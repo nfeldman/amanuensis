@@ -1,0 +1,23 @@
+[project]
+name = "amanuensis-materializer"
+version = "0.1.0"
+description = "Diff-aware renderer for the Amanuensis conspectus."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# A useful starter set: pycodestyle, pyflakes, pyupgrade, bugbear, simplify,
+# comprehensions, and isort. Strict enough to catch real bugs; not so
+# strict that it litters the repo with style nits.
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+# E501 (line-too-long) is covered by the formatter, not the linter, in
+# the rare cases a line must exceed 100.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures intentionally construct minimal data with literal-heavy
+# code; suppress rules that produce noise in tests.
+"test-materializer.py" = ["B008"]

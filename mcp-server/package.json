@@ -1,0 +1,50 @@
+{
+  "name": "amanuensis",
+  "version": "0.1.0",
+  "description": "Agent toolkit for disciplined, evidence-driven architectural surveys of large codebases. Ships an MCP server, a VS Code agent bundle, an installer CLI, and a diff-aware materializer.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "amanuensis-memory": "dist/index.js",
+    "amanuensis": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist/",
+    "src/schema.sql",
+    "agents/",
+    "materializer/",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "amanuensis",
+    "code-survey",
+    "architectural-documentation",
+    "vscode-agent",
+    "sqlite",
+    "better-sqlite3"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist agents materializer",
+    "prepack": "node scripts/prepack-bundle-assets.mjs && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "better-sqlite3": "^11.3.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.12",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.5.0",
+    "ajv": "8.18.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

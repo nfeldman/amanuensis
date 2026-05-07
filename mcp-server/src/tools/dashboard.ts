@@ -1,0 +1,58 @@
+import { optInt, type ToolDefinition } from "../helpers.js";
+
+export const dashboardTools: ToolDefinition[] = [
+  {
+    name: "get_hot_subsystems",
+    description:
+      "Return the most-accessed subsystems over the last 7 days, weighted by recency. Reads from the hot_subsystems view.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "integer" } },
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const limit = optInt(args, "limit", 5) ?? 5;
+      return ctx.db
+        .prepare("SELECT entry_id, access_count, last_accessed, heat FROM hot_subsystems LIMIT ?")
+        .all(limit);
+    },
+  },
+  {
+    name: "get_dashboard",
+    description:
+      "Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, open field notes, unresolved contradictions.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    handler: (_args, ctx) => {
+      // One round-trip: SQLite assembles the per-table counts as
+      // scalar subqueries inside a single SELECT. COUNT(*) FILTER (…)
+      // collapses what was previously a SUM(CASE WHEN … THEN 1 ELSE 0 END)
+      // pattern.
+      const row = ctx.db
+        .prepare(
+          `SELECT (SELECT canonical_branch FROM git_state WHERE repo_id='default') AS canonical_branch,
+                  (SELECT onboarding_sha   FROM git_state WHERE repo_id='default') AS onboarding_sha,
+                  (SELECT last_checked_sha FROM git_state WHERE repo_id='default') AS last_checked_sha,
+                  (SELECT COUNT(*)                                       FROM subsystems)      AS subsystem_count,
+                  (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
+                  (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
+                  (SELECT COUNT(*) FILTER (WHERE status='confirmed-bug') FROM findings)        AS open_bugs,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1)                FROM entries)         AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
+                  (SELECT COUNT(*) FILTER (WHERE resolution='unresolved') FROM contradictions) AS unresolved_contradictions`,
+        )
+        .get() as {
+        canonical_branch: string | null;
+        onboarding_sha: string | null;
+        last_checked_sha: string | null;
+        subsystem_count: number;
+        mapped_count: number;
+        total_findings: number;
+        open_bugs: number;
+        stale_entries: number;
+        open_field_notes: number;
+        unresolved_contradictions: number;
+      };
+      return { project_key: ctx.project.projectKey, ...row };
+    },
+  },
+];
