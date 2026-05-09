@@ -185,7 +185,7 @@ in the methodology prose and the agents' instructions.
 ```
 mcp-server/            TypeScript MCP server (better-sqlite3, @modelcontextprotocol/sdk)
                          Owns memory.db + the git-backed storage directory.
-                         Tool inventory auto-generated in mcp-server/README.md.
+                         Tool inventory auto-generated in mcp-server/DEVELOPMENT.md.
 materializer/          Python package that renders the conspectus into
                          navigable docs/. Diff-aware, cross-referenced,
                          mermaid diagrams generated from DB state.
@@ -199,7 +199,6 @@ agents/                Seven VS Code .agent.md files:
                          amanuensis-memory-auditor (hygiene sweep)
   references/          Amanuensis's own reference docs:
                          concern-territories.md, artifact-templates.md
-.vscode/mcp.json       Ready-to-use MCP server configuration
 dev/                   Development archive: design specs and source material
                          from the broader research program Amanuensis is
                          part of.
@@ -260,32 +259,16 @@ dev/                   Development archive: design specs and source material
 ### Install
 
 ```bash
-git clone https://github.com/<owner>/amanuensis
-cd amanuensis
-(cd mcp-server && npm install && npm run build)
+npm install -g amanuensis
+
+cd your-project
+amanuensis init
 ```
 
-### Wire up VS Code
-
-Copy the agent files into your project's VS Code agent directory (or
-symlink `agents/` from this repo). The `.vscode/mcp.json` at the repo
-root already points at `mcp-server/dist/index.js`:
-
-```json
-{
-  "servers": {
-    "amanuensis-memory": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "${workspaceFolder}/mcp-server/dist/index.js",
-        "--workspace",
-        "${workspaceFolder}"
-      ]
-    }
-  }
-}
-```
+`amanuensis init` writes the agent files into your workspace and
+adds an `amanuensis-memory` entry to `.vscode/mcp.json`, merging
+with any existing MCP server configuration. Re-run with `--force`
+to overwrite an existing entry.
 
 ### Run onboarding
 
