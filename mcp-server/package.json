@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "description": "Agent toolkit for disciplined, evidence-driven architectural surveys of large codebases. Ships an MCP server, a VS Code agent bundle, an installer CLI, and a diff-aware materializer.",
   "license": "MIT",
+  "author": {
+    "name": "Noah Feldman",
+    "url": "https://github.com/nfeldman"
+  },
+  "homepage": "https://github.com/nfeldman/amanuensis#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nfeldman/amanuensis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nfeldman/amanuensis/issues"
+  },
   "type": "module",
   "bin": {
     "amanuensis-memory": "dist/index.js",
