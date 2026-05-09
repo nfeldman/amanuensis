@@ -295,6 +295,15 @@ boundary. Rollback, history, and diffing are free. If the git binary
 isn't available or init fails, the server still runs — history is a
 nice-to-have, not load-bearing.
 
+## Development
+
+This repository is the source. Contributors should read
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup, the test suite,
+the auto-generated tool inventory rule, and the architectural
+contracts the codebase enforces. The MCP server's developer
+reference — including the live tool inventory regenerated from
+`tools/list` — lives at [mcp-server/DEVELOPMENT.md](mcp-server/DEVELOPMENT.md).
+
 ## One instrument in a larger project
 
 Amanuensis is a concrete realization of a broader theory of disciplined
