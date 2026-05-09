@@ -1,0 +1,93 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  mcp-server:
+    name: MCP server (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+      - name: Install
+        working-directory: mcp-server
+        run: npm ci
+      - name: Audit dependencies
+        working-directory: mcp-server
+        run: npm audit --audit-level=high
+      - name: Lint (Biome)
+        working-directory: mcp-server
+        run: npx biome check src/
+      - name: Build
+        working-directory: mcp-server
+        run: npm run build
+      - name: SQL identifiers resolve against schema
+        working-directory: mcp-server
+        run: node scripts/check-sql-identifiers.mjs
+      - name: Tool inputSchemas are valid JSON Schema
+        working-directory: mcp-server
+        run: node scripts/check-tool-schemas.mjs
+      - name: Smoke test (every tool)
+        working-directory: mcp-server
+        run: node test-smoke.mjs
+      - name: Storage-dir git integration
+        working-directory: mcp-server
+        run: node test-storage-git.mjs
+      - name: Cloud-mode storage (shared conspectus repo, nested-repo detection)
+        working-directory: mcp-server
+        run: node test-cloud-storage.mjs
+      - name: Autoprogress infrastructure (open_questions + mode detection)
+        working-directory: mcp-server
+        run: node test-autoprogress.mjs
+      - name: Conspectus comparison tool
+        working-directory: mcp-server
+        run: node test-compare.mjs
+      - name: Subsystem priority (schema migration + ranking math)
+        working-directory: mcp-server
+        run: node test-priority.mjs
+      - name: Cloud-harness end-to-end simulation
+        working-directory: mcp-server
+        run: node test-cloud-e2e.mjs
+      - name: Installer CLI
+        working-directory: mcp-server
+        run: node test-installer.mjs
+      - name: Adversarial — correctness
+        working-directory: mcp-server
+        run: node test-adversarial-correctness.mjs
+      - name: Invariants — knowledge-depth gates + monotonic transitions
+        working-directory: mcp-server
+        run: node test-invariants.mjs
+      - name: Adversarial — security
+        working-directory: mcp-server
+        run: node test-adversarial-security.mjs
+      - name: Performance ceilings (catastrophic-regression guard)
+        working-directory: mcp-server
+        run: node test-perf-ceilings.mjs
+      - name: Tool inventory doc is up-to-date (DEVELOPMENT.md)
+        working-directory: mcp-server
+        run: node scripts/gen-tool-inventory.mjs --check
+
+  materializer:
+    name: Materializer (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint (ruff)
+        working-directory: materializer
+        run: ruff check .
+      - name: Diff-aware rendering test
+        working-directory: materializer
+        run: python3 test-materializer.py
