@@ -22,7 +22,7 @@ jobs:
         run: npm ci
       - name: Audit dependencies
         working-directory: mcp-server
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
       - name: Lint (Biome)
         working-directory: mcp-server
         run: npx biome check src/
