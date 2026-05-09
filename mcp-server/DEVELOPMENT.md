@@ -269,5 +269,5 @@ src/
   storage-git.ts     git operations over the storage directory
   helpers.ts         argument validators, result helpers
   schema.sql         canonical conspectus schema (embedded at install)
-  tools/             21 tool groups — see auto-generated inventory above
+  tools/             24 tool groups — see auto-generated inventory above
 ```
