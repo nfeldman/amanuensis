@@ -25,10 +25,10 @@ agents and invoke the `amanuensis` agent.
 
 ## Documentation
 
-Full documentation will ship alongside the public release of the
-source repository. In the meantime, `amanuensis init --help` prints
-the installer options and `amanuensis-memory --help` is the MCP
-server's CLI surface.
+See the [source repository](https://github.com/nfeldman/amanuensis)
+for the full README, methodology overview, and architecture diagram.
+`amanuensis init --help` and `amanuensis-memory --help` print their
+respective CLI surfaces.
 
 ## License
 
