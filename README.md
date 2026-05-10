@@ -259,7 +259,7 @@ dev/                   Development archive: design specs and source material
 ### Install
 
 ```bash
-npm install -g amanuensis
+npm install -g @gruetech/amanuensis
 
 cd your-project
 amanuensis init

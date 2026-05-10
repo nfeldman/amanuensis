@@ -1,4 +1,4 @@
-# amanuensis
+# @gruetech/amanuensis
 
 Agent toolkit for disciplined, evidence-driven architectural surveys
 of large codebases. The package ships:
@@ -14,7 +14,7 @@ of large codebases. The package ships:
 ## Install
 
 ```bash
-npm install -g amanuensis
+npm install -g @gruetech/amanuensis
 
 cd your-project
 amanuensis init

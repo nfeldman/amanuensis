@@ -1,5 +1,5 @@
 {
-  "name": "amanuensis",
+  "name": "@gruetech/amanuensis",
   "version": "0.1.0",
   "description": "Agent toolkit for disciplined, evidence-driven architectural surveys of large codebases. Ships an MCP server, a VS Code agent bundle, an installer CLI, and a diff-aware materializer.",
   "license": "MIT",
