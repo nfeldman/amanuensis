@@ -1,0 +1,173 @@
+name: published smoke
+
+# Validates the @gruetech/amanuensis npm tarball end-to-end on a clean
+# machine. The in-tree `tests` workflow runs against the source tree;
+# this one runs against the *published* artifact, which catches a
+# different class of bug:
+#
+# - missing files in the npm tarball (the `files` allowlist drops
+#   something the runtime needs)
+# - prepack bundling failed silently (agents/ or materializer/ not
+#   copied into the package)
+# - bin shims on PATH don't resolve correctly post-install
+# - native dependencies (better-sqlite3) don't build on a fresh OS
+# - the published version is broken in a way the source tree isn't
+#
+# Triggered manually after a publish; not on push, because there's
+# nothing to validate until something is on npm.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version or dist-tag to install (e.g. latest, 0.1.0, next)"
+        required: false
+        default: "latest"
+
+jobs:
+  smoke:
+    name: install + smoke (node ${{ matrix.node }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ["20", "22"]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install @gruetech/amanuensis from npm
+        run: npm install -g "@gruetech/amanuensis@${{ inputs.version }}"
+
+      - name: Bin entries are on PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          which amanuensis
+          which amanuensis-memory
+
+      - name: amanuensis --help
+        run: amanuensis --help
+
+      - name: amanuensis init writes the expected files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ws="$RUNNER_TEMP/smoke-workspace"
+          mkdir -p "$ws"
+          cd "$ws"
+          amanuensis init
+          # Agent files land under .github/agents/ (the VS Code custom-agent
+          # discovery path the installer targets by default).
+          test -f .github/agents/amanuensis.agent.md
+          test -f .github/agents/amanuensis-scoper.agent.md
+          test -f .github/agents/amanuensis-structural.agent.md
+          test -f .github/agents/amanuensis-concerns.agent.md
+          test -f .github/agents/amanuensis-adversarial.agent.md
+          test -f .github/agents/amanuensis-memory-auditor.agent.md
+          test -f .github/agents/amanuensis-notes.agent.md
+          test -f .github/agents/references/concern-territories.md
+          test -f .github/agents/references/artifact-templates.md
+          # mcp.json got written with the server entry pointing at the bin name.
+          test -f .vscode/mcp.json
+          node -e "
+            const c = JSON.parse(require('fs').readFileSync('.vscode/mcp.json', 'utf8'));
+            const e = c.servers && c.servers['amanuensis-memory'];
+            if (!e) { console.error('mcp.json missing amanuensis-memory entry'); process.exit(1); }
+            if (e.command !== 'amanuensis-memory') { console.error('unexpected command:', e.command); process.exit(1); }
+            if (!Array.isArray(e.args) || !e.args.includes('--workspace')) { console.error('expected --workspace in args, got:', e.args); process.exit(1); }
+            console.log('mcp.json OK');
+          "
+
+      - name: amanuensis init --dry-run is repeatable on an installed workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/smoke-workspace"
+          amanuensis init --dry-run
+
+      - name: MCP server starts and responds to tools/list over stdio
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/handshake.mjs" <<'EOF'
+          // Minimal MCP client: spawn amanuensis-memory, do the
+          // initialize handshake, ask for tools/list, fail if no tools
+          // are returned. Validates that the server starts, the SQLite
+          // schema applies, and the tool registry is intact in the
+          // published artifact.
+          import { spawn } from "node:child_process";
+          import { mkdtempSync } from "node:fs";
+          import { tmpdir } from "node:os";
+          import { join } from "node:path";
+
+          const ws = mkdtempSync(join(tmpdir(), "amanuensis-smoke-"));
+          const proc = spawn("amanuensis-memory", ["--workspace", ws], {
+            stdio: ["pipe", "pipe", "inherit"],
+          });
+
+          let buf = "";
+          let settled = false;
+          const result = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              proc.kill("SIGTERM");
+              reject(new Error("timed out waiting for tools/list response (15s)"));
+            }, 15_000);
+            proc.stdout.on("data", (chunk) => {
+              buf += chunk.toString("utf8");
+              let nl;
+              while ((nl = buf.indexOf("\n")) >= 0) {
+                const line = buf.slice(0, nl).trim();
+                buf = buf.slice(nl + 1);
+                if (!line) continue;
+                let msg;
+                try { msg = JSON.parse(line); } catch { continue; }
+                if (msg.id === 1) {
+                  settled = true;
+                  clearTimeout(timeout);
+                  if (msg.error) {
+                    reject(new Error("tools/list errored: " + JSON.stringify(msg.error)));
+                  } else {
+                    const tools = (msg.result && msg.result.tools) || [];
+                    if (tools.length === 0) reject(new Error("tools/list returned empty list"));
+                    else resolve(tools.length);
+                  }
+                }
+              }
+            });
+            proc.on("error", (e) => { if (!settled) { settled = true; reject(e); } });
+            proc.on("exit", (code) => {
+              if (!settled) {
+                settled = true;
+                reject(new Error("server exited before responding (code " + code + ")"));
+              }
+            });
+          });
+
+          const send = (m) => proc.stdin.write(JSON.stringify(m) + "\n");
+          send({
+            jsonrpc: "2.0", id: 0, method: "initialize",
+            params: {
+              protocolVersion: "2024-11-05",
+              capabilities: {},
+              clientInfo: { name: "published-smoke", version: "0" },
+            },
+          });
+          send({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+
+          try {
+            const n = await result;
+            console.log("tools/list returned " + n + " tools");
+            proc.kill("SIGTERM");
+            process.exit(0);
+          } catch (e) {
+            console.error("smoke failed:", e.message);
+            proc.kill("SIGTERM");
+            process.exit(1);
+          }
+          EOF
+          node "$RUNNER_TEMP/handshake.mjs"
