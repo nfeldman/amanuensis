@@ -69,8 +69,8 @@ function printUsage(): void {
       "    managed by this installer. A backup is written before any",
       "    overwrite.",
       "  - The installer does NOT build the MCP server — it assumes",
-      "    the `amanuensis` package is installed (e.g. `npm install -g",
-      "    amanuensis`), which puts both `amanuensis` and",
+      "    the `@gruetech/amanuensis` package is installed (e.g. `npm install",
+      "    -g @gruetech/amanuensis`), which puts both `amanuensis` and",
       "    `amanuensis-memory` on PATH.",
       "",
     ].join("\n"),
@@ -338,7 +338,7 @@ function cmdInit(argv: string[]): void {
     console.log("");
     console.log("Done. Next steps:");
     console.log("  1. Make sure the `amanuensis-memory` binary is on PATH:");
-    console.log("       npm install -g amanuensis");
+    console.log("       npm install -g @gruetech/amanuensis");
     console.log("     (skip if you already installed the package globally.)");
     console.log("  2. Open this workspace in VS Code.");
     console.log('  3. Invoke the `amanuensis` agent and say "run onboarding".');
