@@ -15,6 +15,8 @@ It is designed for both:
 pass "review my code" from a chat assistant produces plausible-sounding
 analysis that can't be trusted.
 
+[grafana-conspectus](https://github.com/nfeldman/grafana-conspectus) is an example of the output after running long enough to identify multiple issues it asserts are true bugs.
+
 ## The problem
 
 Single-pass LLM code review has four recurring failure modes:
