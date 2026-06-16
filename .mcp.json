@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "amanuensis-memory": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/mcp-server/dist/index.js",
+        "--workspace",
+        "${workspaceFolder}"
+      ],
+      "env": {
+        "AMANUENSIS_AUTOPROGRESS": "1"
+      }
+    }
+  }
+}
