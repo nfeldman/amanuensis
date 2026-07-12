@@ -7,7 +7,11 @@ import {
   requireString,
   type ToolDefinition,
 } from "../helpers.js";
-import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
+import {
+  requireActiveSession,
+  requireOverturnEvidence,
+  requireSubsystemStatus,
+} from "../invariants.js";
 
 const SEVERITY = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 const STATUS = ["confirmed-bug", "confirmed-acceptable", "fixed", "ruled-out"] as const;
@@ -108,7 +112,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "update_finding_status",
     description:
-      "Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status.",
+      "Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. Overturning a finding to 'ruled-out' requires new disproving evidence attached to it in the current session (add_evidence + attach_evidence_to_finding) — a bare reclassification is rejected.",
     inputSchema: {
       type: "object",
       properties: {
@@ -120,7 +124,7 @@ export const findingTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: (args, ctx) => {
-      requireActiveSession(ctx, "update_finding_status");
+      const sessionId = requireActiveSession(ctx, "update_finding_status");
       const findingId = requireString(args, "finding_id");
       const status = requireEnum(args, "status", STATUS);
       const fixLocation = optString(args, "fix_location");
@@ -133,6 +137,9 @@ export const findingTools: ToolDefinition[] = [
       // concerns-pass depth or deeper. An earlier phase lacks the
       // evidentiary base to re-classify a finding.
       requireSubsystemStatus(ctx.db, row.subsystem_id, "concerns", "update_finding_status");
+      // Evidence-required-to-overturn: a flip to 'ruled-out' must be backed
+      // by new evidence gathered in this session, not a bare reclassification.
+      requireOverturnEvidence(ctx.db, findingId, sessionId, row.status, status);
       ctx.db
         .prepare(
           "UPDATE findings SET status = ?, fix_location = COALESCE(?, fix_location), updated_at = datetime('now') WHERE finding_id = ?",
