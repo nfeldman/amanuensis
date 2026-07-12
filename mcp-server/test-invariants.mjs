@@ -774,5 +774,66 @@ t("phase prerequisites: happy path passes all gates", () => {
   } finally { cleanup(); }
 });
 
+// ---- Evidence-required-to-overturn gate ----
+
+t("overturn to ruled-out without new session evidence is rejected", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx, "overturn-neg");
+    advanceTo(ctx, "B-07", "concerns");
+    call("add_finding", {
+      finding_id: "B07-1", subsystem_id: "B-07",
+      symptom: "unbounded cache growth", root_cause: "no TTL on entries",
+      severity: "HIGH", status: "confirmed-bug",
+      ref_sha: "fixture-ref", pass_type: "survey",
+    }, ctx);
+    // Bare reclassification with no new evidence attached this session → rejected.
+    assertThrows(
+      () => call("update_finding_status", { finding_id: "B07-1", status: "ruled-out" }, ctx),
+      "no new evidence",
+    );
+  } finally { cleanup(); }
+});
+
+t("non-overturn transition (confirmed-bug → fixed) needs no overturn evidence", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx, "overturn-fixed");
+    advanceTo(ctx, "B-07", "concerns");
+    call("add_finding", {
+      finding_id: "B07-2", subsystem_id: "B-07",
+      symptom: "off-by-one", root_cause: "wrong bound",
+      severity: "LOW", status: "confirmed-bug",
+      ref_sha: "fixture-ref", pass_type: "survey",
+    }, ctx);
+    const r = call("update_finding_status", { finding_id: "B07-2", status: "fixed" }, ctx);
+    assert(r.previous_status === "confirmed-bug", "fixed transition should succeed unguarded");
+  } finally { cleanup(); }
+});
+
+t("overturn to ruled-out succeeds once disproving evidence is attached this session", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx, "overturn-pos");
+    advanceTo(ctx, "B-07", "concerns");
+    call("add_finding", {
+      finding_id: "B07-3", subsystem_id: "B-07",
+      symptom: "race on shared map", root_cause: "no lock",
+      severity: "HIGH", status: "confirmed-bug",
+      ref_sha: "fixture-ref", pass_type: "survey",
+    }, ctx);
+    const ev = call("add_evidence", {
+      file_path: "src/B-07/cache.ts", symbol: "get", line_range: "10-20",
+      ref_sha: "fixture-ref", kind: "code-verified",
+      excerpt: "callers hold the region lock", note: "compensating mechanism found in adversarial pass",
+    }, ctx);
+    call("attach_evidence_to_finding", {
+      finding_id: "B07-3", evidence_id: ev.id, role: "compensating",
+    }, ctx);
+    const r = call("update_finding_status", { finding_id: "B07-3", status: "ruled-out" }, ctx);
+    assert(r.previous_status === "confirmed-bug", "overturn with session evidence should succeed");
+  } finally { cleanup(); }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

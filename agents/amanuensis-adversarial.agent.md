@@ -77,10 +77,15 @@ invariants that bound the blast radius. Find those.
        its linchpin dependency is now documented explicitly
 
 5. **Update the DB.** For each verdict:
-   - *overturned*: call `update_finding_status(finding_id, status="ruled-out")`,
-     and `set_disposition` with `classification="ruled-out"` and evidence
-     from Claim B. Do not delete the finding — keeping the ruled-out
-     record helps future analysts avoid re-treading the same ground.
+   - *overturned*: first record the disproving evidence — `add_evidence` for
+     Claim B, then `attach_evidence_to_finding(finding_id, evidence_id, role="compensating")`
+     — and only then call `update_finding_status(finding_id, status="ruled-out")`
+     and `set_disposition` with `classification="ruled-out"`. The order is
+     load-bearing: the server enforces evidence-required-to-overturn and will
+     reject a flip to `ruled-out` that has no new evidence attached in this
+     session ("overturning requires evidence, not vibes"). Do not delete the
+     finding — keeping the ruled-out record helps future analysts avoid
+     re-treading the same ground.
    - *scope-restricted*: update the finding's `business_context` to note
      the narrower scope, and add a new field note describing which code
      paths are in scope vs. out of scope.

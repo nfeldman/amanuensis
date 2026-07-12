@@ -80,11 +80,15 @@ For each target, write in the subsystem survey artifact
 
 For each verdict:
 
-- **`overturned`** —
-  `update_finding_status(finding_id, status="ruled-out")`, and
-  `set_disposition` with `classification="ruled-out"` and evidence
-  from Claim B. **Do not delete the finding** — the ruled-out
-  record helps future analysts avoid re-treading the same ground.
+- **`overturned`** — first attach the disproving evidence
+  (`add_evidence` for Claim B, then
+  `attach_evidence_to_finding(..., role="compensating")`), *then*
+  `update_finding_status(finding_id, status="ruled-out")` and
+  `set_disposition` with `classification="ruled-out"`. The order
+  matters: the server enforces evidence-required-to-overturn and
+  rejects a flip to `ruled-out` with no new evidence attached this
+  session. **Do not delete the finding** — the ruled-out record
+  helps future analysts avoid re-treading the same ground.
 - **`scope-restricted`** — update the finding's `business_context`
   to note the narrower scope, and add a field note describing
   which code paths are in vs. out of scope.

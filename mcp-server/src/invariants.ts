@@ -224,3 +224,46 @@ export function requireActiveSession(ctx: ServerContext, operation: string): str
   }
   return ctx.sessionId;
 }
+
+/**
+ * Evidence-required-to-overturn invariant. Overturning a finding — moving
+ * it to `ruled-out` — is the adversarial pass's strongest move, and the
+ * methodology's rule is "overturning requires evidence, not vibes." That
+ * rule lived only in agent prose, which decays under autonomous execution.
+ * This makes it machine-checked: a transition *into* `ruled-out` must be
+ * backed by at least one evidence row attached to the finding in the
+ * current session (i.e. gathered by the overturning pass itself, not
+ * pre-existing evidence carried over from the Phase 3 read that confirmed
+ * it). A bare reclassification with no new evidence is exactly the
+ * "flip on re-reading" noise the guard exists to reject.
+ *
+ * Only the transition matters: re-affirming an already `ruled-out` finding,
+ * or any non-overturn status change (e.g. confirmed-bug → fixed), is
+ * unaffected.
+ */
+export function requireOverturnEvidence(
+  db: DB,
+  findingId: string,
+  sessionId: string,
+  previousStatus: string,
+  newStatus: string,
+): void {
+  if (newStatus !== "ruled-out" || previousStatus === "ruled-out") return;
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n
+         FROM finding_evidence fe
+         JOIN evidence e ON e.id = fe.evidence_id
+        WHERE fe.finding_id = ? AND e.session_id = ?`,
+    )
+    .get(findingId, sessionId) as { n: number };
+  if (row.n === 0) {
+    throw new ToolError(
+      `cannot overturn finding ${findingId} to 'ruled-out': no new evidence was attached ` +
+        `in this session. Overturning requires evidence, not vibes — record the disproving ` +
+        `evidence with add_evidence, link it via attach_evidence_to_finding, then re-try the ` +
+        `status change. A reclassification with no new evidence is recorded as an open ` +
+        `question, not applied.`,
+    );
+  }
+}
