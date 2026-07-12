@@ -112,7 +112,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "update_finding_status",
     description:
-      "Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. Overturning a finding to 'ruled-out' requires new disproving evidence attached to it in the current session (add_evidence + attach_evidence_to_finding) — a bare reclassification is rejected.",
+      "Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. Overturning a finding to 'ruled-out' requires new disproving evidence attached to it in the current session (add_evidence + attach_evidence_to_finding). A bare reclassification is rejected.",
     inputSchema: {
       type: "object",
       properties: {

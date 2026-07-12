@@ -116,7 +116,7 @@ _75 tools across 24 groups. Generated from `tools/list` — do not hand-edit._
 | Tool | Description |
 |---|---|
 | `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. |
-| `update_finding_status` | Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. |
+| `update_finding_status` | Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. Overturning a finding to 'ruled-out' requires new disproving evidence attached to it in the current session (add_evidence + attach_evidence_to_finding). A bare reclassification is rejected. |
 | `get_findings` | List findings with optional filters (subsystem_id, severity, status). primary_files is returned as a JSON-parsed array. |
 | `get_finding_summary` | Return per-subsystem severity/status roll-up (total, critical, high, medium, low, open_bugs, fixed). Reads from the finding_summary view. |
 
