@@ -1,9 +1,9 @@
 # Amanuensis
 
-Amanuensis reads a codebase and writes down what it finds in a form you can trust: a
-*conspectus*. Every claim in it points to a specific line of code, carries a confidence
-level with the reason behind it, and anything the tool could not verify is labeled as
-such, sitting in plain view next to what it confirmed.
+Amanuensis reads a codebase and writes down what it finds. The result is a *conspectus*: a
+record where every claim points to a specific line of code and carries a confidence level
+with the reason behind it, and where anything the tool could not verify is labeled as such,
+sitting in plain view next to what it confirmed.
 
 Why frame it that way instead of calling it an "AI code reviewer"? Because finding
 problems was never the hard part. Any capable model will list twenty suspicious things in
@@ -12,7 +12,9 @@ of the twenty are real without checking each one yourself. Speed of generation i
 now. Trustworthy output is not, and closing that gap is the whole reason this exists.
 
 So Amanuensis does not try to review faster. It tries to produce a review you can act on
-without redoing it.
+without redoing it. The longer version of that argument, including why it generalizes past
+code and why it is not a threat to anyone, is in [Value proposition](#value-proposition) at
+the end.
 
 ## Does it hold up?
 
@@ -97,7 +99,7 @@ The pieces underneath:
 ## Architecture
 
 ```
-┌────────────────────────────────────────┐
+┌─────────────────────────────────────────┐
 │  Custom agents (.agent.md)              │
 │  coordinator ─┬─ scoper                 │
 │               ├─ structural             │
@@ -105,21 +107,21 @@ The pieces underneath:
 │               ├─ adversarial            │
 │               ├─ notes                  │
 │               └─ memory-auditor         │
-└───────────────┬────────────────────────┘
+└───────────────┬─────────────────────────┘
                 │ MCP (stdio)
                 ▼
-┌────────────────────────────────────────┐
+┌─────────────────────────────────────────┐
 │  amanuensis-memory MCP server           │
 │  (TypeScript · better-sqlite3)          │
 │  Owns memory.db (WAL) and a git-backed  │
 │  storage dir. The contracts live here.  │
-└───────────────┬─────────────┬──────────┘
+└───────────────┬─────────────┬───────────┘
                 │             │ subprocess
                 ▼             ▼
         ┌──────────────┐  ┌──────────────────────┐
         │ memory.db +  │  │ Python materializer  │
-        │ prose        │  │ renders → docs/       │
-        │ artifacts    │  │                       │
+        │ prose        │  │ renders → docs/      │
+        │ artifacts    │  │                      │
         └──────────────┘  └──────────────────────┘
 ```
 
@@ -146,6 +148,46 @@ onboarding phases, fits the concern checklist to your codebase, and produces a s
 
 The project storage directory is a git repo, and every session commits, so history and
 rollback come for free.
+
+## Value proposition
+
+**So what? Everyone is finding bugs faster now.**
+
+True. It is also easy to draw the wrong lesson from it.
+
+A capable model can scan a repository and produce dozens of plausible bug reports in
+minutes. The expensive part is deciding which ones are real. If you still have to verify
+every claim by hand, the bottleneck has not disappeared. It moved downstream and filled up
+with confident-sounding noise.
+
+Useful output is output you can act on without repeating the work. That takes a system that
+tests its own findings, ties them to evidence, keeps its confidence proportional to what it
+proved, and admits uncertainty after looking rather than instead of looking. That is not a
+better prompt. It is engineering.
+
+### The bugs are the demonstration
+
+Code review is the example because the evidence is concrete: every finding has to survive an
+attempt to disprove it, claims cannot outrun the evidence recorded in the system itself,
+uncertain conclusions stay uncertain, and work already ruled out is remembered rather than
+rediscovered next session.
+
+The broader result is a method for making a probabilistic model dependable at a specific
+task. The same approach applies to contract review, incident triage, compliance work, and
+research synthesis. "AI can find bugs" is old news. The more useful claim is that the
+reliability work most people assumed would need a lab and a benchmark suite is now within
+reach of one careful person, end to end.
+
+### Why this is not a threat
+
+Typing speed was never the limit. The limit is how much of a system one person can examine,
+understand, and trust at once. A tool like this spends machine time on the repetitive
+checking and keeps human attention for judgment. It stays honest about the edge of what it
+knows, which keeps you in the loop instead of quietly standing in for you.
+
+When generation is cheap, producing more output matters less. The valuable skill is making
+the output dependable, and that skill is a human and learnable one. Amanuensis is one worked
+example, built in the open so the method can be inspected rather than merely claimed.
 
 ## Development
 
