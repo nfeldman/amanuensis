@@ -1,325 +1,158 @@
 # Amanuensis
 
-> _An architectural scribe for codebases, built as an agentic methodology to
-> overcome the fact that LLMs are unreliable narrators of code._
+Amanuensis reads a codebase and writes down what it finds in a form you can trust: a
+*conspectus*. Every claim in it points to a specific line of code, carries a confidence
+level with the reason behind it, and anything the tool could not verify is labeled as
+such, sitting in plain view next to what it confirmed.
 
-Amanuensis is a set of VS Code agents plus an MCP server plus a materializer
-that, together, survey a codebase and produce a persistent, navigable,
-evidence-driven **conspectus** — a structured architectural record that
-survives across sessions and agent boundaries.
+Why frame it that way instead of calling it an "AI code reviewer"? Because finding
+problems was never the hard part. Any capable model will list twenty suspicious things in
+a minute. The hard part, and the only part that actually saves you time, is knowing which
+of the twenty are real without checking each one yourself. Speed of generation is cheap
+now. Trustworthy output is not, and closing that gap is the whole reason this exists.
 
-It is designed for both: 
- 1. A tool to validate and understand the firehose of code LLMs can produce
- when let loose and build sufficient confidence to use it.
- 2. Working in large, mixed-language production codebases where a single-
-pass "review my code" from a chat assistant produces plausible-sounding
-analysis that can't be trusted.
+So Amanuensis does not try to review faster. It tries to produce a review you can act on
+without redoing it.
 
-[grafana-conspectus](https://github.com/nfeldman/grafana-conspectus) is an example of the output after running long enough to identify multiple issues it asserts are true bugs.
+## Does it hold up?
 
-## The problem
+Two answers, because there are two claims.
 
-Single-pass LLM code review has four recurring failure modes:
+On real code: pointed at Grafana, it found real bugs and backed each one with evidence you
+can check yourself ([grafana-conspectus](https://github.com/nfeldman/grafana-conspectus)).
+That is an existence proof rather than a benchmark, but it is a real one.
 
-1. **Confirmation without compensation.** The model identifies a concern
-   (missing timeout, unchecked deref, race on shared state) and reports it
-   without looking for the retry loop, the supervisor, the type-system
-   guarantee, or the single-caller invariant that bounds the blast radius.
-2. **Classification from naming.** `UserCache` must be a cache;
-   `sanitize_input` must sanitize input; `deprecated` means deprecated.
-   The model classifies from names and file paths without reading the code.
-3. **Smoothing over contradictions.** When two observations disagree, the
-   model averages them into a hedged sentence instead of surfacing the
-   disagreement. Contradictions are the epistemically honest output of
-   investigation; hedging hides them.
-4. **Amnesia across sessions.** Every conversation starts from zero. What
-   the model confirmed last week, it re-verifies from scratch today — or,
-   worse, re-confabulates. There is no persistent state of what is
-   known, what is suspected, and what was ruled out with evidence.
+On the method: the design rests on a few ideas about how to make a language model
+dependable. I reached them by trial and error while building the thing, not by reading a
+paper. I have since checked them three ways: a review of the recent research on LLM and
+multi-agent reliability, a set of controlled experiments, and an audit of this codebase
+scored in parallel by two different models. All three line up with the design. The audit
+rated the core of it as strong, and found something more useful than a grade: the parts
+doing the real work are the rules the server enforces on its own, not the instructions
+written into a prompt.
 
-Amanuensis is a methodology that constrains LLM output to prevent each of
-these. The tooling in this repo makes the methodology executable.
+The ideas below are the valuable part. The code is one way to implement them.
 
-## The approach
+## The idea, in plain terms
 
-A survey is **phased, evidence-driven, and adversarially reviewed**.
+A language model is a fluent narrator. Ask it about code and it gives you confident,
+readable prose whether or not the prose is correct. That is the trap. A wrong answer looks
+exactly like a right one, so the model's confidence tells you nothing on its own. The
+design treats that confidence as unreliable and makes the model earn each claim instead.
+Four rules do most of that work:
 
-1. **Scope.** Populate a structured file ledger for the subsystem. Seed
-   domain vocabulary. Stub every seam (inter-subsystem boundary). No
-   reading of method bodies yet — the ledger exists to prevent sampling
-   bias in later phases.
-2. **Structural inventory.** Types before implementation. State containers,
-   data flows, concurrency model, seam contracts from this side. Document
-   the map before evaluating concerns against the territory.
-3. **Concern-driven deep read.** A calibrated checklist of concerns
-   specific to *this* codebase's languages, runtime substrates, and
-   architecture (derived during onboarding from 11 concern territories).
-   Every concern gets a terminal classification — confirmed-bug,
-   confirmed-acceptable, ruled-out, out-of-scope, or unresolved-competition
-   — backed by evidence, an evidence-quality tag, and a rationale.
-4. **Adversarial review.** For every confirmed finding and every
-   linchpin-dependent disposition, an adversarial agent tries to
-   *disprove* it. Claim A, Claim B, evidence for Claim B, verdict.
-   Findings that survive this are the highest-confidence claims in the
-   conspectus. Findings that don't survive are reclassified to `ruled-out`
-   with evidence — not silently deleted, so future analysts don't re-tread
-   the same ground.
-5. **Output packaging.** Structured data (file ledger, dispositions,
-   findings, field notes, evidence, seams, diagnosticity matrices) lives
-   in the database. Prose artifacts (onboarding report, entry-point doc,
-   subsystem narratives) live in markdown. The materializer renders both
-   into navigable, cross-referenced documentation.
+1. **Read before you judge.** No conclusion from a name or a file path, only from what the
+   code actually does. `UserCache` is not a cache until you have watched it cache something.
+2. **Prove it or drop it.** Every finding cites its evidence. A claim the tool cannot
+   support is marked unverified rather than asserted, and stays that way until someone
+   verifies it.
+3. **Attack your own findings.** After the first pass gathers problems, a separate pass
+   tries to knock each one down, hunting for the retry loop, the lock, or the invariant
+   that means it was never a bug. What survives is what you keep. What does not is written
+   down as ruled out, with the reason, so nobody rediscovers it next month.
+4. **Remember.** The record persists across sessions. Confirmed, suspected, and ruled out
+   all carry forward, so the tool builds on last week's work instead of starting over and
+   re-inventing it.
 
-The methodology is **confidence-gated**: a subsystem's mapping status
-determines what claims the agents are authorized to make about it.
+None of these is clever by itself. What makes them stick is where they live: in the server
+that stores the conspectus, not in a prompt that asks the model to behave. A claim that
+outruns its evidence, or a finding overturned with no new proof, is rejected when it is
+written. That is what lets the discipline hold when the tool runs unattended, which is the
+setting where prompt-only rules fall apart.
 
-| Status | Authorized claims |
-|---|---|
-| `unmapped` | None. No assertions about behavior. |
-| `scoping` | File scope only: "F is in scope for S." |
-| `structural` | Types, state containers, flows, concurrency model. No correctness claims. |
-| `concerns` | Concern dispositions with evidence. Findings at evidence_quality ≥ code-verified. |
-| `adversarial` | As above, plus survived adversarial probes. Highest confidence. |
-| `mapped` | Complete. Seam contracts filled in. Ready for composition. |
+## How a survey runs
 
-An agent or LLM using the conspectus that makes a claim exceeding the
-authorized level for its source must flag the claim explicitly as
-speculative. This is Amanuensis's most important epistemic constraint.
+A survey moves through phases, and each phase sets a ceiling on what may be claimed. The
+tool cannot report a bug in a subsystem it has only skimmed.
 
-A subsystem can also carry a seventh status, `deferred` — not a knowledge
-level but an explicit "do not survey yet" flag (e.g. out-of-scope for the
-current engagement, blocked on a dependency, owner unavailable). Deferred
-subsystems don't advance through the phases and don't participate in
-concern coverage.
+| Phase | What happens | What may be claimed afterward |
+|---|---|---|
+| **Scope** | Lists the files and boundaries in play. No code read yet, so later phases cannot cherry-pick a convenient sample. | Only that a file belongs to a subsystem. |
+| **Structural** | Maps types, state, data flow, and the concurrency model. | Structure. No correctness claims. |
+| **Concerns** | Works a checklist fitted to this codebase's languages and runtime, not a generic lint pass. Each concern ends in a disposition backed by evidence. | Findings, with citations. |
+| **Adversarial** | A separate agent tries to disprove each finding and each shaky disposition. | The findings that survived the attack. |
+| **Mapped** | Boundaries between subsystems filled in. | Complete. |
 
-## What's genuinely new
+The pieces underneath:
 
-Much of the methodology borrows. These parts are Amanuensis-specific
-structural contributions:
-
-- **Confidence-gated assertion authority.** Every subsystem has a
-  survey status, and that status defines what claims any downstream
-  agent (or human) is authorized to make about it. Exceeding the
-  authorized level requires explicit speculation framing.
-- **Codebase-calibrated concern derivation.** Onboarding Phase 4
-  instantiates 11 concern territories against the specific codebase's
-  language, runtime, and concurrency substrate — not a generic
-  checklist. Non-applicable territories are recorded with the
-  disqualifying condition, not silently skipped.
-- **Adversarial review as a first-class phase.** Phase 4 isn't a
-  polish step. It is a separate agent that applies one of five prose
-  verdicts — `upheld`, `overturned`, `scope-restricted`,
-  `quality-upgraded`, `quality-downgraded` — to every confirmed
-  finding, recorded in the subsystem-survey markdown. Each verdict
-  has a defined schema consequence: `overturned` flips
-  `findings.status` to `ruled-out`; `quality-upgraded` attaches new
-  evidence; `scope-restricted` narrows `business_context`. Overturned
-  findings are reclassified, not deleted — the trail remains.
-- **Contradiction pair tracking.** When two findings about the same
-  `file:symbol@sha` reach incompatible conclusions, the disagreement
-  is a first-class row in the `contradictions` table and surfaces on
-  a dedicated materialized page. The conspectus makes its own
-  uncertainty visible; it does not smooth.
-- **Structured ACH matrices.** The diagnosticity matrix is four
-  tables (`diagnosticity_sessions`, `_concerns`, `_evidence`,
-  `_cells`) with a dedicated materialized page per matrix. Competing
-  concerns don't get independent evaluations — the cells enforce the
-  across-row discrimination that makes ACH work.
-- **First-class seam registry.** Inter-subsystem boundaries are rows,
-  not prose. A seam becomes *assessable* only when both parties reach
-  `mapped` — enforced by a view the coordinator consults before
-  running seam assessment. Composition bugs get a home.
-- **Diff-aware materialization.** The human-facing docs are a
-  deliverable, not a report. A per-page source-hash manifest re-renders
-  only pages whose DB or prose sources changed, with a global
-  cross-reference resolver that links every ID on every page without
-  rewriting unchanged content.
-
-## Where it came from
-
-The methodology started as 10 general areas I found myself exploring whenever
-getting a feel for unfamiliar code and evolved through a handful of iterations. 
-Once it was able to produce usable results, I did some research into six 
-disciplines that felt relevant, ultimately borrowing the following concepts 
-(a longer treatment lives /dev; this section sketches the provenance):
-
-- **Intelligence analysis.** Richards Heuer's *Analysis of Competing
-  Hypotheses* (ACH) is the model for the diagnosticity-matrix protocol.
-  When two or more concerns could independently explain the same
-  symptom, Amanuensis opens a matrix (columns: concerns, rows:
-  evidence), evaluates each cell, and ranks by *inconsistency* — the
-  concern with the most contradicting evidence is rejected first. ACH's
-  linchpin-evidence concept became Amanuensis's `linchpin_dependent`
-  flag and the related hygiene pass.
-- **Archaeology.** The Harris Matrix's insistence that every
-  stratigraphic relationship be recorded, even when the interpretation
-  is uncertain, became Amanuensis's insistence on recording every
-  concern's disposition even when the verdict is "ruled out" or
-  "insufficient evidence." The matrix is the record, not the conclusion.
-- **Forensic science.** Chain of custody for evidence maps onto
-  Amanuensis's `evidence` table: every citation is a structured row with
-  file, symbol, line range, commit SHA, kind, and collection context.
-  Shared evidence can attach to multiple dispositions and findings, and
-  "find everything that cites file X" is a query, not a grep.
-- **Medicine.** Differential diagnosis — enumerate the candidate
-  explanations, test discriminating evidence, rank by inconsistency —
-  is ACH with a stethoscope. The mindset informs the adversarial pass:
-  *what observation would overturn this finding?*
-- **Accident investigation.** James Reason's Swiss Cheese model
-  shaped the concern-territory framing: defects rarely occur at a
-  single layer, and the methodology's job is to map how adjacent
-  layers align (or fail to) rather than to judge each layer in
-  isolation. Seam concerns are composition bugs — bugs that don't
-  exist in either subsystem alone, only in their joint behavior.
-- **Ethnography.** Clifford Geertz's *thick description* is the model
-  for context framing: a disposition is not thick — and not
-  authoritative — until it supplies call-path, historical, domain, and
-  scope context. A thin disposition (only call-path) is marked
-  `linchpin_dependent` so adversarial review knows where to look.
-
-Amanuensis concretizes the first two — ACH and chain of custody — into
-first-class database tables (`diagnosticity_sessions`, `diagnosticity_cells`,
-`evidence`, `disposition_evidence`, `finding_evidence`). The others live
-in the methodology prose and the agents' instructions.
-
-## What's in this repo
-
-```
-mcp-server/            TypeScript MCP server (better-sqlite3, @modelcontextprotocol/sdk)
-                         Owns memory.db + the git-backed storage directory.
-                         Tool inventory auto-generated in mcp-server/DEVELOPMENT.md.
-materializer/          Python package that renders the conspectus into
-                         navigable docs/. Diff-aware, cross-referenced,
-                         mermaid diagrams generated from DB state.
-agents/                Seven VS Code .agent.md files:
-                         amanuensis (coordinator),
-                         amanuensis-scoper (Phase 1),
-                         amanuensis-structural (Phase 2),
-                         amanuensis-concerns (Phase 3),
-                         amanuensis-adversarial (Phase 4),
-                         amanuensis-notes (conversational),
-                         amanuensis-memory-auditor (hygiene sweep)
-  references/          Amanuensis's own reference docs:
-                         concern-territories.md, artifact-templates.md
-dev/                   Development archive: design specs and source material
-                         from the broader research program Amanuensis is
-                         part of.
-```
+- **Contracts enforced in the server.** The depth ceiling above and the "no overturn
+  without new evidence" rule are checked when data is written. Breaking either returns an
+  error, whether or not a person is watching.
+- **Evidence with a paper trail.** Every citation is a stored record: file, symbol,
+  commit, and how the observation was made. Asking what rests on a given piece of evidence
+  is a lookup, not a search.
+- **Concerns fitted to the codebase.** The checklist is derived for the specific system.
+  Territories that do not apply are recorded with the reason they were skipped.
+- **Competing explanations, handled honestly.** When two concerns could explain the same
+  symptom, the tool scores them against shared evidence and drops the one the evidence
+  contradicts most, instead of quietly picking a favorite.
+- **Composition tracked on purpose.** Bugs that exist only in how two subsystems meet get
+  their own place, and a boundary is assessed only once both sides are mapped.
+- **Output that stays current.** A small Python step renders the whole record into a
+  cross-linked doc site and re-renders only the pages whose sources changed.
+- **Unattended runs, same bar.** A headless mode runs an entire survey on its own, trading
+  the human's pause for a queue of open questions. The evidence bar does not move, because
+  it lives in the server rather than in the pause.
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────┐
-│   VS Code custom agents              │
-│   (.agent.md files)                  │
-│                                      │
-│   coordinator ─┬─ scoper             │
-│                ├─ structural         │
-│                ├─ concerns           │
-│                ├─ adversarial        │
-│                ├─ notes              │
-│                └─ memory-auditor     │
-└──────────┬───────────────────────────┘
-           │ MCP stdio
-           ▼
-┌────────────────────────────────────┐
-│   amanuensis-memory MCP server     │
-│   (TypeScript · better-sqlite3)    │
-│                                    │
-│   Owns: memory.db (WAL)            │
-│   Owns: git state, sessions        │
-│   Owns: ~/.amanuensis/workspaces/  │
-│                                    │
-│   materialize_docs ──┐             │
-└──────────┬───────────┼─────────────┘
-           │           │ subprocess
-           ▼           ▼
-┌───────────────┐  ┌──────────────────────┐
-│   memory.db   │  │  Python materializer │
-│   + prose     │  │  (stdlib only)       │
-│   artifacts   │  │                      │
-└───────────────┘  │  docs/.manifest.json │
-                   │  diff-aware renders  │
-                   │  cross-ref resolver  │
-                   │  mermaid diagrams    │
-                   └──────────┬───────────┘
-                              ▼
-                   ┌──────────────────────────┐
-                   │  docs/                   │
-                   │  (navigable conspectus)  │
-                   └──────────────────────────┘
+┌────────────────────────────────────────┐
+│  Custom agents (.agent.md)              │
+│  coordinator ─┬─ scoper                 │
+│               ├─ structural             │
+│               ├─ concerns               │
+│               ├─ adversarial            │
+│               ├─ notes                  │
+│               └─ memory-auditor         │
+└───────────────┬────────────────────────┘
+                │ MCP (stdio)
+                ▼
+┌────────────────────────────────────────┐
+│  amanuensis-memory MCP server           │
+│  (TypeScript · better-sqlite3)          │
+│  Owns memory.db (WAL) and a git-backed  │
+│  storage dir. The contracts live here.  │
+└───────────────┬─────────────┬──────────┘
+                │             │ subprocess
+                ▼             ▼
+        ┌──────────────┐  ┌──────────────────────┐
+        │ memory.db +  │  │ Python materializer  │
+        │ prose        │  │ renders → docs/       │
+        │ artifacts    │  │                       │
+        └──────────────┘  └──────────────────────┘
 ```
 
 ## Quick start
 
-### Prerequisites
-
-- Node.js ≥ 20
-- Python 3.11+ (stdlib only; no pip install required)
-- VS Code with an MCP-compatible agent runtime
-
-### Install
+**Prerequisites:** Node.js ≥ 20, Python 3.11+ (standard library only), and a VS Code
+MCP-compatible agent runtime.
 
 ```bash
 npm install -g @gruetech/amanuensis
-
 cd your-project
-amanuensis init
+amanuensis init          # writes the agent files and wires the MCP server into .vscode/mcp.json
 ```
 
-`amanuensis init` writes the agent files into your workspace and
-adds an `amanuensis-memory` entry to `.vscode/mcp.json`, merging
-with any existing MCP server configuration. Re-run with `--force`
-to overwrite an existing entry.
+Invoke the **amanuensis** agent and say **"run onboarding."** The coordinator walks the
+onboarding phases, fits the concern checklist to your codebase, and produces a seeded
+`memory.db`, the prose artifacts, and a rendered `docs/` site. From there:
 
-### Run onboarding
+- **Survey a subsystem** with "survey B-01." It runs scope, structural, concerns, and
+  adversarial in order, pausing at each boundary for your review.
+- **Browse** with "what have you noticed?"
+- **Audit** with "audit the conspectus," which sweeps for unresolved contradictions, stale
+  entries, and findings that need another look.
 
-Invoke the `amanuensis` agent in VS Code on the codebase you want to
-survey. Say "run onboarding." The coordinator walks the eight
-onboarding phases (Phase 0 orientation through Phase 7 packaging),
-pausing at each gate for your acknowledgment. On completion you'll
-have a seeded `memory.db`, six prose artifacts, a materialized
-`docs/` site, and a calibrated concern checklist specific to your
-codebase.
-
-From there:
-
-- **Survey a subsystem**: "survey B-01" → the coordinator invokes the
-  scoper → structural → concerns → adversarial agents in sequence,
-  pausing at each phase boundary for your review.
-- **Browse**: "what have you noticed?" → invokes the notes agent.
-- **Audit**: "audit the conspectus" → invokes the memory-auditor.
-
-The project storage directory (`~/.amanuensis/workspaces/<owner>/<project>/`)
-is initialized as a git repo on first open. Every `end_session` call
-auto-commits, and agents can call `commit_phase_gate` at any phase
-boundary. Rollback, history, and diffing are free. If the git binary
-isn't available or init fails, the server still runs — history is a
-nice-to-have, not load-bearing.
+The project storage directory is a git repo, and every session commits, so history and
+rollback come for free.
 
 ## Development
 
-This repository is the source. Contributors should read
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup, the test suite,
-the auto-generated tool inventory rule, and the architectural
-contracts the codebase enforces. The MCP server's developer
-reference — including the live tool inventory regenerated from
-`tools/list` — lives at [mcp-server/DEVELOPMENT.md](mcp-server/DEVELOPMENT.md).
-
-## One instrument in a larger project
-
-Amanuensis is a concrete realization of a broader theory of disciplined
-LLM use — the conditions under which a language model is a reliable
-narrator of complex systems, and the conditions under which it is not.
-The full argument, and the rest of the toolkit it implies, continue to
-develop elsewhere. This repository is the first piece to ship. The bigger
-vision is something I've been calling Living Operational Context.
+This repository is the source. Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md).
+The MCP server's developer reference, including the auto-generated tool inventory, is at
+[mcp-server/DEVELOPMENT.md](mcp-server/DEVELOPMENT.md).
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
-
-## Example
-
-See [grafana-conspectus](https://github.com/nfeldman/grafana-conspectus)
-for a partial demonstration of what this can be used for in practice.
