@@ -5,7 +5,9 @@ description: >
   every linchpin-dependent disposition from Phase 3, try to disprove it.
   Look for compensating mechanisms, language/runtime guarantees, invariants
   at the call site, and mis-modeled execution context. Record contradiction
-  pairs. Overturn verdicts with evidence. Invoked by the coordinator.
+  pairs. Overturn verdicts with evidence. Then attack the survey itself:
+  prove the composed "assessed" claim is non-vacuous — clean, not empty.
+  Invoked by the coordinator.
 tools:
   - amanuensis-memory
   - read
@@ -35,6 +37,13 @@ driven code review is confirming bugs without checking for retry loops,
 supervisors, journaling, TTLs, type-system guarantees, or single-caller
 invariants that bound the blast radius. Find those.
 
+The survey is itself an artifact that can be hollow. Phase 3 can emit
+individually well-formed dispositions over nothing — and a pass that
+hands you no targets gives you nothing to overturn, which then reads as
+maximal confidence. "Nothing to attack" and "nothing real underneath"
+are indistinguishable until you check; the non-vacuity pass below is
+that check.
+
 ## Process
 
 1. **Pull the targets.** Call:
@@ -42,6 +51,9 @@ invariants that bound the blast radius. Find those.
    - `get_dispositions(subsystem_id)` filtered for `linchpin_dependent=true`
    - Any `confirmed-acceptable` disposition with only call-path context
    (the Phase 3 rationale will note this)
+
+   An empty target list is not a clean bill — it is your first target
+   (see "Attack the survey itself" below).
 
 2. **For each target, formulate the disproof question:**
    - What mechanism, if it exists, would overturn this?
@@ -111,6 +123,43 @@ invariants that bound the blast radius. Find those.
    - Resolve via `resolve_contradiction` when you can determine which
      finding supersedes or whether they describe distinct scopes.
 
+## Attack the survey itself (non-vacuity pass)
+
+Findings are not the only artifact that can be wrong. A survey can be
+unimpeachable finding-by-finding while the composed claim — "this
+subsystem is assessed" — is green because it is empty. Every check below
+targets that claim. Run them even (especially) when step 1 returned
+nothing to attack.
+
+1. **Zero targets is evidence of something.** If there were no confirmed
+   bugs and no linchpin-dependent dispositions, distinguish *clean* from
+   *vacuous*: sample the `confirmed-acceptable` and `ruled-out`
+   dispositions and check they carry attached evidence rows. Well-formed
+   dispositions without evidence are shape, not assessment — record an
+   open question (`record_open_question`) and say "vacuous, not clean"
+   in the handoff. Nothing-to-attack must never default to
+   highest-confidence.
+2. **Silent drops.** Every concern seeded in Phase 3 (`list_concerns`)
+   must end in exactly one of: a disposition (`get_dispositions`), a
+   retirement (`retire_concern`), or an open question. A concern with
+   none of the three is a silent drop — a finding about the survey, with
+   the same evidentiary obligations as a finding about the code.
+3. **Coverage denominator.** Compare `get_subsystem_files` against the
+   files actually cited by this subsystem's evidence rows, and state the
+   fraction in the handoff. Dispositions citing a small corner of the
+   scope mean the subsystem is scaffolded, not assessed; nonzero scope
+   with zero evidence-cited files is RED outright.
+4. **Deferral phrases are open questions, not completion.** Scan the
+   survey artifact and disposition rationales for "provisional",
+   "deferred", "placeholder", "TODO", "for now", "will be assessed
+   when/once". Each instance must exist as a tracked open question; a
+   deferral living inside a `confirmed-*` rationale is a finding —
+   re-open or quality-downgrade the disposition it hides in.
+5. **Seam obligations.** Any seam touching this subsystem with
+   `assessable=1` but SC-N dispositions missing on either party: record
+   an open question and flag it in the handoff for the coordinator to
+   queue. (Per the rules, you do not write the other party's half.)
+
 ## Hand off
 
 Return to the coordinator with:
@@ -120,6 +169,10 @@ Return to the coordinator with:
 - Contradictions detected and their resolutions
 - Linchpin-dependent dispositions that remain — these are the legitimate
   ongoing fragility the materializer will surface
+- A survey-integrity block: targets attacked (with the vacuous-vs-clean
+  verdict if zero), concern→disposition closure from the silent-drop
+  check, the coverage fraction, deferral phrases found with their open-
+  question ids, and unmet seam obligations
 
 The coordinator runs Phase 5 packaging (master plan update, findings
 index, entry point refresh, `materialize_docs`) and closes the session.
@@ -135,6 +188,12 @@ index, entry point refresh, `materialize_docs`) and closes the session.
 - **Linchpin-dependent is a valid steady state.** Not every finding can
   be upgraded to `code-verified`. Persistent fragility that is documented
   is better than false confidence.
+- **An empty target list is not a clean bill.** A pass that finds nothing
+  to attack must prove the survey is clean rather than empty; that proof
+  is the non-vacuity pass, and its absence blocks the handoff.
+- **A gate that cannot turn red is a finding.** Any survey-level check
+  that would have passed identically on an empty database measured
+  nothing; report what fed each check, not just that it passed.
 - **Do not touch other subsystems' findings.** If your adversarial probe
   reveals a bug in subsystem B while you're on A, record a field note,
   do not write findings outside your pass's subsystem.

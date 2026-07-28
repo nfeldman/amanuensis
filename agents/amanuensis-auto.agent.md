@@ -26,7 +26,7 @@ handoffs:
     prompt: "Work the calibrated checklist against ${input:subsystem_id}. Every concern to a terminal state with evidence + evidence_quality + linchpin flag + rationale. Do NOT pause — record blocking questions via record_open_question. Call commit_phase_gate at the end."
   - agent: amanuensis-adversarial
     label: "Phase 4 · Adversarial review (autoprogress)"
-    prompt: "Try to disprove each confirmed finding on ${input:subsystem_id}. Record contradiction pairs and overturn verdicts with evidence. Do NOT pause — record blocking questions via record_open_question. Call commit_phase_gate at the end."
+    prompt: "Try to disprove each confirmed finding on ${input:subsystem_id}. Record contradiction pairs and overturn verdicts with evidence. Then run the non-vacuity pass: attack the survey itself — an empty target list is your first target, and the survey-integrity block is required in the handoff. Do NOT pause — record blocking questions via record_open_question. Call commit_phase_gate at the end."
 ---
 
 You are the Amanuensis **autoprogress** coordinator. Same methodology as

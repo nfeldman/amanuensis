@@ -360,6 +360,14 @@ evidence quality tag was chosen.]
 - **Verdict**: [upheld / overturned / scope-restricted / quality-upgraded / quality-downgraded]
 
 [One subsection per finding reviewed.]
+
+### Survey integrity (non-vacuity pass)
+
+- **Targets attacked**: [N — if 0, verdict: clean / vacuous, with the evidence sample]
+- **Concern closure**: [seeded N / disposed N / retired N / open N — silent drops: none, or list]
+- **Coverage**: [files cited in evidence / files in scope]
+- **Deferral phrases**: [none, or each with its open-question id]
+- **Seam obligations**: [none unmet, or list flagged to the coordinator]
 ```
 
 The materializer decorates this file with DB-sourced tables
