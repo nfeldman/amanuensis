@@ -28,6 +28,9 @@ CI runs everything in [`.github/workflows/test.yml`](.github/workflows/test.yml)
 To run a representative slice locally:
 
 ```bash
+node dev/render-roadmap.mjs --check     # roadmap structure and generated projection
+node dev/test-roadmap.mjs               # prove roadmap gates fail under sabotage
+
 cd mcp-server
 
 node test-smoke.mjs                     # exercises every tool against a fresh DB
@@ -57,6 +60,25 @@ python3 materializer/test-materializer.py
 - Python: `ruff check .` from `materializer/`
 
 CI runs both and fails on findings.
+
+## Generated roadmap
+
+[`ROADMAP.md`](ROADMAP.md) is generated from the canonical
+[`dev/roadmap.json`](dev/roadmap.json). The generator validates initiative IDs,
+dependency order and cycles, evidence paths, metrics, acceptance and red-gate
+criteria, implementation slices, and practice-catalog coverage before rendering.
+
+Edit the JSON source, then run from the repository root:
+
+```bash
+node dev/render-roadmap.mjs --write
+node dev/render-roadmap.mjs --check
+node dev/test-roadmap.mjs
+```
+
+CI fails if the generated document drifts from its source. This check proves the
+roadmap's structure and correspondence, not the truth of its product assumptions;
+those are governed by the roadmap's controls, metrics, and kill criteria.
 
 ## Auto-generated tool inventory
 

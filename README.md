@@ -5,6 +5,9 @@ record where every claim points to a specific line of code and carries a confide
 with the reason behind it, and where anything the tool could not verify is labeled as such,
 sitting in plain view next to what it confirmed.
 
+The path from a completed survey to a revision-aware system of record, super review, and
+architecture support is defined in the [living-conspectus roadmap](ROADMAP.md).
+
 Why frame it that way instead of calling it an "AI code reviewer"? Because finding
 problems was never the hard part. Any capable model will list twenty suspicious things in
 a minute. The hard part, and the only part that actually saves you time, is knowing which

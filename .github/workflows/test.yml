@@ -7,6 +7,19 @@ on:
     branches: [main]
 
 jobs:
+  roadmap:
+    name: Roadmap structure and projection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate roadmap and generated projection
+        run: node dev/render-roadmap.mjs --check
+      - name: Prove roadmap validation red gates
+        run: node dev/test-roadmap.mjs
+
   mcp-server:
     name: MCP server (TypeScript)
     runs-on: ubuntu-latest

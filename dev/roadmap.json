@@ -1,0 +1,1957 @@
+{
+  "schemaVersion": 1,
+  "roadmapVersion": "1.0",
+  "updated": "2026-08-10",
+  "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
+  "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
+  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction earn their place only after that proof.",
+  "baselineObservations": [
+    {
+      "kind": "observation",
+      "claim": "The current product already separates scope, structural, concern, adversarial, and mapped phases, and server-side invariants limit what may be claimed at each depth.",
+      "evidence": [
+        "README.md",
+        "mcp-server/src/invariants.ts"
+      ]
+    },
+    {
+      "kind": "observation",
+      "claim": "The SQLite record already stores evidence, dispositions, findings, contradictions, cross-references, file ownership, query history, and git baselines.",
+      "evidence": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/DEVELOPMENT.md"
+      ]
+    },
+    {
+      "kind": "observation",
+      "claim": "Change detection currently maps changed paths to file-ledger rows and marks every entry in directly affected subsystems stale; it does not compute transitive claim or seam impact.",
+      "evidence": [
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/tools/stale.ts"
+      ]
+    },
+    {
+      "kind": "observation",
+      "claim": "A finding can be marked fixed without new confirming evidence, while a transition to ruled-out already requires new disproving evidence from the active session.",
+      "evidence": [
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/invariants.ts"
+      ]
+    },
+    {
+      "kind": "observation",
+      "claim": "Access and query logs support usage-aware compression, but that mechanism optimizes retrieval rather than learning which claims remain true or which methods work.",
+      "evidence": [
+        "mcp-server/src/tools/logging.ts",
+        "mcp-server/src/schema.sql"
+      ]
+    },
+    {
+      "kind": "observation",
+      "claim": "The repository has broad mechanical validation for tools, schemas, storage, invariants, adversarial behavior, performance, and materialization.",
+      "evidence": [
+        ".github/workflows/test.yml",
+        "CONTRIBUTING.md"
+      ]
+    }
+  ],
+  "inferences": [
+    {
+      "kind": "inference",
+      "claim": "Temporal validity and targeted revalidation are the highest-leverage missing substrate.",
+      "basis": "Review, architecture, and research learning all become unsafe if a changed file can leave plausible but invalid claims looking current.",
+      "counterpoint": "A coarser subsystem-staleness model may prove sufficient for smaller repositories; the roadmap therefore requires comparative cost and recall measurements before deeper graph machinery is accepted."
+    },
+    {
+      "kind": "inference",
+      "claim": "Amanuensis can support architecture work without becoming the owner of goals or decisions.",
+      "basis": "Its evidence, constraints, contradictions, and history can compile the situation in which a decision is made.",
+      "counterpoint": "Inferring intent from code can fossilize accidents; direct intent, inferred intent, and observed behavior must remain separate kinds."
+    },
+    {
+      "kind": "inference",
+      "claim": "Crosswalk-driven research can improve decisions only if questions are admitted and later reconciled against their decision impact.",
+      "basis": "Unbounded topic generation creates an attractive research backlog with no obligation to change a design or close a gap.",
+      "counterpoint": "Some exploratory research has delayed value; the system must retain bounded speculative questions without pretending they are validated product work."
+    }
+  ],
+  "openQuestions": [
+    {
+      "question": "Is claim validity best represented by commit intervals, explicit supersession edges, or both?",
+      "owner": "Amanuensis",
+      "resolveBefore": "A1 schema ADR"
+    },
+    {
+      "question": "What recall target is achievable for transitive impact without parsing every supported language?",
+      "owner": "Amanuensis",
+      "resolveBefore": "A2 implementation selection"
+    },
+    {
+      "question": "Which design-session artifacts belong in Amanuensis custody versus Chorusmith session custody?",
+      "owner": "Amanuensis + Chorusmith",
+      "resolveBefore": "A10 contract freeze"
+    },
+    {
+      "question": "What evidence is sufficient to claim that imported research changed a code decision rather than merely decorating it?",
+      "owner": "Amanuensis + Scholiast",
+      "resolveBefore": "A13 admission policy"
+    }
+  ],
+  "tensions": [
+    {
+      "name": "Record versus reality",
+      "left": "A durable record prevents repeated work.",
+      "right": "The repository and its behavior remain the implementation truth.",
+      "resolution": "Amanuensis records claims about code with validity, provenance, and invalidation; it never treats its prose as more authoritative than the referenced code state."
+    },
+    {
+      "name": "Continuity versus staleness",
+      "left": "Carry knowledge across sessions.",
+      "right": "Changed code can make yesterday's knowledge dangerous.",
+      "resolution": "Preserve historical claims while removing current authority until targeted revalidation succeeds."
+    },
+    {
+      "name": "Automation versus desire",
+      "left": "Run the epistemic loop unattended end to end.",
+      "right": "A model must not invent product goals or silently accept architecture decisions.",
+      "resolution": "Automate observation, challenge, maintenance, option generation, and verification; reserve desire, irreversible policy, and decision acceptance for humans."
+    },
+    {
+      "name": "Density versus proof",
+      "left": "Give reviewers and designers a high-value brief.",
+      "right": "Compression can erase uncertainty and provenance.",
+      "resolution": "Compile task-specific briefs from typed claims, with expandable evidence and explicit omitted/unknown sections."
+    },
+    {
+      "name": "Product identity versus platform duplication",
+      "left": "Amanuensis should feel like a complete code intelligence product.",
+      "right": "Chorusmith is the natural home for general session orchestration and context compilation.",
+      "resolution": "Keep Amanuensis complete as a domain engine and user-facing workflow; expose stable contracts so Chorusmith can orchestrate it later without an early rewrite."
+    },
+    {
+      "name": "Immanent design versus speculative potential",
+      "left": "Honor what the system is already trying to do.",
+      "right": "Do not let current accidents cap its potential.",
+      "resolution": "Generate three labeled lenses—immanent, adversarial, and speculative—without merging them into a false consensus."
+    }
+  ],
+  "definitions": [
+    {
+      "term": "Fully surveyed",
+      "definition": "At a named commit: every in-scope file is assigned or explicitly excluded; every subsystem has completed the required phase sequence; every declared seam has both endpoints mapped and an integral assessment; every applicable concern has an evidence-backed disposition or a tracked gap; dispatched, landed, and scored work reconcile; and the clean export passes read-back validation.",
+      "negativeCriteria": [
+        "It does not mean the repository contains no defects.",
+        "It does not mean every open question is answered.",
+        "It does not mean a green collection of subsystem checks proves the integrated HEAD state."
+      ]
+    },
+    {
+      "term": "System of record",
+      "definition": "The authoritative ledger of what Amanuensis has established, rejected, invalidated, or left open about a codebase, including the evidence and repository state that bound each claim.",
+      "negativeCriteria": [
+        "It is not the source of truth for code behavior; code and runtime evidence remain primary.",
+        "It is not a wiki whose uncited prose becomes authoritative through repetition.",
+        "It is not a substitute for accepted product intent or architecture decisions."
+      ]
+    },
+    {
+      "term": "Living conspectus",
+      "definition": "A system of record that detects relevant repository changes, predicts affected knowledge, withdraws stale authority, schedules bounded revalidation, records supersession, and verifies that regenerated projections match durable state.",
+      "negativeCriteria": [
+        "It is not a periodic full rescan with a new timestamp.",
+        "It is not query-frequency compression mislabeled as learning.",
+        "It is not automatic rewriting of claims without retained history."
+      ]
+    },
+    {
+      "term": "Super review",
+      "definition": "A change review that combines the diff with the pre-existing conspectus, predicted blast radius, historical findings, cross-seam obligations, invalidated claims, adversarial challenge, and an integral check of the assembled HEAD state.",
+      "negativeCriteria": [
+        "It is not a larger list of plausible defects.",
+        "It is not a unit-test summary.",
+        "It is not a claim of safety when known gaps or unlanded work remain."
+      ]
+    },
+    {
+      "term": "Architecture session",
+      "definition": "A bounded decision-support process that compiles observed behavior, direct and inferred intent, constraints, contradictions, options, consequences, falsifiers, and unresolved research into a reviewable decision record.",
+      "negativeCriteria": [
+        "It does not let the model originate the user's desire.",
+        "It does not collapse evidence, interpretation, and recommendation into one voice.",
+        "It does not accept or execute an architecture decision on the user's behalf."
+      ]
+    },
+    {
+      "term": "Learning",
+      "definition": "A traceable change to corpus state, retrieval policy, method choice, research backlog, or user preference that follows from observed outcomes and can itself be revised.",
+      "negativeCriteria": [
+        "It is not merely storing more text.",
+        "It is not tuning behavior from an unscored conversation.",
+        "It is not importing external research without provenance or decision relevance."
+      ]
+    }
+  ],
+  "durableObjects": [
+    {
+      "name": "Claim",
+      "fields": [
+        "claim_id",
+        "epistemic_kind",
+        "subject",
+        "assertion",
+        "evidence_ids",
+        "valid_from_sha",
+        "valid_to_sha",
+        "status",
+        "supersedes",
+        "confidence_reason"
+      ],
+      "contract": "No current authority without evidence, repository validity, and an epistemic kind; invalidation preserves history."
+    },
+    {
+      "name": "Crosswalk",
+      "fields": [
+        "crosswalk_id",
+        "source_id",
+        "target_id",
+        "relation",
+        "evidence_ids",
+        "validity",
+        "provenance"
+      ],
+      "contract": "Relations are typed and supported; neither endpoint inherits unsupported properties from the other."
+    },
+    {
+      "name": "Obligation",
+      "fields": [
+        "obligation_id",
+        "trigger",
+        "destination",
+        "owner",
+        "state",
+        "blocking",
+        "resolution_evidence"
+      ],
+      "contract": "Every detected gap or invalidation has a destination, and blocking obligations keep the relevant gate red."
+    },
+    {
+      "name": "Decision",
+      "fields": [
+        "decision_id",
+        "desire_source",
+        "accepted_option",
+        "alternatives",
+        "constraints",
+        "evidence_ids",
+        "consequences",
+        "falsifiers",
+        "accepted_by"
+      ],
+      "contract": "Amanuensis may draft; only an authorized human or owning system can accept."
+    },
+    {
+      "name": "Run",
+      "fields": [
+        "run_id",
+        "mode",
+        "repo_sha",
+        "configuration",
+        "replicate_id",
+        "dispatched",
+        "landed",
+        "scored",
+        "artifacts"
+      ],
+      "contract": "Every unattended run is reproducible enough to audit and reconciles intended work with landed and scored outputs."
+    }
+  ],
+  "ownership": [
+    {
+      "actor": "Repository and runtime",
+      "owns": "Implementation behavior, tests, history, and directly observed execution.",
+      "doesNotOwn": "The explanation of why behavior exists or which future should be chosen."
+    },
+    {
+      "actor": "Amanuensis",
+      "owns": "Codebase claims, evidence, validity, contradictions, review briefs, design situation models, and revalidation obligations.",
+      "doesNotOwn": "User desire, general orchestration, external-source truth, merges, or accepted product decisions."
+    },
+    {
+      "actor": "Scholiast",
+      "owns": "External research sources, normalized claims, provenance, and research synthesis.",
+      "doesNotOwn": "What the code does or whether external research should control a code decision."
+    },
+    {
+      "actor": "Collatio and distillation",
+      "owns": "Method qualification and extraction of candidate lessons from completed work.",
+      "doesNotOwn": "Automatic promotion of a candidate lesson into policy without validation and read-back."
+    },
+    {
+      "actor": "Chorusmith",
+      "owns": "Cross-domain session orchestration, context compilation, artifact lineage, and project-type composition.",
+      "doesNotOwn": "Amanuensis domain invariants or premature replacement of a working workflow."
+    },
+    {
+      "actor": "Human",
+      "owns": "Desire, priority, risk appetite, architecture acceptance, permission boundaries, and irreversible action.",
+      "doesNotOwn": "Rechecking evidence that the machine has already proven and made auditable."
+    }
+  ],
+  "authority": {
+    "unattended": [
+      "Read configured repository and conspectus sources, detect changes, and update derived indexes.",
+      "Invalidate current authority, create obligations, schedule revalidation, and retain historical claims.",
+      "Generate review briefs, architecture options, adversarial challenges, research questions, and draft decision records.",
+      "Run configured tests, controls, bounded relational checks, materialization, and read-back verification.",
+      "Use already configured analysis and research providers within explicit budget, source, and data boundaries."
+    ],
+    "humanGates": [
+      "A new product desire, priority, or risk appetite is required.",
+      "A data source, API, repository, spend boundary, or external audience is outside the configured envelope.",
+      "An architecture decision, policy exception, code merge, deployment, or destructive action would be accepted or executed.",
+      "Two valid options remain and the choice depends on preference rather than evidence."
+    ],
+    "hardStops": [
+      "No finding, fixed status, or current claim may cross its evidence gate.",
+      "No blocking obligation may be hidden by a green aggregate status.",
+      "No run may report complete when dispatched, landed, and scored sets differ.",
+      "No generated projection may publish when state, coverage, or content read-back disagrees with durable storage."
+    ]
+  },
+  "principles": [
+    {
+      "id": "P1",
+      "title": "Temporal authority, permanent history",
+      "rule": "Claims can lose present authority without being deleted; supersession and invalidation are evidence-bearing events.",
+      "practices": [
+        "GP11",
+        "GP18",
+        "GP23"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Observations before interpretations",
+      "rule": "Every brief and record keeps observed facts, inferences, hypotheses, questions, desires, and decisions distinguishable.",
+      "practices": [
+        "GP1",
+        "GP12",
+        "GP16"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Generators do not certify themselves",
+      "rule": "A separate verifier checks findings, completion, projections, and high-impact recommendations; programmatic gates halt progress when feasible.",
+      "practices": [
+        "GP13",
+        "GP19",
+        "GP25",
+        "VP4"
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "Composition is its own proof obligation",
+      "rule": "Subsystem success never substitutes for fan-in reconciliation, seam review, or an integral HEAD lane.",
+      "practices": [
+        "GP21",
+        "GP22",
+        "GP24"
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Unknowns have destinations",
+      "rule": "A gap must create a visible obligation owned by a later pass, a research queue, or a human decision; otherwise completion remains red.",
+      "practices": [
+        "GP9",
+        "GP20",
+        "GP23"
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "Start with explicit relations",
+      "rule": "Use registries, lexical structure, git history, and bounded relational cores before models, embeddings, ontologies, or graph infrastructure.",
+      "practices": [
+        "GP27",
+        "GP35"
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "Measure the reduction in verification burden",
+      "rule": "Success is not output volume; it is more correct action with less repeated human checking, without suppressing uncertainty.",
+      "practices": [
+        "GP29",
+        "GP31",
+        "GP32",
+        "VP6"
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "id": "now",
+      "label": "Now — make the record alive",
+      "horizon": "First 6–10 engineering weeks; complete before expanding the product surface.",
+      "objective": "Prove that a completed survey can stay trustworthy across repository changes with less work than resurveying it.",
+      "exitCriteria": [
+        "The full-survey definition is computed and cannot go green with missing files, seams, dispositions, runs, or read-back mismatches.",
+        "Known claim-invalidating changes are detected and revalidated with target recall while benign changes stay below the false-invalidation guardrail.",
+        "A fixed finding cannot become verified-fixed without new evidence at the repaired revision.",
+        "An unattended refresh completes within configured authority and stops visibly at every hard gate.",
+        "The living-record path beats full resurvey on human verification minutes without worsening known-defect recall."
+      ],
+      "initiatives": [
+        {
+          "id": "A0",
+          "title": "Dogfood baseline and executable definitions",
+          "status": "ready",
+          "owner": "Amanuensis",
+          "outcome": "Amanuensis can survey itself at a pinned commit, calculate whether that survey is complete, and replay a graded fixture ladder against an immutable baseline.",
+          "rationale": "The program needs a falsifiable baseline before schema work. Otherwise every later improvement can be declared successful by changing the meaning of complete.",
+          "dependsOn": [],
+          "deliverables": [
+            "An ADR freezing operational meanings for fully surveyed, current, stale, invalid, resolved, verified-fixed, and complete.",
+            "A self-conspectus fixture pinned to a repository commit with inventory, seam, concern, and run reconciliation manifests.",
+            "A control harness containing null, benign, invalidating, cross-seam, incoherent-request, export, and repeated-run cases.",
+            "A baseline report with denominators, exclusions, runtime configuration, replicate IDs, and minimum detectable effects."
+          ],
+          "acceptance": [
+            "The completion checker reports the named missing obligation for each independently removed file assignment, concern disposition, seam endpoint, landed result, and scored result.",
+            "Every gate is demonstrated red at least once before the green baseline is accepted.",
+            "Two unchanged-baseline runs are reported separately and establish metric step size; they are not pooled.",
+            "The baseline export is regenerated in a clean directory and read back against durable counts and identifiers."
+          ],
+          "redGate": "Delete or corrupt one obligation in each control class; if completion stays green or the error does not name the missing destination, A0 fails.",
+          "risks": [
+            "A self-survey can overfit the fixture to Amanuensis's own architecture.",
+            "A single model/runtime baseline can be mistaken for a general reliability estimate."
+          ],
+          "practices": [
+            "GP8",
+            "GP12",
+            "GP20",
+            "GP24",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP5",
+            "VP6",
+            "VP10",
+            "VP11",
+            "VP12",
+            "VP17",
+            "VP19",
+            "VP20"
+          ],
+          "metrics": [
+            "M1",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "README.md",
+            "mcp-server/src/invariants.ts",
+            "mcp-server/test-invariants.mjs",
+            "materializer/test-materializer.py"
+          ]
+        },
+        {
+          "id": "A1",
+          "title": "Temporal claim and supersession model",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.",
+          "rationale": "A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.",
+          "dependsOn": [
+            "A0"
+          ],
+          "deliverables": [
+            "A schema ADR comparing commit intervals, supersession edges, and a combined model against real query patterns.",
+            "Additive migrations for claims, claim-evidence links, validity events, and epistemic kinds.",
+            "Write-path invariants that reject untyped authority, missing provenance, invalid commit intervals, and unsupported supersession.",
+            "A compatibility projection that maps existing entries, evidence, dispositions, contradictions, and findings without destructive migration."
+          ],
+          "acceptance": [
+            "Existing databases migrate forward and retain byte-for-byte accessible legacy artifacts; rollback can ignore new tables without losing old data.",
+            "Observation, inference, hypothesis, open question, direct intent, inferred intent, and decision cannot be stored interchangeably.",
+            "A claim invalidated at commit B is not returned as current at B or later, remains queryable historically, and can be superseded only with new evidence.",
+            "Bounded exhaustive tests cover interval edges, supersession cycles, evidence reachability, and contradictory current-authority states."
+          ],
+          "redGate": "Attempt to create current authority without evidence, with an unknown commit, with a validity gap, or through a supersession cycle; every write must be rejected transactionally.",
+          "risks": [
+            "Over-normalization could make ordinary reads expensive and agent usage cumbersome.",
+            "Backfilling legacy prose may imply claim precision the original records never had."
+          ],
+          "practices": [
+            "GP1",
+            "GP6",
+            "GP9",
+            "GP11",
+            "GP12",
+            "GP18",
+            "GP27",
+            "GP35"
+          ],
+          "metrics": [
+            "M1",
+            "M2",
+            "M3"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/schema.sql",
+            "mcp-server/src/tools/evidence.ts",
+            "mcp-server/src/tools/contradictions.ts"
+          ]
+        },
+        {
+          "id": "A2",
+          "title": "Change impact and invalidation engine",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "A commit range produces an explainable set of directly and transitively affected claims, seams, findings, and obligations without invalidating unrelated knowledge.",
+          "rationale": "Precise impact is the economic hinge: too little recall makes the record unsafe, while excessive invalidation destroys the promised time savings.",
+          "dependsOn": [
+            "A1"
+          ],
+          "deliverables": [
+            "A predicted-diff artifact listing changed files, mapped objects, traversed relations, invalidated claims, and unaffected controls before comparison with expected results.",
+            "A deterministic impact cascade using file ledger, evidence links, explicit cross-references, seam endpoints, and git rename data.",
+            "A pluggable escalation point for lexical or model-assisted relation discovery only when explicit relations leave a measured gap.",
+            "An impact explanation API and durable invalidation events."
+          ],
+          "acceptance": [
+            "The known-invalidation fixture reaches the expected claim and downstream obligation with no hidden manual expansion.",
+            "The benign-refactor fixture stays within the false-invalidation guardrail and explains every invalidated object.",
+            "Two-sided sensitivity checks show that adding and removing each relation class changes impact output in the predicted direction.",
+            "The explicit-relation implementation is measured before any model or embedding fallback is admitted."
+          ],
+          "redGate": "Remove a required cross-reference or seam edge from the fixture; the predicted impact must lose the corresponding downstream claim and the coverage gate must turn red.",
+          "risks": [
+            "Static relations can miss runtime coupling and generated-code dependencies.",
+            "Model-assisted impact can create nondeterministic invalidation noise."
+          ],
+          "practices": [
+            "GP11",
+            "GP20",
+            "GP26",
+            "GP27",
+            "GP35",
+            "GP36",
+            "VP4",
+            "VP8",
+            "VP9",
+            "VP15",
+            "VP18"
+          ],
+          "metrics": [
+            "M2",
+            "M3",
+            "M4"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/git.ts",
+            "mcp-server/src/tools/xrefs.ts",
+            "mcp-server/src/tools/seams.ts",
+            "mcp-server/src/tools/files.ts"
+          ]
+        },
+        {
+          "id": "A3",
+          "title": "Obligation-driven revalidation scheduler",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Invalidated knowledge becomes a bounded, prioritized queue whose completed work lands back into the conspectus and whose omissions remain visibly red.",
+          "rationale": "Detection without custody only creates a better stale list. Full automation requires a closed loop from change to assigned work to verified landing.",
+          "dependsOn": [
+            "A2"
+          ],
+          "deliverables": [
+            "A durable obligation table with trigger, destination, owner, blocking state, resolution evidence, and attempt history.",
+            "A scheduler that scopes work packets from invalidated claims and their evidence neighborhoods, with budgets and retry policy.",
+            "Dispatched/landed/scored reconciliation and dead-letter handling.",
+            "Dashboard views for blocked, retried, deferred, and orphaned obligations."
+          ],
+          "acceptance": [
+            "Every invalidated authoritative claim creates at least one owned destination or a hard failure explaining why none can be formed.",
+            "A dropped, duplicated, timed-out, or unscored worker result prevents run completion and remains queryable.",
+            "Retries use unique attempt and replicate identifiers; a retry cannot overwrite earlier evidence.",
+            "The scheduler stays within configured source, budget, concurrency, and authority boundaries during an unattended fixture run."
+          ],
+          "redGate": "Silently drop one dispatched obligation and duplicate another; completion must remain red with separate missing and duplicate diagnoses.",
+          "risks": [
+            "Queue throughput can become a proxy target that rewards shallow closures.",
+            "Aggressive retries can amplify provider cost or repeat correlated errors."
+          ],
+          "practices": [
+            "GP20",
+            "GP23",
+            "GP24",
+            "GP25",
+            "GP29",
+            "GP33",
+            "VP4",
+            "VP11",
+            "VP18"
+          ],
+          "metrics": [
+            "M4",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/dispatch.ts",
+            "mcp-server/src/tools/stale.ts",
+            "mcp-server/src/tools/dashboard.ts",
+            "mcp-server/src/schema.sql"
+          ]
+        },
+        {
+          "id": "A4",
+          "title": "Verified resolution and projection read-back",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Fixed, revalidated, and materialized become evidenced states rather than optimistic labels.",
+          "rationale": "The current asymmetry—proof required to rule out but not to mark fixed—undercuts the core claim that users should not have to redo verification.",
+          "dependsOn": [
+            "A1",
+            "A3"
+          ],
+          "deliverables": [
+            "Distinct fixed-pending-verification and verified-fixed states with repository-SHA-bound confirming evidence.",
+            "Resolution invariants for findings, claims, contradictions, and obligations.",
+            "A clean materialization mode followed by state, coverage, and content read-back.",
+            "A repair path that records projection mismatch without modifying durable truth to match the projection."
+          ],
+          "acceptance": [
+            "A fix-location-only update cannot reach verified-fixed.",
+            "Evidence from before the repair commit cannot verify the repaired state.",
+            "Deleting a rendered finding, cross-link, or stale marker is detected by the appropriate read-back axis.",
+            "Historical fixed and invalidated states remain auditable after later supersession."
+          ],
+          "redGate": "Mark a known finding fixed without post-fix evidence and remove one rendered object; both the state transition and publish step must halt.",
+          "risks": [
+            "A universal proof rule may not fit every finding class.",
+            "Read-back can validate correspondence while still missing a semantically bad source claim."
+          ],
+          "practices": [
+            "GP6",
+            "GP8",
+            "GP11",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP15",
+            "VP19",
+            "VP20"
+          ],
+          "metrics": [
+            "M1",
+            "M5",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/findings.ts",
+            "mcp-server/src/tools/evidence.ts",
+            "mcp-server/src/tools/materialize.ts",
+            "materializer/test-materializer.py"
+          ]
+        },
+        {
+          "id": "A5",
+          "title": "Unattended refresh run envelope",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "A fully surveyed repository can be refreshed end to end from a commit range with deterministic controls, bounded provider use, explicit stop conditions, and a complete audit trail.",
+          "rationale": "Full automation is a systems property. It requires authority, idempotence, reconciliation, and recovery—not just a prompt that continues without asking.",
+          "dependsOn": [
+            "A0",
+            "A3",
+            "A4"
+          ],
+          "deliverables": [
+            "A refresh command/API with plan, execute, resume, cancel, and read-back states.",
+            "An execution manifest pinning repository SHA, source set, model/runtime configuration, budgets, determinism settings, and unique run/replicate IDs.",
+            "Idempotency and crash-recovery contracts for every mutating stage.",
+            "Authority-policy enforcement for configured providers, data boundaries, decision gates, code mutation, and external side effects."
+          ],
+          "acceptance": [
+            "An interrupted run resumes without duplicated authoritative claims or lost obligations.",
+            "A determinism control actually changes the consulted runtime path and is visible in the run manifest.",
+            "Configured analysis providers run without interactive approval while out-of-envelope providers or side effects stop before dispatch.",
+            "The final status is computed from durable landed state and read-back, never from worker success messages."
+          ],
+          "redGate": "Crash after dispatch and before landing, then resume; if work duplicates, disappears, or completion relies on the pre-crash success signal, A5 fails.",
+          "risks": [
+            "Provider APIs differ in determinism, retries, and data retention.",
+            "A permissive default envelope could turn analysis automation into unauthorized action."
+          ],
+          "practices": [
+            "GP8",
+            "GP10",
+            "GP16",
+            "GP24",
+            "GP25",
+            "GP33",
+            "VP11",
+            "VP18",
+            "VP20"
+          ],
+          "metrics": [
+            "M4",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/session.ts",
+            "mcp-server/src/tools/dispatch.ts",
+            "mcp-server/src/tools/locks.ts",
+            "mcp-server/test-cloud-e2e.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "label": "Next — earn super review and architecture",
+      "horizon": "Following 8–14 engineering weeks, gated on the living-record exit rather than elapsed time.",
+      "objective": "Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority.",
+      "exitCriteria": [
+        "A known historical defect, a cross-seam defect, and a benign refactor produce the expected differentiated review behavior.",
+        "Review briefs reduce median human verification time while meeting actionable-precision and missed-contract gates.",
+        "An incoherent design request is returned as underdetermined with the missing desire or evidence named.",
+        "A design session preserves explicit constraints and non-consensus options through decision-record read-back.",
+        "The integral HEAD lane catches a seeded composition failure that all subsystem-local checks miss."
+      ],
+      "initiatives": [
+        {
+          "id": "A6",
+          "title": "Impact-aware review brief",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "A reviewer receives the smallest sufficient situation model for a change: diff, affected claims, constraints, history, seams, contradictions, obligations, and explicit unknowns.",
+          "rationale": "The product's value is not more context; it is the right evidence and prior work arranged around the current decision.",
+          "dependsOn": [
+            "A2",
+            "A4",
+            "A5"
+          ],
+          "deliverables": [
+            "A typed ReviewBrief contract with included and omitted sections, provenance, token budget, and repository validity.",
+            "A context compiler that uses explicit impact relations first and logs every inclusion and exclusion reason.",
+            "Views for historical confirmed/ruled-out findings, compensating controls, stale claims, cross-seam obligations, and unverified areas.",
+            "A task-scoped retrieval trace suitable for later method evaluation."
+          ],
+          "acceptance": [
+            "The known-defect fixture includes the prior finding and current supporting evidence; the benign refactor does not inherit unrelated defect context.",
+            "Removing the task constraint, impacted seam, or stale-claim section changes the brief's control score in the predicted direction.",
+            "Every compressed statement expands to typed claims and evidence valid at the reviewed commit.",
+            "The brief declares uncovered files, omitted sections, and budget-driven truncation before recommendations."
+          ],
+          "redGate": "Supply a diff whose only known risk is in an affected seam; if the seam obligation is omitted or appears without provenance, publication halts.",
+          "risks": [
+            "Task-focused compression may hide a weak but important cross-cutting signal.",
+            "Retrieval quality can be confused with underlying record quality."
+          ],
+          "practices": [
+            "GP7",
+            "GP11",
+            "GP12",
+            "GP14",
+            "GP20",
+            "GP26",
+            "VP8",
+            "VP9"
+          ],
+          "metrics": [
+            "M5",
+            "M6",
+            "M7",
+            "M9"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/diagnosticity.ts",
+            "mcp-server/src/tools/logging.ts",
+            "mcp-server/src/tools/seams.ts",
+            "mcp-server/src/tools/compare.ts"
+          ]
+        },
+        {
+          "id": "A7",
+          "title": "Independent review generation and refutation",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Candidate review findings are generated and attacked by role-separated passes with controlled context differences, then aggregated without contaminating independent judgments.",
+          "rationale": "A large context and a self-critique prompt do not create independent scrutiny. Consequential findings need a refutation path designed around correlated failure.",
+          "dependsOn": [
+            "A6"
+          ],
+          "deliverables": [
+            "Generator, refuter, and verifier role contracts with different evidence access and no pre-aggregation deliberation.",
+            "A context-set diversity policy that varies evidence slices and analytical frames, not just role labels.",
+            "Blind fixtures using surface-identical marker/control cases and treated-versus-clean diffs.",
+            "An aggregation record retaining disagreements, defeated hypotheses, and the evidence that moved status."
+          ],
+          "acceptance": [
+            "A refuter can overturn a seeded false positive only by attaching new disproving evidence.",
+            "Independent passes land before aggregation and cannot read each other's conclusions during judgment.",
+            "Marker-only and treated-versus-clean controls remain blinded through scoring and do not produce directional contamination.",
+            "Same-context, varied-context, and heterogeneous-runtime conditions are reported separately with test-retest stability."
+          ],
+          "redGate": "Reveal expected findings or another pass's verdict to a blinded reviewer; the harness must mark the run contaminated and exclude it from efficacy claims.",
+          "risks": [
+            "Nominal agent separation may preserve correlated context and model errors.",
+            "Extra passes can increase cost without improving decision quality."
+          ],
+          "practices": [
+            "GP2",
+            "GP3",
+            "GP4",
+            "GP5",
+            "GP6",
+            "GP13",
+            "GP15",
+            "GP19",
+            "GP26",
+            "GP30",
+            "VP1",
+            "VP2",
+            "VP3",
+            "VP5",
+            "VP6",
+            "VP15",
+            "VP16"
+          ],
+          "metrics": [
+            "M5",
+            "M6",
+            "M7",
+            "M11"
+          ],
+          "baselineEvidence": [
+            "agents/amanuensis-adversarial.agent.md",
+            "agents/amanuensis-concerns.agent.md",
+            "mcp-server/src/invariants.ts",
+            "mcp-server/test-adversarial-correctness.mjs"
+          ]
+        },
+        {
+          "id": "A8",
+          "title": "Composition and integral HEAD verification",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "The review system proves that expected parts landed, fans in results, and evaluates the assembled repository state rather than inferring integration from local successes.",
+          "rationale": "Many consequential failures live at seams or appear only after individually correct patches compose.",
+          "dependsOn": [
+            "A2",
+            "A7"
+          ],
+          "deliverables": [
+            "A fan-in manifest reconciling expected artifacts, commits, tests, and review results.",
+            "An integral HEAD lane with seam-specific concern selection and clean-checkout execution.",
+            "A seeded cross-seam defect corpus whose local checks pass while the integral lane fails.",
+            "Blocking status propagation from missing or failed composition obligations."
+          ],
+          "acceptance": [
+            "The seeded cross-seam defect is missed by both subsystem-local lanes and caught by the integral lane.",
+            "A worker success message without its expected artifact or commit keeps the fan-in gate red.",
+            "Every deferred composition concern has a named destination and remains visible in the final review.",
+            "The integral result is tied to the exact assembled HEAD SHA and cannot be reused for another state."
+          ],
+          "redGate": "Remove one expected landed artifact and seed one seam-only defect; both must independently block the final green state.",
+          "risks": [
+            "Integral checks can become an expensive duplicate of existing CI.",
+            "A narrow seeded corpus may overstate composition coverage."
+          ],
+          "practices": [
+            "GP20",
+            "GP21",
+            "GP22",
+            "GP23",
+            "GP24",
+            "GP25",
+            "VP4",
+            "VP7",
+            "VP11"
+          ],
+          "metrics": [
+            "M5",
+            "M6",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/seams.ts",
+            "mcp-server/src/tools/dispatch.ts",
+            "mcp-server/test-cloud-e2e.mjs",
+            ".github/workflows/test.yml"
+          ]
+        },
+        {
+          "id": "A9",
+          "title": "Review session and export surface",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "A user can ask what changed, what matters, what survived challenge, and what remains unknown, then inspect every answer without learning the internal schema.",
+          "rationale": "A rigorous record that cannot furnish a fast decision surface fails the original make-it-make-sense-without-wasting-time promise.",
+          "dependsOn": [
+            "A6",
+            "A8"
+          ],
+          "deliverables": [
+            "Review-session commands for situation, findings, challenges, regressions, latent defects, stale knowledge, and open obligations.",
+            "A compact default brief plus progressive evidence expansion.",
+            "A clean export with stable identifiers and bidirectional links to durable records.",
+            "A review completion record that distinguishes advice furnished from decisions accepted."
+          ],
+          "acceptance": [
+            "A reviewer can reach cited evidence for every actionable claim in no more than one expansion step.",
+            "Regression, pre-existing latent defect, ruled-out historical finding, and unverified suspicion are rendered as distinct states.",
+            "Export read-back reconciles state, coverage, and content against the source run.",
+            "User testing measures verification minutes and missed constraints, not satisfaction alone."
+          ],
+          "redGate": "Swap the labels for regression and latent defect or remove an unknown from the export; semantic read-back must detect the mismatch.",
+          "risks": [
+            "A dense default view can become another dashboard users ignore.",
+            "Progressive disclosure may hide uncertainty behind an extra click."
+          ],
+          "practices": [
+            "GP7",
+            "GP11",
+            "GP12",
+            "GP14",
+            "GP28",
+            "VP12",
+            "VP20"
+          ],
+          "metrics": [
+            "M5",
+            "M7",
+            "M9",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/dashboard.ts",
+            "mcp-server/src/tools/materialize.ts",
+            "materializer/amanuensis_materializer/renderers.py",
+            "agents/amanuensis.agent.md"
+          ]
+        },
+        {
+          "id": "A10",
+          "title": "CodebaseBrief architecture contract",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Review, design, and generative sessions consume a stable, task-bounded codebase situation model rather than reaching directly into storage tables.",
+          "rationale": "A shared contract concentrates epistemic discipline and creates the future seam with Chorusmith without giving Chorusmith custody of Amanuensis truth.",
+          "dependsOn": [
+            "A4",
+            "A9"
+          ],
+          "deliverables": [
+            "A versioned CodebaseBrief schema covering facts, direct intent, inferred intent, constraints, contradictions, changes, options, gaps, provenance, and validity.",
+            "Mode-specific projections for review, design, and generative work.",
+            "Budget and omission semantics with deterministic registry/lexical selection before model-assisted compilation.",
+            "Contract fixtures independent of the SQLite implementation."
+          ],
+          "acceptance": [
+            "The same source record produces mode-specific briefs without changing source truth.",
+            "Direct intent, inferred intent, observed behavior, and recommendation remain distinguishable after serialization and read-back.",
+            "Every omission is represented by policy, irrelevance, or budget reason; silent truncation fails.",
+            "A registry lookup handles explicit object identity without a model call."
+          ],
+          "redGate": "Round-trip a brief after deleting epistemic-kind or omission metadata; schema or semantic validation must reject it.",
+          "risks": [
+            "A prematurely broad contract can freeze accidental storage concepts.",
+            "Mode projections can drift into separate products."
+          ],
+          "practices": [
+            "GP7",
+            "GP11",
+            "GP12",
+            "GP14",
+            "GP27",
+            "GP28",
+            "VP20"
+          ],
+          "metrics": [
+            "M7",
+            "M8",
+            "M9",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/artifacts.ts",
+            "mcp-server/src/tools/logging.ts",
+            "mcp-server/src/tools/vocabulary.ts",
+            "dev/cross-domain-analysis.md"
+          ]
+        },
+        {
+          "id": "A11",
+          "title": "Dialectical design-session engine",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Amanuensis furnishes immanent, adversarial, and speculative design lenses, preserves their disagreements, and returns a lean with falsifiers rather than an artificial consensus.",
+          "rationale": "Architecture support should expose potential and tension while remaining anchored to actual code and user desire.",
+          "dependsOn": [
+            "A7",
+            "A10"
+          ],
+          "deliverables": [
+            "Three independent lens prompts/contracts with controlled context sets and content-blinded evaluation fixtures.",
+            "An option matrix covering preserves, rejects, enables, forecloses, migration cost, reversibility, and evidence gaps.",
+            "A lean that cites decisive evidence, surviving disagreement, falsifiers, and research needs.",
+            "An underdetermination response that asks for a missing desire or labels evidence gaps instead of inventing a goal."
+          ],
+          "acceptance": [
+            "An incoherent request produces a named contradiction or missing desire rather than a confident architecture.",
+            "The three lenses are generated independently before aggregation and retain at least one meaningful disagreement in the seeded dialectical fixture.",
+            "Removing a stated constraint worsens constraint-preservation scoring; restoring it improves the score.",
+            "A recommendation cannot be accepted as a decision without an authorized acceptance event."
+          ],
+          "redGate": "Give the engine mutually exclusive goals with no priority rule; any unqualified single recommendation fails the underdetermination gate.",
+          "risks": [
+            "Named lenses can become theatrical personas rather than genuinely different analyses.",
+            "A persuasive lean may still dominate human choice despite formal authority boundaries."
+          ],
+          "practices": [
+            "GP2",
+            "GP3",
+            "GP4",
+            "GP5",
+            "GP12",
+            "GP13",
+            "GP16",
+            "GP19",
+            "GP26",
+            "VP1",
+            "VP8",
+            "VP15",
+            "VP16"
+          ],
+          "metrics": [
+            "M8",
+            "M9",
+            "M11"
+          ],
+          "baselineEvidence": [
+            "agents/amanuensis-adversarial.agent.md",
+            "agents/amanuensis-structural.agent.md",
+            "agents/amanuensis.agent.md",
+            "dev/cross-domain-analysis.md"
+          ]
+        },
+        {
+          "id": "A12",
+          "title": "Decision custody and consequence tracking",
+          "status": "planned",
+          "owner": "Amanuensis + human",
+          "outcome": "Accepted architecture decisions, rejected options, consequences, and falsifiers become durable context without converting model proposals into policy.",
+          "rationale": "A system that remembers code but forgets why it changed will repeatedly reopen settled choices or mistake an implementation accident for intent.",
+          "dependsOn": [
+            "A10",
+            "A11"
+          ],
+          "deliverables": [
+            "Draft, accepted, rejected, superseded, and invalidated decision states with explicit acceptance authority.",
+            "Links from decisions to desires, claims, constraints, alternatives, code changes, consequences, and falsifiers.",
+            "Decision-impact detection that creates review obligations when code or evidence undermines an accepted premise.",
+            "A portable decision projection for Chorusmith session custody without transferring source authority."
+          ],
+          "acceptance": [
+            "A generated recommendation remains draft until an authorized acceptance event names the accepter and scope.",
+            "A changed premise creates a visible decision-review obligation and does not silently rewrite the original decision.",
+            "Rejected options remain queryable with their evidence and can be reconsidered only as a new revision.",
+            "Read-back preserves desire source, acceptance authority, alternatives, and falsifiers."
+          ],
+          "redGate": "Attempt to promote a model-authored draft without authorized acceptance or silently edit an accepted decision's premise; both writes must fail.",
+          "risks": [
+            "Decision records can become bureaucratic and lag real practice.",
+            "A stale accepted decision can exert undue authority unless premise invalidation is reliable."
+          ],
+          "practices": [
+            "GP9",
+            "GP10",
+            "GP11",
+            "GP16",
+            "GP18",
+            "GP20",
+            "GP25"
+          ],
+          "metrics": [
+            "M8",
+            "M9",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/artifacts.ts",
+            "mcp-server/src/tools/xrefs.ts",
+            "mcp-server/src/tools/contradictions.ts",
+            "mcp-server/src/storage-git.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "later",
+      "label": "Later — close the research-learning loop and compose with Chorusmith",
+      "horizon": "After review and design modes meet their gates on more than one repository; sequence by evidence, not date.",
+      "objective": "Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries.",
+      "exitCriteria": [
+        "Research questions are admitted only when they name a decision, uncertainty, evidence need, and destination.",
+        "Imported research retains Scholiast provenance and cannot become a code fact without repository evidence.",
+        "Candidate method lessons are promoted only after qualification, validation, and read-back.",
+        "Research decision yield is positive without an unbounded backlog or degraded human verification time.",
+        "A Chorusmith adapter demonstrates behavior and evidence parity before any workflow extraction."
+      ],
+      "initiatives": [
+        {
+          "id": "A13",
+          "title": "Research-question broker",
+          "status": "planned",
+          "owner": "Amanuensis + Scholiast",
+          "outcome": "Amanuensis emits bounded research requests only when external knowledge could resolve a named architecture or review uncertainty.",
+          "rationale": "Continuous topic generation without admission criteria produces intellectual exhaust, not learning.",
+          "dependsOn": [
+            "A10",
+            "A12"
+          ],
+          "deliverables": [
+            "A ResearchRequest contract naming decision, current evidence, uncertainty, needed source class, disconfirmers, budget, and destination.",
+            "Admission rules for decision relevance, local-evidence exhaustion, expected information value, and duplication.",
+            "A durable queue with rejected, deferred, dispatched, landed, consumed, and expired states.",
+            "A result adapter that preserves source provenance and separates external claims from code observations."
+          ],
+          "acceptance": [
+            "A curiosity-only topic with no decision destination is rejected or explicitly parked outside the blocking queue.",
+            "A duplicate question links to prior research instead of dispatching again unless changed premises are named.",
+            "A research result cannot become a code fact without repository evidence; it may alter a hypothesis, option, or decision premise.",
+            "Every consumed result records which decision field changed or why it changed nothing."
+          ],
+          "redGate": "Import a well-cited external claim that contradicts current code behavior; the system must preserve the contradiction and refuse to rewrite the code observation.",
+          "risks": [
+            "Expected information value is hard to calibrate and easy to game.",
+            "Research latency can block decisions that should proceed under explicit uncertainty."
+          ],
+          "practices": [
+            "GP9",
+            "GP11",
+            "GP12",
+            "GP20",
+            "GP23",
+            "GP29"
+          ],
+          "metrics": [
+            "M9",
+            "M10",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/open-questions.ts",
+            "mcp-server/src/tools/xrefs.ts",
+            "dev/cross-domain-analysis.md"
+          ]
+        },
+        {
+          "id": "A14",
+          "title": "Typed crosswalk and Collatio qualification",
+          "status": "planned",
+          "owner": "Amanuensis + Scholiast",
+          "outcome": "External research, code claims, concerns, decisions, and methods connect through explicit supported relations, and new methods must pass qualification before entering unattended workflows.",
+          "rationale": "Cross-domain learning fails when resemblance is treated as identity or when an attractive technique bypasses control testing.",
+          "dependsOn": [
+            "A13"
+          ],
+          "deliverables": [
+            "A typed crosswalk relation set with provenance, validity, counterevidence, and negative criteria.",
+            "Identity-before-enrichment resolution for imported resources and methods.",
+            "A Collatio qualification adapter covering prediction, controls, red-gate demonstration, and result custody.",
+            "Crosswalk-specific contradiction and supersession handling."
+          ],
+          "acceptance": [
+            "Two similarly named concepts do not merge without an identity relation and supporting evidence.",
+            "A method cannot enter the unattended policy registry until its predicted effect, controls, and red gate are recorded and passed.",
+            "A contradictory external source remains attached as counterevidence rather than being averaged into consensus.",
+            "Generated projections reproduce crosswalk counts, endpoints, relation types, and unresolved contradictions."
+          ],
+          "redGate": "Present a surface-similar but semantically distinct pair; automatic identity merge or inherited properties fail the gate.",
+          "risks": [
+            "A bespoke relation vocabulary can grow into an ontology project.",
+            "Strict qualification can reject useful low-risk heuristics whose value is hard to measure."
+          ],
+          "practices": [
+            "GP1",
+            "GP6",
+            "GP9",
+            "GP11",
+            "GP12",
+            "GP27",
+            "GP28",
+            "VP4",
+            "VP7",
+            "VP10",
+            "VP12"
+          ],
+          "metrics": [
+            "M8",
+            "M9",
+            "M10"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/xrefs.ts",
+            "mcp-server/src/tools/vocabulary.ts",
+            "mcp-server/src/tools/contradictions.ts",
+            "dev/cross-domain-analysis.md"
+          ]
+        },
+        {
+          "id": "A15",
+          "title": "Distillation and revisable learning ledger",
+          "status": "planned",
+          "owner": "Amanuensis + distillation",
+          "outcome": "Completed review and design sessions yield candidate lessons about corpus, retrieval, method, research, and user preference, each promoted only with evidence and a rollback path.",
+          "rationale": "The system should improve from use, but an untyped memory update would blend truth, workflow convenience, and transient preference into irreversible policy.",
+          "dependsOn": [
+            "A12",
+            "A14"
+          ],
+          "deliverables": [
+            "Five separate learning channels: corpus, retrieval, method, research, and user preference.",
+            "A candidate-to-qualified-to-active-to-superseded lifecycle with provenance and evaluation evidence.",
+            "Session-outcome extraction that compares planned, produced, accepted, and later-invalidated artifacts.",
+            "A read-back audit that proves policy/configuration changes landed where the next run actually reads them."
+          ],
+          "acceptance": [
+            "An unscored session can produce candidate lessons but cannot activate a method or preference.",
+            "A learned preference records its human source and scope and cannot masquerade as a code or research fact.",
+            "A promoted method shows an outcome change under treatment-versus-clean or ablation controls before activation.",
+            "Superseding a lesson preserves prior versions and identifies affected future runs."
+          ],
+          "redGate": "Write an attractive session summary directly into active policy; the write path must reject the missing qualification and read-back evidence.",
+          "risks": [
+            "Sparse feedback can make method-learning claims underpowered.",
+            "User preferences may be contextual and become harmful when generalized."
+          ],
+          "practices": [
+            "GP11",
+            "GP12",
+            "GP16",
+            "GP18",
+            "GP28",
+            "VP1",
+            "VP9",
+            "VP17",
+            "VP20"
+          ],
+          "metrics": [
+            "M7",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/tools/logging.ts",
+            "mcp-server/src/tools/storage-history.ts",
+            "mcp-server/src/storage-git.ts",
+            "dev/cross-domain-analysis.md"
+          ]
+        },
+        {
+          "id": "A16",
+          "title": "Multi-repository evaluation and operating envelope",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "The product has an explicit evidence-backed operating envelope across repository types, change classes, review modes, and model/runtime configurations.",
+          "rationale": "One successful self-survey or showcase repository is an existence proof, not a basis for general automation claims.",
+          "dependsOn": [
+            "A8",
+            "A11",
+            "A15"
+          ],
+          "deliverables": [
+            "A stratified corpus of repositories and seeded/known outcomes with explicit inclusion and exclusion criteria.",
+            "Preregistered per-condition metrics, minimum detectable effects, replicate counts, and stopping rules.",
+            "Independent context/model conditions, nulls, graded controls, two-sided sensitivity checks, and component ablations.",
+            "An operating-envelope report that names unsupported languages, scales, repository shapes, and decision classes.",
+            "Raw agreement, chance agreement, and chance-corrected agreement reported together whenever a kappa statistic is used."
+          ],
+          "acceptance": [
+            "Results are reported per repository, mode, model/runtime configuration, and replicate; no pooled headline hides subgroup failures.",
+            "Every efficacy claim includes a verified baseline, null, stronger control, ablation, and test-retest result.",
+            "Negative results clear instrument delivery and determinism before lowering the product claim.",
+            "Positive results survive an adversarial alternative-explanation pass and preserve excluded observations in every metric.",
+            "Ceiling, floor, or no-headroom conditions produce an undetermined-instrument verdict rather than a null, and an unused rubric category receives an operational-framing check before it is attributed to the model."
+          ],
+          "redGate": "Pool a weak subgroup into a positive aggregate or reuse a replicate ID; the report generator must reject publication.",
+          "risks": [
+            "A representative corpus is expensive and can still miss deployment-specific conditions.",
+            "Benchmarks may become targets and displace actual verification-time reduction."
+          ],
+          "practices": [
+            "GP2",
+            "GP3",
+            "GP4",
+            "GP5",
+            "GP17",
+            "GP19",
+            "GP29",
+            "GP30",
+            "GP31",
+            "GP32",
+            "GP33",
+            "GP34",
+            "VP1",
+            "VP2",
+            "VP3",
+            "VP4",
+            "VP5",
+            "VP6",
+            "VP7",
+            "VP8",
+            "VP9",
+            "VP10",
+            "VP13",
+            "VP14",
+            "VP15",
+            "VP16",
+            "VP17",
+            "VP18"
+          ],
+          "metrics": [
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/test-adversarial-correctness.mjs",
+            "mcp-server/test-adversarial-performance.mjs",
+            "mcp-server/test-perf-ceilings.mjs",
+            "CONTRIBUTING.md"
+          ]
+        },
+        {
+          "id": "A17",
+          "title": "Chorusmith adapter and parity-gated extraction",
+          "status": "planned",
+          "owner": "Amanuensis + Chorusmith",
+          "outcome": "Chorusmith can orchestrate Amanuensis as a codebase project type through stable contracts, while Amanuensis remains independently usable and its invariants stay authoritative.",
+          "rationale": "General orchestration belongs in Chorusmith, but early extraction would trade a working domain workflow for an unproven platform abstraction.",
+          "dependsOn": [
+            "A9",
+            "A12",
+            "A15",
+            "A16"
+          ],
+          "deliverables": [
+            "Versioned adapters for CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, and Run manifests.",
+            "Contract and replay tests that run the same scenarios directly and through Chorusmith.",
+            "A custody matrix for durable truth, session artifacts, provider configuration, and user preferences.",
+            "An extraction ADR with rollback and a feature-by-feature parity ledger."
+          ],
+          "acceptance": [
+            "Direct and orchestrated runs reconcile the same authoritative claims, obligations, decisions, and evidence identifiers.",
+            "Chorusmith cannot bypass Amanuensis evidence, depth, authority, or completion gates.",
+            "Amanuensis remains runnable without Chorusmith and produces an equivalent clean export for the parity corpus.",
+            "No workflow moves until behavior, evidence, recovery, and verification-time parity pass."
+          ],
+          "redGate": "Bypass an Amanuensis invariant through the adapter or remove Chorusmith mid-run; the former must be rejected and the latter must resume without source-state corruption.",
+          "risks": [
+            "Contract duplication can ossify both projects.",
+            "Parity may conceal usability regressions or operational complexity."
+          ],
+          "practices": [
+            "GP8",
+            "GP11",
+            "GP21",
+            "GP22",
+            "GP24",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP11",
+            "VP20"
+          ],
+          "metrics": [
+            "M4",
+            "M7",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/src/index.ts",
+            "mcp-server/src/session.ts",
+            "mcp-server/src/storage-git.ts",
+            "dev/cross-domain-analysis.md"
+          ]
+        }
+      ]
+    }
+  ],
+  "firstSlices": [
+    {
+      "sequence": 1,
+      "title": "Freeze definitions and build the red-gate harness",
+      "initiatives": [
+        "A0"
+      ],
+      "intent": "Create the fixture and checkers before changing persistence. This slice predicts every expected failure and proves the harness can observe it.",
+      "existingFiles": [
+        "mcp-server/test-invariants.mjs",
+        "mcp-server/test-adversarial-correctness.mjs",
+        "materializer/test-materializer.py",
+        ".github/workflows/test.yml"
+      ],
+      "proposedFiles": [
+        "dev/adr/0001-living-conspectus-terms.md",
+        "mcp-server/fixtures/living-conspectus/manifest.json",
+        "mcp-server/test-living-conspectus-controls.mjs"
+      ],
+      "proves": [
+        "The operational definition of fully surveyed is computable.",
+        "Each completion and correspondence gate can visibly fail.",
+        "The measurement harness can distinguish null, benign, invalidating, seam, and incoherent-request cases."
+      ],
+      "requiredChecks": [
+        "Run the new control test with every sabotage case enabled individually.",
+        "Run existing invariants, adversarial-correctness, and materializer tests.",
+        "Rebuild the fixture in a clean temporary directory and read it back."
+      ],
+      "rollback": "Remove only the fixture, ADR, and test wiring; no production schema or user data changes occur."
+    },
+    {
+      "sequence": 2,
+      "title": "Add temporal claims without replacing legacy records",
+      "initiatives": [
+        "A1"
+      ],
+      "intent": "Introduce the minimum temporal substrate additively, expose it behind explicit tools, and keep legacy projections working until parity is measured.",
+      "existingFiles": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/contradictions.ts",
+        "mcp-server/test-invariants.mjs"
+      ],
+      "proposedFiles": [
+        "dev/adr/0002-temporal-claim-model.md",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/test-temporal-claims.mjs"
+      ],
+      "proves": [
+        "Current authority can be queried at a commit without deleting history.",
+        "Epistemic kinds and evidence gates are server-enforced.",
+        "Existing databases and tools remain usable during migration."
+      ],
+      "requiredChecks": [
+        "Run bounded exhaustive interval, cycle, and reachability tests.",
+        "Run schema identifier, tool-schema, smoke, storage, and invariant suites.",
+        "Compare legacy and compatibility projections on the pinned self-conspectus."
+      ],
+      "rollback": "Leave additive tables unused and revert tool registration; do not destructively down-migrate existing databases."
+    },
+    {
+      "sequence": 3,
+      "title": "Predict and explain change impact",
+      "initiatives": [
+        "A2"
+      ],
+      "intent": "Replace subsystem-wide stale marking as the only mechanism with an explainable explicit-relation cascade, while retaining the coarse path as a safe fallback.",
+      "existingFiles": [
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/tools/xrefs.ts",
+        "mcp-server/src/tools/seams.ts",
+        "mcp-server/src/tools/files.ts"
+      ],
+      "proposedFiles": [
+        "mcp-server/src/tools/impact.ts",
+        "mcp-server/test-change-impact.mjs",
+        "mcp-server/fixtures/change-impact/manifest.json"
+      ],
+      "proves": [
+        "Known invalidations propagate through explicit dependencies.",
+        "Benign changes do not erase unrelated current knowledge.",
+        "Every impact result is accompanied by a traversable reason path."
+      ],
+      "requiredChecks": [
+        "Record the predicted diff before comparing fixture outcomes.",
+        "Run two-sided edge addition/removal sensitivity checks and an explicit-relation ablation.",
+        "Run existing git, storage, comparison, performance, and adversarial suites."
+      ],
+      "rollback": "Switch the impact policy back to conservative subsystem invalidation; retain emitted validity events for audit."
+    },
+    {
+      "sequence": 4,
+      "title": "Close the obligation loop",
+      "initiatives": [
+        "A3"
+      ],
+      "intent": "Turn invalidations into durable work with explicit ownership, fan-in reconciliation, retry identity, and stop conditions.",
+      "existingFiles": [
+        "mcp-server/src/tools/dispatch.ts",
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/dashboard.ts",
+        "mcp-server/src/schema.sql"
+      ],
+      "proposedFiles": [
+        "mcp-server/src/tools/obligations.ts",
+        "mcp-server/test-obligation-reconciliation.mjs",
+        "mcp-server/fixtures/obligations/manifest.json"
+      ],
+      "proves": [
+        "Every invalidation has a destination.",
+        "Dispatched, landed, and scored work reconcile before completion.",
+        "Retries and partial failures remain auditable."
+      ],
+      "requiredChecks": [
+        "Inject loss, duplication, timeout, and unscored-result faults independently.",
+        "Verify unique run, work-item, attempt, and replicate identifiers.",
+        "Run cloud E2E, autoprogress, locks, invariants, and performance ceilings."
+      ],
+      "rollback": "Disable automatic dispatch and leave obligations visible for manual processing; never mark them resolved during rollback."
+    },
+    {
+      "sequence": 5,
+      "title": "Require proof of repair and verify the clean export",
+      "initiatives": [
+        "A4"
+      ],
+      "intent": "Make resolution symmetric with refutation and validate derived artifacts along state, coverage, and content axes.",
+      "existingFiles": [
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/materialize.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-materializer.py"
+      ],
+      "proposedFiles": [
+        "mcp-server/test-resolution-proof.mjs",
+        "materializer/test-readback.py",
+        "dev/adr/0003-resolution-evidence.md"
+      ],
+      "proves": [
+        "Fixed is not confused with verified-fixed.",
+        "Pre-fix evidence cannot certify post-fix behavior.",
+        "A published projection corresponds to durable source state."
+      ],
+      "requiredChecks": [
+        "Demonstrate both state-transition and projection-corruption gates red.",
+        "Render into a clean temporary directory before read-back.",
+        "Run all finding, evidence, materializer, storage-history, and adversarial tests."
+      ],
+      "rollback": "Retain the stricter states in storage but disable publication of verified-fixed; fall back to fixed-pending-verification rather than weakening the evidence rule."
+    },
+    {
+      "sequence": 6,
+      "title": "Ship the bounded unattended refresh",
+      "initiatives": [
+        "A5"
+      ],
+      "intent": "Compose plan, impact, obligations, workers, landing, scoring, and read-back into one resumable run with explicit authority and provider boundaries.",
+      "existingFiles": [
+        "mcp-server/src/session.ts",
+        "mcp-server/src/tools/dispatch.ts",
+        "mcp-server/src/tools/locks.ts",
+        "mcp-server/test-cloud-e2e.mjs"
+      ],
+      "proposedFiles": [
+        "mcp-server/src/tools/refresh.ts",
+        "mcp-server/test-refresh-recovery.mjs",
+        "dev/adr/0004-automation-authority.md"
+      ],
+      "proves": [
+        "A living conspectus can maintain itself across a real commit range.",
+        "Configured APIs run unattended while expanded authority stops before dispatch.",
+        "Crash recovery and final read-back preserve source-state integrity."
+      ],
+      "requiredChecks": [
+        "Run crash injection at every mutating boundary and resume each case.",
+        "Verify the determinism knob changes an observed runtime input.",
+        "Run the complete repository suite and compare refresh versus full-resurvey verification minutes."
+      ],
+      "rollback": "Disable unattended execution while retaining plan and impact generation; all unfinished obligations remain blocking and visible."
+    }
+  ],
+  "metrics": [
+    {
+      "id": "M1",
+      "name": "Survey completion integrity",
+      "definition": "Required obligations present and valid divided by all obligations required by the pinned inventory, concern, seam, run, and export manifests.",
+      "target": "100%; any missing blocking obligation keeps completion red.",
+      "exclusions": "Files and concerns explicitly excluded before execution with owner and reason remain in the denominator as satisfied exclusions; post-hoc exclusions are forbidden."
+    },
+    {
+      "id": "M2",
+      "name": "Stale-claim recall",
+      "definition": "Expected invalidated authoritative claims reached by the impact engine divided by all invalidated claims in the labeled fixture.",
+      "target": "≥95% before targeted invalidation replaces the conservative fallback; 100% for critical seeded claims.",
+      "exclusions": "Unlabeled claims and changes outside the pinned commit range are reported separately, not silently removed."
+    },
+    {
+      "id": "M3",
+      "name": "False invalidation rate",
+      "definition": "Still-valid authoritative claims withdrawn by the impact engine divided by all still-valid claims in the benign and mixed fixtures.",
+      "target": "≤10% initially and lower than conservative subsystem invalidation by a preregistered margin.",
+      "exclusions": "Claims whose validity cannot be adjudicated stay unknown and are not counted as true negatives."
+    },
+    {
+      "id": "M4",
+      "name": "Human revalidation reduction",
+      "definition": "One minus targeted-refresh active human verification minutes divided by full-resurvey active human verification minutes for the same repository state and quality gates; machine wall time, provider cost, and token use are reported alongside as separate units.",
+      "target": ">30% human-time reduction with no decrease in M2 or known-defect recall before living refresh is the default; machine cost must remain within the A0-preregistered guardrail.",
+      "exclusions": "Setup and cache warm-up are included for both paths; failed or abandoned runs remain in reported time and cost."
+    },
+    {
+      "id": "M5",
+      "name": "Actionable precision",
+      "definition": "Review findings accepted as correctly evidenced and action-relevant divided by all review findings presented as actionable.",
+      "target": "≥80% on the evaluation corpus, reported by severity and finding class.",
+      "exclusions": "Unverified suspicions are a separate product output and cannot be removed from the review-volume report."
+    },
+    {
+      "id": "M6",
+      "name": "Missed-contract rate",
+      "definition": "Known applicable contracts absent from the review brief or integral assessment divided by all applicable labeled contracts.",
+      "target": "0 for critical contracts and <5% overall before super review is recommended for consequential changes.",
+      "exclusions": "Unsupported languages or repository regions remain explicit unsupported strata, not exclusions from the headline."
+    },
+    {
+      "id": "M7",
+      "name": "Human verification minutes",
+      "definition": "Elapsed active human time from furnished brief to accept, reject, or correctly defer the review or design output.",
+      "target": "Lower median than repository-native review with non-inferior correctness; report distribution and repository strata.",
+      "exclusions": "Training, interruption, and tool-failure time are tagged and reported both included and separated."
+    },
+    {
+      "id": "M8",
+      "name": "Constraint preservation",
+      "definition": "Explicit user, code, operational, and compatibility constraints retained correctly through brief, option matrix, lean, and decision projection divided by all stated constraints.",
+      "target": "100% for hard constraints; soft constraints may be traded only with an explicit consequence.",
+      "exclusions": "Contradictory constraints stay in the denominator and require an underdetermination result."
+    },
+    {
+      "id": "M9",
+      "name": "Unknown retention",
+      "definition": "Known gaps and unresolved contradictions visible with a destination in the final artifact divided by those present in the source situation model.",
+      "target": "100% for blocking unknowns and ≥95% overall.",
+      "exclusions": "Resolved items require resolution evidence; compression alone is not resolution."
+    },
+    {
+      "id": "M10",
+      "name": "Research decision yield",
+      "definition": "Consumed research requests that change a named option, premise, confidence reason, or decision divided by all completed research requests.",
+      "target": "Establish baseline first; rescope admission if yield stays below 20% for two evaluation cycles while backlog grows.",
+      "exclusions": "Explicit exploratory research is reported separately and cannot improve the decision-yield numerator."
+    },
+    {
+      "id": "M11",
+      "name": "Test-retest stability",
+      "definition": "Across at least two runs with identical pinned inputs: exact agreement on critical status and blocking-obligation IDs, plus Jaccard agreement on noncritical authoritative object IDs; report both components and metric step size.",
+      "target": "No critical-status disagreement; quantitative target set after A0 baseline rather than invented in advance.",
+      "exclusions": "Runs with different model/runtime configuration, context set, or determinism input are separate conditions."
+    },
+    {
+      "id": "M12",
+      "name": "Run and projection reconciliation",
+      "definition": "Expected work and durable objects that are dispatched, landed, scored, materialized, and read back consistently divided by all expected work and objects.",
+      "target": "100%; any mismatch is blocking.",
+      "exclusions": "Canceled work remains present with an authorized cancellation state and is never erased from the denominator."
+    }
+  ],
+  "controlLadder": [
+    {
+      "level": 0,
+      "fixture": "Unchanged pinned HEAD",
+      "expected": "No authoritative claim is invalidated; repeated runs remain separately identifiable and materially stable.",
+      "validates": [
+        "M3",
+        "M11",
+        "M12"
+      ]
+    },
+    {
+      "level": 1,
+      "fixture": "Surface-identical marker versus clean content",
+      "expected": "Marker presence alone does not create directional review or design effects.",
+      "validates": [
+        "M5",
+        "M11"
+      ]
+    },
+    {
+      "level": 2,
+      "fixture": "Benign rename/refactor with stable behavior",
+      "expected": "Evidence locations repair or invalidate narrowly; unrelated claims remain current.",
+      "validates": [
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "level": 3,
+      "fixture": "Known historical defect at its original and repaired commits",
+      "expected": "The original review surfaces the prior confirmed finding; the repaired revision distinguishes fixed-pending-verification from verified-fixed and never relabels the history as a new regression.",
+      "validates": [
+        "M5",
+        "M7",
+        "M12"
+      ]
+    },
+    {
+      "level": 4,
+      "fixture": "Known direct claim invalidation",
+      "expected": "The exact claim loses authority, receives an obligation, and cannot recover without new evidence.",
+      "validates": [
+        "M2",
+        "M12"
+      ]
+    },
+    {
+      "level": 5,
+      "fixture": "Known transitive cross-seam defect",
+      "expected": "Local checks stay green, impact crosses the seam, and the integral HEAD lane blocks completion.",
+      "validates": [
+        "M2",
+        "M6",
+        "M12"
+      ]
+    },
+    {
+      "level": 6,
+      "fixture": "Mutually incompatible design goals without priority",
+      "expected": "The session returns underdetermined, preserves both goals, and requests human desire rather than choosing silently.",
+      "validates": [
+        "M8",
+        "M9"
+      ]
+    },
+    {
+      "level": 7,
+      "fixture": "Corrupted clean export and missing landed result",
+      "expected": "State, coverage, content, and fan-in checks independently turn red and name the mismatch.",
+      "validates": [
+        "M1",
+        "M12"
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "risk": "The product becomes a general knowledge platform and loses its code-evidence advantage.",
+      "signal": "Roadmap work adds generic orchestration, ontology, or collaboration infrastructure before M2–M7 improve.",
+      "mitigation": "Require every Amanuensis feature to improve a named codebase decision metric; move general session machinery behind a Chorusmith contract.",
+      "owner": "Product"
+    },
+    {
+      "risk": "The living record is either unsafe or as expensive as a resurvey.",
+      "signal": "M2 misses critical invalidations, M3 invalidates most claims, or M4 stays below its gate.",
+      "mitigation": "Keep the conservative fallback, narrow the supported operating envelope, and stop downstream feature expansion.",
+      "owner": "Amanuensis"
+    },
+    {
+      "risk": "Automation hides uncertainty behind a green status.",
+      "signal": "Blocking unknowns, dropped work, projection mismatches, or provider failures disappear from final artifacts.",
+      "mitigation": "Make obligations, reconciliation, and read-back server-side halting gates with sabotage tests.",
+      "owner": "Amanuensis"
+    },
+    {
+      "risk": "Architecture assistance invents intent or entrenches accidental structure.",
+      "signal": "Inferred intent is rendered as direct intent or recommendations survive contradictory goals without qualification.",
+      "mitigation": "Typed epistemic kinds, underdetermination tests, three non-consensus lenses, and human acceptance authority.",
+      "owner": "Amanuensis + human"
+    },
+    {
+      "risk": "Research and learning loops optimize volume rather than decisions.",
+      "signal": "Backlog grows while M10 falls, or unscored sessions change active policy.",
+      "mitigation": "Admission criteria, decision destinations, qualification, ablation, and reversible learning states.",
+      "owner": "Amanuensis + Scholiast"
+    },
+    {
+      "risk": "Evaluation results are attractive but not transportable.",
+      "signal": "Claims rely on one repository, pooled metrics, shared context, or a single run.",
+      "mitigation": "Stratified corpora, independent conditions, unique replicates, MDEs, nulls, graded controls, and explicit operating envelopes.",
+      "owner": "Evaluation"
+    }
+  ],
+  "killCriteria": [
+    {
+      "trigger": "Targeted refresh fails critical stale-claim recall or does not reduce verification work after two bounded design iterations",
+      "action": "Stop review/design expansion; retain Amanuensis as a high-integrity survey and conservative resurvey tool while reconsidering the impact model."
+    },
+    {
+      "trigger": "The durable record does not lower human verification minutes at non-inferior correctness",
+      "action": "Remove or radically simplify the system-of-record claim; optimize the brief and evidence path before adding capabilities."
+    },
+    {
+      "trigger": "Review, design, and generative modes cannot preserve epistemic-kind separation in blinded scoring",
+      "action": "Do not ship the affected mode; keep it as an explicitly experimental lens outside authoritative output."
+    },
+    {
+      "trigger": "Research backlog grows for two evaluation cycles while decision yield remains below 20%",
+      "action": "Disable automatic dispatch, retain manual research requests, and tighten admission or remove the loop."
+    },
+    {
+      "trigger": "Chorusmith orchestration fails behavior, evidence, recovery, or verification-time parity",
+      "action": "Do not extract the workflow; keep the adapter experimental and Amanuensis independently complete."
+    },
+    {
+      "trigger": "A provider, model, or graph layer adds cost without surviving its ablation",
+      "action": "Remove it and return to the simpler explicit-relation or deterministic implementation."
+    }
+  ],
+  "practiceAudit": {
+    "version": "2.6",
+    "applied": [
+      {
+        "ids": [
+          "GP1",
+          "GP6",
+          "GP11",
+          "GP12",
+          "VP10",
+          "VP12"
+        ],
+        "use": "Evidence-first definitions, explicit observation/inference/open-question separation, provenance, operational definitions, and baseline verification.",
+        "verification": "A0 and A1 make these durable and reject unsupported authority; this roadmap labels its own baseline by epistemic kind."
+      },
+      {
+        "ids": [
+          "GP8",
+          "GP25",
+          "GP28",
+          "VP4",
+          "VP11",
+          "VP18",
+          "VP19",
+          "VP20"
+        ],
+        "use": "Mechanical halting gates, red-gate demonstrations, fan-in reconciliation, determinism delivery, clean export, and three-axis read-back.",
+        "verification": "Every initiative has a red gate; A0, A3–A5, A8–A10, and A17 name the machine checks that block completion."
+      },
+      {
+        "ids": [
+          "GP9",
+          "GP18",
+          "GP20",
+          "GP23"
+        ],
+        "use": "Contradictions, deferrals, and invalidations remain durable first-class obligations with explicit destinations.",
+        "verification": "The minimum durable objects include validity and obligation lifecycles; M1, M9, and M12 keep gaps in the denominator."
+      },
+      {
+        "ids": [
+          "GP10",
+          "GP16"
+        ],
+        "use": "Authority is designed into unattended automation; desire and decision acceptance remain human-owned.",
+        "verification": "The authority section and A5/A11/A12 red gates reject unauthorized provider expansion and automatic decision acceptance."
+      },
+      {
+        "ids": [
+          "GP2",
+          "GP3",
+          "GP4",
+          "GP5",
+          "GP13",
+          "GP15",
+          "GP19",
+          "GP26",
+          "GP30",
+          "VP1",
+          "VP2",
+          "VP3",
+          "VP15",
+          "VP16"
+        ],
+        "use": "Single-responsibility generation/refutation/verification, context-set diversity, heterogeneous resolving-profile conditions without an assumed quality premium, surface-identical nulls, treated-versus-clean marker checks, and adversarial follow-up.",
+        "verification": "A7, A11, and A16 specify independence before aggregation, role boundaries, contamination failure, blinded scoring, and separate model/context condition reports."
+      },
+      {
+        "ids": [
+          "GP14",
+          "GP17",
+          "GP27",
+          "GP35",
+          "GP36"
+        ],
+        "use": "Task-shaped briefs, domain-calibrated concerns, deterministic registry/lexical paths first, bounded exhaustive checks for relational cores, and predicted diffs before comparison.",
+        "verification": "A1/A2 test relation cores exhaustively and require predicted impact diffs; A6/A10 log context inclusions and forbid model calls for explicit lookup; A16 stratifies domains."
+      },
+      {
+        "ids": [
+          "GP21",
+          "GP22",
+          "GP24",
+          "VP7",
+          "VP8",
+          "VP9"
+        ],
+        "use": "Composition is independently verified with fan-in, an integral HEAD lane, graded controls, two-sided sensitivity, and ablation before attribution.",
+        "verification": "A2 and A8 require predicted relation effects, seam-only defects, missing-artifact sabotage, and explicit-relation/provider ablations."
+      },
+      {
+        "ids": [
+          "GP29",
+          "GP31",
+          "GP32",
+          "GP33",
+          "GP34",
+          "VP5",
+          "VP6",
+          "VP13",
+          "VP14",
+          "VP17"
+        ],
+        "use": "Metrics are actor-sensitive, specifically attributed, exclusion-stable, uniquely replicated, separately reported, and powered before efficacy runs; agreement reports raw and chance components, unused labels are operationalized, and no-headroom results remain undetermined-instrument rather than null.",
+        "verification": "A0 and A16 require replicate identities, MDEs, framing checks, headroom verdicts, and complete agreement reporting; the measurement contract defines denominators, exclusions, strata, and non-pooling."
+      }
+    ],
+    "limitations": [
+      "This roadmap was authored and adversarially re-read in one agent context; it is not an independent or blinded validation of the product thesis. A7 and A16 require real independence before efficacy claims.",
+      "Numeric gates for recall, invalidation, and precision are initial operating hypotheses, not established effect estimates; A0 and A16 may revise them with recorded rationale.",
+      "The roadmap validator proves structure, dependency integrity, required fields, practice-accounting coverage, evidence-path existence, and projection correspondence. It does not prove that roadmap claims are true or that the plan will work.",
+      "External Chorusmith, Scholiast, Collatio, and distillation contracts were used as planning context but are not vendored or enforced by this repository yet."
+    ]
+  },
+  "references": [
+    {
+      "name": "Amanuensis product and method",
+      "path": "README.md",
+      "relevance": "Defines the conspectus, evidence-first value proposition, staged survey, adversarial pass, persistence, and current architecture."
+    },
+    {
+      "name": "Amanuensis implementation inventory",
+      "path": "mcp-server/DEVELOPMENT.md",
+      "relevance": "Documents current tools and storage surfaces that the roadmap extends."
+    },
+    {
+      "name": "Cross-domain analysis",
+      "path": "dev/cross-domain-analysis.md",
+      "relevance": "Supplies prior concepts around evidence quality, architectural concern handling, and cross-domain application."
+    },
+    {
+      "name": "Practice catalog v2.6",
+      "relevance": "Supplies the reliability, validation, orchestration, provenance, and measurement practices mapped in this roadmap."
+    },
+    {
+      "name": "Scholiast",
+      "relevance": "Defines external research custody, living-conspectus semantics, identity-before-enrichment, canonical records, and generated projections."
+    },
+    {
+      "name": "Collatio v2 and distillation",
+      "relevance": "Provide qualification and outcome-learning loops; this roadmap treats them as governed inputs rather than automatic policy writers."
+    },
+    {
+      "name": "Chorusmith",
+      "relevance": "Owns future general orchestration and context compilation; extraction remains parity-gated and later-stage."
+    }
+  ]
+}
