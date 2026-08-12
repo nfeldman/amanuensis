@@ -80,9 +80,31 @@ The live tool inventory below is auto-generated from the running server's
 `tools/list` response — do not hand-edit. Run `node scripts/gen-tool-inventory.mjs`
 to regenerate; CI fails if the block is stale.
 
+## Review session and export protocol
+
+A review session derives an immutable, compact decision surface from a terminal
+composition reconciliation. Operational rules keep a reopened verified repair
+as a regression, an open finding anchored before the change base as a latent
+defect, a disproved finding as ruled-out history, an open candidate concern as
+an unverified suspicion, and an open question as an unknown. These labels are
+data, not presentation prose.
+
+Each compact item has a stable content-derived ID, a durable record URI, and a
+single expansion call that returns its source record, cited evidence, and
+backlink. Actionable claims without evidence are rejected, except for an open
+obligation whose structured row is itself the work-custody record. Completion
+stores advice furnished separately from decisions accepted.
+
+Exports are fixed beneath project storage and emitted as canonical JSON plus a
+Markdown view. Before an export can count as verified, a separate read-back
+reconciles session identity/state, exact item coverage, and item content hashes.
+Lexical containment and real paths of existing ancestors reject symlink-parent
+escapes. Evaluation captures verification minutes and missed-constraint counts;
+satisfaction is optional context rather than the success measure.
+
 <!-- TOOL-INVENTORY-START -->
 
-_126 tools across 32 groups. Generated from `tools/list` — do not hand-edit._
+_133 tools across 33 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -322,6 +344,18 @@ _126 tools across 32 groups. Generated from `tools/list` — do not hand-edit._
 | `reveal_review_analysis_truth` | Reveal a blind fixture only after judgment is terminal, verify its salted seal, scan every dispatched packet for the content canary, and durably mark contaminated runs for exclusion. |
 | `score_review_evaluation` | Score sealed clean, marker-only, treated, and null arms with at least two replicates per same-context, varied-context, and heterogeneous-runtime condition. Report each cell separately with set stability and metric step size; never pool, and exclude contaminated runs. |
 | `get_review_analysis` | Read review-analysis manifest, pass custody, contamination, aggregation, and post-judgment reveal. Before aggregation it exposes pass status and hashes, never another pass's private runtime input or judgment payload. |
+
+### `review-session` (7)
+
+| Tool | Description |
+|---|---|
+| `compile_review_session` | Compile a compact decision surface from one reconciled composition run. It operationally distinguishes changed situation, active findings, survived/contested/defeated challenges, regressions, latent defects, stale knowledge, open obligations, unknowns, unverified suspicions, and ruled-out or fixed history. |
+| `get_review_session` | Read the compact review situation, optionally one named section, plus advice-versus-decision completion custody, exports, and measured verification evaluations. Compact items expose stable record URIs and a one-call expansion pointer. |
+| `expand_review_session_item` | Expand one compact review item directly to its durable source record and structured evidence, with a backlink to the parent review. This is the single progressive-disclosure hop for every actionable claim. |
+| `complete_review_session` | Record which advice items were actually furnished and any user decisions separately. A decision can reference only furnished advice; absence of an accepted decision never becomes implicit acceptance. |
+| `export_review_session` | Generate canonical JSON and Markdown under project storage from a furnished review session, with stable item identifiers, record links, expansion pointers, and an immutable publication hash. The export remains derived, never authoritative. |
+| `verify_review_export` | Read the canonical export paths back and independently reconcile state, exact item coverage, and semantic content against the source review session. Label swaps, missing unknowns, path errors, and edited completion custody turn RED. |
+| `record_review_session_evaluation` | Record decision-surface usability as verification minutes, missed constraints over an explicit denominator, and expansion count; satisfaction is optional context and cannot replace the task metrics. |
 
 ### `seams` (3)
 

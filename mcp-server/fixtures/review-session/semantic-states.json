@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "states": {
+    "regression": "A finding was previously verified fixed and later reopened.",
+    "latent-defect": "An open finding predates the reviewed change and has no prior verified repair.",
+    "ruled-out-historical": "The current resolution record rules the finding out; it is retained as history.",
+    "unverified-suspicion": "A candidate concern has no finding authority.",
+    "unknown": "An open question records an unresolved judgment, not a defect claim."
+  },
+  "readbackAxes": ["state", "coverage", "content"],
+  "usabilityMeasures": ["verification_minutes", "missed_constraint_count", "expansion_count"]
+}

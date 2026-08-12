@@ -45,6 +45,7 @@ node test-refresh-recovery.mjs          # unattended authority and crash recover
 node test-review-brief.mjs              # impact context, ablations, and publication
 node test-review-analysis.mjs           # independent passes, blinding, and null controls
 node test-composition.mjs               # exact fan-in and integral HEAD seam controls
+node test-review-session.mjs            # compact review, expansion, and semantic export read-back
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -159,6 +160,13 @@ in agent prose:
   a separate clean-checkout integral lane runs against the assembled HEAD.
   Extend `test-composition.mjs` whenever an item kind, seam-selection rule,
   deferral destination, checkout proof, or final fan-in condition changes.
+- **Review-session custody.** The compact decision surface is derived from a
+  reconciled composition and preserves operational labels for regressions,
+  latent defects, ruled-out history, suspicions, and unknowns. Every actionable
+  item expands to its durable record and evidence in one call. Export success
+  requires independent state, coverage, and content read-back. Extend
+  `test-review-session.mjs` whenever a section, label, expansion, completion,
+  export, or user-evaluation contract changes.
 
 ## Commits
 

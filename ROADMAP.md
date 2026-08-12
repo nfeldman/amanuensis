@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 8 | 1 | 0 | 9 |
+| 0 | 7 | 1 | 0 | 10 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A9 — Review session and export surface. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A10 — CodebaseBrief architecture contract. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -527,7 +527,7 @@ Risks:
 
 #### A9 — Review session and export surface
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A6, A8<br>
 **Metrics:** M5, M7, M9, M12
@@ -558,11 +558,11 @@ Risks:
 - Progressive disclosure may hide uncertainty behind an extra click.
 
 **Practice basis:** GP7, GP11, GP12, GP14, GP28, VP12, VP20<br>
-**Baseline evidence:** `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/amanuensis_materializer/renderers.py`, `agents/amanuensis.agent.md`
+**Baseline evidence:** `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/amanuensis_materializer/renderers.py`, `agents/amanuensis.agent.md`, `mcp-server/src/tools/review-session.ts`, `mcp-server/fixtures/review-session/semantic-states.json`, `mcp-server/test-review-session.mjs`, `dev/adr/0010-derived-review-surface-and-semantic-readback.md`
 
 #### A10 — CodebaseBrief architecture contract
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A4, A9<br>
 **Metrics:** M7, M8, M9, M12

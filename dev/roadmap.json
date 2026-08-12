@@ -911,20 +911,20 @@
             "M12"
           ],
           "baselineEvidence": [
-        "mcp-server/src/tools/seams.ts",
-        "mcp-server/src/tools/dispatch.ts",
-        "mcp-server/test-cloud-e2e.mjs",
-        ".github/workflows/test.yml",
-        "mcp-server/src/tools/composition.ts",
-        "mcp-server/fixtures/composition/manifest.json",
-        "mcp-server/test-composition.mjs",
-        "dev/adr/0009-integral-head-composition-fan-in.md"
+            "mcp-server/src/tools/seams.ts",
+            "mcp-server/src/tools/dispatch.ts",
+            "mcp-server/test-cloud-e2e.mjs",
+            ".github/workflows/test.yml",
+            "mcp-server/src/tools/composition.ts",
+            "mcp-server/fixtures/composition/manifest.json",
+            "mcp-server/test-composition.mjs",
+            "dev/adr/0009-integral-head-composition-fan-in.md"
           ]
         },
         {
-      "id": "A9",
-      "title": "Review session and export surface",
-      "status": "in-progress",
+          "id": "A9",
+          "title": "Review session and export surface",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "A user can ask what changed, what matters, what survived challenge, and what remains unknown, then inspect every answer without learning the internal schema.",
           "rationale": "A rigorous record that cannot furnish a fast decision surface fails the original make-it-make-sense-without-wasting-time promise.",
@@ -968,13 +968,17 @@
             "mcp-server/src/tools/dashboard.ts",
             "mcp-server/src/tools/materialize.ts",
             "materializer/amanuensis_materializer/renderers.py",
-            "agents/amanuensis.agent.md"
+            "agents/amanuensis.agent.md",
+            "mcp-server/src/tools/review-session.ts",
+            "mcp-server/fixtures/review-session/semantic-states.json",
+            "mcp-server/test-review-session.mjs",
+            "dev/adr/0010-derived-review-surface-and-semantic-readback.md"
           ]
         },
         {
           "id": "A10",
           "title": "CodebaseBrief architecture contract",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Review, design, and generative sessions consume a stable, task-bounded codebase situation model rather than reaching directly into storage tables.",
           "rationale": "A shared contract concentrates epistemic discipline and creates the future seam with Chorusmith without giving Chorusmith custody of Amanuensis truth.",

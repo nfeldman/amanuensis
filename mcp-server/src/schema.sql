@@ -2434,6 +2434,215 @@ BEFORE DELETE ON composition_deferrals FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'composition deferral cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- REVIEW SESSION: compact decision surface and verified clean export
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS review_sessions (
+    review_session_id TEXT PRIMARY KEY,
+    composition_run_id TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    impact_run_id      TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    reviewed_sha       TEXT NOT NULL,
+    status             TEXT NOT NULL DEFAULT 'prepared' CHECK (status IN ('prepared','furnished')),
+    item_count         INTEGER NOT NULL CHECK (item_count > 0),
+    actionable_count   INTEGER NOT NULL CHECK (actionable_count >= 0),
+    summary_json       TEXT NOT NULL CHECK (json_valid(summary_json)),
+    summary_hash       TEXT NOT NULL,
+    prepared_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    prepared_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    furnished_at       TEXT
+);
+
+CREATE TABLE IF NOT EXISTS review_session_items (
+    review_session_id TEXT NOT NULL REFERENCES review_sessions(review_session_id) ON DELETE RESTRICT,
+    item_id           TEXT NOT NULL,
+    ordinal           INTEGER NOT NULL CHECK (ordinal >= 0),
+    section           TEXT NOT NULL CHECK (section IN (
+                         'situation','findings','challenges','regressions','latent-defects',
+                         'stale-knowledge','open-obligations','unknowns','history')),
+    semantic_state    TEXT NOT NULL CHECK (semantic_state IN (
+                         'changed','active-finding','challenge-survived','challenge-contested',
+                         'challenge-defeated','regression','latent-defect','stale-claim',
+                         'open-obligation','unknown','unverified-suspicion',
+                         'ruled-out-historical','verified-fixed-historical','acceptable-control',
+                         'composition-red','composition-green')),
+    epistemic_kind    TEXT NOT NULL CHECK (epistemic_kind IN (
+                         'observation','inference','open-question')),
+    actionable        INTEGER NOT NULL CHECK (actionable IN (0,1)),
+    statement         TEXT NOT NULL,
+    source_type       TEXT NOT NULL CHECK (source_type IN (
+                         'change-file','finding','review-hypothesis','claim','obligation',
+                         'open-question','field-note','composition')),
+    source_id         TEXT NOT NULL,
+    record_uri        TEXT NOT NULL,
+    compact_json      TEXT NOT NULL CHECK (json_valid(compact_json)),
+    compact_hash      TEXT NOT NULL,
+    PRIMARY KEY (review_session_id, item_id),
+    UNIQUE (review_session_id, ordinal),
+    UNIQUE (review_session_id, source_type, source_id, semantic_state)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_session_items_section
+    ON review_session_items(review_session_id, section, ordinal);
+
+CREATE TABLE IF NOT EXISTS review_session_item_evidence (
+    review_session_id TEXT NOT NULL,
+    item_id           TEXT NOT NULL,
+    evidence_id       INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    role              TEXT NOT NULL CHECK (role IN ('supports','contradicts','qualifies','status-moving')),
+    PRIMARY KEY (review_session_id, item_id, evidence_id),
+    FOREIGN KEY (review_session_id, item_id)
+      REFERENCES review_session_items(review_session_id, item_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS review_session_completions (
+    review_session_id   TEXT PRIMARY KEY REFERENCES review_sessions(review_session_id) ON DELETE RESTRICT,
+    advice_item_ids_json TEXT NOT NULL CHECK (json_valid(advice_item_ids_json)),
+    advice_count         INTEGER NOT NULL CHECK (advice_count > 0),
+    decisions_json       TEXT NOT NULL CHECK (json_valid(decisions_json)),
+    decision_count       INTEGER NOT NULL CHECK (decision_count >= 0),
+    accepted_count       INTEGER NOT NULL CHECK (accepted_count >= 0),
+    completion_note      TEXT NOT NULL,
+    completed_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    completed_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (accepted_count <= decision_count)
+);
+
+CREATE TABLE IF NOT EXISTS review_exports (
+    export_id          TEXT PRIMARY KEY,
+    review_session_id  TEXT NOT NULL UNIQUE REFERENCES review_sessions(review_session_id) ON DELETE RESTRICT,
+    json_path          TEXT NOT NULL UNIQUE,
+    markdown_path      TEXT NOT NULL UNIQUE,
+    json_hash          TEXT NOT NULL,
+    markdown_hash      TEXT NOT NULL,
+    item_count         INTEGER NOT NULL CHECK (item_count > 0),
+    export_json        TEXT NOT NULL CHECK (json_valid(export_json)),
+    exported_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    exported_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS review_export_verifications (
+    verification_id INTEGER PRIMARY KEY,
+    export_id       TEXT NOT NULL REFERENCES review_exports(export_id) ON DELETE RESTRICT,
+    state_ok        INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok     INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok      INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok              INTEGER NOT NULL CHECK (ok IN (0,1)),
+    mismatch_count  INTEGER NOT NULL CHECK (mismatch_count >= 0),
+    report_json     TEXT NOT NULL CHECK (json_valid(report_json)),
+    report_hash     TEXT NOT NULL,
+    verified_by     TEXT NOT NULL REFERENCES sessions(session_id),
+    verified_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(state_ok AND coverage_ok AND content_ok))
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_export_verifications
+    ON review_export_verifications(export_id, verification_id);
+
+CREATE TABLE IF NOT EXISTS review_session_evaluations (
+    evaluation_id           TEXT PRIMARY KEY,
+    review_session_id       TEXT NOT NULL REFERENCES review_sessions(review_session_id) ON DELETE RESTRICT,
+    verification_minutes    REAL NOT NULL CHECK (verification_minutes >= 0),
+    constraint_denominator  INTEGER NOT NULL CHECK (constraint_denominator > 0),
+    missed_constraint_count INTEGER NOT NULL CHECK (missed_constraint_count >= 0),
+    expansion_count         INTEGER NOT NULL CHECK (expansion_count >= 0),
+    satisfaction_score      INTEGER CHECK (satisfaction_score IS NULL OR satisfaction_score BETWEEN 1 AND 5),
+    notes                   TEXT,
+    recorded_by             TEXT NOT NULL REFERENCES sessions(session_id),
+    recorded_at             TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (missed_constraint_count <= constraint_denominator)
+);
+
+CREATE TRIGGER IF NOT EXISTS review_session_payload_is_immutable
+BEFORE UPDATE ON review_sessions FOR EACH ROW
+WHEN OLD.review_session_id!=NEW.review_session_id
+  OR OLD.composition_run_id!=NEW.composition_run_id OR OLD.impact_run_id!=NEW.impact_run_id
+  OR OLD.reviewed_sha!=NEW.reviewed_sha OR OLD.item_count!=NEW.item_count
+  OR OLD.actionable_count!=NEW.actionable_count OR OLD.summary_json!=NEW.summary_json
+  OR OLD.summary_hash!=NEW.summary_hash OR OLD.prepared_by!=NEW.prepared_by
+BEGIN SELECT RAISE(ABORT, 'review session payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_status_is_monotonic
+BEFORE UPDATE OF status ON review_sessions FOR EACH ROW
+WHEN NOT (OLD.status='prepared' AND NEW.status='furnished'
+  AND EXISTS (SELECT 1 FROM review_session_completions
+               WHERE review_session_id=OLD.review_session_id))
+BEGIN SELECT RAISE(ABORT, 'review session furnishing requires completion custody'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_furnished_at_is_write_once
+BEFORE UPDATE OF furnished_at ON review_sessions FOR EACH ROW
+WHEN NOT (OLD.status='prepared' AND NEW.status='furnished'
+  AND OLD.furnished_at IS NULL AND NEW.furnished_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'review session furnished timestamp is write-once'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_cannot_be_deleted
+BEFORE DELETE ON review_sessions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_item_is_immutable
+BEFORE UPDATE ON review_session_items FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session item is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_item_cannot_be_deleted
+BEFORE DELETE ON review_session_items FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session item cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_item_evidence_is_immutable
+BEFORE UPDATE ON review_session_item_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session item evidence is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_item_evidence_cannot_be_deleted
+BEFORE DELETE ON review_session_item_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session item evidence cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_completion_must_reconcile
+BEFORE INSERT ON review_session_completions FOR EACH ROW
+BEGIN
+    SELECT CASE WHEN NEW.advice_count!=json_array_length(NEW.advice_item_ids_json)
+      THEN RAISE(ABORT, 'review advice count does not reconcile') END;
+    SELECT CASE WHEN NEW.decision_count!=json_array_length(NEW.decisions_json)
+      THEN RAISE(ABORT, 'review decision count does not reconcile') END;
+    SELECT CASE WHEN NEW.accepted_count!=(
+      SELECT COUNT(*) FROM json_each(NEW.decisions_json)
+       WHERE json_extract(value, '$.disposition')='accepted')
+      THEN RAISE(ABORT, 'review accepted-decision count does not reconcile') END;
+    SELECT CASE WHEN EXISTS (
+      SELECT 1 FROM json_each(NEW.advice_item_ids_json) a
+       WHERE NOT EXISTS (SELECT 1 FROM review_session_items i
+                          WHERE i.review_session_id=NEW.review_session_id AND i.item_id=a.value))
+      THEN RAISE(ABORT, 'review advice references an unknown item') END;
+    SELECT CASE WHEN EXISTS (
+      SELECT 1 FROM json_each(NEW.decisions_json) d
+       WHERE NOT EXISTS (SELECT 1 FROM review_session_items i
+                          WHERE i.review_session_id=NEW.review_session_id
+                            AND i.item_id=json_extract(d.value, '$.item_id')))
+      THEN RAISE(ABORT, 'review decision references an unknown item') END;
+END;
+CREATE TRIGGER IF NOT EXISTS review_session_completion_is_immutable
+BEFORE UPDATE ON review_session_completions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session completion is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_completion_cannot_be_deleted
+BEFORE DELETE ON review_session_completions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session completion cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_export_is_immutable
+BEFORE UPDATE ON review_exports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review export is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_export_cannot_be_deleted
+BEFORE DELETE ON review_exports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review export cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_export_verification_is_immutable
+BEFORE UPDATE ON review_export_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review export verification is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_export_verification_cannot_be_deleted
+BEFORE DELETE ON review_export_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review export verification cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_export_verification_must_reconcile
+BEFORE INSERT ON review_export_verifications FOR EACH ROW
+WHEN NEW.mismatch_count!=json_array_length(json_extract(NEW.report_json, '$.mismatches'))
+  OR NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
+  OR NEW.coverage_ok!=json_extract(NEW.report_json, '$.axes.coverage.ok')
+  OR NEW.content_ok!=json_extract(NEW.report_json, '$.axes.content.ok')
+  OR NEW.ok!=json_extract(NEW.report_json, '$.ok')
+BEGIN SELECT RAISE(ABORT, 'review export verification report does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_evaluation_is_immutable
+BEFORE UPDATE ON review_session_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session evaluation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_session_evaluation_cannot_be_deleted
+BEFORE DELETE ON review_session_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review session evaluation cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

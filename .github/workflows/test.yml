@@ -114,6 +114,9 @@ jobs:
       - name: Composition — exact fan-in and integral HEAD verification
         working-directory: mcp-server
         run: node test-composition.mjs
+      - name: Review session — semantic states, expansion, and export read-back
+        working-directory: mcp-server
+        run: node test-review-session.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

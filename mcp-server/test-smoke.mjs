@@ -38,6 +38,7 @@ import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
 import { refreshTools } from "./dist/tools/refresh.js";
 import { reviewAnalysisTools } from "./dist/tools/review-analysis.js";
+import { reviewSessionTools } from "./dist/tools/review-session.js";
 import { reviewTools } from "./dist/tools/review.js";
 import { resolutionTools } from "./dist/tools/resolution.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
@@ -89,6 +90,7 @@ const allTools = new Map(
     ...refreshTools,
     ...reviewTools,
     ...reviewAnalysisTools,
+    ...reviewSessionTools,
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,
