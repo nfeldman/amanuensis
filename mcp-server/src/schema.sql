@@ -1020,6 +1020,227 @@ CREATE INDEX IF NOT EXISTS idx_change_impact_invalidations_claim
     ON change_impact_invalidations(claim_id, state);
 
 ----------------------------------------------------------------------
+-- REVALIDATION OBLIGATIONS: custody from invalidation to scored landing
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS revalidation_obligations (
+    obligation_id          TEXT PRIMARY KEY,
+    trigger_type           TEXT NOT NULL CHECK (trigger_type IN (
+                                  'claim-invalidation','explicit-gap','manual','decision-impact')),
+    trigger_id             TEXT NOT NULL,
+    destination_type       TEXT NOT NULL CHECK (destination_type IN (
+                                  'claim','finding','subsystem','seam','artifact','decision')),
+    destination_id         TEXT NOT NULL,
+    source_impact_run_id   TEXT REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    owner                   TEXT NOT NULL CHECK (length(owner) > 0),
+    state                   TEXT NOT NULL DEFAULT 'ready' CHECK (state IN (
+                                  'open','ready','dispatched','landed','scored','closed',
+                                  'blocked','dead-letter','deferred')),
+    blocking                INTEGER NOT NULL DEFAULT 1 CHECK (blocking IN (0,1)),
+    priority                INTEGER NOT NULL DEFAULT 1 CHECK (priority BETWEEN 0 AND 4),
+    resolution_evidence_id INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
+    resolution_note         TEXT,
+    created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    closed_at               TEXT,
+    UNIQUE (trigger_type, trigger_id, destination_type, destination_id),
+    CHECK (state != 'closed' OR resolution_evidence_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_revalidation_obligations_state
+    ON revalidation_obligations(state, blocking, priority);
+CREATE INDEX IF NOT EXISTS idx_revalidation_obligations_impact
+    ON revalidation_obligations(source_impact_run_id, state);
+
+CREATE TABLE IF NOT EXISTS revalidation_runs (
+    run_id                       TEXT PRIMARY KEY,
+    source_impact_run_id         TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    status                       TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                                       'planned','running','reconciling','complete','failed')),
+    allowed_sources              TEXT NOT NULL CHECK (json_valid(allowed_sources)),
+    provider_allowlist           TEXT NOT NULL CHECK (json_valid(provider_allowlist)),
+    allowed_write_prefixes       TEXT NOT NULL CHECK (json_valid(allowed_write_prefixes)),
+    authority_mode               TEXT NOT NULL CHECK (authority_mode IN (
+                                       'observe-only','conspectus-write','branch-write')),
+    max_concurrency              INTEGER NOT NULL CHECK (max_concurrency > 0),
+    max_attempts_per_obligation  INTEGER NOT NULL CHECK (max_attempts_per_obligation > 0),
+    max_tokens_per_attempt       INTEGER NOT NULL CHECK (max_tokens_per_attempt > 0),
+    max_total_tokens             INTEGER NOT NULL CHECK (max_total_tokens > 0),
+    max_total_cost_microusd      INTEGER NOT NULL CHECK (max_total_cost_microusd >= 0),
+    expected_obligation_count    INTEGER NOT NULL CHECK (expected_obligation_count > 0),
+    session_id                   TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at                   TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at                 TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_revalidation_runs_status
+    ON revalidation_runs(status, created_at);
+
+CREATE TABLE IF NOT EXISTS revalidation_run_obligations (
+    run_id          TEXT NOT NULL REFERENCES revalidation_runs(run_id) ON DELETE CASCADE,
+    obligation_id  TEXT NOT NULL REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    ordinal         INTEGER NOT NULL CHECK (ordinal >= 0),
+    work_packet     TEXT NOT NULL CHECK (json_valid(work_packet)),
+    PRIMARY KEY (run_id, obligation_id),
+    UNIQUE (run_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS revalidation_attempts (
+    attempt_id             TEXT PRIMARY KEY,
+    run_id                 TEXT NOT NULL REFERENCES revalidation_runs(run_id) ON DELETE RESTRICT,
+    obligation_id          TEXT NOT NULL REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    replicate_id           TEXT NOT NULL,
+    attempt_number         INTEGER NOT NULL CHECK (attempt_number > 0),
+    worker_id              TEXT NOT NULL,
+    provider               TEXT NOT NULL,
+    model                  TEXT NOT NULL,
+    status                 TEXT NOT NULL DEFAULT 'dispatched' CHECK (status IN (
+                                   'dispatched','landed','scored','failed','timed-out')),
+    planned_tokens         INTEGER NOT NULL CHECK (planned_tokens > 0),
+    planned_cost_microusd  INTEGER NOT NULL CHECK (planned_cost_microusd >= 0),
+    actual_tokens          INTEGER CHECK (actual_tokens IS NULL OR actual_tokens >= 0),
+    actual_cost_microusd   INTEGER CHECK (actual_cost_microusd IS NULL OR actual_cost_microusd >= 0),
+    result_json            TEXT CHECK (result_json IS NULL OR json_valid(result_json)),
+    artifacts_written      TEXT CHECK (artifacts_written IS NULL OR json_valid(artifacts_written)),
+    score_json             TEXT CHECK (score_json IS NULL OR json_valid(score_json)),
+    budget_violation       INTEGER NOT NULL DEFAULT 0 CHECK (budget_violation IN (0,1)),
+    boundary_violation     INTEGER NOT NULL DEFAULT 0 CHECK (boundary_violation IN (0,1)),
+    dispatched_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    landed_at              TEXT,
+    scored_at              TEXT,
+    UNIQUE (run_id, obligation_id, replicate_id, attempt_number),
+    FOREIGN KEY (run_id, obligation_id)
+        REFERENCES revalidation_run_obligations(run_id, obligation_id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_revalidation_attempts_run
+    ON revalidation_attempts(run_id, status, obligation_id);
+
+CREATE TABLE IF NOT EXISTS revalidation_attempt_events (
+    id              INTEGER PRIMARY KEY,
+    attempt_id      TEXT NOT NULL REFERENCES revalidation_attempts(attempt_id) ON DELETE RESTRICT,
+    event_type      TEXT NOT NULL CHECK (event_type IN (
+                              'dispatched','landed','scored','failed','timed-out')),
+    detail_json     TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(detail_json)),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_revalidation_attempt_events_attempt
+    ON revalidation_attempt_events(attempt_id, id);
+
+CREATE TABLE IF NOT EXISTS revalidation_protocol_violations (
+    id              INTEGER PRIMARY KEY,
+    run_id          TEXT NOT NULL REFERENCES revalidation_runs(run_id) ON DELETE RESTRICT,
+    obligation_id  TEXT REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    attempt_id      TEXT,
+    violation_type TEXT NOT NULL CHECK (violation_type IN (
+                              'duplicate-landing','duplicate-score','unknown-attempt',
+                              'source-boundary','authority-boundary','budget-overrun')),
+    detail_json     TEXT NOT NULL CHECK (json_valid(detail_json)),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_revalidation_protocol_violations_run
+    ON revalidation_protocol_violations(run_id, violation_type);
+
+CREATE TRIGGER IF NOT EXISTS impact_application_creates_obligation
+AFTER UPDATE OF state ON change_impact_invalidations
+FOR EACH ROW
+WHEN NEW.state = 'applied' AND OLD.state != 'applied'
+BEGIN
+    INSERT OR IGNORE INTO revalidation_obligations
+      (obligation_id, trigger_type, trigger_id, destination_type, destination_id,
+       source_impact_run_id, owner, state, blocking, priority)
+    VALUES
+      ('impact:' || NEW.run_id || ':claim:' || NEW.claim_id,
+       'claim-invalidation', NEW.run_id || ':claim:' || NEW.claim_id,
+       'claim', NEW.claim_id, NEW.run_id,
+       'amanuensis:revalidation', 'ready', 1, 1);
+END;
+
+-- VP24 historical sweep: the trigger governs future transitions; this insert
+-- covers applied invalidations that existed before the trigger was installed.
+INSERT OR IGNORE INTO revalidation_obligations
+  (obligation_id, trigger_type, trigger_id, destination_type, destination_id,
+   source_impact_run_id, owner, state, blocking, priority)
+SELECT 'impact:' || i.run_id || ':claim:' || i.claim_id,
+       'claim-invalidation', i.run_id || ':claim:' || i.claim_id,
+       'claim', i.claim_id, i.run_id,
+       'amanuensis:revalidation', 'ready', 1, 1
+  FROM change_impact_invalidations i
+ WHERE i.state = 'applied';
+
+CREATE TRIGGER IF NOT EXISTS revalidation_attempt_identity_is_immutable
+BEFORE UPDATE ON revalidation_attempts
+FOR EACH ROW
+WHEN OLD.attempt_id != NEW.attempt_id
+  OR OLD.run_id != NEW.run_id
+  OR OLD.obligation_id != NEW.obligation_id
+  OR OLD.replicate_id != NEW.replicate_id
+  OR OLD.attempt_number != NEW.attempt_number
+  OR OLD.worker_id != NEW.worker_id
+  OR OLD.provider != NEW.provider
+  OR OLD.model != NEW.model
+  OR OLD.planned_tokens != NEW.planned_tokens
+  OR OLD.planned_cost_microusd != NEW.planned_cost_microusd
+BEGIN
+    SELECT RAISE(ABORT, 'revalidation attempt identity and plan are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS revalidation_obligation_terminal_is_immutable
+BEFORE UPDATE OF state ON revalidation_obligations
+FOR EACH ROW
+WHEN OLD.state IN ('closed','dead-letter') AND NEW.state != OLD.state
+BEGIN
+    SELECT RAISE(ABORT, 'terminal revalidation obligation cannot be reopened in place');
+END;
+
+CREATE TRIGGER IF NOT EXISTS revalidation_attempt_status_is_monotonic
+BEFORE UPDATE OF status ON revalidation_attempts
+FOR EACH ROW
+WHEN NOT (
+    (OLD.status = 'dispatched' AND NEW.status IN ('landed','failed','timed-out'))
+    OR (OLD.status = 'landed' AND NEW.status = 'scored')
+)
+BEGIN
+    SELECT RAISE(ABORT, 'invalid revalidation attempt status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS revalidation_attempt_dispatched_event
+AFTER INSERT ON revalidation_attempts
+FOR EACH ROW
+BEGIN
+    INSERT INTO revalidation_attempt_events (attempt_id, event_type, detail_json)
+    VALUES (NEW.attempt_id, 'dispatched', json_object(
+      'run_id', NEW.run_id, 'obligation_id', NEW.obligation_id,
+      'replicate_id', NEW.replicate_id, 'attempt_number', NEW.attempt_number));
+END;
+
+CREATE TRIGGER IF NOT EXISTS revalidation_attempt_transition_event
+AFTER UPDATE OF status ON revalidation_attempts
+FOR EACH ROW
+BEGIN
+    INSERT INTO revalidation_attempt_events (attempt_id, event_type, detail_json)
+    VALUES (NEW.attempt_id, NEW.status, json_object('from', OLD.status, 'to', NEW.status));
+END;
+
+CREATE VIEW IF NOT EXISTS revalidation_dashboard AS
+SELECT
+  (SELECT COUNT(*) FROM revalidation_obligations WHERE state NOT IN ('closed','dead-letter')) AS open,
+  (SELECT COUNT(*) FROM revalidation_obligations WHERE state = 'blocked') AS blocked,
+  (SELECT COUNT(*) FROM revalidation_obligations WHERE state = 'deferred') AS deferred,
+  (SELECT COUNT(*) FROM revalidation_obligations WHERE state = 'dead-letter') AS dead_letter,
+  (SELECT COUNT(*) FROM revalidation_obligations o
+    WHERE o.destination_type = 'claim'
+      AND NOT EXISTS (SELECT 1 FROM claims c WHERE c.claim_id = o.destination_id)) AS orphaned,
+  (SELECT COUNT(*) FROM (
+     SELECT obligation_id FROM revalidation_attempts
+      GROUP BY obligation_id HAVING COUNT(*) > 1
+   )) AS retried,
+  (SELECT COUNT(*) FROM revalidation_runs WHERE status = 'running') AS active_runs,
+  (SELECT COUNT(*) FROM revalidation_protocol_violations) AS protocol_violations;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

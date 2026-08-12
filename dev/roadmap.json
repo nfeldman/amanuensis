@@ -569,7 +569,7 @@
         {
           "id": "A3",
           "title": "Obligation-driven revalidation scheduler",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Invalidated knowledge becomes a bounded, prioritized queue whose completed work lands back into the conspectus and whose omissions remain visibly red.",
           "rationale": "Detection without custody only creates a better stale list. Full automation requires a closed loop from change to assigned work to verified landing.",
@@ -613,13 +613,17 @@
             "mcp-server/src/tools/dispatch.ts",
             "mcp-server/src/tools/stale.ts",
             "mcp-server/src/tools/dashboard.ts",
-            "mcp-server/src/schema.sql"
+            "mcp-server/src/schema.sql",
+            "dev/adr/0004-obligation-custody-and-reconciliation.md",
+            "mcp-server/src/tools/revalidation.ts",
+            "mcp-server/fixtures/revalidation/manifest.json",
+            "mcp-server/test-revalidation-scheduler.mjs"
           ]
         },
         {
           "id": "A4",
           "title": "Verified resolution and projection read-back",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Fixed, revalidated, and materialized become evidenced states rather than optimistic labels.",
           "rationale": "The current asymmetry—proof required to rule out but not to mark fixed—undercuts the core claim that users should not have to redo verification.",

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "custodyInvariant": "every applied claim invalidation has one owned blocking destination",
+  "completionInvariant": "expected obligations equal assigned obligations and every assigned obligation is closed by scored evidence with zero protocol violations",
+  "faultArms": [
+    {
+      "name": "dropped",
+      "expectedDiagnostic": "missing_landings"
+    },
+    {
+      "name": "duplicate",
+      "expectedDiagnostic": "duplicates"
+    },
+    {
+      "name": "timed-out",
+      "expectedDiagnostic": "timed_out"
+    },
+    {
+      "name": "unscored",
+      "expectedDiagnostic": "unscored"
+    }
+  ],
+  "identityAxes": [
+    "run_id",
+    "obligation_id",
+    "attempt_id",
+    "replicate_id",
+    "attempt_number"
+  ],
+  "hardBounds": [
+    "allowed_sources",
+    "provider_allowlist",
+    "allowed_write_prefixes",
+    "authority_mode",
+    "max_concurrency",
+    "max_attempts_per_obligation",
+    "max_tokens_per_attempt",
+    "max_total_tokens",
+    "max_total_cost_microusd"
+  ]
+}

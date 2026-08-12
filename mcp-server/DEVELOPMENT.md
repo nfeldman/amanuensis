@@ -19,7 +19,7 @@ to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_84 tools across 26 groups. Generated from `tools/list` — do not hand-edit._
+_91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -187,6 +187,18 @@ _84 tools across 26 groups. Generated from `tools/list` — do not hand-edit._
 | `get_session` | Return the stored metadata for a session. If no session_id is provided, returns the most recently started session. |
 | `end_session` | Mark a session ended with an outcome ('completed', 'deferred', 'superseded', etc.). Not required — sessions are still valid while open — but closing them makes the activity log legible. |
 | `list_sessions` | List sessions, newest first. Filter by state ('active' = not ended, 'ended' = ended, or omit for all). |
+
+### `revalidation` (7)
+
+| Tool | Description |
+|---|---|
+| `plan_revalidation_run` | Create a bounded revalidation run from an applied impact run. The planner verifies one durable obligation per applied invalidation, compiles source-filtered evidence neighborhoods, and stores the exact work packets before dispatch. |
+| `dispatch_revalidation_attempt` | Dispatch one immutable, uniquely identified attempt from a planned work packet. Enforces provider, concurrency, per-attempt, aggregate budget, retry-number, and maximum-attempt bounds before work begins. |
+| `land_revalidation_result` | Record one worker result without discarding over-budget or out-of-authority telemetry. Duplicate or unknown deliveries become durable protocol violations and keep reconciliation red. |
+| `fail_revalidation_attempt` | Record a failed or timed-out attempt, preserving it and reopening its obligation only when the configured retry budget remains. |
+| `score_revalidation_result` | Score a landed result. Accepted work can close an obligation only with new structured evidence; revalidated outcomes additionally require a current replacement claim backed by that evidence. Rejected/inconclusive work retries or dead-letters by policy. |
+| `reconcile_revalidation_run` | Reconcile expected obligations against attempts, landings, scores, closures, and protocol/budget/authority violations. Completion is exact fan-in, never non-emptiness; every diagnostic remains queryable. |
+| `get_revalidation_dashboard` | Return revalidation summary counts plus queryable obligations, runs, attempts, and protocol violations. Filters keep blocked, retried, deferred, dead-letter, and orphaned work visible. |
 
 ### `seams` (3)
 

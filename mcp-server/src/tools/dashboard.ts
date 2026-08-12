@@ -38,7 +38,10 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE status='confirmed-bug') FROM findings)        AS open_bugs,
                   (SELECT COUNT(*) FILTER (WHERE stale=1)                FROM entries)         AS stale_entries,
                   (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
-                  (SELECT COUNT(*) FILTER (WHERE resolution='unresolved') FROM contradictions) AS unresolved_contradictions`,
+                  (SELECT COUNT(*) FILTER (WHERE resolution='unresolved') FROM contradictions) AS unresolved_contradictions,
+                  (SELECT open FROM revalidation_dashboard) AS open_revalidation_obligations,
+                  (SELECT blocked FROM revalidation_dashboard) AS blocked_revalidation_obligations,
+                  (SELECT COUNT(*) FROM revalidation_runs WHERE status='failed') AS failed_revalidation_runs`,
         )
         .get() as {
         canonical_branch: string | null;
@@ -51,6 +54,9 @@ export const dashboardTools: ToolDefinition[] = [
         stale_entries: number;
         open_field_notes: number;
         unresolved_contradictions: number;
+        open_revalidation_obligations: number;
+        blocked_revalidation_obligations: number;
+        failed_revalidation_runs: number;
       };
       return { project_key: ctx.project.projectKey, ...row };
     },

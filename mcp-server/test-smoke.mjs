@@ -34,6 +34,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
+import { revalidationTools } from "./dist/tools/revalidation.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo } from "./dist/storage-git.js";
@@ -79,7 +80,7 @@ const allTools = new Map(
     ...xrefTools, ...contradictionTools, ...loggingTools, ...lockTools,
     ...staleTools, ...dispatchTools, ...dashboardTools,
     ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...impactTools,
-    ...diagnosticityTools,
+    ...revalidationTools, ...diagnosticityTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),
 );
@@ -397,7 +398,83 @@ run("apply_change_impact", {
   run_id: "smoke-impact-run",
 }, (r) => r.ok && r.invalidated_claims === 2);
 
-// 22. Diagnosticity matrix
+// 22. Obligation scheduler and reconciliation
+run("plan_revalidation_run", {
+  run_id: "smoke-revalidation-run",
+  impact_run_id: "smoke-impact-run",
+  allowed_sources: ["claim-fixture.txt"],
+  provider_allowlist: ["smoke-provider"],
+  authority_mode: "observe-only",
+  max_concurrency: 2,
+  max_attempts_per_obligation: 2,
+  max_tokens_per_attempt: 100,
+  max_total_tokens: 400,
+  max_total_cost_microusd: 10000,
+}, (r) => r.expected_obligations === 2 && r.dispatchable === 2);
+const smokeObligations = ctx.db
+  .prepare("SELECT obligation_id FROM revalidation_obligations ORDER BY obligation_id")
+  .all()
+  .map((row) => row.obligation_id);
+run("dispatch_revalidation_attempt", {
+  run_id: "smoke-revalidation-run",
+  obligation_id: smokeObligations[0],
+  attempt_id: "smoke-revalidation-1",
+  replicate_id: "replicate-1",
+  attempt_number: 1,
+  worker_id: "smoke-worker-1",
+  provider: "smoke-provider",
+  model: "smoke-model",
+  planned_tokens: 50,
+  planned_cost_microusd: 500,
+}, (r) => r.ok);
+run("land_revalidation_result", {
+  run_id: "smoke-revalidation-run",
+  attempt_id: "smoke-revalidation-1",
+  result: { conclusion: "claim remains retired" },
+  actual_tokens: 40,
+  actual_cost_microusd: 400,
+}, (r) => r.ok && !r.budget_violation);
+const smokeResolutionEvidence = run("add_evidence", {
+  file_path: "claim-fixture.txt",
+  line_range: "1-1",
+  ref_sha: claimSha3,
+  kind: "test-observed",
+  note: "smoke revalidation evidence",
+}, (r) => r.ok && typeof r.id === "number");
+run("score_revalidation_result", {
+  run_id: "smoke-revalidation-run",
+  attempt_id: "smoke-revalidation-1",
+  verdict: "accepted",
+  resolution_outcome: "retired",
+  rationale: "the invalidated observation remains historical",
+  resolution_evidence_id: smokeResolutionEvidence.id,
+}, (r) => r.ok && r.obligation_state === "closed");
+run("dispatch_revalidation_attempt", {
+  run_id: "smoke-revalidation-run",
+  obligation_id: smokeObligations[1],
+  attempt_id: "smoke-revalidation-2",
+  replicate_id: "replicate-1",
+  attempt_number: 1,
+  worker_id: "smoke-worker-2",
+  provider: "smoke-provider",
+  model: "smoke-model",
+  planned_tokens: 50,
+  planned_cost_microusd: 500,
+}, (r) => r.ok);
+run("fail_revalidation_attempt", {
+  run_id: "smoke-revalidation-run",
+  attempt_id: "smoke-revalidation-2",
+  status: "timed-out",
+  reason: "smoke timeout",
+}, (r) => r.ok && r.obligation_state === "ready");
+run("reconcile_revalidation_run", {
+  run_id: "smoke-revalidation-run",
+}, (r) => !r.complete && r.diagnostics.timed_out.length === 1);
+run("get_revalidation_dashboard", {
+  run_id: "smoke-revalidation-run",
+}, (r) => r.obligations.length === 2 && r.summary.retried === 0);
+
+// 23. Diagnosticity matrix
 const mtx = run("open_diagnosticity_matrix", {
   subsystem_id: "B-01",
   symptom: "stale read after write",
@@ -418,12 +495,12 @@ run("resolve_diagnosticity_matrix", {
 run("get_diagnosticity_matrix", { matrix_id: mtx.matrix_id }, (r) => r.session.outcome === "resolved" && r.cells.length === 2);
 run("list_diagnosticity_matrices", { outcome: "resolved" }, (r) => r.length === 1);
 
-// 23. Storage-dir git history — covers commit_phase_gate + get_storage_history
+// 24. Storage-dir git history — covers commit_phase_gate + get_storage_history
 //     Requires ensureStorageRepo() was called above to init TMP as a git repo.
 run("commit_phase_gate", { label: "smoke: mid-session" }, (r) => typeof r.committed === "boolean");
 run("get_storage_history", { limit: 5 }, (r) => r.is_git_repo === true && Array.isArray(r.commits) && r.commits.length >= 1);
 
-// 24. Session lifecycle — end_session auto-commits, so the history should grow.
+// 25. Session lifecycle — end_session auto-commits, so the history should grow.
 run("list_sessions", { state: "active" }, (r) => r.length === 1);
 run("end_session", { session_id: ctx.sessionId, outcome: "completed" }, (r) => r.ok);
 run("list_sessions", { state: "ended" }, (r) => r.length === 1 && r[0].outcome === "completed");

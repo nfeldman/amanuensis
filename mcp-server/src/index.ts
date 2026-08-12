@@ -25,6 +25,7 @@ import { loggingTools } from "./tools/logging.js";
 import { materializeTools } from "./tools/materialize.js";
 import { openQuestionTools } from "./tools/open-questions.js";
 import { projectTools } from "./tools/project.js";
+import { revalidationTools } from "./tools/revalidation.js";
 import { seamTools } from "./tools/seams.js";
 import { staleTools } from "./tools/stale.js";
 import { storageHistoryTools } from "./tools/storage-history.js";
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
     ...projectTools,
     ...gitTools,
     ...impactTools,
+    ...revalidationTools,
     ...subsystemTools,
     ...concernTools,
     ...fileTools,

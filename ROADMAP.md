@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 14 | 1 | 0 | 3 |
+| 0 | 13 | 1 | 0 | 4 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -303,7 +303,7 @@ Risks:
 
 #### A3 — Obligation-driven revalidation scheduler
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2<br>
 **Metrics:** M4, M11, M12
@@ -334,11 +334,11 @@ Risks:
 - Aggressive retries can amplify provider cost or repeat correlated errors.
 
 **Practice basis:** GP20, GP23, GP24, GP25, GP29, GP33, VP4, VP11, VP18<br>
-**Baseline evidence:** `mcp-server/src/tools/dispatch.ts`, `mcp-server/src/tools/stale.ts`, `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/schema.sql`
+**Baseline evidence:** `mcp-server/src/tools/dispatch.ts`, `mcp-server/src/tools/stale.ts`, `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/schema.sql`, `dev/adr/0004-obligation-custody-and-reconciliation.md`, `mcp-server/src/tools/revalidation.ts`, `mcp-server/fixtures/revalidation/manifest.json`, `mcp-server/test-revalidation-scheduler.mjs`
 
 #### A4 — Verified resolution and projection read-back
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A1, A3<br>
 **Metrics:** M1, M5, M12

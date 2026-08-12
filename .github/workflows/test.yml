@@ -90,6 +90,9 @@ jobs:
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
+      - name: Revalidation scheduler — custody, bounds, retries, reconciliation
+        working-directory: mcp-server
+        run: node test-revalidation-scheduler.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs
