@@ -1,0 +1,855 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "amanuensis-self-b8b566f-a0-v1",
+  "immutable": true,
+  "mutationPolicy": "Create a new fixture ID and baseline report; never retarget this fixture to another revision.",
+  "practiceCatalog": {
+    "version": "2.7",
+    "updated": "2026-08-11"
+  },
+  "revision": "b8b566f",
+  "tree": "4ec74205c42b4c23d0034fd3f67001ba510bde6d",
+  "runtimeConfiguration": {
+    "coordinator": "Codex desktop",
+    "modelFamily": "GPT-5",
+    "temperature": "not exposed",
+    "deterministicSeed": "not exposed",
+    "node": "v24.18.0",
+    "python": "3.12.13",
+    "platform": "darwin-arm64",
+    "autoprogress": true
+  },
+  "inventory": {
+    "fileCount": 109,
+    "pathsSha256": "220b4ccda2b6b397ca95e14a9498e5bfd1a2c22ee0cbe1022da679ab2ac165f7",
+    "paths": [
+      ".claude/skills/amanuensis/SKILL.md",
+      ".claude/skills/amanuensis/references/artifact-templates.md",
+      ".claude/skills/amanuensis/references/concern-territories.md",
+      ".claude/skills/amanuensis/references/memory-audit.md",
+      ".claude/skills/amanuensis/references/notes.md",
+      ".claude/skills/amanuensis/references/onboarding.md",
+      ".claude/skills/amanuensis/references/open-questions.md",
+      ".claude/skills/amanuensis/references/phase-1-scope.md",
+      ".claude/skills/amanuensis/references/phase-2-structural.md",
+      ".claude/skills/amanuensis/references/phase-3-concerns.md",
+      ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+      ".claude/skills/amanuensis/references/phase-5-packaging.md",
+      ".claude/skills/amanuensis/references/setup.md",
+      ".claude/skills/amanuensis/references/subsystem-survey.md",
+      ".github/FUNDING.yml",
+      ".github/workflows/published-smoke.yml",
+      ".github/workflows/test.yml",
+      ".mcp.json",
+      "CONTRIBUTING.md",
+      "LICENSE",
+      "README.md",
+      "ROADMAP.md",
+      "agents/README.md",
+      "agents/amanuensis-adversarial.agent.md",
+      "agents/amanuensis-auto.agent.md",
+      "agents/amanuensis-concerns.agent.md",
+      "agents/amanuensis-memory-auditor.agent.md",
+      "agents/amanuensis-notes.agent.md",
+      "agents/amanuensis-scoper.agent.md",
+      "agents/amanuensis-structural.agent.md",
+      "agents/amanuensis.agent.md",
+      "agents/references/artifact-templates.md",
+      "agents/references/concern-territories.md",
+      "dev/cross-domain-analysis.md",
+      "dev/render-roadmap.mjs",
+      "dev/roadmap.json",
+      "dev/test-roadmap.mjs",
+      "materializer/.gitignore",
+      "materializer/README.md",
+      "materializer/amanuensis_materializer/__init__.py",
+      "materializer/amanuensis_materializer/core.py",
+      "materializer/amanuensis_materializer/db.py",
+      "materializer/amanuensis_materializer/diagrams.py",
+      "materializer/amanuensis_materializer/manifest.py",
+      "materializer/amanuensis_materializer/renderers.py",
+      "materializer/amanuensis_materializer/slugs.py",
+      "materializer/amanuensis_materializer/xref.py",
+      "materializer/materialize.py",
+      "materializer/pyproject.toml",
+      "materializer/test-materializer.py",
+      "mcp-server/.gitignore",
+      "mcp-server/DEVELOPMENT.md",
+      "mcp-server/README.md",
+      "mcp-server/biome.json",
+      "mcp-server/package-lock.json",
+      "mcp-server/package.json",
+      "mcp-server/scripts/check-sql-identifiers.mjs",
+      "mcp-server/scripts/check-tool-schemas.mjs",
+      "mcp-server/scripts/gen-tool-inventory.mjs",
+      "mcp-server/scripts/prepack-bundle-assets.mjs",
+      "mcp-server/src/cli.ts",
+      "mcp-server/src/db.ts",
+      "mcp-server/src/helpers.ts",
+      "mcp-server/src/index.ts",
+      "mcp-server/src/invariants.ts",
+      "mcp-server/src/project.ts",
+      "mcp-server/src/schema.sql",
+      "mcp-server/src/session.ts",
+      "mcp-server/src/storage-git.ts",
+      "mcp-server/src/tools/artifacts.ts",
+      "mcp-server/src/tools/compare.ts",
+      "mcp-server/src/tools/concerns.ts",
+      "mcp-server/src/tools/contradictions.ts",
+      "mcp-server/src/tools/dashboard.ts",
+      "mcp-server/src/tools/diagnosticity.ts",
+      "mcp-server/src/tools/dispatch.ts",
+      "mcp-server/src/tools/dispositions.ts",
+      "mcp-server/src/tools/evidence.ts",
+      "mcp-server/src/tools/field-notes.ts",
+      "mcp-server/src/tools/files.ts",
+      "mcp-server/src/tools/findings.ts",
+      "mcp-server/src/tools/git.ts",
+      "mcp-server/src/tools/locks.ts",
+      "mcp-server/src/tools/logging.ts",
+      "mcp-server/src/tools/materialize.ts",
+      "mcp-server/src/tools/open-questions.ts",
+      "mcp-server/src/tools/project.ts",
+      "mcp-server/src/tools/seams.ts",
+      "mcp-server/src/tools/stale.ts",
+      "mcp-server/src/tools/storage-history.ts",
+      "mcp-server/src/tools/subsystems.ts",
+      "mcp-server/src/tools/vocabulary.ts",
+      "mcp-server/src/tools/xrefs.ts",
+      "mcp-server/test-adversarial-correctness.mjs",
+      "mcp-server/test-adversarial-performance.mjs",
+      "mcp-server/test-adversarial-security.mjs",
+      "mcp-server/test-autoprogress.mjs",
+      "mcp-server/test-cloud-e2e.mjs",
+      "mcp-server/test-cloud-storage.mjs",
+      "mcp-server/test-compare.mjs",
+      "mcp-server/test-installer.mjs",
+      "mcp-server/test-invariants.mjs",
+      "mcp-server/test-perf-ceilings.mjs",
+      "mcp-server/test-perf-tier2.mjs",
+      "mcp-server/test-perf.mjs",
+      "mcp-server/test-priority.mjs",
+      "mcp-server/test-smoke.mjs",
+      "mcp-server/test-storage-git.mjs",
+      "mcp-server/tsconfig.json"
+    ],
+    "assignments": [
+      {
+        "subsystemId": "B-01",
+        "classification": "in-scope",
+        "files": [
+          ".claude/skills/amanuensis/SKILL.md",
+          ".claude/skills/amanuensis/references/artifact-templates.md",
+          ".claude/skills/amanuensis/references/concern-territories.md",
+          ".claude/skills/amanuensis/references/memory-audit.md",
+          ".claude/skills/amanuensis/references/notes.md",
+          ".claude/skills/amanuensis/references/onboarding.md",
+          ".claude/skills/amanuensis/references/open-questions.md",
+          ".claude/skills/amanuensis/references/phase-1-scope.md",
+          ".claude/skills/amanuensis/references/phase-2-structural.md",
+          ".claude/skills/amanuensis/references/phase-3-concerns.md",
+          ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+          ".claude/skills/amanuensis/references/phase-5-packaging.md",
+          ".claude/skills/amanuensis/references/setup.md",
+          ".claude/skills/amanuensis/references/subsystem-survey.md",
+          "agents/README.md",
+          "agents/amanuensis-adversarial.agent.md",
+          "agents/amanuensis-auto.agent.md",
+          "agents/amanuensis-concerns.agent.md",
+          "agents/amanuensis-memory-auditor.agent.md",
+          "agents/amanuensis-notes.agent.md",
+          "agents/amanuensis-scoper.agent.md",
+          "agents/amanuensis-structural.agent.md",
+          "agents/amanuensis.agent.md",
+          "agents/references/artifact-templates.md",
+          "agents/references/concern-territories.md"
+        ]
+      },
+      {
+        "subsystemId": "B-02",
+        "classification": "in-scope",
+        "files": [
+          "mcp-server/src/db.ts",
+          "mcp-server/src/helpers.ts",
+          "mcp-server/src/index.ts",
+          "mcp-server/src/invariants.ts",
+          "mcp-server/src/project.ts",
+          "mcp-server/src/schema.sql",
+          "mcp-server/src/session.ts",
+          "mcp-server/src/storage-git.ts"
+        ]
+      },
+      {
+        "subsystemId": "B-03",
+        "classification": "in-scope",
+        "files": [
+          "mcp-server/src/tools/artifacts.ts",
+          "mcp-server/src/tools/compare.ts",
+          "mcp-server/src/tools/concerns.ts",
+          "mcp-server/src/tools/contradictions.ts",
+          "mcp-server/src/tools/dashboard.ts",
+          "mcp-server/src/tools/diagnosticity.ts",
+          "mcp-server/src/tools/dispatch.ts",
+          "mcp-server/src/tools/dispositions.ts",
+          "mcp-server/src/tools/evidence.ts",
+          "mcp-server/src/tools/field-notes.ts",
+          "mcp-server/src/tools/files.ts",
+          "mcp-server/src/tools/findings.ts",
+          "mcp-server/src/tools/git.ts",
+          "mcp-server/src/tools/locks.ts",
+          "mcp-server/src/tools/logging.ts",
+          "mcp-server/src/tools/materialize.ts",
+          "mcp-server/src/tools/open-questions.ts",
+          "mcp-server/src/tools/project.ts",
+          "mcp-server/src/tools/seams.ts",
+          "mcp-server/src/tools/stale.ts",
+          "mcp-server/src/tools/storage-history.ts",
+          "mcp-server/src/tools/subsystems.ts",
+          "mcp-server/src/tools/vocabulary.ts",
+          "mcp-server/src/tools/xrefs.ts"
+        ]
+      },
+      {
+        "subsystemId": "B-04",
+        "classification": "in-scope",
+        "files": [
+          "materializer/.gitignore",
+          "materializer/README.md",
+          "materializer/amanuensis_materializer/__init__.py",
+          "materializer/amanuensis_materializer/core.py",
+          "materializer/amanuensis_materializer/db.py",
+          "materializer/amanuensis_materializer/diagrams.py",
+          "materializer/amanuensis_materializer/manifest.py",
+          "materializer/amanuensis_materializer/renderers.py",
+          "materializer/amanuensis_materializer/slugs.py",
+          "materializer/amanuensis_materializer/xref.py",
+          "materializer/materialize.py",
+          "materializer/pyproject.toml",
+          "materializer/test-materializer.py"
+        ]
+      },
+      {
+        "subsystemId": "B-05",
+        "classification": "in-scope",
+        "files": [
+          ".github/workflows/published-smoke.yml",
+          ".github/workflows/test.yml",
+          ".mcp.json",
+          "CONTRIBUTING.md",
+          "README.md",
+          "ROADMAP.md",
+          "dev/cross-domain-analysis.md",
+          "dev/render-roadmap.mjs",
+          "dev/roadmap.json",
+          "dev/test-roadmap.mjs",
+          "mcp-server/.gitignore",
+          "mcp-server/DEVELOPMENT.md",
+          "mcp-server/README.md",
+          "mcp-server/biome.json",
+          "mcp-server/package-lock.json",
+          "mcp-server/package.json",
+          "mcp-server/scripts/check-sql-identifiers.mjs",
+          "mcp-server/scripts/check-tool-schemas.mjs",
+          "mcp-server/scripts/gen-tool-inventory.mjs",
+          "mcp-server/scripts/prepack-bundle-assets.mjs",
+          "mcp-server/src/cli.ts",
+          "mcp-server/test-adversarial-correctness.mjs",
+          "mcp-server/test-adversarial-performance.mjs",
+          "mcp-server/test-adversarial-security.mjs",
+          "mcp-server/test-autoprogress.mjs",
+          "mcp-server/test-cloud-e2e.mjs",
+          "mcp-server/test-cloud-storage.mjs",
+          "mcp-server/test-compare.mjs",
+          "mcp-server/test-installer.mjs",
+          "mcp-server/test-invariants.mjs",
+          "mcp-server/test-perf-ceilings.mjs",
+          "mcp-server/test-perf-tier2.mjs",
+          "mcp-server/test-perf.mjs",
+          "mcp-server/test-priority.mjs",
+          "mcp-server/test-smoke.mjs",
+          "mcp-server/test-storage-git.mjs",
+          "mcp-server/tsconfig.json"
+        ]
+      }
+    ],
+    "exclusions": [
+      {
+        "path": ".github/FUNDING.yml",
+        "owner": "repository-maintainer",
+        "reason": "Sponsorship metadata does not participate in runtime or survey behavior; retained as a satisfied explicit exclusion."
+      },
+      {
+        "path": "LICENSE",
+        "owner": "repository-maintainer",
+        "reason": "License text governs distribution but has no executable survey contract; retained as a satisfied explicit exclusion."
+      }
+    ]
+  },
+  "subsystems": [
+    {
+      "id": "B-01",
+      "name": "Survey methodology and agent contracts",
+      "status": "mapped",
+      "completedPhases": [
+        "scope",
+        "structural",
+        "concerns",
+        "adversarial",
+        "packaging"
+      ],
+      "evidence": [
+        ".claude/skills/amanuensis/SKILL.md:Survey workflow@b8b566f"
+      ]
+    },
+    {
+      "id": "B-02",
+      "name": "MCP core, persistence, and lifecycle",
+      "status": "mapped",
+      "completedPhases": [
+        "scope",
+        "structural",
+        "concerns",
+        "adversarial",
+        "packaging"
+      ],
+      "evidence": [
+        "mcp-server/src/index.ts:main@b8b566f",
+        "mcp-server/src/db.ts:openDatabase@b8b566f"
+      ]
+    },
+    {
+      "id": "B-03",
+      "name": "Knowledge tools and workflow API",
+      "status": "mapped",
+      "completedPhases": [
+        "scope",
+        "structural",
+        "concerns",
+        "adversarial",
+        "packaging"
+      ],
+      "evidence": [
+        "mcp-server/src/index.ts:allTools@b8b566f",
+        "mcp-server/src/invariants.ts:enforcePhasePrerequisites@b8b566f"
+      ]
+    },
+    {
+      "id": "B-04",
+      "name": "Diff-aware materializer",
+      "status": "mapped",
+      "completedPhases": [
+        "scope",
+        "structural",
+        "concerns",
+        "adversarial",
+        "packaging"
+      ],
+      "evidence": [
+        "materializer/amanuensis_materializer/core.py:materialize@b8b566f"
+      ]
+    },
+    {
+      "id": "B-05",
+      "name": "Packaging, installer, validation, and product docs",
+      "status": "mapped",
+      "completedPhases": [
+        "scope",
+        "structural",
+        "concerns",
+        "adversarial",
+        "packaging"
+      ],
+      "evidence": [
+        "mcp-server/src/cli.ts:main@b8b566f",
+        ".github/workflows/test.yml:jobs@b8b566f"
+      ]
+    }
+  ],
+  "concerns": {
+    "active": [
+      "SI-1",
+      "SI-2",
+      "CC-1",
+      "TB-1",
+      "EP-1",
+      "EP-2",
+      "IF-1",
+      "AT-1",
+      "AT-2",
+      "CR-1",
+      "RL-1",
+      "RL-2",
+      "TR-1",
+      "TR-2",
+      "SC-1",
+      "SC-2"
+    ]
+  },
+  "concernCoverage": [
+    {
+      "subsystemId": "B-01",
+      "evidence": [
+        ".claude/skills/amanuensis/SKILL.md:hard-rules@b8b566f",
+        ".claude/skills/amanuensis/references/subsystem-survey.md:coordinator-loop@b8b566f"
+      ],
+      "dispositions": {
+        "SI-1": "confirmed-acceptable",
+        "SI-2": "confirmed-acceptable",
+        "CC-1": "out-of-scope",
+        "TB-1": "out-of-scope",
+        "EP-1": "out-of-scope",
+        "EP-2": "confirmed-acceptable",
+        "IF-1": "confirmed-acceptable",
+        "AT-1": "out-of-scope",
+        "AT-2": "out-of-scope",
+        "CR-1": "confirmed-acceptable",
+        "RL-1": "confirmed-acceptable",
+        "RL-2": "confirmed-acceptable",
+        "TR-1": "confirmed-acceptable",
+        "TR-2": "out-of-scope",
+        "SC-1": "confirmed-acceptable",
+        "SC-2": "confirmed-acceptable"
+      }
+    },
+    {
+      "subsystemId": "B-02",
+      "evidence": [
+        "mcp-server/src/project.ts:resolveProject@b8b566f",
+        "mcp-server/src/db.ts:openDatabase@b8b566f",
+        "mcp-server/src/storage-git.ts:commitStorage@b8b566f",
+        "mcp-server/src/session.ts:startSession@b8b566f"
+      ],
+      "dispositions": {
+        "SI-1": "confirmed-acceptable",
+        "SI-2": "confirmed-acceptable",
+        "CC-1": "out-of-scope",
+        "TB-1": "confirmed-bug",
+        "EP-1": "out-of-scope",
+        "EP-2": "confirmed-bug",
+        "IF-1": "out-of-scope",
+        "AT-1": "confirmed-acceptable",
+        "AT-2": "confirmed-bug",
+        "CR-1": "confirmed-bug",
+        "RL-1": "confirmed-bug",
+        "RL-2": "confirmed-bug",
+        "TR-1": "confirmed-acceptable",
+        "TR-2": "out-of-scope",
+        "SC-1": "confirmed-acceptable",
+        "SC-2": "out-of-scope"
+      }
+    },
+    {
+      "subsystemId": "B-03",
+      "evidence": [
+        "mcp-server/src/tools/files.ts:add_files_to_scope@b8b566f",
+        "mcp-server/src/tools/materialize.ts:materialize_docs@b8b566f",
+        "mcp-server/src/tools/dispositions.ts:set_disposition@b8b566f"
+      ],
+      "dispositions": {
+        "SI-1": "confirmed-acceptable",
+        "SI-2": "confirmed-acceptable",
+        "CC-1": "out-of-scope",
+        "TB-1": "confirmed-bug",
+        "EP-1": "confirmed-acceptable",
+        "EP-2": "confirmed-acceptable",
+        "IF-1": "confirmed-acceptable",
+        "AT-1": "confirmed-acceptable",
+        "AT-2": "unresolved-competition",
+        "CR-1": "confirmed-acceptable",
+        "RL-1": "confirmed-bug",
+        "RL-2": "confirmed-acceptable",
+        "TR-1": "confirmed-acceptable",
+        "TR-2": "out-of-scope",
+        "SC-1": "confirmed-acceptable",
+        "SC-2": "out-of-scope"
+      }
+    },
+    {
+      "subsystemId": "B-04",
+      "evidence": [
+        "materializer/amanuensis_materializer/core.py:materialize@b8b566f",
+        "materializer/amanuensis_materializer/manifest.py:Manifest@b8b566f",
+        "materializer/test-materializer.py:main@b8b566f"
+      ],
+      "dispositions": {
+        "SI-1": "confirmed-acceptable",
+        "SI-2": "confirmed-acceptable",
+        "CC-1": "confirmed-acceptable",
+        "TB-1": "out-of-scope",
+        "EP-1": "confirmed-acceptable",
+        "EP-2": "out-of-scope",
+        "IF-1": "confirmed-acceptable",
+        "AT-1": "confirmed-bug",
+        "AT-2": "out-of-scope",
+        "CR-1": "confirmed-acceptable",
+        "RL-1": "confirmed-acceptable",
+        "RL-2": "confirmed-acceptable",
+        "TR-1": "confirmed-acceptable",
+        "TR-2": "out-of-scope",
+        "SC-1": "confirmed-acceptable",
+        "SC-2": "out-of-scope"
+      }
+    },
+    {
+      "subsystemId": "B-05",
+      "evidence": [
+        "mcp-server/src/cli.ts:main@b8b566f",
+        "mcp-server/scripts/prepack-bundle-assets.mjs:main@b8b566f",
+        ".github/workflows/test.yml:jobs@b8b566f"
+      ],
+      "dispositions": {
+        "SI-1": "confirmed-acceptable",
+        "SI-2": "confirmed-acceptable",
+        "CC-1": "out-of-scope",
+        "TB-1": "confirmed-bug",
+        "EP-1": "confirmed-acceptable",
+        "EP-2": "out-of-scope",
+        "IF-1": "out-of-scope",
+        "AT-1": "out-of-scope",
+        "AT-2": "out-of-scope",
+        "CR-1": "out-of-scope",
+        "RL-1": "out-of-scope",
+        "RL-2": "out-of-scope",
+        "TR-1": "out-of-scope",
+        "TR-2": "confirmed-acceptable",
+        "SC-1": "confirmed-acceptable",
+        "SC-2": "confirmed-acceptable"
+      }
+    }
+  ],
+  "seams": [
+    {
+      "id": "SM-01",
+      "sharedObject": "MCP tool protocol and survey phase contract",
+      "partyA": "B-01",
+      "partyB": "B-03",
+      "assessment": {
+        "status": "passed",
+        "evidence": [
+          ".claude/skills/amanuensis/SKILL.md:tool-calls@b8b566f",
+          "mcp-server/src/index.ts:ListToolsRequestSchema@b8b566f"
+        ]
+      }
+    },
+    {
+      "id": "SM-02",
+      "sharedObject": "ServerContext, SQLite schema, and transactional invariants",
+      "partyA": "B-02",
+      "partyB": "B-03",
+      "assessment": {
+        "status": "passed",
+        "evidence": [
+          "mcp-server/src/helpers.ts:ServerContext@b8b566f",
+          "mcp-server/src/invariants.ts:requireActiveSession@b8b566f"
+        ]
+      }
+    },
+    {
+      "id": "SM-03",
+      "sharedObject": "materialize_docs subprocess and storage/docs projection",
+      "partyA": "B-03",
+      "partyB": "B-04",
+      "assessment": {
+        "status": "passed",
+        "evidence": [
+          "mcp-server/src/tools/materialize.ts:materialize_docs@b8b566f",
+          "materializer/materialize.py:main@b8b566f"
+        ]
+      }
+    },
+    {
+      "id": "SM-04",
+      "sharedObject": "packaged agent and reference mirrors",
+      "partyA": "B-05",
+      "partyB": "B-01",
+      "assessment": {
+        "status": "passed",
+        "evidence": [
+          "mcp-server/scripts/prepack-bundle-assets.mjs:copyTree@b8b566f",
+          "mcp-server/package.json:files@b8b566f"
+        ]
+      }
+    },
+    {
+      "id": "SM-05",
+      "sharedObject": "packaged Python materializer mirror",
+      "partyA": "B-05",
+      "partyB": "B-04",
+      "assessment": {
+        "status": "passed",
+        "evidence": [
+          "mcp-server/scripts/prepack-bundle-assets.mjs:materializer@b8b566f",
+          "mcp-server/package.json:files@b8b566f"
+        ]
+      }
+    }
+  ],
+  "runContract": {
+    "expectedWork": [
+      "survey:B-01",
+      "survey:B-02",
+      "survey:B-03",
+      "survey:B-04",
+      "survey:B-05",
+      "assess:SM-01",
+      "assess:SM-02",
+      "assess:SM-03",
+      "assess:SM-04",
+      "assess:SM-05",
+      "export:clean"
+    ]
+  },
+  "runs": [
+    {
+      "runId": "a0-unchanged-run-01",
+      "replicateId": "a0-r1",
+      "condition": "unchanged-baseline",
+      "dispatched": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "landed": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "scored": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "blockingObligations": []
+    },
+    {
+      "runId": "a0-unchanged-run-02",
+      "replicateId": "a0-r2",
+      "condition": "unchanged-baseline",
+      "dispatched": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "landed": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "scored": [
+        "survey:B-01",
+        "survey:B-02",
+        "survey:B-03",
+        "survey:B-04",
+        "survey:B-05",
+        "assess:SM-01",
+        "assess:SM-02",
+        "assess:SM-03",
+        "assess:SM-04",
+        "assess:SM-05",
+        "export:clean"
+      ],
+      "blockingObligations": []
+    }
+  ],
+  "controls": [
+    {
+      "id": "A0-C0",
+      "class": "unchanged",
+      "fixture": "Pinned manifest replayed twice",
+      "expectedRedProof": "Removing either replicate or changing its reconciled sets must name the missing run obligation.",
+      "input": {},
+      "expectedObservation": {
+        "replicatesRemainSeparate": true,
+        "criticalStatusAgreement": true
+      }
+    },
+    {
+      "id": "A0-C1",
+      "class": "marker",
+      "fixture": "Surface-identical marker and clean records",
+      "expectedRedProof": "Marker-only mutation cannot satisfy or remove a durable obligation.",
+      "input": {
+        "cleanPayload": {
+          "claim": "same semantic content",
+          "evidence": "same anchor"
+        },
+        "markedPayload": {
+          "claim": "same semantic content",
+          "evidence": "same anchor"
+        },
+        "marker": "out-of-band-control-marker"
+      },
+      "expectedObservation": {
+        "surfaceMatched": true,
+        "markerDirectionalEffect": false
+      }
+    },
+    {
+      "id": "A0-C2",
+      "class": "benign-refactor",
+      "fixture": "Path-preserving behavior-neutral refactor",
+      "expectedRedProof": "Changing content without updating pinned revision/hash must leave the fixture invalid rather than silently retargeting it.",
+      "input": {
+        "before": {
+          "behaviorHash": "stable-behavior",
+          "evidenceLocation": "mcp-server/src/helpers.ts:requireString@before"
+        },
+        "after": {
+          "behaviorHash": "stable-behavior",
+          "evidenceLocation": "mcp-server/src/helpers.ts:requireString@benign-refactor"
+        },
+        "dependentClaimIds": [
+          "claim:unrelated"
+        ]
+      },
+      "expectedObservation": {
+        "repairedEvidenceLocations": [
+          "mcp-server/src/helpers.ts:requireString@benign-refactor"
+        ],
+        "unrelatedInvalidations": []
+      }
+    },
+    {
+      "id": "A0-C3",
+      "class": "historical-defect",
+      "fixture": "Confirmed defect identity at original and repaired revisions",
+      "expectedRedProof": "Verified-fixed without repair-revision evidence must remain red.",
+      "input": {
+        "originalRevision": "historical-defect-original",
+        "repairedRevision": "historical-defect-repaired",
+        "originalFindingStatus": "confirmed-bug",
+        "repairRevisionEvidenceIds": []
+      },
+      "expectedObservation": {
+        "originalRevision": "historical-defect-original",
+        "repairedRevision": "historical-defect-repaired",
+        "originalFindingStatus": "confirmed-bug",
+        "repairedFindingStatus": "fixed-pending-verification",
+        "repairRevisionEvidenceIds": []
+      }
+    },
+    {
+      "id": "A0-C4",
+      "class": "direct-invalidation",
+      "fixture": "One authoritative evidence anchor removed",
+      "expectedRedProof": "The exact concern disposition must lose its evidence-backed terminal state.",
+      "input": {
+        "evidenceAnchorPresent": false,
+        "revalidationObligationId": "OB-A0-C4-REVALIDATE"
+      },
+      "expectedObservation": {
+        "currentAuthority": false,
+        "revalidationObligationId": "OB-A0-C4-REVALIDATE"
+      }
+    },
+    {
+      "id": "A0-C5",
+      "class": "cross-seam",
+      "fixture": "One seam endpoint omitted while local subsystem rows remain mapped",
+      "expectedRedProof": "The integral seam endpoint obligation must be named.",
+      "input": {
+        "localChecksGreen": true,
+        "crossSeamDefect": true,
+        "seamId": "SM-03"
+      },
+      "expectedObservation": {
+        "localChecksGreen": true,
+        "integralStatus": "blocked",
+        "seamId": "SM-03"
+      }
+    },
+    {
+      "id": "A0-C6",
+      "class": "incoherent-request",
+      "fixture": "Mutually incompatible goals with no priority",
+      "expectedRedProof": "Completion cannot invent a preference; the blocking underdetermination obligation remains visible.",
+      "input": {
+        "goalsConflict": true,
+        "priority": null
+      },
+      "expectedObservation": {
+        "status": "underdetermined",
+        "humanDecisionRequired": true,
+        "selectedOption": null
+      }
+    },
+    {
+      "id": "A0-C7",
+      "class": "export-fan-in",
+      "fixture": "Corrupted export plus missing landed/scored work",
+      "expectedRedProof": "State, coverage, content, landed, and scored obligations turn red independently.",
+      "input": {
+        "expectedStateHash": "expected-state",
+        "stateHash": "corrupt-state",
+        "expectedCoverageHash": "expected-coverage",
+        "coverageHash": "corrupt-coverage",
+        "expectedContentHash": "expected-content",
+        "contentHash": "corrupt-content",
+        "expectedWork": [
+          "work-1",
+          "work-2"
+        ],
+        "landed": [
+          "work-1"
+        ],
+        "scored": [
+          "work-1"
+        ]
+      },
+      "expectedObservation": {
+        "stateCorruptionRejected": true,
+        "coverageCorruptionRejected": true,
+        "contentCorruptionRejected": true,
+        "missingLandedRejected": true,
+        "missingScoredRejected": true
+      }
+    }
+  ],
+  "export": {
+    "readBackHashes": {
+      "state": "f22888277bd8b8e959d19c46f0935cd52622c2b862c916a7febecf336c21c143",
+      "coverage": "bdb065fa32800da77ec4d1d2388484c1059a313e2c2a25ff9d62392c453a6720",
+      "content": "2bcc3834eb824d641f3c90c2e5e572925a425219a46d65b142c25c33ac5d7cf7"
+    }
+  }
+}

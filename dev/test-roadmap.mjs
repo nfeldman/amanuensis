@@ -61,6 +61,16 @@ try {
   });
   run(["--write", "--source", noRedGate, "--output", projection], 1, ".redGate is required");
 
+  const unfinishedDependency = writeCase("unfinished-dependency", (value) => {
+    initiative(value, "A0").status = "ready";
+    initiative(value, "A1").status = "ready";
+  });
+  run(
+    ["--write", "--source", unfinishedDependency, "--output", projection],
+    1,
+    "ready initiative A1 depends on unfinished A0",
+  );
+
   const missingEvidence = writeCase("missing-evidence", (value) => {
     initiative(value, "A0").baselineEvidence.push("not-a-real-roadmap-evidence-file");
   });
@@ -92,7 +102,7 @@ try {
   );
 
   console.log(
-    "roadmap red gates verified: drift, dangling dependency, cycle, missing criterion, evidence, practice coverage, and control integrity",
+    "roadmap red gates verified: drift, dangling/unfinished dependency, cycle, missing criterion, evidence, practice coverage, and control integrity",
   );
 } finally {
   rmSync(SCRATCH, { recursive: true, force: true });

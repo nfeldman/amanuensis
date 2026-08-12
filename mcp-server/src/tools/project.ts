@@ -1,3 +1,4 @@
+import { checkpointDatabaseForStorageCommit } from "../db.js";
 import { newSessionId, ok, optString, requireString, type ToolDefinition } from "../helpers.js";
 import { getSession, startSession } from "../session.js";
 import { commitStorage, isGitRepo } from "../storage-git.js";
@@ -88,6 +89,7 @@ export const projectTools: ToolDefinition[] = [
       // nothing has changed.
       let storageCommit: { commit_sha?: string; reason?: string } | undefined;
       if (isGitRepo(ctx.project.storagePath)) {
+        checkpointDatabaseForStorageCommit(ctx.db);
         const r = commitStorage(ctx.project.storagePath, `session ${id} ended (${outcome})`);
         storageCommit = { commit_sha: r.commit_sha, reason: r.reason };
       }

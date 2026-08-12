@@ -1,3 +1,4 @@
+import { checkpointDatabaseForStorageCommit } from "../db.js";
 import { optInt, requireString, type ToolDefinition, ToolError } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 import { commitStorage, getStorageLog, isGitRepo } from "../storage-git.js";
@@ -28,6 +29,7 @@ export const storageHistoryTools: ToolDefinition[] = [
           "storage directory is not a git repo — check server logs for git init failure",
         );
       }
+      checkpointDatabaseForStorageCommit(ctx.db);
       const result = commitStorage(ctx.project.storagePath, label);
       if (!result.ok) {
         throw new ToolError(result.reason ?? "commit failed");

@@ -25,6 +25,12 @@ function findSchemaPath(): string {
 
 export type DB = Database.Database;
 
+export interface WalCheckpoint {
+  busy: number;
+  log: number;
+  checkpointed: number;
+}
+
 export function openDatabase(dbPath: string): DB {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
@@ -90,4 +96,27 @@ function hasColumn(db: DB, table: string, column: string): boolean {
 export function withTransaction<T>(db: DB, fn: () => T): T {
   const txn = db.transaction(fn);
   return txn();
+}
+
+/**
+ * Move every committed WAL frame into memory.db before storage Git stages it.
+ *
+ * The storage repository intentionally ignores memory.db-wal/-shm. Without an
+ * explicit checkpoint, a phase commit can therefore contain prose produced by
+ * a survey phase while omitting the database rows that phase wrote. TRUNCATE
+ * both checkpoints the frames and resets the sidecar after success. A busy or
+ * partial checkpoint is a hard failure: a recoverability gate must not publish
+ * a commit it already knows is incomplete.
+ */
+export function checkpointDatabaseForStorageCommit(db: DB): WalCheckpoint {
+  const rows = db.pragma("wal_checkpoint(TRUNCATE)") as WalCheckpoint[];
+  const result = rows[0];
+  if (!result) throw new Error("SQLite WAL checkpoint returned no result");
+  if (result.busy !== 0 || result.log !== result.checkpointed) {
+    throw new Error(
+      `SQLite WAL checkpoint incomplete: busy=${result.busy}, ` +
+        `log=${result.log}, checkpointed=${result.checkpointed}`,
+    );
+  }
+  return result;
 }

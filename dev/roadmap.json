@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "roadmapVersion": "1.0",
-  "updated": "2026-08-10",
+  "updated": "2026-08-12",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction earn their place only after that proof.",
@@ -408,7 +408,7 @@
         {
           "id": "A0",
           "title": "Dogfood baseline and executable definitions",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Amanuensis can survey itself at a pinned commit, calculate whether that survey is complete, and replay a graded fixture ladder against an immutable baseline.",
           "rationale": "The program needs a falsifiable baseline before schema work. Otherwise every later improvement can be declared successful by changing the meaning of complete.",
@@ -453,16 +453,16 @@
             "M12"
           ],
           "baselineEvidence": [
-            "README.md",
-            "mcp-server/src/invariants.ts",
-            "mcp-server/test-invariants.mjs",
-            "materializer/test-materializer.py"
+            "dev/adr/0001-living-conspectus-terms.md",
+            "dev/conspectus/self-baseline.json",
+            "dev/conspectus/baseline-report.json",
+            "dev/test-living-conspectus.mjs"
           ]
         },
         {
           "id": "A1",
           "title": "Temporal claim and supersession model",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis",
           "outcome": "Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.",
           "rationale": "A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.",
@@ -1414,8 +1414,10 @@
       ],
       "proposedFiles": [
         "dev/adr/0001-living-conspectus-terms.md",
-        "mcp-server/fixtures/living-conspectus/manifest.json",
-        "mcp-server/test-living-conspectus-controls.mjs"
+        "dev/conspectus/self-baseline.json",
+        "dev/conspectus/baseline-report.json",
+        "dev/check-living-conspectus.mjs",
+        "dev/test-living-conspectus.mjs"
       ],
       "proves": [
         "The operational definition of fully surveyed is computable.",
@@ -1427,7 +1429,7 @@
         "Run existing invariants, adversarial-correctness, and materializer tests.",
         "Rebuild the fixture in a clean temporary directory and read it back."
       ],
-      "rollback": "Remove only the fixture, ADR, and test wiring; no production schema or user data changes occur."
+      "rollback": "Remove the fixture, ADR, checker, and test wiring; retain or separately revert the WAL checkpoint repair according to its regression test."
     },
     {
       "sequence": 2,

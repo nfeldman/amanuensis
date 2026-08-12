@@ -7,8 +7,10 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
 import { resolveProject } from "./dist/project.js";
+import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import {
   ensureStorageRepo,
   commitStorage,
@@ -74,6 +76,35 @@ t("commitStorage commits a DB change", () => {
   assert(r.ok, `commit ok: ${r.reason}`);
   assert(r.reason === "committed", `reason should be 'committed', got: ${r.reason}`);
   assert(r.commit_sha && r.commit_sha.length >= 7, `short SHA returned: ${r.commit_sha}`);
+  rmSync(ws, { recursive: true, force: true });
+  rmSync(project.storagePath, { recursive: true, force: true });
+});
+
+t("commit_phase_gate checkpoints live WAL state into the committed database", () => {
+  const { ws, project } = freshProject();
+  const db = openDatabase(project.dbPath);
+  db.prepare("INSERT INTO sessions(session_id,intent) VALUES('live-session','checkpoint test')").run();
+  db.prepare("INSERT INTO git_state(repo_id,canonical_branch,onboarding_sha) VALUES('default','main','live-wal')").run();
+  const ctx = { project, db, sessionId: "live-session" };
+  const tool = storageHistoryTools.find(({ name }) => name === "commit_phase_gate");
+  assert(tool, "commit_phase_gate tool should exist");
+  const result = tool.handler({ label: "checkpoint live WAL" }, ctx);
+  assert(result.committed, `phase gate should commit: ${JSON.stringify(result)}`);
+
+  // Keep the source connection open: closing it would auto-checkpoint and
+  // make this control unable to distinguish the fixed path from the defect.
+  const shown = spawnSync("git", ["show", `${result.commit_sha}:memory.db`], {
+    cwd: project.storagePath,
+    encoding: null,
+  });
+  assert(shown.status === 0, `git show should recover memory.db: ${shown.stderr?.toString()}`);
+  const snapshotPath = join(ws, "committed-memory.db");
+  writeFileSync(snapshotPath, shown.stdout);
+  const snapshot = new Database(snapshotPath, { readonly: true, fileMustExist: true });
+  const row = snapshot.prepare("SELECT onboarding_sha FROM git_state WHERE repo_id='default'").get();
+  assert(row?.onboarding_sha === "live-wal", "committed DB should contain the live WAL mutation");
+  snapshot.close();
+  db.close();
   rmSync(ws, { recursive: true, force: true });
   rmSync(project.storagePath, { recursive: true, force: true });
 });

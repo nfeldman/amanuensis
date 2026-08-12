@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "amanuensis-self-b8b566f-a0-v1",
+  "revision": "b8b566f",
+  "tree": "4ec74205c42b4c23d0034fd3f67001ba510bde6d",
+  "practiceCatalog": {
+    "version": "2.7",
+    "updated": "2026-08-11"
+  },
+  "runtimeConfiguration": {
+    "coordinator": "Codex desktop",
+    "modelFamily": "GPT-5",
+    "temperature": "not exposed",
+    "deterministicSeed": "not exposed",
+    "node": "v24.18.0",
+    "python": "3.12.13",
+    "platform": "darwin-arm64",
+    "autoprogress": true
+  },
+  "denominators": {
+    "trackedFiles": 109,
+    "explicitExclusions": 2,
+    "subsystems": 5,
+    "activeConcerns": 16,
+    "concernDispositions": 80,
+    "seams": 5,
+    "seamEndpoints": 10,
+    "runs": 2,
+    "workPerRun": 11,
+    "completionObligations": 297,
+    "authoritativeObjects": 199,
+    "reconciliationObligations": 66,
+    "controls": 8
+  },
+  "exclusions": [
+    {
+      "path": ".github/FUNDING.yml",
+      "owner": "repository-maintainer",
+      "reason": "Sponsorship metadata does not participate in runtime or survey behavior; retained as a satisfied explicit exclusion."
+    },
+    {
+      "path": "LICENSE",
+      "owner": "repository-maintainer",
+      "reason": "License text governs distribution but has no executable survey contract; retained as a satisfied explicit exclusion."
+    }
+  ],
+  "metrics": {
+    "M1": {
+      "value": 1,
+      "numerator": 297,
+      "denominator": 297,
+      "stepSize": 0.003367003367003367
+    },
+    "M11": {
+      "criticalStatusAgreement": true,
+      "blockingObligationIdAgreement": true,
+      "authoritativeObjectJaccard": 1,
+      "jaccardStepSize": 0.005025125628140704,
+      "replicates": [
+        {
+          "runId": "a0-unchanged-run-01",
+          "replicateId": "a0-r1",
+          "condition": "unchanged-baseline",
+          "criticalStatus": "complete",
+          "blockingObligationIds": [],
+          "authoritativeObjectCount": 199,
+          "authoritativeObjectSetHash": "8a86e7a62bf2054062632d625aa607536f2351a1e19a3ffb972c6ce3b238d017"
+        },
+        {
+          "runId": "a0-unchanged-run-02",
+          "replicateId": "a0-r2",
+          "condition": "unchanged-baseline",
+          "criticalStatus": "complete",
+          "blockingObligationIds": [],
+          "authoritativeObjectCount": 199,
+          "authoritativeObjectSetHash": "8a86e7a62bf2054062632d625aa607536f2351a1e19a3ffb972c6ce3b238d017"
+        }
+      ]
+    },
+    "M12": {
+      "value": 1,
+      "numerator": 66,
+      "denominator": 66,
+      "stepSize": 0.015151515151515152
+    }
+  },
+  "minimumDetectableEffects": {
+    "M1": 0.003367003367003367,
+    "M11Jaccard": 0.005025125628140704,
+    "M12": 0.015151515151515152,
+    "statisticalMde": "not estimable from n=2; report discrete one-obligation step sizes only"
+  },
+  "controlIds": [
+    "A0-C0",
+    "A0-C1",
+    "A0-C2",
+    "A0-C3",
+    "A0-C4",
+    "A0-C5",
+    "A0-C6",
+    "A0-C7"
+  ],
+  "result": {
+    "complete": true,
+    "missing": [],
+    "errors": []
+  }
+}

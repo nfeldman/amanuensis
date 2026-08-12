@@ -19,6 +19,10 @@ jobs:
         run: node dev/render-roadmap.mjs --check
       - name: Prove roadmap validation red gates
         run: node dev/test-roadmap.mjs
+      - name: Verify pinned living-conspectus baseline
+        run: node dev/check-living-conspectus.mjs
+      - name: Prove living-conspectus gates and clean-export read-back
+        run: node dev/test-living-conspectus.mjs
 
   mcp-server:
     name: MCP server (TypeScript)

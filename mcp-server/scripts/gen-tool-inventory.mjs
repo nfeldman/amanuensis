@@ -55,7 +55,7 @@ async function fetchToolList() {
   const workspace = mkdtempSync(join(tmpdir(), "aman-inv-"));
   return new Promise((resolveFn, rejectFn) => {
     const srv = spawn(
-      "node",
+      process.execPath,
       [join(mcpRoot, "dist", "index.js"), "--workspace", workspace],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
@@ -66,7 +66,7 @@ async function fetchToolList() {
     const killTimer = setTimeout(() => {
       srv.kill("SIGTERM");
       rejectFn(new Error("server did not respond in time\n" + stderr));
-    }, 5000);
+    }, 15_000);
 
     const send = (msg) => srv.stdin.write(JSON.stringify(msg) + "\n");
     send({ jsonrpc: "2.0", id: 1, method: "initialize", params: {

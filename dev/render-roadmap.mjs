@@ -356,11 +356,13 @@ function validateRoadmap(roadmap) {
   const readyItems = [...initiatives.values()].filter(({ item }) => item.status === "ready");
   assert(readyItems.length > 0, "at least one initiative must be ready", errors);
   for (const { item } of readyItems) {
-    assert(
-      item.dependsOn.length === 0,
-      `ready initiative ${item.id} must have no dependencies`,
-      errors,
-    );
+    for (const dependency of item.dependsOn) {
+      assert(
+        initiatives.get(dependency)?.item.status === "done",
+        `ready initiative ${item.id} depends on unfinished ${dependency}`,
+        errors,
+      );
+    }
   }
 
   const sequences = new Set();
