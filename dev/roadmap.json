@@ -869,7 +869,7 @@
         {
       "id": "A8",
       "title": "Composition and integral HEAD verification",
-      "status": "in-progress",
+      "status": "done",
           "owner": "Amanuensis",
           "outcome": "The review system proves that expected parts landed, fans in results, and evaluates the assembled repository state rather than inferring integration from local successes.",
           "rationale": "Many consequential failures live at seams or appear only after individually correct patches compose.",
@@ -911,16 +911,20 @@
             "M12"
           ],
           "baselineEvidence": [
-            "mcp-server/src/tools/seams.ts",
-            "mcp-server/src/tools/dispatch.ts",
-            "mcp-server/test-cloud-e2e.mjs",
-            ".github/workflows/test.yml"
+        "mcp-server/src/tools/seams.ts",
+        "mcp-server/src/tools/dispatch.ts",
+        "mcp-server/test-cloud-e2e.mjs",
+        ".github/workflows/test.yml",
+        "mcp-server/src/tools/composition.ts",
+        "mcp-server/fixtures/composition/manifest.json",
+        "mcp-server/test-composition.mjs",
+        "dev/adr/0009-integral-head-composition-fan-in.md"
           ]
         },
         {
-          "id": "A9",
-          "title": "Review session and export surface",
-          "status": "planned",
+      "id": "A9",
+      "title": "Review session and export surface",
+      "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "A user can ask what changed, what matters, what survived challenge, and what remains unknown, then inspect every answer without learning the internal schema.",
           "rationale": "A rigorous record that cannot furnish a fast decision surface fails the original make-it-make-sense-without-wasting-time promise.",

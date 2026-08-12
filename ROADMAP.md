@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 9 | 1 | 0 | 8 |
+| 0 | 8 | 1 | 0 | 9 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A8 — Composition and integral HEAD verification. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A9 — Review session and export surface. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -492,7 +492,7 @@ Risks:
 
 #### A8 — Composition and integral HEAD verification
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2, A7<br>
 **Metrics:** M5, M6, M12
@@ -523,11 +523,11 @@ Risks:
 - A narrow seeded corpus may overstate composition coverage.
 
 **Practice basis:** GP20, GP21, GP22, GP23, GP24, GP25, VP4, VP7, VP11<br>
-**Baseline evidence:** `mcp-server/src/tools/seams.ts`, `mcp-server/src/tools/dispatch.ts`, `mcp-server/test-cloud-e2e.mjs`, `.github/workflows/test.yml`
+**Baseline evidence:** `mcp-server/src/tools/seams.ts`, `mcp-server/src/tools/dispatch.ts`, `mcp-server/test-cloud-e2e.mjs`, `.github/workflows/test.yml`, `mcp-server/src/tools/composition.ts`, `mcp-server/fixtures/composition/manifest.json`, `mcp-server/test-composition.mjs`, `dev/adr/0009-integral-head-composition-fan-in.md`
 
 #### A9 — Review session and export surface
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A6, A8<br>
 **Metrics:** M5, M7, M9, M12

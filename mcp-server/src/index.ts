@@ -8,6 +8,7 @@ import { resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { claimTools } from "./tools/claims.js";
 import { compareTools } from "./tools/compare.js";
+import { compositionTools } from "./tools/composition.js";
 import { concernTools } from "./tools/concerns.js";
 import { contradictionTools } from "./tools/contradictions.js";
 import { dashboardTools } from "./tools/dashboard.js";
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
     ...refreshTools,
     ...reviewTools,
     ...reviewAnalysisTools,
+    ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,
     ...concernTools,

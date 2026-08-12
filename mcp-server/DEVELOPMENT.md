@@ -57,13 +57,32 @@ protocol custody and red-gate behavior; it does not establish the semantic
 quality of a model, the benefit of additional compute, or an effect size for
 model heterogeneity.
 
+## Composition and integral HEAD protocol
+
+Composition runs list every expected artifact, commit, test, and A7 review
+result before collection. Each item names whether its verification object is a
+unit or the assembled repository. A landed worker message is only an
+observation: a separate scorer checks it against the artifact registry, Git,
+test identity and exit status, or a terminal review aggregation. Fan-in reports
+the realized expected/dispatched/landed/scored/passed/failed/deferred N and
+cannot turn green from a nonempty subset.
+
+After all unit items pass, one integral lane receives the exact assembled HEAD
+and tree, every impacted seam with named concern codes, and the remaining
+composition-scoped checks. It must report a clean worktree at that same commit.
+Deferred concerns are blocking rows with an open obligation destination and
+remain visible in reconciliation. The A8 corpus deliberately changes a
+producer version while both producer and consumer unit checks still pass; only
+the integral contract fails. A follow-up compatibility commit demonstrates the
+same instrument reaching green.
+
 The live tool inventory below is auto-generated from the running server's
 `tools/list` response — do not hand-edit. Run `node scripts/gen-tool-inventory.mjs`
 to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_116 tools across 31 groups. Generated from `tools/list` — do not hand-edit._
+_126 tools across 32 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -89,6 +108,21 @@ _116 tools across 31 groups. Generated from `tools/list` — do not hand-edit._
 | Tool | Description |
 |---|---|
 | `compare_conspectuses` | Diff two Amanuensis memory.db files structurally. Useful for comparing a local vs. cloud autoprogress run of the same codebase, or before/after a methodology change. Paths point at the memory.db files directly, not at storage directories. Returns a JSON summary; if write_to is set, also renders the diff as a markdown page at that path. |
+
+### `composition` (10)
+
+| Tool | Description |
+|---|---|
+| `plan_composition_run` | Create an immutable fan-in manifest for artifacts, commits, tests, and A7 review results. Every item declares its verification object and target commit; integral items bind to the exact currently assembled HEAD, and impacted seams require named concern coverage. |
+| `dispatch_composition_item` | Dispatch one expected composition item with an explicit unit or integral-HEAD verification object. Integral items remain unavailable until unit fan-in has admitted the separate integral lane. |
+| `land_composition_item` | Land a worker observation exactly once without trusting its success label. A separate scorer checks the expected artifact, commit, test identity/SHA/exit, or terminal A7 aggregation against durable state. |
+| `score_composition_item` | Independently score a landed item against its immutable manifest and durable repository/conspectus state. A success message without the expected artifact or commit becomes scored-fail. |
+| `dispatch_integral_verification` | After exact passing unit fan-in, dispatch the sole composition-scoped lane over the assembled HEAD, expected integral checks, and every impacted seam's selected concerns. Missing, failed, or deferred unit work halts here. |
+| `land_integral_verification` | Land immutable proof coordinates from a clean checkout of the assembled HEAD. Test and review results still land as their separately expected integral composition items. |
+| `score_integral_verification` | Verify that the integral lane used the exact assembled HEAD/tree in a clean worktree. A mismatched or dirty checkout blocks composition before final fan-in. |
+| `record_composition_deferral` | Record a composition concern as an immutable RED deferral with an existing open blocking obligation as its named destination. A source phrase alone cannot discharge the concern. |
+| `reconcile_composition_run` | Append a reconciliation that reports expected, dispatched, landed, scored, passed, failed, and deferred N. Green requires exact item fan-in, no deferrals, and a passing clean integral lane; missing work remains RED rather than counting as less data. |
+| `get_composition_run` | Read the immutable composition manifest, verification-object custody, seam concerns, named deferrals, integral checkout proof, and every fan-in reconciliation for one assembled HEAD. |
 
 ### `concerns` (3)
 

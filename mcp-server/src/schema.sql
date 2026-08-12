@@ -2122,6 +2122,318 @@ BEFORE DELETE ON review_evaluations FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'review evaluation cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- COMPOSITION VERIFICATION: exact fan-in and one integral lane at HEAD
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS composition_runs (
+    run_id                       TEXT PRIMARY KEY,
+    impact_run_id                TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    assembled_head_sha           TEXT NOT NULL,
+    assembled_tree_sha           TEXT NOT NULL,
+    expected_item_count          INTEGER NOT NULL CHECK (expected_item_count > 0),
+    expected_unit_item_count     INTEGER NOT NULL CHECK (expected_unit_item_count > 0),
+    expected_integral_item_count INTEGER NOT NULL CHECK (expected_integral_item_count > 0),
+    impacted_seam_count          INTEGER NOT NULL CHECK (impacted_seam_count >= 0),
+    selected_seam_count          INTEGER NOT NULL CHECK (selected_seam_count >= 0),
+    status                       TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                                     'planned','collecting','integral-dispatched','verifying',
+                                     'complete','blocked')),
+    manifest_json                TEXT NOT NULL CHECK (json_valid(manifest_json)),
+    manifest_hash                TEXT NOT NULL,
+    session_id                   TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at                   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at                   TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at                 TEXT,
+    CHECK (expected_item_count=expected_unit_item_count+expected_integral_item_count),
+    CHECK (impacted_seam_count=selected_seam_count OR impacted_seam_count=0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_composition_runs_status
+    ON composition_runs(status, created_at);
+
+CREATE TABLE IF NOT EXISTS composition_items (
+    item_id             TEXT PRIMARY KEY,
+    run_id              TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    ordinal             INTEGER NOT NULL CHECK (ordinal >= 0),
+    item_kind           TEXT NOT NULL CHECK (item_kind IN (
+                              'artifact','commit','test','review-result')),
+    verification_scope  TEXT NOT NULL CHECK (verification_scope IN ('unit','integral-head')),
+    subject             TEXT NOT NULL,
+    expected_ref        TEXT NOT NULL,
+    target_sha          TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                              'planned','dispatched','landed','scored-pass','scored-fail')),
+    runtime_input_json  TEXT CHECK (runtime_input_json IS NULL OR json_valid(runtime_input_json)),
+    runtime_input_hash  TEXT,
+    observation_json    TEXT CHECK (observation_json IS NULL OR json_valid(observation_json)),
+    observation_hash    TEXT,
+    scoring_json        TEXT CHECK (scoring_json IS NULL OR json_valid(scoring_json)),
+    scoring_hash        TEXT,
+    dispatched_at       TEXT,
+    landed_at           TEXT,
+    scored_at           TEXT,
+    UNIQUE (run_id, ordinal),
+    UNIQUE (run_id, item_kind, verification_scope, subject)
+);
+
+CREATE INDEX IF NOT EXISTS idx_composition_items_run
+    ON composition_items(run_id, verification_scope, status, ordinal);
+
+CREATE TABLE IF NOT EXISTS composition_seam_concerns (
+    run_id        TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    seam_id       TEXT NOT NULL REFERENCES seams(id) ON DELETE RESTRICT,
+    concern_code  TEXT NOT NULL REFERENCES concerns(code) ON DELETE RESTRICT,
+    rationale     TEXT NOT NULL,
+    PRIMARY KEY (run_id, seam_id, concern_code)
+);
+
+CREATE TABLE IF NOT EXISTS composition_integral_lanes (
+    run_id                TEXT PRIMARY KEY REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    status                TEXT NOT NULL CHECK (status IN (
+                              'dispatched','landed','scored-pass','scored-fail')),
+    runtime_input_json    TEXT NOT NULL CHECK (json_valid(runtime_input_json)),
+    runtime_input_hash    TEXT NOT NULL,
+    checkout_head_sha     TEXT,
+    checkout_tree_sha     TEXT,
+    checkout_mode         TEXT CHECK (checkout_mode IS NULL OR checkout_mode='clean-worktree'),
+    dirty_paths_json      TEXT CHECK (dirty_paths_json IS NULL OR json_valid(dirty_paths_json)),
+    observation_json      TEXT CHECK (observation_json IS NULL OR json_valid(observation_json)),
+    observation_hash      TEXT,
+    scoring_json          TEXT CHECK (scoring_json IS NULL OR json_valid(scoring_json)),
+    scoring_hash          TEXT,
+    dispatched_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    landed_at             TEXT,
+    scored_at             TEXT
+);
+
+CREATE TABLE IF NOT EXISTS composition_deferrals (
+    deferral_id    TEXT PRIMARY KEY,
+    run_id         TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    concern        TEXT NOT NULL,
+    obligation_id  TEXT NOT NULL REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    source_item_id TEXT REFERENCES composition_items(item_id) ON DELETE RESTRICT,
+    recorded_by    TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_composition_deferrals_run
+    ON composition_deferrals(run_id, created_at);
+
+CREATE TABLE IF NOT EXISTS composition_reconciliations (
+    reconciliation_id INTEGER PRIMARY KEY,
+    run_id             TEXT NOT NULL REFERENCES composition_runs(run_id) ON DELETE RESTRICT,
+    expected_count     INTEGER NOT NULL CHECK (expected_count > 0),
+    dispatched_count   INTEGER NOT NULL CHECK (dispatched_count >= 0),
+    landed_count       INTEGER NOT NULL CHECK (landed_count >= 0),
+    scored_count       INTEGER NOT NULL CHECK (scored_count >= 0),
+    passed_count       INTEGER NOT NULL CHECK (passed_count >= 0),
+    failed_count       INTEGER NOT NULL CHECK (failed_count >= 0),
+    deferred_count     INTEGER NOT NULL CHECK (deferred_count >= 0),
+    status             TEXT NOT NULL CHECK (status IN ('red','green')),
+    result_json        TEXT NOT NULL CHECK (json_valid(result_json)),
+    result_hash        TEXT NOT NULL,
+    session_id         TEXT NOT NULL REFERENCES sessions(session_id),
+    reconciled_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (scored_count=passed_count+failed_count)
+);
+
+CREATE INDEX IF NOT EXISTS idx_composition_reconciliations_run
+    ON composition_reconciliations(run_id, reconciliation_id);
+
+CREATE TRIGGER IF NOT EXISTS composition_manifest_is_immutable
+BEFORE UPDATE ON composition_runs FOR EACH ROW
+WHEN OLD.run_id!=NEW.run_id OR OLD.impact_run_id!=NEW.impact_run_id
+  OR OLD.assembled_head_sha!=NEW.assembled_head_sha OR OLD.assembled_tree_sha!=NEW.assembled_tree_sha
+  OR OLD.expected_item_count!=NEW.expected_item_count
+  OR OLD.expected_unit_item_count!=NEW.expected_unit_item_count
+  OR OLD.expected_integral_item_count!=NEW.expected_integral_item_count
+  OR OLD.impacted_seam_count!=NEW.impacted_seam_count
+  OR OLD.selected_seam_count!=NEW.selected_seam_count
+  OR OLD.manifest_json!=NEW.manifest_json OR OLD.manifest_hash!=NEW.manifest_hash
+  OR OLD.session_id!=NEW.session_id
+BEGIN SELECT RAISE(ABORT, 'composition manifest is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS composition_run_starts_planned
+BEFORE INSERT ON composition_runs FOR EACH ROW
+WHEN NEW.status!='planned'
+BEGIN SELECT RAISE(ABORT, 'composition run must start planned'); END;
+CREATE TRIGGER IF NOT EXISTS composition_run_cannot_be_deleted
+BEFORE DELETE ON composition_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition run cannot be deleted'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_status_is_monotonic
+BEFORE UPDATE OF status ON composition_runs FOR EACH ROW
+WHEN NOT (
+    (OLD.status='planned' AND NEW.status='collecting'
+     AND EXISTS (SELECT 1 FROM composition_items
+                  WHERE run_id=OLD.run_id AND status!='planned'))
+ OR (OLD.status IN ('planned','collecting') AND NEW.status='integral-dispatched'
+     AND EXISTS (SELECT 1 FROM composition_integral_lanes
+                  WHERE run_id=OLD.run_id AND status='dispatched'))
+ OR (OLD.status='integral-dispatched' AND NEW.status='verifying'
+     AND EXISTS (SELECT 1 FROM composition_integral_lanes
+                  WHERE run_id=OLD.run_id AND status='scored-pass'))
+ OR (OLD.status IN ('planned','collecting','integral-dispatched','verifying')
+     AND NEW.status='blocked')
+ OR (OLD.status='verifying' AND NEW.status='complete'
+     AND EXISTS (SELECT 1 FROM composition_reconciliations
+                  WHERE run_id=OLD.run_id AND status='green'))
+)
+BEGIN SELECT RAISE(ABORT, 'invalid composition status transition'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_item_plan_is_immutable
+BEFORE UPDATE ON composition_items FOR EACH ROW
+WHEN OLD.item_id!=NEW.item_id OR OLD.run_id!=NEW.run_id OR OLD.ordinal!=NEW.ordinal
+  OR OLD.item_kind!=NEW.item_kind OR OLD.verification_scope!=NEW.verification_scope
+  OR OLD.subject!=NEW.subject OR OLD.expected_ref!=NEW.expected_ref OR OLD.target_sha!=NEW.target_sha
+BEGIN SELECT RAISE(ABORT, 'composition item plan is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS composition_item_starts_planned
+BEFORE INSERT ON composition_items FOR EACH ROW
+WHEN NEW.status!='planned' OR NEW.runtime_input_json IS NOT NULL
+  OR NEW.observation_json IS NOT NULL OR NEW.scoring_json IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'composition item must start planned and empty'); END;
+CREATE TRIGGER IF NOT EXISTS composition_item_cannot_be_deleted
+BEFORE DELETE ON composition_items FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition item cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS composition_seam_concern_is_immutable
+BEFORE UPDATE ON composition_seam_concerns FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition seam concern is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS composition_seam_concern_cannot_be_deleted
+BEFORE DELETE ON composition_seam_concerns FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition seam concern cannot be deleted'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_item_status_is_monotonic
+BEFORE UPDATE OF status ON composition_items FOR EACH ROW
+WHEN NOT (
+    (OLD.status='planned' AND NEW.status='dispatched'
+     AND NEW.runtime_input_json IS NOT NULL AND NEW.runtime_input_hash IS NOT NULL
+     AND NEW.dispatched_at IS NOT NULL)
+ OR (OLD.status='dispatched' AND NEW.status='landed'
+     AND NEW.observation_json IS NOT NULL AND NEW.observation_hash IS NOT NULL
+     AND NEW.landed_at IS NOT NULL)
+ OR (OLD.status='landed' AND NEW.status IN ('scored-pass','scored-fail')
+     AND NEW.scoring_json IS NOT NULL AND NEW.scoring_hash IS NOT NULL
+     AND NEW.scored_at IS NOT NULL)
+)
+BEGIN SELECT RAISE(ABORT, 'invalid composition item status transition'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_item_dispatch_is_write_once
+BEFORE UPDATE OF runtime_input_json, runtime_input_hash, dispatched_at ON composition_items
+FOR EACH ROW
+WHEN NOT (OLD.status='planned' AND NEW.status='dispatched'
+  AND OLD.runtime_input_json IS NULL AND NEW.runtime_input_json IS NOT NULL
+  AND OLD.runtime_input_hash IS NULL AND NEW.runtime_input_hash IS NOT NULL
+  AND OLD.dispatched_at IS NULL AND NEW.dispatched_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'composition item dispatch is write-once'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_item_landing_is_write_once
+BEFORE UPDATE OF observation_json, observation_hash, landed_at ON composition_items
+FOR EACH ROW
+WHEN NOT (OLD.status='dispatched' AND NEW.status='landed'
+  AND OLD.observation_json IS NULL AND NEW.observation_json IS NOT NULL
+  AND OLD.observation_hash IS NULL AND NEW.observation_hash IS NOT NULL
+  AND OLD.landed_at IS NULL AND NEW.landed_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'composition item landing is write-once'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_item_scoring_is_write_once
+BEFORE UPDATE OF scoring_json, scoring_hash, scored_at ON composition_items
+FOR EACH ROW
+WHEN NOT (OLD.status='landed' AND NEW.status IN ('scored-pass','scored-fail')
+  AND OLD.scoring_json IS NULL AND NEW.scoring_json IS NOT NULL
+  AND OLD.scoring_hash IS NULL AND NEW.scoring_hash IS NOT NULL
+  AND OLD.scored_at IS NULL AND NEW.scored_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'composition item scoring is write-once'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_integral_lane_status_is_monotonic
+BEFORE UPDATE OF status ON composition_integral_lanes FOR EACH ROW
+WHEN NOT ((OLD.status='dispatched' AND NEW.status='landed'
+           AND NEW.checkout_head_sha IS NOT NULL AND NEW.checkout_tree_sha IS NOT NULL
+           AND NEW.checkout_mode='clean-worktree' AND NEW.dirty_paths_json IS NOT NULL
+           AND NEW.observation_json IS NOT NULL AND NEW.observation_hash IS NOT NULL
+           AND NEW.landed_at IS NOT NULL)
+       OR (OLD.status='landed' AND NEW.status IN ('scored-pass','scored-fail')
+           AND NEW.scoring_json IS NOT NULL AND NEW.scoring_hash IS NOT NULL
+           AND NEW.scored_at IS NOT NULL))
+BEGIN SELECT RAISE(ABORT, 'invalid integral lane status transition'); END;
+CREATE TRIGGER IF NOT EXISTS composition_integral_lane_starts_dispatched
+BEFORE INSERT ON composition_integral_lanes FOR EACH ROW
+WHEN NEW.status!='dispatched' OR NEW.runtime_input_json IS NULL OR NEW.runtime_input_hash IS NULL
+BEGIN SELECT RAISE(ABORT, 'composition integral lane must start dispatched'); END;
+CREATE TRIGGER IF NOT EXISTS composition_integral_lane_cannot_be_deleted
+BEFORE DELETE ON composition_integral_lanes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition integral lane cannot be deleted'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_integral_lane_landing_is_write_once
+BEFORE UPDATE OF checkout_head_sha, checkout_tree_sha, checkout_mode,
+                 dirty_paths_json, observation_json, observation_hash, landed_at
+ON composition_integral_lanes FOR EACH ROW
+WHEN NOT (OLD.status='dispatched' AND NEW.status='landed'
+  AND OLD.observation_json IS NULL AND NEW.observation_json IS NOT NULL
+  AND OLD.observation_hash IS NULL AND NEW.observation_hash IS NOT NULL
+  AND OLD.landed_at IS NULL AND NEW.landed_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'integral lane landing is write-once'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_integral_lane_scoring_is_write_once
+BEFORE UPDATE OF scoring_json, scoring_hash, scored_at ON composition_integral_lanes
+FOR EACH ROW
+WHEN NOT (OLD.status='landed' AND NEW.status IN ('scored-pass','scored-fail')
+  AND OLD.scoring_json IS NULL AND NEW.scoring_json IS NOT NULL
+  AND OLD.scoring_hash IS NULL AND NEW.scoring_hash IS NOT NULL
+  AND OLD.scored_at IS NULL AND NEW.scored_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'integral lane scoring is write-once'); END;
+
+CREATE TRIGGER IF NOT EXISTS composition_reconciliation_must_reconcile
+BEFORE INSERT ON composition_reconciliations FOR EACH ROW
+BEGIN
+    SELECT CASE WHEN NEW.expected_count != (
+        SELECT expected_item_count FROM composition_runs WHERE run_id=NEW.run_id
+    ) THEN RAISE(ABORT, 'composition expected denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.expected_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id
+    ) THEN RAISE(ABORT, 'composition item manifest does not reconcile') END;
+    SELECT CASE WHEN NEW.dispatched_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id AND status!='planned'
+    ) THEN RAISE(ABORT, 'composition dispatched denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.landed_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id
+         AND status IN ('landed','scored-pass','scored-fail')
+    ) THEN RAISE(ABORT, 'composition landed denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.scored_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id
+         AND status IN ('scored-pass','scored-fail')
+    ) THEN RAISE(ABORT, 'composition scored denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.passed_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id AND status='scored-pass'
+    ) OR NEW.failed_count != (
+        SELECT COUNT(*) FROM composition_items WHERE run_id=NEW.run_id AND status='scored-fail'
+    ) OR NEW.deferred_count != (
+        SELECT COUNT(*) FROM composition_deferrals WHERE run_id=NEW.run_id
+    ) THEN RAISE(ABORT, 'composition outcome denominators do not reconcile') END;
+    SELECT CASE WHEN NEW.status='green' AND (
+        NEW.passed_count!=NEW.expected_count OR NEW.failed_count!=0 OR NEW.deferred_count!=0
+        OR NOT EXISTS (SELECT 1 FROM composition_integral_lanes
+                        WHERE run_id=NEW.run_id AND status='scored-pass')
+    ) THEN RAISE(ABORT, 'green composition requires exact fan-in and a passing integral lane') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS composition_reconciliation_is_immutable
+BEFORE UPDATE ON composition_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition reconciliation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS composition_reconciliation_cannot_be_deleted
+BEFORE DELETE ON composition_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition reconciliation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS composition_deferral_is_immutable
+BEFORE UPDATE ON composition_deferrals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition deferral is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS composition_deferral_requires_red_destination
+BEFORE INSERT ON composition_deferrals FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM revalidation_obligations
+                  WHERE obligation_id=NEW.obligation_id AND blocking=1 AND state!='closed')
+BEGIN SELECT RAISE(ABORT, 'composition deferral requires an open blocking destination'); END;
+CREATE TRIGGER IF NOT EXISTS composition_deferral_cannot_be_deleted
+BEFORE DELETE ON composition_deferrals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'composition deferral cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

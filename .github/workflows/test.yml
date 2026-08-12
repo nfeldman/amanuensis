@@ -111,6 +111,9 @@ jobs:
       - name: Independent review — blinding, fan-in, refutation, evaluation controls
         working-directory: mcp-server
         run: node test-review-analysis.mjs
+      - name: Composition — exact fan-in and integral HEAD verification
+        working-directory: mcp-server
+        run: node test-composition.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

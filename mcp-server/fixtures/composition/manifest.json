@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "unitKinds": ["artifact", "commit", "test", "review-result"],
+  "integralKinds": ["test", "review-result"],
+  "seed": {
+    "localExpectation": "both subsystem-local checks pass",
+    "integralExpectation": "the version contract fails only after producer and consumer compose"
+  },
+  "redGates": [
+    "worker success without expected artifact",
+    "missing fan-in item",
+    "dirty or wrong integral checkout",
+    "seam-only defect",
+    "deferred concern without a closed destination"
+  ]
+}

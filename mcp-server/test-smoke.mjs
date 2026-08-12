@@ -32,6 +32,7 @@ import { dashboardTools } from "./dist/tools/dashboard.js";
 import { seamTools } from "./dist/tools/seams.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { compositionTools } from "./dist/tools/composition.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
@@ -88,6 +89,7 @@ const allTools = new Map(
     ...refreshTools,
     ...reviewTools,
     ...reviewAnalysisTools,
+    ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),
