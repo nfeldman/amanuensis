@@ -51,6 +51,7 @@ node test-design-session.mjs            # independent lenses, disagreement, and 
 node test-decisions.mjs                 # acceptance authority, impact custody, and portable read-back
 node test-research-broker.mjs           # admission, Scholiast custody, and external/code contradiction
 node test-crosswalk-qualification.mjs   # identity red gates, relation custody, and qualified activation
+node test-learning-ledger.mjs           # typed distillation, scored promotion, and rollback/read-back
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -206,6 +207,16 @@ in agent prose:
   semantics, qualification axes, policy activation, or projection content
   changes. The checked-in fixture demonstrates the adapter only; it does not
   assert that the Collatio v2 research program itself is authorized or passed.
+- **Learning-ledger custody.** Distillation outcomes retain exact planned,
+  produced, accepted, and later-invalidated artifact counts. Corpus, retrieval,
+  method, research, and user-preference lessons cannot exchange epistemic kinds
+  or evidence classes. Every policy change starts as a candidate, passes a
+  scored channel-specific evaluation, stages as an immutable version, and turns
+  active only after the next-run representation reads back on state, coverage,
+  and content. Supersession preserves both lesson and policy history plus the
+  selector for affected future runs. Extend `test-learning-ledger.mjs` whenever
+  an outcome state, channel, qualification rule, lifecycle transition,
+  rollback field, or runtime policy representation changes.
 
 ## Commits
 

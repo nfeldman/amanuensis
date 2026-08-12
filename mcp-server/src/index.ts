@@ -25,6 +25,7 @@ import { fileTools } from "./tools/files.js";
 import { findingTools } from "./tools/findings.js";
 import { gitTools } from "./tools/git.js";
 import { impactTools } from "./tools/impact.js";
+import { learningTools } from "./tools/learning.js";
 import { lockTools } from "./tools/locks.js";
 import { loggingTools } from "./tools/logging.js";
 import { materializeTools } from "./tools/materialize.js";
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
     ...decisionTools,
     ...researchTools,
     ...crosswalkTools,
+    ...learningTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

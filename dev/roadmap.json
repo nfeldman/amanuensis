@@ -1281,7 +1281,7 @@
         {
           "id": "A15",
           "title": "Distillation and revisable learning ledger",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis + distillation",
           "outcome": "Completed review and design sessions yield candidate lessons about corpus, retrieval, method, research, and user preference, each promoted only with evidence and a rollback path.",
           "rationale": "The system should improve from use, but an untyped memory update would blend truth, workflow convenience, and transient preference into irreversible policy.",
@@ -1327,13 +1327,17 @@
             "mcp-server/src/tools/logging.ts",
             "mcp-server/src/tools/storage-history.ts",
             "mcp-server/src/storage-git.ts",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/src/tools/learning.ts",
+            "mcp-server/fixtures/learning/method-qualification.json",
+            "mcp-server/test-learning-ledger.mjs",
+            "dev/adr/0016-typed-revisable-learning-ledger.md"
           ]
         },
         {
           "id": "A16",
           "title": "Multi-repository evaluation and operating envelope",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "The product has an explicit evidence-backed operating envelope across repository types, change classes, review modes, and model/runtime configurations.",
           "rationale": "One successful self-survey or showcase repository is an existence proof, not a basis for general automation claims.",

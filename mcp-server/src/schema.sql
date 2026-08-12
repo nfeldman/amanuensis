@@ -3746,6 +3746,276 @@ BEFORE DELETE ON crosswalk_projection_verifications FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'crosswalk projection verification cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- LEARNING LEDGER: typed distillation, qualification, and reversible policy
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS learning_outcome_extractions (
+    extraction_id       TEXT PRIMARY KEY,
+    source_kind         TEXT NOT NULL CHECK (source_kind IN (
+                            'agent-session','review-session','design-session')),
+    source_ref          TEXT NOT NULL,
+    source_terminal_state TEXT NOT NULL,
+    planned_count       INTEGER NOT NULL CHECK (planned_count > 0),
+    produced_count      INTEGER NOT NULL CHECK (produced_count >= 0),
+    accepted_count      INTEGER NOT NULL CHECK (accepted_count >= 0),
+    invalidated_count   INTEGER NOT NULL CHECK (invalidated_count >= 0),
+    outcome_json        TEXT NOT NULL CHECK (json_valid(outcome_json)),
+    outcome_hash        TEXT NOT NULL,
+    extracted_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    extracted_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (produced_count <= planned_count),
+    CHECK (accepted_count <= produced_count),
+    CHECK (invalidated_count <= accepted_count),
+    UNIQUE (source_kind, source_ref, outcome_hash)
+);
+
+CREATE TABLE IF NOT EXISTS learning_lessons (
+    lesson_id           TEXT PRIMARY KEY,
+    predecessor_lesson_id TEXT REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
+    rollback_of_lesson_id TEXT REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
+    extraction_id       TEXT NOT NULL REFERENCES learning_outcome_extractions(extraction_id) ON DELETE RESTRICT,
+    channel             TEXT NOT NULL CHECK (channel IN (
+                            'corpus','retrieval','method','research','user-preference')),
+    epistemic_kind      TEXT NOT NULL CHECK (epistemic_kind IN (
+                            'observation','inference','external-claim','direct-intent')),
+    proposition         TEXT NOT NULL,
+    scope_json          TEXT NOT NULL CHECK (json_valid(scope_json)),
+    target_policy_key   TEXT NOT NULL,
+    configuration_json  TEXT NOT NULL CHECK (json_valid(configuration_json)),
+    evidence_artifact_ids_json TEXT NOT NULL CHECK (json_valid(evidence_artifact_ids_json)),
+    human_source_json   TEXT CHECK (human_source_json IS NULL OR json_valid(human_source_json)),
+    rollback_plan_json  TEXT NOT NULL CHECK (json_valid(rollback_plan_json)),
+    payload_hash        TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'candidate' CHECK (status IN (
+                            'candidate','qualified','active','superseded')),
+    proposed_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    proposed_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    qualified_at        TEXT,
+    activated_at        TEXT,
+    superseded_at       TEXT,
+    CHECK (predecessor_lesson_id IS NULL OR predecessor_lesson_id!=lesson_id),
+    CHECK (rollback_of_lesson_id IS NULL OR rollback_of_lesson_id!=lesson_id),
+    CHECK ((channel='corpus' AND epistemic_kind='observation' AND human_source_json IS NULL)
+        OR (channel IN ('retrieval','method') AND epistemic_kind='inference' AND human_source_json IS NULL)
+        OR (channel='research' AND epistemic_kind='external-claim' AND human_source_json IS NULL)
+        OR (channel='user-preference' AND epistemic_kind='direct-intent' AND human_source_json IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_learning_lessons_policy
+    ON learning_lessons(target_policy_key, status, channel);
+
+CREATE TABLE IF NOT EXISTS learning_evaluations (
+    evaluation_id       TEXT PRIMARY KEY,
+    lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
+    evaluation_kind     TEXT NOT NULL CHECK (evaluation_kind IN (
+                            'provenance-audit','treatment-versus-clean','ablation','human-confirmation')),
+    metric              TEXT NOT NULL,
+    baseline_value_milli INTEGER NOT NULL,
+    observed_value_milli INTEGER NOT NULL,
+    expected_direction  TEXT NOT NULL CHECK (expected_direction IN ('increase','decrease')),
+    minimum_effect_milli INTEGER NOT NULL CHECK (minimum_effect_milli > 0),
+    effect_milli        INTEGER NOT NULL,
+    passed              INTEGER NOT NULL CHECK (passed IN (0,1)),
+    evidence_artifact_ids_json TEXT NOT NULL CHECK (json_valid(evidence_artifact_ids_json)),
+    method_qualification_id TEXT REFERENCES method_qualification_plans(qualification_id) ON DELETE RESTRICT,
+    confirmed_by_kind   TEXT CHECK (confirmed_by_kind IS NULL OR confirmed_by_kind IN ('human','owning-system')),
+    confirmed_by        TEXT,
+    limitations_json    TEXT NOT NULL CHECK (json_valid(limitations_json)),
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    evaluated_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    evaluated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((expected_direction='increase' AND effect_milli=observed_value_milli-baseline_value_milli)
+        OR (expected_direction='decrease' AND effect_milli=baseline_value_milli-observed_value_milli)),
+    CHECK (passed=(effect_milli>=minimum_effect_milli)),
+    CHECK ((confirmed_by_kind IS NULL)=(confirmed_by IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS learning_events (
+    event_id            INTEGER PRIMARY KEY,
+    lesson_id           TEXT NOT NULL REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
+    event_type          TEXT NOT NULL CHECK (event_type IN (
+                            'proposed','qualified','staged','activated','superseded')),
+    actor_kind          TEXT NOT NULL CHECK (actor_kind IN ('human','owning-system','amanuensis')),
+    actor_id            TEXT NOT NULL,
+    detail_json         TEXT NOT NULL CHECK (json_valid(detail_json)),
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS learning_policy_versions (
+    policy_version_id   TEXT PRIMARY KEY,
+    policy_key          TEXT NOT NULL,
+    revision_number     INTEGER NOT NULL CHECK (revision_number > 0),
+    lesson_id           TEXT NOT NULL UNIQUE REFERENCES learning_lessons(lesson_id) ON DELETE RESTRICT,
+    predecessor_policy_version_id TEXT REFERENCES learning_policy_versions(policy_version_id) ON DELETE RESTRICT,
+    channel             TEXT NOT NULL CHECK (channel IN (
+                            'corpus','retrieval','method','research','user-preference')),
+    configuration_json  TEXT NOT NULL CHECK (json_valid(configuration_json)),
+    configuration_hash  TEXT NOT NULL,
+    affected_future_runs_json TEXT NOT NULL CHECK (json_valid(affected_future_runs_json)),
+    status              TEXT NOT NULL DEFAULT 'staged' CHECK (status IN ('staged','active','superseded')),
+    superseded_by       TEXT REFERENCES learning_policy_versions(policy_version_id) ON DELETE RESTRICT,
+    staged_by           TEXT NOT NULL REFERENCES sessions(session_id),
+    staged_at           TEXT NOT NULL DEFAULT (datetime('now')),
+    activated_at        TEXT,
+    superseded_at       TEXT,
+    UNIQUE (policy_key, revision_number),
+    CHECK ((status='staged' AND activated_at IS NULL AND superseded_at IS NULL AND superseded_by IS NULL)
+        OR (status='active' AND activated_at IS NOT NULL AND superseded_at IS NULL AND superseded_by IS NULL)
+        OR (status='superseded' AND activated_at IS NOT NULL AND superseded_at IS NOT NULL AND superseded_by IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_policy_one_active
+    ON learning_policy_versions(policy_key) WHERE status='active';
+
+CREATE TABLE IF NOT EXISTS learning_policy_readbacks (
+    readback_id         INTEGER PRIMARY KEY,
+    policy_version_id   TEXT NOT NULL REFERENCES learning_policy_versions(policy_version_id) ON DELETE RESTRICT,
+    phase               TEXT NOT NULL CHECK (phase IN ('preactivation','postactivation','audit')),
+    state_ok            INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok         INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok          INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok                  INTEGER NOT NULL CHECK (ok IN (0,1)),
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    audited_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    audited_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(state_ok AND coverage_ok AND content_ok))
+);
+
+CREATE TRIGGER IF NOT EXISTS learning_outcome_must_reconcile
+BEFORE INSERT ON learning_outcome_extractions FOR EACH ROW
+WHEN NEW.planned_count!=json_extract(NEW.outcome_json, '$.counts.planned')
+  OR NEW.produced_count!=json_extract(NEW.outcome_json, '$.counts.produced')
+  OR NEW.accepted_count!=json_extract(NEW.outcome_json, '$.counts.accepted')
+  OR NEW.invalidated_count!=json_extract(NEW.outcome_json, '$.counts.later_invalidated')
+  OR NEW.source_kind!=json_extract(NEW.outcome_json, '$.source.kind')
+  OR NEW.source_ref!=json_extract(NEW.outcome_json, '$.source.ref')
+BEGIN SELECT RAISE(ABORT, 'learning outcome extraction does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS learning_outcome_is_immutable
+BEFORE UPDATE ON learning_outcome_extractions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning outcome extraction is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_outcome_cannot_be_deleted
+BEFORE DELETE ON learning_outcome_extractions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning outcome extraction cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS learning_lesson_starts_candidate
+BEFORE INSERT ON learning_lessons FOR EACH ROW
+WHEN NEW.status!='candidate' OR NEW.qualified_at IS NOT NULL OR NEW.activated_at IS NOT NULL
+  OR NEW.superseded_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'learning lesson must begin as candidate'); END;
+CREATE TRIGGER IF NOT EXISTS learning_lesson_payload_is_immutable
+BEFORE UPDATE ON learning_lessons FOR EACH ROW
+WHEN OLD.lesson_id!=NEW.lesson_id
+  OR COALESCE(OLD.predecessor_lesson_id,'')!=COALESCE(NEW.predecessor_lesson_id,'')
+  OR COALESCE(OLD.rollback_of_lesson_id,'')!=COALESCE(NEW.rollback_of_lesson_id,'')
+  OR OLD.extraction_id!=NEW.extraction_id OR OLD.channel!=NEW.channel
+  OR OLD.epistemic_kind!=NEW.epistemic_kind OR OLD.proposition!=NEW.proposition
+  OR OLD.scope_json!=NEW.scope_json OR OLD.target_policy_key!=NEW.target_policy_key
+  OR OLD.configuration_json!=NEW.configuration_json
+  OR OLD.evidence_artifact_ids_json!=NEW.evidence_artifact_ids_json
+  OR COALESCE(OLD.human_source_json,'')!=COALESCE(NEW.human_source_json,'')
+  OR OLD.rollback_plan_json!=NEW.rollback_plan_json OR OLD.payload_hash!=NEW.payload_hash
+  OR OLD.proposed_by!=NEW.proposed_by
+BEGIN SELECT RAISE(ABORT, 'learning lesson payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_lesson_status_is_monotonic
+BEFORE UPDATE OF status ON learning_lessons FOR EACH ROW
+WHEN NOT ((OLD.status='candidate' AND NEW.status='qualified'
+            AND NEW.qualified_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM learning_events e WHERE e.lesson_id=OLD.lesson_id
+                         AND e.event_type='qualified'))
+       OR (OLD.status='qualified' AND NEW.status='active'
+            AND NEW.activated_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM learning_events e WHERE e.lesson_id=OLD.lesson_id
+                         AND e.event_type='activated'))
+       OR (OLD.status='active' AND NEW.status='superseded'
+            AND NEW.superseded_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM learning_events e WHERE e.lesson_id=OLD.lesson_id
+                         AND e.event_type='superseded')))
+BEGIN SELECT RAISE(ABORT, 'invalid learning lesson status transition'); END;
+CREATE TRIGGER IF NOT EXISTS learning_lesson_cannot_be_deleted
+BEFORE DELETE ON learning_lessons FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning lesson cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS learning_evaluation_requires_candidate
+BEFORE INSERT ON learning_evaluations FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM learning_lessons l WHERE l.lesson_id=NEW.lesson_id
+                  AND l.status='candidate')
+BEGIN SELECT RAISE(ABORT, 'learning evaluation requires candidate lesson'); END;
+CREATE TRIGGER IF NOT EXISTS learning_method_evaluation_is_qualified
+BEFORE INSERT ON learning_evaluations FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM learning_lessons l WHERE l.lesson_id=NEW.lesson_id AND l.channel='method')
+ AND (NEW.evaluation_kind NOT IN ('treatment-versus-clean','ablation')
+      OR NEW.method_qualification_id IS NULL
+      OR NOT EXISTS (SELECT 1 FROM method_qualification_plans p
+                       JOIN method_qualification_scores s ON s.qualification_id=p.qualification_id
+                      WHERE p.qualification_id=NEW.method_qualification_id
+                        AND p.status='passed' AND s.passed=1 AND s.readback_ok=1))
+BEGIN SELECT RAISE(ABORT, 'method learning requires treatment/ablation and passed method qualification'); END;
+CREATE TRIGGER IF NOT EXISTS learning_preference_evaluation_is_human
+BEFORE INSERT ON learning_evaluations FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM learning_lessons l WHERE l.lesson_id=NEW.lesson_id
+              AND l.channel='user-preference')
+ AND (NEW.evaluation_kind!='human-confirmation' OR NEW.confirmed_by_kind!='human'
+      OR NEW.confirmed_by IS NULL)
+BEGIN SELECT RAISE(ABORT, 'preference learning requires scored human confirmation'); END;
+CREATE TRIGGER IF NOT EXISTS learning_evaluation_is_immutable
+BEFORE UPDATE ON learning_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning evaluation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_evaluation_cannot_be_deleted
+BEFORE DELETE ON learning_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning evaluation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS learning_event_is_immutable
+BEFORE UPDATE ON learning_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning event is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_event_cannot_be_deleted
+BEFORE DELETE ON learning_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning event cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS learning_policy_starts_staged
+BEFORE INSERT ON learning_policy_versions FOR EACH ROW
+WHEN NEW.status!='staged' OR NEW.activated_at IS NOT NULL OR NEW.superseded_at IS NOT NULL
+  OR NEW.superseded_by IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'learning policy must begin staged'); END;
+CREATE TRIGGER IF NOT EXISTS learning_policy_requires_qualified_lesson
+BEFORE INSERT ON learning_policy_versions FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM learning_lessons l JOIN learning_evaluations e
+                   ON e.lesson_id=l.lesson_id
+                  WHERE l.lesson_id=NEW.lesson_id AND l.status='qualified' AND e.passed=1
+                    AND l.target_policy_key=NEW.policy_key AND l.channel=NEW.channel
+                    AND l.configuration_json=NEW.configuration_json)
+BEGIN SELECT RAISE(ABORT, 'learning policy requires qualified lesson and matching configuration'); END;
+CREATE TRIGGER IF NOT EXISTS learning_policy_payload_is_immutable
+BEFORE UPDATE ON learning_policy_versions FOR EACH ROW
+WHEN OLD.policy_version_id!=NEW.policy_version_id OR OLD.policy_key!=NEW.policy_key
+  OR OLD.revision_number!=NEW.revision_number OR OLD.lesson_id!=NEW.lesson_id
+  OR COALESCE(OLD.predecessor_policy_version_id,'')!=COALESCE(NEW.predecessor_policy_version_id,'')
+  OR OLD.channel!=NEW.channel OR OLD.configuration_json!=NEW.configuration_json
+  OR OLD.configuration_hash!=NEW.configuration_hash
+  OR OLD.affected_future_runs_json!=NEW.affected_future_runs_json OR OLD.staged_by!=NEW.staged_by
+BEGIN SELECT RAISE(ABORT, 'learning policy payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_policy_status_is_monotonic
+BEFORE UPDATE OF status ON learning_policy_versions FOR EACH ROW
+WHEN NOT ((OLD.status='staged' AND NEW.status='active' AND NEW.activated_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM learning_policy_readbacks r
+                         WHERE r.policy_version_id=OLD.policy_version_id
+                           AND r.phase='preactivation' AND r.ok=1))
+       OR (OLD.status='active' AND NEW.status='superseded' AND NEW.superseded_at IS NOT NULL
+            AND NEW.superseded_by IS NOT NULL))
+BEGIN SELECT RAISE(ABORT, 'invalid learning policy status transition'); END;
+CREATE TRIGGER IF NOT EXISTS learning_policy_cannot_be_deleted
+BEFORE DELETE ON learning_policy_versions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning policy cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS learning_readback_must_reconcile
+BEFORE INSERT ON learning_policy_readbacks FOR EACH ROW
+WHEN NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
+  OR NEW.coverage_ok!=json_extract(NEW.report_json, '$.axes.coverage.ok')
+  OR NEW.content_ok!=json_extract(NEW.report_json, '$.axes.content.ok')
+  OR NEW.ok!=json_extract(NEW.report_json, '$.ok')
+BEGIN SELECT RAISE(ABORT, 'learning policy read-back does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS learning_readback_is_immutable
+BEFORE UPDATE ON learning_policy_readbacks FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning policy read-back is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS learning_readback_cannot_be_deleted
+BEFORE DELETE ON learning_policy_readbacks FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'learning policy read-back cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

@@ -132,6 +132,9 @@ jobs:
       - name: Crosswalk — identity gates, counterevidence, and Collatio qualification adapter
         working-directory: mcp-server
         run: node test-crosswalk-qualification.mjs
+      - name: Learning ledger — typed channels, scored promotion, and runtime read-back
+        working-directory: mcp-server
+        run: node test-learning-ledger.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

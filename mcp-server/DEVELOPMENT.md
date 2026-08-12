@@ -187,7 +187,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_172 tools across 38 groups. Generated from `tools/list` — do not hand-edit._
+_180 tools across 39 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -383,6 +383,19 @@ _172 tools across 38 groups. Generated from `tools/list` — do not hand-edit._
 | `predict_change_impact` | Compute and durably record an explainable predicted diff before comparison or invalidation. Uses rename-aware Git changes, file-ledger mappings, claim/finding evidence, xrefs, seams, and open obligations. Explicit gaps can emit a non-executing discovery request; this tool never calls a model. |
 | `get_change_impact` | Read a durable predicted-diff artifact and its current application state. Optional object_type/object_id filters return the exact traversable reason path for one impacted object. |
 | `apply_change_impact` | Atomically apply a previously recorded prediction: create structured git-change evidence, close every still-current predicted claim at head_sha, append validity events, and retain the immutable predicted artifact for audit. |
+
+### `learning` (8)
+
+| Tool | Description |
+|---|---|
+| `extract_learning_outcome` | Freeze a completed agent, review, or design session outcome as an exact planned → produced → accepted → later-invalidated artifact ledger. Every artifact has typed provenance, state prefixes reconcile mechanically, and supported invalidations must match current durable state. |
+| `propose_learning_lesson` | Create an immutable candidate in exactly one corpus, retrieval, method, research, or user-preference channel from a completed outcome extraction. Channel-specific epistemic kinds and evidence are enforced; preferences require a matching named human statement and exact scope. Every candidate carries an executable rollback trigger, action, preservation set, and affected-future-run selector. |
+| `qualify_learning_lesson` | Mechanically score a candidate against frozen evidence and a minimum effect. Method lessons additionally require treatment-versus-clean or ablation evidence plus an A14 qualification that passed read-back; preference lessons require scored confirmation by their named human source. A failed score remains candidate and cannot activate. |
+| `stage_learning_policy` | Stage one qualified lesson as the next immutable policy version. Configuration must exactly match the qualified candidate; a successor must name the currently active lesson, and method learning additionally requires the matching A14 unattended method activation. |
+| `verify_learning_policy` | Read a staged policy through the runtime representation, activate it transactionally, supersede prior lesson and policy history, then read the active next-run policy again on independent state, coverage, and content axes. Any mismatch rolls the entire activation back. |
+| `audit_learning_policy` | Re-read one active learning policy through the same registry consumed by future runs and append a state/coverage/content audit. observed_policy is a validation-only fault-injection surface; it never mutates policy. |
+| `get_learning_policy` | Return the active, read-back-verified policy representation consumed by future runs for one key, or null when no qualified lesson is active. |
+| `get_learning_ledger` | Read the typed distillation ledger. Without lesson_id it returns extraction, lesson, and active-policy summaries; with lesson_id it returns immutable provenance, evaluation, event history, rollback plan, and every policy version. |
 
 ### `locks` (3)
 

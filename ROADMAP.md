@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 2 | 1 | 0 | 15 |
+| 0 | 1 | 1 | 0 | 16 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A15 — Distillation and revisable learning ledger. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A16 — Multi-repository evaluation and operating envelope. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -752,7 +752,7 @@ Risks:
 
 #### A15 — Distillation and revisable learning ledger
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis + distillation<br>
 **Depends on:** A12, A14<br>
 **Metrics:** M7, M10, M11, M12
@@ -783,11 +783,11 @@ Risks:
 - User preferences may be contextual and become harmful when generalized.
 
 **Practice basis:** GP11, GP12, GP16, GP18, GP28, VP1, VP9, VP17, VP20<br>
-**Baseline evidence:** `mcp-server/src/tools/logging.ts`, `mcp-server/src/tools/storage-history.ts`, `mcp-server/src/storage-git.ts`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `mcp-server/src/tools/logging.ts`, `mcp-server/src/tools/storage-history.ts`, `mcp-server/src/storage-git.ts`, `dev/cross-domain-analysis.md`, `mcp-server/src/tools/learning.ts`, `mcp-server/fixtures/learning/method-qualification.json`, `mcp-server/test-learning-ledger.mjs`, `dev/adr/0016-typed-revisable-learning-ledger.md`
 
 #### A16 — Multi-repository evaluation and operating envelope
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A8, A11, A15<br>
 **Metrics:** M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "qualification_id": "qualification-learning-method",
+  "observed_value_milli": 900,
+  "control_results": [
+    { "control_id": "baseline", "observed_outcome": "accept" },
+    { "control_id": "positive", "observed_outcome": "reject" },
+    { "control_id": "negative", "observed_outcome": "accept" },
+    { "control_id": "scramble", "observed_outcome": "reject" },
+    { "control_id": "inconclusive", "observed_outcome": "inconclusive" }
+  ],
+  "red_gate_results": [
+    {
+      "gate_id": "policy-bypass",
+      "fired": true,
+      "observed_failure": "unqualified method cannot enter unattended policy"
+    }
+  ],
+  "custody_counts": { "planned": 1, "landed": 1, "schema_valid": 1 },
+  "limitations": ["Fixture demonstrates A15 composition with A14; it is not a general efficacy claim."]
+}
