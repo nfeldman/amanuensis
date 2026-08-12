@@ -102,9 +102,33 @@ Lexical containment and real paths of existing ancestors reject symlink-parent
 escapes. Evaluation captures verification minutes and missed-constraint counts;
 satisfaction is optional context rather than the success measure.
 
+## CodebaseBrief contract
+
+`CodebaseBrief 1.0.0` is the stable seam between Amanuensis records and review,
+design, or generative sessions. It is deliberately not a serialization of
+SQLite tables. `prepare_codebase_brief_source` freezes one task-bounded source
+manifest from an A9 review session, direct task constraints, and any
+provenance-bound inferred intent or candidate options. All projections retain
+that source hash and copy selected candidates without changing their truth.
+
+Every candidate carries a stable ID and hash, an explicit epistemic kind,
+record URI, provenance, validity, declared modes, and relevance terms. The
+contract keeps observed behavior, direct intent, inferred intent,
+recommendations, inferences, and open questions distinct after JSON round-trip.
+The JSON Schema ships in `contracts/codebase-brief.schema.json`; the runtime
+semantic validator additionally reconciles hashes and the exact source census.
+
+Selection is `registry-then-lexical-v1`: explicit IDs resolve locally before a
+deterministic lexical rank, and the trace records `model_calls: 0`. A caller may
+explicitly request a candidate outside a mode's normal policy, but that override
+is visible as `registry-exact`. Every remaining candidate appears once in the
+omission ledger with a `policy`, `irrelevant`, or `budget` reason. Missing
+epistemic metadata, category drift, hash drift, duplicate accounting, and silent
+truncation are invalid.
+
 <!-- TOOL-INVENTORY-START -->
 
-_133 tools across 33 groups. Generated from `tools/list` — do not hand-edit._
+_138 tools across 34 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -124,6 +148,16 @@ _133 tools across 33 groups. Generated from `tools/list` — do not hand-edit._
 | `get_claims` | Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
+
+### `codebase-brief` (5)
+
+| Tool | Description |
+|---|---|
+| `prepare_codebase_brief_source` | Freeze a storage-independent CodebaseBrief source record from one A9 review session plus typed direct constraints, provenance-bound inferred intent, and candidate options. The source is immutable and shared by all mode projections. |
+| `compile_codebase_brief` | Compile a versioned review, design, or generative CodebaseBrief from one immutable source. Exact registry IDs are resolved first, lexical ranking is deterministic, model_calls is always zero, and every excluded candidate receives a policy, irrelevance, or budget reason. |
+| `get_codebase_brief` | Read one immutable CodebaseBrief projection, its source identity, explicit omissions, deterministic selection trace, and append-only validation records. |
+| `lookup_codebase_brief_objects` | Resolve exact candidate IDs in a frozen CodebaseBrief source through the local registry. This path is deterministic, preserves source objects byte-for-byte, and performs zero model calls. |
+| `validate_codebase_brief` | Validate a stored or caller-supplied CodebaseBrief 1.0.0. Semantic checks reject erased epistemic kinds, category drift, duplicate accounting, and any source candidate missing from both selected content and explicit omissions. |
 
 ### `compare` (1)
 

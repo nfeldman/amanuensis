@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0.0",
+  "source_id": "fixture-codebase-source",
+  "review_session_id": "fixture-review-session",
+  "reviewed_sha": "1111111111111111111111111111111111111111",
+  "objective": "Design a compatible event migration without losing explicit uncertainty.",
+  "candidates": [
+    {
+      "candidate_id": "intent:objective",
+      "category": "direct_intent",
+      "epistemic_kind": "direct-intent",
+      "statement": "Design a compatible event migration.",
+      "source": { "record_uri": "amanuensis://fixture/objective", "source_type": "direct-user", "source_id": "objective" },
+      "provenance": [{ "kind": "direct-user", "ref": "fixture.objective", "sha": null }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": true,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["event", "migration"]
+    },
+    {
+      "candidate_id": "constraint:compatibility",
+      "category": "constraints",
+      "epistemic_kind": "direct-intent",
+      "statement": "Existing consumers must remain compatible during migration.",
+      "source": { "record_uri": "amanuensis://fixture/constraint", "source_type": "direct-user", "source_id": "compatibility" },
+      "provenance": [{ "kind": "direct-user", "ref": "fixture.constraint", "sha": null }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": true,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["compatibility", "consumer"]
+    },
+    {
+      "candidate_id": "fact:producer-v2",
+      "category": "facts",
+      "epistemic_kind": "observed-behavior",
+      "statement": "The producer now emits event version 2.",
+      "source": { "record_uri": "amanuensis://finding/producer-v2", "source_type": "finding", "source_id": "producer-v2" },
+      "provenance": [{ "kind": "evidence", "ref": "evidence:1", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": "1111111111111111111111111111111111111111", "valid_until_sha": null },
+      "required": false,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["event", "producer", "version"]
+    },
+    {
+      "candidate_id": "intent:compatibility-owner",
+      "category": "inferred_intent",
+      "epistemic_kind": "inferred-intent",
+      "statement": "The adapter appears intended to own event-version compatibility.",
+      "source": { "record_uri": "amanuensis://fixture/inferred-intent", "source_type": "inferred-intent", "source_id": "compatibility-owner" },
+      "provenance": [{ "kind": "derived-rule", "ref": "amanuensis://finding/producer-v2", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["design", "generative"],
+      "relevance_terms": ["event", "compatibility", "adapter"]
+    },
+    {
+      "candidate_id": "contradiction:versions",
+      "category": "contradictions",
+      "epistemic_kind": "inference",
+      "statement": "Producer version 2 conflicts with the consumer version 1 contract.",
+      "source": { "record_uri": "amanuensis://fixture/contradiction", "source_type": "review-hypothesis", "source_id": "versions" },
+      "provenance": [{ "kind": "durable-record", "ref": "amanuensis://review-hypothesis/versions", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["review", "design"],
+      "relevance_terms": ["event", "compatibility", "version"]
+    },
+    {
+      "candidate_id": "change:event-version",
+      "category": "changes",
+      "epistemic_kind": "observed-behavior",
+      "statement": "The event version constant changed from 1 to 2.",
+      "source": { "record_uri": "amanuensis://change/event-version", "source_type": "change-file", "source_id": "event-version" },
+      "provenance": [{ "kind": "durable-record", "ref": "amanuensis://change/event-version", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["event", "migration", "version"]
+    },
+    {
+      "candidate_id": "option:adapter",
+      "category": "options",
+      "epistemic_kind": "recommendation",
+      "statement": "Introduce an adapter that accepts both event versions during migration.",
+      "source": { "record_uri": "amanuensis://fixture/option", "source_type": "option", "source_id": "adapter" },
+      "provenance": [{ "kind": "derived-rule", "ref": "amanuensis://fixture/contradiction", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["design", "generative"],
+      "relevance_terms": ["event", "compatibility", "migration"]
+    },
+    {
+      "candidate_id": "gap:rollout-order",
+      "category": "gaps",
+      "epistemic_kind": "open-question",
+      "statement": "The rollout order of producers and consumers remains unknown.",
+      "source": { "record_uri": "amanuensis://question/rollout", "source_type": "open-question", "source_id": "rollout" },
+      "provenance": [{ "kind": "durable-record", "ref": "amanuensis://question/rollout", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "unknown", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["migration", "rollout", "consumer"]
+    },
+    {
+      "candidate_id": "fact:historical-v0",
+      "category": "facts",
+      "epistemic_kind": "observed-behavior",
+      "statement": "Event version 0 was retired in an earlier release.",
+      "source": { "record_uri": "amanuensis://history/event-v0", "source_type": "finding", "source_id": "event-v0" },
+      "provenance": [{ "kind": "durable-record", "ref": "amanuensis://history/event-v0", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "historical", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": "1111111111111111111111111111111111111111" },
+      "required": false,
+      "modes": ["review"],
+      "relevance_terms": ["event", "version", "history"]
+    },
+    {
+      "candidate_id": "fact:docs-theme",
+      "category": "facts",
+      "epistemic_kind": "observed-behavior",
+      "statement": "The documentation site uses the slate color theme.",
+      "source": { "record_uri": "amanuensis://fact/docs-theme", "source_type": "claim", "source_id": "docs-theme" },
+      "provenance": [{ "kind": "evidence", "ref": "evidence:docs", "sha": "1111111111111111111111111111111111111111" }],
+      "validity": { "status": "current", "as_of_sha": "1111111111111111111111111111111111111111", "valid_from_sha": null, "valid_until_sha": null },
+      "required": false,
+      "modes": ["review", "design", "generative"],
+      "relevance_terms": ["documentation", "theme", "color"]
+    }
+  ]
+}

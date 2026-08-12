@@ -2643,6 +2643,111 @@ BEFORE DELETE ON review_session_evaluations FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'review session evaluation cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- CODEBASE BRIEF: versioned, task-bounded architecture contract
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS codebase_brief_sources (
+    source_id         TEXT PRIMARY KEY,
+    review_session_id TEXT NOT NULL REFERENCES review_sessions(review_session_id) ON DELETE RESTRICT,
+    reviewed_sha      TEXT NOT NULL,
+    schema_version    TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    candidate_count   INTEGER NOT NULL CHECK (candidate_count > 0),
+    source_json       TEXT NOT NULL CHECK (json_valid(source_json)),
+    source_hash       TEXT NOT NULL,
+    prepared_by       TEXT NOT NULL REFERENCES sessions(session_id),
+    prepared_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS codebase_brief_candidates (
+    source_id        TEXT NOT NULL REFERENCES codebase_brief_sources(source_id) ON DELETE RESTRICT,
+    candidate_id     TEXT NOT NULL,
+    category         TEXT NOT NULL CHECK (category IN (
+                       'facts','direct_intent','inferred_intent','constraints',
+                       'contradictions','changes','options','gaps')),
+    epistemic_kind   TEXT NOT NULL CHECK (epistemic_kind IN (
+                       'observed-behavior','inference','direct-intent',
+                       'inferred-intent','recommendation','open-question')),
+    required         INTEGER NOT NULL CHECK (required IN (0,1)),
+    candidate_hash   TEXT NOT NULL,
+    candidate_json   TEXT NOT NULL CHECK (json_valid(candidate_json)),
+    PRIMARY KEY (source_id, candidate_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_codebase_brief_candidates_category
+    ON codebase_brief_candidates(source_id, category, candidate_id);
+
+CREATE TABLE IF NOT EXISTS codebase_briefs (
+    brief_id        TEXT PRIMARY KEY,
+    source_id       TEXT NOT NULL REFERENCES codebase_brief_sources(source_id) ON DELETE RESTRICT,
+    mode            TEXT NOT NULL CHECK (mode IN ('review','design','generative')),
+    schema_version  TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    item_limit      INTEGER NOT NULL CHECK (item_limit > 0),
+    included_count  INTEGER NOT NULL CHECK (included_count > 0),
+    omitted_count   INTEGER NOT NULL CHECK (omitted_count >= 0),
+    brief_json      TEXT NOT NULL CHECK (json_valid(brief_json)),
+    brief_hash      TEXT NOT NULL,
+    compiled_by     TEXT NOT NULL REFERENCES sessions(session_id),
+    compiled_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (source_id, mode, brief_id)
+);
+
+CREATE TABLE IF NOT EXISTS codebase_brief_validations (
+    validation_id INTEGER PRIMARY KEY,
+    brief_id      TEXT NOT NULL REFERENCES codebase_briefs(brief_id) ON DELETE RESTRICT,
+    input_hash    TEXT NOT NULL,
+    schema_ok     INTEGER NOT NULL CHECK (schema_ok IN (0,1)),
+    semantic_ok   INTEGER NOT NULL CHECK (semantic_ok IN (0,1)),
+    error_count   INTEGER NOT NULL CHECK (error_count >= 0),
+    report_json   TEXT NOT NULL CHECK (json_valid(report_json)),
+    validated_by  TEXT NOT NULL REFERENCES sessions(session_id),
+    validated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS codebase_brief_source_is_immutable
+BEFORE UPDATE ON codebase_brief_sources FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief source is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_source_cannot_be_deleted
+BEFORE DELETE ON codebase_brief_sources FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief source cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_candidate_is_immutable
+BEFORE UPDATE ON codebase_brief_candidates FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief candidate is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_candidate_cannot_be_deleted
+BEFORE DELETE ON codebase_brief_candidates FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief candidate cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_is_immutable
+BEFORE UPDATE ON codebase_briefs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_cannot_be_deleted
+BEFORE DELETE ON codebase_briefs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_validation_is_immutable
+BEFORE UPDATE ON codebase_brief_validations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief validation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_validation_cannot_be_deleted
+BEFORE DELETE ON codebase_brief_validations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief validation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_source_must_reconcile
+BEFORE INSERT ON codebase_brief_sources FOR EACH ROW
+WHEN NEW.candidate_count!=json_array_length(json_extract(NEW.source_json, '$.candidates'))
+  OR NEW.source_hash!=json_extract(NEW.source_json, '$.source_hash')
+  OR NEW.review_session_id!=json_extract(NEW.source_json, '$.review_session_id')
+  OR NEW.reviewed_sha!=json_extract(NEW.source_json, '$.reviewed_sha')
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief source does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_must_reconcile
+BEFORE INSERT ON codebase_briefs FOR EACH ROW
+WHEN NEW.included_count!=json_extract(NEW.brief_json, '$.budget.selected_count')
+  OR NEW.omitted_count!=json_extract(NEW.brief_json, '$.budget.omitted_count')
+  OR NEW.source_id!=json_extract(NEW.brief_json, '$.source.source_id')
+  OR NEW.mode!=json_extract(NEW.brief_json, '$.mode')
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief projection does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS codebase_brief_validation_must_reconcile
+BEFORE INSERT ON codebase_brief_validations FOR EACH ROW
+WHEN NEW.semantic_ok!=json_extract(NEW.report_json, '$.ok')
+  OR NEW.error_count!=json_array_length(json_extract(NEW.report_json, '$.errors'))
+BEGIN SELECT RAISE(ABORT, 'CodebaseBrief validation does not reconcile'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

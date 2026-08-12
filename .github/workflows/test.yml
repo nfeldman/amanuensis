@@ -117,6 +117,9 @@ jobs:
       - name: Review session — semantic states, expansion, and export read-back
         working-directory: mcp-server
         run: node test-review-session.mjs
+      - name: CodebaseBrief — mode projections, omission custody, and contract red gates
+        working-directory: mcp-server
+        run: node test-codebase-brief.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

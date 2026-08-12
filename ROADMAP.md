@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 7 | 1 | 0 | 10 |
+| 0 | 6 | 1 | 0 | 11 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A10 — CodebaseBrief architecture contract. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A11 — Dialectical design-session engine. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -134,6 +134,7 @@ Does not mean:
 | Obligation | obligation_id, trigger, destination, owner, state, blocking, resolution_evidence | Every detected gap or invalidation has a destination, and blocking obligations keep the relevant gate red. |
 | Decision | decision_id, desire_source, accepted_option, alternatives, constraints, evidence_ids, consequences, falsifiers, accepted_by | Amanuensis may draft; only an authorized human or owning system can accept. |
 | Run | run_id, mode, repo_sha, configuration, replicate_id, dispatched, landed, scored, artifacts | Every unattended run is reproducible enough to audit and reconciles intended work with landed and scored outputs. |
+| CodebaseBrief | schema_version, source_hash, mode, epistemic_kind, provenance, validity, selection, omissions | Every mode projection preserves one immutable source truth; exact registry selection is model-free, and every non-selected candidate has an explicit reason. |
 
 ### Ownership
 
@@ -562,7 +563,7 @@ Risks:
 
 #### A10 — CodebaseBrief architecture contract
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A4, A9<br>
 **Metrics:** M7, M8, M9, M12
@@ -593,11 +594,11 @@ Risks:
 - Mode projections can drift into separate products.
 
 **Practice basis:** GP7, GP11, GP12, GP14, GP27, GP28, VP20<br>
-**Baseline evidence:** `mcp-server/src/tools/artifacts.ts`, `mcp-server/src/tools/logging.ts`, `mcp-server/src/tools/vocabulary.ts`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `mcp-server/src/tools/artifacts.ts`, `mcp-server/src/tools/logging.ts`, `mcp-server/src/tools/vocabulary.ts`, `dev/cross-domain-analysis.md`, `mcp-server/contracts/codebase-brief.schema.json`, `mcp-server/src/codebase-brief-contract.ts`, `mcp-server/src/tools/codebase-brief.ts`, `mcp-server/fixtures/codebase-brief/source-input.json`, `mcp-server/test-codebase-brief.mjs`, `dev/adr/0011-codebase-brief-contract.md`
 
 #### A11 — Dialectical design-session engine
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A7, A10<br>
 **Metrics:** M8, M9, M11

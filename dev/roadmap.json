@@ -263,6 +263,20 @@
         "artifacts"
       ],
       "contract": "Every unattended run is reproducible enough to audit and reconciles intended work with landed and scored outputs."
+    },
+    {
+      "name": "CodebaseBrief",
+      "fields": [
+        "schema_version",
+        "source_hash",
+        "mode",
+        "epistemic_kind",
+        "provenance",
+        "validity",
+        "selection",
+        "omissions"
+      ],
+      "contract": "Every mode projection preserves one immutable source truth; exact registry selection is model-free, and every non-selected candidate has an explicit reason."
     }
   ],
   "ownership": [
@@ -978,7 +992,7 @@
         {
           "id": "A10",
           "title": "CodebaseBrief architecture contract",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Review, design, and generative sessions consume a stable, task-bounded codebase situation model rather than reaching directly into storage tables.",
           "rationale": "A shared contract concentrates epistemic discipline and creates the future seam with Chorusmith without giving Chorusmith custody of Amanuensis truth.",
@@ -1022,13 +1036,19 @@
             "mcp-server/src/tools/artifacts.ts",
             "mcp-server/src/tools/logging.ts",
             "mcp-server/src/tools/vocabulary.ts",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/contracts/codebase-brief.schema.json",
+            "mcp-server/src/codebase-brief-contract.ts",
+            "mcp-server/src/tools/codebase-brief.ts",
+            "mcp-server/fixtures/codebase-brief/source-input.json",
+            "mcp-server/test-codebase-brief.mjs",
+            "dev/adr/0011-codebase-brief-contract.md"
           ]
         },
         {
           "id": "A11",
           "title": "Dialectical design-session engine",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Amanuensis furnishes immanent, adversarial, and speculative design lenses, preserves their disagreements, and returns a lean with falsifiers rather than an artificial consensus.",
           "rationale": "Architecture support should expose potential and tension while remaining anchored to actual code and user desire.",

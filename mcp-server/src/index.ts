@@ -7,6 +7,7 @@ import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "
 import { resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { claimTools } from "./tools/claims.js";
+import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
 import { compositionTools } from "./tools/composition.js";
 import { concernTools } from "./tools/concerns.js";
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
     ...reviewTools,
     ...reviewAnalysisTools,
     ...reviewSessionTools,
+    ...codebaseBriefTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/codebase-brief/1.0.0",
+  "title": "Amanuensis CodebaseBrief",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "brief_id",
+    "mode",
+    "source",
+    "task",
+    "budget",
+    "selection",
+    "source_manifest",
+    "sections",
+    "omissions"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "brief_id": { "$ref": "#/$defs/nonEmpty" },
+    "mode": { "enum": ["review", "design", "generative"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_hash", "review_session_id", "reviewed_sha"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/nonEmpty" },
+        "source_hash": { "$ref": "#/$defs/nonEmpty" },
+        "review_session_id": { "$ref": "#/$defs/nonEmpty" },
+        "reviewed_sha": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective"],
+      "properties": { "objective": { "$ref": "#/$defs/nonEmpty" } }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_limit", "required_count", "selected_count", "omitted_count"],
+      "properties": {
+        "item_limit": { "type": "integer", "minimum": 1 },
+        "required_count": { "type": "integer", "minimum": 0 },
+        "selected_count": { "type": "integer", "minimum": 1 },
+        "omitted_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "model_calls", "registry_ids", "lexical_query", "query_terms"],
+      "properties": {
+        "algorithm": { "const": "registry-then-lexical-v1" },
+        "model_calls": { "const": 0 },
+        "registry_ids": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" }, "uniqueItems": true },
+        "lexical_query": { "type": "string" },
+        "query_terms": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" }, "uniqueItems": true }
+      }
+    },
+    "source_manifest": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/manifestItem" }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "direct_intent", "inferred_intent", "constraints", "contradictions", "changes", "options", "gaps"],
+      "properties": {
+        "facts": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "direct_intent": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "inferred_intent": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "constraints": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "contradictions": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "changes": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "options": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } },
+        "gaps": { "type": "array", "items": { "$ref": "#/$defs/selectedCandidate" } }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "candidate_hash", "reason", "detail"],
+        "properties": {
+          "candidate_id": { "$ref": "#/$defs/nonEmpty" },
+          "candidate_hash": { "$ref": "#/$defs/nonEmpty" },
+          "reason": { "enum": ["policy", "irrelevant", "budget"] },
+          "detail": { "$ref": "#/$defs/nonEmpty" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "manifestItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "candidate_hash"],
+      "properties": {
+        "candidate_id": { "$ref": "#/$defs/nonEmpty" },
+        "candidate_hash": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_uri", "source_type", "source_id"],
+      "properties": {
+        "record_uri": { "$ref": "#/$defs/nonEmpty" },
+        "source_type": { "$ref": "#/$defs/nonEmpty" },
+        "source_id": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "sha"],
+      "properties": {
+        "kind": { "enum": ["direct-user", "durable-record", "evidence", "derived-rule"] },
+        "ref": { "$ref": "#/$defs/nonEmpty" },
+        "sha": { "type": ["string", "null"] }
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "as_of_sha", "valid_from_sha", "valid_until_sha"],
+      "properties": {
+        "status": { "enum": ["current", "historical", "stale", "unknown"] },
+        "as_of_sha": { "$ref": "#/$defs/nonEmpty" },
+        "valid_from_sha": { "type": ["string", "null"] },
+        "valid_until_sha": { "type": ["string", "null"] }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["candidate_id", "category", "epistemic_kind", "statement", "source", "provenance", "validity", "required", "modes", "relevance_terms", "candidate_hash"],
+      "properties": {
+        "candidate_id": { "$ref": "#/$defs/nonEmpty" },
+        "category": { "enum": ["facts", "direct_intent", "inferred_intent", "constraints", "contradictions", "changes", "options", "gaps"] },
+        "epistemic_kind": { "enum": ["observed-behavior", "inference", "direct-intent", "inferred-intent", "recommendation", "open-question"] },
+        "statement": { "$ref": "#/$defs/nonEmpty" },
+        "source": { "$ref": "#/$defs/source" },
+        "provenance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provenance" } },
+        "validity": { "$ref": "#/$defs/validity" },
+        "required": { "type": "boolean" },
+        "modes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["review", "design", "generative"] } },
+        "relevance_terms": { "type": "array", "items": { "type": "string" } },
+        "candidate_hash": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "selectedCandidate": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/candidate" },
+        {
+          "type": "object",
+          "required": ["selection_basis"],
+          "properties": { "selection_basis": { "enum": ["required", "registry-exact", "lexical"] } }
+        }
+      ]
+    }
+  }
+}

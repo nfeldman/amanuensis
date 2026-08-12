@@ -46,6 +46,7 @@ node test-review-brief.mjs              # impact context, ablations, and publica
 node test-review-analysis.mjs           # independent passes, blinding, and null controls
 node test-composition.mjs               # exact fan-in and integral HEAD seam controls
 node test-review-session.mjs            # compact review, expansion, and semantic export read-back
+node test-codebase-brief.mjs            # mode projections, omission custody, and contract red gates
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -167,6 +168,12 @@ in agent prose:
   requires independent state, coverage, and content read-back. Extend
   `test-review-session.mjs` whenever a section, label, expansion, completion,
   export, or user-evaluation contract changes.
+- **CodebaseBrief custody.** The versioned contract is not a storage DTO.
+  Review, design, and generative projections share one immutable source hash;
+  exact registry identity precedes deterministic lexical selection, and every
+  unselected candidate has a policy, irrelevance, or budget reason. Extend
+  `test-codebase-brief.mjs` whenever a category, epistemic kind, mode policy,
+  selection route, budget rule, or omission contract changes.
 
 ## Commits
 
