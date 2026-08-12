@@ -1048,7 +1048,7 @@
         {
           "id": "A11",
           "title": "Dialectical design-session engine",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Amanuensis furnishes immanent, adversarial, and speculative design lenses, preserves their disagreements, and returns a lean with falsifiers rather than an artificial consensus.",
           "rationale": "Architecture support should expose potential and tension while remaining anchored to actual code and user desire.",
@@ -1097,13 +1097,16 @@
             "agents/amanuensis-adversarial.agent.md",
             "agents/amanuensis-structural.agent.md",
             "agents/amanuensis.agent.md",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/src/tools/design-session.ts",
+            "mcp-server/test-design-session.mjs",
+            "dev/adr/0012-independent-dialectical-design.md"
           ]
         },
         {
           "id": "A12",
           "title": "Decision custody and consequence tracking",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis + human",
           "outcome": "Accepted architecture decisions, rejected options, consequences, and falsifiers become durable context without converting model proposals into policy.",
           "rationale": "A system that remembers code but forgets why it changed will repeatedly reopen settled choices or mistake an implementation accident for intent.",

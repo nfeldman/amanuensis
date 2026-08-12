@@ -47,6 +47,7 @@ node test-review-analysis.mjs           # independent passes, blinding, and null
 node test-composition.mjs               # exact fan-in and integral HEAD seam controls
 node test-review-session.mjs            # compact review, expansion, and semantic export read-back
 node test-codebase-brief.mjs            # mode projections, omission custody, and contract red gates
+node test-design-session.mjs            # independent lenses, disagreement, and underdetermination
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -174,6 +175,12 @@ in agent prose:
   unselected candidate has a policy, irrelevance, or budget reason. Extend
   `test-codebase-brief.mjs` whenever a category, epistemic kind, mode policy,
   selection route, budget rule, or omission contract changes.
+- **Design-session custody.** Immanent, adversarial, and speculative lenses
+  dispatch independently over controlled projections before any output lands.
+  Aggregation preserves disagreement and may furnish advice, never acceptance;
+  unresolved desire conflicts force underdetermination. Extend
+  `test-design-session.mjs` whenever a lens packet, option field, desire rule,
+  aggregation condition, or evaluation-blinding guard changes.
 
 ## Commits
 

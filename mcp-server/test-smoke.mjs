@@ -34,6 +34,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { codebaseBriefTools } from "./dist/tools/codebase-brief.js";
 import { compositionTools } from "./dist/tools/composition.js";
+import { designSessionTools } from "./dist/tools/design-session.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
@@ -93,6 +94,7 @@ const allTools = new Map(
     ...reviewAnalysisTools,
     ...reviewSessionTools,
     ...codebaseBriefTools,
+    ...designSessionTools,
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,

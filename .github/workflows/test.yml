@@ -120,6 +120,9 @@ jobs:
       - name: CodebaseBrief — mode projections, omission custody, and contract red gates
         working-directory: mcp-server
         run: node test-codebase-brief.mjs
+      - name: Design sessions — independent lenses, disagreement, and underdetermination
+        working-directory: mcp-server
+        run: node test-design-session.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

@@ -2748,6 +2748,187 @@ WHEN NEW.semantic_ok!=json_extract(NEW.report_json, '$.ok')
 BEGIN SELECT RAISE(ABORT, 'CodebaseBrief validation does not reconcile'); END;
 
 ----------------------------------------------------------------------
+-- DESIGN SESSIONS: independent dialectical lenses and advice-only lean
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS design_sessions (
+    design_session_id        TEXT PRIMARY KEY,
+    source_id                TEXT NOT NULL REFERENCES codebase_brief_sources(source_id) ON DELETE RESTRICT,
+    source_hash              TEXT NOT NULL,
+    status                   TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                               'planned','collecting','ready-to-aggregate',
+                               'aggregated','underdetermined')),
+    desire_count             INTEGER NOT NULL CHECK (desire_count > 0),
+    conflict_count           INTEGER NOT NULL CHECK (conflict_count >= 0),
+    expected_lens_count      INTEGER NOT NULL DEFAULT 3 CHECK (expected_lens_count=3),
+    orchestrator_model_family TEXT NOT NULL,
+    plan_json                TEXT NOT NULL CHECK (json_valid(plan_json)),
+    plan_hash                TEXT NOT NULL,
+    planned_by               TEXT NOT NULL REFERENCES sessions(session_id),
+    planned_at               TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at             TEXT
+);
+
+CREATE TABLE IF NOT EXISTS design_desires (
+    design_session_id TEXT NOT NULL REFERENCES design_sessions(design_session_id) ON DELETE RESTRICT,
+    desire_id         TEXT NOT NULL,
+    statement         TEXT NOT NULL,
+    priority          INTEGER CHECK (priority IS NULL OR priority BETWEEN 1 AND 5),
+    exclusive_group   TEXT,
+    source_ref        TEXT NOT NULL,
+    PRIMARY KEY (design_session_id, desire_id)
+);
+
+CREATE TABLE IF NOT EXISTS design_lenses (
+    design_session_id TEXT NOT NULL REFERENCES design_sessions(design_session_id) ON DELETE RESTRICT,
+    lens              TEXT NOT NULL CHECK (lens IN ('immanent','adversarial','speculative')),
+    brief_id          TEXT NOT NULL REFERENCES codebase_briefs(brief_id) ON DELETE RESTRICT,
+    provider          TEXT NOT NULL,
+    model             TEXT NOT NULL,
+    model_family      TEXT NOT NULL,
+    context_profile   TEXT NOT NULL CHECK (context_profile IN (
+                         'existing-trajectory','constraint-challenge','adjacent-possible')),
+    status            TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','dispatched','landed')),
+    packet_json       TEXT NOT NULL CHECK (json_valid(packet_json)),
+    packet_hash       TEXT NOT NULL,
+    observed_packet_hash TEXT,
+    output_json       TEXT CHECK (output_json IS NULL OR json_valid(output_json)),
+    output_hash       TEXT,
+    dispatched_at     TEXT,
+    landed_at         TEXT,
+    PRIMARY KEY (design_session_id, lens)
+);
+
+CREATE TABLE IF NOT EXISTS design_options (
+    design_session_id TEXT NOT NULL,
+    lens              TEXT NOT NULL,
+    option_key        TEXT NOT NULL,
+    summary           TEXT NOT NULL,
+    preserves_json    TEXT NOT NULL CHECK (json_valid(preserves_json)),
+    rejects_json      TEXT NOT NULL CHECK (json_valid(rejects_json)),
+    enables_json      TEXT NOT NULL CHECK (json_valid(enables_json)),
+    forecloses_json   TEXT NOT NULL CHECK (json_valid(forecloses_json)),
+    migration_cost_json TEXT NOT NULL CHECK (json_valid(migration_cost_json)),
+    reversibility_json TEXT NOT NULL CHECK (json_valid(reversibility_json)),
+    evidence_item_ids_json TEXT NOT NULL CHECK (json_valid(evidence_item_ids_json)),
+    evidence_gaps_json TEXT NOT NULL CHECK (json_valid(evidence_gaps_json)),
+    falsifiers_json   TEXT NOT NULL CHECK (json_valid(falsifiers_json)),
+    research_needs_json TEXT NOT NULL CHECK (json_valid(research_needs_json)),
+    constraint_preservation REAL NOT NULL CHECK (constraint_preservation BETWEEN 0 AND 1),
+    PRIMARY KEY (design_session_id, lens, option_key),
+    FOREIGN KEY (design_session_id, lens)
+      REFERENCES design_lenses(design_session_id, lens) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS design_aggregations (
+    design_session_id    TEXT PRIMARY KEY REFERENCES design_sessions(design_session_id) ON DELETE RESTRICT,
+    status               TEXT NOT NULL CHECK (status IN ('qualified','underdetermined')),
+    option_count         INTEGER NOT NULL CHECK (option_count > 0),
+    disagreement_count   INTEGER NOT NULL CHECK (disagreement_count >= 0),
+    matrix_json          TEXT NOT NULL CHECK (json_valid(matrix_json)),
+    lean_json            TEXT CHECK (lean_json IS NULL OR json_valid(lean_json)),
+    missing_desires_json TEXT NOT NULL CHECK (json_valid(missing_desires_json)),
+    result_json          TEXT NOT NULL CHECK (json_valid(result_json)),
+    result_hash          TEXT NOT NULL,
+    aggregated_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    aggregated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((status='qualified' AND lean_json IS NOT NULL)
+        OR (status='underdetermined' AND lean_json IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS design_evaluation_packets (
+    packet_id          TEXT PRIMARY KEY,
+    design_session_id  TEXT NOT NULL REFERENCES design_sessions(design_session_id) ON DELETE RESTRICT,
+    condition          TEXT NOT NULL CHECK (condition IN ('clean','marker-only','treated','null')),
+    replicate_id       TEXT NOT NULL,
+    blind_label        TEXT NOT NULL UNIQUE,
+    packet_json        TEXT NOT NULL CHECK (json_valid(packet_json)),
+    packet_hash        TEXT NOT NULL,
+    canary_terms_json  TEXT NOT NULL CHECK (json_valid(canary_terms_json)),
+    content_canary_ok  INTEGER NOT NULL CHECK (content_canary_ok IN (0,1)),
+    prepared_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    prepared_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (design_session_id, condition, replicate_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS design_session_payload_is_immutable
+BEFORE UPDATE ON design_sessions FOR EACH ROW
+WHEN OLD.design_session_id!=NEW.design_session_id OR OLD.source_id!=NEW.source_id
+  OR OLD.source_hash!=NEW.source_hash OR OLD.desire_count!=NEW.desire_count
+  OR OLD.conflict_count!=NEW.conflict_count OR OLD.expected_lens_count!=NEW.expected_lens_count
+  OR OLD.orchestrator_model_family!=NEW.orchestrator_model_family
+  OR OLD.plan_json!=NEW.plan_json OR OLD.plan_hash!=NEW.plan_hash
+BEGIN SELECT RAISE(ABORT, 'design session plan is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_session_status_is_monotonic
+BEFORE UPDATE OF status ON design_sessions FOR EACH ROW
+WHEN NOT ((OLD.status='planned' AND NEW.status='collecting')
+  OR (OLD.status='collecting' AND NEW.status='ready-to-aggregate')
+  OR (OLD.status='ready-to-aggregate' AND NEW.status IN ('aggregated','underdetermined')))
+BEGIN SELECT RAISE(ABORT, 'invalid design session status transition'); END;
+CREATE TRIGGER IF NOT EXISTS design_session_cannot_be_deleted
+BEFORE DELETE ON design_sessions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design session cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_desire_is_immutable
+BEFORE UPDATE ON design_desires FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design desire is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_desire_cannot_be_deleted
+BEFORE DELETE ON design_desires FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design desire cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_lens_payload_is_immutable
+BEFORE UPDATE ON design_lenses FOR EACH ROW
+WHEN OLD.design_session_id!=NEW.design_session_id OR OLD.lens!=NEW.lens
+  OR OLD.brief_id!=NEW.brief_id OR OLD.provider!=NEW.provider OR OLD.model!=NEW.model
+  OR OLD.model_family!=NEW.model_family OR OLD.context_profile!=NEW.context_profile
+  OR OLD.packet_json!=NEW.packet_json OR OLD.packet_hash!=NEW.packet_hash
+BEGIN SELECT RAISE(ABORT, 'design lens plan is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_lens_dispatch_must_reconcile
+BEFORE UPDATE OF status ON design_lenses FOR EACH ROW
+WHEN NEW.status='dispatched' AND NOT (OLD.status='planned'
+  AND NEW.observed_packet_hash=OLD.packet_hash AND NEW.dispatched_at IS NOT NULL
+  AND NEW.output_json IS NULL AND NEW.output_hash IS NULL)
+BEGIN SELECT RAISE(ABORT, 'design lens dispatch does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS design_lens_land_must_reconcile
+BEFORE UPDATE OF status ON design_lenses FOR EACH ROW
+WHEN NEW.status='landed' AND NOT (OLD.status='dispatched'
+  AND NEW.observed_packet_hash=OLD.packet_hash AND NEW.output_json IS NOT NULL
+  AND NEW.output_hash IS NOT NULL AND NEW.landed_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'design lens landing does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS design_lens_cannot_be_deleted
+BEFORE DELETE ON design_lenses FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design lens cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_option_is_immutable
+BEFORE UPDATE ON design_options FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design option is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_option_cannot_be_deleted
+BEFORE DELETE ON design_options FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design option cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_aggregation_is_immutable
+BEFORE UPDATE ON design_aggregations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design aggregation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_aggregation_cannot_be_deleted
+BEFORE DELETE ON design_aggregations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design aggregation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_aggregation_must_reconcile
+BEFORE INSERT ON design_aggregations FOR EACH ROW
+WHEN NEW.option_count!=json_array_length(json_extract(NEW.matrix_json, '$.options'))
+  OR NEW.disagreement_count!=json_array_length(json_extract(NEW.matrix_json, '$.disagreements'))
+  OR NEW.status!=json_extract(NEW.result_json, '$.status')
+BEGIN SELECT RAISE(ABORT, 'design aggregation does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS design_evaluation_packet_is_immutable
+BEFORE UPDATE ON design_evaluation_packets FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design evaluation packet is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS design_evaluation_packet_cannot_be_deleted
+BEFORE DELETE ON design_evaluation_packets FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'design evaluation packet cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS design_evaluation_packet_must_be_blind
+BEFORE INSERT ON design_evaluation_packets FOR EACH ROW
+WHEN NEW.content_canary_ok!=1
+  OR json_type(NEW.packet_json, '$.condition') IS NOT NULL
+  OR json_type(NEW.packet_json, '$.design_session_id') IS NOT NULL
+  OR json_type(NEW.packet_json, '$.lens') IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'design evaluation packet is not blind'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

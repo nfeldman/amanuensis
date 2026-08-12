@@ -13,6 +13,7 @@ import { compositionTools } from "./tools/composition.js";
 import { concernTools } from "./tools/concerns.js";
 import { contradictionTools } from "./tools/contradictions.js";
 import { dashboardTools } from "./tools/dashboard.js";
+import { designSessionTools } from "./tools/design-session.js";
 import { diagnosticityTools } from "./tools/diagnosticity.js";
 import { dispatchTools } from "./tools/dispatch.js";
 import { dispositionTools } from "./tools/dispositions.js";
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
     ...reviewAnalysisTools,
     ...reviewSessionTools,
     ...codebaseBriefTools,
+    ...designSessionTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

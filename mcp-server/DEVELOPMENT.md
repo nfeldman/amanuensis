@@ -126,9 +126,27 @@ omission ledger with a `policy`, `irrelevant`, or `budget` reason. Missing
 epistemic metadata, category drift, hash drift, duplicate accounting, and silent
 truncation are invalid.
 
+## Dialectical design sessions
+
+Design sessions bind three immutable CodebaseBrief projections to independent
+immanent, adversarial, and speculative lanes. Each has its own controlled
+section set, context profile, provider/model identity, and mandate. All packets
+dispatch before any output can land, and none contains another lane's output.
+Each option explicitly records what it preserves, rejects, enables, and
+forecloses, along with cost, reversibility, evidence, gaps, falsifiers, and
+research needs.
+
+Mechanical aggregation runs only after exact three-lens fan-in. It keeps
+preference and option-field disagreements, and furnishes an advice-only lean
+only when an option has an independent strict majority, decisive evidence, and
+no unresolved mutually exclusive or highest-priority desire. Otherwise the
+result is underdetermined and names the missing human desire. Blind evaluation
+packets anonymize lanes, remove runtime identities and condition labels, and
+halt when supplied content canaries survive.
+
 <!-- TOOL-INVENTORY-START -->
 
-_138 tools across 34 groups. Generated from `tools/list` — do not hand-edit._
+_144 tools across 35 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -202,6 +220,17 @@ _138 tools across 34 groups. Generated from `tools/list` — do not hand-edit._
 |---|---|
 | `get_hot_subsystems` | Return the most-accessed subsystems over the last 7 days, weighted by recency. Reads from the hot_subsystems view. |
 | `get_dashboard` | Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, open field notes, unresolved contradictions. |
+
+### `design-session` (6)
+
+| Tool | Description |
+|---|---|
+| `plan_design_session` | Plan exactly three independent immanent, adversarial, and speculative architecture lenses over review/design/generative projections of one CodebaseBrief source. Human-origin desires, exclusive conflicts, context profiles, model-family diversity, and no-deliberation fan-in are frozen before dispatch. |
+| `dispatch_design_lens` | Dispatch one frozen design-lens packet. Packets contain only that lens's controlled CodebaseBrief sections and human-origin desires, never another lens output; all three must dispatch before any can land. |
+| `land_design_lens` | Land one independent lens's option matrix contribution. Every option names what it preserves, rejects, enables, and forecloses plus migration cost, reversibility, visible evidence, gaps, falsifiers, and research needs. Decision or acceptance fields are forbidden. |
+| `aggregate_design_session` | Mechanically aggregate exact three-lens fan-in without a deliberation round. Preserve option-field and preference disagreements; furnish an advice-only lean only with an independent strict majority, decisive evidence, and no unresolved mutually exclusive or highest-priority desire. |
+| `prepare_design_evaluation_packet` | Create a content-checked blind evaluation packet for clean, marker-only, treated, or null design artifacts. The returned packet omits condition, session, lens, provider, and model identities; lens contributions are anonymously relabeled and surviving canary terms halt delivery. |
+| `get_design_session` | Read a design session's immutable desire and lens manifests, controlled packets, independent outputs, preserved disagreements, option matrix, advice-only or underdetermined result, and blinded evaluation-packet metadata. |
 
 ### `diagnosticity` (5)
 

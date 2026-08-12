@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 6 | 1 | 0 | 11 |
+| 0 | 5 | 1 | 0 | 12 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A11 — Dialectical design-session engine. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A12 — Decision custody and consequence tracking. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -598,7 +598,7 @@ Risks:
 
 #### A11 — Dialectical design-session engine
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A7, A10<br>
 **Metrics:** M8, M9, M11
@@ -629,11 +629,11 @@ Risks:
 - A persuasive lean may still dominate human choice despite formal authority boundaries.
 
 **Practice basis:** GP2, GP3, GP4, GP5, GP12, GP13, GP16, GP19, GP26, VP1, VP8, VP15, VP16<br>
-**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-structural.agent.md`, `agents/amanuensis.agent.md`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-structural.agent.md`, `agents/amanuensis.agent.md`, `dev/cross-domain-analysis.md`, `mcp-server/src/tools/design-session.ts`, `mcp-server/test-design-session.mjs`, `dev/adr/0012-independent-dialectical-design.md`
 
 #### A12 — Decision custody and consequence tracking
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis + human<br>
 **Depends on:** A10, A11<br>
 **Metrics:** M8, M9, M12
