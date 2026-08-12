@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "a7-independent-review-v1",
+  "surfaceContract": {
+    "assignmentFields": [
+      "assignment_id",
+      "pair_id",
+      "replicate_id",
+      "surface_contract_hash",
+      "expected_finding_keys",
+      "leak_canary"
+    ],
+    "passPacketFields": [
+      "schema_version",
+      "analysis_run_id",
+      "pass_id",
+      "role",
+      "replicate_id",
+      "reviewed_sha",
+      "analytical_frame",
+      "role_contract",
+      "authority"
+    ],
+    "forbiddenChallengeKeys": [
+      "verdict",
+      "rationale",
+      "confidence",
+      "prior_verdict",
+      "source_pass_id",
+      "expected_finding_keys",
+      "arm_type",
+      "truth"
+    ]
+  },
+  "conditions": [
+    "same-context",
+    "varied-context",
+    "heterogeneous-runtime"
+  ],
+  "arms": [
+    {
+      "armType": "clean",
+      "markerPresent": false,
+      "incoherent": false,
+      "expectedFindingKeys": []
+    },
+    {
+      "armType": "marker-only",
+      "markerPresent": true,
+      "incoherent": false,
+      "expectedFindingKeys": []
+    },
+    {
+      "armType": "treated",
+      "markerPresent": true,
+      "incoherent": false,
+      "expectedFindingKeys": [
+        "known-defect"
+      ]
+    },
+    {
+      "armType": "null",
+      "markerPresent": false,
+      "incoherent": true,
+      "expectedFindingKeys": []
+    }
+  ],
+  "replicatesPerCell": 2,
+  "scoring": {
+    "poolAcrossConditions": false,
+    "poolAcrossArms": false,
+    "excludeContaminated": true,
+    "reportSetJaccard": true,
+    "reportMetricStepSize": true,
+    "markerOnlyMayAddFindings": false
+  }
+}

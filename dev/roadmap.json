@@ -802,9 +802,9 @@
           ]
         },
         {
-          "id": "A7",
-          "title": "Independent review generation and refutation",
-          "status": "in-progress",
+      "id": "A7",
+      "title": "Independent review generation and refutation",
+      "status": "done",
           "owner": "Amanuensis",
           "outcome": "Candidate review findings are generated and attacked by role-separated passes with controlled context differences, then aggregated without contaminating independent judgments.",
           "rationale": "A large context and a self-critique prompt do not create independent scrutiny. Consequential findings need a refutation path designed around correlated failure.",
@@ -856,16 +856,20 @@
           "baselineEvidence": [
             "agents/amanuensis-adversarial.agent.md",
             "agents/amanuensis-concerns.agent.md",
-            "mcp-server/src/invariants.ts",
-            "mcp-server/src/tools/review.ts",
-            "mcp-server/test-adversarial-correctness.mjs",
-            "mcp-server/test-review-brief.mjs"
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/review.ts",
+        "mcp-server/test-adversarial-correctness.mjs",
+        "mcp-server/test-review-brief.mjs",
+        "mcp-server/src/tools/review-analysis.ts",
+        "mcp-server/fixtures/review-analysis/manifest.json",
+        "mcp-server/test-review-analysis.mjs",
+        "dev/adr/0008-independent-review-custody-and-blinding.md"
           ]
         },
         {
-          "id": "A8",
-          "title": "Composition and integral HEAD verification",
-          "status": "planned",
+      "id": "A8",
+      "title": "Composition and integral HEAD verification",
+      "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "The review system proves that expected parts landed, fans in results, and evaluates the assembled repository state rather than inferring integration from local successes.",
           "rationale": "Many consequential failures live at seams or appear only after individually correct patches compose.",

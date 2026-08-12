@@ -29,6 +29,7 @@ import { refreshTools } from "./tools/refresh.js";
 import { resolutionTools } from "./tools/resolution.js";
 import { revalidationTools } from "./tools/revalidation.js";
 import { reviewTools } from "./tools/review.js";
+import { reviewAnalysisTools } from "./tools/review-analysis.js";
 import { seamTools } from "./tools/seams.js";
 import { staleTools } from "./tools/stale.js";
 import { storageHistoryTools } from "./tools/storage-history.js";
@@ -65,6 +66,7 @@ async function main(): Promise<void> {
     ...revalidationTools,
     ...refreshTools,
     ...reviewTools,
+    ...reviewAnalysisTools,
     ...resolutionTools,
     ...subsystemTools,
     ...concernTools,

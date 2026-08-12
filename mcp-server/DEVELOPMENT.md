@@ -37,13 +37,33 @@ without treating a worker callback as completion:
 outbox is deliberate: external API calls cannot share a SQLite transaction,
 so dispatch and landing are separate, auditable boundaries.
 
+## Independent review protocol
+
+The review-analysis tools turn a published ReviewBrief into staged,
+observe-only work packets. Generators land candidates before hypotheses are
+frozen. Refuters then receive anonymous claims and evidence without generator
+rationale or identity. Verifiers receive the same claims plus pooled evidence,
+but no refuter verdict or rationale. Only after every planned pass lands can a
+mechanical aggregation retain, contest, or defeat a hypothesis; defeat requires
+new evidence found by a refuter and independently reused by an overturning
+verifier.
+
+Blind evaluation uses sealed clean, marker-only, treated, and null arms with at
+least two replicates per condition. Scoring checks the shapes of the packets
+actually dispatched, preserves matched-arm denominators, reports test-retest
+Jaccard and metric step size per cell, never pools conditions, and excludes any
+run whose structural or content canary fires. The deterministic harness proves
+protocol custody and red-gate behavior; it does not establish the semantic
+quality of a model, the benefit of additional compute, or an effect size for
+model heterogeneity.
+
 The live tool inventory below is auto-generated from the running server's
 `tools/list` response — do not hand-edit. Run `node scripts/gen-tool-inventory.mjs`
 to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_107 tools across 30 groups. Generated from `tools/list` — do not hand-edit._
+_116 tools across 31 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -254,6 +274,20 @@ _107 tools across 30 groups. Generated from `tools/list` — do not hand-edit._
 | `publish_review_brief` | Publish a compiled ReviewBrief only after independently reconciling its immutable hash, every required section, the A2 impacted-seam denominator with nonempty provenance, and a perfect structural control score. |
 | `get_review_brief` | Read a ReviewBrief with its typed sections, section-status and budget declarations, full retrieval trace, gap obligations, control components, and publication receipt. |
 | `expand_review_brief_item` | Expand one included compact ReviewBrief item through its trace ID to the full typed source, evidence, impact provenance, and repository-validity checks at the reviewed commit. |
+
+### `review-analysis` (9)
+
+| Tool | Description |
+|---|---|
+| `plan_review_analysis` | Plan a sealed, observe-only A7 review analysis with at least two generator, refuter, and verifier passes. The manifest isolates same-context, varied-context, or heterogeneous-runtime conditions, pins provider and budget bounds, and accepts only published A6 briefs from one reviewed commit. |
+| `dispatch_review_pass` | Dispatch one durable review outbox packet at its allowed stage. Generators receive one published ReviewBrief; refuters receive anonymous claim-plus-evidence packets; verifiers receive pooled evidence without prior verdicts. Structural leakage marks the run contaminated before provider work. |
+| `land_review_pass` | Land one independent pass exactly once with usage, structured judgments, and repository-valid evidence inside the sealed source and budget envelope. Generator empty results require a non-vacuity report; refuter overturns require newly discovered disproving evidence. |
+| `fail_review_pass` | Record a dispatched review pass failure and halt the analysis without manufacturing fan-in or retrying under the same pass identity. |
+| `freeze_review_hypotheses` | After every generator lands, mechanically freeze candidate finding keys into anonymous challenge packets containing claim variants and structured evidence but no rationale, confidence, provider, model, or pass identity. |
+| `aggregate_review_analysis` | Mechanically aggregate only after exact generator/refuter/verifier fan-in. Retain every disagreement and rationale; mark a hypothesis defeated only when a refuter's newly discovered evidence is independently reused by an overturning verifier. |
+| `reveal_review_analysis_truth` | Reveal a blind fixture only after judgment is terminal, verify its salted seal, scan every dispatched packet for the content canary, and durably mark contaminated runs for exclusion. |
+| `score_review_evaluation` | Score sealed clean, marker-only, treated, and null arms with at least two replicates per same-context, varied-context, and heterogeneous-runtime condition. Report each cell separately with set stability and metric step size; never pool, and exclude contaminated runs. |
+| `get_review_analysis` | Read review-analysis manifest, pass custody, contamination, aggregation, and post-judgment reveal. Before aggregation it exposes pass status and hashes, never another pass's private runtime input or judgment payload. |
 
 ### `seams` (3)
 

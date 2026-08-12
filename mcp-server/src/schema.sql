@@ -1725,6 +1725,403 @@ BEGIN
 END;
 
 ----------------------------------------------------------------------
+-- INDEPENDENT REVIEW ANALYSIS: generate, blind-challenge, verify, aggregate
+----------------------------------------------------------------------
+-- A7 pass inputs are durable outbox packets. Generator packets contain one
+-- published A6 brief. Refuter packets contain anonymized claims + evidence;
+-- verifier packets add evidence discovered by refuters but never their
+-- verdicts, rationales, confidence, provider, or identity.
+
+CREATE TABLE IF NOT EXISTS review_analysis_runs (
+    run_id                    TEXT PRIMARY KEY,
+    impact_run_id             TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    reviewed_sha              TEXT NOT NULL,
+    replicate_id              TEXT NOT NULL,
+    condition                 TEXT NOT NULL CHECK (condition IN (
+                                  'same-context','varied-context','heterogeneous-runtime')),
+    orchestrator_model_family TEXT NOT NULL,
+    provider_allowlist        TEXT NOT NULL CHECK (json_valid(provider_allowlist)),
+    allowed_source_prefixes   TEXT NOT NULL CHECK (json_valid(allowed_source_prefixes)),
+    max_total_tokens          INTEGER NOT NULL CHECK (max_total_tokens > 0),
+    max_total_cost_microusd   INTEGER NOT NULL CHECK (max_total_cost_microusd >= 0),
+    expected_generator_count  INTEGER NOT NULL CHECK (expected_generator_count >= 2),
+    expected_refuter_count    INTEGER NOT NULL CHECK (expected_refuter_count >= 2),
+    expected_verifier_count   INTEGER NOT NULL CHECK (expected_verifier_count >= 2),
+    blind_assignment_id       TEXT NOT NULL,
+    sealed_truth_hash         TEXT NOT NULL,
+    validation_inject_leak    TEXT CHECK (validation_inject_leak IN (
+                                  'blind-truth-field','prior-verdict-field')),
+    status                    TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                                  'planned','generating','hypotheses-frozen','refuting',
+                                  'verification-ready','verifying','ready-to-aggregate',
+                                  'aggregated','contaminated','failed')),
+    manifest_json             TEXT NOT NULL CHECK (json_valid(manifest_json)),
+    manifest_hash             TEXT NOT NULL,
+    session_id                TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at                TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at                TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at              TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_analysis_runs_status
+    ON review_analysis_runs(status, created_at);
+
+CREATE TABLE IF NOT EXISTS review_analysis_briefs (
+    run_id          TEXT NOT NULL REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    context_profile TEXT NOT NULL CHECK (context_profile IN (
+                            'diff-scoped','control-wide','integral-head')),
+    brief_id        TEXT NOT NULL REFERENCES review_briefs(brief_id) ON DELETE RESTRICT,
+    PRIMARY KEY (run_id, context_profile),
+    UNIQUE (run_id, brief_id)
+);
+
+CREATE TABLE IF NOT EXISTS review_passes (
+    pass_id                  TEXT PRIMARY KEY,
+    run_id                   TEXT NOT NULL REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    ordinal                  INTEGER NOT NULL CHECK (ordinal >= 0),
+    role                     TEXT NOT NULL CHECK (role IN ('generator','refuter','verifier')),
+    replicate_id             TEXT NOT NULL,
+    context_profile          TEXT NOT NULL CHECK (context_profile IN (
+                                 'diff-scoped','control-wide','integral-head')),
+    analytical_frame         TEXT NOT NULL,
+    provider                 TEXT NOT NULL,
+    model                    TEXT NOT NULL,
+    model_family             TEXT NOT NULL,
+    runtime                  TEXT NOT NULL,
+    planned_tokens           INTEGER NOT NULL CHECK (planned_tokens > 0),
+    planned_cost_microusd    INTEGER NOT NULL CHECK (planned_cost_microusd >= 0),
+    status                   TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                                 'planned','dispatched','landed','failed')),
+    runtime_input_json       TEXT CHECK (runtime_input_json IS NULL OR json_valid(runtime_input_json)),
+    runtime_input_hash       TEXT,
+    result_json              TEXT CHECK (result_json IS NULL OR json_valid(result_json)),
+    result_hash              TEXT,
+    actual_tokens            INTEGER CHECK (actual_tokens IS NULL OR actual_tokens >= 0),
+    actual_cost_microusd     INTEGER CHECK (actual_cost_microusd IS NULL OR actual_cost_microusd >= 0),
+    dispatched_at            TEXT,
+    landed_at                TEXT,
+    failure                  TEXT,
+    UNIQUE (run_id, ordinal),
+    UNIQUE (run_id, role, replicate_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_passes_run
+    ON review_passes(run_id, role, status, ordinal);
+
+CREATE TABLE IF NOT EXISTS review_judgments (
+    judgment_id       TEXT PRIMARY KEY,
+    pass_id           TEXT NOT NULL REFERENCES review_passes(pass_id) ON DELETE RESTRICT,
+    hypothesis_id     TEXT,
+    finding_key       TEXT NOT NULL,
+    claim             TEXT NOT NULL,
+    severity          TEXT CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+    scope             TEXT,
+    verdict           TEXT NOT NULL CHECK (verdict IN (
+                            'proposed','upheld','overturned','scope-restricted','undetermined')),
+    rationale         TEXT NOT NULL,
+    payload_json      TEXT NOT NULL CHECK (json_valid(payload_json)),
+    payload_hash      TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (pass_id, hypothesis_id),
+    CHECK ((verdict='proposed' AND hypothesis_id IS NULL)
+        OR (verdict!='proposed' AND hypothesis_id IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_judgments_pass
+    ON review_judgments(pass_id, verdict, finding_key);
+
+CREATE TABLE IF NOT EXISTS review_judgment_evidence (
+    judgment_id  TEXT NOT NULL REFERENCES review_judgments(judgment_id) ON DELETE RESTRICT,
+    evidence_id  INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    origin       TEXT NOT NULL CHECK (origin IN ('prior-packet','discovered-by-pass')),
+    PRIMARY KEY (judgment_id, evidence_id)
+);
+
+CREATE TABLE IF NOT EXISTS review_hypotheses (
+    hypothesis_id        TEXT PRIMARY KEY,
+    run_id               TEXT NOT NULL REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    ordinal              INTEGER NOT NULL CHECK (ordinal >= 0),
+    finding_key          TEXT NOT NULL,
+    challenge_packet_json TEXT NOT NULL CHECK (json_valid(challenge_packet_json)),
+    challenge_packet_hash TEXT NOT NULL,
+    frozen_at            TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (run_id, ordinal),
+    UNIQUE (run_id, finding_key)
+);
+
+CREATE TABLE IF NOT EXISTS review_hypothesis_candidates (
+    hypothesis_id TEXT NOT NULL REFERENCES review_hypotheses(hypothesis_id) ON DELETE RESTRICT,
+    judgment_id   TEXT NOT NULL REFERENCES review_judgments(judgment_id) ON DELETE RESTRICT,
+    PRIMARY KEY (hypothesis_id, judgment_id)
+);
+
+CREATE TABLE IF NOT EXISTS review_aggregations (
+    aggregation_id        INTEGER PRIMARY KEY,
+    run_id                TEXT NOT NULL UNIQUE REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    expected_pass_count   INTEGER NOT NULL CHECK (expected_pass_count > 0),
+    landed_pass_count     INTEGER NOT NULL CHECK (landed_pass_count >= 0),
+    hypothesis_count      INTEGER NOT NULL CHECK (hypothesis_count >= 0),
+    survived_count        INTEGER NOT NULL CHECK (survived_count >= 0),
+    defeated_count        INTEGER NOT NULL CHECK (defeated_count >= 0),
+    contested_count       INTEGER NOT NULL CHECK (contested_count >= 0),
+    result_json           TEXT NOT NULL CHECK (json_valid(result_json)),
+    result_hash           TEXT NOT NULL,
+    session_id            TEXT NOT NULL REFERENCES sessions(session_id),
+    aggregated_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (landed_pass_count=expected_pass_count),
+    CHECK (hypothesis_count=survived_count+defeated_count+contested_count)
+);
+
+CREATE TABLE IF NOT EXISTS review_contamination_events (
+    id          INTEGER PRIMARY KEY,
+    run_id      TEXT NOT NULL REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    pass_id     TEXT REFERENCES review_passes(pass_id) ON DELETE RESTRICT,
+    leak_type   TEXT NOT NULL CHECK (leak_type IN (
+                      'blind-truth-field','prior-verdict-field','content-canary')),
+    detail_json TEXT NOT NULL CHECK (json_valid(detail_json)),
+    detected_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_contamination_run
+    ON review_contamination_events(run_id, detected_at);
+
+CREATE TABLE IF NOT EXISTS review_blind_reveals (
+    run_id          TEXT PRIMARY KEY REFERENCES review_analysis_runs(run_id) ON DELETE RESTRICT,
+    truth_json      TEXT NOT NULL CHECK (json_valid(truth_json)),
+    truth_hash      TEXT NOT NULL,
+    contaminated    INTEGER NOT NULL CHECK (contaminated IN (0,1)),
+    revealed_by     TEXT NOT NULL REFERENCES sessions(session_id),
+    revealed_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS review_evaluations (
+    evaluation_id       TEXT PRIMARY KEY,
+    run_ids_json        TEXT NOT NULL CHECK (json_valid(run_ids_json)),
+    included_run_count  INTEGER NOT NULL CHECK (included_run_count >= 0),
+    excluded_run_count  INTEGER NOT NULL CHECK (excluded_run_count >= 0),
+    status              TEXT NOT NULL CHECK (status IN ('valid','red')),
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    report_hash         TEXT NOT NULL,
+    session_id          TEXT NOT NULL REFERENCES sessions(session_id),
+    scored_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS review_analysis_manifest_is_immutable
+BEFORE UPDATE ON review_analysis_runs
+FOR EACH ROW
+WHEN OLD.run_id!=NEW.run_id OR OLD.impact_run_id!=NEW.impact_run_id
+  OR OLD.reviewed_sha!=NEW.reviewed_sha OR OLD.replicate_id!=NEW.replicate_id
+  OR OLD.condition!=NEW.condition OR OLD.orchestrator_model_family!=NEW.orchestrator_model_family
+  OR OLD.provider_allowlist!=NEW.provider_allowlist
+  OR OLD.allowed_source_prefixes!=NEW.allowed_source_prefixes
+  OR OLD.max_total_tokens!=NEW.max_total_tokens
+  OR OLD.max_total_cost_microusd!=NEW.max_total_cost_microusd
+  OR OLD.expected_generator_count!=NEW.expected_generator_count
+  OR OLD.expected_refuter_count!=NEW.expected_refuter_count
+  OR OLD.expected_verifier_count!=NEW.expected_verifier_count
+  OR OLD.blind_assignment_id!=NEW.blind_assignment_id
+  OR OLD.sealed_truth_hash!=NEW.sealed_truth_hash
+  OR COALESCE(OLD.validation_inject_leak,'')!=COALESCE(NEW.validation_inject_leak,'')
+  OR OLD.manifest_json!=NEW.manifest_json OR OLD.manifest_hash!=NEW.manifest_hash
+  OR OLD.session_id!=NEW.session_id
+BEGIN
+    SELECT RAISE(ABORT, 'review analysis manifest is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_analysis_status_is_monotonic
+BEFORE UPDATE OF status ON review_analysis_runs
+FOR EACH ROW
+WHEN NOT (
+    (OLD.status='planned' AND NEW.status='generating')
+ OR (OLD.status='generating' AND NEW.status='hypotheses-frozen')
+ OR (OLD.status='hypotheses-frozen' AND NEW.status='refuting')
+ OR (OLD.status='refuting' AND NEW.status='verification-ready')
+ OR (OLD.status='verification-ready' AND NEW.status='verifying')
+ OR (OLD.status='verifying' AND NEW.status='ready-to-aggregate')
+ OR (OLD.status='ready-to-aggregate' AND NEW.status='aggregated')
+ OR (OLD.status='aggregated' AND NEW.status='contaminated')
+ OR (OLD.status NOT IN ('aggregated','contaminated','failed')
+     AND NEW.status IN ('contaminated','failed'))
+)
+BEGIN
+    SELECT RAISE(ABORT, 'invalid review analysis status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_pass_identity_is_immutable
+BEFORE UPDATE ON review_passes
+FOR EACH ROW
+WHEN OLD.pass_id!=NEW.pass_id OR OLD.run_id!=NEW.run_id OR OLD.ordinal!=NEW.ordinal
+  OR OLD.role!=NEW.role OR OLD.replicate_id!=NEW.replicate_id
+  OR OLD.context_profile!=NEW.context_profile OR OLD.analytical_frame!=NEW.analytical_frame
+  OR OLD.provider!=NEW.provider OR OLD.model!=NEW.model OR OLD.model_family!=NEW.model_family
+  OR OLD.runtime!=NEW.runtime OR OLD.planned_tokens!=NEW.planned_tokens
+  OR OLD.planned_cost_microusd!=NEW.planned_cost_microusd
+BEGIN
+    SELECT RAISE(ABORT, 'review pass identity and plan are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_pass_status_is_monotonic
+BEFORE UPDATE OF status ON review_passes
+FOR EACH ROW
+WHEN NOT (
+    (OLD.status='planned' AND NEW.status='dispatched')
+ OR (OLD.status='dispatched' AND NEW.status IN ('landed','failed'))
+)
+BEGIN
+    SELECT RAISE(ABORT, 'invalid review pass status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_pass_input_is_write_once
+BEFORE UPDATE OF runtime_input_json, runtime_input_hash, dispatched_at ON review_passes
+FOR EACH ROW
+WHEN NOT (
+    OLD.status='planned' AND NEW.status='dispatched'
+    AND OLD.runtime_input_json IS NULL AND NEW.runtime_input_json IS NOT NULL
+    AND OLD.runtime_input_hash IS NULL AND NEW.runtime_input_hash IS NOT NULL
+    AND OLD.dispatched_at IS NULL AND NEW.dispatched_at IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'review pass runtime input is write-once at dispatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_pass_runtime_input_is_blind
+BEFORE UPDATE OF runtime_input_json ON review_passes
+FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM json_tree(NEW.runtime_input_json)
+     WHERE key IN ('expected_findings','expected_finding_keys','truth','arm_type',
+                   'evaluation_condition','leak_canary')
+       OR (NEW.role!='generator' AND key IN
+           ('verdict','rationale','confidence','prior_verdict','source_pass_id'))
+)
+BEGIN
+    SELECT RAISE(ABORT, 'review pass runtime input violates blinding contract');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_pass_result_is_write_once
+BEFORE UPDATE OF result_json, result_hash, actual_tokens, actual_cost_microusd, landed_at, failure
+ON review_passes
+FOR EACH ROW
+WHEN NOT (
+    OLD.status='dispatched' AND NEW.status IN ('landed','failed')
+    AND OLD.result_json IS NULL AND OLD.result_hash IS NULL
+    AND OLD.actual_tokens IS NULL AND OLD.actual_cost_microusd IS NULL
+    AND OLD.landed_at IS NULL AND OLD.failure IS NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'review pass result is write-once at landing');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_judgment_is_immutable
+BEFORE UPDATE ON review_judgments FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review judgment is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_analysis_brief_is_immutable
+BEFORE UPDATE ON review_analysis_briefs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review analysis brief assignment is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_analysis_brief_cannot_be_deleted
+BEFORE DELETE ON review_analysis_briefs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review analysis brief assignment cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_judgment_cannot_be_deleted
+BEFORE DELETE ON review_judgments FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review judgment cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_judgment_requires_dispatched_pass
+BEFORE INSERT ON review_judgments FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM review_passes p WHERE p.pass_id=NEW.pass_id AND p.status='dispatched'
+)
+BEGIN SELECT RAISE(ABORT, 'review judgments land only for a dispatched pass'); END;
+CREATE TRIGGER IF NOT EXISTS review_judgment_evidence_requires_dispatched_pass
+BEFORE INSERT ON review_judgment_evidence FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM review_judgments j JOIN review_passes p ON p.pass_id=j.pass_id
+     WHERE j.judgment_id=NEW.judgment_id AND p.status='dispatched'
+)
+BEGIN SELECT RAISE(ABORT, 'review judgment evidence lands only with its dispatched pass'); END;
+CREATE TRIGGER IF NOT EXISTS review_judgment_evidence_is_immutable
+BEFORE UPDATE ON review_judgment_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review judgment evidence is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_judgment_evidence_cannot_be_deleted
+BEFORE DELETE ON review_judgment_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review judgment evidence cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_is_immutable
+BEFORE UPDATE ON review_hypotheses FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review hypothesis is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_cannot_be_deleted
+BEFORE DELETE ON review_hypotheses FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review hypothesis cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_requires_generating_run
+BEFORE INSERT ON review_hypotheses FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM review_analysis_runs r WHERE r.run_id=NEW.run_id AND r.status='generating'
+)
+BEGIN SELECT RAISE(ABORT, 'review hypotheses freeze only after generation'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_candidate_requires_generating_run
+BEFORE INSERT ON review_hypothesis_candidates FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1 FROM review_hypotheses h JOIN review_analysis_runs r ON r.run_id=h.run_id
+     WHERE h.hypothesis_id=NEW.hypothesis_id AND r.status='generating'
+)
+BEGIN SELECT RAISE(ABORT, 'review hypothesis candidates freeze only during generation'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_candidate_is_immutable
+BEFORE UPDATE ON review_hypothesis_candidates FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review hypothesis candidate mapping is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_hypothesis_candidate_cannot_be_deleted
+BEFORE DELETE ON review_hypothesis_candidates FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review hypothesis candidate mapping cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_aggregation_must_reconcile
+BEFORE INSERT ON review_aggregations FOR EACH ROW
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1 FROM review_analysis_runs r
+         WHERE r.run_id=NEW.run_id AND r.status='ready-to-aggregate'
+           AND NEW.expected_pass_count=(r.expected_generator_count+r.expected_refuter_count+r.expected_verifier_count)
+    ) THEN RAISE(ABORT, 'review aggregation run or expected denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.landed_pass_count != (
+        SELECT COUNT(*) FROM review_passes p WHERE p.run_id=NEW.run_id AND p.status='landed'
+    ) THEN RAISE(ABORT, 'review aggregation landed denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.expected_pass_count != (
+        SELECT COUNT(*) FROM review_passes p WHERE p.run_id=NEW.run_id
+    ) THEN RAISE(ABORT, 'review aggregation pass manifest does not reconcile') END;
+    SELECT CASE WHEN EXISTS (
+        SELECT 1 FROM review_hypotheses h
+         WHERE h.run_id=NEW.run_id AND (
+           SELECT COUNT(*) FROM review_judgments j JOIN review_passes p ON p.pass_id=j.pass_id
+            WHERE j.hypothesis_id=h.hypothesis_id AND p.role IN ('refuter','verifier')
+         ) != (
+           SELECT r.expected_refuter_count+r.expected_verifier_count
+             FROM review_analysis_runs r WHERE r.run_id=NEW.run_id
+         )
+    ) THEN RAISE(ABORT, 'review aggregation judgment fan-in does not reconcile') END;
+    SELECT CASE WHEN EXISTS (
+        SELECT 1 FROM review_contamination_events c WHERE c.run_id=NEW.run_id
+    ) THEN RAISE(ABORT, 'contaminated review analysis cannot aggregate') END;
+END;
+CREATE TRIGGER IF NOT EXISTS review_aggregation_is_immutable
+BEFORE UPDATE ON review_aggregations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review aggregation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_aggregation_cannot_be_deleted
+BEFORE DELETE ON review_aggregations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review aggregation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_contamination_event_is_immutable
+BEFORE UPDATE ON review_contamination_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review contamination event is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_contamination_event_cannot_be_deleted
+BEFORE DELETE ON review_contamination_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review contamination event cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_blind_reveal_is_immutable
+BEFORE UPDATE ON review_blind_reveals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review blind reveal is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_blind_reveal_cannot_be_deleted
+BEFORE DELETE ON review_blind_reveals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review blind reveal cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS review_evaluation_is_immutable
+BEFORE UPDATE ON review_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review evaluation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS review_evaluation_cannot_be_deleted
+BEFORE DELETE ON review_evaluations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'review evaluation cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

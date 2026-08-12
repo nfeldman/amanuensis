@@ -43,6 +43,7 @@ node test-resolution-proof.mjs          # repair proof and append-only resolutio
 node test-projection-custody.mjs        # projection mismatch custody and repair
 node test-refresh-recovery.mjs          # unattended authority and crash recovery
 node test-review-brief.mjs              # impact context, ablations, and publication
+node test-review-analysis.mjs           # independent passes, blinding, and null controls
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -146,6 +147,12 @@ in agent prose:
   is independently reconciled before publication. Extend
   `test-review-brief.mjs` whenever a required section, context profile, or
   publication gate changes.
+- **Independent-review custody.** Generator, refuter, and verifier passes cross
+  separate durable dispatch/landing boundaries. Challenge packets exclude
+  rationale, confidence, pass identity, and prior verdicts; exact fan-in is
+  required before mechanical aggregation. Extend `test-review-analysis.mjs`
+  whenever a role packet, condition axis, verdict rule, blind arm, or scoring
+  denominator changes.
 
 ## Commits
 

@@ -108,6 +108,9 @@ jobs:
       - name: Review brief — impact context, ablations, expansion, publication
         working-directory: mcp-server
         run: node test-review-brief.mjs
+      - name: Independent review — blinding, fan-in, refutation, evaluation controls
+        working-directory: mcp-server
+        run: node test-review-analysis.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs
