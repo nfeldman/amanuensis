@@ -48,6 +48,7 @@ node test-composition.mjs               # exact fan-in and integral HEAD seam co
 node test-review-session.mjs            # compact review, expansion, and semantic export read-back
 node test-codebase-brief.mjs            # mode projections, omission custody, and contract red gates
 node test-design-session.mjs            # independent lenses, disagreement, and underdetermination
+node test-decisions.mjs                 # acceptance authority, impact custody, and portable read-back
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -181,6 +182,12 @@ in agent prose:
   unresolved desire conflicts force underdetermination. Extend
   `test-design-session.mjs` whenever a lens packet, option field, desire rule,
   aggregation condition, or evaluation-blinding guard changes.
+- **Decision custody.** Generated recommendations remain immutable drafts until
+  a human or owning-system acceptance event names its actor, authority source,
+  and matching scope. Premise impacts create blocking obligations rather than
+  editing accepted history; rejected and superseded revisions remain readable.
+  Extend `test-decisions.mjs` whenever an authority transition, premise kind,
+  impact route, revision rule, or portable projection field changes.
 
 ## Commits
 

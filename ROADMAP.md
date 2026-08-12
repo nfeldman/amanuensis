@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 5 | 1 | 0 | 12 |
+| 0 | 4 | 1 | 0 | 13 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A12 — Decision custody and consequence tracking. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A13 — Research-question broker. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -633,7 +633,7 @@ Risks:
 
 #### A12 — Decision custody and consequence tracking
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis + human<br>
 **Depends on:** A10, A11<br>
 **Metrics:** M8, M9, M12
@@ -664,7 +664,7 @@ Risks:
 - A stale accepted decision can exert undue authority unless premise invalidation is reliable.
 
 **Practice basis:** GP9, GP10, GP11, GP16, GP18, GP20, GP25<br>
-**Baseline evidence:** `mcp-server/src/tools/artifacts.ts`, `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/contradictions.ts`, `mcp-server/src/storage-git.ts`
+**Baseline evidence:** `mcp-server/src/tools/artifacts.ts`, `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/contradictions.ts`, `mcp-server/src/storage-git.ts`, `mcp-server/contracts/codebase-decision.schema.json`, `mcp-server/src/tools/decisions.ts`, `mcp-server/test-decisions.mjs`, `dev/adr/0013-decision-acceptance-and-premise-custody.md`
 
 ### Later — close the research-learning loop and compose with Chorusmith
 
@@ -682,7 +682,7 @@ Risks:
 
 #### A13 — Research-question broker
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis + Scholiast<br>
 **Depends on:** A10, A12<br>
 **Metrics:** M9, M10, M12

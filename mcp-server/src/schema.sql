@@ -2929,6 +2929,167 @@ WHEN NEW.content_canary_ok!=1
 BEGIN SELECT RAISE(ABORT, 'design evaluation packet is not blind'); END;
 
 ----------------------------------------------------------------------
+-- DECISIONS: human acceptance, immutable revisions, consequence custody
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS decisions (
+    decision_id        TEXT PRIMARY KEY,
+    title              TEXT NOT NULL,
+    current_revision_id TEXT,
+    created_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS decision_revisions (
+    revision_id        TEXT PRIMARY KEY,
+    decision_id        TEXT NOT NULL REFERENCES decisions(decision_id) ON DELETE RESTRICT,
+    revision_number    INTEGER NOT NULL CHECK (revision_number > 0),
+    predecessor_revision_id TEXT REFERENCES decision_revisions(revision_id) ON DELETE RESTRICT,
+    design_session_id  TEXT REFERENCES design_sessions(design_session_id) ON DELETE RESTRICT,
+    status             TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
+                           'draft','accepted','rejected','superseded','invalidated')),
+    desire_sources_json TEXT NOT NULL CHECK (json_valid(desire_sources_json)),
+    accepted_option_json TEXT NOT NULL CHECK (json_valid(accepted_option_json)),
+    alternatives_json  TEXT NOT NULL CHECK (json_valid(alternatives_json)),
+    constraints_json   TEXT NOT NULL CHECK (json_valid(constraints_json)),
+    consequences_json  TEXT NOT NULL CHECK (json_valid(consequences_json)),
+    falsifiers_json    TEXT NOT NULL CHECK (json_valid(falsifiers_json)),
+    premises_json      TEXT NOT NULL CHECK (json_valid(premises_json)),
+    code_changes_json  TEXT NOT NULL CHECK (json_valid(code_changes_json)),
+    rationale          TEXT NOT NULL,
+    authored_by_kind   TEXT NOT NULL CHECK (authored_by_kind IN ('model','human','owning-system')),
+    authored_by        TEXT NOT NULL,
+    payload_hash       TEXT NOT NULL,
+    created_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    terminal_at        TEXT,
+    UNIQUE (decision_id, revision_number)
+);
+
+CREATE TABLE IF NOT EXISTS decision_events (
+    event_id           INTEGER PRIMARY KEY,
+    revision_id        TEXT NOT NULL REFERENCES decision_revisions(revision_id) ON DELETE RESTRICT,
+    event_type         TEXT NOT NULL CHECK (event_type IN (
+                           'drafted','accepted','rejected','superseded','invalidated','impact-detected')),
+    actor_kind         TEXT NOT NULL CHECK (actor_kind IN ('model','human','owning-system','amanuensis')),
+    actor_id           TEXT NOT NULL,
+    authority_scope    TEXT,
+    reason             TEXT NOT NULL,
+    evidence_id        INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
+    impact_run_id      TEXT REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    detail_json        TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(detail_json)),
+    created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS decision_projections (
+    projection_id      TEXT PRIMARY KEY,
+    revision_id        TEXT NOT NULL REFERENCES decision_revisions(revision_id) ON DELETE RESTRICT,
+    schema_version     TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    projection_json    TEXT NOT NULL CHECK (json_valid(projection_json)),
+    projection_hash    TEXT NOT NULL,
+    projected_by       TEXT NOT NULL REFERENCES sessions(session_id),
+    projected_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (revision_id, projection_id)
+);
+
+CREATE TABLE IF NOT EXISTS decision_projection_verifications (
+    verification_id   INTEGER PRIMARY KEY,
+    projection_id     TEXT NOT NULL REFERENCES decision_projections(projection_id) ON DELETE RESTRICT,
+    state_ok           INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok        INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok         INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok                 INTEGER NOT NULL CHECK (ok IN (0,1)),
+    report_json        TEXT NOT NULL CHECK (json_valid(report_json)),
+    verified_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    verified_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(state_ok AND coverage_ok AND content_ok))
+);
+
+CREATE TRIGGER IF NOT EXISTS decision_identity_is_immutable
+BEFORE UPDATE ON decisions FOR EACH ROW
+WHEN OLD.decision_id!=NEW.decision_id OR OLD.title!=NEW.title OR OLD.created_by!=NEW.created_by
+BEGIN SELECT RAISE(ABORT, 'decision identity is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS decision_cannot_be_deleted
+BEFORE DELETE ON decisions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS decision_current_revision_must_be_accepted
+BEFORE UPDATE OF current_revision_id ON decisions FOR EACH ROW
+WHEN NEW.current_revision_id IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM decision_revisions r
+   WHERE r.revision_id=NEW.current_revision_id
+     AND r.decision_id=NEW.decision_id AND r.status='accepted')
+BEGIN SELECT RAISE(ABORT, 'decision current authority must reference an accepted revision'); END;
+CREATE TRIGGER IF NOT EXISTS decision_revision_payload_is_immutable
+BEFORE UPDATE ON decision_revisions FOR EACH ROW
+WHEN OLD.revision_id!=NEW.revision_id OR OLD.decision_id!=NEW.decision_id
+  OR OLD.revision_number!=NEW.revision_number
+  OR COALESCE(OLD.predecessor_revision_id,'')!=COALESCE(NEW.predecessor_revision_id,'')
+  OR COALESCE(OLD.design_session_id,'')!=COALESCE(NEW.design_session_id,'')
+  OR OLD.desire_sources_json!=NEW.desire_sources_json
+  OR OLD.accepted_option_json!=NEW.accepted_option_json
+  OR OLD.alternatives_json!=NEW.alternatives_json
+  OR OLD.constraints_json!=NEW.constraints_json
+  OR OLD.consequences_json!=NEW.consequences_json
+  OR OLD.falsifiers_json!=NEW.falsifiers_json OR OLD.premises_json!=NEW.premises_json
+  OR OLD.code_changes_json!=NEW.code_changes_json OR OLD.rationale!=NEW.rationale
+  OR OLD.authored_by_kind!=NEW.authored_by_kind OR OLD.authored_by!=NEW.authored_by
+  OR OLD.payload_hash!=NEW.payload_hash OR OLD.created_by!=NEW.created_by
+BEGIN SELECT RAISE(ABORT, 'decision revision payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS decision_revision_status_is_monotonic
+BEFORE UPDATE OF status ON decision_revisions FOR EACH ROW
+WHEN NOT ((OLD.status='draft' AND NEW.status IN ('accepted','rejected'))
+  OR (OLD.status='accepted' AND NEW.status IN ('superseded','invalidated')))
+BEGIN SELECT RAISE(ABORT, 'invalid decision revision status transition'); END;
+CREATE TRIGGER IF NOT EXISTS decision_revision_acceptance_requires_event
+BEFORE UPDATE OF status ON decision_revisions FOR EACH ROW
+WHEN NEW.status='accepted' AND (
+  NEW.terminal_at IS NULL OR NOT EXISTS (
+    SELECT 1 FROM decision_events e
+     WHERE e.revision_id=OLD.revision_id AND e.event_type='accepted'
+       AND e.actor_kind IN ('human','owning-system')
+       AND e.authority_scope IS NOT NULL AND length(e.authority_scope)>0))
+BEGIN SELECT RAISE(ABORT, 'decision acceptance transition lacks authorized event'); END;
+CREATE TRIGGER IF NOT EXISTS decision_revision_cannot_be_deleted
+BEFORE DELETE ON decision_revisions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision revision cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS decision_event_is_immutable
+BEFORE UPDATE ON decision_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision event is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS decision_event_cannot_be_deleted
+BEFORE DELETE ON decision_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision event cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS decision_acceptance_requires_authority
+BEFORE INSERT ON decision_events FOR EACH ROW
+WHEN NEW.event_type='accepted' AND (
+  NEW.actor_kind NOT IN ('human','owning-system')
+  OR NEW.authority_scope IS NULL OR length(NEW.authority_scope)=0
+  OR NEW.authority_scope NOT IN (
+    SELECT r.decision_id FROM decision_revisions r WHERE r.revision_id=NEW.revision_id
+    UNION ALL
+    SELECT r.decision_id || ':' || r.revision_id
+      FROM decision_revisions r WHERE r.revision_id=NEW.revision_id))
+BEGIN SELECT RAISE(ABORT, 'decision acceptance requires explicit human or owning-system authority'); END;
+CREATE TRIGGER IF NOT EXISTS decision_projection_is_immutable
+BEFORE UPDATE ON decision_projections FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision projection is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS decision_projection_cannot_be_deleted
+BEFORE DELETE ON decision_projections FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision projection cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS decision_projection_verification_is_immutable
+BEFORE UPDATE ON decision_projection_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision projection verification is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS decision_projection_verification_cannot_be_deleted
+BEFORE DELETE ON decision_projection_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'decision projection verification cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS decision_projection_verification_must_reconcile
+BEFORE INSERT ON decision_projection_verifications FOR EACH ROW
+WHEN NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
+  OR NEW.coverage_ok!=json_extract(NEW.report_json, '$.axes.coverage.ok')
+  OR NEW.content_ok!=json_extract(NEW.report_json, '$.axes.content.ok')
+  OR NEW.ok!=json_extract(NEW.report_json, '$.ok')
+BEGIN SELECT RAISE(ABORT, 'decision projection verification does not reconcile'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

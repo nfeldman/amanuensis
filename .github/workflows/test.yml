@@ -123,6 +123,9 @@ jobs:
       - name: Design sessions — independent lenses, disagreement, and underdetermination
         working-directory: mcp-server
         run: node test-design-session.mjs
+      - name: Decisions — acceptance authority, impact custody, and projection read-back
+        working-directory: mcp-server
+        run: node test-decisions.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

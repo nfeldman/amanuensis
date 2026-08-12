@@ -1106,7 +1106,7 @@
         {
           "id": "A12",
           "title": "Decision custody and consequence tracking",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis + human",
           "outcome": "Accepted architecture decisions, rejected options, consequences, and falsifiers become durable context without converting model proposals into policy.",
           "rationale": "A system that remembers code but forgets why it changed will repeatedly reopen settled choices or mistake an implementation accident for intent.",
@@ -1149,7 +1149,11 @@
             "mcp-server/src/tools/artifacts.ts",
             "mcp-server/src/tools/xrefs.ts",
             "mcp-server/src/tools/contradictions.ts",
-            "mcp-server/src/storage-git.ts"
+            "mcp-server/src/storage-git.ts",
+            "mcp-server/contracts/codebase-decision.schema.json",
+            "mcp-server/src/tools/decisions.ts",
+            "mcp-server/test-decisions.mjs",
+            "dev/adr/0013-decision-acceptance-and-premise-custody.md"
           ]
         }
       ]
@@ -1170,7 +1174,7 @@
         {
           "id": "A13",
           "title": "Research-question broker",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis + Scholiast",
           "outcome": "Amanuensis emits bounded research requests only when external knowledge could resolve a named architecture or review uncertainty.",
           "rationale": "Continuous topic generation without admission criteria produces intellectual exhaust, not learning.",

@@ -144,9 +144,27 @@ result is underdetermined and names the missing human desire. Blind evaluation
 packets anonymize lanes, remove runtime identities and condition labels, and
 halt when supplied content canaries survive.
 
+## Decision custody
+
+Decision records separate proposal authorship from acceptance authority. A
+model, human, or owning system may draft an immutable revision, but only a
+human or owning-system event whose scope matches the decision may authorize the
+`draft → accepted` transition. SQLite requires that event before both the
+status transition and the current-authority pointer. Rejection, supersession,
+and invalidation retain the original payload and append events; reconsideration
+always creates a successor revision.
+
+Each revision carries direct desire sources, the selected option, rejected
+alternatives, constraints, consequences, falsifiers, typed premises, and code
+links. `detect_decision_impacts` compares applied A2 impacts with accepted
+premises and creates a blocking decision-review obligation without changing
+the accepted row. `CodebaseDecision 1.0.0` projections are source-authoritative
+copies for Chorusmith custody; three-axis read-back rejects missing authority,
+alternatives, desire sources, or falsifiers.
+
 <!-- TOOL-INVENTORY-START -->
 
-_144 tools across 35 groups. Generated from `tools/list` — do not hand-edit._
+_152 tools across 36 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -220,6 +238,19 @@ _144 tools across 35 groups. Generated from `tools/list` — do not hand-edit._
 |---|---|
 | `get_hot_subsystems` | Return the most-accessed subsystems over the last 7 days, weighted by recency. Reads from the hot_subsystems view. |
 | `get_dashboard` | Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, open field notes, unresolved contradictions. |
+
+### `decisions` (8)
+
+| Tool | Description |
+|---|---|
+| `draft_decision_revision` | Create an immutable draft decision revision from qualified design advice or direct human/system authorship. Desire sources, selected option, rejected alternatives, constraints, consequences, falsifiers, premises, and code links are mandatory custody; a rejected or accepted decision can only be reconsidered as a new revision. |
+| `accept_decision_revision` | Accept one draft revision only through an explicit human or owning-system authority event whose scope covers this decision. Acceptance names the actor, authority source, and reason; an accepted predecessor becomes superseded without losing history. |
+| `reject_decision_revision` | Reject one draft through explicit human or owning-system authority. The proposal, alternatives, evidence, and reason remain immutable and queryable; reconsideration requires a successor revision. |
+| `invalidate_decision_revision` | Invalidate accepted decision authority without editing its premises. New evidence or an applied impact run is required, history remains readable, and a blocking decision-review obligation is created. |
+| `detect_decision_impacts` | Compare an applied A2 impact artifact with every accepted decision's typed claim, evidence, and code premises. Matches append an impact event and create a blocking decision-review obligation; accepted history is never silently rewritten. |
+| `get_decision` | Read a decision's complete immutable revision and authority-event history, rejected and superseded alternatives, current authority pointer, and open review obligations. |
+| `project_decision_revision` | Create a portable CodebaseDecision 1.0.0 projection for Chorusmith session custody. It carries desire sources, authority events, alternatives, consequences, falsifiers, premises, and source-owned acceptance without transferring decision authority. |
+| `verify_decision_projection` | Read a stored or caller-supplied portable decision projection back against durable source state. State, exact required-field coverage, and semantic content must all agree; dropping desire source, acceptance authority, alternatives, or falsifiers turns red. |
 
 ### `design-session` (6)
 
