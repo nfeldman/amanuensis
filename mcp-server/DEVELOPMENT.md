@@ -13,13 +13,37 @@ database (WAL mode, via `better-sqlite3`).
 - Exposes a typed tool surface over the conspectus schema, plus a
   `materialize_docs` tool that shells out to the Python materializer
 
+## Unattended refresh protocol
+
+The refresh tools compose change impact, revalidation, and projection proof
+without treating a worker callback as completion:
+
+1. `plan_refresh_run` writes an immutable commit/provider/budget/authority
+   manifest. A configured provider inside this envelope is preauthorized;
+   provider expansion, output outside project storage, and irreversible side
+   effects are blocked before dispatch.
+2. `execute_refresh_run` advances durable stages and creates provider-outbox
+   attempts. A worker adapter reads the attempt's `runtime_route` and
+   `runtime_input` from `get_refresh_run`.
+3. The adapter returns through `land_refresh_result` or
+   `fail_refresh_result`. Accepted work is closed through
+   `score_refresh_result`, which retains A3's evidence and boundary gates.
+4. `resume_refresh_run` adopts deterministic children after interruption and
+   advances only from database state. A run becomes complete after exact
+   revalidation fan-in and state/coverage/content read-back of the clean
+   projection. `cancel_refresh_run` preserves prior attempt history.
+
+`simulation_crash_after` exists only for fault-injection tests. The provider
+outbox is deliberate: external API calls cannot share a SQLite transaction,
+so dispatch and landing are separate, auditable boundaries.
+
 The live tool inventory below is auto-generated from the running server's
 `tools/list` response — do not hand-edit. Run `node scripts/gen-tool-inventory.mjs`
 to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_95 tools across 28 groups. Generated from `tools/list` — do not hand-edit._
+_103 tools across 29 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -190,6 +214,19 @@ _95 tools across 28 groups. Generated from `tools/list` — do not hand-edit._
 | `get_session` | Return the stored metadata for a session. If no session_id is provided, returns the most recently started session. |
 | `end_session` | Mark a session ended with an outcome ('completed', 'deferred', 'superseded', etc.). Not required — sessions are still valid while open — but closing them makes the activity log legible. |
 | `list_sessions` | List sessions, newest first. Filter by state ('active' = not ended, 'ended' = ended, or omit for all). |
+
+### `refresh` (8)
+
+| Tool | Description |
+|---|---|
+| `plan_refresh_run` | Create an immutable unattended-refresh execution manifest. Pins commit range, source/provider/model/runtime inputs, determinism route, budgets, replicate identity, authority, side-effect envelope, child IDs, and output. Out-of-envelope providers or effects create a durable blocked plan before any dispatch. |
+| `execute_refresh_run` | Advance a planned refresh idempotently through impact prediction/application, revalidation planning, bounded automatic dispatch, durable reconciliation, clean publication read-back, and completion. simulation_crash_after is a validation fault injector; deterministic child identities let resume adopt landed work. |
+| `resume_refresh_run` | Resume an interrupted refresh by adopting deterministic child runs and attempts, then advancing from durable state. No worker success message is treated as completion. |
+| `cancel_refresh_run` | Cancel a nonterminal refresh. Dispatched attempts are retained as failed history, their unfinished obligations return to ready, and no claim or obligation is marked resolved. |
+| `land_refresh_result` | Land one provider result through the refresh envelope. A3 records budget/source/authority violations; this wrapper updates the refresh outbox but does not score or complete the run. |
+| `fail_refresh_result` | Record a failed or timed-out refresh attempt without losing retry identity. Resume may dispatch the next deterministic attempt while policy permits. |
+| `score_refresh_result` | Score a landed refresh result through the evidence-gated A3 closure contract. Completion still requires resume to reconcile all landed state and pass final projection read-back. |
+| `get_refresh_run` | Read the immutable refresh manifest, custody events, provider outbox attempts, child-run state, blockers, durable projection proof, and completion basis. |
 
 ### `resolution` (1)
 

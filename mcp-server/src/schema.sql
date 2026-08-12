@@ -1240,6 +1240,7 @@ CREATE TABLE IF NOT EXISTS revalidation_attempts (
     actual_cost_microusd   INTEGER CHECK (actual_cost_microusd IS NULL OR actual_cost_microusd >= 0),
     result_json            TEXT CHECK (result_json IS NULL OR json_valid(result_json)),
     artifacts_written      TEXT CHECK (artifacts_written IS NULL OR json_valid(artifacts_written)),
+    consulted_sources      TEXT CHECK (consulted_sources IS NULL OR json_valid(consulted_sources)),
     score_json             TEXT CHECK (score_json IS NULL OR json_valid(score_json)),
     budget_violation       INTEGER NOT NULL DEFAULT 0 CHECK (budget_violation IN (0,1)),
     boundary_violation     INTEGER NOT NULL DEFAULT 0 CHECK (boundary_violation IN (0,1)),
@@ -1377,6 +1378,151 @@ SELECT
    )) AS retried,
   (SELECT COUNT(*) FROM revalidation_runs WHERE status = 'running') AS active_runs,
   (SELECT COUNT(*) FROM revalidation_protocol_violations) AS protocol_violations;
+
+----------------------------------------------------------------------
+-- UNATTENDED REFRESH: resumable composition and authority envelope
+----------------------------------------------------------------------
+-- A refresh run is a durable coordinator over impact, revalidation, and
+-- projection verification.  The manifest is immutable; only custody state and
+-- child-run pointers advance.  Deterministic child/attempt identifiers let a
+-- resume adopt a side effect that landed immediately before a process crash.
+
+CREATE TABLE IF NOT EXISTS refresh_runs (
+    run_id                      TEXT PRIMARY KEY,
+    replicate_id                TEXT NOT NULL,
+    status                      TEXT NOT NULL CHECK (status IN (
+                                    'planned','impact-predicted','impact-applied',
+                                    'revalidation-planned','executing','verifying',
+                                    'blocked','completed','cancelled','failed')),
+    base_sha                    TEXT NOT NULL,
+    head_sha                    TEXT NOT NULL,
+    allowed_sources             TEXT NOT NULL CHECK (json_valid(allowed_sources)),
+    provider_allowlist          TEXT NOT NULL CHECK (json_valid(provider_allowlist)),
+    selected_provider           TEXT NOT NULL,
+    model                       TEXT NOT NULL,
+    runtime                     TEXT NOT NULL,
+    determinism_mode            TEXT NOT NULL CHECK (determinism_mode IN (
+                                    'provider-default','seeded','local-deterministic')),
+    determinism_seed            INTEGER,
+    runtime_input_json          TEXT NOT NULL CHECK (json_valid(runtime_input_json)),
+    relation_discovery_mode     TEXT NOT NULL CHECK (relation_discovery_mode IN (
+                                    'explicit-only','request-if-gap')),
+    max_relation_depth          INTEGER NOT NULL CHECK (max_relation_depth BETWEEN 0 AND 16),
+    authority_mode              TEXT NOT NULL CHECK (authority_mode IN (
+                                    'observe-only','conspectus-write','branch-write')),
+    allowed_write_prefixes      TEXT NOT NULL CHECK (json_valid(allowed_write_prefixes)),
+    allowed_side_effects        TEXT NOT NULL CHECK (json_valid(allowed_side_effects)),
+    decision_policy             TEXT NOT NULL DEFAULT 'human-only'
+                                    CHECK (decision_policy = 'human-only'),
+    auto_dispatch               INTEGER NOT NULL CHECK (auto_dispatch IN (0,1)),
+    max_concurrency             INTEGER NOT NULL CHECK (max_concurrency > 0),
+    max_attempts_per_obligation INTEGER NOT NULL CHECK (max_attempts_per_obligation > 0),
+    max_tokens_per_attempt      INTEGER NOT NULL CHECK (max_tokens_per_attempt > 0),
+    max_total_tokens            INTEGER NOT NULL CHECK (max_total_tokens > 0),
+    max_total_cost_microusd     INTEGER NOT NULL CHECK (max_total_cost_microusd >= 0),
+    planned_tokens_per_attempt  INTEGER NOT NULL CHECK (planned_tokens_per_attempt > 0),
+    planned_cost_microusd       INTEGER NOT NULL CHECK (planned_cost_microusd >= 0),
+    output_dir                  TEXT NOT NULL,
+    manifest_json               TEXT NOT NULL CHECK (json_valid(manifest_json)),
+    manifest_hash               TEXT NOT NULL,
+    impact_run_id               TEXT NOT NULL UNIQUE,
+    revalidation_run_id         TEXT UNIQUE,
+    projection_run_id           TEXT UNIQUE REFERENCES projection_verification_runs(run_id),
+    blocking_reasons_json       TEXT NOT NULL DEFAULT '[]'
+                                    CHECK (json_valid(blocking_reasons_json)),
+    session_id                  TEXT NOT NULL REFERENCES sessions(session_id),
+    error                       TEXT,
+    created_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at                  TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at                TEXT,
+    cancelled_at                TEXT,
+    CHECK (base_sha != head_sha),
+    CHECK ((determinism_mode = 'seeded' AND determinism_seed IS NOT NULL)
+           OR (determinism_mode != 'seeded' AND determinism_seed IS NULL)),
+    CHECK (status != 'completed' OR projection_run_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_runs_status
+    ON refresh_runs(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS refresh_stage_events (
+    id                INTEGER PRIMARY KEY,
+    run_id            TEXT NOT NULL REFERENCES refresh_runs(run_id) ON DELETE CASCADE,
+    stage             TEXT NOT NULL CHECK (stage IN (
+                              'plan','impact-predict','impact-apply',
+                              'revalidation-plan','dispatch','reconcile',
+                              'readback','complete','cancel')),
+    event_type        TEXT NOT NULL CHECK (event_type IN (
+                              'completed','adopted','blocked','failed','cancelled')),
+    idempotency_key   TEXT NOT NULL,
+    detail_json       TEXT NOT NULL CHECK (json_valid(detail_json)),
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (run_id, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_stage_events_run
+    ON refresh_stage_events(run_id, id);
+
+CREATE TABLE IF NOT EXISTS refresh_dispatches (
+    run_id            TEXT NOT NULL REFERENCES refresh_runs(run_id) ON DELETE CASCADE,
+    obligation_id     TEXT NOT NULL REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    attempt_id        TEXT NOT NULL UNIQUE REFERENCES revalidation_attempts(attempt_id) ON DELETE RESTRICT,
+    runtime_route     TEXT NOT NULL,
+    runtime_input_json TEXT NOT NULL CHECK (json_valid(runtime_input_json)),
+    status            TEXT NOT NULL DEFAULT 'dispatched' CHECK (status IN (
+                              'dispatched','landed','scored','failed','timed-out')),
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (run_id, attempt_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_dispatches_obligation
+    ON refresh_dispatches(run_id, obligation_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS refresh_manifest_is_immutable
+BEFORE UPDATE ON refresh_runs
+FOR EACH ROW
+WHEN OLD.replicate_id != NEW.replicate_id
+  OR OLD.base_sha != NEW.base_sha
+  OR OLD.head_sha != NEW.head_sha
+  OR OLD.allowed_sources != NEW.allowed_sources
+  OR OLD.provider_allowlist != NEW.provider_allowlist
+  OR OLD.selected_provider != NEW.selected_provider
+  OR OLD.model != NEW.model
+  OR OLD.runtime != NEW.runtime
+  OR OLD.determinism_mode != NEW.determinism_mode
+  OR COALESCE(OLD.determinism_seed, -1) != COALESCE(NEW.determinism_seed, -1)
+  OR OLD.runtime_input_json != NEW.runtime_input_json
+  OR OLD.relation_discovery_mode != NEW.relation_discovery_mode
+  OR OLD.max_relation_depth != NEW.max_relation_depth
+  OR OLD.authority_mode != NEW.authority_mode
+  OR OLD.allowed_write_prefixes != NEW.allowed_write_prefixes
+  OR OLD.allowed_side_effects != NEW.allowed_side_effects
+  OR OLD.decision_policy != NEW.decision_policy
+  OR OLD.auto_dispatch != NEW.auto_dispatch
+  OR OLD.max_concurrency != NEW.max_concurrency
+  OR OLD.max_attempts_per_obligation != NEW.max_attempts_per_obligation
+  OR OLD.max_tokens_per_attempt != NEW.max_tokens_per_attempt
+  OR OLD.max_total_tokens != NEW.max_total_tokens
+  OR OLD.max_total_cost_microusd != NEW.max_total_cost_microusd
+  OR OLD.planned_tokens_per_attempt != NEW.planned_tokens_per_attempt
+  OR OLD.planned_cost_microusd != NEW.planned_cost_microusd
+  OR OLD.output_dir != NEW.output_dir
+  OR OLD.manifest_json != NEW.manifest_json
+  OR OLD.manifest_hash != NEW.manifest_hash
+  OR OLD.impact_run_id != NEW.impact_run_id
+  OR OLD.session_id != NEW.session_id
+BEGIN
+    SELECT RAISE(ABORT, 'refresh execution manifest is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS refresh_terminal_state_is_immutable
+BEFORE UPDATE OF status ON refresh_runs
+FOR EACH ROW
+WHEN OLD.status IN ('completed','cancelled','failed') AND NEW.status != OLD.status
+BEGIN
+    SELECT RAISE(ABORT, 'terminal refresh run cannot be resumed in place');
+END;
 
 ----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses

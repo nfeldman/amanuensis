@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // A4 integration: MCP publication gate records read-back mismatch custody.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
@@ -129,8 +129,40 @@ try {
 
   const repaired = call("materialize_docs", { clean_publish: true });
   assert(repaired.ok && repaired.published && repaired.readback.ok, JSON.stringify(repaired));
+  const deterministic = call("materialize_docs", {
+    clean_publish: true,
+    verification_run_id: "deterministic-proof",
+  });
+  const repeated = call("materialize_docs", {
+    clean_publish: true,
+    verification_run_id: "deterministic-proof",
+  });
+  assert(
+    deterministic.projection_run_id === repeated.projection_run_id,
+    "identical projection proof was not idempotent",
+  );
+  let collisionRejected = false;
+  try {
+    call("verify_materialized_docs", { verification_run_id: "deterministic-proof" });
+  } catch (error) {
+    collisionRejected = error.message.includes("already bound to a different projection proof");
+  }
+  assert(collisionRejected, "projection proof identity was rebound to another mode");
+  const otherOutput = join(storage, "other-docs");
+  collisionRejected = false;
+  try {
+    call("materialize_docs", {
+      clean_publish: true,
+      output_dir: otherOutput,
+      verification_run_id: "deterministic-proof",
+    });
+  } catch (error) {
+    collisionRejected = error.message.includes("already bound to a different projection proof");
+  }
+  assert(collisionRejected, "projection proof identity was rebound to another output");
+  assert(!existsSync(otherOutput), "proof collision wrote a different output before rejection");
   console.log(
-    "OK — red projection halts, records mismatch custody, and repairs from durable truth",
+    "OK — red projection halts, records mismatch custody, repairs, and rejects proof rebinding",
   );
 } finally {
   db.close();

@@ -75,6 +75,16 @@ function runMigrations(db: DB): void {
       "ALTER TABLE subsystems ADD COLUMN priority INTEGER CHECK (priority IS NULL OR priority > 0)",
     );
   }
+  // 2. revalidation_attempts.consulted_sources — provider read-boundary
+  // telemetry, added with the unattended refresh envelope.
+  if (
+    hasTable(db, "revalidation_attempts") &&
+    !hasColumn(db, "revalidation_attempts", "consulted_sources")
+  ) {
+    db.exec(
+      "ALTER TABLE revalidation_attempts ADD COLUMN consulted_sources TEXT CHECK (consulted_sources IS NULL OR json_valid(consulted_sources))",
+    );
+  }
   // The CREATE INDEX ... IF NOT EXISTS in schema.sql handles the index
   // for us on the next initializeSchema pass — no explicit add here.
 }

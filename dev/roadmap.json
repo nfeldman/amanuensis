@@ -679,7 +679,7 @@
         {
           "id": "A5",
           "title": "Unattended refresh run envelope",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "A fully surveyed repository can be refreshed end to end from a commit range with deterministic controls, bounded provider use, explicit stop conditions, and a complete audit trail.",
           "rationale": "Full automation is a systems property. It requires authority, idempotence, reconciliation, and recovery—not just a prompt that continues without asking.",
@@ -722,10 +722,14 @@
             "M12"
           ],
           "baselineEvidence": [
-            "mcp-server/src/session.ts",
-            "mcp-server/src/tools/dispatch.ts",
-            "mcp-server/src/tools/locks.ts",
-            "mcp-server/test-cloud-e2e.mjs"
+            "dev/adr/0006-unattended-refresh-authority-and-recovery.md",
+            "mcp-server/src/db.ts",
+            "mcp-server/src/schema.sql",
+            "mcp-server/src/tools/refresh.ts",
+            "mcp-server/src/tools/revalidation.ts",
+            "mcp-server/src/tools/materialize.ts",
+            "mcp-server/test-refresh-recovery.mjs",
+            ".github/workflows/test.yml"
           ]
         }
       ]
@@ -746,7 +750,7 @@
         {
           "id": "A6",
           "title": "Impact-aware review brief",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "A reviewer receives the smallest sufficient situation model for a change: diff, affected claims, constraints, history, seams, contradictions, obligations, and explicit unknowns.",
           "rationale": "The product's value is not more context; it is the right evidence and prior work arranged around the current decision.",
@@ -1583,7 +1587,7 @@
       "proposedFiles": [
         "mcp-server/src/tools/refresh.ts",
         "mcp-server/test-refresh-recovery.mjs",
-        "dev/adr/0004-automation-authority.md"
+        "dev/adr/0006-unattended-refresh-authority-and-recovery.md"
       ],
       "proves": [
         "A living conspectus can maintain itself across a real commit range.",

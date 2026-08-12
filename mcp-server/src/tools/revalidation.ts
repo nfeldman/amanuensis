@@ -588,6 +588,7 @@ export const revalidationTools: ToolDefinition[] = [
         attempt_id: { type: "string" },
         result: { type: "object" },
         artifacts_written: { type: "array", items: { type: "string" } },
+        consulted_sources: { type: "array", items: { type: "string" } },
         actual_tokens: { type: "integer", minimum: 0 },
         actual_cost_microusd: { type: "integer", minimum: 0 },
       },
@@ -628,6 +629,7 @@ export const revalidationTools: ToolDefinition[] = [
         throw new ToolError("result must be an object");
       }
       const artifacts = optStringArray(args, "artifacts_written") ?? [];
+      const consultedSources = optStringArray(args, "consulted_sources") ?? [];
       const actualTokens = requireNonNegative(requireInt(args, "actual_tokens"), "actual_tokens");
       const actualCost = requireNonNegative(
         requireInt(args, "actual_cost_microusd"),
@@ -646,16 +648,22 @@ export const revalidationTools: ToolDefinition[] = [
         totals.tokens + actualTokens > run.max_total_tokens ||
         totals.cost + actualCost > run.max_total_cost_microusd;
       const allowedWrites = JSON.parse(run.allowed_write_prefixes) as string[];
+      const allowedSources = JSON.parse(run.allowed_sources) as string[];
       const authorityViolation = run.authority_mode === "observe-only" && artifacts.length > 0;
-      const sourceViolation =
+      const writeBoundaryViolation =
         run.authority_mode !== "observe-only" &&
         artifacts.some((path) => !pathAllowed(path, allowedWrites));
+      const readBoundaryViolation = consultedSources.some(
+        (path) => !pathAllowed(path, allowedSources),
+      );
+      const boundaryViolation =
+        authorityViolation || writeBoundaryViolation || readBoundaryViolation;
       ctx.db.transaction(() => {
         ctx.db
           .prepare(
             `UPDATE revalidation_attempts
                 SET status='landed', actual_tokens=?, actual_cost_microusd=?,
-                    result_json=?, artifacts_written=?, budget_violation=?,
+                    result_json=?, artifacts_written=?, consulted_sources=?, budget_violation=?,
                     boundary_violation=?, landed_at=datetime('now')
               WHERE attempt_id = ?`,
           )
@@ -664,8 +672,9 @@ export const revalidationTools: ToolDefinition[] = [
             actualCost,
             JSON.stringify(result),
             JSON.stringify(artifacts),
+            JSON.stringify(consultedSources),
             budgetViolation ? 1 : 0,
-            authorityViolation || sourceViolation ? 1 : 0,
+            boundaryViolation ? 1 : 0,
             attemptId,
           );
         ctx.db
@@ -693,20 +702,37 @@ export const revalidationTools: ToolDefinition[] = [
             detail: { authority_mode: run.authority_mode, artifacts_written: artifacts },
           });
         }
-        if (sourceViolation) {
+        if (writeBoundaryViolation) {
           recordViolation(ctx, {
             runId,
             obligationId: attempt.obligation_id,
             attemptId,
             type: "source-boundary",
-            detail: { allowed_write_prefixes: allowedWrites, artifacts_written: artifacts },
+            detail: {
+              boundary: "write",
+              allowed_write_prefixes: allowedWrites,
+              artifacts_written: artifacts,
+            },
+          });
+        }
+        if (readBoundaryViolation) {
+          recordViolation(ctx, {
+            runId,
+            obligationId: attempt.obligation_id,
+            attemptId,
+            type: "source-boundary",
+            detail: {
+              boundary: "read",
+              allowed_sources: allowedSources,
+              consulted_sources: consultedSources,
+            },
           });
         }
       })();
       return ok({
         attempt_id: attemptId,
         budget_violation: budgetViolation,
-        boundary_violation: authorityViolation || sourceViolation,
+        boundary_violation: boundaryViolation,
       });
     },
   },

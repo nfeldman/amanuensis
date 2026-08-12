@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 12 | 1 | 0 | 5 |
+| 0 | 11 | 1 | 0 | 6 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A5 — Unattended refresh run envelope. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A6 — Impact-aware review brief. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -373,7 +373,7 @@ Risks:
 
 #### A5 — Unattended refresh run envelope
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A0, A3, A4<br>
 **Metrics:** M4, M11, M12
@@ -404,7 +404,7 @@ Risks:
 - A permissive default envelope could turn analysis automation into unauthorized action.
 
 **Practice basis:** GP8, GP10, GP16, GP24, GP25, GP33, VP11, VP18, VP20<br>
-**Baseline evidence:** `mcp-server/src/session.ts`, `mcp-server/src/tools/dispatch.ts`, `mcp-server/src/tools/locks.ts`, `mcp-server/test-cloud-e2e.mjs`
+**Baseline evidence:** `dev/adr/0006-unattended-refresh-authority-and-recovery.md`, `mcp-server/src/db.ts`, `mcp-server/src/schema.sql`, `mcp-server/src/tools/refresh.ts`, `mcp-server/src/tools/revalidation.ts`, `mcp-server/src/tools/materialize.ts`, `mcp-server/test-refresh-recovery.mjs`, `.github/workflows/test.yml`
 
 ### Next — earn super review and architecture
 
@@ -422,7 +422,7 @@ Risks:
 
 #### A6 — Impact-aware review brief
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2, A4, A5<br>
 **Metrics:** M5, M6, M7, M9
@@ -982,7 +982,7 @@ Required checks:
 Compose plan, impact, obligations, workers, landing, scoring, and read-back into one resumable run with explicit authority and provider boundaries.
 
 **Existing files:** `mcp-server/src/session.ts`, `mcp-server/src/tools/dispatch.ts`, `mcp-server/src/tools/locks.ts`, `mcp-server/test-cloud-e2e.mjs`<br>
-**Proposed files:** `mcp-server/src/tools/refresh.ts`, `mcp-server/test-refresh-recovery.mjs`, `dev/adr/0004-automation-authority.md`
+**Proposed files:** `mcp-server/src/tools/refresh.ts`, `mcp-server/test-refresh-recovery.mjs`, `dev/adr/0006-unattended-refresh-authority-and-recovery.md`
 
 Proves:
 
