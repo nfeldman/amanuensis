@@ -42,6 +42,7 @@ node test-adversarial-security.mjs      # input handling, SQL safety, path trave
 node test-resolution-proof.mjs          # repair proof and append-only resolution history
 node test-projection-custody.mjs        # projection mismatch custody and repair
 node test-refresh-recovery.mjs          # unattended authority and crash recovery
+node test-review-brief.mjs              # impact context, ablations, and publication
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -140,6 +141,11 @@ in agent prose:
   exact obligation reconciliation plus final projection read-back. Extend
   `test-refresh-recovery.mjs` whenever a mutating stage or authority axis is
   added.
+- **Review-brief custody.** Required context comes from the durable impact
+  artifact, every retrieval choice has an immutable trace, and seam provenance
+  is independently reconciled before publication. Extend
+  `test-review-brief.mjs` whenever a required section, context profile, or
+  publication gate changes.
 
 ## Commits
 

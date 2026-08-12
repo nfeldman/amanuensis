@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 11 | 1 | 0 | 6 |
+| 0 | 10 | 1 | 0 | 7 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A6 — Impact-aware review brief. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A7 — Independent review generation and refutation. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -422,7 +422,7 @@ Risks:
 
 #### A6 — Impact-aware review brief
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2, A4, A5<br>
 **Metrics:** M5, M6, M7, M9
@@ -453,11 +453,11 @@ Risks:
 - Retrieval quality can be confused with underlying record quality.
 
 **Practice basis:** GP7, GP11, GP12, GP14, GP20, GP26, VP8, VP9<br>
-**Baseline evidence:** `mcp-server/src/tools/diagnosticity.ts`, `mcp-server/src/tools/logging.ts`, `mcp-server/src/tools/seams.ts`, `mcp-server/src/tools/compare.ts`
+**Baseline evidence:** `dev/adr/0007-impact-aware-review-brief.md`, `mcp-server/src/schema.sql`, `mcp-server/src/tools/impact.ts`, `mcp-server/src/tools/review.ts`, `mcp-server/test-review-brief.mjs`, `.github/workflows/test.yml`
 
 #### A7 — Independent review generation and refutation
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A6<br>
 **Metrics:** M5, M6, M7, M11
@@ -488,7 +488,7 @@ Risks:
 - Extra passes can increase cost without improving decision quality.
 
 **Practice basis:** GP2, GP3, GP4, GP5, GP6, GP13, GP15, GP19, GP26, GP30, VP1, VP2, VP3, VP5, VP6, VP15, VP16<br>
-**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-concerns.agent.md`, `mcp-server/src/invariants.ts`, `mcp-server/test-adversarial-correctness.mjs`
+**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-concerns.agent.md`, `mcp-server/src/invariants.ts`, `mcp-server/src/tools/review.ts`, `mcp-server/test-adversarial-correctness.mjs`, `mcp-server/test-review-brief.mjs`
 
 #### A8 — Composition and integral HEAD verification
 

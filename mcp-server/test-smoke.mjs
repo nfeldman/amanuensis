@@ -36,6 +36,7 @@ import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
 import { refreshTools } from "./dist/tools/refresh.js";
+import { reviewTools } from "./dist/tools/review.js";
 import { resolutionTools } from "./dist/tools/resolution.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
@@ -84,6 +85,7 @@ const allTools = new Map(
     ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...impactTools,
     ...revalidationTools, ...diagnosticityTools,
     ...refreshTools,
+    ...reviewTools,
     ...resolutionTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),

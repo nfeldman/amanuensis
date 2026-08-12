@@ -750,7 +750,7 @@
         {
           "id": "A6",
           "title": "Impact-aware review brief",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "A reviewer receives the smallest sufficient situation model for a change: diff, affected claims, constraints, history, seams, contradictions, obligations, and explicit unknowns.",
           "rationale": "The product's value is not more context; it is the right evidence and prior work arranged around the current decision.",
@@ -793,16 +793,18 @@
             "M9"
           ],
           "baselineEvidence": [
-            "mcp-server/src/tools/diagnosticity.ts",
-            "mcp-server/src/tools/logging.ts",
-            "mcp-server/src/tools/seams.ts",
-            "mcp-server/src/tools/compare.ts"
+            "dev/adr/0007-impact-aware-review-brief.md",
+            "mcp-server/src/schema.sql",
+            "mcp-server/src/tools/impact.ts",
+            "mcp-server/src/tools/review.ts",
+            "mcp-server/test-review-brief.mjs",
+            ".github/workflows/test.yml"
           ]
         },
         {
           "id": "A7",
           "title": "Independent review generation and refutation",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Candidate review findings are generated and attacked by role-separated passes with controlled context differences, then aggregated without contaminating independent judgments.",
           "rationale": "A large context and a self-critique prompt do not create independent scrutiny. Consequential findings need a refutation path designed around correlated failure.",
@@ -855,7 +857,9 @@
             "agents/amanuensis-adversarial.agent.md",
             "agents/amanuensis-concerns.agent.md",
             "mcp-server/src/invariants.ts",
-            "mcp-server/test-adversarial-correctness.mjs"
+            "mcp-server/src/tools/review.ts",
+            "mcp-server/test-adversarial-correctness.mjs",
+            "mcp-server/test-review-brief.mjs"
           ]
         },
         {

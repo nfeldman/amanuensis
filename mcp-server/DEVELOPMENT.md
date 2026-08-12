@@ -43,7 +43,7 @@ to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_103 tools across 29 groups. Generated from `tools/list` — do not hand-edit._
+_107 tools across 30 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -246,6 +246,15 @@ _103 tools across 29 groups. Generated from `tools/list` — do not hand-edit._
 | `reconcile_revalidation_run` | Reconcile expected obligations against attempts, landings, scores, closures, and protocol/budget/authority violations. Completion is exact fan-in, never non-emptiness; every diagnostic remains queryable. |
 | `get_revalidation_dashboard` | Return revalidation summary counts plus queryable obligations, runs, attempts, and protocol violations. Filters keep blocked, retried, deferred, dead-letter, and orphaned work visible. |
 
+### `review` (4)
+
+| Tool | Description |
+|---|---|
+| `compile_review_brief` | Compile and persist a typed, token-bounded ReviewBrief from one durable change-impact run. Explicit impact relations select context first; every inclusion, declared drop, truncation, or block receives a reversible trace and every real gap receives an obligation destination. validation_ablate is a fault-injection control for A6 tests. |
+| `publish_review_brief` | Publish a compiled ReviewBrief only after independently reconciling its immutable hash, every required section, the A2 impacted-seam denominator with nonempty provenance, and a perfect structural control score. |
+| `get_review_brief` | Read a ReviewBrief with its typed sections, section-status and budget declarations, full retrieval trace, gap obligations, control components, and publication receipt. |
+| `expand_review_brief_item` | Expand one included compact ReviewBrief item through its trace ID to the full typed source, evidence, impact provenance, and repository-validity checks at the reviewed commit. |
+
 ### `seams` (3)
 
 | Tool | Description |
@@ -346,5 +355,5 @@ src/
   storage-git.ts     git operations over the storage directory
   helpers.ts         argument validators, result helpers
   schema.sql         canonical conspectus schema (embedded at install)
-  tools/             24 tool groups — see auto-generated inventory above
+  tools/             30 tool groups — see auto-generated inventory above
 ```

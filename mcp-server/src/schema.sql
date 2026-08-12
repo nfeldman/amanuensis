@@ -1525,6 +1525,206 @@ BEGIN
 END;
 
 ----------------------------------------------------------------------
+-- REVIEW BRIEFS: impact-shaped context with reversible provenance
+----------------------------------------------------------------------
+-- The compact brief is derived from one durable A2 impact artifact.  The
+-- trace owns every inclusion, omission, truncation, and blocking reason;
+-- source_json is the expansion path back to typed claims and evidence.
+
+CREATE TABLE IF NOT EXISTS review_briefs (
+    brief_id                         TEXT PRIMARY KEY,
+    impact_run_id                    TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE RESTRICT,
+    context_profile                  TEXT NOT NULL CHECK (context_profile IN (
+                                           'diff-scoped','control-wide','integral-head')),
+    task                             TEXT NOT NULL,
+    task_constraints                 TEXT NOT NULL CHECK (json_valid(task_constraints)),
+    reviewed_sha                     TEXT NOT NULL,
+    token_budget                     INTEGER NOT NULL CHECK (token_budget > 0),
+    estimated_tokens                 INTEGER NOT NULL CHECK (estimated_tokens >= 0),
+    control_score                    REAL NOT NULL CHECK (control_score BETWEEN 0.0 AND 1.0),
+    required_section_count           INTEGER NOT NULL CHECK (required_section_count >= 0),
+    included_required_section_count  INTEGER NOT NULL CHECK (included_required_section_count >= 0),
+    uncovered_file_count             INTEGER NOT NULL CHECK (uncovered_file_count >= 0),
+    omitted_section_count            INTEGER NOT NULL CHECK (omitted_section_count >= 0),
+    truncated_item_count             INTEGER NOT NULL CHECK (truncated_item_count >= 0),
+    status                           TEXT NOT NULL CHECK (status IN (
+                                           'publishable','blocked','published')),
+    brief_json                       TEXT NOT NULL CHECK (json_valid(brief_json)),
+    brief_hash                       TEXT NOT NULL,
+    session_id                       TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at                       TEXT NOT NULL DEFAULT (datetime('now')),
+    published_at                     TEXT,
+    CHECK (included_required_section_count <= required_section_count),
+    CHECK (status != 'published' OR published_at IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_briefs_impact
+    ON review_briefs(impact_run_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_review_briefs_status
+    ON review_briefs(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS review_brief_trace (
+    trace_id          TEXT PRIMARY KEY,
+    brief_id          TEXT NOT NULL REFERENCES review_briefs(brief_id) ON DELETE CASCADE,
+    ordinal           INTEGER NOT NULL CHECK (ordinal >= 0),
+    section           TEXT NOT NULL,
+    action            TEXT NOT NULL CHECK (action IN (
+                              'included','omitted','truncated','blocked')),
+    object_type       TEXT NOT NULL,
+    object_id         TEXT NOT NULL,
+    reason            TEXT NOT NULL,
+    provenance_json   TEXT NOT NULL CHECK (json_valid(provenance_json)),
+    source_json       TEXT NOT NULL CHECK (json_valid(source_json)),
+    estimated_tokens  INTEGER NOT NULL CHECK (estimated_tokens >= 0),
+    obligation_id     TEXT REFERENCES revalidation_obligations(obligation_id) ON DELETE RESTRICT,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (brief_id, ordinal),
+    UNIQUE (brief_id, section, object_type, object_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_brief_trace_brief
+    ON review_brief_trace(brief_id, action, section, ordinal);
+
+CREATE TABLE IF NOT EXISTS review_brief_publications (
+    publication_id     INTEGER PRIMARY KEY,
+    brief_id           TEXT NOT NULL UNIQUE REFERENCES review_briefs(brief_id) ON DELETE RESTRICT,
+    brief_hash         TEXT NOT NULL,
+    reviewed_sha       TEXT NOT NULL,
+    control_score      REAL NOT NULL CHECK (control_score BETWEEN 0.0 AND 1.0),
+    included_trace_count INTEGER NOT NULL CHECK (included_trace_count >= 0),
+    seam_count         INTEGER NOT NULL CHECK (seam_count >= 0),
+    session_id         TEXT NOT NULL REFERENCES sessions(session_id),
+    published_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE VIEW IF NOT EXISTS review_brief_summary AS
+SELECT b.brief_id, b.impact_run_id, b.context_profile, b.reviewed_sha,
+       b.token_budget, b.estimated_tokens, b.control_score, b.status,
+       b.uncovered_file_count, b.omitted_section_count, b.truncated_item_count,
+       COUNT(t.trace_id) AS trace_count,
+       COUNT(t.trace_id) FILTER (WHERE t.action='included') AS included_count,
+       COUNT(t.trace_id) FILTER (WHERE t.action IN ('blocked','truncated')) AS red_count
+  FROM review_briefs b
+  LEFT JOIN review_brief_trace t ON t.brief_id=b.brief_id
+ GROUP BY b.brief_id;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_payload_is_immutable
+BEFORE UPDATE ON review_briefs
+FOR EACH ROW
+WHEN OLD.brief_id != NEW.brief_id
+  OR OLD.impact_run_id != NEW.impact_run_id
+  OR OLD.context_profile != NEW.context_profile
+  OR OLD.task != NEW.task
+  OR OLD.task_constraints != NEW.task_constraints
+  OR OLD.reviewed_sha != NEW.reviewed_sha
+  OR OLD.token_budget != NEW.token_budget
+  OR OLD.estimated_tokens != NEW.estimated_tokens
+  OR OLD.control_score != NEW.control_score
+  OR OLD.required_section_count != NEW.required_section_count
+  OR OLD.included_required_section_count != NEW.included_required_section_count
+  OR OLD.uncovered_file_count != NEW.uncovered_file_count
+  OR OLD.omitted_section_count != NEW.omitted_section_count
+  OR OLD.truncated_item_count != NEW.truncated_item_count
+  OR OLD.brief_json != NEW.brief_json
+  OR OLD.brief_hash != NEW.brief_hash
+  OR OLD.session_id != NEW.session_id
+BEGIN
+    SELECT RAISE(ABORT, 'review brief payload is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_status_is_monotonic
+BEFORE UPDATE OF status ON review_briefs
+FOR EACH ROW
+WHEN NOT (
+    OLD.status='publishable' AND NEW.status='published'
+    AND EXISTS (
+        SELECT 1 FROM review_brief_publications p
+         WHERE p.brief_id=OLD.brief_id
+           AND p.brief_hash=OLD.brief_hash
+           AND p.reviewed_sha=OLD.reviewed_sha
+           AND p.control_score=OLD.control_score
+    )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'published status requires a reconciled publication receipt');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_published_at_follows_receipt
+BEFORE UPDATE OF published_at ON review_briefs
+FOR EACH ROW
+WHEN NOT (
+    OLD.status='publishable' AND NEW.status='published'
+    AND OLD.published_at IS NULL AND NEW.published_at IS NOT NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'review brief publication timestamp is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_trace_is_immutable
+BEFORE UPDATE ON review_brief_trace
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'review brief trace is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_trace_cannot_be_deleted
+BEFORE DELETE ON review_brief_trace
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'review brief trace cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_publication_is_immutable
+BEFORE UPDATE ON review_brief_publications
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'review brief publication is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_publication_cannot_be_deleted
+BEFORE DELETE ON review_brief_publications
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'review brief publication cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS review_brief_publication_must_reconcile
+BEFORE INSERT ON review_brief_publications
+FOR EACH ROW
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1 FROM review_briefs b
+         WHERE b.brief_id=NEW.brief_id
+           AND b.status='publishable'
+           AND b.brief_hash=NEW.brief_hash
+           AND b.reviewed_sha=NEW.reviewed_sha
+           AND b.control_score=1.0
+           AND NEW.control_score=b.control_score
+           AND b.included_required_section_count=b.required_section_count
+    ) THEN RAISE(ABORT, 'review brief publication does not match a publishable brief') END;
+    SELECT CASE WHEN NEW.included_trace_count != (
+        SELECT COUNT(*) FROM review_brief_trace
+         WHERE brief_id=NEW.brief_id AND action='included'
+    ) THEN RAISE(ABORT, 'review brief publication trace count does not reconcile') END;
+    SELECT CASE WHEN NEW.seam_count != (
+        SELECT COUNT(*) FROM change_impact_objects o
+        JOIN review_briefs b ON b.impact_run_id=o.run_id
+         WHERE b.brief_id=NEW.brief_id AND o.object_type='seam'
+    ) THEN RAISE(ABORT, 'review brief publication seam denominator does not reconcile') END;
+    SELECT CASE WHEN NEW.seam_count != (
+        SELECT COUNT(*) FROM review_brief_trace
+         WHERE brief_id=NEW.brief_id AND section='impacted_seams' AND action='included'
+           AND json_array_length(json_extract(provenance_json, '$.impact_reason_path')) > 0
+    ) THEN RAISE(ABORT, 'review brief publication seam provenance does not reconcile') END;
+    SELECT CASE WHEN EXISTS (
+        SELECT 1
+          FROM review_brief_trace t, json_each(json_extract(t.source_json, '$.evidence')) evidence
+         WHERE t.brief_id=NEW.brief_id AND t.action='included'
+           AND COALESCE(json_extract(evidence.value, '$.reachable_at_reviewed_sha'), 0) != 1
+    ) THEN RAISE(ABORT, 'review brief publication evidence validity does not reconcile') END;
+END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

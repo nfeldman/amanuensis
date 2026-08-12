@@ -105,6 +105,9 @@ jobs:
       - name: Unattended refresh — authority, crash adoption, final read-back
         working-directory: mcp-server
         run: node test-refresh-recovery.mjs
+      - name: Review brief — impact context, ablations, expansion, publication
+        working-directory: mcp-server
+        run: node test-review-brief.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs
