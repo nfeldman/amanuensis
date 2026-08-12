@@ -19,7 +19,7 @@ to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_75 tools across 24 groups. Generated from `tools/list` — do not hand-edit._
+_81 tools across 25 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -28,6 +28,17 @@ _75 tools across 24 groups. Generated from `tools/list` — do not hand-edit._
 | `register_artifact` | Record that a prose artifact exists and capture its content hash. `path` is relative to the project storage directory. If the file exists, its size and sha256 are computed automatically. This is the source of truth the diff-aware materializer uses to decide what to re-render. |
 | `list_artifacts` | List registered prose artifacts. Filter by kind ('subsystem-survey', 'findings-index', etc.) and/or subsystem_id. |
 | `rehash_artifact` | Re-read an artifact from disk and update its stored content_hash + bytes. Called by the agents right after writing an artifact file so the materializer's diff check reflects the current contents. |
+
+### `claims` (6)
+
+| Tool | Description |
+|---|---|
+| `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. |
+| `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. |
+| `supersede_claim` | Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. |
+| `get_claims` | Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
+| `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
+| `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
 
 ### `compare` (1)
 

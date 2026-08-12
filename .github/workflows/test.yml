@@ -84,6 +84,9 @@ jobs:
       - name: Invariants — knowledge-depth gates + monotonic transitions
         working-directory: mcp-server
         run: node test-invariants.mjs
+      - name: Temporal claims — intervals, supersession, migration, compatibility
+        working-directory: mcp-server
+        run: node test-temporal-claims.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

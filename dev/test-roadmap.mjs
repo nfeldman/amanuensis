@@ -72,7 +72,13 @@ try {
   );
 
   const unfinishedActiveDependency = writeCase("unfinished-active-dependency", (value) => {
+    for (const stage of value.stages) {
+      for (const item of stage.initiatives) {
+        if (item.status === "in-progress") item.status = "planned";
+      }
+    }
     initiative(value, "A0").status = "ready";
+    initiative(value, "A1").status = "in-progress";
   });
   run(
     ["--write", "--source", unfinishedActiveDependency, "--output", projection],
@@ -81,6 +87,7 @@ try {
   );
 
   const competingActiveWork = writeCase("competing-active-work", (value) => {
+    initiative(value, "A1").status = "in-progress";
     initiative(value, "A2").status = "in-progress";
   });
   run(
@@ -90,7 +97,12 @@ try {
   );
 
   const noFrontier = writeCase("no-frontier", (value) => {
-    initiative(value, "A1").status = "planned";
+    for (const stage of value.stages) {
+      for (const item of stage.initiatives) {
+        if (item.status === "ready" || item.status === "in-progress") item.status = "planned";
+      }
+    }
+    initiative(value, "A17").status = "planned";
   });
   run(
     ["--write", "--source", noFrontier, "--output", projection],

@@ -462,7 +462,7 @@
         {
           "id": "A1",
           "title": "Temporal claim and supersession model",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.",
           "rationale": "A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.",
@@ -504,13 +504,16 @@
           "baselineEvidence": [
             "mcp-server/src/schema.sql",
             "mcp-server/src/tools/evidence.ts",
-            "mcp-server/src/tools/contradictions.ts"
+            "mcp-server/src/tools/contradictions.ts",
+            "dev/adr/0002-temporal-claim-model.md",
+            "mcp-server/src/tools/claims.ts",
+            "mcp-server/test-temporal-claims.mjs"
           ]
         },
         {
           "id": "A2",
           "title": "Change impact and invalidation engine",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "A commit range produces an explainable set of directly and transitively affected claims, seams, findings, and obligations without invalidating unrelated knowledge.",
           "rationale": "Precise impact is the economic hinge: too little recall makes the record unsafe, while excessive invalidation destroys the promised time savings.",

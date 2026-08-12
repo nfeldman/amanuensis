@@ -765,6 +765,179 @@ CREATE INDEX IF NOT EXISTS idx_disp_evidence_evidence ON disposition_evidence(ev
 CREATE INDEX IF NOT EXISTS idx_find_evidence_evidence ON finding_evidence(evidence_id);
 
 ----------------------------------------------------------------------
+-- TEMPORAL CLAIMS: typed authority at repository states
+----------------------------------------------------------------------
+-- Claims are immutable versions in a named semantic slot (`claim_key`).
+-- `valid_until_sha` is an exclusive Git boundary: a claim invalidated at B
+-- is not authoritative at B. Commit ancestry, rather than SHA text or wall
+-- clock order, is evaluated by the claims tool against the target workspace.
+--
+-- Exactly one open-ended version may occupy a claim_key. Supersession closes
+-- the predecessor and opens the successor at the same commit, while the edge
+-- and validity events retain why the transition happened.
+
+CREATE TABLE IF NOT EXISTS claims (
+    claim_id          TEXT    PRIMARY KEY,
+    claim_key         TEXT    NOT NULL,
+    subject_type      TEXT    NOT NULL,
+    subject_id        TEXT    NOT NULL,
+    statement         TEXT    NOT NULL,
+    epistemic_kind    TEXT    NOT NULL CHECK (epistemic_kind IN (
+                                'observation','inference','hypothesis',
+                                'open-question','direct-intent',
+                                'inferred-intent','decision')),
+    asserted_at_sha   TEXT    NOT NULL,
+    valid_from_sha    TEXT    NOT NULL,
+    valid_until_sha   TEXT,
+    session_id        TEXT    NOT NULL REFERENCES sessions(session_id),
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (length(claim_id) > 0),
+    CHECK (length(claim_key) > 0),
+    CHECK (length(subject_type) > 0),
+    CHECK (length(subject_id) > 0),
+    CHECK (length(statement) > 0),
+    CHECK (valid_until_sha IS NULL OR valid_until_sha != valid_from_sha)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_current_key
+    ON claims(claim_key) WHERE valid_until_sha IS NULL;
+CREATE INDEX IF NOT EXISTS idx_claims_subject ON claims(subject_type, subject_id);
+CREATE INDEX IF NOT EXISTS idx_claims_epistemic_kind ON claims(epistemic_kind);
+CREATE INDEX IF NOT EXISTS idx_claims_validity ON claims(valid_from_sha, valid_until_sha);
+
+CREATE TABLE IF NOT EXISTS claim_evidence (
+    claim_id          TEXT    NOT NULL REFERENCES claims(claim_id) ON DELETE CASCADE,
+    evidence_id       INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    role              TEXT    NOT NULL CHECK (role IN ('supports','contradicts','qualifies')),
+    PRIMARY KEY (claim_id, evidence_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_evidence_evidence ON claim_evidence(evidence_id);
+
+CREATE TABLE IF NOT EXISTS claim_validity_events (
+    id                INTEGER PRIMARY KEY,
+    claim_id          TEXT    NOT NULL REFERENCES claims(claim_id) ON DELETE CASCADE,
+    event_type        TEXT    NOT NULL CHECK (event_type IN (
+                                'asserted','invalidated','superseded','revalidated')),
+    at_sha            TEXT    NOT NULL,
+    reason            TEXT    NOT NULL,
+    evidence_id       INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    session_id        TEXT    NOT NULL REFERENCES sessions(session_id),
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_validity_events_claim
+    ON claim_validity_events(claim_id, id);
+CREATE INDEX IF NOT EXISTS idx_claim_validity_events_sha ON claim_validity_events(at_sha);
+
+CREATE TABLE IF NOT EXISTS claim_supersessions (
+    predecessor_claim_id TEXT PRIMARY KEY REFERENCES claims(claim_id) ON DELETE RESTRICT,
+    successor_claim_id   TEXT NOT NULL UNIQUE REFERENCES claims(claim_id) ON DELETE RESTRICT,
+    at_sha               TEXT NOT NULL,
+    evidence_id          INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    rationale            TEXT NOT NULL,
+    session_id           TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (predecessor_claim_id != successor_claim_id)
+);
+
+-- Claim versions do not change meaning in place. The only legal mutation is
+-- setting the exclusive end of a previously current interval exactly once.
+CREATE TRIGGER IF NOT EXISTS claims_versions_are_immutable
+BEFORE UPDATE ON claims
+FOR EACH ROW
+WHEN (
+    OLD.claim_key != NEW.claim_key
+    OR OLD.subject_type != NEW.subject_type
+    OR OLD.subject_id != NEW.subject_id
+    OR OLD.statement != NEW.statement
+    OR OLD.epistemic_kind != NEW.epistemic_kind
+    OR OLD.asserted_at_sha != NEW.asserted_at_sha
+    OR OLD.valid_from_sha != NEW.valid_from_sha
+    OR OLD.session_id != NEW.session_id
+    OR OLD.valid_until_sha IS NOT NULL
+    OR NEW.valid_until_sha IS NULL
+)
+BEGIN
+    SELECT RAISE(ABORT, 'claim versions are immutable; only a current validity interval may be closed');
+END;
+
+CREATE TRIGGER IF NOT EXISTS claim_supersession_integrity
+BEFORE INSERT ON claim_supersessions
+FOR EACH ROW
+BEGIN
+    SELECT CASE WHEN EXISTS (
+        WITH RECURSIVE successors(claim_id) AS (
+            SELECT NEW.successor_claim_id
+            UNION ALL
+            SELECT cs.successor_claim_id
+              FROM claim_supersessions cs
+              JOIN successors s ON cs.predecessor_claim_id = s.claim_id
+        )
+        SELECT 1 FROM successors WHERE claim_id = NEW.predecessor_claim_id
+    ) THEN RAISE(ABORT, 'claim supersession cycle') END;
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1
+          FROM claims predecessor
+          JOIN claims successor ON successor.claim_id = NEW.successor_claim_id
+         WHERE predecessor.claim_id = NEW.predecessor_claim_id
+           AND predecessor.claim_key = successor.claim_key
+           AND predecessor.valid_until_sha = NEW.at_sha
+           AND successor.valid_from_sha = NEW.at_sha
+    ) THEN RAISE(ABORT, 'supersession must preserve claim_key and share one validity boundary') END;
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1 FROM claim_evidence
+         WHERE claim_id = NEW.successor_claim_id
+           AND evidence_id = NEW.evidence_id
+           AND role = 'supports'
+    ) THEN RAISE(ABORT, 'supersession evidence must support the successor claim') END;
+END;
+
+-- Existing rows remain untouched. This view is an explicitly lossy bridge:
+-- it gives legacy knowledge stable typed handles without pretending the old
+-- records had claim-level temporal precision they never carried.
+CREATE VIEW IF NOT EXISTS legacy_claim_projection AS
+SELECT 'legacy:entry:' || id || ':' || tier AS claim_id,
+       'entry' AS subject_type,
+       id || ':' || tier AS subject_id,
+       'Legacy entry ' || id || ' tier ' || tier ||
+         COALESCE(' from ' || source_path, '') AS statement,
+       CASE WHEN confidence = 'inferred' THEN 'inference' ELSE 'observation' END
+         AS epistemic_kind,
+       ref_sha AS asserted_at_sha,
+       source_path AS provenance,
+       'entries' AS legacy_source
+  FROM entries
+UNION ALL
+SELECT 'legacy:evidence:' || id,
+       'evidence', CAST(id AS TEXT),
+       kind || ' evidence at ' || file_path || COALESCE(':' || symbol, ''),
+       'observation', ref_sha, file_path, 'evidence'
+  FROM evidence
+UNION ALL
+SELECT 'legacy:disposition:' || subsystem_id || ':' || concern_code,
+       'disposition', subsystem_id || ':' || concern_code,
+       classification || COALESCE(': ' || rationale, ''),
+       'inference', ref_sha, evidence, 'dispositions'
+  FROM dispositions
+UNION ALL
+SELECT 'legacy:finding:' || finding_id || ':symptom',
+       'finding', finding_id,
+       symptom, 'observation', ref_sha, primary_files, 'findings'
+  FROM findings
+UNION ALL
+SELECT 'legacy:finding:' || finding_id || ':root-cause',
+       'finding', finding_id,
+       root_cause, 'inference', ref_sha, primary_files, 'findings'
+  FROM findings
+UNION ALL
+SELECT 'legacy:contradiction:' || id,
+       'contradiction', CAST(id AS TEXT),
+       conflict_type || ' between ' || finding_a || ' and ' || finding_b,
+       'inference', NULL, shared_location, 'contradictions'
+  FROM contradictions;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

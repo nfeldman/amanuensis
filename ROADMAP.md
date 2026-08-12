@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 16 | 1 | 0 | 1 |
+| 0 | 15 | 1 | 0 | 2 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -233,7 +233,7 @@ Risks:
 
 #### A1 — Temporal claim and supersession model
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A0<br>
 **Metrics:** M1, M2, M3
@@ -264,11 +264,11 @@ Risks:
 - Backfilling legacy prose may imply claim precision the original records never had.
 
 **Practice basis:** GP1, GP6, GP9, GP11, GP12, GP18, GP27, GP35<br>
-**Baseline evidence:** `mcp-server/src/schema.sql`, `mcp-server/src/tools/evidence.ts`, `mcp-server/src/tools/contradictions.ts`
+**Baseline evidence:** `mcp-server/src/schema.sql`, `mcp-server/src/tools/evidence.ts`, `mcp-server/src/tools/contradictions.ts`, `dev/adr/0002-temporal-claim-model.md`, `mcp-server/src/tools/claims.ts`, `mcp-server/test-temporal-claims.mjs`
 
 #### A2 — Change impact and invalidation engine
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A1<br>
 **Metrics:** M2, M3, M4

@@ -355,9 +355,10 @@ function validateRoadmap(roadmap) {
 
   const readyItems = [...initiatives.values()].filter(({ item }) => item.status === "ready");
   const activeItems = [...initiatives.values()].filter(({ item }) => item.status === "in-progress");
+  const unfinishedItems = [...initiatives.values()].filter(({ item }) => item.status !== "done");
   assert(activeItems.length <= 1, "at most one initiative may be in-progress", errors);
   assert(
-    readyItems.length > 0 || activeItems.length > 0,
+    unfinishedItems.length === 0 || readyItems.length > 0 || activeItems.length > 0,
     "at least one initiative must be ready or in-progress",
     errors,
   );

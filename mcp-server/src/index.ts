@@ -6,6 +6,7 @@ import { openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import { resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
+import { claimTools } from "./tools/claims.js";
 import { compareTools } from "./tools/compare.js";
 import { concernTools } from "./tools/concerns.js";
 import { contradictionTools } from "./tools/contradictions.js";
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
     ...materializeTools,
     ...seamTools,
     ...artifactTools,
+    ...claimTools,
     ...evidenceTools,
     ...diagnosticityTools,
     ...openQuestionTools,

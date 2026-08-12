@@ -8,6 +8,7 @@
 // This is NOT a full MCP integration test; it drives tools directly to
 // catch regressions without needing a live transport. Run with:
 //   node test-smoke.mjs
+import { execFileSync } from "node:child_process";
 import { rmSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,6 +31,7 @@ import { dispatchTools } from "./dist/tools/dispatch.js";
 import { dashboardTools } from "./dist/tools/dashboard.js";
 import { seamTools } from "./dist/tools/seams.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
@@ -41,6 +43,23 @@ mkdirSync(TMP, { recursive: true });
 // Init the smoke TMP as a git repo so commit_phase_gate / get_storage_history
 // exercise their real code paths against a real repo.
 ensureStorageRepo(TMP);
+function fixtureCommit(value) {
+  writeFileSync(join(TMP, "claim-fixture.txt"), `${value}\n`);
+  execFileSync("git", ["add", "claim-fixture.txt"], { cwd: TMP });
+  execFileSync(
+    "git",
+    [
+      "-c", "commit.gpgsign=false",
+      "-c", "user.name=amanuensis-smoke",
+      "-c", "user.email=smoke@localhost",
+      "commit", "--quiet", "--no-verify", "-m", `claim fixture ${value}`,
+    ],
+    { cwd: TMP },
+  );
+  return execFileSync("git", ["rev-parse", "HEAD"], { cwd: TMP, encoding: "utf8" }).trim();
+}
+const claimSha1 = fixtureCommit("one");
+const claimSha2 = fixtureCommit("two");
 
 const project = {
   workspacePath: TMP,
@@ -58,7 +77,7 @@ const allTools = new Map(
     ...dispositionTools, ...findingTools, ...fieldNoteTools, ...vocabularyTools,
     ...xrefTools, ...contradictionTools, ...loggingTools, ...lockTools,
     ...staleTools, ...dispatchTools, ...dashboardTools,
-    ...seamTools, ...artifactTools, ...evidenceTools, ...diagnosticityTools,
+    ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...diagnosticityTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),
 );
@@ -297,7 +316,59 @@ run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, 
 run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 1);
 run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 2);
 
-// 20. Diagnosticity matrix
+// 20. Temporal claims
+const claimEv1 = run("add_evidence", {
+  file_path: "claim-fixture.txt",
+  line_range: "1-1",
+  ref_sha: claimSha1,
+  kind: "test-observed",
+}, (r) => r.ok && typeof r.id === "number");
+const claimEv2 = run("add_evidence", {
+  file_path: "claim-fixture.txt",
+  line_range: "1-1",
+  ref_sha: claimSha2,
+  kind: "test-observed",
+}, (r) => r.ok && typeof r.id === "number");
+run("add_claim", {
+  claim_id: "smoke-claim-1",
+  claim_key: "smoke.fixture",
+  subject_type: "subsystem",
+  subject_id: "B-01",
+  statement: "The first fixture state is observed.",
+  epistemic_kind: "observation",
+  ref_sha: claimSha1,
+  evidence_ids: [claimEv1.id],
+}, (r) => r.ok);
+run("supersede_claim", {
+  predecessor_claim_id: "smoke-claim-1",
+  successor_claim_id: "smoke-claim-2",
+  statement: "The second fixture state supersedes the first.",
+  epistemic_kind: "observation",
+  at_sha: claimSha2,
+  rationale: "the fixture changed",
+  evidence_ids: [claimEv2.id],
+}, (r) => r.ok);
+run("add_claim", {
+  claim_id: "smoke-invalidated",
+  claim_key: "smoke.invalidated",
+  subject_type: "subsystem",
+  subject_id: "B-01",
+  statement: "A claim that will be invalidated.",
+  epistemic_kind: "hypothesis",
+  ref_sha: claimSha1,
+  evidence_ids: [claimEv1.id],
+}, (r) => r.ok);
+run("invalidate_claim", {
+  claim_id: "smoke-invalidated",
+  at_sha: claimSha2,
+  reason: "the second fixture refutes it",
+  evidence_ids: [claimEv2.id],
+}, (r) => r.ok);
+run("get_claims", { query_sha: claimSha2 }, (r) => r.length === 1 && r[0].claim_id === "smoke-claim-2");
+run("get_claim_history", { claim_key: "smoke.fixture" }, (r) => r.claims.length === 2 && r.edges.length === 1);
+run("get_legacy_claim_projection", { legacy_source: "findings" }, (r) => r.length === 4);
+
+// 21. Diagnosticity matrix
 const mtx = run("open_diagnosticity_matrix", {
   subsystem_id: "B-01",
   symptom: "stale read after write",
@@ -318,12 +389,12 @@ run("resolve_diagnosticity_matrix", {
 run("get_diagnosticity_matrix", { matrix_id: mtx.matrix_id }, (r) => r.session.outcome === "resolved" && r.cells.length === 2);
 run("list_diagnosticity_matrices", { outcome: "resolved" }, (r) => r.length === 1);
 
-// 21. Storage-dir git history — covers commit_phase_gate + get_storage_history
+// 22. Storage-dir git history — covers commit_phase_gate + get_storage_history
 //     Requires ensureStorageRepo() was called above to init TMP as a git repo.
 run("commit_phase_gate", { label: "smoke: mid-session" }, (r) => typeof r.committed === "boolean");
 run("get_storage_history", { limit: 5 }, (r) => r.is_git_repo === true && Array.isArray(r.commits) && r.commits.length >= 1);
 
-// 22. Session lifecycle — end_session auto-commits, so the history should grow.
+// 23. Session lifecycle — end_session auto-commits, so the history should grow.
 run("list_sessions", { state: "active" }, (r) => r.length === 1);
 run("end_session", { session_id: ctx.sessionId, outcome: "completed" }, (r) => r.ok);
 run("list_sessions", { state: "ended" }, (r) => r.length === 1 && r[0].outcome === "completed");
