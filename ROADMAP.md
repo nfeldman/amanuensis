@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 13 | 1 | 0 | 4 |
+| 0 | 12 | 1 | 0 | 5 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A0 — Dogfood baseline and executable definitions. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A5 — Unattended refresh run envelope. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -31,7 +31,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 - The current product already separates scope, structural, concern, adversarial, and mapped phases, and server-side invariants limit what may be claimed at each depth. Evidence: `README.md`, `mcp-server/src/invariants.ts`.
 - The SQLite record already stores evidence, dispositions, findings, contradictions, cross-references, file ownership, query history, and git baselines. Evidence: `mcp-server/src/schema.sql`, `mcp-server/DEVELOPMENT.md`.
 - Change detection currently maps changed paths to file-ledger rows and marks every entry in directly affected subsystems stale; it does not compute transitive claim or seam impact. Evidence: `mcp-server/src/tools/git.ts`, `mcp-server/src/tools/stale.ts`.
-- A finding can be marked fixed without new confirming evidence, while a transition to ruled-out already requires new disproving evidence from the active session. Evidence: `mcp-server/src/tools/findings.ts`, `mcp-server/src/invariants.ts`.
+- Finding repairs now separate fixed-pending-verification from verified-fixed, and both verification and contradiction resolution require structured evidence; append-only events preserve later reopenings and supersession history. Evidence: `mcp-server/src/tools/findings.ts`, `mcp-server/src/invariants.ts`.
 - Access and query logs support usage-aware compression, but that mechanism optimizes retrieval rather than learning which claims remain true or which methods work. Evidence: `mcp-server/src/tools/logging.ts`, `mcp-server/src/schema.sql`.
 - The repository has broad mechanical validation for tools, schemas, storage, invariants, adversarial behavior, performance, and materialization. Evidence: `.github/workflows/test.yml`, `CONTRIBUTING.md`.
 
@@ -338,7 +338,7 @@ Risks:
 
 #### A4 — Verified resolution and projection read-back
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A1, A3<br>
 **Metrics:** M1, M5, M12
@@ -369,11 +369,11 @@ Risks:
 - Read-back can validate correspondence while still missing a semantically bad source claim.
 
 **Practice basis:** GP6, GP8, GP11, GP25, GP28, VP4, VP15, VP19, VP20<br>
-**Baseline evidence:** `mcp-server/src/tools/findings.ts`, `mcp-server/src/tools/evidence.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/test-materializer.py`
+**Baseline evidence:** `dev/adr/0005-resolution-proof-and-projection-readback.md`, `mcp-server/src/tools/findings.ts`, `mcp-server/src/tools/evidence.ts`, `mcp-server/src/tools/materialize.ts`, `mcp-server/src/tools/resolution.ts`, `mcp-server/test-resolution-proof.mjs`, `mcp-server/test-projection-custody.mjs`, `materializer/test-materializer.py`, `materializer/test-readback.py`
 
 #### A5 — Unattended refresh run envelope
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A0, A3, A4<br>
 **Metrics:** M4, M11, M12
@@ -959,7 +959,7 @@ Required checks:
 Make resolution symmetric with refutation and validate derived artifacts along state, coverage, and content axes.
 
 **Existing files:** `mcp-server/src/tools/findings.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/amanuensis_materializer/renderers.py`, `materializer/test-materializer.py`<br>
-**Proposed files:** `mcp-server/test-resolution-proof.mjs`, `materializer/test-readback.py`, `dev/adr/0003-resolution-evidence.md`
+**Proposed files:** `mcp-server/test-resolution-proof.mjs`, `materializer/test-readback.py`, `dev/adr/0005-resolution-proof-and-projection-readback.md`
 
 Proves:
 
@@ -1050,7 +1050,7 @@ Metrics are reported per repository, commit range, mode, model/runtime configura
 - **Chorusmith orchestration fails behavior, evidence, recovery, or verification-time parity:** Do not extract the workflow; keep the adapter experimental and Amanuensis independently complete.
 - **A provider, model, or graph layer adds cost without surviving its ablation:** Remove it and return to the simpler explicit-relation or deterministic implementation.
 
-## Practice-catalog audit (v2.6)
+## Practice-catalog audit (v2.8)
 
 | Practices | Applied as | Verification in this roadmap |
 |---|---|---|
@@ -1075,7 +1075,7 @@ Limitations:
 - **Amanuensis product and method:** Defines the conspectus, evidence-first value proposition, staged survey, adversarial pass, persistence, and current architecture. (`README.md`)
 - **Amanuensis implementation inventory:** Documents current tools and storage surfaces that the roadmap extends. (`mcp-server/DEVELOPMENT.md`)
 - **Cross-domain analysis:** Supplies prior concepts around evidence quality, architectural concern handling, and cross-domain application. (`dev/cross-domain-analysis.md`)
-- **Practice catalog v2.6:** Supplies the reliability, validation, orchestration, provenance, and measurement practices mapped in this roadmap.
+- **Practice catalog v2.8:** Supplies the reliability, validation, orchestration, provenance, and measurement practices mapped in this roadmap.
 - **Scholiast:** Defines external research custody, living-conspectus semantics, identity-before-enrichment, canonical records, and generated projections.
 - **Collatio v2 and distillation:** Provide qualification and outcome-learning loops; this roadmap treats them as governed inputs rather than automatic policy writers.
 - **Chorusmith:** Owns future general orchestration and context compilation; extraction remains parity-gated and later-stage.

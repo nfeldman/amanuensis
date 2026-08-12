@@ -32,7 +32,7 @@
     },
     {
       "kind": "observation",
-      "claim": "A finding can be marked fixed without new confirming evidence, while a transition to ruled-out already requires new disproving evidence from the active session.",
+      "claim": "Finding repairs now separate fixed-pending-verification from verified-fixed, and both verification and contradiction resolution require structured evidence; append-only events preserve later reopenings and supersession history.",
       "evidence": [
         "mcp-server/src/tools/findings.ts",
         "mcp-server/src/invariants.ts"
@@ -623,7 +623,7 @@
         {
           "id": "A4",
           "title": "Verified resolution and projection read-back",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Fixed, revalidated, and materialized become evidenced states rather than optimistic labels.",
           "rationale": "The current asymmetry—proof required to rule out but not to mark fixed—undercuts the core claim that users should not have to redo verification.",
@@ -665,16 +665,21 @@
             "M12"
           ],
           "baselineEvidence": [
+            "dev/adr/0005-resolution-proof-and-projection-readback.md",
             "mcp-server/src/tools/findings.ts",
             "mcp-server/src/tools/evidence.ts",
             "mcp-server/src/tools/materialize.ts",
-            "materializer/test-materializer.py"
+            "mcp-server/src/tools/resolution.ts",
+            "mcp-server/test-resolution-proof.mjs",
+            "mcp-server/test-projection-custody.mjs",
+            "materializer/test-materializer.py",
+            "materializer/test-readback.py"
           ]
         },
         {
           "id": "A5",
           "title": "Unattended refresh run envelope",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "A fully surveyed repository can be refreshed end to end from a commit range with deterministic controls, bounded provider use, explicit stop conditions, and a complete audit trail.",
           "rationale": "Full automation is a systems property. It requires authority, idempotence, reconciliation, and recovery—not just a prompt that continues without asking.",
@@ -1548,7 +1553,7 @@
       "proposedFiles": [
         "mcp-server/test-resolution-proof.mjs",
         "materializer/test-readback.py",
-        "dev/adr/0003-resolution-evidence.md"
+        "dev/adr/0005-resolution-proof-and-projection-readback.md"
       ],
       "proves": [
         "Fixed is not confused with verified-fixed.",
@@ -1821,7 +1826,7 @@
     }
   ],
   "practiceAudit": {
-    "version": "2.6",
+    "version": "2.8",
     "applied": [
       {
         "ids": [
@@ -1951,7 +1956,7 @@
       "relevance": "Supplies prior concepts around evidence quality, architectural concern handling, and cross-domain application."
     },
     {
-      "name": "Practice catalog v2.6",
+      "name": "Practice catalog v2.8",
       "relevance": "Supplies the reliability, validation, orchestration, provenance, and measurement practices mapped in this roadmap."
     },
     {

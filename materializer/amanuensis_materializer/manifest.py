@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from pathlib import Path
 
-MATERIALIZER_VERSION = "0.1.0"
+MATERIALIZER_VERSION = "0.2.0"
 
 
 def _now_iso() -> str:

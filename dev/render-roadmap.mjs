@@ -486,7 +486,7 @@ function validateRoadmap(roadmap) {
     }
   }
 
-  assert(roadmap.practiceAudit?.version === "2.6", "practiceAudit.version must be 2.6", errors);
+  assert(roadmap.practiceAudit?.version === "2.8", "practiceAudit.version must be 2.8", errors);
   const appliedPractices = new Set();
   for (const [index, entry] of (roadmap.practiceAudit?.applied ?? []).entries()) {
     nonEmptyStrings(entry.ids, `practiceAudit.applied[${index}].ids`, errors);
@@ -524,6 +524,9 @@ function render(roadmap) {
     status,
     initiatives.filter((item) => item.status === status).length,
   ]);
+  const nextInitiative = roadmap.stages
+    .flatMap((stage) => stage.initiatives)
+    .find((initiative) => initiative.status !== "done");
   const lines = [];
   lines.push(`# ${roadmap.title}`);
   lines.push("");
@@ -558,7 +561,7 @@ function render(roadmap) {
   }
   lines.push("");
   lines.push(
-    `**Start here:** ${roadmap.stages[0].initiatives[0].id} — ${roadmap.stages[0].initiatives[0].title}. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.`,
+    `**Start here:** ${nextInitiative?.id ?? "complete"} — ${nextInitiative?.title ?? "all initiatives complete"}. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.`,
   );
 
   lines.push("");

@@ -38,6 +38,7 @@ from .manifest import (
     sha256_bytes,
     sources_differ,
 )
+from .readback import ProjectionVerifier, write_contract
 from .renderers import RenderResult
 from .slugs import matrix_page, subsystem_page
 from .xref import XrefIndex, resolve_all
@@ -65,13 +66,21 @@ class Summary:
     pages_retired: list[str] = field(default_factory=list)
     xref_updates: int = 0
     warnings: list[str] = field(default_factory=list)
+    readback: dict[str, Any] | None = None
 
 
 class Materializer:
-    def __init__(self, storage: Path, output: Path, force_full: bool = False) -> None:
+    def __init__(
+        self,
+        storage: Path,
+        output: Path,
+        force_full: bool = False,
+        verify_readback: bool = True,
+    ) -> None:
         self.storage = storage
         self.output = output
         self.force_full = force_full
+        self.verify_readback = verify_readback
         self.manifest_path = output / ".manifest.json"
         self.manifest = Manifest.load(self.manifest_path)
         self.summary = Summary(output_dir=str(output))
@@ -141,6 +150,18 @@ class Materializer:
             self.manifest.version = MATERIALIZER_VERSION
             self.manifest.save(self.manifest_path)
 
+            # The incremental manifest records renderer-input hashes.  The
+            # projection receipt is deliberately separate and hashes the bytes
+            # after global xref resolution — the bytes a reader will see.
+            expected_paths = sorted(alive)
+            write_contract(self.output, expected_paths)
+            if self.verify_readback:
+                self.summary.readback = ProjectionVerifier(
+                    self.storage, self.output, expected_paths
+                ).verify()
+                if not self.summary.readback["ok"]:
+                    self.summary.ok = False
+
             return {
                 "ok": self.summary.ok,
                 "output_dir": str(self.output),
@@ -150,9 +171,19 @@ class Materializer:
                 "pages_retired": self.summary.pages_retired,
                 "xref_updates": self.summary.xref_updates,
                 "warnings": self.summary.warnings,
+                "readback": self.summary.readback,
             }
         finally:
             conn.close()
+
+    def verify_projection(self) -> dict[str, Any]:
+        """Read back an existing projection without rendering or repairing it."""
+        conn = open_ro(self.storage / "memory.db")
+        try:
+            expected_paths = [p.path for p in self._plan(conn)]
+        finally:
+            conn.close()
+        return ProjectionVerifier(self.storage, self.output, expected_paths).verify()
 
     # ---------------------------------------------------------------------
     def _plan(self, conn) -> list[PagePlan]:

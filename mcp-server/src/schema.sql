@@ -765,6 +765,144 @@ CREATE INDEX IF NOT EXISTS idx_disp_evidence_evidence ON disposition_evidence(ev
 CREATE INDEX IF NOT EXISTS idx_find_evidence_evidence ON finding_evidence(evidence_id);
 
 ----------------------------------------------------------------------
+-- RESOLUTION PROOFS: append-only authority for "fixed" and resolved
+----------------------------------------------------------------------
+-- `findings.status` and `contradictions.resolution` remain coarse mutable
+-- compatibility projections.  Authority lives here: a repair is pending
+-- until evidence at a repository state at or after the fix commit confirms
+-- it, and a contradiction resolution retains the evidence that justified it.
+
+CREATE TABLE IF NOT EXISTS finding_resolution_events (
+    id                 INTEGER PRIMARY KEY,
+    origin_key         TEXT UNIQUE, -- deterministic key for one-time legacy imports
+    finding_id         TEXT NOT NULL REFERENCES findings(finding_id) ON DELETE CASCADE,
+    resolution_state   TEXT NOT NULL CHECK (resolution_state IN (
+                               'open','accepted','ruled-out',
+                               'fixed-pending-verification','verified-fixed')),
+    fix_location       TEXT,
+    fix_sha            TEXT,
+    evidence_id        INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
+    rationale          TEXT NOT NULL,
+    session_id         TEXT,
+    recorded_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (resolution_state NOT IN ('fixed-pending-verification','verified-fixed')
+           OR (fix_location IS NOT NULL AND fix_sha IS NOT NULL)),
+    CHECK (resolution_state != 'verified-fixed' OR evidence_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_finding_resolution_finding
+    ON finding_resolution_events(finding_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_finding_resolution_evidence
+    ON finding_resolution_events(evidence_id);
+
+CREATE TRIGGER IF NOT EXISTS finding_verification_evidence_integrity
+BEFORE INSERT ON finding_resolution_events
+FOR EACH ROW
+WHEN NEW.resolution_state = 'verified-fixed'
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1 FROM finding_evidence fe
+         WHERE fe.finding_id = NEW.finding_id
+           AND fe.evidence_id = NEW.evidence_id
+           AND fe.role = 'fix-verification'
+    ) THEN RAISE(ABORT, 'verified-fixed evidence must be attached as fix-verification') END;
+END;
+
+-- Existing `fixed` rows predate proof-of-repair.  Preserve them explicitly as
+-- pending instead of fabricating verification or silently treating them as
+-- open.  Rows without a fix location receive an honest legacy placeholder;
+-- they still cannot become verified without a new tool-mediated event.
+INSERT OR IGNORE INTO finding_resolution_events
+    (origin_key, finding_id, resolution_state, fix_location, fix_sha,
+     rationale, session_id, recorded_at)
+SELECT 'legacy-fixed:' || finding_id,
+       finding_id,
+       'fixed-pending-verification',
+       COALESCE(fix_location, 'legacy:location-not-recorded'),
+       COALESCE(ref_sha, 'legacy:sha-not-recorded'),
+       'Imported legacy fixed label; verification was not recorded.',
+       session_id,
+       updated_at
+  FROM findings
+ WHERE status = 'fixed';
+
+CREATE VIEW IF NOT EXISTS finding_resolution_current AS
+SELECT e.*
+  FROM finding_resolution_events e
+ WHERE e.id = (
+    SELECT e2.id
+      FROM finding_resolution_events e2
+     WHERE e2.finding_id = e.finding_id
+     ORDER BY e2.id DESC
+     LIMIT 1
+ );
+
+CREATE TABLE IF NOT EXISTS contradiction_resolution_events (
+    id              INTEGER PRIMARY KEY,
+    contradiction_id INTEGER NOT NULL REFERENCES contradictions(id) ON DELETE CASCADE,
+    resolution      TEXT NOT NULL CHECK (resolution IN (
+                           'a-supersedes-b','b-supersedes-a',
+                           'scope-distinction','unresolved')),
+    scope_note      TEXT,
+    evidence_id     INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
+    rationale       TEXT NOT NULL,
+    session_id      TEXT,
+    recorded_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (resolution = 'unresolved' OR evidence_id IS NOT NULL),
+    CHECK (resolution != 'scope-distinction' OR scope_note IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contradiction_resolution_contradiction
+    ON contradiction_resolution_events(contradiction_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_contradiction_resolution_evidence
+    ON contradiction_resolution_events(evidence_id);
+
+CREATE TRIGGER IF NOT EXISTS contradiction_resolution_evidence_integrity
+BEFORE INSERT ON contradiction_resolution_events
+FOR EACH ROW
+WHEN NEW.resolution != 'unresolved'
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+        SELECT 1
+          FROM contradictions c
+          JOIN finding_evidence fe
+            ON fe.finding_id IN (c.finding_a, c.finding_b)
+         WHERE c.id = NEW.contradiction_id
+           AND fe.evidence_id = NEW.evidence_id
+    ) THEN RAISE(ABORT, 'contradiction resolution evidence must be attached to a party') END;
+END;
+
+----------------------------------------------------------------------
+-- PROJECTION VERIFICATION: derived output may fail; durable truth may not bend
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS projection_verification_runs (
+    run_id          TEXT PRIMARY KEY,
+    output_dir      TEXT NOT NULL,
+    mode            TEXT NOT NULL CHECK (mode IN ('readback','clean-publish')),
+    source_sha      TEXT,
+    state_ok        INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok     INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok      INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok              INTEGER NOT NULL CHECK (ok IN (0,1)),
+    summary_json    TEXT NOT NULL,
+    session_id      TEXT,
+    verified_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS projection_mismatches (
+    id              INTEGER PRIMARY KEY,
+    run_id          TEXT NOT NULL REFERENCES projection_verification_runs(run_id) ON DELETE CASCADE,
+    axis            TEXT NOT NULL CHECK (axis IN ('state','coverage','content')),
+    object_type     TEXT NOT NULL,
+    object_id       TEXT NOT NULL,
+    detail          TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_projection_mismatch_run
+    ON projection_mismatches(run_id, axis);
+
+----------------------------------------------------------------------
 -- TEMPORAL CLAIMS: typed authority at repository states
 ----------------------------------------------------------------------
 -- Claims are immutable versions in a named semantic slot (`claim_key`).

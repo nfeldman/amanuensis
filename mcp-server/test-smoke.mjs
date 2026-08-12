@@ -35,6 +35,7 @@ import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
+import { resolutionTools } from "./dist/tools/resolution.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo } from "./dist/storage-git.js";
@@ -81,6 +82,7 @@ const allTools = new Map(
     ...staleTools, ...dispatchTools, ...dashboardTools,
     ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...impactTools,
     ...revalidationTools, ...diagnosticityTools,
+    ...resolutionTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),
 );
@@ -198,9 +200,14 @@ run("add_finding", {
   ref_sha: "deadbeef",
   pass_type: "survey",
 }, (r) => r.ok);
-run("update_finding_status", { finding_id: "B01-1", status: "fixed", fix_location: "scheduler/main.ts:runJob@cafef00d" }, (r) => r.previous_status === "confirmed-bug");
+run("update_finding_status", {
+  finding_id: "B01-1",
+  status: "fixed",
+  fix_location: "scheduler/main.ts:runJob",
+  fix_sha: claimSha2,
+}, (r) => r.previous_status === "confirmed-bug" && r.resolution_state === "fixed-pending-verification");
 run("get_findings", {}, (r) => r.length === 1);
-run("get_finding_summary", {}, (r) => r.length === 1 && r[0].fixed === 1);
+run("get_finding_summary", {}, (r) => r.length === 1 && r[0].fixed_pending_verification === 1);
 
 // 8. Field notes
 const fn = run("add_field_note", {
@@ -241,7 +248,25 @@ const contra = run("add_contradiction", {
   conflict_type: "classification-conflict",
   shared_location: "scheduler/main.ts:runJob@deadbeef",
 }, (r) => r.ok && typeof r.id === "number");
-run("resolve_contradiction", { id: contra.id, resolution: "scope-distinction", scope_note: "different code paths" }, (r) => r.ok);
+const contraEvidence = run("add_evidence", {
+  file_path: "claim-fixture.txt",
+  line_range: "1-1",
+  ref_sha: claimSha2,
+  kind: "code-verified",
+  note: "call-site scopes are distinct",
+}, (r) => r.ok && typeof r.id === "number");
+run("attach_evidence_to_finding", {
+  finding_id: "B01-2",
+  evidence_id: contraEvidence.id,
+  role: "compensating",
+}, (r) => r.ok);
+run("resolve_contradiction", {
+  id: contra.id,
+  resolution: "scope-distinction",
+  scope_note: "different code paths",
+  evidence_id: contraEvidence.id,
+  rationale: "call-site evidence distinguishes the scopes",
+}, (r) => r.ok);
 run("get_contradictions", { resolution_filter: "scope-distinction" }, (r) => r.length === 1);
 
 // 12. Logging
@@ -315,8 +340,23 @@ run("attach_evidence_to_disposition", {
 run("attach_evidence_to_finding", {
   finding_id: "B01-1", evidence_id: ev1.id, role: "root-cause",
 }, (r) => r.ok);
+const fixEvidence = run("add_evidence", {
+  file_path: "claim-fixture.txt",
+  line_range: "1-1",
+  ref_sha: claimSha2,
+  kind: "test-observed",
+  note: "repair verified at fix commit",
+}, (r) => r.ok && typeof r.id === "number");
+run("attach_evidence_to_finding", {
+  finding_id: "B01-1", evidence_id: fixEvidence.id, role: "fix-verification",
+}, (r) => r.ok);
+run("verify_finding_fix", {
+  finding_id: "B01-1",
+  evidence_id: fixEvidence.id,
+  verification_note: "smoke repair verification",
+}, (r) => r.ok && r.resolution_state === "verified-fixed");
 run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, (r) => r.length === 1 && r[0].role === "supports");
-run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 1);
+run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 2);
 run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 2);
 
 // 20. Temporal claims
@@ -473,6 +513,7 @@ run("reconcile_revalidation_run", {
 run("get_revalidation_dashboard", {
   run_id: "smoke-revalidation-run",
 }, (r) => r.obligations.length === 2 && r.summary.retried === 0);
+run("audit_resolution_invariants", {}, (r) => r.ok && Array.isArray(r.violations));
 
 // 23. Diagnosticity matrix
 const mtx = run("open_diagnosticity_matrix", {

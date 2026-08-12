@@ -54,36 +54,83 @@ export const contradictionTools: ToolDefinition[] = [
   {
     name: "resolve_contradiction",
     description:
-      "Apply a resolution to a contradiction. resolution ∈ {a-supersedes-b, b-supersedes-a, scope-distinction, unresolved}. scope_note is required for scope-distinction and documents why the findings apply to distinct scopes.",
+      "Apply an evidence-backed resolution to a contradiction and append its proof history. Non-unresolved resolutions require structured evidence collected in the active session, attached to one of the contradictory findings, plus a rationale. scope_note is additionally required for scope-distinction.",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "integer" },
         resolution: { type: "string" },
         scope_note: { type: "string" },
-        session_id: { type: "string" },
+        evidence_id: { type: "integer" },
+        rationale: { type: "string" },
       },
-      required: ["id", "resolution"],
+      required: ["id", "resolution", "rationale"],
       additionalProperties: false,
     },
     handler: (args, ctx) => {
-      requireActiveSession(ctx, "resolve_contradiction");
+      const sessionId = requireActiveSession(ctx, "resolve_contradiction");
       const id = requireInt(args, "id");
       const resolution = requireEnum(args, "resolution", RESOLUTIONS);
       const scopeNote = optString(args, "scope_note");
-      const sessionId = optString(args, "session_id") ?? ctx.sessionId;
+      const rationale = requireString(args, "rationale");
+      const evidenceId = args.evidence_id == null ? null : requireInt(args, "evidence_id");
       if (resolution === "scope-distinction" && !scopeNote) {
         return { ok: false, error: "scope-distinction requires scope_note" };
       }
-      const res = ctx.db
-        .prepare(
-          `UPDATE contradictions
-             SET resolution=?, scope_note=?, resolved_at=datetime('now'), session_id=?
-             WHERE id=?`,
-        )
-        .run(resolution, scopeNote, sessionId, id);
-      if (res.changes === 0) return { ok: false, error: `unknown contradiction: ${id}` };
-      return ok();
+      if (resolution !== "unresolved") {
+        if (evidenceId === null) {
+          return { ok: false, error: "resolved contradiction requires evidence_id" };
+        }
+        const evidence = ctx.db
+          .prepare(
+            `SELECT e.session_id,
+                    EXISTS (
+                      SELECT 1
+                        FROM contradictions c
+                        JOIN finding_evidence fe
+                          ON fe.finding_id IN (c.finding_a, c.finding_b)
+                       WHERE c.id=? AND fe.evidence_id=e.id
+                    ) AS attached_to_party
+               FROM evidence e WHERE e.id=?`,
+          )
+          .get(id, evidenceId) as
+          | { session_id: string | null; attached_to_party: number }
+          | undefined;
+        if (!evidence) return { ok: false, error: `unknown evidence: ${evidenceId}` };
+        if (evidence.session_id !== sessionId) {
+          return {
+            ok: false,
+            error: "contradiction resolution requires evidence from the active session",
+          };
+        }
+        if (!evidence.attached_to_party) {
+          return {
+            ok: false,
+            error: "contradiction resolution evidence must be attached to one of its findings",
+          };
+        }
+      }
+      const exists = ctx.db.prepare("SELECT 1 FROM contradictions WHERE id=?").get(id);
+      if (!exists) return { ok: false, error: `unknown contradiction: ${id}` };
+      ctx.db.transaction(() => {
+        ctx.db
+          .prepare(
+            `UPDATE contradictions
+               SET resolution=?, scope_note=?,
+                   resolved_at=CASE WHEN ?='unresolved' THEN NULL ELSE datetime('now') END,
+                   session_id=?
+               WHERE id=?`,
+          )
+          .run(resolution, scopeNote, resolution, sessionId, id);
+        ctx.db
+          .prepare(
+            `INSERT INTO contradiction_resolution_events
+               (contradiction_id, resolution, scope_note, evidence_id, rationale, session_id)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(id, resolution, scopeNote, evidenceId, rationale, sessionId);
+      })();
+      return ok({ evidence_id: evidenceId });
     },
   },
   {
@@ -101,7 +148,10 @@ export const contradictionTools: ToolDefinition[] = [
         return ctx.db
           .prepare(
             `SELECT id, finding_a, finding_b, shared_location, conflict_type,
-                    resolution, scope_note, detected_at, resolved_at, session_id
+                    resolution, scope_note, detected_at, resolved_at, session_id,
+                    (SELECT evidence_id FROM contradiction_resolution_events cre
+                      WHERE cre.contradiction_id=contradictions.id ORDER BY cre.id DESC LIMIT 1)
+                      AS resolution_evidence_id
                FROM contradictions ORDER BY detected_at DESC`,
           )
           .all();
@@ -109,7 +159,10 @@ export const contradictionTools: ToolDefinition[] = [
       return ctx.db
         .prepare(
           `SELECT id, finding_a, finding_b, shared_location, conflict_type,
-                  resolution, scope_note, detected_at, resolved_at, session_id
+                  resolution, scope_note, detected_at, resolved_at, session_id,
+                  (SELECT evidence_id FROM contradiction_resolution_events cre
+                    WHERE cre.contradiction_id=contradictions.id ORDER BY cre.id DESC LIMIT 1)
+                    AS resolution_evidence_id
              FROM contradictions
              WHERE resolution = ?
              ORDER BY detected_at DESC`,

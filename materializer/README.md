@@ -65,9 +65,32 @@ With optional flags:
 
 - `--output <dir>` — output dir (default: `<storage>/docs`)
 - `--force-full` — ignore the manifest and rebuild every page
+- `--clean-publish` — render and verify in isolation before promotion
+- `--readback-only` — verify the existing projection without changing it
 
 On success the last line of stdout is a JSON summary the MCP server's
 `materialize_docs` tool parses.
+
+Every normal render now writes `.projection-contract.json` after global
+cross-reference resolution and reads the finished files back on independent
+state, coverage, and content axes. A read-back failure makes the command fail.
+
+For publication, use clean staging:
+
+```bash
+python3 materializer/materialize.py --storage /path/to/conspectus --clean-publish
+```
+
+This promotes the staged output only after all three axes pass. To audit an
+existing projection without changing it:
+
+```bash
+python3 materializer/materialize.py --storage /path/to/conspectus --readback-only
+```
+
+The MCP `verify_materialized_docs` tool additionally records each run and its
+mismatches in `memory.db`. Verification never edits durable source records to
+make them agree with a derived projection.
 
 ## Called from the MCP server
 
@@ -80,8 +103,11 @@ interpreter, to override the defaults.
 
 ```bash
 python3 test-materializer.py
+python3 test-readback.py
 ```
 
 Seeds a temp DB, runs the materializer five times (full render,
 no-op, prose change, add subsystem, remove subsystem) and verifies the
-manifest-driven behavior at each step.
+manifest-driven behavior at each step. The read-back suite deletes a finding
+marker, cross-link, and stale marker independently and requires the gate to
+turn red on the appropriate axis.

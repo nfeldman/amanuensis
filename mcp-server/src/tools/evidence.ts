@@ -22,7 +22,13 @@ const KINDS = [
 ] as const;
 
 const DISP_ROLES = ["supports", "contradicts", "linchpin", "compensating"] as const;
-const FIND_ROLES = ["symptom", "root-cause", "fix-anchor", "compensating"] as const;
+const FIND_ROLES = [
+  "symptom",
+  "root-cause",
+  "fix-anchor",
+  "fix-verification",
+  "compensating",
+] as const;
 
 export const evidenceTools: ToolDefinition[] = [
   {
@@ -103,7 +109,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "attach_evidence_to_finding",
     description:
-      "Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / compensating).",
+      "Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / fix-verification / compensating). verify_finding_fix requires fix-verification.",
     inputSchema: {
       type: "object",
       properties: {

@@ -25,6 +25,7 @@ from .diagrams import (
     subsystem_dependency_graph,
 )
 from .manifest import sha256_bytes, sha256_json
+from .readback import finding_marker, stale_marker
 from .slugs import matrix_slug
 
 RenderResult = tuple[str, dict[str, str]]
@@ -87,7 +88,8 @@ def render_index(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         " SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) AS high"
         " FROM findings",
     )[0]
-    stale = row(conn, "SELECT COUNT(*) AS n FROM entries WHERE stale=1") or {"n": 0}
+    stale_rows = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
+    stale = {"n": len(stale_rows)}
     open_notes = row(
         conn, "SELECT COUNT(*) AS n FROM field_notes WHERE follow_up='open'"
     ) or {"n": 0}
@@ -148,6 +150,8 @@ def render_index(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         f"| Open field notes | {open_notes['n']} |",
         f"| Unresolved contradictions | {unresolved['n']} |",
         "",
+        *[stale_marker(str(e["id"]), int(e["tier"])) for e in stale_rows],
+        "" if stale_rows else "",
         "## Navigation",
         "",
         "New here? Start with [How to read this conspectus](how-to-read.md).",
@@ -179,6 +183,7 @@ def render_index(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         **_db_source("index:subs", subs),
         **_db_source("index:findings", findings_summary),
         **_db_source("index:stale", stale),
+        **_db_source("index:stale-objects", stale_rows),
         **_db_source("index:notes", open_notes),
         **_db_source("index:unresolved", unresolved),
         **_db_source("index:session", latest_session or {}),
@@ -437,7 +442,18 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
 def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     fs = rows(
         conn,
-        "SELECT * FROM findings ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END, subsystem_id, finding_id",
+        """SELECT f.*,
+                  COALESCE(r.resolution_state,
+                    CASE f.status WHEN 'fixed' THEN 'fixed-pending-verification'
+                                  WHEN 'ruled-out' THEN 'ruled-out'
+                                  WHEN 'confirmed-acceptable' THEN 'accepted'
+                                  ELSE 'open' END) AS resolution_state,
+                  r.fix_sha, r.evidence_id AS resolution_evidence_id
+             FROM findings f
+             LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
+            ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
+                       WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
+                     f.subsystem_id, f.finding_id""",
     )
     out = ["# Findings", ""]
     if not fs:
@@ -454,9 +470,10 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 "|---|---|---|---|---|---|",
             ]
             for f in sev_rows:
+                out.append(finding_marker(str(f["finding_id"])))
                 out.append(
                     f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
-                    f"**{f['subsystem_id']}** | {f['status']} | "
+                    f"**{f['subsystem_id']}** | {f['resolution_state']} | "
                     f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
                     f"`{(f['ref_sha'] or '—')[:8]}` |"
                 )
@@ -587,7 +604,7 @@ def render_diagnosticity(conn: sqlite3.Connection, storage: Path) -> RenderResul
         for m in matrices:
             mid = f"DM-{m['id']}"
             out.append(
-                f"| [**{mid}**]({matrix_slug(m['id'])}.md) | "
+                f"| [**{mid}**](diagnosticity/{matrix_slug(m['id'])}.md) | "
                 f"**{m['subsystem_id'] or '—'}** | {(m['symptom'] or '').replace('|', '/')} | "
                 f"{m['outcome']} | {m['leading_concern'] or '—'} | "
                 f"{_fmt_time(m['created_at'])} |"
@@ -774,9 +791,16 @@ def render_how_to_read(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     won't touch it unless the renderer itself changes — which is what
     we want.
     """
-    del conn, storage  # unused — content is static
+    del conn  # unused — content is static apart from optional provenance
     body = HOW_TO_READ_BODY
-    return body, {"synthetic:how-to-read": _hash_text(body)}
+    for optional in ("provenance.md", "entry-point.md"):
+        if not (storage / optional).is_file():
+            body = body.replace(f"[`{optional}`]({optional})", f"`{optional}`")
+    return body, {
+        "synthetic:how-to-read": _hash_text(body),
+        **_prose_source(storage, "provenance.md"),
+        **_prose_source(storage, "entry-point.md"),
+    }
 
 
 HOW_TO_READ_BODY = """\

@@ -392,7 +392,9 @@ t("update_finding_status enforces gate on the underlying subsystem", () => {
       ctx,
     );
     // This should work — B-01 is at concerns.
-    const r1 = call("update_finding_status", { finding_id: "B01-1", status: "fixed" }, ctx);
+    const r1 = call("update_finding_status", {
+      finding_id: "B01-1", status: "confirmed-acceptable",
+    }, ctx);
     assert(r1.ok);
   } finally { cleanup(); }
 });
@@ -795,7 +797,7 @@ t("overturn to ruled-out without new session evidence is rejected", () => {
   } finally { cleanup(); }
 });
 
-t("non-overturn transition (confirmed-bug → fixed) needs no overturn evidence", () => {
+t("fixed transition requires repository-bound repair coordinates", () => {
   const { ctx, cleanup } = freshCtx();
   try {
     startSession(ctx, "overturn-fixed");
@@ -806,8 +808,10 @@ t("non-overturn transition (confirmed-bug → fixed) needs no overturn evidence"
       severity: "LOW", status: "confirmed-bug",
       ref_sha: "fixture-ref", pass_type: "survey",
     }, ctx);
-    const r = call("update_finding_status", { finding_id: "B07-2", status: "fixed" }, ctx);
-    assert(r.previous_status === "confirmed-bug", "fixed transition should succeed unguarded");
+    assertThrows(
+      () => call("update_finding_status", { finding_id: "B07-2", status: "fixed" }, ctx),
+      "fix_location and fix_sha",
+    );
   } finally { cleanup(); }
 });
 

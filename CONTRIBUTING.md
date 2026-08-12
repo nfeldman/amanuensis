@@ -39,6 +39,8 @@ node test-smoke.mjs                     # exercises every tool against a fresh D
 node test-invariants.mjs                # knowledge-depth gates, monotonic transitions
 node test-adversarial-correctness.mjs   # tries to violate the data contracts
 node test-adversarial-security.mjs      # input handling, SQL safety, path traversal
+node test-resolution-proof.mjs          # repair proof and append-only resolution history
+node test-projection-custody.mjs        # projection mismatch custody and repair
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -54,6 +56,7 @@ For the materializer, from the repo root:
 ```bash
 ruff check materializer/
 python3 materializer/test-materializer.py
+python3 materializer/test-readback.py
 ```
 
 ## Lint

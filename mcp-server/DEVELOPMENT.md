@@ -19,7 +19,7 @@ to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
+_95 tools across 28 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -59,7 +59,7 @@ _91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 | Tool | Description |
 |---|---|
 | `add_contradiction` | Record a contradiction between two findings. Use when the same file/symbol is implicated in findings whose classifications or severities are logically incompatible. conflict_type: 'classification-conflict', 'severity-conflict', etc. Leaves the contradiction as 'unresolved' until resolve_contradiction is called. |
-| `resolve_contradiction` | Apply a resolution to a contradiction. resolution ∈ {a-supersedes-b, b-supersedes-a, scope-distinction, unresolved}. scope_note is required for scope-distinction and documents why the findings apply to distinct scopes. |
+| `resolve_contradiction` | Apply an evidence-backed resolution to a contradiction and append its proof history. Non-unresolved resolutions require structured evidence collected in the active session, attached to one of the contradictory findings, plus a rationale. scope_note is additionally required for scope-distinction. |
 | `get_contradictions` | List contradictions. resolution_filter defaults to 'unresolved'; pass 'all' to return every row regardless of status. |
 
 ### `dashboard` (2)
@@ -101,7 +101,7 @@ _91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 |---|---|
 | `add_evidence` | Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells. |
 | `attach_evidence_to_disposition` | Link an evidence row to a disposition with a role (supports / contradicts / linchpin / compensating). Idempotent — repeated calls just update the role. |
-| `attach_evidence_to_finding` | Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / compensating). |
+| `attach_evidence_to_finding` | Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / fix-verification / compensating). verify_finding_fix requires fix-verification. |
 | `get_evidence` | Fetch evidence rows. Filter by id, file_path, kind, ref_sha, or any combination. Returns the full row with collected_at timestamp. |
 | `get_disposition_evidence` | Return all evidence rows attached to a disposition, including role. |
 | `get_finding_evidence` | Return all evidence rows attached to a finding, including role. |
@@ -122,14 +122,16 @@ _91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 | `update_file_classification` | Transition a scoped file to a new classification (e.g., candidate → examined). Updates examined_at when the new classification is 'examined'. |
 | `get_subsystem_files` | List the file ledger for a subsystem. classification_filter narrows to e.g. 'examined' or 'candidate'. |
 
-### `findings` (4)
+### `findings` (6)
 
 | Tool | Description |
 |---|---|
 | `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. |
-| `update_finding_status` | Change a finding's status (e.g., confirmed-bug → fixed). Optionally record fix_location. Returns previous_status. Overturning a finding to 'ruled-out' requires new disproving evidence attached to it in the current session (add_evidence + attach_evidence_to_finding). A bare reclassification is rejected. |
+| `update_finding_status` | Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session. |
+| `verify_finding_fix` | Promote a fixed-pending-verification finding to verified-fixed. The evidence must be attached to the finding, collected in the active session, and repository-bound to the fix commit or one of its descendants. Historical events remain append-only. |
+| `get_finding_resolution_history` | Return the append-only resolution history for one finding, including pending repairs, verification evidence, reopenings, and superseded verified states. |
 | `get_findings` | List findings with optional filters (subsystem_id, severity, status). primary_files is returned as a JSON-parsed array. |
-| `get_finding_summary` | Return per-subsystem severity/status roll-up (total, critical, high, medium, low, open_bugs, fixed). Reads from the finding_summary view. |
+| `get_finding_summary` | Return per-subsystem roll-up, distinguishing fixed-pending-verification from verified-fixed. |
 
 ### `git` (3)
 
@@ -163,11 +165,12 @@ _91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 | `log_query` | Record a human query and which of the seven fields the answer drew on (what, why, how, when, where, see-also, confidence). tier_reached is the deepest tier the agent had to load (0–3). Used to compute field demand for adaptive compression. |
 | `get_field_demand` | Return demand ranking across the seven fields (what, why, how, when, where, see-also, confidence). Used to prioritize what gets preserved during Tier 2 → Tier 1 compression. |
 
-### `materialize` (1)
+### `materialize` (2)
 
 | Tool | Description |
 |---|---|
-| `materialize_docs` | Render the conspectus from memory.db + prose artifacts into navigable documentation under <storage>/docs/. Diff-aware: re-renders only pages whose source data or prose has changed since the last run. output_dir overrides the default (project storage /docs). force_full=true re-renders everything. |
+| `materialize_docs` | Render the conspectus and read the finished projection back on independent state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. |
+| `verify_materialized_docs` | Read back an existing projection without rendering or repairing it. Records state, coverage, and content mismatches as an auditable verification run; durable source truth is read-only. |
 
 ### `open-questions` (4)
 
@@ -187,6 +190,12 @@ _91 tools across 27 groups. Generated from `tools/list` — do not hand-edit._
 | `get_session` | Return the stored metadata for a session. If no session_id is provided, returns the most recently started session. |
 | `end_session` | Mark a session ended with an outcome ('completed', 'deferred', 'superseded', etc.). Not required — sessions are still valid while open — but closing them makes the activity log legible. |
 | `list_sessions` | List sessions, newest first. Filter by state ('active' = not ended, 'ended' = ended, or omit for all). |
+
+### `resolution` (1)
+
+| Tool | Description |
+|---|---|
+| `audit_resolution_invariants` | Audit authoritative resolution invariants across findings, temporal claims, contradictions, and revalidation obligations. Returns explicit violations; it never repairs or rewrites durable truth. |
 
 ### `revalidation` (7)
 

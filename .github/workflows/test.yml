@@ -93,6 +93,12 @@ jobs:
       - name: Revalidation scheduler — custody, bounds, retries, reconciliation
         working-directory: mcp-server
         run: node test-revalidation-scheduler.mjs
+      - name: Resolution proof — post-fix evidence and historical audit
+        working-directory: mcp-server
+        run: node test-resolution-proof.mjs
+      - name: Projection custody — read-back recording and repair
+        working-directory: mcp-server
+        run: node test-projection-custody.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs
@@ -119,3 +125,6 @@ jobs:
       - name: Diff-aware rendering test
         working-directory: materializer
         run: python3 test-materializer.py
+      - name: Projection read-back fault injection
+        working-directory: materializer
+        run: python3 test-readback.py
