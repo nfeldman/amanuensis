@@ -87,6 +87,9 @@ jobs:
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs
+      - name: Change impact — prediction, relation sensitivity, application
+        working-directory: mcp-server
+        run: node test-change-impact.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

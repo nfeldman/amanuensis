@@ -938,6 +938,88 @@ SELECT 'legacy:contradiction:' || id,
   FROM contradictions;
 
 ----------------------------------------------------------------------
+-- CHANGE IMPACT: predicted diffs, explanation paths, and application
+----------------------------------------------------------------------
+-- Prediction and application are deliberately separate. A predicted run is
+-- written before any fixture/expected-result comparison (GP36), and applying
+-- it later closes claim intervals while preserving the original artifact.
+
+CREATE TABLE IF NOT EXISTS change_impact_runs (
+    run_id                    TEXT PRIMARY KEY,
+    base_sha                  TEXT NOT NULL,
+    head_sha                  TEXT NOT NULL,
+    relation_discovery_mode   TEXT NOT NULL CHECK (relation_discovery_mode IN (
+                                      'explicit-only','request-if-gap')),
+    max_depth                 INTEGER NOT NULL CHECK (max_depth BETWEEN 0 AND 16),
+    explicit_gap_count        INTEGER NOT NULL CHECK (explicit_gap_count >= 0),
+    status                    TEXT NOT NULL DEFAULT 'predicted' CHECK (status IN (
+                                      'predicted','applied','abandoned')),
+    artifact_json             TEXT NOT NULL CHECK (json_valid(artifact_json)),
+    session_id                TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at                TEXT NOT NULL DEFAULT (datetime('now')),
+    applied_at                TEXT,
+    CHECK (base_sha != head_sha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_change_impact_runs_range
+    ON change_impact_runs(base_sha, head_sha);
+CREATE INDEX IF NOT EXISTS idx_change_impact_runs_status
+    ON change_impact_runs(status);
+
+CREATE TABLE IF NOT EXISTS change_impact_files (
+    run_id          TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE CASCADE,
+    ordinal         INTEGER NOT NULL,
+    change_type     TEXT NOT NULL CHECK (change_type IN (
+                              'added','deleted','modified','renamed','copied','type-changed',
+                              'unmerged','unknown')),
+    path_before     TEXT,
+    path_after      TEXT,
+    similarity      INTEGER CHECK (similarity IS NULL OR similarity BETWEEN 0 AND 100),
+    PRIMARY KEY (run_id, ordinal),
+    CHECK (path_before IS NOT NULL OR path_after IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS change_impact_objects (
+    run_id          TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE CASCADE,
+    object_type     TEXT NOT NULL CHECK (object_type IN (
+                              'changed-file','subsystem','seam','finding','obligation',
+                              'claim','control','gap')),
+    object_id       TEXT NOT NULL,
+    impact_kind     TEXT NOT NULL CHECK (impact_kind IN (
+                              'direct','transitive','unaffected','gap')),
+    invalidates     INTEGER NOT NULL DEFAULT 0 CHECK (invalidates IN (0,1)),
+    reason_path     TEXT NOT NULL CHECK (json_valid(reason_path)),
+    PRIMARY KEY (run_id, object_type, object_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_change_impact_objects_lookup
+    ON change_impact_objects(object_type, object_id, run_id);
+
+CREATE TABLE IF NOT EXISTS change_impact_relations (
+    run_id          TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE CASCADE,
+    ordinal         INTEGER NOT NULL,
+    relation_class  TEXT NOT NULL CHECK (relation_class IN ('xref','seam')),
+    relation_id     TEXT NOT NULL,
+    from_id         TEXT NOT NULL,
+    to_id           TEXT NOT NULL,
+    PRIMARY KEY (run_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS change_impact_invalidations (
+    run_id          TEXT NOT NULL REFERENCES change_impact_runs(run_id) ON DELETE CASCADE,
+    claim_id        TEXT NOT NULL REFERENCES claims(claim_id) ON DELETE RESTRICT,
+    state           TEXT NOT NULL DEFAULT 'predicted' CHECK (state IN (
+                              'predicted','applied','skipped')),
+    reason_path     TEXT NOT NULL CHECK (json_valid(reason_path)),
+    evidence_id     INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
+    applied_at      TEXT,
+    PRIMARY KEY (run_id, claim_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_change_impact_invalidations_claim
+    ON change_impact_invalidations(claim_id, state);
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

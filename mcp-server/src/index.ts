@@ -19,6 +19,7 @@ import { fieldNoteTools } from "./tools/field-notes.js";
 import { fileTools } from "./tools/files.js";
 import { findingTools } from "./tools/findings.js";
 import { gitTools } from "./tools/git.js";
+import { impactTools } from "./tools/impact.js";
 import { lockTools } from "./tools/locks.js";
 import { loggingTools } from "./tools/logging.js";
 import { materializeTools } from "./tools/materialize.js";
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
   const allTools: ToolDefinition[] = [
     ...projectTools,
     ...gitTools,
+    ...impactTools,
     ...subsystemTools,
     ...concernTools,
     ...fileTools,

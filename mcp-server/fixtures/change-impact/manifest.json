@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "predictionUnit": "authoritative claim versions at the base commit",
+  "predictionFrame": "rename-aware Git diff plus file-ledger, evidence, xref, seam, finding, and open-obligation relations",
+  "structuralBlindSpots": [
+    "runtime coupling absent from explicit records",
+    "generated-code dependencies not represented in the file ledger",
+    "semantic relationships across unmapped changed paths"
+  ],
+  "benignRename": {
+    "invalidatedClaims": [],
+    "unaffectedClaims": [
+      "claim-a",
+      "claim-b",
+      "claim-benign",
+      "claim-c",
+      "claim-control"
+    ],
+    "changeTypes": ["renamed"],
+    "contentChanges": 0,
+    "explicitGaps": 0
+  },
+  "knownInvalidation": {
+    "invalidatedClaims": ["claim-a", "claim-b", "claim-c"],
+    "unaffectedClaims": ["claim-benign", "claim-control"],
+    "requiredObjects": ["obligation:open-question:1", "finding:finding-c"],
+    "requiredRelationClasses": ["xref", "seam"],
+    "requiredGaps": ["unmapped-file:extra/unmapped.txt"],
+    "criticalClaims": ["claim-c"]
+  },
+  "relationArms": {
+    "none": ["claim-a"],
+    "xrefOnly": ["claim-a", "claim-b"],
+    "seamOnly": ["claim-a"],
+    "xrefAndSeam": ["claim-a", "claim-b", "claim-c"]
+  }
+}

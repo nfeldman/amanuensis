@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 15 | 1 | 0 | 2 |
+| 0 | 14 | 1 | 0 | 3 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -268,7 +268,7 @@ Risks:
 
 #### A2 — Change impact and invalidation engine
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A1<br>
 **Metrics:** M2, M3, M4
@@ -299,11 +299,11 @@ Risks:
 - Model-assisted impact can create nondeterministic invalidation noise.
 
 **Practice basis:** GP11, GP20, GP26, GP27, GP35, GP36, VP4, VP8, VP9, VP15, VP18<br>
-**Baseline evidence:** `mcp-server/src/tools/git.ts`, `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/seams.ts`, `mcp-server/src/tools/files.ts`
+**Baseline evidence:** `mcp-server/src/tools/git.ts`, `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/seams.ts`, `mcp-server/src/tools/files.ts`, `dev/adr/0003-predict-before-apply-change-impact.md`, `mcp-server/src/tools/impact.ts`, `mcp-server/fixtures/change-impact/manifest.json`, `mcp-server/test-change-impact.mjs`
 
 #### A3 — Obligation-driven revalidation scheduler
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2<br>
 **Metrics:** M4, M11, M12

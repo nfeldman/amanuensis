@@ -33,6 +33,7 @@ import { seamTools } from "./dist/tools/seams.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { impactTools } from "./dist/tools/impact.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo } from "./dist/storage-git.js";
@@ -77,7 +78,8 @@ const allTools = new Map(
     ...dispositionTools, ...findingTools, ...fieldNoteTools, ...vocabularyTools,
     ...xrefTools, ...contradictionTools, ...loggingTools, ...lockTools,
     ...staleTools, ...dispatchTools, ...dashboardTools,
-    ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...diagnosticityTools,
+    ...seamTools, ...artifactTools, ...evidenceTools, ...claimTools, ...impactTools,
+    ...diagnosticityTools,
     ...storageHistoryTools,
   ].map((t) => [t.name, t]),
 );
@@ -368,7 +370,34 @@ run("get_claims", { query_sha: claimSha2 }, (r) => r.length === 1 && r[0].claim_
 run("get_claim_history", { claim_key: "smoke.fixture" }, (r) => r.claims.length === 2 && r.edges.length === 1);
 run("get_legacy_claim_projection", { legacy_source: "findings" }, (r) => r.length === 4);
 
-// 21. Diagnosticity matrix
+// 21. Change impact prediction, explanation, and application
+run("add_claim", {
+  claim_id: "smoke-impact",
+  claim_key: "smoke.impact",
+  subject_type: "subsystem",
+  subject_id: "B-01",
+  statement: "The second fixture state is subject to later change impact.",
+  epistemic_kind: "observation",
+  ref_sha: claimSha2,
+  evidence_ids: [claimEv2.id],
+}, (r) => r.ok);
+const claimSha3 = fixtureCommit("three");
+run("predict_change_impact", {
+  base_sha: claimSha2,
+  head_sha: claimSha3,
+  run_id: "smoke-impact-run",
+  relation_discovery: "request-if-gap",
+}, (r) => r.run_id === "smoke-impact-run" && r.invalidated_claims.length === 2);
+run("get_change_impact", {
+  run_id: "smoke-impact-run",
+  object_type: "claim",
+  object_id: "smoke-impact",
+}, (r) => r.status === "predicted" && r.object.invalidates);
+run("apply_change_impact", {
+  run_id: "smoke-impact-run",
+}, (r) => r.ok && r.invalidated_claims === 2);
+
+// 22. Diagnosticity matrix
 const mtx = run("open_diagnosticity_matrix", {
   subsystem_id: "B-01",
   symptom: "stale read after write",
@@ -389,12 +418,12 @@ run("resolve_diagnosticity_matrix", {
 run("get_diagnosticity_matrix", { matrix_id: mtx.matrix_id }, (r) => r.session.outcome === "resolved" && r.cells.length === 2);
 run("list_diagnosticity_matrices", { outcome: "resolved" }, (r) => r.length === 1);
 
-// 22. Storage-dir git history — covers commit_phase_gate + get_storage_history
+// 23. Storage-dir git history — covers commit_phase_gate + get_storage_history
 //     Requires ensureStorageRepo() was called above to init TMP as a git repo.
 run("commit_phase_gate", { label: "smoke: mid-session" }, (r) => typeof r.committed === "boolean");
 run("get_storage_history", { limit: 5 }, (r) => r.is_git_repo === true && Array.isArray(r.commits) && r.commits.length >= 1);
 
-// 23. Session lifecycle — end_session auto-commits, so the history should grow.
+// 24. Session lifecycle — end_session auto-commits, so the history should grow.
 run("list_sessions", { state: "active" }, (r) => r.length === 1);
 run("end_session", { session_id: ctx.sessionId, outcome: "completed" }, (r) => r.ok);
 run("list_sessions", { state: "ended" }, (r) => r.length === 1 && r[0].outcome === "completed");

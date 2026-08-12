@@ -19,7 +19,7 @@ to regenerate; CI fails if the block is stale.
 
 <!-- TOOL-INVENTORY-START -->
 
-_81 tools across 25 groups. Generated from `tools/list` — do not hand-edit._
+_84 tools across 26 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -138,6 +138,14 @@ _81 tools across 25 groups. Generated from `tools/list` — do not hand-edit._
 | `get_git_state` | Return the stored git baseline (canonical branch, onboarding SHA, last-checked SHA, detected branches). |
 | `set_git_state` | Create or update the git baseline. On first call, onboarding_sha and canonical_branch are required. Subsequent calls may update any subset of fields. detected_branches is an array; stored as JSON. |
 | `detect_changes` | Compare current_sha against last_checked_sha for files tracked in the file_ledger. Marks affected entries stale and updates last_checked_sha. Requires the target workspace to be a git repo the server can shell out to. |
+
+### `impact` (3)
+
+| Tool | Description |
+|---|---|
+| `predict_change_impact` | Compute and durably record an explainable predicted diff before comparison or invalidation. Uses rename-aware Git changes, file-ledger mappings, claim/finding evidence, xrefs, seams, and open obligations. Explicit gaps can emit a non-executing discovery request; this tool never calls a model. |
+| `get_change_impact` | Read a durable predicted-diff artifact and its current application state. Optional object_type/object_id filters return the exact traversable reason path for one impacted object. |
+| `apply_change_impact` | Atomically apply a previously recorded prediction: create structured git-change evidence, close every still-current predicted claim at head_sha, append validity events, and retain the immutable predicted artifact for audit. |
 
 ### `locks` (3)
 

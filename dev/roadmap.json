@@ -513,7 +513,7 @@
         {
           "id": "A2",
           "title": "Change impact and invalidation engine",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "A commit range produces an explainable set of directly and transitively affected claims, seams, findings, and obligations without invalidating unrelated knowledge.",
           "rationale": "Precise impact is the economic hinge: too little recall makes the record unsafe, while excessive invalidation destroys the promised time savings.",
@@ -559,13 +559,17 @@
             "mcp-server/src/tools/git.ts",
             "mcp-server/src/tools/xrefs.ts",
             "mcp-server/src/tools/seams.ts",
-            "mcp-server/src/tools/files.ts"
+            "mcp-server/src/tools/files.ts",
+            "dev/adr/0003-predict-before-apply-change-impact.md",
+            "mcp-server/src/tools/impact.ts",
+            "mcp-server/fixtures/change-impact/manifest.json",
+            "mcp-server/test-change-impact.mjs"
           ]
         },
         {
           "id": "A3",
           "title": "Obligation-driven revalidation scheduler",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Invalidated knowledge becomes a bounded, prioritized queue whose completed work lands back into the conspectus and whose omissions remain visibly red.",
           "rationale": "Detection without custody only creates a better stale list. Full automation requires a closed loop from change to assigned work to verified landing.",
