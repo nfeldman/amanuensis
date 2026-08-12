@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 1 | 16 | 0 | 0 | 1 |
+| 0 | 16 | 1 | 0 | 1 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -233,7 +233,7 @@ Risks:
 
 #### A1 — Temporal claim and supersession model
 
-**Status:** ready<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A0<br>
 **Metrics:** M1, M2, M3

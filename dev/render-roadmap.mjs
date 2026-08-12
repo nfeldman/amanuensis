@@ -354,12 +354,18 @@ function validateRoadmap(roadmap) {
   for (const id of initiatives.keys()) visit(id);
 
   const readyItems = [...initiatives.values()].filter(({ item }) => item.status === "ready");
-  assert(readyItems.length > 0, "at least one initiative must be ready", errors);
-  for (const { item } of readyItems) {
+  const activeItems = [...initiatives.values()].filter(({ item }) => item.status === "in-progress");
+  assert(activeItems.length <= 1, "at most one initiative may be in-progress", errors);
+  assert(
+    readyItems.length > 0 || activeItems.length > 0,
+    "at least one initiative must be ready or in-progress",
+    errors,
+  );
+  for (const { item } of [...readyItems, ...activeItems]) {
     for (const dependency of item.dependsOn) {
       assert(
         initiatives.get(dependency)?.item.status === "done",
-        `ready initiative ${item.id} depends on unfinished ${dependency}`,
+        `${item.status} initiative ${item.id} depends on unfinished ${dependency}`,
         errors,
       );
     }

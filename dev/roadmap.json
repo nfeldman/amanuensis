@@ -462,7 +462,7 @@
         {
           "id": "A1",
           "title": "Temporal claim and supersession model",
-          "status": "ready",
+          "status": "in-progress",
           "owner": "Amanuensis",
           "outcome": "Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.",
           "rationale": "A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.",

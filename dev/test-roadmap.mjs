@@ -71,6 +71,33 @@ try {
     "ready initiative A1 depends on unfinished A0",
   );
 
+  const unfinishedActiveDependency = writeCase("unfinished-active-dependency", (value) => {
+    initiative(value, "A0").status = "ready";
+  });
+  run(
+    ["--write", "--source", unfinishedActiveDependency, "--output", projection],
+    1,
+    "in-progress initiative A1 depends on unfinished A0",
+  );
+
+  const competingActiveWork = writeCase("competing-active-work", (value) => {
+    initiative(value, "A2").status = "in-progress";
+  });
+  run(
+    ["--write", "--source", competingActiveWork, "--output", projection],
+    1,
+    "at most one initiative may be in-progress",
+  );
+
+  const noFrontier = writeCase("no-frontier", (value) => {
+    initiative(value, "A1").status = "planned";
+  });
+  run(
+    ["--write", "--source", noFrontier, "--output", projection],
+    1,
+    "at least one initiative must be ready or in-progress",
+  );
+
   const missingEvidence = writeCase("missing-evidence", (value) => {
     initiative(value, "A0").baselineEvidence.push("not-a-real-roadmap-evidence-file");
   });

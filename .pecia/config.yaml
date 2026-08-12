@@ -1,0 +1,6 @@
+# pecia config — flat keys only. Core vocabulary may be extended, not redefined.
+# extra_statuses: []
+# extra_types: []
+# planned: []
+stale_days: 7
+rot_days: 14
