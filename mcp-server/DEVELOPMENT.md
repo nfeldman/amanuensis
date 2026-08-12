@@ -162,9 +162,32 @@ the accepted row. `CodebaseDecision 1.0.0` projections are source-authoritative
 copies for Chorusmith custody; three-axis read-back rejects missing authority,
 alternatives, desire sources, or falsifiers.
 
+## Research-question broker
+
+`ResearchRequest 1.0.0` is the decision-bound seam from Amanuensis to
+Scholiast. Admission requires a real decision revision and field, current local
+evidence, an exhausted repository search, named source classes and
+disconfirmers, a bounded budget, and transparent expected-information-value
+inputs. Curiosity-only proposals are retained as rejected; incomplete or
+low-value proposals are retained as nonblocking deferrals. Exact duplicates
+link their prior request unless an existing changed premise is named.
+
+Only admitted requests can dispatch. The handoff records an existing durable
+`scholiast/<slug>` workspace, required output, established and ruled-out ground,
+held evidence, source-quality guidance, access-status degradation, budget, and
+decision destination. Landing re-reads and hashes its artifacts. Source rows
+retain locators, class, access status, excerpt, and limitation.
+
+External testimony is stored separately from repository-backed temporal claims.
+It may target a hypothesis, option, premise, or confidence reason, but never a
+code observation, and its target must match the admitted request. A conflict
+with current code behavior creates an open typed contradiction and preserves
+both records. Consumption names the exact changed
+field or why nothing changed; it cannot mutate accepted decision history.
+
 <!-- TOOL-INVENTORY-START -->
 
-_152 tools across 36 groups. Generated from `tools/list` — do not hand-edit._
+_159 tools across 37 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -397,6 +420,18 @@ _152 tools across 36 groups. Generated from `tools/list` — do not hand-edit._
 | `fail_refresh_result` | Record a failed or timed-out refresh attempt without losing retry identity. Resume may dispatch the next deterministic attempt while policy permits. |
 | `score_refresh_result` | Score a landed refresh result through the evidence-gated A3 closure contract. Completion still requires resume to reconcile all landed state and pass final projection read-back. |
 | `get_refresh_run` | Read the immutable refresh manifest, custody events, provider outbox attempts, child-run state, blockers, durable projection proof, and completion basis. |
+
+### `research` (7)
+
+| Tool | Description |
+|---|---|
+| `propose_research_request` | Record and mechanically admit, defer, or reject a bounded external-research question. Admission requires a real decision field, anchored current evidence, an exhausted local search, named source classes and disconfirmers, expected information value of at least 9, and duplicate reconciliation. Rejections and deferrals remain durable and nonblocking by default. |
+| `dispatch_research_request` | Dispatch only an admitted request as a complete Scholiast handoff. The workspace must already be a real, non-temporary scholiast/<slug> directory; the packet preserves the destination, local evidence, ruled-out ground, source ladder, disconfirmers, budget, output shape, and access-status rule. |
+| `land_research_result` | Land a Scholiast result only with readable durable artifacts, append-only source provenance, per-source access status and limitations, calibrated external claims, and explicit contradictions to current repository observations. External claims are structurally separate from code claims. |
+| `consume_research_result` | Reconcile one landed result to a named hypothesis, option, premise, or confidence reason, or record why it changed nothing. A changed effect must cite an external claim and exactly match its destination; this does not rewrite immutable decision or repository observations. |
+| `expire_research_request` | Expire an admitted, deferred, dispatched, or landed request with a durable reason. Expiry is terminal and retained in queue metrics; rejected and consumed requests cannot be erased or relabeled. |
+| `get_research_request` | Read one research request with its immutable contract, queue events, Scholiast handoff, landed source/claim provenance, preserved code contradictions, and consumption record. |
+| `list_research_requests` | List the durable research queue, including rejected, deferred, admitted, dispatched, landed, consumed, and expired rows. Optional filters preserve visibility into backlog and research decision-yield denominators. |
 
 ### `resolution` (1)
 

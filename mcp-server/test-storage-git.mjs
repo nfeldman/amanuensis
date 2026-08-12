@@ -96,6 +96,10 @@ t("commit_phase_gate checkpoints live WAL state into the committed database", ()
   const shown = spawnSync("git", ["show", `${result.commit_sha}:memory.db`], {
     cwd: project.storagePath,
     encoding: null,
+    // The canonical schema grows with each roadmap initiative. Keep the
+    // proof-test buffer above the default 1 MiB so a larger valid database is
+    // not mistaken for a missing Git object.
+    maxBuffer: 16 * 1024 * 1024,
   });
   assert(shown.status === 0, `git show should recover memory.db: ${shown.stderr?.toString()}`);
   const snapshotPath = join(ws, "committed-memory.db");

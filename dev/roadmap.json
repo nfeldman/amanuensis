@@ -1174,7 +1174,7 @@
         {
           "id": "A13",
           "title": "Research-question broker",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis + Scholiast",
           "outcome": "Amanuensis emits bounded research requests only when external knowledge could resolve a named architecture or review uncertainty.",
           "rationale": "Continuous topic generation without admission criteria produces intellectual exhaust, not learning.",
@@ -1215,13 +1215,17 @@
           "baselineEvidence": [
             "mcp-server/src/tools/open-questions.ts",
             "mcp-server/src/tools/xrefs.ts",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/contracts/research-request.schema.json",
+            "mcp-server/src/tools/research.ts",
+            "mcp-server/test-research-broker.mjs",
+            "dev/adr/0014-decision-bounded-research-custody.md"
           ]
         },
         {
           "id": "A14",
           "title": "Typed crosswalk and Collatio qualification",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis + Scholiast",
           "outcome": "External research, code claims, concerns, decisions, and methods connect through explicit supported relations, and new methods must pass qualification before entering unattended workflows.",
           "rationale": "Cross-domain learning fails when resemblance is treated as identity or when an attractive technique bypasses control testing.",

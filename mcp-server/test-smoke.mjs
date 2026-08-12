@@ -40,6 +40,7 @@ import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
 import { refreshTools } from "./dist/tools/refresh.js";
+import { researchTools } from "./dist/tools/research.js";
 import { reviewAnalysisTools } from "./dist/tools/review-analysis.js";
 import { reviewSessionTools } from "./dist/tools/review-session.js";
 import { reviewTools } from "./dist/tools/review.js";
@@ -97,6 +98,7 @@ const allTools = new Map(
     ...codebaseBriefTools,
     ...designSessionTools,
     ...decisionTools,
+    ...researchTools,
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,

@@ -3090,6 +3090,324 @@ WHEN NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
 BEGIN SELECT RAISE(ABORT, 'decision projection verification does not reconcile'); END;
 
 ----------------------------------------------------------------------
+-- RESEARCH BROKER: admitted questions and external-claim custody
+----------------------------------------------------------------------
+-- A research request is a decision-support object, not a curiosity feed.
+-- Rejected/deferred requests are retained so duplicate and backlog metrics
+-- include the denominator. External testimony is stored in a separate table
+-- from repository-backed `claims`; importing research can therefore challenge
+-- a code observation but cannot silently replace it.
+
+CREATE TABLE IF NOT EXISTS research_requests (
+    request_id             TEXT PRIMARY KEY,
+    schema_version         TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    question               TEXT NOT NULL,
+    question_fingerprint   TEXT NOT NULL,
+    decision_id            TEXT REFERENCES decisions(decision_id) ON DELETE RESTRICT,
+    decision_revision_id   TEXT REFERENCES decision_revisions(revision_id) ON DELETE RESTRICT,
+    destination_field      TEXT CHECK (destination_field IN (
+                               'premise','accepted-option','alternative','constraint',
+                               'consequence','falsifier','review-hypothesis')),
+    destination_ref        TEXT,
+    current_evidence_json  TEXT NOT NULL CHECK (json_valid(current_evidence_json)),
+    uncertainty            TEXT NOT NULL,
+    needed_source_classes_json TEXT NOT NULL CHECK (json_valid(needed_source_classes_json)),
+    disconfirmers_json     TEXT NOT NULL CHECK (json_valid(disconfirmers_json)),
+    budget_json            TEXT NOT NULL CHECK (json_valid(budget_json)),
+    local_search_json      TEXT NOT NULL CHECK (json_valid(local_search_json)),
+    decision_sensitivity   INTEGER NOT NULL CHECK (decision_sensitivity BETWEEN 1 AND 5),
+    uncertainty_reducibility INTEGER NOT NULL CHECK (uncertainty_reducibility BETWEEN 1 AND 5),
+    expected_value_score   INTEGER NOT NULL CHECK (
+                               expected_value_score=decision_sensitivity*uncertainty_reducibility),
+    changed_premise_refs_json TEXT NOT NULL DEFAULT '[]'
+                               CHECK (json_valid(changed_premise_refs_json)),
+    duplicate_of           TEXT REFERENCES research_requests(request_id) ON DELETE RESTRICT,
+    admission_reasons_json TEXT NOT NULL CHECK (json_valid(admission_reasons_json)),
+    contract_json          TEXT NOT NULL CHECK (json_valid(contract_json)),
+    contract_hash          TEXT NOT NULL,
+    status                 TEXT NOT NULL CHECK (status IN (
+                               'rejected','deferred','admitted','dispatched',
+                               'landed','consumed','expired')),
+    blocking               INTEGER NOT NULL DEFAULT 0 CHECK (blocking IN (0,1)),
+    created_by             TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at             TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at             TEXT NOT NULL DEFAULT (datetime('now')),
+    terminal_at            TEXT,
+    CHECK ((decision_id IS NULL)=(decision_revision_id IS NULL)),
+    CHECK ((decision_id IS NULL)=(destination_field IS NULL)),
+    CHECK ((decision_id IS NULL)=(destination_ref IS NULL)),
+    CHECK (status NOT IN ('admitted','dispatched','landed','consumed') OR decision_id IS NOT NULL),
+    CHECK (status!='rejected' OR blocking=0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_requests_queue
+    ON research_requests(status, blocking, created_at);
+CREATE INDEX IF NOT EXISTS idx_research_requests_destination
+    ON research_requests(decision_revision_id, destination_field, destination_ref);
+CREATE INDEX IF NOT EXISTS idx_research_requests_fingerprint
+    ON research_requests(question_fingerprint, decision_revision_id, destination_field, destination_ref);
+
+CREATE TABLE IF NOT EXISTS research_request_events (
+    event_id        INTEGER PRIMARY KEY,
+    request_id      TEXT NOT NULL REFERENCES research_requests(request_id) ON DELETE RESTRICT,
+    from_state      TEXT CHECK (from_state IS NULL OR from_state IN (
+                        'rejected','deferred','admitted','dispatched','landed','consumed','expired')),
+    to_state        TEXT NOT NULL CHECK (to_state IN (
+                        'rejected','deferred','admitted','dispatched','landed','consumed','expired')),
+    reason          TEXT NOT NULL,
+    detail_json     TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(detail_json)),
+    actor           TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_request_events
+    ON research_request_events(request_id, event_id);
+
+CREATE TABLE IF NOT EXISTS research_dispatches (
+    dispatch_id         TEXT PRIMARY KEY,
+    request_id          TEXT NOT NULL UNIQUE REFERENCES research_requests(request_id) ON DELETE RESTRICT,
+    workspace_path      TEXT NOT NULL,
+    required_output_path TEXT NOT NULL,
+    handoff_json        TEXT NOT NULL CHECK (json_valid(handoff_json)),
+    handoff_hash        TEXT NOT NULL,
+    dispatched_by      TEXT NOT NULL REFERENCES sessions(session_id),
+    dispatched_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS research_results (
+    result_id        TEXT PRIMARY KEY,
+    request_id       TEXT NOT NULL UNIQUE REFERENCES research_requests(request_id) ON DELETE RESTRICT,
+    schema_version   TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    result_json      TEXT NOT NULL CHECK (json_valid(result_json)),
+    result_hash      TEXT NOT NULL,
+    landed_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    landed_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS research_sources (
+    result_id        TEXT NOT NULL REFERENCES research_results(result_id) ON DELETE RESTRICT,
+    source_id        TEXT NOT NULL,
+    title            TEXT NOT NULL,
+    locator          TEXT NOT NULL,
+    source_class     TEXT NOT NULL,
+    access_status    TEXT NOT NULL CHECK (access_status IN (
+                         'directly-read','snippet','via-agent','unread-hop','inaccessible')),
+    held_excerpt     TEXT,
+    limitation      TEXT NOT NULL,
+    PRIMARY KEY (result_id, source_id)
+);
+
+CREATE TABLE IF NOT EXISTS research_external_claims (
+    external_claim_id TEXT PRIMARY KEY,
+    result_id         TEXT NOT NULL REFERENCES research_results(result_id) ON DELETE RESTRICT,
+    statement         TEXT NOT NULL,
+    classification    TEXT NOT NULL CHECK (classification IN (
+                          'established','contested','underdetermined','inferred','open-question')),
+    confidence        TEXT NOT NULL CHECK (confidence IN (
+                          'verified','corroborated','single-source','inferred','unverified')),
+    source_ids_json   TEXT NOT NULL CHECK (json_valid(source_ids_json)),
+    chain_degradation INTEGER NOT NULL CHECK (chain_degradation BETWEEN 0 AND 3),
+    target_kind       TEXT NOT NULL CHECK (target_kind IN (
+                          'hypothesis','option','decision-premise','confidence-reason')),
+    target_ref        TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_external_claims_result
+    ON research_external_claims(result_id);
+
+CREATE TABLE IF NOT EXISTS research_code_contradictions (
+    contradiction_id INTEGER PRIMARY KEY,
+    external_claim_id TEXT NOT NULL REFERENCES research_external_claims(external_claim_id) ON DELETE RESTRICT,
+    code_claim_id     TEXT NOT NULL REFERENCES claims(claim_id) ON DELETE RESTRICT,
+    status            TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved','scope-distinction')),
+    resolution_note   TEXT,
+    detected_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at       TEXT,
+    UNIQUE (external_claim_id, code_claim_id),
+    CHECK (status='open' OR resolution_note IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS research_consumptions (
+    consumption_id   TEXT PRIMARY KEY,
+    request_id       TEXT NOT NULL UNIQUE REFERENCES research_requests(request_id) ON DELETE RESTRICT,
+    result_id        TEXT NOT NULL UNIQUE REFERENCES research_results(result_id) ON DELETE RESTRICT,
+    effect_kind      TEXT NOT NULL CHECK (effect_kind IN (
+                         'hypothesis','option','decision-premise','confidence-reason','no-change')),
+    target_ref       TEXT,
+    effect_statement TEXT,
+    no_change_reason TEXT,
+    consumed_by      TEXT NOT NULL REFERENCES sessions(session_id),
+    consumed_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((effect_kind='no-change' AND target_ref IS NULL
+            AND effect_statement IS NULL AND no_change_reason IS NOT NULL)
+        OR (effect_kind!='no-change' AND target_ref IS NOT NULL
+            AND effect_statement IS NOT NULL AND no_change_reason IS NULL))
+);
+
+CREATE TRIGGER IF NOT EXISTS research_request_payload_is_immutable
+BEFORE UPDATE ON research_requests FOR EACH ROW
+WHEN OLD.request_id!=NEW.request_id OR OLD.schema_version!=NEW.schema_version
+  OR OLD.question!=NEW.question OR OLD.question_fingerprint!=NEW.question_fingerprint
+  OR COALESCE(OLD.decision_id,'')!=COALESCE(NEW.decision_id,'')
+  OR COALESCE(OLD.decision_revision_id,'')!=COALESCE(NEW.decision_revision_id,'')
+  OR COALESCE(OLD.destination_field,'')!=COALESCE(NEW.destination_field,'')
+  OR COALESCE(OLD.destination_ref,'')!=COALESCE(NEW.destination_ref,'')
+  OR OLD.current_evidence_json!=NEW.current_evidence_json OR OLD.uncertainty!=NEW.uncertainty
+  OR OLD.needed_source_classes_json!=NEW.needed_source_classes_json
+  OR OLD.disconfirmers_json!=NEW.disconfirmers_json OR OLD.budget_json!=NEW.budget_json
+  OR OLD.local_search_json!=NEW.local_search_json
+  OR OLD.decision_sensitivity!=NEW.decision_sensitivity
+  OR OLD.uncertainty_reducibility!=NEW.uncertainty_reducibility
+  OR OLD.expected_value_score!=NEW.expected_value_score
+  OR OLD.changed_premise_refs_json!=NEW.changed_premise_refs_json
+  OR COALESCE(OLD.duplicate_of,'')!=COALESCE(NEW.duplicate_of,'')
+  OR OLD.admission_reasons_json!=NEW.admission_reasons_json
+  OR OLD.contract_json!=NEW.contract_json OR OLD.contract_hash!=NEW.contract_hash
+  OR OLD.blocking!=NEW.blocking OR OLD.created_by!=NEW.created_by
+BEGIN SELECT RAISE(ABORT, 'research request payload is immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_initial_state_is_admission_only
+BEFORE INSERT ON research_requests FOR EACH ROW
+WHEN NEW.status NOT IN ('rejected','deferred','admitted')
+BEGIN SELECT RAISE(ABORT, 'research request must enter through admission'); END;
+CREATE TRIGGER IF NOT EXISTS research_request_rejection_is_terminal
+BEFORE INSERT ON research_requests FOR EACH ROW
+WHEN NEW.status='rejected' AND NEW.terminal_at IS NULL
+BEGIN SELECT RAISE(ABORT, 'rejected research request requires terminal timestamp'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_terminal_timestamp_is_derived
+BEFORE UPDATE OF terminal_at ON research_requests FOR EACH ROW
+WHEN NOT (OLD.status!=NEW.status AND NEW.status IN ('consumed','expired')
+          AND NEW.terminal_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'research request terminal timestamp is derived from terminal transition'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_status_transition_is_valid
+BEFORE UPDATE OF status ON research_requests FOR EACH ROW
+WHEN NOT (
+     (OLD.status='admitted' AND NEW.status IN ('dispatched','deferred','expired'))
+  OR (OLD.status='deferred' AND NEW.status IN ('admitted','expired'))
+  OR (OLD.status='dispatched' AND NEW.status IN ('landed','expired'))
+  OR (OLD.status='landed' AND NEW.status IN ('consumed','expired')))
+BEGIN SELECT RAISE(ABORT, 'invalid research request status transition'); END;
+CREATE TRIGGER IF NOT EXISTS research_request_terminal_status_requires_timestamp
+BEFORE UPDATE OF status ON research_requests FOR EACH ROW
+WHEN NEW.status IN ('consumed','expired') AND NEW.terminal_at IS NULL
+BEGIN SELECT RAISE(ABORT, 'terminal research request requires terminal timestamp'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_transition_requires_event
+BEFORE UPDATE OF status ON research_requests FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_request_events e
+   WHERE e.request_id=OLD.request_id AND e.from_state=OLD.status AND e.to_state=NEW.status)
+BEGIN SELECT RAISE(ABORT, 'research request transition lacks event'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_transition_requires_custody
+BEFORE UPDATE OF status ON research_requests FOR EACH ROW
+WHEN (NEW.status='dispatched' AND NOT EXISTS (
+        SELECT 1 FROM research_dispatches d WHERE d.request_id=OLD.request_id))
+  OR (NEW.status='landed' AND NOT EXISTS (
+        SELECT 1 FROM research_results r WHERE r.request_id=OLD.request_id))
+  OR (NEW.status='consumed' AND NOT EXISTS (
+        SELECT 1 FROM research_consumptions c WHERE c.request_id=OLD.request_id))
+BEGIN SELECT RAISE(ABORT, 'research request transition lacks durable custody object'); END;
+
+CREATE TRIGGER IF NOT EXISTS research_request_cannot_be_deleted
+BEFORE DELETE ON research_requests FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research request cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_request_event_is_immutable
+BEFORE UPDATE ON research_request_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research request event is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_request_event_cannot_be_deleted
+BEFORE DELETE ON research_request_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research request event cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_dispatch_is_immutable
+BEFORE UPDATE ON research_dispatches FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research dispatch is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_dispatch_requires_admission
+BEFORE INSERT ON research_dispatches FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_requests r WHERE r.request_id=NEW.request_id AND r.status='admitted')
+BEGIN SELECT RAISE(ABORT, 'research dispatch requires admitted request'); END;
+CREATE TRIGGER IF NOT EXISTS research_dispatch_cannot_be_deleted
+BEFORE DELETE ON research_dispatches FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research dispatch cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_result_is_immutable
+BEFORE UPDATE ON research_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research result is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_result_requires_dispatch
+BEFORE INSERT ON research_results FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_requests r WHERE r.request_id=NEW.request_id AND r.status='dispatched')
+BEGIN SELECT RAISE(ABORT, 'research result requires dispatched request'); END;
+CREATE TRIGGER IF NOT EXISTS research_result_cannot_be_deleted
+BEFORE DELETE ON research_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research result cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_source_is_immutable
+BEFORE UPDATE ON research_sources FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research source is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_read_source_requires_excerpt
+BEFORE INSERT ON research_sources FOR EACH ROW
+WHEN NEW.access_status IN ('directly-read','snippet')
+  AND (NEW.held_excerpt IS NULL OR length(NEW.held_excerpt)=0)
+BEGIN SELECT RAISE(ABORT, 'read research source requires held excerpt'); END;
+CREATE TRIGGER IF NOT EXISTS research_source_cannot_be_deleted
+BEFORE DELETE ON research_sources FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research source cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_external_claim_is_immutable
+BEFORE UPDATE ON research_external_claims FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research external claim is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_external_claim_sources_must_resolve
+BEFORE INSERT ON research_external_claims FOR EACH ROW
+WHEN json_array_length(NEW.source_ids_json)=0 OR EXISTS (
+  SELECT 1 FROM json_each(NEW.source_ids_json) j
+   WHERE NOT EXISTS (
+     SELECT 1 FROM research_sources s
+      WHERE s.result_id=NEW.result_id AND s.source_id=j.value))
+BEGIN SELECT RAISE(ABORT, 'research external claim sources must resolve within result'); END;
+CREATE TRIGGER IF NOT EXISTS research_external_claim_destination_must_match_request
+BEFORE INSERT ON research_external_claims FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_results x
+  JOIN research_requests q ON q.request_id=x.request_id
+  WHERE x.result_id=NEW.result_id AND q.destination_ref=NEW.target_ref
+    AND ((q.destination_field='premise' AND NEW.target_kind='decision-premise')
+      OR (q.destination_field IN ('accepted-option','alternative') AND NEW.target_kind='option')
+      OR (q.destination_field='review-hypothesis' AND NEW.target_kind='hypothesis')
+      OR (q.destination_field IN ('constraint','consequence','falsifier')
+          AND NEW.target_kind='confidence-reason')))
+BEGIN SELECT RAISE(ABORT, 'research external claim destination must match request'); END;
+CREATE TRIGGER IF NOT EXISTS research_external_claim_cannot_be_deleted
+BEFORE DELETE ON research_external_claims FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research external claim cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_code_contradiction_requires_current_observation
+BEFORE INSERT ON research_code_contradictions FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM claims c
+   WHERE c.claim_id=NEW.code_claim_id AND c.epistemic_kind='observation'
+     AND c.valid_until_sha IS NULL
+     AND EXISTS (SELECT 1 FROM claim_evidence ce WHERE ce.claim_id=c.claim_id))
+BEGIN SELECT RAISE(ABORT, 'research contradiction target must be a current evidence-backed observation'); END;
+CREATE TRIGGER IF NOT EXISTS research_code_contradiction_is_immutable
+BEFORE UPDATE ON research_code_contradictions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research code contradiction is immutable pending evidence-backed resolution'); END;
+CREATE TRIGGER IF NOT EXISTS research_code_contradiction_cannot_be_deleted
+BEFORE DELETE ON research_code_contradictions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research code contradiction cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS research_consumption_is_immutable
+BEFORE UPDATE ON research_consumptions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research consumption is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS research_consumption_requires_landed_result
+BEFORE INSERT ON research_consumptions FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM research_requests q JOIN research_results r ON r.request_id=q.request_id
+   WHERE q.request_id=NEW.request_id AND q.status='landed' AND r.result_id=NEW.result_id)
+BEGIN SELECT RAISE(ABORT, 'research consumption requires matching landed result'); END;
+CREATE TRIGGER IF NOT EXISTS research_consumption_cannot_be_deleted
+BEFORE DELETE ON research_consumptions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'research consumption cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

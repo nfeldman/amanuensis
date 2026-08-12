@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/research-request/1.0.0",
+  "title": "Amanuensis ResearchRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "question",
+    "decision_destination",
+    "current_evidence",
+    "uncertainty",
+    "needed_source_classes",
+    "disconfirmers",
+    "budget",
+    "local_evidence_search",
+    "expected_information_value",
+    "changed_premise_refs",
+    "duplicate_of",
+    "admission"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "request_id": { "$ref": "#/$defs/nonEmpty" },
+    "question": { "$ref": "#/$defs/nonEmpty" },
+    "decision_destination": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/decisionDestination" }
+      ]
+    },
+    "current_evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/currentEvidence" }
+    },
+    "uncertainty": { "$ref": "#/$defs/nonEmpty" },
+    "needed_source_classes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmpty" },
+      "uniqueItems": true
+    },
+    "disconfirmers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmpty" },
+      "uniqueItems": true
+    },
+    "budget": { "$ref": "#/$defs/budget" },
+    "local_evidence_search": { "$ref": "#/$defs/localSearch" },
+    "expected_information_value": { "$ref": "#/$defs/informationValue" },
+    "changed_premise_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmpty" },
+      "uniqueItems": true
+    },
+    "duplicate_of": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/nonEmpty" }
+      ]
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reasons", "blocking"],
+      "properties": {
+        "state": { "enum": ["rejected", "deferred", "admitted"] },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmpty" }
+        },
+        "blocking": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "decisionDestination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_id", "revision_id", "field", "ref"],
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/nonEmpty" },
+        "revision_id": { "$ref": "#/$defs/nonEmpty" },
+        "field": {
+          "enum": [
+            "premise",
+            "accepted-option",
+            "alternative",
+            "constraint",
+            "consequence",
+            "falsifier",
+            "review-hypothesis"
+          ]
+        },
+        "ref": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "currentEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "statement"],
+      "properties": {
+        "kind": { "enum": ["code-claim", "repository-evidence", "decision-premise"] },
+        "ref": { "$ref": "#/$defs/nonEmpty" },
+        "statement": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_sources", "max_minutes"],
+      "properties": {
+        "max_sources": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "max_minutes": { "type": "integer", "minimum": 5, "maximum": 1440 }
+      }
+    },
+    "localSearch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "queries", "locations", "unresolved_reason"],
+      "properties": {
+        "outcome": { "enum": ["exhausted", "not-run", "found-answer"] },
+        "queries": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" } },
+        "locations": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" } },
+        "unresolved_reason": { "type": "string" }
+      }
+    },
+    "informationValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision_sensitivity", "uncertainty_reducibility", "score", "threshold"],
+      "properties": {
+        "decision_sensitivity": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "uncertainty_reducibility": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "score": { "type": "integer", "minimum": 1, "maximum": 25 },
+        "threshold": { "const": 9 }
+      }
+    }
+  }
+}

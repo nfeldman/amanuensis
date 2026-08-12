@@ -49,6 +49,7 @@ node test-review-session.mjs            # compact review, expansion, and semanti
 node test-codebase-brief.mjs            # mode projections, omission custody, and contract red gates
 node test-design-session.mjs            # independent lenses, disagreement, and underdetermination
 node test-decisions.mjs                 # acceptance authority, impact custody, and portable read-back
+node test-research-broker.mjs           # admission, Scholiast custody, and external/code contradiction
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -188,6 +189,12 @@ in agent prose:
   editing accepted history; rejected and superseded revisions remain readable.
   Extend `test-decisions.mjs` whenever an authority transition, premise kind,
   impact route, revision rule, or portable projection field changes.
+- **Research-broker custody.** A research request must resolve to a named
+  decision field, exhaust local evidence, cross a durable Scholiast handoff,
+  and land external sources with access status and limitations. External claims
+  never enter the repository-claim table; contradictions preserve both sides.
+  Extend `test-research-broker.mjs` whenever admission, queue transitions,
+  handoff fields, source confidence, result targeting, or consumption changes.
 
 ## Commits
 

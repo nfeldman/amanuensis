@@ -30,6 +30,7 @@ import { materializeTools } from "./tools/materialize.js";
 import { openQuestionTools } from "./tools/open-questions.js";
 import { projectTools } from "./tools/project.js";
 import { refreshTools } from "./tools/refresh.js";
+import { researchTools } from "./tools/research.js";
 import { resolutionTools } from "./tools/resolution.js";
 import { revalidationTools } from "./tools/revalidation.js";
 import { reviewTools } from "./tools/review.js";
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     ...codebaseBriefTools,
     ...designSessionTools,
     ...decisionTools,
+    ...researchTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

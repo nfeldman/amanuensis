@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 4 | 1 | 0 | 13 |
+| 0 | 3 | 1 | 0 | 14 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A13 — Research-question broker. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A14 — Typed crosswalk and Collatio qualification. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -682,7 +682,7 @@ Risks:
 
 #### A13 — Research-question broker
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis + Scholiast<br>
 **Depends on:** A10, A12<br>
 **Metrics:** M9, M10, M12
@@ -713,11 +713,11 @@ Risks:
 - Research latency can block decisions that should proceed under explicit uncertainty.
 
 **Practice basis:** GP9, GP11, GP12, GP20, GP23, GP29<br>
-**Baseline evidence:** `mcp-server/src/tools/open-questions.ts`, `mcp-server/src/tools/xrefs.ts`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `mcp-server/src/tools/open-questions.ts`, `mcp-server/src/tools/xrefs.ts`, `dev/cross-domain-analysis.md`, `mcp-server/contracts/research-request.schema.json`, `mcp-server/src/tools/research.ts`, `mcp-server/test-research-broker.mjs`, `dev/adr/0014-decision-bounded-research-custody.md`
 
 #### A14 — Typed crosswalk and Collatio qualification
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis + Scholiast<br>
 **Depends on:** A13<br>
 **Metrics:** M8, M9, M10
