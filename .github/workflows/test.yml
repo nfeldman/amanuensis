@@ -129,6 +129,9 @@ jobs:
       - name: Research broker — admission, Scholiast custody, and external/code separation
         working-directory: mcp-server
         run: node test-research-broker.mjs
+      - name: Crosswalk — identity gates, counterevidence, and Collatio qualification adapter
+        working-directory: mcp-server
+        run: node test-crosswalk-qualification.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

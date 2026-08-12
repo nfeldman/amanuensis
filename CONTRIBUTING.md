@@ -50,6 +50,7 @@ node test-codebase-brief.mjs            # mode projections, omission custody, an
 node test-design-session.mjs            # independent lenses, disagreement, and underdetermination
 node test-decisions.mjs                 # acceptance authority, impact custody, and portable read-back
 node test-research-broker.mjs           # admission, Scholiast custody, and external/code contradiction
+node test-crosswalk-qualification.mjs   # identity red gates, relation custody, and qualified activation
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -195,6 +196,16 @@ in agent prose:
   never enter the repository-claim table; contradictions preserve both sides.
   Extend `test-research-broker.mjs` whenever admission, queue transitions,
   handoff fields, source confidence, result targeting, or consumption changes.
+- **Crosswalk and method-qualification custody.** Similar labels create an
+  identity question, not an automatic merge. Relations use a finite vocabulary
+  with positive and negative criteria; counterevidence remains attached through
+  supersession. An unattended method must cross a frozen, authorized Collatio
+  adapter plan, mechanically scored controls and red gates, and artifact
+  read-back before SQLite accepts activation. Extend
+  `test-crosswalk-qualification.mjs` whenever identity resolution, relation
+  semantics, qualification axes, policy activation, or projection content
+  changes. The checked-in fixture demonstrates the adapter only; it does not
+  assert that the Collatio v2 research program itself is authorized or passed.
 
 ## Commits
 

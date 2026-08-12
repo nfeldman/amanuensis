@@ -12,6 +12,7 @@ import { compareTools } from "./tools/compare.js";
 import { compositionTools } from "./tools/composition.js";
 import { concernTools } from "./tools/concerns.js";
 import { contradictionTools } from "./tools/contradictions.js";
+import { crosswalkTools } from "./tools/crosswalk.js";
 import { dashboardTools } from "./tools/dashboard.js";
 import { decisionTools } from "./tools/decisions.js";
 import { designSessionTools } from "./tools/design-session.js";
@@ -78,6 +79,7 @@ async function main(): Promise<void> {
     ...designSessionTools,
     ...decisionTools,
     ...researchTools,
+    ...crosswalkTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

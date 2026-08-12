@@ -1225,7 +1225,7 @@
         {
           "id": "A14",
           "title": "Typed crosswalk and Collatio qualification",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis + Scholiast",
           "outcome": "External research, code claims, concerns, decisions, and methods connect through explicit supported relations, and new methods must pass qualification before entering unattended workflows.",
           "rationale": "Cross-domain learning fails when resemblance is treated as identity or when an attractive technique bypasses control testing.",
@@ -1271,13 +1271,17 @@
             "mcp-server/src/tools/xrefs.ts",
             "mcp-server/src/tools/vocabulary.ts",
             "mcp-server/src/tools/contradictions.ts",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/src/tools/crosswalk.ts",
+            "mcp-server/fixtures/crosswalk/qualification-result.json",
+            "mcp-server/test-crosswalk-qualification.mjs",
+            "dev/adr/0015-identity-first-crosswalk-and-qualified-methods.md"
           ]
         },
         {
           "id": "A15",
           "title": "Distillation and revisable learning ledger",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis + distillation",
           "outcome": "Completed review and design sessions yield candidate lessons about corpus, retrieval, method, research, and user preference, each promoted only with evidence and a rollback path.",
           "rationale": "The system should improve from use, but an untyped memory update would blend truth, workflow convenience, and transient preference into irreversible policy.",

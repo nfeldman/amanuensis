@@ -3408,6 +3408,344 @@ BEFORE DELETE ON research_consumptions FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'research consumption cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- TYPED CROSSWALKS: identity-before-enrichment and method qualification
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS crosswalk_entities (
+    entity_id          TEXT PRIMARY KEY,
+    entity_kind        TEXT NOT NULL CHECK (entity_kind IN (
+                           'code-claim','external-claim','concern','decision-revision','method')),
+    source_kind        TEXT NOT NULL CHECK (source_kind IN (
+                           'code-claim','external-claim','concern','decision-revision',
+                           'repository-evidence','direct-user')),
+    source_ref         TEXT NOT NULL,
+    label              TEXT NOT NULL,
+    normalized_label   TEXT NOT NULL,
+    definition         TEXT NOT NULL,
+    negative_criteria_json TEXT NOT NULL CHECK (json_valid(negative_criteria_json)),
+    provenance_json    TEXT NOT NULL CHECK (json_valid(provenance_json)),
+    identity_state     TEXT NOT NULL CHECK (identity_state IN ('pending','distinct','same-as')),
+    canonical_entity_id TEXT REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    created_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (entity_kind, source_kind, source_ref),
+    CHECK ((identity_state='pending' AND canonical_entity_id IS NULL)
+        OR (identity_state IN ('distinct','same-as') AND canonical_entity_id IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_crosswalk_entities_label
+    ON crosswalk_entities(normalized_label, entity_kind);
+CREATE INDEX IF NOT EXISTS idx_crosswalk_entities_canonical
+    ON crosswalk_entities(canonical_entity_id, identity_state);
+
+CREATE TABLE IF NOT EXISTS crosswalk_identity_resolutions (
+    resolution_id       INTEGER PRIMARY KEY,
+    entity_id           TEXT NOT NULL UNIQUE REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    candidate_entity_id TEXT REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    resolution          TEXT NOT NULL CHECK (resolution IN ('unique','same-as','distinct')),
+    evidence_json       TEXT NOT NULL CHECK (json_valid(evidence_json)),
+    rationale           TEXT NOT NULL,
+    resolved_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    resolved_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((resolution='unique' AND candidate_entity_id IS NULL)
+        OR (resolution IN ('same-as','distinct') AND candidate_entity_id IS NOT NULL)),
+    CHECK (candidate_entity_id IS NULL OR candidate_entity_id!=entity_id)
+);
+
+CREATE TABLE IF NOT EXISTS crosswalk_properties (
+    property_id         TEXT PRIMARY KEY,
+    entity_id           TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    property_key        TEXT NOT NULL,
+    value_json          TEXT NOT NULL CHECK (json_valid(value_json)),
+    source_entity_id    TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    provenance_json     TEXT NOT NULL CHECK (json_valid(provenance_json)),
+    created_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (entity_id, property_key, source_entity_id)
+);
+
+CREATE TABLE IF NOT EXISTS crosswalk_relations (
+    relation_id         TEXT PRIMARY KEY,
+    predecessor_relation_id TEXT REFERENCES crosswalk_relations(relation_id) ON DELETE RESTRICT,
+    source_entity_id    TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    target_entity_id    TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    relation_type       TEXT NOT NULL CHECK (relation_type IN (
+                           'same-as','supports','contradicts','refines','analogous-to',
+                           'applies-to','derived-from','supersedes')),
+    statement           TEXT NOT NULL,
+    positive_criteria_json TEXT NOT NULL CHECK (json_valid(positive_criteria_json)),
+    negative_criteria_json TEXT NOT NULL CHECK (json_valid(negative_criteria_json)),
+    provenance_json     TEXT NOT NULL CHECK (json_valid(provenance_json)),
+    valid_from          TEXT NOT NULL,
+    valid_until         TEXT,
+    status              TEXT NOT NULL DEFAULT 'current' CHECK (status IN ('current','superseded')),
+    created_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    superseded_at       TEXT,
+    CHECK (source_entity_id!=target_entity_id),
+    CHECK ((status='current' AND valid_until IS NULL AND superseded_at IS NULL)
+        OR (status='superseded' AND valid_until IS NOT NULL AND superseded_at IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_crosswalk_relations_endpoints
+    ON crosswalk_relations(source_entity_id, target_entity_id, relation_type, status);
+
+CREATE TABLE IF NOT EXISTS crosswalk_counterevidence (
+    counterevidence_id  TEXT PRIMARY KEY,
+    relation_id         TEXT NOT NULL REFERENCES crosswalk_relations(relation_id) ON DELETE RESTRICT,
+    statement           TEXT NOT NULL,
+    provenance_json     TEXT NOT NULL CHECK (json_valid(provenance_json)),
+    resolution          TEXT NOT NULL DEFAULT 'open' CHECK (resolution IN (
+                           'open','scope-distinction','relation-superseded')),
+    resolution_note     TEXT,
+    created_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at         TEXT,
+    CHECK (resolution='open' OR resolution_note IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_crosswalk_counterevidence_open
+    ON crosswalk_counterevidence(relation_id, resolution) WHERE resolution='open';
+
+CREATE TABLE IF NOT EXISTS method_qualification_plans (
+    qualification_id   TEXT PRIMARY KEY,
+    method_entity_id   TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    collatio_contract_json TEXT NOT NULL CHECK (json_valid(collatio_contract_json)),
+    prediction_json    TEXT NOT NULL CHECK (json_valid(prediction_json)),
+    controls_json      TEXT NOT NULL CHECK (json_valid(controls_json)),
+    red_gates_json     TEXT NOT NULL CHECK (json_valid(red_gates_json)),
+    custody_json       TEXT NOT NULL CHECK (json_valid(custody_json)),
+    target_policy_key  TEXT NOT NULL,
+    plan_hash          TEXT NOT NULL,
+    status             TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                           'planned','landed','passed','failed')),
+    planned_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    planned_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    terminal_at        TEXT,
+    UNIQUE (method_entity_id, qualification_id)
+);
+
+CREATE TABLE IF NOT EXISTS method_qualification_results (
+    result_id          TEXT PRIMARY KEY,
+    qualification_id  TEXT NOT NULL UNIQUE REFERENCES method_qualification_plans(qualification_id) ON DELETE RESTRICT,
+    artifact_path      TEXT NOT NULL,
+    artifact_hash      TEXT NOT NULL,
+    result_json        TEXT NOT NULL CHECK (json_valid(result_json)),
+    result_hash        TEXT NOT NULL,
+    landed_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    landed_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS method_qualification_scores (
+    score_id           TEXT PRIMARY KEY,
+    qualification_id  TEXT NOT NULL UNIQUE REFERENCES method_qualification_plans(qualification_id) ON DELETE RESTRICT,
+    result_id          TEXT NOT NULL UNIQUE REFERENCES method_qualification_results(result_id) ON DELETE RESTRICT,
+    prediction_ok      INTEGER NOT NULL CHECK (prediction_ok IN (0,1)),
+    controls_ok        INTEGER NOT NULL CHECK (controls_ok IN (0,1)),
+    red_gates_ok       INTEGER NOT NULL CHECK (red_gates_ok IN (0,1)),
+    custody_ok         INTEGER NOT NULL CHECK (custody_ok IN (0,1)),
+    readback_ok        INTEGER NOT NULL CHECK (readback_ok IN (0,1)),
+    passed             INTEGER NOT NULL CHECK (passed IN (0,1)),
+    report_json        TEXT NOT NULL CHECK (json_valid(report_json)),
+    scored_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    scored_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (passed=(prediction_ok AND controls_ok AND red_gates_ok AND custody_ok AND readback_ok))
+);
+
+CREATE TABLE IF NOT EXISTS unattended_method_policy (
+    policy_key         TEXT PRIMARY KEY,
+    method_entity_id   TEXT NOT NULL REFERENCES crosswalk_entities(entity_id) ON DELETE RESTRICT,
+    qualification_id  TEXT NOT NULL UNIQUE REFERENCES method_qualification_plans(qualification_id) ON DELETE RESTRICT,
+    configuration_json TEXT NOT NULL CHECK (json_valid(configuration_json)),
+    activated_by       TEXT NOT NULL REFERENCES sessions(session_id),
+    activated_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    superseded_by      TEXT REFERENCES unattended_method_policy(policy_key) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS crosswalk_projections (
+    projection_id      TEXT PRIMARY KEY,
+    schema_version     TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    projection_json    TEXT NOT NULL CHECK (json_valid(projection_json)),
+    projection_hash    TEXT NOT NULL,
+    projected_by       TEXT NOT NULL REFERENCES sessions(session_id),
+    projected_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS crosswalk_projection_verifications (
+    verification_id   INTEGER PRIMARY KEY,
+    projection_id     TEXT NOT NULL REFERENCES crosswalk_projections(projection_id) ON DELETE RESTRICT,
+    state_ok           INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok        INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok         INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok                 INTEGER NOT NULL CHECK (ok IN (0,1)),
+    report_json        TEXT NOT NULL CHECK (json_valid(report_json)),
+    verified_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    verified_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(state_ok AND coverage_ok AND content_ok))
+);
+
+CREATE TRIGGER IF NOT EXISTS crosswalk_entity_insert_starts_pending
+BEFORE INSERT ON crosswalk_entities FOR EACH ROW
+WHEN NEW.identity_state!='pending' OR NEW.canonical_entity_id IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'crosswalk identity must begin pending'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_entity_payload_is_immutable
+BEFORE UPDATE ON crosswalk_entities FOR EACH ROW
+WHEN OLD.entity_id!=NEW.entity_id OR OLD.entity_kind!=NEW.entity_kind
+  OR OLD.source_kind!=NEW.source_kind OR OLD.source_ref!=NEW.source_ref
+  OR OLD.label!=NEW.label OR OLD.normalized_label!=NEW.normalized_label
+  OR OLD.definition!=NEW.definition OR OLD.negative_criteria_json!=NEW.negative_criteria_json
+  OR OLD.provenance_json!=NEW.provenance_json OR OLD.created_by!=NEW.created_by
+BEGIN SELECT RAISE(ABORT, 'crosswalk entity payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_entity_identity_transition_is_valid
+BEFORE UPDATE OF identity_state, canonical_entity_id ON crosswalk_entities FOR EACH ROW
+WHEN OLD.identity_state!='pending' OR NEW.identity_state NOT IN ('distinct','same-as')
+  OR NEW.canonical_entity_id IS NULL
+BEGIN SELECT RAISE(ABORT, 'invalid crosswalk identity transition'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_entity_identity_requires_resolution
+BEFORE UPDATE OF identity_state, canonical_entity_id ON crosswalk_entities FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM crosswalk_identity_resolutions r WHERE r.entity_id=OLD.entity_id
+    AND ((r.resolution IN ('unique','distinct') AND NEW.identity_state='distinct'
+          AND NEW.canonical_entity_id=OLD.entity_id)
+      OR (r.resolution='same-as' AND NEW.identity_state='same-as'
+          AND NEW.canonical_entity_id=(SELECT canonical_entity_id FROM crosswalk_entities
+                                       WHERE entity_id=r.candidate_entity_id))))
+BEGIN SELECT RAISE(ABORT, 'crosswalk identity transition lacks matching resolution'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_entity_cannot_be_deleted
+BEFORE DELETE ON crosswalk_entities FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk entity cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_identity_resolution_is_immutable
+BEFORE UPDATE ON crosswalk_identity_resolutions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk identity resolution is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_identity_resolution_cannot_be_deleted
+BEFORE DELETE ON crosswalk_identity_resolutions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk identity resolution cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_property_requires_resolved_identity
+BEFORE INSERT ON crosswalk_properties FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM crosswalk_entities e WHERE e.entity_id=NEW.entity_id
+                  AND e.identity_state!='pending')
+  OR NOT EXISTS (SELECT 1 FROM crosswalk_entities e WHERE e.entity_id=NEW.source_entity_id
+                  AND e.identity_state!='pending')
+  OR (NEW.entity_id!=NEW.source_entity_id AND NOT EXISTS (
+       SELECT 1 FROM crosswalk_entities a JOIN crosswalk_entities b
+        ON a.canonical_entity_id=b.canonical_entity_id
+       WHERE a.entity_id=NEW.entity_id AND b.entity_id=NEW.source_entity_id))
+BEGIN SELECT RAISE(ABORT, 'crosswalk enrichment requires resolved identity'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_property_is_immutable
+BEFORE UPDATE ON crosswalk_properties FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk property is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_property_cannot_be_deleted
+BEFORE DELETE ON crosswalk_properties FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk property cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_relation_requires_resolved_endpoints
+BEFORE INSERT ON crosswalk_relations FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM crosswalk_entities e WHERE e.entity_id=NEW.source_entity_id
+                  AND e.identity_state!='pending')
+  OR NOT EXISTS (SELECT 1 FROM crosswalk_entities e WHERE e.entity_id=NEW.target_entity_id
+                  AND e.identity_state!='pending')
+BEGIN SELECT RAISE(ABORT, 'crosswalk relation requires resolved endpoint identities'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_same_as_requires_canonical_identity
+BEFORE INSERT ON crosswalk_relations FOR EACH ROW
+WHEN NEW.relation_type='same-as' AND NOT EXISTS (
+  SELECT 1 FROM crosswalk_entities a JOIN crosswalk_entities b
+    ON a.canonical_entity_id=b.canonical_entity_id
+   WHERE a.entity_id=NEW.source_entity_id AND b.entity_id=NEW.target_entity_id)
+BEGIN SELECT RAISE(ABORT, 'same-as relation requires resolved canonical identity'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_relation_payload_is_immutable
+BEFORE UPDATE ON crosswalk_relations FOR EACH ROW
+WHEN OLD.relation_id!=NEW.relation_id
+  OR COALESCE(OLD.predecessor_relation_id,'')!=COALESCE(NEW.predecessor_relation_id,'')
+  OR OLD.source_entity_id!=NEW.source_entity_id OR OLD.target_entity_id!=NEW.target_entity_id
+  OR OLD.relation_type!=NEW.relation_type OR OLD.statement!=NEW.statement
+  OR OLD.positive_criteria_json!=NEW.positive_criteria_json
+  OR OLD.negative_criteria_json!=NEW.negative_criteria_json
+  OR OLD.provenance_json!=NEW.provenance_json OR OLD.valid_from!=NEW.valid_from
+  OR OLD.created_by!=NEW.created_by
+BEGIN SELECT RAISE(ABORT, 'crosswalk relation payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_relation_status_is_monotonic
+BEFORE UPDATE OF status ON crosswalk_relations FOR EACH ROW
+WHEN NOT (OLD.status='current' AND NEW.status='superseded'
+          AND NEW.valid_until IS NOT NULL AND NEW.superseded_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'invalid crosswalk relation status transition'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_relation_cannot_be_deleted
+BEFORE DELETE ON crosswalk_relations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk relation cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_counterevidence_is_immutable
+BEFORE UPDATE ON crosswalk_counterevidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk counterevidence is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_counterevidence_cannot_be_deleted
+BEFORE DELETE ON crosswalk_counterevidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk counterevidence cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_requires_method_identity
+BEFORE INSERT ON method_qualification_plans FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM crosswalk_entities e WHERE e.entity_id=NEW.method_entity_id
+                  AND e.entity_kind='method' AND e.identity_state!='pending')
+BEGIN SELECT RAISE(ABORT, 'method qualification requires resolved method identity'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_plan_payload_is_immutable
+BEFORE UPDATE ON method_qualification_plans FOR EACH ROW
+WHEN OLD.qualification_id!=NEW.qualification_id OR OLD.method_entity_id!=NEW.method_entity_id
+  OR OLD.collatio_contract_json!=NEW.collatio_contract_json
+  OR OLD.prediction_json!=NEW.prediction_json OR OLD.controls_json!=NEW.controls_json
+  OR OLD.red_gates_json!=NEW.red_gates_json OR OLD.custody_json!=NEW.custody_json
+  OR OLD.target_policy_key!=NEW.target_policy_key OR OLD.plan_hash!=NEW.plan_hash
+  OR OLD.planned_by!=NEW.planned_by
+BEGIN SELECT RAISE(ABORT, 'method qualification plan payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_status_is_monotonic
+BEFORE UPDATE OF status ON method_qualification_plans FOR EACH ROW
+WHEN NOT ((OLD.status='planned' AND NEW.status='landed')
+       OR (OLD.status='landed' AND NEW.status IN ('passed','failed')))
+BEGIN SELECT RAISE(ABORT, 'invalid method qualification status transition'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_result_requires_plan
+BEFORE INSERT ON method_qualification_results FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM method_qualification_plans p
+                  WHERE p.qualification_id=NEW.qualification_id AND p.status='planned')
+BEGIN SELECT RAISE(ABORT, 'method qualification result requires planned qualification'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_result_is_immutable
+BEFORE UPDATE ON method_qualification_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'method qualification result is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_result_cannot_be_deleted
+BEFORE DELETE ON method_qualification_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'method qualification result cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_score_requires_landed
+BEFORE INSERT ON method_qualification_scores FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM method_qualification_plans p
+                  WHERE p.qualification_id=NEW.qualification_id AND p.status='landed')
+BEGIN SELECT RAISE(ABORT, 'method qualification score requires landed result'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_score_is_immutable
+BEFORE UPDATE ON method_qualification_scores FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'method qualification score is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS method_qualification_score_cannot_be_deleted
+BEFORE DELETE ON method_qualification_scores FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'method qualification score cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS unattended_method_policy_requires_passed_qualification
+BEFORE INSERT ON unattended_method_policy FOR EACH ROW
+WHEN NOT EXISTS (
+  SELECT 1 FROM method_qualification_plans p JOIN method_qualification_scores s
+    ON s.qualification_id=p.qualification_id
+   WHERE p.qualification_id=NEW.qualification_id AND p.method_entity_id=NEW.method_entity_id
+     AND p.target_policy_key=NEW.policy_key AND p.status='passed' AND s.passed=1
+     AND s.readback_ok=1)
+BEGIN SELECT RAISE(ABORT, 'unattended method policy requires passed qualification and read-back'); END;
+CREATE TRIGGER IF NOT EXISTS unattended_method_policy_is_immutable
+BEFORE UPDATE ON unattended_method_policy FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'unattended method policy is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS unattended_method_policy_cannot_be_deleted
+BEFORE DELETE ON unattended_method_policy FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'unattended method policy cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_projection_is_immutable
+BEFORE UPDATE ON crosswalk_projections FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk projection is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_projection_cannot_be_deleted
+BEFORE DELETE ON crosswalk_projections FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk projection cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_projection_verification_is_immutable
+BEFORE UPDATE ON crosswalk_projection_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk projection verification is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS crosswalk_projection_verification_cannot_be_deleted
+BEFORE DELETE ON crosswalk_projection_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'crosswalk projection verification cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

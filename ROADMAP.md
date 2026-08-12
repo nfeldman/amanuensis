@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 3 | 1 | 0 | 14 |
+| 0 | 2 | 1 | 0 | 15 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A14 — Typed crosswalk and Collatio qualification. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A15 — Distillation and revisable learning ledger. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -717,7 +717,7 @@ Risks:
 
 #### A14 — Typed crosswalk and Collatio qualification
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis + Scholiast<br>
 **Depends on:** A13<br>
 **Metrics:** M8, M9, M10
@@ -748,11 +748,11 @@ Risks:
 - Strict qualification can reject useful low-risk heuristics whose value is hard to measure.
 
 **Practice basis:** GP1, GP6, GP9, GP11, GP12, GP27, GP28, VP4, VP7, VP10, VP12<br>
-**Baseline evidence:** `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/vocabulary.ts`, `mcp-server/src/tools/contradictions.ts`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `mcp-server/src/tools/xrefs.ts`, `mcp-server/src/tools/vocabulary.ts`, `mcp-server/src/tools/contradictions.ts`, `dev/cross-domain-analysis.md`, `mcp-server/src/tools/crosswalk.ts`, `mcp-server/fixtures/crosswalk/qualification-result.json`, `mcp-server/test-crosswalk-qualification.mjs`, `dev/adr/0015-identity-first-crosswalk-and-qualified-methods.md`
 
 #### A15 — Distillation and revisable learning ledger
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis + distillation<br>
 **Depends on:** A12, A14<br>
 **Metrics:** M7, M10, M11, M12

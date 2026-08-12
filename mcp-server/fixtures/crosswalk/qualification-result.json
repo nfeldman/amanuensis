@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "qualification_id": "qualification-cache-method",
+  "observed_value_milli": 850,
+  "control_results": [
+    { "control_id": "control-baseline", "observed_outcome": "accept" },
+    { "control_id": "control-positive", "observed_outcome": "reject" },
+    { "control_id": "control-negative", "observed_outcome": "accept" },
+    { "control_id": "control-scramble", "observed_outcome": "reject" },
+    { "control_id": "control-inconclusive", "observed_outcome": "inconclusive" }
+  ],
+  "red_gate_results": [
+    {
+      "gate_id": "identity-before-enrichment",
+      "fired": true,
+      "observed_failure": "crosswalk enrichment requires resolved identity"
+    },
+    {
+      "gate_id": "qualification-before-policy",
+      "fired": true,
+      "observed_failure": "requires passed qualification and read-back"
+    }
+  ],
+  "custody_counts": { "planned": 1, "landed": 1, "schema_valid": 1 },
+  "limitations": [
+    "Fixture qualification demonstrates the adapter, not population-level method efficacy."
+  ]
+}

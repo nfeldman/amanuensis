@@ -187,7 +187,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_159 tools across 37 groups. Generated from `tools/list` — do not hand-edit._
+_172 tools across 38 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -254,6 +254,24 @@ _159 tools across 37 groups. Generated from `tools/list` — do not hand-edit._
 | `add_contradiction` | Record a contradiction between two findings. Use when the same file/symbol is implicated in findings whose classifications or severities are logically incompatible. conflict_type: 'classification-conflict', 'severity-conflict', etc. Leaves the contradiction as 'unresolved' until resolve_contradiction is called. |
 | `resolve_contradiction` | Apply an evidence-backed resolution to a contradiction and append its proof history. Non-unresolved resolutions require structured evidence collected in the active session, attached to one of the contradictory findings, plus a rationale. scope_note is additionally required for scope-distinction. |
 | `get_contradictions` | List contradictions. resolution_filter defaults to 'unresolved'; pass 'all' to return every row regardless of status. |
+
+### `crosswalk` (13)
+
+| Tool | Description |
+|---|---|
+| `stage_crosswalk_entity` | Stage a provenance-bearing code claim, external claim, concern, decision revision, or method endpoint. A unique normalized label resolves as distinct; a collision stays pending and cannot receive relations or enrichment until explicit same-as or distinct resolution. |
+| `resolve_crosswalk_identity` | Resolve one normalized-label collision as same-as or distinct with supporting evidence and rationale. Same-as adopts the candidate's canonical identity and writes a typed relation; distinct preserves both definitions and negative criteria. |
+| `add_crosswalk_property` | Add one immutable, provenance-bearing property to a resolved endpoint. A property copied from another endpoint is accepted only when both resolve to the same canonical identity; analogy and name similarity never confer inheritance. |
+| `add_crosswalk_relation` | Add a current relation from the finite supports/contradicts/refines/analogous-to/applies-to/derived-from/supersedes vocabulary. Both identities must be resolved; positive and negative criteria plus validated provenance are mandatory. |
+| `add_crosswalk_counterevidence` | Attach immutable counterevidence to a relation without averaging it into consensus or editing the relation. Counterevidence remains visible with its historical relation even after a successor changes current authority. |
+| `supersede_crosswalk_relation` | Create an evidence-bearing successor relation over the same endpoints and close the predecessor's validity interval. Prior claims and counterevidence remain immutable and readable. |
+| `plan_method_qualification` | Freeze a Collatio-compatible qualification plan for a resolved method: authorized scope, falsifiable metric prediction, baseline/positive/negative/scramble/inconclusive controls, production red gates, exact result custody, and target unattended policy key. |
+| `land_method_qualification` | Land one durable qualification result whose JSON content exactly matches the frozen artifact name/schema, measured prediction value, control outcomes, red-gate firings, reconciliation counts, and limitations. Landing re-reads and hashes the artifact and never self-awards pass status. |
+| `score_method_qualification` | Mechanically score a landed method result against its frozen prediction, exact graded-control set, every red-gate proof, custody counts, and artifact/result read-back. Any failed axis yields failed qualification. |
+| `activate_qualified_method` | Activate a method at its frozen unattended-policy destination. SQLite rejects direct or handler writes unless the matching qualification passed prediction, controls, red gates, custody, and read-back. |
+| `project_crosswalk` | Create an immutable Crosswalk 1.0.0 projection with exact endpoint and relation identities, typed relation counts, unresolved identity/contradiction counts, counterevidence, history, and active qualified methods. |
+| `verify_crosswalk_projection` | Read a stored or caller-supplied crosswalk projection back against durable state on independent state, exact coverage/count, and semantic content axes. |
+| `get_crosswalk` | Read the full crosswalk projection or one endpoint with its identity resolution, properties, typed relations, and open counterevidence counts. |
 
 ### `dashboard` (2)
 
