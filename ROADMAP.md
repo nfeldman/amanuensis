@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 0 | 1 | 0 | 17 |
+| 0 | 0 | 0 | 0 | 18 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A17 — Chorusmith adapter and parity-gated extraction. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** complete — all initiatives complete. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -824,7 +824,7 @@ Risks:
 
 #### A17 — Chorusmith adapter and parity-gated extraction
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis + Chorusmith<br>
 **Depends on:** A9, A12, A15, A16<br>
 **Metrics:** M4, M7, M11, M12
@@ -855,7 +855,7 @@ Risks:
 - Parity may conceal usability regressions or operational complexity.
 
 **Practice basis:** GP8, GP11, GP21, GP22, GP24, GP25, GP28, VP4, VP11, VP20<br>
-**Baseline evidence:** `mcp-server/src/index.ts`, `mcp-server/src/session.ts`, `mcp-server/src/storage-git.ts`, `dev/cross-domain-analysis.md`
+**Baseline evidence:** `mcp-server/src/index.ts`, `mcp-server/src/session.ts`, `mcp-server/src/storage-git.ts`, `dev/cross-domain-analysis.md`, `mcp-server/src/schema.sql`, `mcp-server/src/tools/chorusmith-adapter.ts`, `mcp-server/contracts/chorusmith/project-type.json`, `mcp-server/contracts/chorusmith/artifact-input.schema.json`, `mcp-server/contracts/chorusmith/run-manifest.schema.json`, `mcp-server/contracts/chorusmith/custody-matrix.json`, `mcp-server/contracts/chorusmith/extraction-parity-ledger.json`, `mcp-server/test-chorusmith-adapter.mjs`, `dev/adr/0018-chorusmith-adapter-parity-boundary.md`
 
 ## First implementation slices
 

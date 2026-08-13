@@ -6,6 +6,7 @@ import { openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import { resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
+import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
     ...crosswalkTools,
     ...learningTools,
     ...evaluationTools,
+    ...chorusmithAdapterTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

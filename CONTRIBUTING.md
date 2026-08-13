@@ -53,6 +53,7 @@ node test-research-broker.mjs           # admission, Scholiast custody, and exte
 node test-crosswalk-qualification.mjs   # identity red gates, relation custody, and qualified activation
 node test-learning-ledger.mjs           # typed distillation, scored promotion, and rollback/read-back
 node test-operating-envelope.mjs        # stratified controls, instrument clearance, and no-pooling red gates
+node test-chorusmith-adapter.mjs        # adapter contracts, direct parity, bypass, and restart recovery
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -225,6 +226,14 @@ in agent prose:
   review; it never emits pooled efficacy. Extend `test-operating-envelope.mjs`
   whenever a condition role, metric contract, instrument state, stratum field,
   verdict rule, exclusion field, or report projection changes.
+- **Chorusmith-adapter custody.** Project-type manifests freeze an exact commit,
+  allowlisted adapter/tool mapping, ordered step arguments, output keys, direct
+  parity snapshot, and recovery/time policy. Adapter execution must invoke the
+  existing Amanuensis handler inside the step transaction; it may not write
+  domain tables. No feature leaves `retained-direct` until behavior, evidence,
+  restart recovery, and verification-time parity are green. Extend
+  `test-chorusmith-adapter.mjs` whenever an adapter version, allowed operation,
+  custody owner, parity field, restart rule, or extraction status changes.
 
 ## Commits
 

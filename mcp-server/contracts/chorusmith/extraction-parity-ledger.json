@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0.0",
+  "policy": "No workflow moves until behavior, evidence, recovery, and verification-time parity pass for that feature.",
+  "features": [
+    {
+      "feature": "CodebaseBrief",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "catalog-and-envelope",
+      "extraction_status": "retained-direct",
+      "rollback": "invoke amanuensis-memory directly"
+    },
+    {
+      "feature": "ReviewBrief",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "catalog-and-envelope",
+      "extraction_status": "retained-direct",
+      "rollback": "invoke amanuensis-memory directly"
+    },
+    {
+      "feature": "ResearchRequest",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "catalog-and-envelope",
+      "extraction_status": "retained-direct",
+      "rollback": "invoke amanuensis-memory directly"
+    },
+    {
+      "feature": "Decision",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "direct-versus-orchestrated",
+      "extraction_status": "retained-direct",
+      "rollback": "invoke amanuensis-memory directly"
+    },
+    {
+      "feature": "Obligation",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "direct-versus-orchestrated",
+      "extraction_status": "retained-direct",
+      "rollback": "invoke amanuensis-memory directly"
+    },
+    {
+      "feature": "RunManifest",
+      "adapter_version": "1.0.0",
+      "contract": "green",
+      "replay": "interruption-and-resume",
+      "extraction_status": "retained-direct",
+      "rollback": "resume from the Amanuensis run ledger"
+    }
+  ]
+}

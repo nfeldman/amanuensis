@@ -1,0 +1,63 @@
+{
+  "kind": "ProjectTypeAdapter",
+  "schemaVersion": "1.0.0",
+  "projectType": "codebase",
+  "transport": {
+    "kind": "mcp",
+    "serverName": "amanuensis-memory"
+  },
+  "upstreamCompatibility": {
+    "repository": "chorusmith",
+    "commit": "7e794747017c6c3d0df9151d4c6a584a6cdba60e",
+    "persistArtifactInputFields": [
+      "runKey",
+      "artifactKind",
+      "schemaRef",
+      "schemaVersion",
+      "producedByStageId",
+      "attemptIndex",
+      "outputSlot",
+      "payload"
+    ],
+    "nativePayloadHash": "computed by Chorusmith with BLAKE3 during persistence; not supplied by the adapter",
+    "boundary": "Chorusmith external MCP consumption is not extracted. The Amanuensis envelope contains a PersistArtifactInput-compatible projection plus separate SHA-256 source custody; a future native ingress must translate the projection and let Chorusmith compute its own record hash."
+  },
+  "adapters": [
+    {
+      "kind": "CodebaseBrief",
+      "artifactKind": "AmanuensisCodebaseBrief",
+      "schemaRef": "AmanuensisCodebaseBrief@1.0.0",
+      "outputSlot": "codebase-brief"
+    },
+    {
+      "kind": "ReviewBrief",
+      "artifactKind": "AmanuensisReviewBrief",
+      "schemaRef": "AmanuensisReviewBrief@1.0.0",
+      "outputSlot": "review-brief"
+    },
+    {
+      "kind": "ResearchRequest",
+      "artifactKind": "AmanuensisResearchRequest",
+      "schemaRef": "AmanuensisResearchRequest@1.0.0",
+      "outputSlot": "research-request"
+    },
+    {
+      "kind": "Decision",
+      "artifactKind": "AmanuensisDecision",
+      "schemaRef": "AmanuensisDecision@1.0.0",
+      "outputSlot": "decision"
+    },
+    {
+      "kind": "Obligation",
+      "artifactKind": "AmanuensisObligation",
+      "schemaRef": "AmanuensisObligation@1.0.0",
+      "outputSlot": "obligation"
+    },
+    {
+      "kind": "RunManifest",
+      "artifactKind": "AmanuensisRunManifest",
+      "schemaRef": "AmanuensisRunManifest@1.0.0",
+      "outputSlot": "run-manifest"
+    }
+  ]
+}

@@ -1423,7 +1423,7 @@
         {
           "id": "A17",
           "title": "Chorusmith adapter and parity-gated extraction",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis + Chorusmith",
           "outcome": "Chorusmith can orchestrate Amanuensis as a codebase project type through stable contracts, while Amanuensis remains independently usable and its invariants stay authoritative.",
           "rationale": "General orchestration belongs in Chorusmith, but early extraction would trade a working domain workflow for an unproven platform abstraction.",
@@ -1472,7 +1472,16 @@
             "mcp-server/src/index.ts",
             "mcp-server/src/session.ts",
             "mcp-server/src/storage-git.ts",
-            "dev/cross-domain-analysis.md"
+            "dev/cross-domain-analysis.md",
+            "mcp-server/src/schema.sql",
+            "mcp-server/src/tools/chorusmith-adapter.ts",
+            "mcp-server/contracts/chorusmith/project-type.json",
+            "mcp-server/contracts/chorusmith/artifact-input.schema.json",
+            "mcp-server/contracts/chorusmith/run-manifest.schema.json",
+            "mcp-server/contracts/chorusmith/custody-matrix.json",
+            "mcp-server/contracts/chorusmith/extraction-parity-ledger.json",
+            "mcp-server/test-chorusmith-adapter.mjs",
+            "dev/adr/0018-chorusmith-adapter-parity-boundary.md"
           ]
         }
       ]

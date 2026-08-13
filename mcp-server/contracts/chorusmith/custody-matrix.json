@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "rows": [
+    {
+      "asset": "durable truth",
+      "owner": "amanuensis",
+      "chorusmith_authority": "projection-and-invocation-only",
+      "non_transferable": ["evidence gates", "knowledge depth", "decision authority", "completion"]
+    },
+    {
+      "asset": "session artifacts",
+      "owner": "chorusmith",
+      "amanuensis_authority": "validate-and-land-domain-results",
+      "non_transferable": ["attempt routing", "context assembly receipts"]
+    },
+    {
+      "asset": "provider configuration",
+      "owner": "chorusmith",
+      "amanuensis_authority": "enforce-preauthorized-envelope",
+      "non_transferable": ["provider selection", "retry policy"]
+    },
+    {
+      "asset": "user preferences",
+      "owner": "human",
+      "chorusmith_authority": "transport-only",
+      "amanuensis_authority": "typed-scoped-custody-only",
+      "non_transferable": ["preference origination", "scope expansion"]
+    }
+  ]
+}

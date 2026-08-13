@@ -32,6 +32,7 @@ import { dashboardTools } from "./dist/tools/dashboard.js";
 import { seamTools } from "./dist/tools/seams.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { chorusmithAdapterTools } from "./dist/tools/chorusmith-adapter.js";
 import { codebaseBriefTools } from "./dist/tools/codebase-brief.js";
 import { compositionTools } from "./dist/tools/composition.js";
 import { crosswalkTools } from "./dist/tools/crosswalk.js";
@@ -105,6 +106,7 @@ const allTools = new Map(
     ...crosswalkTools,
     ...learningTools,
     ...evaluationTools,
+    ...chorusmithAdapterTools,
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,

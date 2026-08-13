@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.local/contracts/chorusmith/artifact-input-1.0.0.schema.json",
+  "title": "Amanuensis custody envelope for a Chorusmith artifact input projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "sourceRef",
+    "sourcePayloadHash",
+    "authority",
+    "artifactInput"
+  ],
+  "properties": {
+    "kind": { "const": "AmanuensisChorusmithArtifactEnvelope" },
+    "schemaVersion": { "const": "1.0.0" },
+    "sourceRef": { "type": "string", "pattern": "^amanuensis://" },
+    "sourcePayloadHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "transfer", "externalWriteAuthority"],
+      "properties": {
+        "owner": { "const": "amanuensis" },
+        "transfer": { "const": "projection-only" },
+        "externalWriteAuthority": { "const": false }
+      }
+    },
+    "artifactInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runKey",
+        "artifactKind",
+        "schemaRef",
+        "schemaVersion",
+        "producedByStageId",
+        "attemptIndex",
+        "outputSlot",
+        "payload"
+      ],
+      "properties": {
+        "runKey": { "type": ["string", "null"] },
+        "artifactKind": {
+          "enum": [
+            "AmanuensisCodebaseBrief",
+            "AmanuensisReviewBrief",
+            "AmanuensisResearchRequest",
+            "AmanuensisDecision",
+            "AmanuensisObligation",
+            "AmanuensisRunManifest"
+          ]
+        },
+        "schemaRef": { "type": "string", "pattern": "^Amanuensis[A-Za-z]+@1\\.0\\.0$" },
+        "schemaVersion": { "const": "1.0.0" },
+        "producedByStageId": { "const": "amanuensis-adapter" },
+        "attemptIndex": { "const": 0 },
+        "outputSlot": { "type": "string", "minLength": 1 },
+        "payload": { "type": "object" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisCodebaseBrief" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisCodebaseBrief@1.0.0" },
+          "outputSlot": { "const": "codebase-brief" }
+        } } }
+      }
+    },
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisReviewBrief" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisReviewBrief@1.0.0" },
+          "outputSlot": { "const": "review-brief" }
+        } } }
+      }
+    },
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisResearchRequest" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisResearchRequest@1.0.0" },
+          "outputSlot": { "const": "research-request" }
+        } } }
+      }
+    },
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisDecision" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisDecision@1.0.0" },
+          "outputSlot": { "const": "decision" }
+        } } }
+      }
+    },
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisObligation" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisObligation@1.0.0" },
+          "outputSlot": { "const": "obligation" }
+        } } }
+      }
+    },
+    {
+      "if": { "properties": { "artifactInput": { "type": "object", "properties": { "artifactKind": { "const": "AmanuensisRunManifest" } } } } },
+      "then": {
+        "properties": { "artifactInput": { "type": "object", "properties": {
+          "schemaRef": { "const": "AmanuensisRunManifest@1.0.0" },
+          "outputSlot": { "const": "run-manifest" }
+        } } }
+      }
+    }
+  ]
+}

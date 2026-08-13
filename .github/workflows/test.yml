@@ -138,6 +138,9 @@ jobs:
       - name: Operating envelope — stratified controls, instrument clearance, and no pooling
         working-directory: mcp-server
         run: node test-operating-envelope.mjs
+      - name: Chorusmith adapter — contracts, direct parity, bypass, and recovery
+        working-directory: mcp-server
+        run: node test-chorusmith-adapter.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

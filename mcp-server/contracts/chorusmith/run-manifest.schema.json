@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.local/contracts/chorusmith/run-manifest-1.0.0.schema.json",
+  "title": "AmanuensisRunManifest 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "run_id",
+    "external_run_ref",
+    "source_commit",
+    "transport",
+    "adapter_catalog_hash",
+    "steps",
+    "parity_scope",
+    "expected_direct",
+    "parity_policy",
+    "custody_matrix",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "kind": { "const": "AmanuensisRunManifest" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "external_run_ref": { "type": "string", "minLength": 1 },
+    "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "server_name"],
+      "properties": {
+        "kind": { "const": "mcp" },
+        "server_name": { "const": "amanuensis-memory" }
+      }
+    },
+    "adapter_catalog_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "step_id",
+          "ordinal",
+          "adapter_kind",
+          "tool_name",
+          "args",
+          "expected_output_keys"
+        ],
+        "properties": {
+          "step_id": { "type": "string", "minLength": 1 },
+          "ordinal": { "type": "integer", "minimum": 1 },
+          "adapter_kind": {
+            "enum": [
+              "CodebaseBrief",
+              "ReviewBrief",
+              "ResearchRequest",
+              "Decision",
+              "Obligation",
+              "RunManifest"
+            ]
+          },
+          "tool_name": { "type": "string", "minLength": 1 },
+          "args": { "type": "object" },
+          "expected_output_keys": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "parity_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_ids", "decision_ids", "obligation_ids", "evidence_ids"],
+      "properties": {
+        "claim_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "decision_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "obligation_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "evidence_ids": { "type": "array", "minItems": 1, "items": { "type": "integer" } }
+      }
+    },
+    "expected_direct": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot", "snapshot_hash", "verification_time_us", "verification_time_kind"],
+      "properties": {
+        "snapshot": { "type": "object" },
+        "snapshot_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "verification_time_us": { "type": "integer", "minimum": 1 },
+        "verification_time_kind": { "const": "mechanical-parity-projection" }
+      }
+    },
+    "parity_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recovery_probe_required", "max_verification_overhead_us"],
+      "properties": {
+        "recovery_probe_required": { "type": "boolean" },
+        "max_verification_overhead_us": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "custody_matrix": { "type": "object" },
+    "authority": { "type": "object" }
+  }
+}

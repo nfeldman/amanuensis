@@ -187,7 +187,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_186 tools across 40 groups. Generated from `tools/list` — do not hand-edit._
+_194 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -196,6 +196,19 @@ _186 tools across 40 groups. Generated from `tools/list` — do not hand-edit._
 | `register_artifact` | Record that a prose artifact exists and capture its content hash. `path` is relative to the project storage directory. If the file exists, its size and sha256 are computed automatically. This is the source of truth the diff-aware materializer uses to decide what to re-render. |
 | `list_artifacts` | List registered prose artifacts. Filter by kind ('subsystem-survey', 'findings-index', etc.) and/or subsystem_id. |
 | `rehash_artifact` | Re-read an artifact from disk and update its stored content_hash + bytes. Called by the agents right after writing an artifact file so the materializer's diff check reflects the current contents. |
+
+### `chorusmith-adapter` (8)
+
+| Tool | Description |
+|---|---|
+| `get_chorusmith_adapter_catalog` | Return the versioned CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, and RunManifest adapter registry plus the custody matrix. Amanuensis retains durable-truth and invariant authority; Chorusmith receives typed projection and invocation authority only. |
+| `capture_chorusmith_parity_snapshot` | Derive a deterministic parity snapshot for exact authoritative claim, decision, obligation, and evidence IDs, plus the identical human-verification item surface and measured mechanical projection time. Missing or silently excluded records are errors. |
+| `plan_chorusmith_adapter_run` | Freeze an AmanuensisRunManifest@1.0.0 against an exact repository commit, typed adapter steps, an independently captured direct-path snapshot, recovery-probe policy, verification-time ceiling, and the non-transferable custody matrix. Only explicitly allowlisted Amanuensis tools may appear. |
+| `execute_chorusmith_adapter_step` | Execute exactly the next frozen adapter step by invoking the existing Amanuensis tool handler inside one database transaction. The adapter has no direct domain-table write path, so evidence, depth, authority, and completion invariants remain authoritative and a rejected step rolls back its custody update. |
+| `resume_chorusmith_adapter_run` | Resume a durable in-progress or ready adapter run after orchestration loss. Reconcile every landed args/output hash, derive the current domain projection without mutating source truth, append a recovery receipt, and return the exact next step. |
+| `verify_chorusmith_adapter_parity` | Before any extraction may advance, compare the orchestrated run with its frozen direct-path baseline on behavior, evidence identifiers, interruption recovery, and verification surface/time. Only a four-axis green report may move the run to verified; failures remain append-only. |
+| `export_chorusmith_adapter_artifact` | Project one durable CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, or RunManifest through its @1.0.0 adapter into an Amanuensis custody envelope containing a Chorusmith PersistArtifactInput-compatible projection. Chorusmith must compute its own native record hash during future ingress; export is append-only, projection-only, and grants no external write authority. |
+| `get_chorusmith_adapter_run` | Read one immutable adapter manifest, its ordered landed/pending steps, restart receipts, and parity verifications. This is also the RunManifest@1.0.0 adapter's projection source. |
 
 ### `claims` (6)
 

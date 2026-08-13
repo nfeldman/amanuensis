@@ -4206,6 +4206,178 @@ BEFORE DELETE ON operating_envelope_verifications FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'operating envelope verification cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- CHORUSMITH ADAPTER: versioned projection, exact execution, and parity custody
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS chorusmith_adapter_runs (
+    run_id                   TEXT PRIMARY KEY,
+    external_run_ref         TEXT NOT NULL UNIQUE,
+    schema_version           TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    manifest_json            TEXT NOT NULL CHECK (json_valid(manifest_json)),
+    manifest_hash            TEXT NOT NULL,
+    expected_step_count      INTEGER NOT NULL CHECK (expected_step_count > 0),
+    expected_snapshot_hash   TEXT NOT NULL,
+    status                   TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                                 'planned','running','ready','verified')),
+    recovery_count           INTEGER NOT NULL DEFAULT 0 CHECK (recovery_count >= 0),
+    planned_by               TEXT NOT NULL REFERENCES sessions(session_id),
+    planned_at               TEXT NOT NULL DEFAULT (datetime('now')),
+    verified_at              TEXT
+);
+
+CREATE TABLE IF NOT EXISTS chorusmith_adapter_steps (
+    step_id                  TEXT PRIMARY KEY,
+    run_id                   TEXT NOT NULL REFERENCES chorusmith_adapter_runs(run_id) ON DELETE RESTRICT,
+    ordinal                  INTEGER NOT NULL CHECK (ordinal > 0),
+    adapter_kind             TEXT NOT NULL CHECK (adapter_kind IN (
+                                 'CodebaseBrief','ReviewBrief','ResearchRequest',
+                                 'Decision','Obligation','RunManifest')),
+    tool_name                TEXT NOT NULL,
+    args_json                TEXT NOT NULL CHECK (json_valid(args_json)),
+    args_hash                TEXT NOT NULL,
+    expected_output_keys_json TEXT NOT NULL CHECK (json_valid(expected_output_keys_json)),
+    status                   TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','landed')),
+    output_json              TEXT CHECK (output_json IS NULL OR json_valid(output_json)),
+    output_hash              TEXT,
+    landed_at                TEXT,
+    UNIQUE (run_id, ordinal)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chorusmith_adapter_steps_run
+    ON chorusmith_adapter_steps(run_id,status,ordinal);
+
+CREATE TABLE IF NOT EXISTS chorusmith_adapter_recoveries (
+    recovery_id              INTEGER PRIMARY KEY,
+    run_id                   TEXT NOT NULL REFERENCES chorusmith_adapter_runs(run_id) ON DELETE RESTRICT,
+    landed_step_count        INTEGER NOT NULL CHECK (landed_step_count >= 0),
+    next_step_id             TEXT,
+    domain_projection_hash   TEXT NOT NULL,
+    receipt_json             TEXT NOT NULL CHECK (json_valid(receipt_json)),
+    resumed_by               TEXT NOT NULL REFERENCES sessions(session_id),
+    resumed_at               TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS chorusmith_adapter_exports (
+    export_id                TEXT PRIMARY KEY,
+    run_id                   TEXT REFERENCES chorusmith_adapter_runs(run_id) ON DELETE RESTRICT,
+    adapter_kind             TEXT NOT NULL CHECK (adapter_kind IN (
+                                 'CodebaseBrief','ReviewBrief','ResearchRequest',
+                                 'Decision','Obligation','RunManifest')),
+    source_id                TEXT NOT NULL,
+    envelope_json            TEXT NOT NULL CHECK (json_valid(envelope_json)),
+    envelope_hash            TEXT NOT NULL,
+    exported_by              TEXT NOT NULL REFERENCES sessions(session_id),
+    exported_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (adapter_kind, source_id, envelope_hash)
+);
+
+CREATE TABLE IF NOT EXISTS chorusmith_parity_verifications (
+    verification_id         INTEGER PRIMARY KEY,
+    run_id                   TEXT NOT NULL REFERENCES chorusmith_adapter_runs(run_id) ON DELETE RESTRICT,
+    behavior_ok              INTEGER NOT NULL CHECK (behavior_ok IN (0,1)),
+    evidence_ok              INTEGER NOT NULL CHECK (evidence_ok IN (0,1)),
+    recovery_ok              INTEGER NOT NULL CHECK (recovery_ok IN (0,1)),
+    verification_time_ok     INTEGER NOT NULL CHECK (verification_time_ok IN (0,1)),
+    ok                       INTEGER NOT NULL CHECK (ok IN (0,1)),
+    report_json              TEXT NOT NULL CHECK (json_valid(report_json)),
+    verified_by              TEXT NOT NULL REFERENCES sessions(session_id),
+    verified_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(behavior_ok AND evidence_ok AND recovery_ok AND verification_time_ok))
+);
+
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_run_starts_planned
+BEFORE INSERT ON chorusmith_adapter_runs FOR EACH ROW
+WHEN NEW.status!='planned' OR NEW.recovery_count!=0 OR NEW.verified_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter run must begin planned'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_run_payload_is_immutable
+BEFORE UPDATE ON chorusmith_adapter_runs FOR EACH ROW
+WHEN OLD.run_id!=NEW.run_id OR OLD.external_run_ref!=NEW.external_run_ref
+  OR OLD.schema_version!=NEW.schema_version OR OLD.manifest_json!=NEW.manifest_json
+  OR OLD.manifest_hash!=NEW.manifest_hash OR OLD.expected_step_count!=NEW.expected_step_count
+  OR OLD.expected_snapshot_hash!=NEW.expected_snapshot_hash OR OLD.planned_by!=NEW.planned_by
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter run manifest is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_run_status_is_monotonic
+BEFORE UPDATE OF status ON chorusmith_adapter_runs FOR EACH ROW
+WHEN NOT ((OLD.status='planned' AND NEW.status='running')
+       OR (OLD.status='running' AND NEW.status='ready')
+       OR (OLD.status='ready' AND NEW.status='verified' AND NEW.verified_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM chorusmith_parity_verifications v
+                         WHERE v.run_id=OLD.run_id AND v.ok=1)))
+BEGIN SELECT RAISE(ABORT, 'invalid chorusmith adapter run status transition'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_recovery_count_requires_receipt
+BEFORE UPDATE OF recovery_count ON chorusmith_adapter_runs FOR EACH ROW
+WHEN NEW.recovery_count!=OLD.recovery_count+1
+  OR NEW.recovery_count!=(SELECT COUNT(*) FROM chorusmith_adapter_recoveries r
+                           WHERE r.run_id=OLD.run_id)
+BEGIN SELECT RAISE(ABORT, 'chorusmith recovery count requires one reconciled receipt'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_run_cannot_be_deleted
+BEFORE DELETE ON chorusmith_adapter_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter run cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_payload_is_immutable
+BEFORE UPDATE ON chorusmith_adapter_steps FOR EACH ROW
+WHEN OLD.step_id!=NEW.step_id OR OLD.run_id!=NEW.run_id OR OLD.ordinal!=NEW.ordinal
+  OR OLD.adapter_kind!=NEW.adapter_kind OR OLD.tool_name!=NEW.tool_name
+  OR OLD.args_json!=NEW.args_json OR OLD.args_hash!=NEW.args_hash
+  OR OLD.expected_output_keys_json!=NEW.expected_output_keys_json
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_starts_planned
+BEFORE INSERT ON chorusmith_adapter_steps FOR EACH ROW
+WHEN NEW.status!='planned' OR NEW.output_json IS NOT NULL OR NEW.output_hash IS NOT NULL
+  OR NEW.landed_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step must begin planned'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_count_is_bounded
+AFTER INSERT ON chorusmith_adapter_steps FOR EACH ROW
+WHEN (SELECT COUNT(*) FROM chorusmith_adapter_steps s WHERE s.run_id=NEW.run_id)>
+     (SELECT expected_step_count FROM chorusmith_adapter_runs r WHERE r.run_id=NEW.run_id)
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step count exceeds frozen manifest'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_landing_requires_output
+BEFORE UPDATE OF status ON chorusmith_adapter_steps FOR EACH ROW
+WHEN NOT (OLD.status='planned' AND NEW.status='landed' AND NEW.output_json IS NOT NULL
+  AND NEW.output_hash IS NOT NULL AND NEW.landed_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step landing requires output custody'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_output_is_immutable
+BEFORE UPDATE OF output_json,output_hash,landed_at ON chorusmith_adapter_steps FOR EACH ROW
+WHEN NOT (OLD.status='planned' AND NEW.status='landed'
+  AND OLD.output_json IS NULL AND OLD.output_hash IS NULL AND OLD.landed_at IS NULL
+  AND NEW.output_json IS NOT NULL AND NEW.output_hash IS NOT NULL AND NEW.landed_at IS NOT NULL)
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step output is immutable after landing'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_step_cannot_be_deleted
+BEFORE DELETE ON chorusmith_adapter_steps FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter step cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_recovery_must_reconcile
+BEFORE INSERT ON chorusmith_adapter_recoveries FOR EACH ROW
+WHEN NEW.landed_step_count!=json_extract(NEW.receipt_json, '$.landed_step_count')
+  OR COALESCE(NEW.next_step_id,'')!=COALESCE(json_extract(NEW.receipt_json, '$.next_step_id'),'')
+  OR NEW.domain_projection_hash!=json_extract(NEW.receipt_json, '$.domain_projection_hash')
+BEGIN SELECT RAISE(ABORT, 'chorusmith recovery receipt does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_recovery_is_immutable
+BEFORE UPDATE ON chorusmith_adapter_recoveries FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter recovery is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_recovery_cannot_be_deleted
+BEFORE DELETE ON chorusmith_adapter_recoveries FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter recovery cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_export_is_immutable
+BEFORE UPDATE ON chorusmith_adapter_exports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter export is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_adapter_export_cannot_be_deleted
+BEFORE DELETE ON chorusmith_adapter_exports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith adapter export cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_parity_verification_must_reconcile
+BEFORE INSERT ON chorusmith_parity_verifications FOR EACH ROW
+WHEN NEW.behavior_ok!=json_extract(NEW.report_json, '$.axes.behavior.ok')
+  OR NEW.evidence_ok!=json_extract(NEW.report_json, '$.axes.evidence.ok')
+  OR NEW.recovery_ok!=json_extract(NEW.report_json, '$.axes.recovery.ok')
+  OR NEW.verification_time_ok!=json_extract(NEW.report_json, '$.axes.verification_time.ok')
+  OR NEW.ok!=json_extract(NEW.report_json, '$.ok')
+BEGIN SELECT RAISE(ABORT, 'chorusmith parity verification does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_parity_verification_is_immutable
+BEFORE UPDATE ON chorusmith_parity_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith parity verification is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS chorusmith_parity_verification_cannot_be_deleted
+BEFORE DELETE ON chorusmith_parity_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'chorusmith parity verification cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns
