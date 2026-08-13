@@ -135,6 +135,9 @@ jobs:
       - name: Learning ledger — typed channels, scored promotion, and runtime read-back
         working-directory: mcp-server
         run: node test-learning-ledger.mjs
+      - name: Operating envelope — stratified controls, instrument clearance, and no pooling
+        working-directory: mcp-server
+        run: node test-operating-envelope.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

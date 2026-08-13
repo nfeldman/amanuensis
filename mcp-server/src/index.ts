@@ -19,6 +19,7 @@ import { designSessionTools } from "./tools/design-session.js";
 import { diagnosticityTools } from "./tools/diagnosticity.js";
 import { dispatchTools } from "./tools/dispatch.js";
 import { dispositionTools } from "./tools/dispositions.js";
+import { evaluationTools } from "./tools/evaluation.js";
 import { evidenceTools } from "./tools/evidence.js";
 import { fieldNoteTools } from "./tools/field-notes.js";
 import { fileTools } from "./tools/files.js";
@@ -82,6 +83,7 @@ async function main(): Promise<void> {
     ...researchTools,
     ...crosswalkTools,
     ...learningTools,
+    ...evaluationTools,
     ...compositionTools,
     ...resolutionTools,
     ...subsystemTools,

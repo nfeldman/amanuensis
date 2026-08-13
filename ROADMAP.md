@@ -12,7 +12,7 @@ The ambition is coherent as a program and too broad as a single release. Amanuen
 
 | Ready | Planned | In progress | Blocked | Done |
 |---:|---:|---:|---:|---:|
-| 0 | 1 | 1 | 0 | 16 |
+| 0 | 0 | 1 | 0 | 17 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority. | A6, A7, A8, A9, A10, A11, A12 |
 | Later | Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries. | A13, A14, A15, A16, A17 |
 
-**Start here:** A16 — Multi-repository evaluation and operating envelope. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
+**Start here:** A17 — Chorusmith adapter and parity-gated extraction. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.
 
 ## Epistemic baseline
 
@@ -787,7 +787,7 @@ Risks:
 
 #### A16 — Multi-repository evaluation and operating envelope
 
-**Status:** in-progress<br>
+**Status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A8, A11, A15<br>
 **Metrics:** M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
@@ -820,11 +820,11 @@ Risks:
 - Benchmarks may become targets and displace actual verification-time reduction.
 
 **Practice basis:** GP2, GP3, GP4, GP5, GP17, GP19, GP29, GP30, GP31, GP32, GP33, GP34, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9, VP10, VP13, VP14, VP15, VP16, VP17, VP18<br>
-**Baseline evidence:** `mcp-server/test-adversarial-correctness.mjs`, `mcp-server/test-adversarial-performance.mjs`, `mcp-server/test-perf-ceilings.mjs`, `CONTRIBUTING.md`
+**Baseline evidence:** `mcp-server/test-adversarial-correctness.mjs`, `mcp-server/test-adversarial-performance.mjs`, `mcp-server/test-perf-ceilings.mjs`, `CONTRIBUTING.md`, `mcp-server/src/schema.sql`, `mcp-server/src/tools/evaluation.ts`, `mcp-server/fixtures/evaluation/program.json`, `mcp-server/test-operating-envelope.mjs`, `dev/adr/0017-stratified-operating-envelope.md`
 
 #### A17 — Chorusmith adapter and parity-gated extraction
 
-**Status:** planned<br>
+**Status:** in-progress<br>
 **Owner:** Amanuensis + Chorusmith<br>
 **Depends on:** A9, A12, A15, A16<br>
 **Metrics:** M4, M7, M11, M12

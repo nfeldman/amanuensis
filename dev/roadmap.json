@@ -1337,7 +1337,7 @@
         {
           "id": "A16",
           "title": "Multi-repository evaluation and operating envelope",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "The product has an explicit evidence-backed operating envelope across repository types, change classes, review modes, and model/runtime configurations.",
           "rationale": "One successful self-survey or showcase repository is an existence proof, not a basis for general automation claims.",
@@ -1412,13 +1412,18 @@
             "mcp-server/test-adversarial-correctness.mjs",
             "mcp-server/test-adversarial-performance.mjs",
             "mcp-server/test-perf-ceilings.mjs",
-            "CONTRIBUTING.md"
+            "CONTRIBUTING.md",
+            "mcp-server/src/schema.sql",
+            "mcp-server/src/tools/evaluation.ts",
+            "mcp-server/fixtures/evaluation/program.json",
+            "mcp-server/test-operating-envelope.mjs",
+            "dev/adr/0017-stratified-operating-envelope.md"
           ]
         },
         {
           "id": "A17",
           "title": "Chorusmith adapter and parity-gated extraction",
-          "status": "planned",
+          "status": "in-progress",
           "owner": "Amanuensis + Chorusmith",
           "outcome": "Chorusmith can orchestrate Amanuensis as a codebase project type through stable contracts, while Amanuensis remains independently usable and its invariants stay authoritative.",
           "rationale": "General orchestration belongs in Chorusmith, but early extraction would trade a working domain workflow for an unproven platform abstraction.",

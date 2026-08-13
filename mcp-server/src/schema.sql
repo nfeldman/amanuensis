@@ -4016,6 +4016,196 @@ BEFORE DELETE ON learning_policy_readbacks FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'learning policy read-back cannot be deleted'); END;
 
 ----------------------------------------------------------------------
+-- OPERATING ENVELOPE: stratified, preregistered multi-repository evaluation
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS evaluation_programs (
+    program_id          TEXT PRIMARY KEY,
+    schema_version      TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    manifest_json       TEXT NOT NULL CHECK (json_valid(manifest_json)),
+    manifest_hash       TEXT NOT NULL,
+    expected_case_count INTEGER NOT NULL CHECK (expected_case_count > 0),
+    status              TEXT NOT NULL DEFAULT 'planned' CHECK (status IN (
+                            'planned','collecting','ready','published')),
+    planned_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    planned_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    published_at        TEXT
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_cases (
+    case_id             TEXT PRIMARY KEY,
+    program_id          TEXT NOT NULL REFERENCES evaluation_programs(program_id) ON DELETE RESTRICT,
+    stratum_id          TEXT NOT NULL,
+    repository_id       TEXT NOT NULL,
+    repository_type     TEXT NOT NULL,
+    languages_json      TEXT NOT NULL CHECK (json_valid(languages_json)),
+    scale_bucket        TEXT NOT NULL,
+    repository_shape    TEXT NOT NULL,
+    change_class        TEXT NOT NULL,
+    mode                TEXT NOT NULL,
+    context_condition   TEXT NOT NULL,
+    model_family        TEXT NOT NULL,
+    runtime_id          TEXT NOT NULL,
+    condition_id        TEXT NOT NULL,
+    condition_role      TEXT NOT NULL CHECK (condition_role IN (
+                            'baseline','null','stronger-control','treatment','ablation',
+                            'test-retest','sensitivity-add','sensitivity-remove')),
+    replicate_id        TEXT NOT NULL UNIQUE,
+    expected_input_hash TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','landed')),
+    landed_at           TEXT,
+    UNIQUE (program_id,stratum_id,condition_id,replicate_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_evaluation_cases_program
+    ON evaluation_cases(program_id,stratum_id,condition_role,status);
+
+CREATE TABLE IF NOT EXISTS evaluation_results (
+    result_id           TEXT PRIMARY KEY,
+    case_id             TEXT NOT NULL UNIQUE REFERENCES evaluation_cases(case_id) ON DELETE RESTRICT,
+    primary_metric_id   TEXT NOT NULL,
+    metrics_json        TEXT NOT NULL CHECK (json_valid(metrics_json)),
+    primary_value_milli INTEGER NOT NULL,
+    delivery_json       TEXT NOT NULL CHECK (json_valid(delivery_json)),
+    instrument_status   TEXT NOT NULL CHECK (instrument_status IN (
+                            'valid','delivery-failed','determinism-failed','undetermined-no-headroom')),
+    rubric_counts_json  TEXT NOT NULL CHECK (json_valid(rubric_counts_json)),
+    unused_category_checks_json TEXT NOT NULL CHECK (json_valid(unused_category_checks_json)),
+    excluded_observations_json TEXT NOT NULL CHECK (json_valid(excluded_observations_json)),
+    agreement_json      TEXT CHECK (agreement_json IS NULL OR json_valid(agreement_json)),
+    limitations_json    TEXT NOT NULL CHECK (json_valid(limitations_json)),
+    result_hash         TEXT NOT NULL,
+    landed_by           TEXT NOT NULL REFERENCES sessions(session_id),
+    landed_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_alternative_reviews (
+    review_id           TEXT PRIMARY KEY,
+    case_id             TEXT NOT NULL UNIQUE REFERENCES evaluation_cases(case_id) ON DELETE RESTRICT,
+    alternatives_json   TEXT NOT NULL CHECK (json_valid(alternatives_json)),
+    evidence_json       TEXT NOT NULL CHECK (json_valid(evidence_json)),
+    outcome             TEXT NOT NULL CHECK (outcome IN ('survived','explained-away','underdetermined')),
+    limitation          TEXT NOT NULL,
+    reviewed_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    reviewed_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS operating_envelope_reports (
+    report_id           TEXT PRIMARY KEY,
+    program_id          TEXT NOT NULL UNIQUE REFERENCES evaluation_programs(program_id) ON DELETE RESTRICT,
+    schema_version      TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    report_hash         TEXT NOT NULL,
+    stratum_count       INTEGER NOT NULL CHECK (stratum_count > 1),
+    supported_count     INTEGER NOT NULL CHECK (supported_count >= 0),
+    undetermined_count  INTEGER NOT NULL CHECK (undetermined_count >= 0),
+    unsupported_count   INTEGER NOT NULL CHECK (unsupported_count >= 0),
+    published_by        TEXT NOT NULL REFERENCES sessions(session_id),
+    published_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (supported_count+undetermined_count+unsupported_count=stratum_count)
+);
+
+CREATE TABLE IF NOT EXISTS operating_envelope_verifications (
+    verification_id    INTEGER PRIMARY KEY,
+    report_id           TEXT NOT NULL REFERENCES operating_envelope_reports(report_id) ON DELETE RESTRICT,
+    state_ok            INTEGER NOT NULL CHECK (state_ok IN (0,1)),
+    coverage_ok         INTEGER NOT NULL CHECK (coverage_ok IN (0,1)),
+    content_ok          INTEGER NOT NULL CHECK (content_ok IN (0,1)),
+    ok                  INTEGER NOT NULL CHECK (ok IN (0,1)),
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    verified_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    verified_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (ok=(state_ok AND coverage_ok AND content_ok))
+);
+
+CREATE TRIGGER IF NOT EXISTS evaluation_program_starts_planned
+BEFORE INSERT ON evaluation_programs FOR EACH ROW
+WHEN NEW.status!='planned' OR NEW.published_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'evaluation program must begin planned'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_program_payload_is_immutable
+BEFORE UPDATE ON evaluation_programs FOR EACH ROW
+WHEN OLD.program_id!=NEW.program_id OR OLD.schema_version!=NEW.schema_version
+  OR OLD.manifest_json!=NEW.manifest_json OR OLD.manifest_hash!=NEW.manifest_hash
+  OR OLD.expected_case_count!=NEW.expected_case_count OR OLD.planned_by!=NEW.planned_by
+BEGIN SELECT RAISE(ABORT, 'evaluation program manifest is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_program_status_is_monotonic
+BEFORE UPDATE OF status ON evaluation_programs FOR EACH ROW
+WHEN NOT ((OLD.status='planned' AND NEW.status='collecting')
+       OR (OLD.status='collecting' AND NEW.status='ready')
+       OR (OLD.status='ready' AND NEW.status='published' AND NEW.published_at IS NOT NULL
+            AND EXISTS (SELECT 1 FROM operating_envelope_reports r WHERE r.program_id=OLD.program_id)))
+BEGIN SELECT RAISE(ABORT, 'invalid evaluation program status transition'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_program_cannot_be_deleted
+BEFORE DELETE ON evaluation_programs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation program cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_case_is_immutable
+BEFORE UPDATE ON evaluation_cases FOR EACH ROW
+WHEN OLD.case_id!=NEW.case_id OR OLD.program_id!=NEW.program_id OR OLD.stratum_id!=NEW.stratum_id
+  OR OLD.repository_id!=NEW.repository_id OR OLD.repository_type!=NEW.repository_type
+  OR OLD.languages_json!=NEW.languages_json OR OLD.scale_bucket!=NEW.scale_bucket
+  OR OLD.repository_shape!=NEW.repository_shape OR OLD.change_class!=NEW.change_class
+  OR OLD.mode!=NEW.mode OR OLD.context_condition!=NEW.context_condition
+  OR OLD.model_family!=NEW.model_family OR OLD.runtime_id!=NEW.runtime_id
+  OR OLD.condition_id!=NEW.condition_id OR OLD.condition_role!=NEW.condition_role
+  OR OLD.replicate_id!=NEW.replicate_id OR OLD.expected_input_hash!=NEW.expected_input_hash
+BEGIN SELECT RAISE(ABORT, 'evaluation case payload is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_case_land_requires_result
+BEFORE UPDATE OF status ON evaluation_cases FOR EACH ROW
+WHEN NOT (OLD.status='planned' AND NEW.status='landed' AND NEW.landed_at IS NOT NULL
+  AND EXISTS (SELECT 1 FROM evaluation_results r WHERE r.case_id=OLD.case_id))
+BEGIN SELECT RAISE(ABORT, 'evaluation case landing requires result custody'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_case_cannot_be_deleted
+BEFORE DELETE ON evaluation_cases FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation case cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_result_requires_planned_case
+BEFORE INSERT ON evaluation_results FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM evaluation_cases c WHERE c.case_id=NEW.case_id AND c.status='planned')
+BEGIN SELECT RAISE(ABORT, 'evaluation result requires planned case'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_result_is_immutable
+BEFORE UPDATE ON evaluation_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation result is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_result_cannot_be_deleted
+BEFORE DELETE ON evaluation_results FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation result cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_alternative_review_requires_landed_treatment
+BEFORE INSERT ON evaluation_alternative_reviews FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM evaluation_cases c JOIN evaluation_results r ON r.case_id=c.case_id
+                  WHERE c.case_id=NEW.case_id AND c.condition_role='treatment'
+                    AND c.status='landed' AND r.instrument_status='valid')
+BEGIN SELECT RAISE(ABORT, 'alternative review requires a valid landed treatment case'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_alternative_review_is_immutable
+BEFORE UPDATE ON evaluation_alternative_reviews FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation alternative review is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS evaluation_alternative_review_cannot_be_deleted
+BEFORE DELETE ON evaluation_alternative_reviews FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'evaluation alternative review cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_report_requires_exact_fan_in
+BEFORE INSERT ON operating_envelope_reports FOR EACH ROW
+WHEN NOT EXISTS (SELECT 1 FROM evaluation_programs p WHERE p.program_id=NEW.program_id AND p.status='ready')
+  OR (SELECT COUNT(*) FROM evaluation_cases c WHERE c.program_id=NEW.program_id)
+     !=(SELECT COUNT(*) FROM evaluation_cases c WHERE c.program_id=NEW.program_id AND c.status='landed')
+BEGIN SELECT RAISE(ABORT, 'operating envelope report requires ready program and exact fan-in'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_report_is_immutable
+BEFORE UPDATE ON operating_envelope_reports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope report is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_report_cannot_be_deleted
+BEFORE DELETE ON operating_envelope_reports FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope report cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_verification_must_reconcile
+BEFORE INSERT ON operating_envelope_verifications FOR EACH ROW
+WHEN NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
+  OR NEW.coverage_ok!=json_extract(NEW.report_json, '$.axes.coverage.ok')
+  OR NEW.content_ok!=json_extract(NEW.report_json, '$.axes.content.ok')
+  OR NEW.ok!=json_extract(NEW.report_json, '$.ok')
+BEGIN SELECT RAISE(ABORT, 'operating envelope verification does not reconcile'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_verification_is_immutable
+BEFORE UPDATE ON operating_envelope_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope verification is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_verification_cannot_be_deleted
+BEFORE DELETE ON operating_envelope_verifications FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope verification cannot be deleted'); END;
+
+----------------------------------------------------------------------
 -- DIAGNOSTICITY MATRIX: Analysis of Competing Hypotheses
 ----------------------------------------------------------------------
 -- Heuer's ACH applied to concern competition. When two or more concerns

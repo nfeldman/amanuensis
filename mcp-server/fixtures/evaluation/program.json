@@ -1,0 +1,254 @@
+{
+  "repositories": [
+    {
+      "repository_id": "fixture-typescript-service",
+      "repository_type": "application-service",
+      "languages": ["TypeScript", "SQL"],
+      "scale_bucket": "small",
+      "repository_shape": "service-with-durable-ledger",
+      "inclusion_reason": "Exercises change review against executable state and persistence invariants.",
+      "exclusion_criteria": ["Generated vendor trees", "Unpinned external services"],
+      "known_outcomes": [
+        {
+          "outcome_id": "ts-seed-1",
+          "statement": "A seeded fan-in defect must be found without pooling repository strata.",
+          "source_ref": "fixture://typescript/fan-in"
+        }
+      ]
+    },
+    {
+      "repository_id": "fixture-python-docs",
+      "repository_type": "documentation-toolchain",
+      "languages": ["Python", "Markdown"],
+      "scale_bucket": "medium",
+      "repository_shape": "docs-heavy-monorepo",
+      "inclusion_reason": "Exercises architecture-session behavior where contracts are split across prose and code.",
+      "exclusion_criteria": ["Binary source artifacts", "Unlabeled generated documentation"],
+      "known_outcomes": [
+        {
+          "outcome_id": "py-seed-1",
+          "statement": "A weak treatment effect must remain visible as an unsupported subgroup.",
+          "source_ref": "fixture://python/weak-subgroup"
+        }
+      ]
+    },
+    {
+      "repository_id": "fixture-go-cli",
+      "repository_type": "command-line-tool",
+      "languages": ["Go", "YAML"],
+      "scale_bucket": "large",
+      "repository_shape": "multi-command-cli",
+      "inclusion_reason": "Exercises a no-headroom instrument condition in a third repository and runtime stratum.",
+      "exclusion_criteria": ["Platform-specific integration tests", "Network-only fixtures"],
+      "known_outcomes": [
+        {
+          "outcome_id": "go-seed-1",
+          "statement": "A floor-bound metric must produce undetermined-instrument, not a null.",
+          "source_ref": "fixture://go/no-headroom"
+        }
+      ]
+    }
+  ],
+  "strata": [
+    {
+      "stratum_id": "typescript-review-codex",
+      "repository_id": "fixture-typescript-service",
+      "change_class": "state-machine-change",
+      "mode": "super-review",
+      "context_condition": "impact-plus-integral-head",
+      "model_family": "codex",
+      "runtime_id": "node-24"
+    },
+    {
+      "stratum_id": "python-design-claude",
+      "repository_id": "fixture-python-docs",
+      "change_class": "architecture-decision",
+      "mode": "design-session",
+      "context_condition": "situation-model-only",
+      "model_family": "claude",
+      "runtime_id": "python-3.12"
+    },
+    {
+      "stratum_id": "go-review-local",
+      "repository_id": "fixture-go-cli",
+      "change_class": "contract-change",
+      "mode": "compact-review",
+      "context_condition": "brief-plus-diff",
+      "model_family": "local-open-model",
+      "runtime_id": "go-1.24"
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "M2",
+      "definition": "Stale-claim recall.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Stop only after all preregistered replicates land or are retained as explicit exclusions."
+    },
+    {
+      "metric_id": "M3",
+      "definition": "Inverse false-invalidation rate so higher remains better in this fixture.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Do not reinterpret an underpowered negative as equivalence."
+    },
+    {
+      "metric_id": "M4",
+      "definition": "Human revalidation reduction.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Retain failed and abandoned time observations separately."
+    },
+    {
+      "metric_id": "M5",
+      "definition": "Actionable precision.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Primary outcome; no early stop before two replicates per condition."
+    },
+    {
+      "metric_id": "M6",
+      "definition": "Inverse missed-contract rate so higher remains better in this fixture.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Unsupported regions remain named, not excluded."
+    },
+    {
+      "metric_id": "M7",
+      "definition": "Inverse human verification minutes so higher remains better in this fixture.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Report human and machine time as separate units."
+    },
+    {
+      "metric_id": "M8",
+      "definition": "Constraint preservation.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Contradictory constraints remain in the denominator."
+    },
+    {
+      "metric_id": "M9",
+      "definition": "Unknown retention.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Compression never counts as resolution."
+    },
+    {
+      "metric_id": "M10",
+      "definition": "Research decision yield.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Exploratory research cannot improve the numerator."
+    },
+    {
+      "metric_id": "M11",
+      "definition": "Test-retest stability represented as agreement.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Report metric step size beside the replicate comparison."
+    },
+    {
+      "metric_id": "M12",
+      "definition": "Run and projection reconciliation.",
+      "direction": "increase",
+      "minimum_detectable_effect_milli": 100,
+      "step_size_milli": 50,
+      "stopping_rule": "Every dispatched case must land before publication."
+    }
+  ],
+  "primary_metric_id": "M5",
+  "conditions": [
+    {
+      "condition_id": "baseline",
+      "role": "baseline",
+      "intervention": "Repository-native review or design workflow.",
+      "expected_behavior": "Reproduce the untreated producer path.",
+      "manipulation_check": "Observed input hash and baseline read-back match the preregistration."
+    },
+    {
+      "condition_id": "surface-null",
+      "role": "null",
+      "intervention": "Derange real cross-references while retaining the baseline surface.",
+      "expected_behavior": "Semantic acceptance degrades without a provenance marker.",
+      "manipulation_check": "The derangement changes cross-reference coherence while surface dimensions remain paired.",
+      "surface_identity": {
+        "compared_against_role": "baseline",
+        "dimensions": ["shape", "length-distribution", "identifiers", "cross-references"]
+      }
+    },
+    {
+      "condition_id": "known-positive",
+      "role": "stronger-control",
+      "intervention": "Expose a directly labeled known outcome.",
+      "expected_behavior": "The instrument resolves a larger effect than the treatment.",
+      "manipulation_check": "Known-outcome identifiers are present in the scored artifact."
+    },
+    {
+      "condition_id": "amanuensis",
+      "role": "treatment",
+      "intervention": "Run the complete Amanuensis workflow.",
+      "expected_behavior": "The primary outcome improves over baseline by at least the MDE where supported.",
+      "manipulation_check": "The resulting artifact carries Amanuensis run and projection custody."
+    },
+    {
+      "condition_id": "no-conspectus",
+      "role": "ablation",
+      "intervention": "Run the workflow without persistent conspectus context.",
+      "expected_behavior": "Any benefit attributable to the conspectus diminishes.",
+      "manipulation_check": "The input manifest omits conspectus references."
+    },
+    {
+      "condition_id": "amanuensis-retest",
+      "role": "test-retest",
+      "intervention": "Repeat the treatment on byte-identical pinned input.",
+      "expected_behavior": "Critical outcomes remain stable within the preregistered step and MDE.",
+      "manipulation_check": "Input hash matches treatment and the replicate identifier remains distinct."
+    },
+    {
+      "condition_id": "sensitivity-more-context",
+      "role": "sensitivity-add",
+      "intervention": "Add relevant verified context.",
+      "expected_behavior": "Outcome does not degrade relative to treatment.",
+      "manipulation_check": "The added context IDs are present in the compiled input."
+    },
+    {
+      "condition_id": "sensitivity-less-context",
+      "role": "sensitivity-remove",
+      "intervention": "Remove one relevant context component.",
+      "expected_behavior": "Outcome does not improve relative to treatment.",
+      "manipulation_check": "The removed context ID is absent from the compiled input."
+    }
+  ],
+  "replicates_per_condition": 2,
+  "stopping_rules": [
+    "Land exactly every preregistered case before deriving any envelope.",
+    "Treat a failed delivery, inert determinism control, or no-headroom observation as instrument-undetermined.",
+    "Never publish a pooled efficacy statistic."
+  ],
+  "unsupported": {
+    "languages": ["Rust", "Swift", "Kotlin"],
+    "scales": ["extra-large", "multi-million-line"],
+    "repository_shapes": ["kernel", "firmware", "polyrepo-fleet"],
+    "decision_classes": ["safety-critical release", "regulated compliance certification"]
+  },
+  "rubric": {
+    "categories": ["detected", "missed", "unknown"],
+    "operational_framing": {
+      "detected": "A known outcome is named at the correct locus with supporting evidence.",
+      "missed": "A known outcome was available to the assigned condition but absent from its result.",
+      "unknown": "The evidence cannot discriminate detection from absence without inventing authority."
+    }
+  }
+}

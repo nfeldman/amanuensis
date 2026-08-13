@@ -187,7 +187,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_180 tools across 39 groups. Generated from `tools/list` — do not hand-edit._
+_186 tools across 40 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -329,6 +329,17 @@ _180 tools across 39 groups. Generated from `tools/list` — do not hand-edit._
 | `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
 | `get_dispositions` | Return dispositions. Filter by subsystem_id, concern_code, or both. Omit both to return everything (useful for adversarial review across the conspectus). |
 | `get_concern_coverage` | Return the concern × subsystem matrix (active concerns × registered subsystems) with current disposition or '—' for unexamined cells. Used to produce the materialized heatmap. |
+
+### `evaluation` (6)
+
+| Tool | Description |
+|---|---|
+| `plan_evaluation_program` | Freeze a multi-repository operating-envelope program with at least two repository strata, explicit inclusion/exclusion and known outcomes, per-metric MDE/step/stopping rules, all eight control roles, at least two substrate-generated replicates per condition, rubric framing, and unsupported languages/scales/shapes/decision classes. |
+| `land_evaluation_result` | Land one preregistered replicate with exact metric denominators, excluded-observation custody, input/determinism delivery proof, baseline headroom, rubric-category exposure checks, limitations, and—when used—raw, chance, and chance-corrected agreement together. Negative observations with failed delivery or no headroom remain instrument-undetermined. |
+| `review_evaluation_alternatives` | Record an independent adversarial alternative-explanation pass for one valid landed treatment replicate. Positive operating-envelope support requires every treatment replicate's review to survive; explained-away and underdetermined reviews remain blocking. |
+| `publish_operating_envelope` | Publish only after exact multi-repository fan-in. Derive efficacy separately for every repository/mode/context/model-runtime stratum from baseline, null, stronger control, treatment, ablation, test-retest, and two-sided sensitivity replicates. Program-level pooled efficacy claims, duplicate replicate assignments, subgroup verdict overrides, and positive claims lacking survived alternative review are rejected. |
+| `verify_operating_envelope` | Re-derive a published operating envelope from durable per-replicate results and verify state, exact stratum coverage/no-pooling, and semantic content. A caller-supplied report is a validation-only fault-injection surface. |
+| `get_evaluation_program` | Read one immutable evaluation manifest, every repository-stratified replicate and instrument state, plus the published evidence-backed operating envelope when present. |
 
 ### `evidence` (6)
 

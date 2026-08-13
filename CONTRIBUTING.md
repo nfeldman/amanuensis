@@ -52,6 +52,7 @@ node test-decisions.mjs                 # acceptance authority, impact custody, 
 node test-research-broker.mjs           # admission, Scholiast custody, and external/code contradiction
 node test-crosswalk-qualification.mjs   # identity red gates, relation custody, and qualified activation
 node test-learning-ledger.mjs           # typed distillation, scored promotion, and rollback/read-back
+node test-operating-envelope.mjs        # stratified controls, instrument clearance, and no-pooling red gates
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -217,6 +218,13 @@ in agent prose:
   selector for affected future runs. Extend `test-learning-ledger.mjs` whenever
   an outcome state, channel, qualification rule, lifecycle transition,
   rollback field, or runtime policy representation changes.
+- **Operating-envelope custody.** Evaluation manifests freeze repository,
+  change, mode, context, model/runtime, metric, MDE, stopping, control, and
+  replicate assignments before results land. Publication requires exact fan-in,
+  instrument clearance, per-stratum derivation, and positive-claim alternative
+  review; it never emits pooled efficacy. Extend `test-operating-envelope.mjs`
+  whenever a condition role, metric contract, instrument state, stratum field,
+  verdict rule, exclusion field, or report projection changes.
 
 ## Commits
 

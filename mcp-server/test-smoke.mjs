@@ -38,6 +38,7 @@ import { crosswalkTools } from "./dist/tools/crosswalk.js";
 import { decisionTools } from "./dist/tools/decisions.js";
 import { designSessionTools } from "./dist/tools/design-session.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { evaluationTools } from "./dist/tools/evaluation.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { learningTools } from "./dist/tools/learning.js";
 import { revalidationTools } from "./dist/tools/revalidation.js";
@@ -103,6 +104,7 @@ const allTools = new Map(
     ...researchTools,
     ...crosswalkTools,
     ...learningTools,
+    ...evaluationTools,
     ...compositionTools,
     ...resolutionTools,
     ...storageHistoryTools,
