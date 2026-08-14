@@ -18,13 +18,15 @@
   "type": "module",
   "bin": {
     "amanuensis-memory": "dist/index.js",
-    "amanuensis": "dist/cli.js"
+    "amanuensis": "dist/cli.js",
+    "amanuensis-evaluate-history": "scripts/historical-evaluation.mjs"
   },
   "main": "dist/index.js",
   "files": [
     "dist/",
     "src/schema.sql",
     "contracts/",
+    "scripts/historical-evaluation.mjs",
     "agents/",
     "materializer/",
     "README.md"

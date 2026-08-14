@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "roadmapVersion": "1.0",
-  "updated": "2026-08-12",
+  "roadmapVersion": "1.1",
+  "updated": "2026-08-14",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction earn their place only after that proof.",
@@ -1483,6 +1483,65 @@
             "mcp-server/test-chorusmith-adapter.mjs",
             "dev/adr/0018-chorusmith-adapter-parity-boundary.md"
           ]
+        },
+        {
+          "id": "A18",
+          "title": "Qualified natural-history evaluation corpus",
+          "status": "done",
+          "owner": "Amanuensis + evaluation",
+          "outcome": "Historical codebase cases can be prepared and scored without exposing future history or evaluator truth, and every admitted case has an executable pre-fix failure and post-fix kill witness.",
+          "rationale": "A16's synthetic fixture validates result custody but cannot determine whether Amanuensis or its construction disciplines improve real work; natural cases are useful only if their future fixes and regression evidence remain outside the treatment surface.",
+          "dependsOn": [
+            "A17"
+          ],
+          "deliverables": [
+            "A public versioned historical-corpus contract and model-agnostic prepare, qualify, and score runner.",
+            "History-free participant packets with task-only custody and forbidden-fragment/canary scans.",
+            "Evaluator-only patch execution against exact target and repair snapshots with bounded commands.",
+            "A private preregistered two-case pilot corpus and exact fan-in qualification receipt."
+          ],
+          "acceptance": [
+            "Every case resolves full target and repair commits exactly and proves that repair descends from target.",
+            "Preparation exports no Git metadata or evaluator patch and rejects a non-empty destination.",
+            "A case qualifies only when the same hidden oracle fails at target and passes at repair.",
+            "Scoring uses evaluator scratch space and leaves the participant workspace unchanged.",
+            "Receipts bind runner, contract, manifest, task, oracle, command, trees, outcomes, and output digests without emitting a pooled efficacy result."
+          ],
+          "redGate": "Inject a future-fix fragment or case canary into a participant packet, or use an inert target/fix pair; leakage must halt before scoring and the invalid kill witness must reject qualification.",
+          "risks": [
+            "Historical build environments can decay and turn product evaluation into toolchain evaluation.",
+            "A small or conveniently selected natural corpus can look representative while measuring only memorable failures.",
+            "Case prompts can accidentally reveal the implementation rather than state the observable contract."
+          ],
+          "practices": [
+            "GP1",
+            "GP3",
+            "GP4",
+            "GP21",
+            "GP22",
+            "GP24",
+            "VP4",
+            "VP5",
+            "VP6",
+            "VP9",
+            "VP10",
+            "VP16",
+            "VP17",
+            "VP19"
+          ],
+          "metrics": [
+            "M4",
+            "M6",
+            "M7",
+            "M11",
+            "M12"
+          ],
+          "baselineEvidence": [
+            "mcp-server/contracts/historical-evaluation-corpus.schema.json",
+            "mcp-server/scripts/historical-evaluation.mjs",
+            "mcp-server/test-historical-evaluation.mjs",
+            "dev/adr/0019-qualified-natural-history-corpus.md"
+          ]
         }
       ]
     }
@@ -2007,6 +2066,7 @@
     ],
     "limitations": [
       "This roadmap was authored and adversarially re-read in one agent context; it is not an independent or blinded validation of the product thesis. A7 and A16 require real independence before efficacy claims.",
+      "A18 qualifies two private natural-history cases as evaluation instruments. Their red/green witnesses prove transport and oracle sensitivity, not Amanuensis efficacy, construction-method efficacy, representativeness, or causality.",
       "Numeric gates for recall, invalidation, and precision are initial operating hypotheses, not established effect estimates; A0 and A16 may revise them with recorded rationale.",
       "The roadmap validator proves structure, dependency integrity, required fields, practice-accounting coverage, evidence-path existence, and projection correspondence. It does not prove that roadmap claims are true or that the plan will work.",
       "External Chorusmith, Scholiast, Collatio, and distillation contracts were used as planning context but are not vendored or enforced by this repository yet."

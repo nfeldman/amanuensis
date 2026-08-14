@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nfeldman/amanuensis/contracts/historical-evaluation-corpus.schema.json",
+  "title": "Amanuensis historical evaluation corpus",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "programId", "created", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "programId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,79}$" },
+    "created": { "type": "string", "format": "date" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "(^/)|(^|/)\\.\\.(/|$)" }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "repository",
+        "participant",
+        "oracle",
+        "leakage",
+        "classification"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,79}$" },
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "targetCommit", "fixCommit"],
+          "properties": {
+            "root": { "type": "string", "minLength": 1 },
+            "targetCommit": { "$ref": "#/$defs/commit" },
+            "fixCommit": { "$ref": "#/$defs/commit" }
+          }
+        },
+        "participant": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["taskFile"],
+          "properties": {
+            "taskFile": { "$ref": "#/$defs/relativePath" }
+          }
+        },
+        "oracle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["patchFile", "command", "timeoutMs", "workingDirectory"],
+          "properties": {
+            "patchFile": { "$ref": "#/$defs/relativePath" },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 3600000 },
+            "workingDirectory": { "$ref": "#/$defs/relativePath" }
+          }
+        },
+        "leakage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["forbiddenFragments", "canaries"],
+          "properties": {
+            "forbiddenFragments": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 8 }
+            },
+            "canaries": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 8 }
+            }
+          }
+        },
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["language", "repositoryShape", "changeClass", "truthStrength"],
+          "properties": {
+            "language": { "type": "string", "minLength": 1 },
+            "repositoryShape": { "type": "string", "minLength": 1 },
+            "changeClass": { "type": "string", "minLength": 1 },
+            "truthStrength": {
+              "enum": ["executable-regression", "reproduction-plus-fix", "adjudicated-review"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

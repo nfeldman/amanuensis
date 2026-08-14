@@ -141,6 +141,9 @@ jobs:
       - name: Chorusmith adapter — contracts, direct parity, bypass, and recovery
         working-directory: mcp-server
         run: node test-chorusmith-adapter.mjs
+      - name: Historical evaluation — clean packets, kill witnesses, and leakage guards
+        working-directory: mcp-server
+        run: node test-historical-evaluation.mjs
       - name: Adversarial — security
         working-directory: mcp-server
         run: node test-adversarial-security.mjs

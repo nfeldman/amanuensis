@@ -54,6 +54,7 @@ node test-crosswalk-qualification.mjs   # identity red gates, relation custody, 
 node test-learning-ledger.mjs           # typed distillation, scored promotion, and rollback/read-back
 node test-operating-envelope.mjs        # stratified controls, instrument clearance, and no-pooling red gates
 node test-chorusmith-adapter.mjs        # adapter contracts, direct parity, bypass, and restart recovery
+node test-historical-evaluation.mjs     # clean historical packets, hidden kill witnesses, and leak canaries
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
@@ -234,6 +235,14 @@ in agent prose:
   restart recovery, and verification-time parity are green. Extend
   `test-chorusmith-adapter.mjs` whenever an adapter version, allowed operation,
   custody owner, parity field, restart rule, or extraction status changes.
+- **Historical-evaluation custody.** Exact tasks and evaluator oracles live
+  outside the public product repository. Every admitted case resolves full
+  target/fix commits, exports a history-free participant packet, fails its
+  hidden oracle before the repair, passes after it, and scans forbidden future
+  fragments and canaries before scoring. A qualification receipt proves the
+  instrument path only; it is never an efficacy result. Extend
+  `test-historical-evaluation.mjs` whenever manifest custody, export, leakage,
+  witness, scoring, timeout, or receipt behavior changes.
 
 ## Commits
 
