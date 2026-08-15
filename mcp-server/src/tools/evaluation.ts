@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   requireEnum,
   requireInt,
@@ -26,6 +28,8 @@ const INSTRUMENT_STATES = [
   "determinism-failed",
   "undetermined-no-headroom",
 ] as const;
+export const EVALUATION_SCHEMA_VERSION = "1.0.0";
+export const EVALUATION_DETECTOR_VERSION = "1.0.0";
 
 interface ProgramRow {
   program_id: string;
@@ -85,6 +89,15 @@ function stableJson(value: unknown): string {
 
 function hash(value: unknown): string {
   return createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
+let cachedDetectorDigest: string | undefined;
+
+function detectorDigest(): string {
+  cachedDetectorDigest ??= createHash("sha256")
+    .update(readFileSync(fileURLToPath(import.meta.url)))
+    .digest("hex");
+  return cachedDetectorDigest;
 }
 
 function present<T>(value: T | undefined, message: string): T {
@@ -301,7 +314,9 @@ function planProgram(args: Record<string, unknown>, ctx: ServerContext): Record<
   const framing = object(rubric.operational_framing, "rubric.operational_framing");
   for (const category of categories) requireString(framing, category);
   const manifest = {
-    schema_version: "1.0.0",
+    schema_version: EVALUATION_SCHEMA_VERSION,
+    detector_version: EVALUATION_DETECTOR_VERSION,
+    detector_digest: detectorDigest(),
     program_id: programId,
     repositories,
     strata,
@@ -801,7 +816,9 @@ function deriveEnvelope(
     };
   });
   return {
-    schema_version: "1.0.0",
+    schema_version: EVALUATION_SCHEMA_VERSION,
+    detector_version: EVALUATION_DETECTOR_VERSION,
+    detector_digest: detectorDigest(),
     program_id: p.program_id,
     manifest_hash: p.manifest_hash,
     reporting_unit: "repository × mode × context × model/runtime × replicate",
@@ -861,6 +878,16 @@ function publishEnvelope(
   const publishedBy = requireActiveSession(ctx, "publish_operating_envelope");
   const p = program(ctx, requireString(args, "program_id"));
   if (p.status !== "ready") throw new ToolError(`evaluation program is ${p.status}`);
+  const plannedManifest = JSON.parse(p.manifest_json) as Record<string, unknown>;
+  if (
+    plannedManifest.detector_version !== EVALUATION_DETECTOR_VERSION ||
+    plannedManifest.detector_digest !== detectorDigest()
+  ) {
+    throw new ToolError(
+      "evaluation detector changed after planning; this comparison is out-of-band, not an " +
+        "efficacy result. Create an explicit successor program under the current detector.",
+    );
+  }
   const cases = ctx.db
     .prepare(
       "SELECT replicate_id,stratum_id FROM evaluation_cases WHERE program_id=? ORDER BY replicate_id",
@@ -929,25 +956,180 @@ function publishEnvelope(
   return { report_id: reportId, report_hash: hash(report), report };
 }
 
+interface StoredEnvelope {
+  reportId: string;
+  programId: string;
+  report: Record<string, unknown>;
+  source: "original" | "rebaseline";
+}
+
+function storedEnvelope(ctx: ServerContext, reportId: string): StoredEnvelope {
+  const original = ctx.db
+    .prepare("SELECT program_id,report_json FROM operating_envelope_reports WHERE report_id=?")
+    .get(reportId) as { program_id: string; report_json: string } | undefined;
+  if (original) {
+    return {
+      reportId,
+      programId: original.program_id,
+      report: JSON.parse(original.report_json) as Record<string, unknown>,
+      source: "original",
+    };
+  }
+  const rebaseline = ctx.db
+    .prepare(
+      "SELECT program_id,report_json FROM operating_envelope_rebaselines WHERE successor_report_id=?",
+    )
+    .get(reportId) as { program_id: string; report_json: string } | undefined;
+  if (!rebaseline) throw new ToolError(`unknown operating envelope report: ${reportId}`);
+  return {
+    reportId,
+    programId: rebaseline.program_id,
+    report: JSON.parse(rebaseline.report_json) as Record<string, unknown>,
+    source: "rebaseline",
+  };
+}
+
+function recordMeasurementEvent(
+  ctx: ServerContext,
+  reportId: string,
+  eventKind: "detector-mismatch" | "rebaseline" | "successor-verification",
+  detail: Record<string, unknown>,
+  recordedBy: string,
+): void {
+  ctx.db
+    .prepare(
+      `INSERT INTO operating_envelope_measurement_events
+         (report_id,event_kind,detail_json,recorded_by) VALUES (?, ?, ?, ?)`,
+    )
+    .run(reportId, eventKind, stableJson(detail), recordedBy);
+}
+
+function rebaselineEnvelope(
+  args: Record<string, unknown>,
+  ctx: ServerContext,
+): Record<string, unknown> {
+  const rebasedBy = requireActiveSession(ctx, "rebaseline_operating_envelope");
+  const source = storedEnvelope(ctx, requireString(args, "source_report_id"));
+  const storedVersion = source.report.detector_version;
+  const storedDigest = source.report.detector_digest;
+  if (storedVersion === EVALUATION_DETECTOR_VERSION && storedDigest === detectorDigest()) {
+    throw new ToolError(
+      "source report already uses the current detector; rebaseline is unnecessary",
+    );
+  }
+  const successorReportId = requireString(args, "successor_report_id");
+  const collision = ctx.db
+    .prepare(
+      `SELECT report_id AS id FROM operating_envelope_reports WHERE report_id=?
+       UNION ALL
+       SELECT successor_report_id AS id FROM operating_envelope_rebaselines
+       WHERE successor_report_id=?`,
+    )
+    .get(successorReportId, successorReportId);
+  if (collision) {
+    throw new ToolError(`operating envelope report identity already exists: ${successorReportId}`);
+  }
+  const p = program(ctx, source.programId);
+  const report = deriveEnvelope(ctx, p, source.report.claims as Array<Record<string, unknown>>);
+  const reason = requireString(args, "reason");
+  ctx.db.transaction(() => {
+    ctx.db
+      .prepare(
+        `INSERT INTO operating_envelope_rebaselines
+           (successor_report_id,source_report_id,program_id,schema_version,detector_version,
+            detector_digest,report_json,report_hash,reason,rebased_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        successorReportId,
+        source.reportId,
+        source.programId,
+        EVALUATION_SCHEMA_VERSION,
+        EVALUATION_DETECTOR_VERSION,
+        detectorDigest(),
+        stableJson(report),
+        hash(report),
+        reason,
+        rebasedBy,
+      );
+    recordMeasurementEvent(
+      ctx,
+      source.reportId,
+      "rebaseline",
+      {
+        comparison_status: "out-of-band-measurement-correction",
+        successor_report_id: successorReportId,
+        source_detector_version: storedVersion ?? null,
+        source_detector_digest: storedDigest ?? null,
+        detector_version: EVALUATION_DETECTOR_VERSION,
+        detector_digest: detectorDigest(),
+        reason,
+      },
+      rebasedBy,
+    );
+  })();
+  return {
+    successor_report_id: successorReportId,
+    source_report_id: source.reportId,
+    comparison_status: "out-of-band-measurement-correction",
+    report_hash: hash(report),
+    report,
+  };
+}
+
 function verifyEnvelope(
   args: Record<string, unknown>,
   ctx: ServerContext,
 ): Record<string, unknown> {
   const verifiedBy = requireActiveSession(ctx, "verify_operating_envelope");
   const reportId = requireString(args, "report_id");
-  const stored = ctx.db
-    .prepare("SELECT program_id,report_json FROM operating_envelope_reports WHERE report_id=?")
-    .get(reportId) as { program_id: string; report_json: string } | undefined;
-  if (!stored) throw new ToolError(`unknown operating envelope report: ${reportId}`);
-  const storedReport = JSON.parse(stored.report_json) as Record<string, unknown>;
-  const p = program(ctx, stored.program_id);
+  const stored = storedEnvelope(ctx, reportId);
+  const storedReport = stored.report;
+  const p = program(ctx, stored.programId);
+  if (
+    storedReport.detector_version !== EVALUATION_DETECTOR_VERSION ||
+    storedReport.detector_digest !== detectorDigest()
+  ) {
+    const mismatch = {
+      comparison_status: "out-of-band-detector-mismatch",
+      ok: null,
+      axes: null,
+      stored_detector_version: storedReport.detector_version ?? null,
+      stored_detector_digest: storedReport.detector_digest ?? null,
+      current_detector_version: EVALUATION_DETECTOR_VERSION,
+      current_detector_digest: detectorDigest(),
+      explanation:
+        "The measuring code changed. This is a measurement correction, not repository or efficacy drift.",
+    };
+    recordMeasurementEvent(ctx, reportId, "detector-mismatch", mismatch, verifiedBy);
+    return mismatch;
+  }
   const expected = deriveEnvelope(ctx, p, storedReport.claims as Array<Record<string, unknown>>);
   const actual = args.report ?? storedReport;
   const value =
     actual && typeof actual === "object" && !Array.isArray(actual)
       ? (actual as Record<string, unknown>)
       : {};
-  const stateOk = value.schema_version === "1.0.0" && value.program_id === p.program_id;
+  if (
+    value.detector_version !== EVALUATION_DETECTOR_VERSION ||
+    value.detector_digest !== detectorDigest()
+  ) {
+    const mismatch = {
+      comparison_status: "out-of-band-detector-mismatch",
+      ok: null,
+      axes: null,
+      stored_detector_version: value.detector_version ?? null,
+      stored_detector_digest: value.detector_digest ?? null,
+      current_detector_version: EVALUATION_DETECTOR_VERSION,
+      current_detector_digest: detectorDigest(),
+      explanation:
+        "The supplied report uses another detector. This is out-of-band, not semantic drift.",
+    };
+    recordMeasurementEvent(ctx, reportId, "detector-mismatch", mismatch, verifiedBy);
+    return mismatch;
+  }
+  const stateOk =
+    value.schema_version === EVALUATION_SCHEMA_VERSION && value.program_id === p.program_id;
   const coverageOk =
     Array.isArray(value.strata) &&
     value.strata.length === (expected.strata as unknown[]).length &&
@@ -961,21 +1143,25 @@ function verifyEnvelope(
     },
     ok: stateOk && coverageOk && contentOk,
   };
-  ctx.db
-    .prepare(
-      `INSERT INTO operating_envelope_verifications
-         (report_id,state_ok,coverage_ok,content_ok,ok,report_json,verified_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      reportId,
-      stateOk ? 1 : 0,
-      coverageOk ? 1 : 0,
-      contentOk ? 1 : 0,
-      report.ok ? 1 : 0,
-      stableJson(report),
-      verifiedBy,
-    );
+  if (stored.source === "original") {
+    ctx.db
+      .prepare(
+        `INSERT INTO operating_envelope_verifications
+           (report_id,state_ok,coverage_ok,content_ok,ok,report_json,verified_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        reportId,
+        stateOk ? 1 : 0,
+        coverageOk ? 1 : 0,
+        contentOk ? 1 : 0,
+        report.ok ? 1 : 0,
+        stableJson(report),
+        verifiedBy,
+      );
+  } else {
+    recordMeasurementEvent(ctx, reportId, "successor-verification", report, verifiedBy);
+  }
   return report;
 }
 
@@ -993,6 +1179,11 @@ function getProgram(args: Record<string, unknown>, ctx: ServerContext): Record<s
       )
       .all(p.program_id),
     report: report ? { ...report, report: JSON.parse(report.report_json) } : null,
+    rebaselines: ctx.db
+      .prepare(
+        "SELECT * FROM operating_envelope_rebaselines WHERE program_id=? ORDER BY rebased_at,successor_report_id",
+      )
+      .all(p.program_id),
   };
 }
 
@@ -1105,6 +1296,22 @@ export const evaluationTools: ToolDefinition[] = [
       },
     },
     handler: publishEnvelope,
+  },
+  {
+    name: "rebaseline_operating_envelope",
+    description:
+      "Create an immutable successor report when a detector-version or detector-digest mismatch makes comparison out-of-band. The source report is preserved; the successor is a measurement correction, not an efficacy or repository-regression verdict.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["source_report_id", "successor_report_id", "reason"],
+      properties: {
+        source_report_id: { type: "string", minLength: 1 },
+        successor_report_id: { type: "string", minLength: 1 },
+        reason: { type: "string", minLength: 1 },
+      },
+    },
+    handler: rebaselineEnvelope,
   },
   {
     name: "verify_operating_envelope",

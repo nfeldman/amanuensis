@@ -187,7 +187,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_194 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
+_195 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -343,7 +343,7 @@ _194 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `get_dispositions` | Return dispositions. Filter by subsystem_id, concern_code, or both. Omit both to return everything (useful for adversarial review across the conspectus). |
 | `get_concern_coverage` | Return the concern × subsystem matrix (active concerns × registered subsystems) with current disposition or '—' for unexamined cells. Used to produce the materialized heatmap. |
 
-### `evaluation` (6)
+### `evaluation` (7)
 
 | Tool | Description |
 |---|---|
@@ -351,6 +351,7 @@ _194 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `land_evaluation_result` | Land one preregistered replicate with exact metric denominators, excluded-observation custody, input/determinism delivery proof, baseline headroom, rubric-category exposure checks, limitations, and—when used—raw, chance, and chance-corrected agreement together. Negative observations with failed delivery or no headroom remain instrument-undetermined. |
 | `review_evaluation_alternatives` | Record an independent adversarial alternative-explanation pass for one valid landed treatment replicate. Positive operating-envelope support requires every treatment replicate's review to survive; explained-away and underdetermined reviews remain blocking. |
 | `publish_operating_envelope` | Publish only after exact multi-repository fan-in. Derive efficacy separately for every repository/mode/context/model-runtime stratum from baseline, null, stronger control, treatment, ablation, test-retest, and two-sided sensitivity replicates. Program-level pooled efficacy claims, duplicate replicate assignments, subgroup verdict overrides, and positive claims lacking survived alternative review are rejected. |
+| `rebaseline_operating_envelope` | Create an immutable successor report when a detector-version or detector-digest mismatch makes comparison out-of-band. The source report is preserved; the successor is a measurement correction, not an efficacy or repository-regression verdict. |
 | `verify_operating_envelope` | Re-derive a published operating envelope from durable per-replicate results and verify state, exact stratum coverage/no-pooling, and semantic content. A caller-supplied report is a validation-only fault-injection surface. |
 | `get_evaluation_program` | Read one immutable evaluation manifest, every repository-stratified replicate and instrument state, plus the published evidence-backed operating envelope when present. |
 

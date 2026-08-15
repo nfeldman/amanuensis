@@ -14,14 +14,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.18.0"
       - name: Validate roadmap and generated projection
         run: node dev/render-roadmap.mjs --check
       - name: Prove roadmap validation red gates
         run: node dev/test-roadmap.mjs
       - name: Verify Pecia execution custody matches the roadmap
         run: node dev/test-pecia-roadmap.mjs && node dev/test-pecia-roadmap-red-gates.mjs
-      - name: Verify pinned living-conspectus baseline
+      - name: Verify versioned historical A0 conspectus baseline
         run: node dev/check-living-conspectus.mjs
       - name: Prove living-conspectus gates and clean-export read-back
         run: node dev/test-living-conspectus.mjs
@@ -33,12 +33,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.18.0"
           cache: npm
           cache-dependency-path: mcp-server/package-lock.json
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.13"
       - name: Install
         working-directory: mcp-server
         run: npm ci
@@ -161,7 +161,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12.13"
       - name: Install ruff
         run: pip install ruff
       - name: Lint (ruff)

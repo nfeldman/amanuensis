@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -12,6 +13,7 @@ const CHECKER = resolve(DEV, "test-pecia-roadmap.mjs");
 const roadmapText = readFileSync(resolve(DEV, "roadmap.json"), "utf8");
 const ledgerText = readFileSync(resolve(ROOT, ".pecia/work.jsonl"), "utf8");
 const snapshotHead = readFileSync(resolve(ROOT, ".pecia/snapshot.head"), "utf8");
+const snapshotManifest = readFileSync(resolve(ROOT, ".pecia/snapshot.json"), "utf8");
 const scratch = mkdtempSync(resolve(tmpdir(), "amanuensis-pecia-roadmap-test-"));
 
 function writeCase(name, mutate = () => {}) {
@@ -20,16 +22,22 @@ function writeCase(name, mutate = () => {}) {
   mkdirSync(resolve(fixture, ".pecia"), { recursive: true });
   const state = {
     roadmap: JSON.parse(roadmapText),
-    records: ledgerText.split("\n").filter(Boolean).map((line) => JSON.parse(line)),
+    records: ledgerText
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line)),
     head: snapshotHead,
+    snapshot: JSON.parse(snapshotManifest),
   };
   mutate(state);
+  const projection = `${state.records.map((record) => JSON.stringify(record)).join("\n")}\n`;
+  if (!state.keepSnapshotDigest) {
+    state.snapshot.workProjectionSha256 = createHash("sha256").update(projection).digest("hex");
+  }
   writeFileSync(resolve(fixture, "dev/roadmap.json"), `${JSON.stringify(state.roadmap)}\n`);
-  writeFileSync(
-    resolve(fixture, ".pecia/work.jsonl"),
-    `${state.records.map((record) => JSON.stringify(record)).join("\n")}\n`,
-  );
+  writeFileSync(resolve(fixture, ".pecia/work.jsonl"), projection);
   writeFileSync(resolve(fixture, ".pecia/snapshot.head"), state.head);
+  writeFileSync(resolve(fixture, ".pecia/snapshot.json"), `${JSON.stringify(state.snapshot)}\n`);
   return fixture;
 }
 
@@ -61,6 +69,22 @@ try {
   );
 
   run(
+    writeCase("stage-status", (state) => {
+      headForLabel(state, "roadmap:stage-now").status = "done";
+    }),
+    1,
+    "now stage status drifted from product-evidence status",
+  );
+
+  run(
+    writeCase("stage-evidence", (state) => {
+      headForLabel(state, "roadmap:stage-now").evidence = "unknown";
+    }),
+    1,
+    "now stage lacks evidence",
+  );
+
+  run(
     writeCase("dependency", (state) => {
       const a0 = headForLabel(state, "roadmap:A0");
       const a1 = headForLabel(state, "roadmap:A1");
@@ -80,13 +104,24 @@ try {
 
   run(
     writeCase("head", (state) => {
-      state.head = "not-a-timeline-head\n";
+      state.head = `${"0".repeat(64)}\n`;
     }),
     1,
-    "Pecia snapshot must name its timeline head",
+    "Pecia snapshot manifest and head disagree",
   );
 
-  console.log("pecia-roadmap red gates verified: missing, dependency, status, and head drift");
+  run(
+    writeCase("projection-digest", (state) => {
+      state.snapshot.workProjectionSha256 = "0".repeat(64);
+      state.keepSnapshotDigest = true;
+    }),
+    1,
+    "Pecia work projection digest drifted",
+  );
+
+  console.log(
+    "pecia-roadmap red gates verified: missing, dependency, initiative/stage status, stage evidence, timeline identity, and projection digest drift",
+  );
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

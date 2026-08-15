@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +14,8 @@ const revisions = readFileSync(resolve(ROOT, ".pecia/work.jsonl"), "utf8")
   .split("\n")
   .filter(Boolean)
   .map((line) => JSON.parse(line));
+const workProjectionBytes = readFileSync(resolve(ROOT, ".pecia/work.jsonl"));
+const snapshot = JSON.parse(readFileSync(resolve(ROOT, ".pecia/snapshot.json"), "utf8"));
 
 const heads = new Map();
 for (const record of revisions) {
@@ -61,6 +64,29 @@ for (const { initiative, stage } of initiatives) {
   assert.equal(record.status, expectedStatus, `${initiative.id} status drifted from the roadmap`);
 }
 
+for (const stage of roadmap.stages) {
+  const stageRecord = exactlyOne(`roadmap:stage-${stage.id}`);
+  const childRecords = stage.initiatives.map((initiative) => recordsByRoadmapId.get(initiative.id));
+  const expectedStatus = stage.productEvidenceStatus === "established" ? "done" : "open";
+  if (expectedStatus === "done") {
+    assert.ok(
+      childRecords.every((record) => record.status === "done"),
+      `${stage.id} cannot establish product evidence before child implementation is terminal`,
+    );
+    assert.equal(
+      stage.exitEvidence.length,
+      stage.exitCriteria.length,
+      `${stage.id} product evidence does not cover every stage exit`,
+    );
+  }
+  assert.equal(
+    stageRecord.status,
+    expectedStatus,
+    `${stage.id} stage status drifted from product-evidence status`,
+  );
+  assert.notEqual(stageRecord.evidence, "unknown", `${stage.id} stage lacks evidence`);
+}
+
 for (const { initiative } of initiatives) {
   const target = recordsByRoadmapId.get(initiative.id);
   const actualDependencies = [...recordsByRoadmapId.entries()]
@@ -76,6 +102,19 @@ for (const { initiative } of initiatives) {
 
 const snapshotHead = readFileSync(resolve(ROOT, ".pecia/snapshot.head"), "utf8").trim();
 assert.match(snapshotHead, /^[a-f0-9]{64}$/, "Pecia snapshot must name its timeline head");
+assert.equal(snapshot.schemaVersion, 1, "Pecia snapshot manifest schema drifted");
+assert.equal(snapshot.projectionDetectorVersion, "1.0.0", "Pecia detector version drifted");
+assert.equal(
+  snapshot.authority,
+  "projection-only",
+  "Pecia projection must not claim timeline authority",
+);
+assert.equal(snapshot.timelineHead, snapshotHead, "Pecia snapshot manifest and head disagree");
+assert.equal(
+  snapshot.workProjectionSha256,
+  createHash("sha256").update(workProjectionBytes).digest("hex"),
+  "Pecia work projection digest drifted",
+);
 
 console.log(
   `pecia-roadmap correspondence valid; ${initiatives.length} initiatives, ` +

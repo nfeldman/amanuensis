@@ -131,6 +131,54 @@ try {
     "does not account for required GP1",
   );
 
+  const staleCatalog = writeCase("stale-catalog", (value) => {
+    value.practiceAudit.version = "2.8";
+  });
+  run(
+    ["--write", "--source", staleCatalog, "--output", projection],
+    1,
+    "practiceAudit.version must be 2.10",
+  );
+
+  const unsupportedProductProof = writeCase("unsupported-product-proof", (value) => {
+    value.delivery.productProof = "established";
+  });
+  run(
+    ["--write", "--source", unsupportedProductProof, "--output", projection],
+    1,
+    "productProof cannot be established before the Now stage exits are evidenced",
+  );
+
+  const unevidencedStageExit = writeCase("unevidenced-stage-exit", (value) => {
+    value.stages[0].productEvidenceStatus = "established";
+  });
+  run(
+    ["--write", "--source", unevidencedStageExit, "--output", projection],
+    1,
+    "must evidence every stage exit before product proof is established",
+  );
+
+  const expandedCatalog = resolve(SCRATCH, "expanded-catalog.json");
+  const catalog = JSON.parse(readFileSync(resolve(DEV_DIR, "practice-catalog-v2.10.json"), "utf8"));
+  catalog.ids.push("VP27");
+  writeFileSync(expandedCatalog, `${JSON.stringify(catalog, null, 2)}\n`);
+  run(
+    ["--write", "--source", valid, "--catalog", expandedCatalog, "--output", projection],
+    1,
+    "does not account for required VP27",
+  );
+
+  const overdueDecision = writeCase("overdue-decision", (value) => {
+    value.programDecisions[0].status = "open";
+    delete value.programDecisions[0].decisionRecord;
+    delete value.programDecisions[0].resolution;
+  });
+  run(
+    ["--write", "--source", overdueDecision, "--output", projection],
+    1,
+    "is still open after terminal A1",
+  );
+
   const brokenControl = writeCase("broken-control", (value) => {
     value.controlLadder[0].expected = "";
   });
@@ -141,7 +189,7 @@ try {
   );
 
   console.log(
-    "roadmap red gates verified: drift, dangling/unfinished dependency, cycle, missing criterion, evidence, practice coverage, and control integrity",
+    "roadmap red gates verified: drift, dangling/unfinished dependency, cycle, overdue decision, product/stage proof, stale catalog, missing criterion, evidence, practice coverage, and control integrity",
   );
 } finally {
   rmSync(SCRATCH, { recursive: true, force: true });

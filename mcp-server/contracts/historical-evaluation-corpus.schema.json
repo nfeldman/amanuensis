@@ -4,9 +4,10 @@
   "title": "Amanuensis historical evaluation corpus",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "programId", "created", "cases"],
+  "required": ["schemaVersion", "detectorVersion", "programId", "created", "cases"],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
+    "detectorVersion": { "const": "1.0.0" },
     "programId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,79}$" },
     "created": { "type": "string", "format": "date" },
     "cases": {

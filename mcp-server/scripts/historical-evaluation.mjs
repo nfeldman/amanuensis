@@ -20,6 +20,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SHA_40 = /^[a-f0-9]{40}$/;
 const ID = /^[a-z0-9][a-z0-9._-]{2,79}$/;
+export const CORPUS_SCHEMA_VERSION = "1.1.0";
+export const RECEIPT_SCHEMA_VERSION = "1.1.0";
+export const DETECTOR_VERSION = "1.0.0";
 const VALID_TRUTH_STRENGTH = new Set([
   "executable-regression",
   "reproduction-plus-fix",
@@ -88,8 +91,23 @@ export function loadCorpus(manifestPath) {
   const absoluteManifest = resolve(manifestPath);
   const manifestDirectory = dirname(absoluteManifest);
   const corpus = JSON.parse(readFileSync(absoluteManifest, "utf8"));
-  requireExactKeys(corpus, "corpus", ["schemaVersion", "programId", "created", "cases"]);
-  if (corpus.schemaVersion !== "1.0.0") fail("schemaVersion must be 1.0.0");
+  requireExactKeys(corpus, "corpus", [
+    "schemaVersion",
+    "detectorVersion",
+    "programId",
+    "created",
+    "cases",
+  ]);
+  if (corpus.schemaVersion !== CORPUS_SCHEMA_VERSION) {
+    fail(`schemaVersion must be ${CORPUS_SCHEMA_VERSION}`);
+  }
+  if (corpus.detectorVersion !== DETECTOR_VERSION) {
+    fail(
+      `detectorVersion ${corpus.detectorVersion ?? "missing"} does not match runner detector ` +
+        `${DETECTOR_VERSION}; this is an out-of-band measurement-definition change, not a ` +
+        "repository regression. Run the explicit rebaseline operation before comparing results.",
+    );
+  }
   if (!ID.test(corpus.programId ?? "")) fail("programId is invalid");
   requireDate(corpus.created, "created");
   if (!Array.isArray(corpus.cases) || corpus.cases.length === 0) {
@@ -394,7 +412,8 @@ function executeOracle(caseRecord, workspace) {
 
 function receiptBase(corpus, caseRecord) {
   return {
-    schemaVersion: "1.0.0",
+    schemaVersion: RECEIPT_SCHEMA_VERSION,
+    detectorVersion: DETECTOR_VERSION,
     programId: corpus.programId,
     caseId: caseRecord.caseId,
     runnerDigest: digestFile(RUNNER_PATH),
@@ -514,7 +533,8 @@ function qualifyOne(corpus, caseRecord) {
 export function qualifyCorpus(corpus, caseId) {
   const cases = caseId ? [selectCase(corpus, caseId)] : corpus.cases;
   return {
-    schemaVersion: "1.0.0",
+    schemaVersion: RECEIPT_SCHEMA_VERSION,
+    detectorVersion: DETECTOR_VERSION,
     programId: corpus.programId,
     operation: "qualify-corpus",
     caseCount: cases.length,
@@ -522,10 +542,75 @@ export function qualifyCorpus(corpus, caseId) {
   };
 }
 
+export function rebaselineCorpus(manifestPath, outputManifestPath, outputReceiptPath) {
+  const absoluteManifest = resolve(manifestPath);
+  const absoluteOutput = resolve(outputManifestPath);
+  if (!outputReceiptPath) fail("rebaseline requires a new receipt path");
+  const absoluteReceipt = resolve(outputReceiptPath);
+  if (absoluteOutput === absoluteManifest) {
+    fail("rebaseline must create a new manifest; the historical manifest is immutable");
+  }
+  if (absoluteReceipt === absoluteManifest || absoluteReceipt === absoluteOutput) {
+    fail("rebaseline manifest and receipt paths must be distinct new identities");
+  }
+  if (dirname(absoluteOutput) !== dirname(absoluteManifest)) {
+    fail("rebaseline output must remain beside the source manifest so custody paths do not move");
+  }
+  if (existsSync(absoluteOutput)) fail(`rebaseline output already exists: ${absoluteOutput}`);
+  if (existsSync(absoluteReceipt)) fail(`rebaseline receipt already exists: ${absoluteReceipt}`);
+  const original = JSON.parse(readFileSync(absoluteManifest, "utf8"));
+  if (!original || typeof original !== "object" || Array.isArray(original)) {
+    fail("corpus must be an object");
+  }
+  if (original.schemaVersion !== "1.0.0" && original.schemaVersion !== CORPUS_SCHEMA_VERSION) {
+    fail(`rebaseline supports corpus schema 1.0.0 or ${CORPUS_SCHEMA_VERSION}`);
+  }
+  const sourceSchemaVersion = original.schemaVersion;
+  const sourceDetectorVersion = original.detectorVersion ?? null;
+  const rebased = {
+    ...original,
+    schemaVersion: CORPUS_SCHEMA_VERSION,
+    detectorVersion: DETECTOR_VERSION,
+  };
+  const serialized = `${JSON.stringify(rebased, null, 2)}\n`;
+  const temporaryManifest = resolve(
+    dirname(absoluteManifest),
+    `.${basename(absoluteManifest)}.rebaseline-${process.pid}`,
+  );
+  try {
+    writeFileSync(temporaryManifest, serialized);
+    const qualification = qualifyCorpus(loadCorpus(temporaryManifest));
+    const receipt = {
+      ...qualification,
+      operation: "rebaseline-corpus",
+      sourceSchemaVersion,
+      sourceDetectorVersion,
+      measurementCorrection: true,
+      comparisonDisposition: "out-of-band-not-regression",
+    };
+    let manifestCreated = false;
+    let receiptCreated = false;
+    try {
+      writeFileSync(absoluteOutput, serialized, { flag: "wx" });
+      manifestCreated = true;
+      writeFileSync(absoluteReceipt, `${JSON.stringify(receipt, null, 2)}\n`, { flag: "wx" });
+      receiptCreated = true;
+    } catch (error) {
+      if (receiptCreated) rmSync(absoluteReceipt, { force: true });
+      if (manifestCreated) rmSync(absoluteOutput, { force: true });
+      throw error;
+    }
+    return receipt;
+  } finally {
+    rmSync(temporaryManifest, { force: true });
+  }
+}
+
 function usage() {
   return [
     "usage:",
     "  historical-evaluation.mjs qualify <manifest.json> [case-id] [--receipt path]",
+    "  historical-evaluation.mjs rebaseline <manifest.json> <new-manifest.json> --receipt <new-receipt.json>",
     "  historical-evaluation.mjs prepare <manifest.json> <case-id> <output-dir> [--receipt path]",
     "  historical-evaluation.mjs score <manifest.json> <case-id> <workspace> [--receipt path]",
   ].join("\n");
@@ -547,16 +632,23 @@ function main(argv) {
   const { args, receiptPath } = parseCli(argv);
   const [operation, manifestPath, caseId, path] = args;
   if (!operation || !manifestPath) fail(usage());
-  const corpus = loadCorpus(manifestPath);
   let receipt;
-  if (operation === "qualify" && args.length <= 3) receipt = qualifyCorpus(corpus, caseId);
-  else if (operation === "prepare" && caseId && path && args.length === 4) {
-    receipt = prepareCase(corpus, caseId, path);
-  } else if (operation === "score" && caseId && path && args.length === 4) {
-    receipt = scoreCase(corpus, caseId, path);
-  } else fail(usage());
+  if (operation === "rebaseline" && caseId && args.length === 3) {
+    if (!receiptPath) fail("rebaseline requires a new --receipt path");
+    receipt = rebaselineCorpus(manifestPath, caseId, receiptPath);
+  } else {
+    const corpus = loadCorpus(manifestPath);
+    if (operation === "qualify" && args.length <= 3) receipt = qualifyCorpus(corpus, caseId);
+    else if (operation === "prepare" && caseId && path && args.length === 4) {
+      receipt = prepareCase(corpus, caseId, path);
+    } else if (operation === "score" && caseId && path && args.length === 4) {
+      receipt = scoreCase(corpus, caseId, path);
+    } else fail(usage());
+  }
   const serialized = `${JSON.stringify(receipt, null, 2)}\n`;
-  if (receiptPath) writeFileSync(resolve(receiptPath), serialized);
+  if (receiptPath && operation !== "rebaseline") {
+    writeFileSync(resolve(receiptPath), serialized, { flag: "wx" });
+  }
   process.stdout.write(serialized);
 }
 

@@ -3,8 +3,8 @@
 Pecia tracks execution of the living-conspectus roadmap while
 `dev/roadmap.json` remains authoritative for initiative definitions, gates,
 dependencies, and status. The committed `.pecia/work.jsonl` is Pecia's
-materialized custody record; `.pecia/snapshot.head` identifies the local v2
-timeline state from which it was rendered.
+materialized projection; `.pecia/snapshot.json` binds its SHA-256 and detector
+version to the claimed local-v2 `.pecia/snapshot.head` timeline identity.
 
 ## Operating contract
 
@@ -16,6 +16,9 @@ timeline state from which it was rendered.
   status/dependency-divergent custody records.
 - Completion still requires the roadmap's tests and red gate. Pecia's clean
   structural check means well-formed, never true.
+- A stage is terminal only when every child task is terminal and the stage has
+  non-unknown evidence. The validator derives that correspondence rather than
+  trusting the stage label.
 - A green initiative is closed in Pecia with executable evidence and committed
   with its roadmap status transition. The next dependency-ready item is then
   claimed before implementation continues.
@@ -35,10 +38,11 @@ with owner identity `openai:codex-gpt-5`.
    Until distribution and the v2 staged-state contract are resolved, Pecia is
    an execution-custody scheduler here, not Amanuensis's commit gate.
 3. The authoritative v2 timeline lives in Git's common directory and is not a
-   normal branch artifact. This branch commits the snapshot and head; another
-   clone must reconstruct or sync the timeline before writing. The roadmap
-   correspondence test deliberately validates the committed projection without
-   pretending it validates the machine-local timeline.
+   normal branch artifact. This branch commits a projection, its digest, and the
+   claimed timeline head; another clone must reconstruct or sync the timeline
+   before writing. The manifest is explicitly `projection-only`, and the
+   correspondence test deliberately does not claim machine-local timeline
+   authority.
 
 These limitations are visible rather than waived. Amanuensis's existing CI,
 red gates, and explicit per-milestone commits remain the enforcement substrate.

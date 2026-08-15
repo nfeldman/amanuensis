@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
+export const DETECTOR_VERSION = "1.0.0";
 const VALID_DISPOSITIONS = new Set([
   "confirmed-bug",
   "confirmed-acceptable",
@@ -38,7 +39,16 @@ function parseArgs(argv) {
       options.mode = "print-report";
       continue;
     }
-    if (["--root", "--fixture", "--report", "--export", "--read-back"].includes(argument)) {
+    if (
+      [
+        "--root",
+        "--fixture",
+        "--report",
+        "--detector-registry",
+        "--export",
+        "--read-back",
+      ].includes(argument)
+    ) {
       const value = argv[index + 1];
       if (!value) throw new Error(`${argument} requires a path`);
       options[argument.slice(2).replace("-", "_")] = value;
@@ -92,7 +102,9 @@ export function runControl(control, manifest) {
   const input = control?.input ?? {};
   switch (control?.class) {
     case "unchanged": {
-      const runs = (manifest.runs ?? []).filter(({ condition }) => condition === "unchanged-baseline");
+      const runs = (manifest.runs ?? []).filter(
+        ({ condition }) => condition === "unchanged-baseline",
+      );
       return {
         replicatesRemainSeparate:
           new Set(runs.map(({ runId }) => runId)).size === runs.length &&
@@ -117,8 +129,10 @@ export function runControl(control, manifest) {
     case "benign-refactor": {
       const behaviorStable = input.before?.behaviorHash === input.after?.behaviorHash;
       return {
-        repairedEvidenceLocations: behaviorStable ? [input.after?.evidenceLocation].filter(Boolean) : [],
-        unrelatedInvalidations: behaviorStable ? [] : input.dependentClaimIds ?? [],
+        repairedEvidenceLocations: behaviorStable
+          ? [input.after?.evidenceLocation].filter(Boolean)
+          : [],
+        unrelatedInvalidations: behaviorStable ? [] : (input.dependentClaimIds ?? []),
       };
     }
     case "historical-defect": {
@@ -189,9 +203,7 @@ export function expectedProjection(manifest) {
   const filePaths = sortedUnique(manifest.inventory?.paths ?? []);
   const dispositionIds = sortedUnique(
     (manifest.concernCoverage ?? []).flatMap((coverage) =>
-      Object.keys(coverage.dispositions ?? {}).map(
-        (code) => `${coverage.subsystemId}/${code}`,
-      ),
+      Object.keys(coverage.dispositions ?? {}).map((code) => `${coverage.subsystemId}/${code}`),
     ),
   );
   const expectedWork = sortedUnique(manifest.runContract?.expectedWork ?? []);
@@ -276,7 +288,11 @@ export function evaluateConspectus(manifest) {
   }
   for (const path of assignments.keys()) {
     if (!uniquePaths.includes(path)) {
-      addStructuralError(state, `file:${path}:unknown`, "assignment names a path outside inventory");
+      addStructuralError(
+        state,
+        `file:${path}:unknown`,
+        "assignment names a path outside inventory",
+      );
     }
   }
 
@@ -285,13 +301,14 @@ export function evaluateConspectus(manifest) {
     addObligation(
       state,
       `subsystem:${subsystem.id}:phase-sequence`,
-      subsystem.status === "mapped" && sameSet(subsystem.completedPhases ?? [], [
-        "scope",
-        "structural",
-        "concerns",
-        "adversarial",
-        "packaging",
-      ]),
+      subsystem.status === "mapped" &&
+        sameSet(subsystem.completedPhases ?? [], [
+          "scope",
+          "structural",
+          "concerns",
+          "adversarial",
+          "packaging",
+        ]),
       `expected mapped with scope, structural, concerns, adversarial, packaging; observed ${subsystem.status}`,
     );
   }
@@ -316,9 +333,7 @@ export function evaluateConspectus(manifest) {
       addObligation(
         state,
         `concern:${subsystemId}/${concernCode}:disposition`,
-        Boolean(
-          coverage?.evidence?.length && disposition && VALID_DISPOSITIONS.has(disposition),
-        ),
+        Boolean(coverage?.evidence?.length && disposition && VALID_DISPOSITIONS.has(disposition)),
         disposition
           ? `invalid or ungrounded disposition ${disposition}`
           : "active concern has no terminal evidence-backed disposition",
@@ -357,7 +372,8 @@ export function evaluateConspectus(manifest) {
   const runIds = new Set();
   const replicateIds = new Set();
   for (const run of manifest.runs ?? []) {
-    if (runIds.has(run.runId)) addStructuralError(state, `run:${run.runId}:unique`, "duplicate run id");
+    if (runIds.has(run.runId))
+      addStructuralError(state, `run:${run.runId}:unique`, "duplicate run id");
     if (replicateIds.has(run.replicateId)) {
       addStructuralError(state, `replicate:${run.replicateId}:unique`, "duplicate replicate id");
     }
@@ -384,7 +400,9 @@ export function evaluateConspectus(manifest) {
       );
     }
     for (const field of ["dispatched", "landed", "scored"]) {
-      const extras = sortedUnique(run[field] ?? []).filter((workId) => !expectedWork.includes(workId));
+      const extras = sortedUnique(run[field] ?? []).filter(
+        (workId) => !expectedWork.includes(workId),
+      );
       if (extras.length) {
         addStructuralError(
           state,
@@ -457,7 +475,11 @@ function reconciledObligationIds(manifest) {
   );
 }
 
-export function buildBaselineReport(manifest, result = evaluateConspectus(manifest)) {
+export function buildBaselineReport(
+  manifest,
+  result = evaluateConspectus(manifest),
+  detectorRegistration = null,
+) {
   const reconciliationIds = reconciledObligationIds(manifest);
   const expectedWork = manifest.runContract?.expectedWork ?? [];
   const reconciliationSatisfied = (manifest.runs ?? []).reduce(
@@ -471,9 +493,8 @@ export function buildBaselineReport(manifest, result = evaluateConspectus(manife
     0,
   );
   const m1Step = result.required > 0 ? 1 / result.required : null;
-  const m11Step = result.authoritativeObjectIds.length > 0
-    ? 1 / result.authoritativeObjectIds.length
-    : null;
+  const m11Step =
+    result.authoritativeObjectIds.length > 0 ? 1 / result.authoritativeObjectIds.length : null;
   const m12Step = reconciliationIds.length > 0 ? 1 / reconciliationIds.length : null;
   const replicates = (manifest.runs ?? [])
     .filter(({ condition }) => condition === "unchanged-baseline")
@@ -499,6 +520,17 @@ export function buildBaselineReport(manifest, result = evaluateConspectus(manife
   );
   return {
     schemaVersion: 1,
+    ...(detectorRegistration
+      ? {
+          measurement: {
+            reportId: detectorRegistration.reportId,
+            detectorVersion: detectorRegistration.detectorVersion,
+            detectorSha256: detectorRegistration.detectorSha256,
+            sourceReportId: detectorRegistration.sourceReportId,
+            comparisonDisposition: detectorRegistration.comparisonDisposition,
+          },
+        }
+      : {}),
     fixtureId: manifest.fixtureId,
     revision: manifest.revision,
     tree: manifest.tree,
@@ -569,7 +601,12 @@ function verifyPinnedRepository(root, manifest) {
   const runGit = (args) => spawnSync("git", args, { cwd: root, encoding: "utf8" });
   const tree = runGit(["rev-parse", `${manifest.revision}^{tree}`]);
   if (tree.status !== 0) {
-    return [{ id: "fixture:revision:resolves", detail: tree.stderr.trim() || "pinned revision is unavailable" }];
+    return [
+      {
+        id: "fixture:revision:resolves",
+        detail: tree.stderr.trim() || "pinned revision is unavailable",
+      },
+    ];
   }
   if (tree.stdout.trim() !== manifest.tree) {
     failures.push({
@@ -595,9 +632,62 @@ function verifyPinnedRepository(root, manifest) {
   return failures;
 }
 
+function verifyDetectorRegistry(registryPath, manifest) {
+  try {
+    const registry = JSON.parse(readFileSync(registryPath, "utf8"));
+    const entry = registry.fixtures?.find(({ fixtureId }) => fixtureId === manifest.fixtureId);
+    if (!entry) {
+      return {
+        failures: [
+          {
+            id: "detector:fixture-registration",
+            detail: `no detector registered for ${manifest.fixtureId}`,
+          },
+        ],
+        current: null,
+      };
+    }
+    const failures = [];
+    const current = entry.currentVerification;
+    if (!current) {
+      failures.push({
+        id: "detector:current-registration",
+        detail: `no current verification detector registered for ${manifest.fixtureId}`,
+      });
+      return { failures, current: null };
+    }
+    if (current.detectorVersion !== DETECTOR_VERSION) {
+      failures.push({
+        id: "detector:version:mismatch",
+        detail:
+          `stored ${current.detectorVersion}, running ${DETECTOR_VERSION}; this is an out-of-band ` +
+          "measurement change, not conspectus drift",
+      });
+    }
+    const observedDigest = sha256(readFileSync(fileURLToPath(import.meta.url)));
+    if (current.detectorSha256 !== observedDigest) {
+      failures.push({
+        id: "detector:digest:mismatch",
+        detail:
+          `stored ${current.detectorSha256}, running ${observedDigest}; bump the detector and ` +
+          "explicitly rebaseline rather than reporting a regression",
+      });
+    }
+    return { failures, current };
+  } catch (error) {
+    return {
+      failures: [{ id: "detector:registry:readable", detail: error.message }],
+      current: null,
+    };
+  }
+}
+
 function writeProjection(outputDir, projection) {
   mkdirSync(outputDir, { recursive: true });
-  writeFileSync(resolve(outputDir, "conspectus-summary.json"), `${JSON.stringify(projection, null, 2)}\n`);
+  writeFileSync(
+    resolve(outputDir, "conspectus-summary.json"),
+    `${JSON.stringify(projection, null, 2)}\n`,
+  );
 }
 
 function readBackProjection(outputDir, expected) {
@@ -611,10 +701,17 @@ function readBackProjection(outputDir, expected) {
   const failures = [];
   for (const axis of ["state", "coverage", "content"]) {
     if (actual.hashes?.[axis] !== expected.hashes[axis]) {
-      failures.push({ id: `export:${axis}:read-back`, expected: expected.hashes[axis], actual: actual.hashes?.[axis] });
+      failures.push({
+        id: `export:${axis}:read-back`,
+        expected: expected.hashes[axis],
+        actual: actual.hashes?.[axis],
+      });
     }
     if (sha256(stableJson(actual[axis])) !== expected.hashes[axis]) {
-      failures.push({ id: `export:${axis}:content`, detail: "content does not match its expected durable hash" });
+      failures.push({
+        id: `export:${axis}:content`,
+        detail: "content does not match its expected durable hash",
+      });
     }
   }
   return failures;
@@ -624,12 +721,21 @@ function main() {
   const cli = parseArgs(process.argv.slice(2));
   const root = resolve(cli.root ?? DEFAULT_ROOT);
   const fixturePath = resolve(root, cli.fixture ?? "dev/conspectus/self-baseline.json");
-  const reportPath = resolve(root, cli.report ?? "dev/conspectus/baseline-report.json");
+  const reportPath = resolve(
+    root,
+    cli.report ?? "dev/conspectus/baseline-report-detector-1.0.0.json",
+  );
+  const detectorRegistryPath = resolve(
+    root,
+    cli.detector_registry ?? "dev/conspectus/detector-registry.json",
+  );
   const manifest = JSON.parse(readFileSync(fixturePath, "utf8"));
   const result = evaluateConspectus(manifest);
   result.errors.push(...verifyPinnedRepository(root, manifest));
+  const detectorCheck = verifyDetectorRegistry(detectorRegistryPath, manifest);
+  result.errors.push(...detectorCheck.failures);
   result.complete = result.complete && result.errors.length === 0;
-  const generatedReport = buildBaselineReport(manifest, result);
+  const generatedReport = buildBaselineReport(manifest, result, detectorCheck.current);
 
   if (cli.mode === "print-report") {
     process.stdout.write(`${JSON.stringify(generatedReport, null, 2)}\n`);
@@ -653,7 +759,10 @@ function main() {
     result.errors.push({ id: "baseline-report:readable", detail: error.message });
   }
   if (!reportMatches) {
-    result.errors.push({ id: "baseline-report:derived", detail: "checked-in report differs from the manifest-derived report" });
+    result.errors.push({
+      id: "baseline-report:derived",
+      detail: "checked-in report differs from the manifest-derived report",
+    });
   }
   result.errors.push(...readBackFailures);
   result.complete = result.complete && reportMatches && readBackFailures.length === 0;
@@ -661,7 +770,7 @@ function main() {
   if (cli.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else if (result.complete) {
     process.stdout.write(
-      `living conspectus complete: ${result.satisfied}/${result.required} obligations; ${result.authoritativeObjectIds.length} authoritative objects\n`,
+      `historical A0 baseline complete: ${result.satisfied}/${result.required} obligations; ${result.authoritativeObjectIds.length} historically authoritative objects at ${manifest.revision}\n`,
     );
   } else {
     for (const failure of [...result.missing, ...result.errors]) {

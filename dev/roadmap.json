@@ -1,10 +1,22 @@
 {
   "schemaVersion": 1,
-  "roadmapVersion": "1.1",
-  "updated": "2026-08-14",
+  "roadmapVersion": "1.2",
+  "updated": "2026-08-15",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
-  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction earn their place only after that proof.",
+  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction have branch-local apparatus, but neither that apparatus nor a 19/19 implementation count establishes the product proof, integration, or release.",
+  "delivery": {
+    "implementation": "branch-local-complete",
+    "productProof": "unestablished",
+    "integration": "pending",
+    "targetRef": "main",
+    "claim": "All 19 roadmap initiatives have branch-local implementation evidence. Integration, remote custody, CI at the integrated commit, and release remain unestablished.",
+    "requiredEvidence": [
+      "A named remote ref containing the reviewed implementation tip.",
+      "The full repository CI suite passing at the exact integrated commit.",
+      "A terminal read-back of roadmap, Pecia projection, and conspectus state at that commit."
+    ]
+  },
   "baselineObservations": [
     {
       "kind": "observation",
@@ -75,26 +87,42 @@
       "counterpoint": "Some exploratory research has delayed value; the system must retain bounded speculative questions without pretending they are validated product work."
     }
   ],
-  "openQuestions": [
+  "programDecisions": [
     {
       "question": "Is claim validity best represented by commit intervals, explicit supersession edges, or both?",
       "owner": "Amanuensis",
-      "resolveBefore": "A1 schema ADR"
+      "resolveBefore": "A1 schema ADR",
+      "resolveBeforeInitiative": "A1",
+      "status": "resolved",
+      "decisionRecord": "dev/adr/0002-temporal-claim-model.md",
+      "resolution": "Use immutable claim versions with Git-validity intervals and explicit supersession edges; enforce their correspondence transactionally."
     },
     {
       "question": "What recall target is achievable for transitive impact without parsing every supported language?",
       "owner": "Amanuensis",
-      "resolveBefore": "A2 implementation selection"
+      "resolveBefore": "A2 implementation selection",
+      "resolveBeforeInitiative": "A2",
+      "status": "resolved",
+      "decisionRecord": "dev/adr/0003-predict-before-apply-change-impact.md",
+      "resolution": "Use deterministic explicit relations first; require ≥95% labeled stale-claim recall and 100% for critical seeded claims before replacing the conservative fallback, while keeping false invalidation ≤10%."
     },
     {
       "question": "Which design-session artifacts belong in Amanuensis custody versus Chorusmith session custody?",
       "owner": "Amanuensis + Chorusmith",
-      "resolveBefore": "A10 contract freeze"
+      "resolveBefore": "A10 contract freeze",
+      "resolveBeforeInitiative": "A10",
+      "status": "resolved",
+      "decisionRecord": "dev/adr/0018-chorusmith-adapter-parity-boundary.md",
+      "resolution": "Chorusmith owns session attempts and session artifacts; Amanuensis owns its domain records, validates adapter envelopes, and lands domain results."
     },
     {
       "question": "What evidence is sufficient to claim that imported research changed a code decision rather than merely decorating it?",
       "owner": "Amanuensis + Scholiast",
-      "resolveBefore": "A13 admission policy"
+      "resolveBefore": "A13 admission policy",
+      "resolveBeforeInitiative": "A13",
+      "status": "resolved",
+      "decisionRecord": "dev/adr/0014-decision-bounded-research-custody.md",
+      "resolution": "A consumed result must name the exact decision field it changed and be followed by an A12 successor decision revision; otherwise it records an explicit no-change rationale."
     }
   ],
   "tensions": [
@@ -411,6 +439,8 @@
       "label": "Now — make the record alive",
       "horizon": "First 6–10 engineering weeks; complete before expanding the product surface.",
       "objective": "Prove that a completed survey can stay trustworthy across repository changes with less work than resurveying it.",
+      "productEvidenceStatus": "unestablished",
+      "exitEvidence": [],
       "exitCriteria": [
         "The full-survey definition is computed and cannot go green with missing files, seams, dispositions, runs, or read-back mismatches.",
         "Known claim-invalidating changes are detected and revalidated with target recall while benign changes stay below the false-invalidation guardrail.",
@@ -459,7 +489,10 @@
             "VP12",
             "VP17",
             "VP19",
-            "VP20"
+            "VP20",
+            "VP21",
+            "VP25",
+            "VP26"
           ],
           "metrics": [
             "M1",
@@ -470,6 +503,8 @@
             "dev/adr/0001-living-conspectus-terms.md",
             "dev/conspectus/self-baseline.json",
             "dev/conspectus/baseline-report.json",
+            "dev/conspectus/baseline-report-detector-1.0.0.json",
+            "dev/conspectus/detector-registry.json",
             "dev/test-living-conspectus.mjs"
           ]
         },
@@ -508,7 +543,8 @@
             "GP12",
             "GP18",
             "GP27",
-            "GP35"
+            "GP35",
+            "VP24"
           ],
           "metrics": [
             "M1",
@@ -671,7 +707,8 @@
             "VP4",
             "VP15",
             "VP19",
-            "VP20"
+            "VP20",
+            "VP24"
           ],
           "metrics": [
             "M1",
@@ -753,6 +790,8 @@
       "label": "Next — earn super review and architecture",
       "horizon": "Following 8–14 engineering weeks, gated on the living-record exit rather than elapsed time.",
       "objective": "Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority.",
+      "productEvidenceStatus": "unestablished",
+      "exitEvidence": [],
       "exitCriteria": [
         "A known historical defect, a cross-seam defect, and a benign refactor produce the expected differentiated review behavior.",
         "Review briefs reduce median human verification time while meeting actionable-precision and missed-contract gates.",
@@ -1163,6 +1202,8 @@
       "label": "Later — close the research-learning loop and compose with Chorusmith",
       "horizon": "After review and design modes meet their gates on more than one repository; sequence by evidence, not date.",
       "objective": "Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries.",
+      "productEvidenceStatus": "unestablished",
+      "exitEvidence": [],
       "exitCriteria": [
         "Research questions are admitted only when they name a decision, uncertainty, evidence need, and destination.",
         "Imported research retains Scholiast provenance and cannot become a code fact without repository evidence.",
@@ -1339,7 +1380,7 @@
           "title": "Multi-repository evaluation and operating envelope",
           "status": "done",
           "owner": "Amanuensis",
-          "outcome": "The product has an explicit evidence-backed operating envelope across repository types, change classes, review modes, and model/runtime configurations.",
+          "outcome": "The product has a detector-versioned operating-envelope apparatus whose synthetic fixture validates stratification, custody, instrument clearing, and no-pooling; real product efficacy and a population operating envelope remain unmeasured.",
           "rationale": "One successful self-survey or showcase repository is an existence proof, not a basis for general automation claims.",
           "dependsOn": [
             "A8",
@@ -1393,7 +1434,11 @@
             "VP15",
             "VP16",
             "VP17",
-            "VP18"
+            "VP18",
+            "VP21",
+            "VP22",
+            "VP23",
+            "VP26"
           ],
           "metrics": [
             "M2",
@@ -1527,7 +1572,12 @@
             "VP10",
             "VP16",
             "VP17",
-            "VP19"
+            "VP19",
+            "VP21",
+            "VP22",
+            "VP23",
+            "VP25",
+            "VP26"
           ],
           "metrics": [
             "M4",
@@ -1564,6 +1614,8 @@
         "dev/adr/0001-living-conspectus-terms.md",
         "dev/conspectus/self-baseline.json",
         "dev/conspectus/baseline-report.json",
+        "dev/conspectus/baseline-report-detector-1.0.0.json",
+        "dev/conspectus/detector-registry.json",
         "dev/check-living-conspectus.mjs",
         "dev/test-living-conspectus.mjs"
       ],
@@ -1958,7 +2010,7 @@
     }
   ],
   "practiceAudit": {
-    "version": "2.8",
+    "version": "2.10",
     "applied": [
       {
         "ids": [
@@ -2026,6 +2078,7 @@
       },
       {
         "ids": [
+          "GP7",
           "GP14",
           "GP17",
           "GP27",
@@ -2062,6 +2115,18 @@
         ],
         "use": "Metrics are actor-sensitive, specifically attributed, exclusion-stable, uniquely replicated, separately reported, and powered before efficacy runs; agreement reports raw and chance components, unused labels are operationalized, and no-headroom results remain undetermined-instrument rather than null.",
         "verification": "A0 and A16 require replicate identities, MDEs, framing checks, headroom verdicts, and complete agreement reporting; the measurement contract defines denominators, exclusions, strata, and non-pooling."
+      },
+      {
+        "ids": [
+          "VP21",
+          "VP22",
+          "VP23",
+          "VP24",
+          "VP25",
+          "VP26"
+        ],
+        "use": "Population-level red-proof coverage, arm-specific manipulation checks, explicit uncovered control surfaces, historical sweeps after retrofitted guards, independently evidenced gate repair, and detector versions separate from schemas.",
+        "verification": "A0/A16/A18 name these practices; the operating-envelope and historical-evaluation contracts carry detector versions separately, reject mismatches as out-of-band, and expose immutable-successor rebaseline operations. Historical v2.7/v2.8 artifacts retain their original provenance and are not silently compared across detector definitions."
       }
     ],
     "limitations": [
@@ -2070,6 +2135,9 @@
       "Numeric gates for recall, invalidation, and precision are initial operating hypotheses, not established effect estimates; A0 and A16 may revise them with recorded rationale.",
       "The roadmap validator proves structure, dependency integrity, required fields, practice-accounting coverage, evidence-path existence, and projection correspondence. It does not prove that roadmap claims are true or that the plan will work.",
       "External Chorusmith, Scholiast, Collatio, and distillation contracts were used as planning context but are not vendored or enforced by this repository yet."
+      ,
+      "Practice-catalog v2.9 changed handles only and did not invalidate IDs or results. Catalog v2.10 adds VP26; historical measurements without a separate detector version remain historical-only and cannot support longitudinal regression claims until explicitly rebaselined.",
+      "Repository-wide VP21 diagnostic coverage is unmeasured because the blocking-gate population and gate-to-red-proof registry have not yet been typed. A0's eight control classes and individual initiative red gates must not be generalized to 100% repository-gate coverage."
     ]
   },
   "references": [
@@ -2089,8 +2157,14 @@
       "relevance": "Supplies prior concepts around evidence quality, architectural concern handling, and cross-domain application."
     },
     {
-      "name": "Practice catalog v2.8",
+      "name": "Practice catalog v2.10",
+      "path": "dev/practice-catalog-v2.10.json",
       "relevance": "Supplies the reliability, validation, orchestration, provenance, and measurement practices mapped in this roadmap."
+    },
+    {
+      "name": "Practice catalog v2.10 reconciliation",
+      "path": "dev/adr/0020-practice-catalog-v2.10-reconciliation.md",
+      "relevance": "Adjudicates catalog-version fallout, distinguishes implementation from delivery, and records VP26 detector/rebaseline repairs and surviving claim limits."
     },
     {
       "name": "Scholiast",

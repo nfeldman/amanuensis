@@ -4118,6 +4118,30 @@ CREATE TABLE IF NOT EXISTS operating_envelope_verifications (
     CHECK (ok=(state_ok AND coverage_ok AND content_ok))
 );
 
+CREATE TABLE IF NOT EXISTS operating_envelope_rebaselines (
+    successor_report_id TEXT PRIMARY KEY,
+    source_report_id    TEXT NOT NULL,
+    program_id          TEXT NOT NULL REFERENCES evaluation_programs(program_id) ON DELETE RESTRICT,
+    schema_version      TEXT NOT NULL CHECK (schema_version='1.0.0'),
+    detector_version    TEXT NOT NULL,
+    detector_digest     TEXT NOT NULL,
+    report_json         TEXT NOT NULL CHECK (json_valid(report_json)),
+    report_hash         TEXT NOT NULL,
+    reason              TEXT NOT NULL,
+    rebased_by          TEXT NOT NULL REFERENCES sessions(session_id),
+    rebased_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS operating_envelope_measurement_events (
+    event_id            INTEGER PRIMARY KEY,
+    report_id           TEXT NOT NULL,
+    event_kind          TEXT NOT NULL CHECK (event_kind IN (
+                            'detector-mismatch','rebaseline','successor-verification')),
+    detail_json         TEXT NOT NULL CHECK (json_valid(detail_json)),
+    recorded_by         TEXT NOT NULL REFERENCES sessions(session_id),
+    recorded_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TRIGGER IF NOT EXISTS evaluation_program_starts_planned
 BEFORE INSERT ON evaluation_programs FOR EACH ROW
 WHEN NEW.status!='planned' OR NEW.published_at IS NOT NULL
@@ -4191,6 +4215,12 @@ BEGIN SELECT RAISE(ABORT, 'operating envelope report is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS operating_envelope_report_cannot_be_deleted
 BEFORE DELETE ON operating_envelope_reports FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'operating envelope report cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_report_id_cannot_shadow_rebaseline
+BEFORE INSERT ON operating_envelope_reports FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM operating_envelope_rebaselines WHERE successor_report_id=NEW.report_id
+)
+BEGIN SELECT RAISE(ABORT, 'operating envelope report identity already exists'); END;
 CREATE TRIGGER IF NOT EXISTS operating_envelope_verification_must_reconcile
 BEFORE INSERT ON operating_envelope_verifications FOR EACH ROW
 WHEN NEW.state_ok!=json_extract(NEW.report_json, '$.axes.state.ok')
@@ -4204,6 +4234,24 @@ BEGIN SELECT RAISE(ABORT, 'operating envelope verification is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS operating_envelope_verification_cannot_be_deleted
 BEFORE DELETE ON operating_envelope_verifications FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'operating envelope verification cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_rebaseline_is_immutable
+BEFORE UPDATE ON operating_envelope_rebaselines FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope rebaseline cannot be updated'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_rebaseline_cannot_be_deleted
+BEFORE DELETE ON operating_envelope_rebaselines FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope rebaseline cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_rebaseline_id_cannot_shadow_report
+BEFORE INSERT ON operating_envelope_rebaselines FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM operating_envelope_reports WHERE report_id=NEW.successor_report_id
+)
+BEGIN SELECT RAISE(ABORT, 'operating envelope report identity already exists'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_measurement_event_is_immutable
+BEFORE UPDATE ON operating_envelope_measurement_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope measurement event cannot be updated'); END;
+CREATE TRIGGER IF NOT EXISTS operating_envelope_measurement_event_cannot_be_deleted
+BEFORE DELETE ON operating_envelope_measurement_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'operating envelope measurement event cannot be deleted'); END;
 
 ----------------------------------------------------------------------
 -- CHORUSMITH ADAPTER: versioned projection, exact execution, and parity custody

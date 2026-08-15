@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "fixtureId": "amanuensis-self-b8b566f-a0-v1",
+      "historicalMeasurement": {
+        "reportId": "amanuensis-self-b8b566f-a0-v1-report-original",
+        "reportPath": "dev/conspectus/baseline-report.json",
+        "detectorVersion": "unversioned",
+        "detectorSha256": "35b348c9f70ff3308c2202f6a0941b8a14bb040ff95524fc1648bd92b2b2bdd9",
+        "recordedAtCommit": "7bfa45c4febe5cfa04689c9f2be8f8004f5c4778"
+      },
+      "currentVerification": {
+        "reportId": "amanuensis-self-b8b566f-a0-v1-report-detector-1.0.0",
+        "sourceReportId": "amanuensis-self-b8b566f-a0-v1-report-original",
+        "detectorVersion": "1.0.0",
+        "detectorSha256": "2cd342efb714d7662944998d603c3fa3ecd9f00da6788ea98374e7a95830a2d1",
+        "comparisonDisposition": "explicit-rebaseline-of-historical-fixture"
+      },
+      "comparisonPolicy": "A version or digest mismatch is out-of-band measurement change, never repository regression. Create a new fixture/report identity after an explicit rebaseline; do not retarget this historical fixture."
+    }
+  ]
+}

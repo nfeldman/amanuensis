@@ -7,13 +7,17 @@ materialized output, so the test suite is broad on purpose.
 
 ## Setup
 
-- Node.js ≥ 20
-- Python 3.11+ (stdlib only — no `pip install` for the materializer
-  itself; `ruff` is needed only for the lint step)
+The repository's reproducible development and CI toolchain is pinned in
+[`.tool-versions`](.tool-versions): Node.js 24.18.0 and Python 3.12.13. The
+published MCP package retains its broader Node.js ≥ 20 compatibility contract,
+and the materializer itself supports Python 3.11+ and uses only the standard
+library. `ruff` is needed only for the lint step.
 
 ```bash
 git clone https://github.com/nfeldman/amanuensis
-cd amanuensis/mcp-server
+cd amanuensis
+mise install
+cd mcp-server
 npm ci
 npm run build
 ```
@@ -104,15 +108,19 @@ those are governed by the roadmap's controls, metrics, and kill criteria.
 [`dev/conspectus/self-baseline.json`](dev/conspectus/self-baseline.json) is the
 immutable A0 self-survey pinned to commit `b8b566f`. It owns the expected file,
 subsystem, concern, seam, run, and export sets. The checker derives
-[`dev/conspectus/baseline-report.json`](dev/conspectus/baseline-report.json) from
-that fixture and fails if the checked-in report drifts.
+[`dev/conspectus/baseline-report-detector-1.0.0.json`](dev/conspectus/baseline-report-detector-1.0.0.json)
+from that fixture and fails if the checked-in successor report drifts. The
+original [`dev/conspectus/baseline-report.json`](dev/conspectus/baseline-report.json)
+remains frozen under its unversioned historical checker; the detector registry
+preserves both identities.
 
 Run both A0 commands after changing the fixture or completion contract. The
 control test removes obligations independently, executes all eight graded
 controls, regenerates an export under a clean temporary root, and reads state,
-coverage, and content back. Retargeting the baseline requires a new fixture ID,
-revision/tree inventory, and baseline report; do not edit the existing fixture
-to follow HEAD.
+coverage, and content back. A detector change requires an explicit successor
+report identity. Retargeting the baseline requires a new fixture ID,
+revision/tree inventory, and report; do not edit the existing fixture to follow
+HEAD.
 
 ## Auto-generated tool inventory
 
@@ -240,7 +248,11 @@ in agent prose:
   target/fix commits, exports a history-free participant packet, fails its
   hidden oracle before the repair, passes after it, and scans forbidden future
   fragments and canaries before scoring. A qualification receipt proves the
-  instrument path only; it is never an efficacy result. Extend
+  instrument path only; it is never an efficacy result. Corpus schema and
+  detector versions are separate, detector mismatch is out-of-band rather than
+  repository drift, ordinary receipts are create-only, and explicit rebaseline
+  creates a new manifest and mandatory successor receipt without mutating the
+  source. Extend
   `test-historical-evaluation.mjs` whenever manifest custody, export, leakage,
   witness, scoring, timeout, or receipt behavior changes.
 

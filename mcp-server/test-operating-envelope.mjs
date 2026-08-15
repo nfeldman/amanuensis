@@ -58,9 +58,7 @@ const project = {
 };
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: null };
-const tools = new Map(
-  [...projectTools, ...evaluationTools].map((tool) => [tool.name, tool]),
-);
+const tools = new Map([...projectTools, ...evaluationTools].map((tool) => [tool.name, tool]));
 function call(name, args) {
   const tool = tools.get(name);
   if (!tool) throw new Error(`unknown tool: ${name}`);
@@ -96,6 +94,9 @@ test("preregistration generates unique repository-stratified replicates", () => 
   const stored = call("get_evaluation_program", { program_id: "envelope-fixture-v1" });
   assertEqual(stored.manifest.repositories.length, 3, "repository corpus");
   assertEqual(stored.manifest.strata.length, 3, "stratum corpus");
+  assertEqual(stored.manifest.schema_version, "1.0.0", "program schema version");
+  assertEqual(stored.manifest.detector_version, "1.0.0", "program detector version");
+  assert(stored.manifest.detector_digest.length === 64, "program detector digest");
 });
 
 test("incomplete fan-in cannot publish", () => {
@@ -198,11 +199,7 @@ function resultArgs(item, overrides = {}) {
 test("unused rubric categories require an operational-framing exposure check", () => {
   const first = plan.cases[0];
   assertThrows(
-    () =>
-      call(
-        "land_evaluation_result",
-        resultArgs(first, { unused_category_checks: [] }),
-      ),
+    () => call("land_evaluation_result", resultArgs(first, { unused_category_checks: [] })),
     "unused rubric category missed lacks operational-framing check",
   );
 });
@@ -221,8 +218,7 @@ test("exact preregistered fan-in lands per-replicate metrics and instrument stat
 
 test("positive treatment replicates receive independent alternative-explanation review", () => {
   const treatmentCases = plan.cases.filter(
-    (item) =>
-      item.stratum_id === "typescript-review-codex" && item.condition_role === "treatment",
+    (item) => item.stratum_id === "typescript-review-codex" && item.condition_role === "treatment",
   );
   for (const item of treatmentCases) {
     call("review_evaluation_alternatives", {
@@ -263,7 +259,8 @@ const claims = [
     scope_kind: "stratum",
     stratum_id: "typescript-review-codex",
     verdict: "supported",
-    statement: "The fixture supports this repository, mode, context, model, and runtime stratum only.",
+    statement:
+      "The fixture supports this repository, mode, context, model, and runtime stratum only.",
   },
   {
     scope_kind: "stratum",
@@ -329,11 +326,21 @@ test("operating envelope retains every subgroup, exclusion, agreement component,
     claims,
   });
   const report = published.report;
+  assertEqual(report.schema_version, "1.0.0", "report schema version");
+  assertEqual(report.detector_version, "1.0.0", "report detector version");
+  assert(report.detector_digest.length === 64, "report detector digest");
   assertEqual(report.pooled_efficacy_metric, null, "pooled metric");
   assertEqual(report.operating_envelope.supported_strata, ["typescript-review-codex"], "supported");
-  assertEqual(report.operating_envelope.unsupported_strata, ["python-design-claude"], "unsupported");
+  assertEqual(
+    report.operating_envelope.unsupported_strata,
+    ["python-design-claude"],
+    "unsupported",
+  );
   assertEqual(report.operating_envelope.undetermined_strata, ["go-review-local"], "undetermined");
-  assert(report.operating_envelope.unsupported_conditions.languages.includes("Rust"), "unsupported language");
+  assert(
+    report.operating_envelope.unsupported_conditions.languages.includes("Rust"),
+    "unsupported language",
+  );
   for (const stratum of report.strata) {
     for (const replicate of stratum.replicate_results) {
       assertEqual(replicate.excluded_observations.length, 1, "excluded observation custody");
@@ -342,7 +349,10 @@ test("operating envelope retains every subgroup, exclusion, agreement component,
         ["chance_agreement_milli", "chance_corrected_agreement_milli", "raw_agreement_milli"],
         "agreement components",
       );
-      assert(replicate.metrics.every((metric) => metric.excluded_count === 1), "metric exclusions");
+      assert(
+        replicate.metrics.every((metric) => metric.excluded_count === 1),
+        "metric exclusions",
+      );
     }
   }
 });
@@ -359,6 +369,77 @@ test("state, coverage, and content read-back can all turn red", () => {
   assert(!red.axes.coverage.ok, "coverage axis should turn red");
   assert(!red.axes.content.ok, "content axis should turn red");
   assert(!red.ok, "damaged report should fail");
+});
+
+test("current detector cannot be rebaselined without a measurement change", () => {
+  assertThrows(
+    () =>
+      call("rebaseline_operating_envelope", {
+        source_report_id: "operating-envelope-v1",
+        successor_report_id: "operating-envelope-v1-detector-1.0.0",
+        reason: "fault-injection probe",
+      }),
+    "source report already uses the current detector",
+  );
+});
+
+test("detector drift is out-of-band and explicit rebaseline preserves the source", () => {
+  const stored = db
+    .prepare("SELECT report_json FROM operating_envelope_reports WHERE report_id=?")
+    .get("operating-envelope-v1");
+  const legacy = JSON.parse(stored.report_json);
+  legacy.detector_version = "0.9.0";
+  legacy.detector_digest = "0".repeat(64);
+  db.exec("DROP TRIGGER operating_envelope_report_is_immutable");
+  db.prepare("UPDATE operating_envelope_reports SET report_json=? WHERE report_id=?").run(
+    JSON.stringify(legacy),
+    "operating-envelope-v1",
+  );
+
+  const mismatch = call("verify_operating_envelope", {
+    report_id: "operating-envelope-v1",
+  });
+  assertEqual(
+    mismatch.comparison_status,
+    "out-of-band-detector-mismatch",
+    "detector mismatch classification",
+  );
+  assertEqual(mismatch.ok, null, "out-of-band mismatch is not a regression verdict");
+
+  assertThrows(
+    () =>
+      call("rebaseline_operating_envelope", {
+        source_report_id: "operating-envelope-v1",
+        successor_report_id: "operating-envelope-v1",
+        reason: "identity-collision probe",
+      }),
+    "operating envelope report identity already exists",
+  );
+
+  const successor = call("rebaseline_operating_envelope", {
+    source_report_id: "operating-envelope-v1",
+    successor_report_id: "operating-envelope-v1-detector-1.0.0",
+    reason: "fault-injected detector definition changed",
+  });
+  assertEqual(
+    successor.comparison_status,
+    "out-of-band-measurement-correction",
+    "rebaseline classification",
+  );
+  assertEqual(legacy.detector_version, "0.9.0", "source remains historical");
+  const verifiedSuccessor = call("verify_operating_envelope", {
+    report_id: "operating-envelope-v1-detector-1.0.0",
+  });
+  assert(verifiedSuccessor.ok, "successor report should verify under the current detector");
+  const events = db
+    .prepare("SELECT event_kind FROM operating_envelope_measurement_events ORDER BY event_id")
+    .all()
+    .map((row) => row.event_kind);
+  assertEqual(
+    events,
+    ["detector-mismatch", "rebaseline", "successor-verification"],
+    "measurement event custody",
+  );
 });
 
 db.close();

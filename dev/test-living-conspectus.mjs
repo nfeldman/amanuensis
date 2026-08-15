@@ -8,10 +8,10 @@ import { fileURLToPath } from "node:url";
 import { evaluateConspectus } from "./check-living-conspectus.mjs";
 
 const DEV_DIR = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(DEV_DIR, "..");
 const FIXTURE_PATH = resolve(DEV_DIR, "conspectus/self-baseline.json");
-const REPORT_PATH = resolve(DEV_DIR, "conspectus/baseline-report.json");
+const REPORT_PATH = resolve(DEV_DIR, "conspectus/baseline-report-detector-1.0.0.json");
 const CHECKER_PATH = resolve(DEV_DIR, "check-living-conspectus.mjs");
+const DETECTOR_REGISTRY_PATH = resolve(DEV_DIR, "conspectus/detector-registry.json");
 const BASELINE = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
 
 function clone() {
@@ -37,7 +37,9 @@ function runChecker(checker, args, expectedStatus, expectedText) {
   const result = spawnSync(process.execPath, [checker, ...args], { encoding: "utf8" });
   const combined = `${result.stdout}\n${result.stderr}`;
   if (result.status !== expectedStatus) {
-    throw new Error(`checker ${args.join(" ")} exited ${result.status}, expected ${expectedStatus}\n${combined}`);
+    throw new Error(
+      `checker ${args.join(" ")} exited ${result.status}, expected ${expectedStatus}\n${combined}`,
+    );
   }
   if (expectedText && !combined.includes(expectedText)) {
     throw new Error(`checker ${args.join(" ")} did not report ${expectedText}\n${combined}`);
@@ -46,7 +48,9 @@ function runChecker(checker, args, expectedStatus, expectedText) {
 
 const green = evaluateConspectus(BASELINE);
 if (!green.complete) {
-  throw new Error(`canonical fixture is not complete: ${JSON.stringify([...green.missing, ...green.errors])}`);
+  throw new Error(
+    `canonical fixture is not complete: ${JSON.stringify([...green.missing, ...green.errors])}`,
+  );
 }
 
 const firstFile = BASELINE.inventory.assignments[0].files[0];
@@ -57,17 +61,24 @@ assertRed(
 );
 assertRed(
   "missing concern disposition",
-  (value) => delete value.concernCoverage.find(({ subsystemId }) => subsystemId === "B-02").dispositions["AT-2"],
+  (value) =>
+    delete value.concernCoverage.find(({ subsystemId }) => subsystemId === "B-02").dispositions[
+      "AT-2"
+    ],
   "concern:B-02/AT-2:disposition",
 );
 assertRed(
   "missing seam endpoint",
-  (value) => { value.seams[0].partyB = null; },
+  (value) => {
+    value.seams[0].partyB = null;
+  },
   "seam:SM-01:endpoint:missing",
 );
 assertRed(
   "missing seam assessment",
-  (value) => { value.seams[0].assessment = null; },
+  (value) => {
+    value.seams[0].assessment = null;
+  },
   "seam:SM-01:integral-assessment",
 );
 assertRed(
@@ -93,20 +104,36 @@ assertRed(
 for (const axis of ["state", "coverage", "content"]) {
   assertRed(
     `corrupt ${axis} read-back`,
-    (value) => { value.export.readBackHashes[axis] = "corrupt"; },
+    (value) => {
+      value.export.readBackHashes[axis] = "corrupt";
+    },
     `export:${axis}:read-back`,
   );
 }
 
 const controlMutations = {
-  unchanged: (control) => { control.expectedObservation.replicatesRemainSeparate = false; },
-  marker: (control) => { control.input.markedPayload.claim = "different semantic content"; },
-  "benign-refactor": (control) => { control.input.after.behaviorHash = "changed-behavior"; },
+  unchanged: (control) => {
+    control.expectedObservation.replicatesRemainSeparate = false;
+  },
+  marker: (control) => {
+    control.input.markedPayload.claim = "different semantic content";
+  },
+  "benign-refactor": (control) => {
+    control.input.after.behaviorHash = "changed-behavior";
+  },
   "historical-defect": (control) => control.input.repairRevisionEvidenceIds.push("repair-evidence"),
-  "direct-invalidation": (control) => { control.input.evidenceAnchorPresent = true; },
-  "cross-seam": (control) => { control.input.crossSeamDefect = false; },
-  "incoherent-request": (control) => { control.input.priority = "goal-a"; },
-  "export-fan-in": (control) => { control.input.scored.push("work-2"); },
+  "direct-invalidation": (control) => {
+    control.input.evidenceAnchorPresent = true;
+  },
+  "cross-seam": (control) => {
+    control.input.crossSeamDefect = false;
+  },
+  "incoherent-request": (control) => {
+    control.input.priority = "goal-a";
+  },
+  "export-fan-in": (control) => {
+    control.input.scored.push("work-2");
+  },
 };
 for (const [controlClass, mutate] of Object.entries(controlMutations)) {
   assertRed(
@@ -124,19 +151,57 @@ try {
   mkdirSync(cleanConspectus, { recursive: true });
   cpSync(CHECKER_PATH, resolve(cleanDev, "check-living-conspectus.mjs"), { recursive: false });
   cpSync(FIXTURE_PATH, resolve(cleanConspectus, "self-baseline.json"), { recursive: false });
-  cpSync(REPORT_PATH, resolve(cleanConspectus, "baseline-report.json"), { recursive: false });
+  cpSync(REPORT_PATH, resolve(cleanConspectus, "baseline-report-detector-1.0.0.json"), {
+    recursive: false,
+  });
+  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry.json"), {
+    recursive: false,
+  });
   const exportDir = resolve(scratch, "export");
   const cleanChecker = resolve(cleanDev, "check-living-conspectus.mjs");
-  runChecker(cleanChecker, ["--root", cleanRoot, "--export", exportDir], 0, "living conspectus complete");
-  runChecker(cleanChecker, ["--root", cleanRoot, "--read-back", exportDir], 0, "living conspectus complete");
+  runChecker(
+    cleanChecker,
+    ["--root", cleanRoot, "--export", exportDir],
+    0,
+    "historical A0 baseline complete",
+  );
+  runChecker(
+    cleanChecker,
+    ["--root", cleanRoot, "--read-back", exportDir],
+    0,
+    "historical A0 baseline complete",
+  );
+
+  const detectorRegistry = JSON.parse(
+    readFileSync(resolve(cleanConspectus, "detector-registry.json"), "utf8"),
+  );
+  detectorRegistry.fixtures[0].currentVerification.detectorVersion = "0.9.0";
+  writeFileSync(
+    resolve(cleanConspectus, "detector-registry.json"),
+    `${JSON.stringify(detectorRegistry, null, 2)}\n`,
+  );
+  runChecker(cleanChecker, ["--root", cleanRoot], 1, "detector:version:mismatch");
+  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry.json"), {
+    recursive: false,
+  });
 
   const summaryPath = resolve(exportDir, "conspectus-summary.json");
   const summary = JSON.parse(readFileSync(summaryPath, "utf8"));
   summary.state.fixtureId = "corrupt";
   writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
-  runChecker(cleanChecker, ["--root", cleanRoot, "--read-back", exportDir], 1, "export:state:content");
+  runChecker(
+    cleanChecker,
+    ["--root", cleanRoot, "--read-back", exportDir],
+    1,
+    "export:state:content",
+  );
   writeFileSync(summaryPath, "{not-json\n");
-  runChecker(cleanChecker, ["--root", cleanRoot, "--read-back", exportDir], 1, "export:projection:readable");
+  runChecker(
+    cleanChecker,
+    ["--root", cleanRoot, "--read-back", exportDir],
+    1,
+    "export:projection:readable",
+  );
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

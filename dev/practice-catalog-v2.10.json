@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2.10",
+  "catalogUpdated": "2026-08-14",
+  "sourceCommit": "c394b723c28ccad6c84c2df6a5100754320b2d97",
+  "sourcePath": "practice-audit/practice-catalog.md",
+  "ids": [
+    "GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7", "GP8", "GP9", "GP10",
+    "GP11", "GP12", "GP13", "GP14", "GP15", "GP16", "GP17", "GP18", "GP19", "GP20",
+    "GP21", "GP22", "GP23", "GP24", "GP25", "GP26", "GP27", "GP28", "GP29", "GP30",
+    "GP31", "GP32", "GP33", "GP34", "GP35", "GP36",
+    "VP1", "VP2", "VP3", "VP4", "VP5", "VP6", "VP7", "VP8", "VP9", "VP10",
+    "VP11", "VP12", "VP13", "VP14", "VP15", "VP16", "VP17", "VP18", "VP19", "VP20",
+    "VP21", "VP22", "VP23", "VP24", "VP25", "VP26"
+  ]
+}

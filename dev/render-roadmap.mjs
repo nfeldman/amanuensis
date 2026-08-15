@@ -15,7 +15,7 @@ function parseArgs(args) {
       mode = argument;
       continue;
     }
-    if (["--root", "--source", "--output"].includes(argument)) {
+    if (["--root", "--source", "--output", "--catalog"].includes(argument)) {
       const value = args[index + 1];
       if (!value) throw new Error(`${argument} requires a path`);
       options[argument.slice(2)] = value;
@@ -33,57 +33,15 @@ const CLI = parseArgs(process.argv.slice(2));
 const ROOT = resolve(CLI.root ?? resolve(SCRIPT_DIR, ".."));
 const SOURCE = resolve(ROOT, CLI.source ?? "dev/roadmap.json");
 const OUTPUT = resolve(ROOT, CLI.output ?? "ROADMAP.md");
+const CATALOG = resolve(ROOT, CLI.catalog ?? "dev/practice-catalog-v2.10.json");
 const STAGE_ORDER = new Map([
   ["now", 0],
   ["next", 1],
   ["later", 2],
 ]);
 const VALID_STATUSES = new Set(["ready", "planned", "in-progress", "blocked", "done"]);
-const REQUIRED_PRACTICES = new Set([
-  "GP1",
-  "GP6",
-  "GP8",
-  "GP9",
-  "GP10",
-  "GP11",
-  "GP12",
-  "GP13",
-  "GP15",
-  "GP16",
-  "GP18",
-  "GP19",
-  "GP20",
-  "GP21",
-  "GP22",
-  "GP23",
-  "GP24",
-  "GP25",
-  "GP27",
-  "GP28",
-  "GP30",
-  "GP34",
-  "GP36",
-  "VP1",
-  "VP2",
-  "VP3",
-  "VP4",
-  "VP5",
-  "VP6",
-  "VP7",
-  "VP8",
-  "VP9",
-  "VP10",
-  "VP11",
-  "VP12",
-  "VP13",
-  "VP14",
-  "VP15",
-  "VP16",
-  "VP17",
-  "VP18",
-  "VP19",
-  "VP20",
-]);
+const CATALOG_SNAPSHOT = JSON.parse(readFileSync(CATALOG, "utf8"));
+const REQUIRED_PRACTICES = new Set(CATALOG_SNAPSHOT.ids);
 
 function loadRoadmap() {
   return JSON.parse(readFileSync(SOURCE, "utf8"));
@@ -116,12 +74,36 @@ function validateRoadmap(roadmap) {
       errors,
     );
   }
+  assert(
+    roadmap.delivery?.implementation === "branch-local-complete",
+    "delivery.implementation must be branch-local-complete",
+    errors,
+  );
+  assert(
+    roadmap.delivery?.productProof === "unestablished" ||
+      roadmap.delivery?.productProof === "established",
+    "delivery.productProof must be unestablished or established",
+    errors,
+  );
+  assert(
+    roadmap.delivery?.integration === "pending",
+    "delivery.integration must remain pending until integrated read-back is recorded",
+    errors,
+  );
+  for (const field of ["targetRef", "claim"]) {
+    assert(
+      typeof roadmap.delivery?.[field] === "string" && roadmap.delivery[field].trim(),
+      `delivery.${field} is required`,
+      errors,
+    );
+  }
+  nonEmptyStrings(roadmap.delivery?.requiredEvidence, "delivery.requiredEvidence", errors);
   assert(/^\d{4}-\d{2}-\d{2}$/.test(roadmap.updated ?? ""), "updated must be YYYY-MM-DD", errors);
 
   for (const field of [
     "baselineObservations",
     "inferences",
-    "openQuestions",
+    "programDecisions",
     "tensions",
     "definitions",
     "durableObjects",
@@ -167,13 +149,28 @@ function validateRoadmap(roadmap) {
       );
     }
   }
-  for (const [index, question] of (roadmap.openQuestions ?? []).entries()) {
-    for (const field of ["question", "owner", "resolveBefore"]) {
+  for (const [index, question] of (roadmap.programDecisions ?? []).entries()) {
+    for (const field of ["question", "owner", "resolveBefore", "resolveBeforeInitiative"]) {
       assert(
         typeof question[field] === "string" && question[field].trim(),
-        `openQuestions[${index}].${field} is required`,
+        `programDecisions[${index}].${field} is required`,
         errors,
       );
+    }
+    assert(
+      question.status === "open" || question.status === "resolved",
+      `programDecisions[${index}].status must be open or resolved`,
+      errors,
+    );
+    if (question.status === "resolved") {
+      for (const field of ["decisionRecord", "resolution"]) {
+        assert(
+          typeof question[field] === "string" && question[field].trim(),
+          `programDecisions[${index}].${field} is required when resolved`,
+          errors,
+        );
+      }
+      if (question.decisionRecord) evidencePaths.add(question.decisionRecord);
     }
   }
 
@@ -283,6 +280,30 @@ function validateRoadmap(roadmap) {
     }
     nonEmptyStrings(stage.exitCriteria, `stages[${stageIndex}].exitCriteria`, errors, 2);
     assert(
+      stage.productEvidenceStatus === "unestablished" ||
+        stage.productEvidenceStatus === "established",
+      `stages[${stageIndex}].productEvidenceStatus is invalid`,
+      errors,
+    );
+    assert(
+      Array.isArray(stage.exitEvidence),
+      `stages[${stageIndex}].exitEvidence must be an array`,
+      errors,
+    );
+    if (stage.productEvidenceStatus === "established") {
+      nonEmptyStrings(
+        stage.exitEvidence,
+        `stages[${stageIndex}].exitEvidence`,
+        errors,
+        stage.exitCriteria?.length ?? 1,
+      );
+      assert(
+        stage.exitEvidence?.length === stage.exitCriteria?.length,
+        `stages[${stageIndex}] must evidence every stage exit before product proof is established`,
+        errors,
+      );
+    }
+    assert(
       Array.isArray(stage.initiatives) && stage.initiatives.length > 0,
       `stages[${stageIndex}].initiatives must be non-empty`,
       errors,
@@ -318,6 +339,27 @@ function validateRoadmap(roadmap) {
     }
   }
   assert(stageIds.size === 3, "stages must contain exactly now, next, and later", errors);
+  const nowStage = roadmap.stages?.find((stage) => stage.id === "now");
+  assert(
+    roadmap.delivery?.productProof !== "established" ||
+      nowStage?.productEvidenceStatus === "established",
+    "delivery.productProof cannot be established before the Now stage exits are evidenced",
+    errors,
+  );
+
+  for (const [index, decision] of (roadmap.programDecisions ?? []).entries()) {
+    const deadline = initiatives.get(decision.resolveBeforeInitiative)?.item;
+    assert(
+      deadline,
+      `programDecisions[${index}] has unknown deadline initiative ${decision.resolveBeforeInitiative}`,
+      errors,
+    );
+    assert(
+      !(deadline?.status === "done" && decision.status !== "resolved"),
+      `programDecisions[${index}] is still open after terminal ${decision.resolveBeforeInitiative}`,
+      errors,
+    );
+  }
 
   for (const [id, { item, stage }] of initiatives) {
     for (const dependency of item.dependsOn ?? []) {
@@ -486,7 +528,11 @@ function validateRoadmap(roadmap) {
     }
   }
 
-  assert(roadmap.practiceAudit?.version === "2.8", "practiceAudit.version must be 2.8", errors);
+  assert(
+    roadmap.practiceAudit?.version === CATALOG_SNAPSHOT.catalogVersion,
+    `practiceAudit.version must be ${CATALOG_SNAPSHOT.catalogVersion}`,
+    errors,
+  );
   const appliedPractices = new Set();
   for (const [index, entry] of (roadmap.practiceAudit?.applied ?? []).entries()) {
     nonEmptyStrings(entry.ids, `practiceAudit.applied[${index}].ids`, errors);
@@ -506,6 +552,13 @@ function validateRoadmap(roadmap) {
     assert(
       appliedPractices.has(required),
       `practice audit does not account for required ${required}`,
+      errors,
+    );
+  }
+  for (const applied of appliedPractices) {
+    assert(
+      REQUIRED_PRACTICES.has(applied),
+      `practice audit names unknown catalog practice ${applied}`,
       errors,
     );
   }
@@ -540,9 +593,9 @@ function render(roadmap) {
   lines.push("");
   lines.push(`**North star:** ${roadmap.northStar}`);
   lines.push("");
-  lines.push("### Status at a glance");
+  lines.push("### Branch-local implementation status at a glance");
   lines.push("");
-  lines.push("| Ready | Planned | In progress | Blocked | Done |");
+  lines.push("| Ready | Planned | In progress | Blocked | Implemented |");
   lines.push("|---:|---:|---:|---:|---:|");
   lines.push(
     `| ${statusCounts.find(([s]) => s === "ready")[1]} | ${statusCounts.find(([s]) => s === "planned")[1]} | ${statusCounts.find(([s]) => s === "in-progress")[1]} | ${statusCounts.find(([s]) => s === "blocked")[1]} | ${statusCounts.find(([s]) => s === "done")[1]} |`,
@@ -552,17 +605,27 @@ function render(roadmap) {
     "The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.",
   );
   lines.push("");
-  lines.push("| Horizon | Product proof | Initiatives |");
-  lines.push("|---|---|---|");
+  lines.push("| Horizon | Target product evidence | Evidence status | Initiatives |");
+  lines.push("|---|---|---|---|");
   for (const stage of roadmap.stages) {
     lines.push(
-      `| ${stage.id[0].toUpperCase()}${stage.id.slice(1)} | ${stage.objective} | ${stage.initiatives.map((item) => item.id).join(", ")} |`,
+      `| ${stage.id[0].toUpperCase()}${stage.id.slice(1)} | ${stage.objective} | ${stage.productEvidenceStatus} | ${stage.initiatives.map((item) => item.id).join(", ")} |`,
     );
   }
   lines.push("");
+  lines.push(`**Implementation:** ${roadmap.delivery.claim}`);
+  lines.push("");
+  lines.push(`**Product proof:** ${roadmap.delivery.productProof}.`);
+  lines.push("");
   lines.push(
-    `**Start here:** ${nextInitiative?.id ?? "complete"} — ${nextInitiative?.title ?? "all initiatives complete"}. Do not begin review, design, research-learning, or Chorusmith extraction work until the living-record exit passes.`,
+    `**Integration gate:** ${roadmap.delivery.integration}; target \`${roadmap.delivery.targetRef}\`. Required evidence: ${roadmap.delivery.requiredEvidence.join(" ")}`,
   );
+  if (nextInitiative) {
+    lines.push("");
+    lines.push(
+      `**Next implementation initiative:** ${nextInitiative.id} — ${nextInitiative.title}.`,
+    );
+  }
 
   lines.push("");
   lines.push("## Epistemic baseline");
@@ -583,12 +646,14 @@ function render(roadmap) {
     );
   }
   lines.push("");
-  lines.push("### Open decisions");
+  lines.push("### Program decisions");
   lines.push("");
-  lines.push("| Question | Decision owner | Resolve before |");
-  lines.push("|---|---|---|");
-  for (const item of roadmap.openQuestions)
-    lines.push(`| ${item.question} | ${item.owner} | ${item.resolveBefore} |`);
+  lines.push("| Question | Owner | Deadline | Status | Decision record | Resolution |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const item of roadmap.programDecisions)
+    lines.push(
+      `| ${item.question} | ${item.owner} | ${item.resolveBefore} | ${item.status} | ${item.decisionRecord ? `\`${item.decisionRecord}\`` : "—"} | ${item.resolution ?? "—"} |`,
+    );
 
   lines.push("");
   lines.push("## Product boundaries");
@@ -658,6 +723,8 @@ function render(roadmap) {
     lines.push("");
     lines.push(`**Objective:** ${stage.objective}`);
     lines.push("");
+    lines.push(`**Product-evidence status:** ${stage.productEvidenceStatus}`);
+    lines.push("");
     lines.push("**Stage exits:**");
     lines.push("");
     lines.push(bullets(stage.exitCriteria));
@@ -665,7 +732,7 @@ function render(roadmap) {
       lines.push("");
       lines.push(`#### ${item.id} — ${item.title}`);
       lines.push("");
-      lines.push(`**Status:** ${item.status}<br>`);
+      lines.push(`**Implementation status:** ${item.status}<br>`);
       lines.push(`**Owner:** ${item.owner}<br>`);
       lines.push(
         `**Depends on:** ${item.dependsOn.length ? item.dependsOn.join(", ") : "none"}<br>`,

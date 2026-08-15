@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import {
+  DETECTOR_VERSION,
   loadCorpus,
   prepareCase,
   qualifyCorpus,
+  rebaselineCorpus,
   scanParticipantSurface,
   scoreCase,
 } from "./scripts/historical-evaluation.mjs";
@@ -23,6 +25,7 @@ const taskPath = resolve(custody, "task.md");
 const oraclePath = resolve(custody, "oracle.patch");
 const canary = "EVALUATOR_CANARY_DO_NOT_SURFACE";
 const testDirectory = dirname(fileURLToPath(import.meta.url));
+const runnerPath = resolve(testDirectory, "scripts/historical-evaluation.mjs");
 
 function git(args) {
   return execFileSync("git", ["-C", repository, ...args], { encoding: "utf8" }).trim();
@@ -36,7 +39,8 @@ function commit(message) {
 
 function writeManifest(targetCommit, fixCommit, overrides = {}) {
   const corpus = {
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
+    detectorVersion: DETECTOR_VERSION,
     programId: "synthetic-natural-history",
     created: "2026-08-14",
     cases: [
@@ -110,6 +114,7 @@ try {
   const corpus = loadCorpus(manifestPath);
   const qualification = qualifyCorpus(corpus);
   assert.equal(qualification.caseCount, 1);
+  assert.equal(qualification.detectorVersion, DETECTOR_VERSION);
   assert.equal(qualification.cases[0].targetOracle.outcome, "fail");
   assert.equal(qualification.cases[0].fixOracle.outcome, "pass");
   assert.equal(qualification.cases[0].qualified, true);
@@ -160,8 +165,49 @@ try {
   });
   assert.throws(() => loadCorpus(manifestPath), /targetCommit and fixCommit must differ/);
 
+  writeManifest(targetCommit, fixCommit, { detectorVersion: "0.9.0" });
+  assert.throws(
+    () => loadCorpus(manifestPath),
+    /out-of-band measurement-definition change, not a repository regression/,
+  );
+  const rebaselineManifest = resolve(custody, "manifest-detector-1.0.0.json");
+  const rebaselineReceipt = resolve(custody, "receipt-detector-1.0.0.json");
+  const rebaseline = rebaselineCorpus(manifestPath, rebaselineManifest, rebaselineReceipt);
+  assert.equal(rebaseline.measurementCorrection, true);
+  assert.equal(rebaseline.comparisonDisposition, "out-of-band-not-regression");
+  assert.equal(rebaseline.sourceDetectorVersion, "0.9.0");
+  assert.equal(JSON.parse(readFileSync(manifestPath, "utf8")).detectorVersion, "0.9.0");
+  assert.equal(loadCorpus(rebaselineManifest).detectorVersion, DETECTOR_VERSION);
+  assert.equal(JSON.parse(readFileSync(rebaselineReceipt, "utf8")).operation, "rebaseline-corpus");
+  assert.throws(
+    () => rebaselineCorpus(manifestPath, rebaselineManifest, rebaselineReceipt),
+    /rebaseline output already exists/,
+  );
+
+  const orphanManifest = resolve(custody, "must-not-survive.json");
+  const occupiedReceipt = resolve(custody, "occupied-receipt.json");
+  writeFileSync(occupiedReceipt, "historical receipt must survive\n");
+  assert.throws(
+    () => rebaselineCorpus(manifestPath, orphanManifest, occupiedReceipt),
+    /rebaseline receipt already exists/,
+  );
+  assert.equal(existsSync(orphanManifest), false);
+  assert.equal(readFileSync(occupiedReceipt, "utf8"), "historical receipt must survive\n");
+
+  writeManifest(targetCommit, fixCommit);
+  const existingReceipt = resolve(custody, "existing-receipt.json");
+  writeFileSync(existingReceipt, "historical receipt must survive\n");
+  const overwriteAttempt = spawnSync(
+    process.execPath,
+    [runnerPath, "qualify", manifestPath, "--receipt", existingReceipt],
+    { encoding: "utf8" },
+  );
+  assert.notEqual(overwriteAttempt.status, 0);
+  assert.match(overwriteAttempt.stderr, /EEXIST|file already exists/);
+  assert.equal(readFileSync(existingReceipt, "utf8"), "historical receipt must survive\n");
+
   console.log(
-    "historical evaluation verified: sealed contract, red/green kill witness, history-free packet, hidden scoring, and leakage canary",
+    "historical evaluation verified: sealed contract, versioned detector, explicit rebaseline, red/green kill witness, history-free packet, hidden scoring, and leakage canary",
   );
 } finally {
   rmSync(scratch, { recursive: true, force: true });
