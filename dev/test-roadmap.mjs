@@ -50,6 +50,11 @@ try {
   writeFileSync(projection, `${readFileSync(projection, "utf8")}drift\n`);
   run(["--check", "--source", valid, "--output", projection], 1, "is stale");
 
+  const staleSchema = writeCase("stale-schema", (value) => {
+    value.schemaVersion = 1;
+  });
+  run(["--write", "--source", staleSchema, "--output", projection], 1, "schemaVersion must be 2");
+
   const dangling = writeCase("dangling", (value) => initiative(value, "A1").dependsOn.push("A999"));
   run(["--write", "--source", dangling, "--output", projection], 1, "unknown dependency A999");
 
@@ -146,7 +151,87 @@ try {
   run(
     ["--write", "--source", unsupportedProductProof, "--output", projection],
     1,
-    "productProof cannot be established before the Now stage exits are evidenced",
+    "productProof must remain unestablished until criterion-linked product evidence is implemented",
+  );
+
+  const regressedIntegration = writeCase("regressed-integration", (value) => {
+    value.delivery.integration.status = "pending";
+  });
+  run(
+    ["--write", "--source", regressedIntegration, "--output", projection],
+    1,
+    "delivery.integration.status must be established after integrated read-back",
+  );
+
+  const regressedImplementation = writeCase("regressed-implementation", (value) => {
+    value.delivery.implementation = "branch-local-complete";
+  });
+  run(
+    ["--write", "--source", regressedImplementation, "--output", projection],
+    1,
+    "delivery.implementation must be integrated",
+  );
+
+  const unfinishedIntegratedImplementation = writeCase(
+    "unfinished-integrated-implementation",
+    (value) => {
+      initiative(value, "A18").status = "ready";
+    },
+  );
+  run(
+    ["--write", "--source", unfinishedIntegratedImplementation, "--output", projection],
+    1,
+    "delivery.implementation cannot be integrated while any initiative is unfinished",
+  );
+
+  const ambiguousIntegrationRef = writeCase("ambiguous-integration-ref", (value) => {
+    value.delivery.integration.ref = "main";
+  });
+  run(
+    ["--write", "--source", ambiguousIntegrationRef, "--output", projection],
+    1,
+    "delivery.integration.ref must be a full refs/heads branch ref",
+  );
+
+  const mismatchedCiHead = writeCase("mismatched-ci-head", (value) => {
+    value.delivery.integration.ci.headSha = "1".repeat(40);
+  });
+  run(
+    ["--write", "--source", mismatchedCiHead, "--output", projection],
+    1,
+    "delivery.integration.ci.headSha must equal the implementation SHA",
+  );
+
+  const failedReadback = writeCase("failed-readback", (value) => {
+    value.delivery.integration.readback.axes.content = "failed";
+    value.delivery.integration.readback.mismatchCount = 1;
+  });
+  run(
+    ["--write", "--source", failedReadback, "--output", projection],
+    1,
+    "delivery.integration.readback.axes.content must be passed",
+  );
+
+  const fabricatedProductProof = writeCase("fabricated-product-proof", (value) => {
+    value.delivery.productProof = "established";
+    value.stages[0].productEvidenceStatus = "established";
+    value.stages[0].exitEvidence = value.stages[0].exitCriteria.map(
+      (_, index) => `fabricated evidence ${index}`,
+    );
+  });
+  run(
+    ["--write", "--source", fabricatedProductProof, "--output", projection],
+    1,
+    "productProof must remain unestablished until criterion-linked product evidence is implemented",
+  );
+
+  const fabricatedRelease = writeCase("fabricated-release", (value) => {
+    value.delivery.release = { status: "established", tag: "v2.0.0" };
+  });
+  run(
+    ["--write", "--source", fabricatedRelease, "--output", projection],
+    1,
+    "delivery.release must remain unestablished with no tag",
   );
 
   const unevidencedStageExit = writeCase("unevidenced-stage-exit", (value) => {
@@ -189,7 +274,7 @@ try {
   );
 
   console.log(
-    "roadmap red gates verified: drift, dangling/unfinished dependency, cycle, overdue decision, product/stage proof, stale catalog, missing criterion, evidence, practice coverage, and control integrity",
+    "roadmap red gates verified: drift, dangling/unfinished dependency, cycle, overdue decision, delivery regression, product/stage proof, stale catalog, missing criterion, evidence, practice coverage, and control integrity",
   );
 } finally {
   rmSync(SCRATCH, { recursive: true, force: true });

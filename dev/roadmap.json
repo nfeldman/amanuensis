@@ -1,21 +1,43 @@
 {
-  "schemaVersion": 1,
-  "roadmapVersion": "1.2",
-  "updated": "2026-08-15",
+  "schemaVersion": 2,
+  "roadmapVersion": "1.3",
+  "updated": "2026-08-19",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
-  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction have branch-local apparatus, but neither that apparatus nor a 19/19 implementation count establishes the product proof, integration, or release.",
+  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction are integrated on main. That establishes the v2 implementation and its repository custody, not product efficacy, a real operating envelope, or a tagged release.",
   "delivery": {
-    "implementation": "branch-local-complete",
+    "implementation": "integrated",
     "productProof": "unestablished",
-    "integration": "pending",
-    "targetRef": "main",
-    "claim": "All 19 roadmap initiatives have branch-local implementation evidence. Integration, remote custody, CI at the integrated commit, and release remain unestablished.",
-    "requiredEvidence": [
-      "A named remote ref containing the reviewed implementation tip.",
-      "The full repository CI suite passing at the exact integrated commit.",
-      "A terminal read-back of roadmap, Pecia projection, and conspectus state at that commit."
-    ]
+    "integration": {
+      "status": "established",
+      "remote": "origin",
+      "repository": "nfeldman/amanuensis",
+      "ref": "refs/heads/main",
+      "implementationSha": "0e2dafb81d08ebfd3bce718aed376a588095a3a8",
+      "verifiedAt": "2026-08-19",
+      "ci": {
+        "provider": "github-actions",
+        "workflow": "tests",
+        "runId": 32268430377,
+        "headSha": "0e2dafb81d08ebfd3bce718aed376a588095a3a8",
+        "conclusion": "success"
+      },
+      "readback": {
+        "runId": "v2-integration-0e2dafb-terminal",
+        "sourceSha": "0e2dafb81d08ebfd3bce718aed376a588095a3a8",
+        "storageCommit": "533962b5d55edfe112caf6fff7fb82d0588bed63",
+        "axes": {
+          "state": "passed",
+          "coverage": "passed",
+          "content": "passed"
+        },
+        "mismatchCount": 0
+      }
+    },
+    "release": {
+      "status": "unestablished",
+      "tag": null
+    }
   },
   "baselineObservations": [
     {

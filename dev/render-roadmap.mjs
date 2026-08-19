@@ -40,6 +40,8 @@ const STAGE_ORDER = new Map([
   ["later", 2],
 ]);
 const VALID_STATUSES = new Set(["ready", "planned", "in-progress", "blocked", "done"]);
+const FULL_SHA = /^[0-9a-f]{40}$/;
+const FULL_BRANCH_REF = /^refs\/heads\/[A-Za-z0-9._/-]+$/;
 const CATALOG_SNAPSHOT = JSON.parse(readFileSync(CATALOG, "utf8"));
 const REQUIRED_PRACTICES = new Set(CATALOG_SNAPSHOT.ids);
 
@@ -66,7 +68,7 @@ function nonEmptyStrings(value, field, errors, minimum = 1) {
 
 function validateRoadmap(roadmap) {
   const errors = [];
-  assert(roadmap.schemaVersion === 1, "schemaVersion must be 1", errors);
+  assert(roadmap.schemaVersion === 2, "schemaVersion must be 2", errors);
   for (const field of ["roadmapVersion", "updated", "title", "northStar", "scopeDecision"]) {
     assert(
       typeof roadmap[field] === "string" && roadmap[field].trim(),
@@ -75,29 +77,95 @@ function validateRoadmap(roadmap) {
     );
   }
   assert(
-    roadmap.delivery?.implementation === "branch-local-complete",
-    "delivery.implementation must be branch-local-complete",
+    roadmap.delivery?.implementation === "integrated",
+    "delivery.implementation must be integrated",
     errors,
   );
   assert(
-    roadmap.delivery?.productProof === "unestablished" ||
-      roadmap.delivery?.productProof === "established",
-    "delivery.productProof must be unestablished or established",
+    roadmap.delivery?.productProof === "unestablished",
+    "delivery.productProof must remain unestablished until criterion-linked product evidence is implemented",
+    errors,
+  );
+  const integration = roadmap.delivery?.integration;
+  assert(
+    integration?.status === "established",
+    "delivery.integration.status must be established after integrated read-back",
+    errors,
+  );
+  assert(integration?.remote === "origin", "delivery.integration.remote must be origin", errors);
+  assert(
+    integration?.repository === "nfeldman/amanuensis",
+    "delivery.integration.repository must be nfeldman/amanuensis",
     errors,
   );
   assert(
-    roadmap.delivery?.integration === "pending",
-    "delivery.integration must remain pending until integrated read-back is recorded",
+    FULL_BRANCH_REF.test(integration?.ref ?? ""),
+    "delivery.integration.ref must be a full refs/heads branch ref",
     errors,
   );
-  for (const field of ["targetRef", "claim"]) {
+  assert(
+    FULL_SHA.test(integration?.implementationSha ?? ""),
+    "delivery.integration.implementationSha must be a full commit SHA",
+    errors,
+  );
+  assert(
+    /^\d{4}-\d{2}-\d{2}$/.test(integration?.verifiedAt ?? ""),
+    "delivery.integration.verifiedAt must be YYYY-MM-DD",
+    errors,
+  );
+  assert(
+    integration?.ci?.provider === "github-actions" && integration?.ci?.workflow === "tests",
+    "delivery.integration.ci must identify the GitHub Actions tests workflow",
+    errors,
+  );
+  assert(
+    Number.isInteger(integration?.ci?.runId) && integration.ci.runId > 0,
+    "delivery.integration.ci.runId must be a positive integer",
+    errors,
+  );
+  assert(
+    integration?.ci?.headSha === integration?.implementationSha,
+    "delivery.integration.ci.headSha must equal the implementation SHA",
+    errors,
+  );
+  assert(
+    integration?.ci?.conclusion === "success",
+    "delivery.integration.ci.conclusion must be success",
+    errors,
+  );
+  assert(
+    typeof integration?.readback?.runId === "string" && integration.readback.runId.trim(),
+    "delivery.integration.readback.runId is required",
+    errors,
+  );
+  assert(
+    integration?.readback?.sourceSha === integration?.implementationSha,
+    "delivery.integration.readback.sourceSha must equal the implementation SHA",
+    errors,
+  );
+  assert(
+    FULL_SHA.test(integration?.readback?.storageCommit ?? ""),
+    "delivery.integration.readback.storageCommit must be a full commit SHA",
+    errors,
+  );
+  for (const axis of ["state", "coverage", "content"]) {
     assert(
-      typeof roadmap.delivery?.[field] === "string" && roadmap.delivery[field].trim(),
-      `delivery.${field} is required`,
+      integration?.readback?.axes?.[axis] === "passed",
+      `delivery.integration.readback.axes.${axis} must be passed`,
       errors,
     );
   }
-  nonEmptyStrings(roadmap.delivery?.requiredEvidence, "delivery.requiredEvidence", errors);
+  assert(
+    integration?.readback?.mismatchCount === 0,
+    "delivery.integration.readback.mismatchCount must be zero",
+    errors,
+  );
+  assert(
+    roadmap.delivery?.release?.status === "unestablished" &&
+      roadmap.delivery?.release?.tag === null,
+    "delivery.release must remain unestablished with no tag",
+    errors,
+  );
   assert(/^\d{4}-\d{2}-\d{2}$/.test(roadmap.updated ?? ""), "updated must be YYYY-MM-DD", errors);
 
   for (const field of [
@@ -400,6 +468,11 @@ function validateRoadmap(roadmap) {
   const unfinishedItems = [...initiatives.values()].filter(({ item }) => item.status !== "done");
   assert(activeItems.length <= 1, "at most one initiative may be in-progress", errors);
   assert(
+    roadmap.delivery?.implementation !== "integrated" || unfinishedItems.length === 0,
+    "delivery.implementation cannot be integrated while any initiative is unfinished",
+    errors,
+  );
+  assert(
     unfinishedItems.length === 0 || readyItems.length > 0 || activeItems.length > 0,
     "at least one initiative must be ready or in-progress",
     errors,
@@ -593,7 +666,7 @@ function render(roadmap) {
   lines.push("");
   lines.push(`**North star:** ${roadmap.northStar}`);
   lines.push("");
-  lines.push("### Branch-local implementation status at a glance");
+  lines.push("### Initiative implementation status at a glance");
   lines.push("");
   lines.push("| Ready | Planned | In progress | Blocked | Implemented |");
   lines.push("|---:|---:|---:|---:|---:|");
@@ -613,12 +686,26 @@ function render(roadmap) {
     );
   }
   lines.push("");
-  lines.push(`**Implementation:** ${roadmap.delivery.claim}`);
+  const integration = roadmap.delivery.integration;
+  const ciUrl = `https://github.com/${integration.repository}/actions/runs/${integration.ci.runId}`;
+  lines.push(
+    `**Implementation:** All ${initiatives.length} roadmap initiatives at implementation tip \`${integration.implementationSha}\` are contained by \`${integration.remote}:${integration.ref}\` (verified ${integration.verifiedAt}).`,
+  );
   lines.push("");
   lines.push(`**Product proof:** ${roadmap.delivery.productProof}.`);
   lines.push("");
+  lines.push(`**Integration:** ${integration.status}.`);
+  lines.push("");
   lines.push(
-    `**Integration gate:** ${roadmap.delivery.integration}; target \`${roadmap.delivery.targetRef}\`. Required evidence: ${roadmap.delivery.requiredEvidence.join(" ")}`,
+    `**CI evidence:** [${integration.ci.workflow} run ${integration.ci.runId}](${ciUrl}) concluded ${integration.ci.conclusion} at exact head \`${integration.ci.headSha}\`.`,
+  );
+  lines.push("");
+  lines.push(
+    `**Conspectus read-back:** \`${integration.readback.runId}\` passed state, coverage, and content with ${integration.readback.mismatchCount} mismatches at source \`${integration.readback.sourceSha}\`; durable storage commit \`${integration.readback.storageCommit}\`.`,
+  );
+  lines.push("");
+  lines.push(
+    `**Tagged release:** ${roadmap.delivery.release.status}; tag ${roadmap.delivery.release.tag ?? "none"}.`,
   );
   if (nextInitiative) {
     lines.push("");

@@ -1,8 +1,10 @@
 # ADR-0020: Reconcile live claims with practice catalog v2.10
 
-- Status: accepted for the branch-local implementation record
+- Status: accepted; implementation integrated on `main`
 - Date: 2026-08-15
+- Last updated: 2026-08-19
 - Catalog: v2.10 at `c394b723c28ccad6c84c2df6a5100754320b2d97`
+- Reconciled catalog state: `research/main` at `a4f8dac4e6a2c5ef45f4e9b5abdf6bf72b0d17c5`
 - Deciders: Amanuensis owns implementation and evidence custody; integration,
   release, and product-efficacy claims remain evidence-owned
 
@@ -42,10 +44,11 @@ rejects an open decision after its deadline initiative is terminal.
 
 ### Separate implementation from delivery and product proof
 
-All 19 roadmap initiatives have branch-local implementation evidence. This does
-not establish remote integration, CI at the integrated commit, release, a
-current conspectus, or the stage-exit product comparison. Those claims require a
-named remote ref, full CI at the exact integrated commit, and terminal read-back.
+At reconciliation on 2026-08-15, all 19 roadmap initiatives had branch-local
+implementation evidence. That state did not establish remote integration, CI at
+the integrated commit, release, a current conspectus, or the stage-exit product
+comparison. Integration was established on 2026-08-19 by a named remote ref,
+full CI at the exact integrated implementation commit, and terminal read-back.
 
 A16 is narrowed to a detector-versioned evaluation apparatus validated on a
 synthetic fixture. It authorizes no real product-efficacy or population operating
@@ -75,12 +78,35 @@ Pecia stage state is derived from child heads and requires non-unknown evidence.
 The committed projection is bound by SHA-256 and detector version in a manifest
 that explicitly disclaims authority over the machine-local timeline.
 
+### Integrated delivery read-back
+
+Remote `main` contains implementation tip
+`0e2dafb81d08ebfd3bce718aed376a588095a3a8`. GitHub Actions run
+`32268430377` passed the full repository suite at that exact commit, including
+the red-capable WAL recovery check. The live conspectus projected 20 pages and
+its independent terminal read-back `v2-integration-0e2dafb-terminal` passed the
+state, coverage, and content axes with zero mismatches. That read-back is
+checkpointed in the conspectus storage history at
+`533962b5d55edfe112caf6fff7fb82d0588bed63`. The authoritative finding
+projects to verified-fixed at its actual repair commit
+`7bfa45c4febe5cfa04689c9f2be8f8004f5c4778`; the append-only correction and
+verification history is retained.
+
+This establishes the v2 implementation cycle and repository integration. It
+does not establish product efficacy, population transport, a real operating
+envelope, repository-wide VP21 diagnostic coverage, or a tagged release.
+Roadmap schema v2 binds that delivery claim to the full remote ref,
+implementation SHA, exact CI head/run/conclusion, conspectus source SHA,
+three-axis result, mismatch count, and checkpointed storage commit; corruption
+tests reject ambiguous refs, cross-SHA receipts, red read-back axes, fabricated
+product proof, and fabricated release state.
+
 ## Claim adjudication
 
 | Prior claim | Current disposition |
 |---|---|
 | Practice-catalog coverage at v2.8 | Withdrawn; the gate omitted VP21–VP25. Replaced by full v2.10 snapshot accounting. |
-| All roadmap initiatives complete | Narrowed to branch-local implementation evidence. Integration/release remain pending. |
+| All roadmap initiatives complete | Survives as an implementation claim: all 19 are integrated on remote `main` with exact-commit CI and terminal read-back. Product efficacy and tagged release remain unestablished. |
 | A0 checker proves a current living conspectus | Withdrawn. It proves only the immutable historical A0 fixture at `b8b566f`. |
 | A16 establishes a product operating envelope | Withdrawn. Synthetic apparatus qualification only; efficacy/population scope unmeasured. |
 | A18 qualifies two natural cases | Survives only at exact recorded runner, contract, task, oracle, tree, and detector identities. |
@@ -95,6 +121,6 @@ that explicitly disclaims authority over the machine-local timeline.
 - [x] A0 detector version/digest mismatch is reported out-of-band.
 - [x] A16 detector drift returns no regression verdict and an explicit successor rebaseline verifies.
 - [x] A18 detector mismatch is out-of-band; ordinary receipt overwrite and in-place rebaseline are refused.
-- [ ] Remote integration and CI/read-back at the integrated commit are delivery evidence, not manufactured locally.
+- [x] Remote integration and CI/read-back at the integrated commit are delivery evidence, not manufactured locally.
 - [ ] Repository-wide VP21 diagnostic coverage awaits a typed gate/proof population.
 - [ ] Product efficacy and real operating-envelope claims await preregistered, blinded, adequately resolving evaluation.
