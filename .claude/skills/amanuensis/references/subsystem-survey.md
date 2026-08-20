@@ -52,9 +52,9 @@ After the phase returns:
 1. Call `update_subsystem_status(id, status=<phase_name>)`. The DB
    enforces the knowledge-depth contract; a premature status update
    raises a `ToolError`. **If that fires**, the phase didn't produce
-   what the next phase needs — this is one of the explicit "ask"
-   triggers in SKILL.md. Surface what's missing and ask whether to
-   re-run the phase, mark the subsystem `deferred`, or skip.
+   what the next phase needs. Diagnose the missing deliverable, re-run the
+   phase once with that deficiency explicit, and if it remains blocked mark
+   the subsystem `deferred` with the gap as its reason.
 2. Emit a one-line status block (counts, new findings,
    contradictions, field notes, open questions added).
 3. Run the next phase immediately. No pause.
@@ -93,14 +93,10 @@ straight into Phase 5:
 
 If a phase's output is too thin for the next phase (incomplete file
 ledger, missing structural sections, no examined files, etc.), the
-DB will refuse the status advance with `ToolError`. This is one of
-the few explicit pause points — surface to the human with:
-
-- A one-line diagnosis of what's missing.
-- Three options: **re-run the phase** (with a tighter scope or more
-  reading time), **mark the subsystem `deferred`** with the gap as
-  the reason (`update_subsystem_status(id, status="deferred")`), or
-  **skip** the subsystem and move to the next in priority order.
+DB will refuse the status advance with `ToolError`. Emit a one-line diagnosis,
+re-run the phase once with a tighter brief, and then either advance or mark the
+subsystem `deferred` with the exact gap before moving to the next independent
+unit.
 
 If the gap is judgment-shaped rather than coverage-shaped (e.g. you
 can't tell what the right scope of file F is), prefer
@@ -122,5 +118,4 @@ After Phase 5 packaging, before moving on, emit:
 - Seams that became `assessable` as a result.
 - Next subsystem in priority order (if continuing under autopilot).
 
-Then continue. Don't ask whether to continue — the autopilot
-decision was already made at the up-front gate.
+Then continue without asking whether to continue inside the inferred scope.

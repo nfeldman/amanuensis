@@ -24,17 +24,14 @@ reviewed** methodology and recording everything in a persistent conspectus
 (the `amanuensis-memory` MCP server's SQLite DB plus prose artifacts in a
 git-backed storage directory).
 
-You **run autonomously by default.** Within whatever scope the human picks at
-the start, you walk all phases end-to-end without pausing. Anything you can't
-decide cleanly gets logged via `record_open_question` (with `what_assumed`
-and a reasonable assumption to keep moving), then surfaced at natural
-checkpoints. The human reviews the open-question queue after the fact; they
-don't sit at a gate waiting for the next prompt.
+You **run autonomously by default.** Infer the narrowest complete scope from
+the user's request, then walk it end-to-end without review gates. Anything you
+cannot decide cleanly gets logged via `record_open_question` (with
+`what_assumed` and a reasonable assumption to keep moving), then surfaced at
+natural checkpoints. The user can redirect at any time; you do not require a
+ceremony before useful work begins.
 
-## On session start (orient, estimate, gate once, then go)
-
-This is the one place you stop for human input by default. Do it once, then
-proceed.
+## On session start (orient, infer scope, proceed)
 
 1. **Check MCP reachability.** If `amanuensis-memory` tools are missing, tell
    the user the server isn't connected and stop — the methodology is
@@ -49,55 +46,35 @@ proceed.
      `list_subsystems`. Inventory what's `mapped` vs `unmapped` vs
      `deferred`, count open findings/contradictions, note staleness.
      Estimate the remaining work.
-3. **Verify `get_autoprogress_mode()` returns `autoprogress=true`.** This is
-   the default in the shipped `.mcp.json`. If it's `false`, you're in
-   strict-interactive mode — drop back to per-phase pauses and tell the
-   user so they can re-launch with the env var if they meant autopilot
-   (see `setup.md`).
-4. **Present the one gate.** A short status banner plus the scope estimate,
-   then offer the menu:
+3. **Verify `get_autoprogress_mode()` returns `autoprogress=true`.** The
+   installer enables it. If it is false, report the configuration mismatch
+   and stop rather than silently changing the workflow contract.
+4. **Infer scope without a menu.** An explicit focused question or named
+   subsystem controls. Otherwise, a cold start means onboarding followed by
+   every subsystem in priority order; a warm start means resume active work,
+   then complete every remaining `unmapped` subsystem. Emit the estimate as a
+   status update and begin.
+5. **If `last_checked_sha != HEAD`** on the canonical branch, fold
+   `detect_changes` into the selected scope.
 
-   | Option | What it does |
-   |---|---|
-   | **A. Autopilot until done** | Run everything in the named scope end-to-end. For cold starts: full onboarding + survey every subsystem in priority order until all `mapped`. For warm starts: survey every remaining `unmapped` subsystem. Open questions queued; checkpoints summarized at natural seams. |
-   | **B. Orderly batches** | Same end state, broken into checkpoints. Default batching: (1) onboarding through master plan, (2) survey top-K priority subsystems (you propose K based on a defect-surface estimate), (3) survey the next batch, etc. After each batch you summarize and ask whether to continue, switch order, or stop. |
-   | **C. Single subsystem** | The user names one subsystem (or a small list). Survey only those, then stop. Assumes onboarding is done; if not, you do onboarding first and then return to ask. |
-   | **D. Focused mode** | The user asks a specific question ("what's the story with X?", "audit", "what's stale"). Skip the menu and just do that — see Commands table. |
+Phase transitions, status advances, materialization, session commits, and
+checkpoint summaries are autonomous.
 
-   For cold starts, recommend **A** unless the scale estimate is large
-   (say, >25 candidate subsystems) — then recommend **B** with a proposed
-   batch size and rationale.
+## Conditions that stop execution
 
-5. **If `last_checked_sha != HEAD`** on the canonical branch, fold a
-   `detect_changes` run into the chosen scope. Don't run it as a separate
-   gate; bake it in.
+- **An unauthorized destructive operation is required.** Snapshot first with
+  `commit_phase_gate(label="Pre-<op> snapshot")`, then stop and state the
+  exact operation and why it is necessary. If the user already requested that
+  exact operation, execute it without adding a second ceremony.
+- **Workspace mismatch.** Stored `workspace_path` differs from the current
+  workspace. Stop; proceeding could pollute another project's conspectus.
+- **Server unreachable mid-run.** State integrity is at risk; stop and surface
+  the last durable checkpoint.
 
-After the user picks, **you don't pause again** unless one of the explicit
-"ask" triggers below fires. Phase transitions, status advances, materialization,
-session commits — all autonomous.
-
-## When you DO ask the human
-
-Pausing is reserved for things you genuinely cannot do without input. If
-it's not in this list, log it and continue.
-
-- **Destructive operations.** `reinit survey`, deleting registered
-  artifacts, force-resetting the storage repo. Always confirm; before any
-  destructive action also `commit_phase_gate(label="Pre-<op> snapshot")`
-  so history survives.
-- **Scope-changing batch decisions in option B.** End of each batch,
-  surface the summary + open-question count and ask: continue / re-order /
-  stop.
-- **Workspace mismatch.** Stored `workspace_path` differs from the
-  current workspace. Ask — proceeding risks polluting the wrong project's
-  conspectus.
-- **Server-reported `ToolError` on a status advance.** The DB enforces the
-  knowledge-depth contract. If a phase declares itself complete but the
-  server refuses to advance status, the phase's deliverables are
-  insufficient — report what's missing and ask whether to re-run the
-  phase, lower the target status (e.g. `deferred`), or skip.
-- **Server unreachable mid-run.** State integrity at risk; stop and
-  surface.
+A status-advance `ToolError` is not a human gate. Diagnose the missing
+deliverable, re-run the phase once with the deficiency made explicit, and if
+it still cannot advance, mark the subsystem `deferred` with the exact gap and
+continue to the next independent unit.
 
 Everything else — ambiguous scope decisions, domain-knowledge calls,
 priority tie-breaks, missing context — gets `record_open_question` with
@@ -110,13 +87,13 @@ is read for evidence only — never modified.
 
 | User says... | You do |
 |---|---|
-| (no specific command) | Run the cold/warm-start orientation above; hit the one gate; then execute. |
+| (no specific command) | Infer the cold/warm-start scope above and execute it. |
 | "run onboarding" | Walk the 8-phase onboarding autonomously. See `references/onboarding.md`. |
 | "survey [id]" / "survey [subsystem]" | Per-subsystem phased survey, autonomous. See `references/subsystem-survey.md` and `references/phase-1-scope.md` through `references/phase-5-packaging.md`. |
-| "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase — no extra gate. |
+| "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase. |
 | "what have you noticed" / "browse" | See `references/notes.md` — answer conversationally from field notes, vocabulary, and findings. No surveys. |
 | "audit" / "what's stale" | See `references/memory-audit.md` — sweep contradictions, linchpin findings, open notes, stale entries. Produce a worklist. |
-| "reinit survey" | Destructive. Snapshot commit, confirm with the human, then clear. |
+| "reinit survey" | The request authorizes this destructive operation. Snapshot, report the exact target, then clear it. |
 | "stop" / "pause" / "wait" | Stop autonomous execution at the next phase boundary; checkpoint state; ask what to do. |
 
 ## Autonomous phase execution
@@ -142,8 +119,8 @@ Authorized claims still scale with status — this is **not** relaxed:
 | `scoping` | File scope only. |
 | `structural` | Types, state containers, flows, concurrency model. No correctness claims. |
 | `concerns` | Concern dispositions with evidence. |
-| `adversarial` | As above, plus survived adversarial probes. Highest confidence. |
-| `mapped` | Complete. Seam contracts filled in. Ready for composition. |
+| `adversarial` | Adversarial work is authorized and in progress. Treat a finding as survived only when its recorded adversarial evidence or terminal review aggregation says so. |
+| `mapped` | Workflow-marked complete with seam contracts filled in. Status alone is not proof that every finding survived challenge; the underlying records govern. |
 
 Anyone (including you, in a later session) making a claim that exceeds the
 authorized level for its source **must flag the claim explicitly as
@@ -206,7 +183,7 @@ Natural checkpoints:
 - End of onboarding Phase 5 (master plan finalized).
 - End of onboarding Phase 7 (initial conspectus rendered).
 - End of every per-subsystem Phase 5 (subsystem → `mapped`).
-- End of a batch (option B).
+- End of each bounded work batch chosen for context or runtime limits.
 - Top of every new session.
 
 Each checkpoint:
@@ -216,9 +193,8 @@ Each checkpoint:
    questions added).
 3. Continue to the next unit of work.
 
-If you've been running for a long stretch without a human in the loop,
-prefer brief status blocks over silent grinding — but don't ask for
-permission to continue. The autopilot decision was already made.
+For long runs, prefer brief status blocks over silent grinding, but do not ask
+for permission to continue inside the inferred scope.
 
 ## Special routines
 
@@ -243,8 +219,9 @@ permission to continue. The autopilot decision was already made.
 These are non-negotiable. Autonomy does not relax them — it depends on
 them.
 
-- **Never modify source code.** Read it. Write only to the project storage
-  directory (`~/.amanuensis/workspaces/<owner>/<project>/`) and the DB.
+- **Never modify source code.** Read it. Write only through Amanuensis tools or
+  to the project-local `.amanuensis/` storage directory and its DB. Never scan,
+  classify, or cite `.amanuensis/` as target-project source; it is tool state.
 - **Never classify anything you haven't read.** Name, location, and file
   metadata are signals, not evidence.
 - **Separate observed facts from inferences from open questions** in

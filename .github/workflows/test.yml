@@ -59,6 +59,9 @@ jobs:
       - name: Tool inputSchemas are valid JSON Schema
         working-directory: mcp-server
         run: node scripts/check-tool-schemas.mjs
+      - name: MCP initialization, annotations, structured results, and error semantics
+        working-directory: mcp-server
+        run: node test-mcp-compatibility.mjs
       - name: Smoke test (every tool)
         working-directory: mcp-server
         run: node test-smoke.mjs
@@ -83,6 +86,9 @@ jobs:
       - name: Installer CLI
         working-directory: mcp-server
         run: node test-installer.mjs
+      - name: Packed artifact adapters and MCP handshake
+        working-directory: mcp-server
+        run: node test-package-artifact.mjs
       - name: Adversarial — correctness
         working-directory: mcp-server
         run: node test-adversarial-correctness.mjs
@@ -159,11 +165,14 @@ jobs:
   materializer:
     name: Materializer (Python)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12.13"
+          python-version: ${{ matrix.python-version }}
       - name: Install ruff
         run: pip install ruff
       - name: Lint (ruff)
@@ -175,3 +184,26 @@ jobs:
       - name: Projection read-back fault injection
         working-directory: materializer
         run: python3 test-readback.py
+
+  node-compatibility:
+    name: Node ${{ matrix.node-version }} package floor
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+      - name: Install
+        working-directory: mcp-server
+        run: npm ci
+      - name: Build
+        working-directory: mcp-server
+        run: npm run build
+      - name: Protocol compatibility
+        working-directory: mcp-server
+        run: node test-mcp-compatibility.mjs

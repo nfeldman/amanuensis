@@ -6,6 +6,7 @@ import {
   optInt,
   optString,
   requireString,
+  requireWorkspaceSourcePath,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -797,6 +798,7 @@ export const impactTools: ToolDefinition[] = [
             if (!evidencePath) {
               throw new ToolError(`change ${changeStep.id} has no evidence path`);
             }
+            const sourcePath = requireWorkspaceSourcePath(evidencePath);
             const evidenceSha = change.path_after ? run.head_sha : run.base_sha;
             const evidence = ctx.db
               .prepare(
@@ -805,7 +807,7 @@ export const impactTools: ToolDefinition[] = [
                  VALUES (?, ?, 'runtime-observed', ?, ?)`,
               )
               .run(
-                evidencePath,
+                sourcePath,
                 evidenceSha,
                 `${reason}; Git range ${run.base_sha}..${run.head_sha}; change ${changeStep.id}`,
                 sessionId,

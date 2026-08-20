@@ -13,18 +13,27 @@
 //   6. Gitignore bypass (committing WAL file by naming trick)
 //   7. Non-UTF8 bytes in commit message
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync, readFileSync, existsSync, chmodSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { ensureStorageRepo, commitStorage, getStorageLog } from "./dist/storage-git.js";
-import { resolveProjectKey } from "./dist/project.js";
+import { isAbsolute, join, relative } from "node:path";
+import { resolveProject, resolveProjectKey } from "./dist/project.js";
+import { commitStorage, ensureStorageRepo, getStorageLog } from "./dist/storage-git.js";
 
-let passed = 0, failed = 0;
+let passed = 0,
+  failed = 0;
 function t(label, fn) {
-  try { fn(); console.log(`  ok   ${label}`); passed++; }
-  catch (e) { console.log(`  FAIL ${label}\n       ${e.message}`); failed++; }
+  try {
+    fn();
+    console.log(`  ok   ${label}`);
+    passed++;
+  } catch (e) {
+    console.log(`  FAIL ${label}\n       ${e.message}`);
+    failed++;
+  }
 }
-function assert(cond, msg) { if (!cond) throw new Error(msg); }
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
 
 function freshStorage() {
   const sp = mkdtempSync(join(tmpdir(), "agit-sec-"));
@@ -52,7 +61,10 @@ t("command injection via label is neutralized", () => {
     assert(r.ok, `vector should commit as message, not execute: ${v}`);
   }
   // Verify nothing landed in /tmp/PWNED_AMANUENSIS
-  assert(!existsSync("/tmp/PWNED_AMANUENSIS"), "injection succeeded — /tmp/PWNED_AMANUENSIS exists");
+  assert(
+    !existsSync("/tmp/PWNED_AMANUENSIS"),
+    "injection succeeded — /tmp/PWNED_AMANUENSIS exists",
+  );
   rmSync(sp, { recursive: true, force: true });
 });
 
@@ -66,7 +78,10 @@ t("label starting with '-' is not read as git flag", () => {
   const r = commitStorage(sp, "-m injected-flag");
   assert(r.ok, `dash-prefixed label should commit: ${r.reason}`);
   const log = getStorageLog(sp, 5);
-  assert(log[0].message === "-m injected-flag", `dash-prefixed label should land verbatim, got: ${log[0].message}`);
+  assert(
+    log[0].message === "-m injected-flag",
+    `dash-prefixed label should land verbatim, got: ${log[0].message}`,
+  );
   rmSync(sp, { recursive: true, force: true });
 });
 
@@ -91,7 +106,10 @@ t("pre-commit hooks are skipped", () => {
   const hooksDir = join(sp, ".git", "hooks");
   mkdirSync(hooksDir, { recursive: true });
   const hookPath = join(hooksDir, "pre-commit");
-  const canary = join(tmpdir(), `amanuensis-sec-canary-${process.pid}-${Math.random().toString(36).slice(2)}`);
+  const canary = join(
+    tmpdir(),
+    `amanuensis-sec-canary-${process.pid}-${Math.random().toString(36).slice(2)}`,
+  );
   writeFileSync(hookPath, `#!/bin/sh\ntouch ${canary}\nexit 0\n`);
   chmodSync(hookPath, 0o755);
   writeFileSync(join(sp, "a.txt"), "x");
@@ -125,6 +143,36 @@ t("project key sanitization: path traversal attempts", () => {
   }
 });
 
+t("crafted git origins cannot escape shared or legacy storage roots", () => {
+  const origins = [
+    "https://github.com/owner/../",
+    "https://github.com/../victim",
+    "git@example.test:C:/Windows",
+    "ssh://git@example.test/owner/%2f..%2f",
+  ];
+  for (const [index, origin] of origins.entries()) {
+    const workspace = mkdtempSync(join(tmpdir(), `agit-origin-${index}-`));
+    const storageRoot = mkdtempSync(join(tmpdir(), `agit-shared-${index}-`));
+    try {
+      spawnSync("git", ["init", "-q"], { cwd: workspace });
+      spawnSync("git", ["remote", "add", "origin", origin], { cwd: workspace });
+      const key = resolveProjectKey(workspace);
+      assert(!key.split("/").includes(".."), `origin produced traversal key: ${origin} → ${key}`);
+      process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
+      const project = resolveProject(workspace);
+      const rel = relative(storageRoot, project.storagePath);
+      assert(
+        rel !== "" && !rel.startsWith("..") && !isAbsolute(rel),
+        `origin escaped shared storage: ${origin} → ${project.storagePath}`,
+      );
+    } finally {
+      delete process.env.AMANUENSIS_STORAGE_ROOT;
+      rmSync(workspace, { recursive: true, force: true });
+      rmSync(storageRoot, { recursive: true, force: true });
+    }
+  }
+});
+
 // 6. WAL/SHM/journal files never end up tracked even if someone adds them.
 t("gitignore resists attempts to track WAL files", () => {
   const sp = freshStorage();
@@ -133,7 +181,7 @@ t("gitignore resists attempts to track WAL files", () => {
   writeFileSync(join(sp, "memory.db-journal"), "fake journal");
   writeFileSync(join(sp, "something.tmp"), "tmp");
   // Commit should not pick these up.
-  const r = commitStorage(sp, "try to commit WAL");
+  commitStorage(sp, "try to commit WAL");
   // It's ok either way (no changes to commit is also fine) — we just
   // care that the WAL files aren't in the tree.
   const tree = spawnSync("git", ["ls-files"], { cwd: sp, encoding: "utf8" });
@@ -155,22 +203,16 @@ t("non-UTF8 bytes in label do not crash", () => {
   rmSync(sp, { recursive: true, force: true });
 });
 
-// 8. Storage dir outside ~/.amanuensis would be a symlink attack. The
-//    storage path is computed from homedir() + projectKey; we verify a
-//    projectKey with traversal characters is sanitized (covered by #5),
-//    and that the resulting storage path stays under ~/.amanuensis.
-t("resolved storage path stays under ~/.amanuensis", async () => {
-  const { resolveProject } = await import("./dist/project.js");
-  // Craft an attacker-like workspace.
-  const { homedir } = await import("node:os");
-  const home = homedir();
+// 8. Default storage must stay inside the resolved project root.
+t("resolved storage path stays under the project root", async () => {
   const malicious = mkdtempSync(join(tmpdir(), "agit-escape-"));
   spawnSync("git", ["init", "-q"], { cwd: malicious });
   const p = resolveProject(malicious);
-  assert(p.storagePath.startsWith(join(home, ".amanuensis")),
-    `storage path must stay under ~/.amanuensis, got: ${p.storagePath}`);
+  assert(
+    p.storagePath === join(malicious, ".amanuensis"),
+    `storage path must be project-local, got: ${p.storagePath}`,
+  );
   rmSync(malicious, { recursive: true, force: true });
-  rmSync(p.storagePath, { recursive: true, force: true });
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

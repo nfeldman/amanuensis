@@ -6,12 +6,24 @@ database (WAL mode, via `better-sqlite3`).
 
 ## What it does
 
-- Resolves a project key from the git remote (or workspace path as fallback)
-- Creates `~/.amanuensis/workspaces/<owner>/<project>/memory.db` on first use
-- Initializes the storage directory as a git repo (first open only) so phase
-  gates and session boundaries can be committed for free history/rollback
+- Resolves collision-resistant shared-storage identity from the Git host and
+  full repository namespace (or a hashed canonical workspace path as fallback)
+- Creates `<project>/.amanuensis/memory.db` on first use and migrates the prior
+  home-directory convention only when project identity can be verified;
+  unverified or divergent state is preserved and reported rather than guessed
+  together
+- Initializes `.amanuensis/` as an independent git repo and locally excludes it
+  from the surveyed repo so phase gates never stage or commit source changes
+- Rejects storage symlinks and incompatible shared-store identity before writes
 - Exposes a typed tool surface over the conspectus schema, plus a
   `materialize_docs` tool that shells out to the Python materializer
+
+The legacy subsystem status is a coarse workflow marker. `adversarial` permits
+that pass and `mapped` marks workflow completion, but neither value alone proves
+that every finding survived challenge; use recorded adversarial evidence or a
+terminal independent-review aggregation for that claim. Current concern
+dispositions are mutable summaries, while temporal claims, finding-resolution
+events, decisions, and storage Git provide the versioned history surfaces.
 
 ## Unattended refresh protocol
 
@@ -606,25 +618,55 @@ npm run build
 
 ## Run
 
-The server speaks stdio and is intended to be launched by a VS Code agent:
+The server speaks standard MCP over stdio and can be launched by any local MCP
+host:
 
 ```bash
 node dist/index.js --workspace /path/to/your/codebase
 ```
 
-Or configured in `.vscode/mcp.json`:
+An explicit workspace is optional. The server checks, in order,
+`--workspace`, `AMANUENSIS_WORKSPACE`, Claude Code's
+`CLAUDE_PROJECT_DIR`, the Git root containing its process cwd, and finally the
+cwd itself.
 
-```json
-{
-  "servers": {
-    "amanuensis-memory": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["${workspaceFolder}/mcp-server/dist/index.js", "--workspace", "${workspaceFolder}"]
-    }
-  }
-}
+Use the installer for client discovery:
+
+```bash
+amanuensis init --client claude
+amanuensis init --client codex
+amanuensis init --client vscode
+amanuensis init --client generic
 ```
+
+Claude Code, Codex, and VS Code use different project configuration formats;
+the installer emits only the selected adapter. The portable units are the
+stdio protocol and the `SKILL.md` workflow, not a universal config filename.
+
+### MCP compatibility posture
+
+The server currently follows the local-tool shape expected by the MCP
+ecosystem:
+
+- official SDK and stdio transport;
+- JSON Schema inputs validated before handler logic;
+- server-level initialization instructions for clients that do not load the
+  Agent Skill;
+- protocol-level `isError` plus backward-compatible text for failed tool
+  results;
+- `structuredContent` alongside serialized JSON for object-shaped results;
+  array-shaped compatibility results remain text-only until output schemas are
+  introduced; and
+- conservative read-only, destructive, idempotent, and open-world annotations
+  on every advertised tool.
+
+The remaining portability limits are explicit. The full method requires an
+Agent Skills-capable host or equivalent instructions. The 195-tool surface is
+large for hosts without tool search or filtering. Tools do not yet advertise
+per-tool output schemas, and list results are not uniformly paginated. The
+server is local stdio only; a shared or hosted service would require
+Streamable HTTP, authentication, and tenant isolation rather than exposing this
+single-user process directly.
 
 ## Smoke test
 

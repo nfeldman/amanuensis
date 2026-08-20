@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireWorkspaceSourcePath,
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
@@ -71,7 +72,7 @@ export const fileTools: ToolDefinition[] = [
           throw new ToolError(`invalid classification: ${classification}`);
         }
         return {
-          file_path: f.file_path,
+          file_path: requireWorkspaceSourcePath(f.file_path),
           why_in_scope: f.why_in_scope ?? null,
           classification,
         };
@@ -118,7 +119,7 @@ export const fileTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       requireActiveSession(ctx, "update_file_classification");
       const subsystemId = requireString(args, "subsystem_id");
-      const filePath = requireString(args, "file_path");
+      const filePath = requireWorkspaceSourcePath(args.file_path);
       const classification = requireEnum(args, "classification", CLASSIFICATIONS);
       const refSha = optString(args, "ref_sha");
       const res = ctx.db

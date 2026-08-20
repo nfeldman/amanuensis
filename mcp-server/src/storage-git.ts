@@ -1,10 +1,10 @@
 // Git operations over the storage directory.
 //
-// The storage directory (~/.amanuensis/workspaces/<owner>/<project>/) is
-// initialized as a git repo on first open. Callers can commit phase gates,
+// The default storage directory (<project>/.amanuensis/) is initialized as an
+// independent nested git repo on first open. Callers can commit phase gates,
 // session boundaries, or arbitrary markers via commitStorage(). All commits
-// are scoped to the storage directory — the surveyed workspace is never
-// touched.
+// are scoped to the storage directory — the surveyed workspace repo is never
+// staged or committed.
 //
 // If git is unavailable (no binary in PATH, init failure, commit failure),
 // these operations degrade silently: init becomes a no-op, commit returns
@@ -30,6 +30,8 @@ const GITIGNORE_CONTENTS = [
   ".materializer-lock",
   "",
 ].join("\n");
+const STORAGE_MODE_FILE = ".storage-mode";
+const INDEPENDENT_MODE = "independent\n";
 
 // Per-invocation config overrides applied to every amanuensis git call.
 // These are passed as `-c key=value` pairs so they don't mutate the
@@ -90,6 +92,9 @@ function repoState(storagePath: string): RepoState {
     if (symref.status === 0) return "unborn";
     return "broken";
   }
+  // A project-local store must never fall through to its enclosing source
+  // repository if nested git initialization was interrupted or failed.
+  if (existsSync(join(storagePath, STORAGE_MODE_FILE))) return "not-a-repo";
   // No .git here — are we inside somebody else's repo?
   const inside = runGit(storagePath, ["rev-parse", "--is-inside-work-tree"]);
   if (inside.status === 0 && inside.stdout.trim() === "true") {
@@ -105,6 +110,7 @@ function repoState(storagePath: string): RepoState {
  */
 export function isGitRepo(storagePath: string): boolean {
   if (existsSync(join(storagePath, ".git"))) return true;
+  if (existsSync(join(storagePath, STORAGE_MODE_FILE))) return false;
   const inside = runGit(storagePath, ["rev-parse", "--is-inside-work-tree"]);
   return inside.status === 0 && inside.stdout.trim() === "true";
 }
@@ -114,7 +120,9 @@ export function isGitRepo(storagePath: string): boolean {
  * Writes a `.gitignore` covering the SQLite WAL/journal files.
  * Idempotent and safe to call on every server start.
  *
- * Handles six starting states:
+ * Handles six starting states. Project-local stores write an independent-mode
+ * marker so an interrupted nested initialization can never fall through to
+ * the surveyed repository:
  *   - not-a-repo     : run git init + write .gitignore + initial commit
  *   - unborn         : .git exists but no commits. Complete it.
  *   - ready          : .git exists with commits. Ensure .gitignore is
@@ -122,15 +130,21 @@ export function isGitRepo(storagePath: string): boolean {
  *   - nested-ready   : the storage dir is INSIDE a caller-managed git
  *                      repo with commits (cloud mode: a conspectus
  *                      repo holds many per-project subdirs). Do NOT
- *                      run `git init` here — that would create a
- *                      destructive nested repo. Commits operate on the
- *                      outer repo.
+ *                      run `git init` here. Commits operate on the outer
+ *                      shared-storage repo. (Project-local storage is the
+ *                      intentional independent nested-repo exception.)
  *   - nested-unborn  : inside an outer repo with no commits yet. Treat
  *                      like ready; the outer repo's first commit will
  *                      cover our files.
  *   - broken         : .git exists but is malformed. Bail out.
  */
-export function ensureStorageRepo(storagePath: string): GitResult {
+export function ensureStorageRepo(
+  storagePath: string,
+  options: { independent?: boolean } = {},
+): GitResult {
+  if (options.independent && !existsSync(join(storagePath, STORAGE_MODE_FILE))) {
+    writeFileSync(join(storagePath, STORAGE_MODE_FILE), INDEPENDENT_MODE, "utf8");
+  }
   const state = repoState(storagePath);
 
   if (state === "broken") {
@@ -185,7 +199,10 @@ export function ensureStorageRepo(storagePath: string): GitResult {
   // block for both fresh init and unborn recovery — both need a root
   // commit. Use --allow-empty in case .gitignore was already tracked
   // somehow (shouldn't happen, but belt-and-suspenders).
-  runGit(storagePath, ["add", ".gitignore"]);
+  const initialFiles = existsSync(join(storagePath, STORAGE_MODE_FILE))
+    ? [".gitignore", STORAGE_MODE_FILE]
+    : [".gitignore"];
+  runGit(storagePath, ["add", ...initialFiles]);
   const firstCommit = runGit(storagePath, [
     "commit",
     "--quiet",

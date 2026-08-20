@@ -129,15 +129,7 @@ Emit the survey-pass summary (status block, not a gate):
 - Open questions logged this pass (by category).
 - Seams that became assessable as a result of this pass.
 
-Then:
-
-- **Autopilot (A)** — pick the next highest-priority `unmapped`
-  subsystem and start its Phase 1. Continue until everything is
-  `mapped` or `deferred`.
-- **Orderly batches (B)** — if this subsystem was the last in the
-  current batch, checkpoint here and ask the human about the next
-  batch. Otherwise pick the next subsystem in the batch.
-- **Single subsystem (C)** — stop after this summary.
-
-The human reads the summary asynchronously; you do not wait for
-them under autopilot.
+Then follow the inferred scope: for a repository-wide run, pick the next
+highest-priority `unmapped` subsystem and continue until everything is
+`mapped` or `deferred`; for a named subsystem, stop after its summary. Status
+summaries are asynchronous and do not gate execution.

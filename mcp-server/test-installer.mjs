@@ -1,348 +1,529 @@
 #!/usr/bin/env node
-// Adversarial correctness probes for the `amanuensis init` installer.
-//
-// Each probe sets up a target workspace in a specific state, runs the
-// installer, and asserts on the resulting filesystem and mcp.json
-// contents. Covers:
-//
-//   - Fresh workspace: all agent files land, mcp.json is created.
-//   - Preservation: an existing mcp.json with other MCP servers keeps
-//     those servers' entries untouched.
-//   - Idempotence: a second run over an already-installed workspace is
-//     a no-op (no files written, no backups created).
-//   - --force: conflicting agent files and a prior amanuensis-memory
-//     entry are backed up and overwritten; other servers' entries still
-//     survive.
-//   - --dry-run: nothing is written.
-//   - JSON-with-comments tolerance: an mcp.json with // comments
-//     parses successfully (comments are lost on rewrite, as documented).
-//   - Invalid JSON: errors out with a diagnostic instead of corrupting.
-//   - --agents-dir override: agents land in the custom path.
-//   - Nonexistent target dir: clear error, no partial writes.
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+// Adversarial probes for the client-adapter installer. Every test runs in a
+// fresh temporary workspace and reads back the files the selected client will
+// consume.
 import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse } from "jsonc-parser";
+import { parse as parseToml } from "smol-toml";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const CLI = join(moduleDir, "dist", "cli.js");
+const SOURCE_SERVER = join(moduleDir, "dist", "index.js");
+// biome-ignore lint/suspicious/noTemplateCurlyInString: Claude Code expansion syntax
+const CLAUDE_PROJECT_VAR = "${CLAUDE_PROJECT_DIR:-.}";
+// biome-ignore lint/suspicious/noTemplateCurlyInString: VS Code expansion syntax
+const VSCODE_WORKSPACE_VAR = "${workspaceFolder}";
 
 let passed = 0;
 let failed = 0;
-function t(label, fn) {
+
+function test(label, fn) {
   try {
     fn();
     console.log(`  ok   ${label}`);
     passed++;
-  } catch (e) {
-    console.log(`  FAIL ${label}\n       ${e.message}`);
+  } catch (error) {
+    console.log(`  FAIL ${label}\n       ${error.message}`);
     failed++;
   }
 }
-function assert(cond, msg) {
-  if (!cond) throw new Error(msg);
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
 }
 
-function runCli(args, opts = {}) {
-  return spawnSync("node", [CLI, ...args], { encoding: "utf8", ...opts });
+function runCli(args, options = {}) {
+  return spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8", ...options });
 }
+
 function fresh() {
-  return mkdtempSync(join(tmpdir(), "aman-inst-"));
+  return mkdtempSync(join(tmpdir(), "amanuensis-installer-"));
 }
+
 function readJson(path) {
-  return JSON.parse(readFileSync(path, "utf8"));
+  return parse(readFileSync(path, "utf8"));
 }
-function agentCount(ws, subpath = ".github/agents") {
-  const d = join(ws, subpath);
-  if (!existsSync(d)) return 0;
-  return readdirSync(d).filter((f) => f.endsWith(".agent.md")).length;
-}
+
 function backupsFor(path) {
-  // Find files matching `<basename>.bak.*` siblings of `path`.
   const dir = dirname(path);
   if (!existsSync(dir)) return [];
   const base = path.slice(dir.length + 1);
-  return readdirSync(dir).filter((f) => f.startsWith(`${base}.bak.`));
+  return readdirSync(dir).filter((entry) => entry.startsWith(`${base}.bak.`));
 }
 
-// ---- 1. Fresh workspace ----
-t("fresh workspace: all agents + references + mcp.json written", () => {
-  const ws = fresh();
+function skillRoot(workspace, client) {
+  return join(
+    workspace,
+    client === "claude" ? ".claude/skills/amanuensis" : ".agents/skills/amanuensis",
+  );
+}
+
+function assertSkill(workspace, client) {
+  const root = skillRoot(workspace, client);
+  const skillPath = join(root, "SKILL.md");
+  assert(existsSync(skillPath), `${client} SKILL.md missing`);
+  const skillText = readFileSync(skillPath, "utf8").replace(/\s+/g, " ");
+  assert(
+    skillText.includes("Never scan, classify, or cite `.amanuensis/` as target-project source"),
+    `${client} skill does not exclude project-local tool state from evidence`,
+  );
+  assert(existsSync(join(root, "references/setup.md")), `${client} setup reference missing`);
+  assert(
+    existsSync(join(root, "references/phase-4-adversarial.md")),
+    `${client} adversarial reference missing`,
+  );
+}
+
+test("requires an explicit client and writes nothing on omission", () => {
+  const workspace = fresh();
   try {
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status === 0, `exit ${r.status}; stderr: ${r.stderr}`);
-    assert(agentCount(ws) >= 7, `expected ≥7 agent files, got ${agentCount(ws)}`);
-    // Reference docs must land with the agents so agents can read them
-    // at their documented relative paths.
-    assert(
-      existsSync(join(ws, ".github/agents/references/concern-territories.md")),
-      "concern-territories.md missing — agents can't find their territory catalog",
-    );
-    assert(
-      existsSync(join(ws, ".github/agents/references/artifact-templates.md")),
-      "artifact-templates.md missing",
-    );
-    const mcp = readJson(join(ws, ".vscode/mcp.json"));
-    assert(mcp.servers["amanuensis-memory"], "amanuensis-memory entry missing");
-    assert(mcp.servers["amanuensis-memory"].command === "amanuensis-memory");
+    const result = runCli(["init", "--dir", workspace]);
+    assert(result.status !== 0, "missing --client should fail");
+    assert(result.stderr.includes("--client is required"), result.stderr);
+    assert(readdirSync(workspace).length === 0, "installer wrote before rejecting ambiguity");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 2. Preservation of other MCP servers ----
-t("preserves other MCP server entries on merge", () => {
-  const ws = fresh();
+test("Claude adapter installs the skill and Claude project MCP config", () => {
+  const workspace = fresh();
   try {
-    mkdirSync(join(ws, ".vscode"), { recursive: true });
+    const result = runCli(["init", "--client", "claude", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assertSkill(workspace, "claude");
+    const config = readJson(join(workspace, ".mcp.json"));
+    const entry = config.mcpServers?.["amanuensis-memory"];
+    assert(entry?.command === process.execPath, "Claude source launcher is not durable");
+    assert(entry.args?.[0] === SOURCE_SERVER, "Claude source server entry missing");
+    assert(entry.args?.at(-1) === CLAUDE_PROJECT_VAR, "Claude project root is not portable");
+    assert(!existsSync(join(workspace, ".vscode")), "Claude adapter created VS Code state");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("Codex adapter installs the shared skill and project config", () => {
+  const workspace = fresh();
+  try {
+    const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assertSkill(workspace, "codex");
+    const config = readFileSync(join(workspace, ".codex/config.toml"), "utf8");
+    assert(config.includes("# >>> amanuensis init (managed)"), "managed block missing");
+    assert(config.includes("[mcp_servers.amanuensis-memory]"), "Codex server table missing");
+    assert(
+      config.includes(`command = ${JSON.stringify(process.execPath)}`),
+      "Codex command missing",
+    );
+    assert(config.includes(JSON.stringify(SOURCE_SERVER)), "Codex source server entry missing");
+    assert(config.includes('cwd = "."'), "Codex working root is not explicit");
+    assert(!config.includes(workspace), "Codex config hard-coded the local checkout path");
+    const parsed = parseToml(config);
+    assert(parsed.mcp_servers?.["amanuensis-memory"]?.cwd === ".", "Codex config is invalid");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("VS Code adapter installs a portable skill, not the custom-agent bundle", () => {
+  const workspace = fresh();
+  try {
+    const result = runCli(["init", "--client", "vscode", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assertSkill(workspace, "vscode");
+    const config = readJson(join(workspace, ".vscode/mcp.json"));
+    const entry = config.servers?.["amanuensis-memory"];
+    assert(entry?.command === process.execPath, "VS Code source launcher is not durable");
+    assert(entry?.args?.[0] === SOURCE_SERVER, "VS Code source server entry missing");
+    assert(entry?.args?.at(-1) === VSCODE_WORKSPACE_VAR, "VS Code workspace binding missing");
+    assert(!existsSync(join(workspace, ".github/agents")), "legacy custom agents were installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("generic adapter installs only the skill and prints an explicit stdio command", () => {
+  const workspace = fresh();
+  try {
+    const result = runCli(["init", "--client", "generic", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assertSkill(workspace, "generic");
+    assert(
+      result.stdout.includes(JSON.stringify(process.execPath)),
+      "registration command missing",
+    );
+    assert(result.stdout.includes(SOURCE_SERVER), "source server argument missing");
+    assert(result.stdout.includes(workspace), "registration command is not bound to target");
+    assert(result.stdout.includes("AMANUENSIS_AUTOPROGRESS=1"), "required environment missing");
+    assert(
+      result.stdout.includes("full method is not automatic"),
+      "generic-host workflow limitation is not disclosed",
+    );
+    assert(!existsSync(join(workspace, ".mcp.json")), "invented a generic config file");
+    assert(!existsSync(join(workspace, ".codex")), "generic adapter created Codex config");
+    assert(!existsSync(join(workspace, ".vscode")), "generic adapter created VS Code config");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("JSON adapters preserve unrelated servers and write a backup", () => {
+  for (const client of ["claude", "vscode"]) {
+    const workspace = fresh();
+    try {
+      const path = join(workspace, client === "claude" ? ".mcp.json" : ".vscode/mcp.json");
+      const rootKey = client === "claude" ? "mcpServers" : "servers";
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(
+        path,
+        JSON.stringify({ [rootKey]: { other: { command: "other-server", args: ["--keep"] } } }),
+      );
+      const result = runCli(["init", "--client", client, "--dir", workspace]);
+      assert(result.status === 0, `${client}: ${result.stderr}`);
+      const config = readJson(path);
+      assert(config[rootKey].other.args[0] === "--keep", `${client}: unrelated server changed`);
+      assert(config[rootKey]["amanuensis-memory"], `${client}: Amanuensis server missing`);
+      assert(backupsFor(path).length === 1, `${client}: backup missing`);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  }
+});
+
+test("JSON entry equality ignores object key order", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".mcp.json");
     writeFileSync(
-      join(ws, ".vscode/mcp.json"),
-      JSON.stringify(
-        {
-          servers: {
-            "some-other-server": {
-              type: "stdio",
-              command: "other-bin",
-              args: ["--flag"],
-            },
+      path,
+      JSON.stringify({
+        mcpServers: {
+          "amanuensis-memory": {
+            env: { AMANUENSIS_AUTOPROGRESS: "1" },
+            args: [SOURCE_SERVER, "--workspace", CLAUDE_PROJECT_VAR],
+            command: process.execPath,
+            type: "stdio",
           },
         },
-        null,
-        2,
-      ),
+      }),
     );
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status === 0, r.stderr);
-    const mcp = readJson(join(ws, ".vscode/mcp.json"));
-    assert(mcp.servers["amanuensis-memory"], "our entry missing");
-    assert(mcp.servers["some-other-server"], "other entry lost!");
-    assert(mcp.servers["some-other-server"].command === "other-bin", "other entry mutated");
-    // A backup was defensively created because we rewrote the file.
-    assert(backupsFor(join(ws, ".vscode/mcp.json")).length === 1, "backup missing");
+    const before = readFileSync(path, "utf8");
+    const result = runCli(["init", "--client", "claude", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assert(readFileSync(path, "utf8") === before, "equivalent entry was rewritten");
+    assert(backupsFor(path).length === 0, "equivalent entry created a backup");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 3. Idempotence ----
-t("second run over installed workspace is a no-op", () => {
-  const ws = fresh();
+test("Codex adapter preserves unrelated TOML verbatim", () => {
+  const workspace = fresh();
   try {
-    runCli(["init", "--dir", ws]);
-    // Clear any backups created by the first run so we measure only
-    // the second run's writes.
-    const mcpPath = join(ws, ".vscode/mcp.json");
-    for (const b of backupsFor(mcpPath)) rmSync(join(dirname(mcpPath), b));
-    const mtimesBefore = readdirSync(join(ws, ".github/agents"))
-      .map((f) => statSync(join(ws, ".github/agents", f)).mtimeMs);
-    const mcpBefore = readFileSync(mcpPath, "utf8");
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status === 0);
-    // mcp.json must not have been rewritten (prior amanuensis-memory
-    // entry present → skip without --force).
-    const mcpAfter = readFileSync(mcpPath, "utf8");
-    assert(mcpBefore === mcpAfter, "mcp.json was rewritten on no-op run");
-    // Agent files must not have been touched (same mtimes).
-    const mtimesAfter = readdirSync(join(ws, ".github/agents"))
-      .map((f) => statSync(join(ws, ".github/agents", f)).mtimeMs);
-    assert(
-      JSON.stringify(mtimesBefore) === JSON.stringify(mtimesAfter),
-      "agent file mtimes changed on no-op run",
-    );
-    assert(backupsFor(mcpPath).length === 0, "spurious backup created");
+    const path = join(workspace, ".codex/config.toml");
+    mkdirSync(dirname(path), { recursive: true });
+    const original = '[model]\nname = "keep-me"\n';
+    writeFileSync(path, original);
+    const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    const config = readFileSync(path, "utf8");
+    assert(config.startsWith(original), "existing TOML was reformatted or changed");
+    assert(config.includes("[mcp_servers.amanuensis-memory]"), "managed block missing");
+    assert(backupsFor(path).length === 1, "Codex config backup missing");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 4. --force overwrites but preserves others ----
-t("--force backs up + overwrites our entry; preserves other servers", () => {
-  const ws = fresh();
+test("all adapters are idempotent on a second run", () => {
+  for (const client of ["claude", "codex", "vscode", "generic"]) {
+    const workspace = fresh();
+    try {
+      const first = runCli(["init", "--client", client, "--dir", workspace]);
+      assert(first.status === 0, `${client} first run: ${first.stderr}`);
+      const skill = join(skillRoot(workspace, client), "SKILL.md");
+      const skillMtime = statSync(skill).mtimeMs;
+      const second = runCli(["init", "--client", client, "--dir", workspace]);
+      assert(second.status === 0, `${client} second run: ${second.stderr}`);
+      assert(statSync(skill).mtimeMs === skillMtime, `${client} rewrote an up-to-date skill`);
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  }
+});
+
+test("a config conflict halts before writing any skill files", () => {
+  const workspace = fresh();
   try {
-    mkdirSync(join(ws, ".vscode"), { recursive: true });
     writeFileSync(
-      join(ws, ".vscode/mcp.json"),
-      JSON.stringify(
-        {
-          servers: {
-            "amanuensis-memory": { type: "stdio", command: "OLD-BINARY", args: [] },
-            "another-server": { type: "stdio", command: "other-bin", args: [] },
-          },
+      join(workspace, ".mcp.json"),
+      JSON.stringify({ mcpServers: { "amanuensis-memory": { command: "user-command" } } }),
+    );
+    const result = runCli(["init", "--client", "claude", "--dir", workspace]);
+    assert(result.status !== 0, "conflicting config should fail");
+    assert(result.stderr.includes("nothing was written"), result.stderr);
+    assert(!existsSync(skillRoot(workspace, "claude")), "skill was partially installed");
+    assert(backupsFor(join(workspace, ".mcp.json")).length === 0, "backup written before halt");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("--force backs up and replaces a conflicting JSON server entry", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".vscode/mcp.json");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(
+      path,
+      JSON.stringify({
+        servers: {
+          "amanuensis-memory": { command: "old" },
+          other: { command: "keep" },
         },
-        null,
-        2,
-      ),
+      }),
     );
-    const r = runCli(["init", "--dir", ws, "--force"]);
-    assert(r.status === 0, r.stderr);
-    const mcp = readJson(join(ws, ".vscode/mcp.json"));
+    const result = runCli(["init", "--client", "vscode", "--dir", workspace, "--force"]);
+    assert(result.status === 0, result.stderr);
+    const config = readJson(path);
+    assert(config.servers["amanuensis-memory"].command === process.execPath, "entry not replaced");
+    assert(config.servers.other.command === "keep", "unrelated entry lost");
+    assert(backupsFor(path).length === 1, "backup missing");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("--force backs up and replaces a conflicting skill file", () => {
+  const workspace = fresh();
+  try {
+    const target = join(skillRoot(workspace, "generic"), "SKILL.md");
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, "user content\n");
+    const result = runCli(["init", "--client", "generic", "--dir", workspace, "--force"]);
+    assert(result.status === 0, result.stderr);
+    assert(readFileSync(target, "utf8").includes("name: amanuensis"), "skill not replaced");
+    const backups = backupsFor(target);
+    assert(backups.length === 1, "skill backup missing");
     assert(
-      mcp.servers["amanuensis-memory"].command === "amanuensis-memory",
-      "our entry was not updated",
+      readFileSync(join(dirname(target), backups[0]), "utf8") === "user content\n",
+      "skill backup does not preserve prior content",
     );
-    assert(mcp.servers["another-server"], "other entry lost under --force");
-    assert(backupsFor(join(ws, ".vscode/mcp.json")).length === 1, "backup missing");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 5. --dry-run ----
-t("--dry-run writes nothing", () => {
-  const ws = fresh();
+test("dry run reports every layer and writes nothing", () => {
+  const workspace = fresh();
   try {
-    const r = runCli(["init", "--dir", ws, "--dry-run"]);
-    assert(r.status === 0, r.stderr);
-    assert(!existsSync(join(ws, ".github")), "dry-run created .github");
-    assert(!existsSync(join(ws, ".vscode")), "dry-run created .vscode");
-    assert(r.stdout.includes("[dry-run]"), "dry-run output marker missing");
+    const result = runCli(["init", "--client", "codex", "--dir", workspace, "--dry-run"]);
+    assert(result.status === 0, result.stderr);
+    assert(result.stdout.includes("[dry-run]"), "dry-run marker missing");
+    assert(result.stdout.includes("SKILL.md"), "skill plan missing");
+    assert(result.stdout.includes(".codex/config.toml"), "config plan missing");
+    assert(readdirSync(workspace).length === 0, "dry run wrote files");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 6. JSON with comments ----
-t("tolerates JSON-with-comments in existing mcp.json", () => {
-  const ws = fresh();
+test("invalid JSON fails before any partial installation", () => {
+  const workspace = fresh();
   try {
-    mkdirSync(join(ws, ".vscode"), { recursive: true });
-    writeFileSync(
-      join(ws, ".vscode/mcp.json"),
-      `{
-  // This file has comments, which VS Code allows.
+    const path = join(workspace, ".mcp.json");
+    const invalid = "{ definitely not JSON }";
+    writeFileSync(path, invalid);
+    const result = runCli(["init", "--client", "claude", "--dir", workspace]);
+    assert(result.status !== 0, "invalid JSON should fail");
+    assert(result.stderr.includes("not parseable JSON"), result.stderr);
+    assert(readFileSync(path, "utf8") === invalid, "invalid config was changed");
+    assert(!existsSync(skillRoot(workspace, "claude")), "skill was partially installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("incomplete Codex managed block fails out-of-band", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".codex/config.toml");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "# >>> amanuensis init (managed)\n[mcp_servers.amanuensis-memory]\n");
+    const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+    assert(result.status !== 0, "incomplete marker should fail");
+    assert(result.stderr.includes("incomplete Amanuensis-managed block"), result.stderr);
+    assert(!existsSync(skillRoot(workspace, "codex")), "skill was partially installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("alternate Codex TOML spellings cannot create a duplicate server", () => {
+  const variants = [
+    "[mcp_servers.'amanuensis-memory']\ncommand = 'old'\n",
+    '[mcp_servers."amanuensis-memory"]\ncommand = "old"\n',
+    'mcp_servers.amanuensis-memory = { command = "old" }\n',
+    'mcp_servers = { "amanuensis-memory" = { command = "old" } }\n',
+  ];
+  for (const existing of variants) {
+    const workspace = fresh();
+    try {
+      const path = join(workspace, ".codex/config.toml");
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, existing);
+      const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+      assert(result.status !== 0, `accepted duplicate candidate: ${existing}`);
+      assert(result.stderr.includes("unmanaged TOML section"), result.stderr);
+      assert(readFileSync(path, "utf8") === existing, "existing TOML changed on conflict");
+      assert(!existsSync(skillRoot(workspace, "codex")), "skill was partially installed");
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  }
+});
+
+test("invalid Codex TOML fails before any partial installation", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".codex/config.toml");
+    mkdirSync(dirname(path), { recursive: true });
+    const invalid = "[broken\nvalue = ???\n";
+    writeFileSync(path, invalid);
+    const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+    assert(result.status !== 0, "invalid TOML should fail");
+    assert(result.stderr.includes("not parseable TOML"), result.stderr);
+    assert(readFileSync(path, "utf8") === invalid, "invalid config was changed");
+    assert(!existsSync(skillRoot(workspace, "codex")), "skill was partially installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("duplicate Codex managed blocks fail before writes", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".codex/config.toml");
+    mkdirSync(dirname(path), { recursive: true });
+    const block =
+      "# >>> amanuensis init (managed)\n[mcp_servers.amanuensis-memory]\n" +
+      'command = "amanuensis-memory"\n# <<< amanuensis init (managed)\n';
+    writeFileSync(path, `${block}\n${block}`);
+    const result = runCli(["init", "--client", "codex", "--dir", workspace]);
+    assert(result.status !== 0, "duplicate managed blocks should fail");
+    assert(result.stderr.includes("incomplete Amanuensis-managed block"), result.stderr);
+    assert(!existsSync(skillRoot(workspace, "codex")), "skill was partially installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("JSON-with-comments remains accepted for the VS Code adapter", () => {
+  const workspace = fresh();
+  try {
+    const path = join(workspace, ".vscode/mcp.json");
+    mkdirSync(dirname(path), { recursive: true });
+    const original = `{
+  // VS Code accepts comments.
   "servers": {
     "other": {
-      "type": "stdio",  // trailing comment too
-      "command": "bin",
-      "args": [] /* block comment */
+      "command": "keep",
+      "args": ["https://host/a//b", "literal /* text */"],
     },
-  }  // trailing comma above
-}
-`,
-    );
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status === 0, `exit ${r.status}; stderr: ${r.stderr}`);
-    const mcp = readJson(join(ws, ".vscode/mcp.json"));
-    assert(mcp.servers.other, "other server lost");
-    assert(mcp.servers["amanuensis-memory"], "our entry missing");
+  },
+}\n`;
+    writeFileSync(path, original);
+    const result = runCli(["init", "--client", "vscode", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    const raw = readFileSync(path, "utf8");
+    assert(raw.includes("// VS Code accepts comments."), "unrelated comment was lost");
+    assert(raw.includes("https://host/a//b"), "comment-like string was corrupted");
+    assert(raw.includes("literal /* text */"), "block-comment-like string was corrupted");
+    const config = readJson(path);
+    assert(config.servers.other.command === "keep", "other entry lost");
+    assert(config.servers["amanuensis-memory"], "Amanuensis entry missing");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 7. Invalid JSON ----
-t("invalid existing mcp.json: errors with diagnostic, no corruption", () => {
-  const ws = fresh();
+test("known legacy custom agents are archived out of discovery", () => {
+  const workspace = fresh();
   try {
-    mkdirSync(join(ws, ".vscode"), { recursive: true });
-    const badContent = "{ this is not json at all }";
-    writeFileSync(join(ws, ".vscode/mcp.json"), badContent);
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status !== 0, "should exit nonzero on parse failure");
+    const legacy = join(workspace, ".github/agents/amanuensis.agent.md");
+    mkdirSync(dirname(legacy), { recursive: true });
+    writeFileSync(legacy, "user-modified legacy workflow\n");
+    const result = runCli(["init", "--client", "generic", "--dir", workspace]);
+    assert(result.status === 0, result.stderr);
+    assert(!existsSync(legacy), "obsolete custom agent remains discoverable");
+    const backups = backupsFor(legacy);
+    assert(backups.length === 1, "legacy agent was not recoverably archived");
     assert(
-      /not parseable JSON/.test(r.stderr) ||
-        /not parseable JSON/.test(r.stdout),
-      `expected parse-error diagnostic, got stderr=${r.stderr}`,
+      readFileSync(join(dirname(legacy), backups[0]), "utf8") === "user-modified legacy workflow\n",
+      "legacy agent contents were not preserved",
     );
-    // The broken file is still present and untouched.
-    assert(readFileSync(join(ws, ".vscode/mcp.json"), "utf8") === badContent, "file was modified");
+    assert(result.stdout.includes("archived obsolete agent"), "migration was silent");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
   }
 });
 
-// ---- 8. --agents-dir override ----
-t("--agents-dir lands agents in the custom path", () => {
-  const ws = fresh();
+test("a symlinked skill destination cannot redirect writes outside the project", () => {
+  const workspace = fresh();
+  const outside = fresh();
   try {
-    const r = runCli(["init", "--dir", ws, "--agents-dir", ".claude/agents"]);
-    assert(r.status === 0, r.stderr);
-    assert(agentCount(ws, ".claude/agents") >= 7, "agents not in custom dir");
-    assert(agentCount(ws, ".github/agents") === 0, "agents also in default dir");
+    symlinkSync(outside, join(workspace, ".agents"), "dir");
+    const result = runCli(["init", "--client", "generic", "--dir", workspace]);
+    assert(result.status !== 0, "symlinked skill root should fail");
+    assert(result.stderr.includes("symbolic link"), result.stderr);
+    assert(readdirSync(outside).length === 0, "installer wrote through the skill symlink");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });
 
-// ---- 9. Nonexistent target ----
-t("nonexistent --dir errors out cleanly", () => {
-  const bogus = join(tmpdir(), `does-not-exist-${Math.random().toString(36).slice(2)}`);
-  const r = runCli(["init", "--dir", bogus]);
-  assert(r.status !== 0, "should exit nonzero");
-  assert(/does not exist/.test(r.stderr), `expected diagnostic, got: ${r.stderr}`);
-});
-
-// ---- 10. Conflicting agent file without --force is preserved ----
-t("conflicting agent file without --force is preserved, user notified", () => {
-  const ws = fresh();
+test("a symlinked client config cannot be read, backed up, or overwritten", () => {
+  const workspace = fresh();
+  const outside = fresh();
+  const externalConfig = join(outside, "mcp.json");
+  const original = '{"mcpServers":{"outside":{"command":"preserve"}}}\n';
   try {
-    // Pre-populate with a user-authored agent file under the same name.
-    mkdirSync(join(ws, ".github/agents"), { recursive: true });
-    const target = join(ws, ".github/agents/amanuensis.agent.md");
-    writeFileSync(target, "---\nname: amanuensis\n---\nUSER-AUTHORED CONTENT\n");
-    const r = runCli(["init", "--dir", ws]);
-    assert(r.status === 0, r.stderr);
-    const content = readFileSync(target, "utf8");
-    assert(content.includes("USER-AUTHORED CONTENT"), "user content clobbered without --force");
-    assert(
-      /conflict.*--force/.test(r.stdout),
-      `expected conflict notice in output, got: ${r.stdout}`,
-    );
-    assert(backupsFor(target).length === 0, "spurious backup of user file");
+    writeFileSync(externalConfig, original);
+    symlinkSync(externalConfig, join(workspace, ".mcp.json"));
+    const result = runCli(["init", "--client", "claude", "--dir", workspace, "--force"]);
+    assert(result.status !== 0, "symlinked config should fail");
+    assert(result.stderr.includes("symbolic link"), result.stderr);
+    assert(readFileSync(externalConfig, "utf8") === original, "external config was changed");
+    assert(readdirSync(outside).length === 1, "external config was backed up outside the project");
+    assert(!existsSync(join(workspace, ".claude")), "skill was partially installed");
   } finally {
-    rmSync(ws, { recursive: true, force: true });
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });
 
-// ---- 11. Conflicting agent file with --force is backed up + replaced ----
-t("conflicting agent file with --force is backed up + replaced", () => {
-  const ws = fresh();
-  try {
-    mkdirSync(join(ws, ".github/agents"), { recursive: true });
-    const target = join(ws, ".github/agents/amanuensis.agent.md");
-    writeFileSync(target, "USER CONTENT\n");
-    const r = runCli(["init", "--dir", ws, "--force"]);
-    assert(r.status === 0, r.stderr);
-    const content = readFileSync(target, "utf8");
-    assert(!content.includes("USER CONTENT"), "not replaced");
-    assert(content.includes("name: amanuensis"), "wrong content written");
-    const backups = backupsFor(target);
-    assert(backups.length === 1, `expected 1 backup, got ${backups.length}`);
-    assert(
-      readFileSync(join(dirname(target), backups[0]), "utf8").includes("USER CONTENT"),
-      "backup missing user content",
-    );
-  } finally {
-    rmSync(ws, { recursive: true, force: true });
-  }
-});
-
-// ---- 12. Bundled agents path discovery (dev vs installed) ----
-t("installer finds bundled agents via candidate paths", () => {
-  // We can't easily simulate an installed-package layout here without
-  // publishing; verify only that the current layout (dev clone) is
-  // discoverable. If this fails, it means the candidate-path logic has
-  // regressed and installed users would fail to find agents.
-  const ws = fresh();
-  try {
-    const r = runCli(["init", "--dir", ws, "--dry-run"]);
-    assert(r.status === 0, r.stderr);
-    // The plan output should reference all expected agent files.
-    for (const name of [
-      "amanuensis.agent.md",
-      "amanuensis-scoper.agent.md",
-      "amanuensis-structural.agent.md",
-      "amanuensis-concerns.agent.md",
-      "amanuensis-adversarial.agent.md",
-      "amanuensis-notes.agent.md",
-      "amanuensis-memory-auditor.agent.md",
-    ]) {
-      assert(r.stdout.includes(name), `dry-run plan missing ${name}`);
-    }
-  } finally {
-    rmSync(ws, { recursive: true, force: true });
-  }
+test("nonexistent target fails with no side effects", () => {
+  const workspace = join(tmpdir(), `does-not-exist-${Math.random().toString(36).slice(2)}`);
+  const result = runCli(["init", "--client", "generic", "--dir", workspace]);
+  assert(result.status !== 0, "nonexistent target should fail");
+  assert(result.stderr.includes("does not exist or is not a directory"), result.stderr);
+  assert(!existsSync(workspace), "nonexistent target was created");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

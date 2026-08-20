@@ -4,6 +4,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  requireWorkspaceCitation,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
@@ -60,7 +61,7 @@ export const dispositionTools: ToolDefinition[] = [
       const subsystemId = requireString(args, "subsystem_id");
       const concernCode = requireString(args, "concern_code");
       const classification = requireEnum(args, "classification", CLASSIFICATIONS);
-      const evidence = requireString(args, "evidence");
+      const evidence = requireWorkspaceCitation(args.evidence, "evidence", { strict: false });
       const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITY);
       const linchpin = optBool(args, "linchpin_dependent", false);
       const rationale = requireString(args, "rationale");

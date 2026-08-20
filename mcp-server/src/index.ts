@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import { resolveProject } from "./project.js";
@@ -10,6 +12,41 @@ import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
+
+const SERVER_INSTRUCTIONS =
+  "Build and maintain an evidence-backed codebase conspectus. Start with get_project_info, then get_dashboard and list_subsystems. Read source code for evidence; write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
+
+// MCP defines destructiveHint=false as a guarantee that a tool performs only
+// additive updates. Default every mutation to destructive and carve out only
+// operations whose handlers have been audited as append-only or immutable-
+// successor writes. These hints inform hosts; they are not authorization.
+const ADDITIVE_TOOLS = new Set([
+  "add_claim",
+  "record_open_question",
+  "rebaseline_operating_envelope",
+]);
+
+function toolAnnotations(name: string) {
+  // MCP annotations are hints, not authorization. Keep the read-only set
+  // intentionally narrow: every get/list/lookup tool is contractually a
+  // query, while tools such as verify_* may also record custody evidence.
+  const readOnly =
+    name.startsWith("get_") || name.startsWith("list_") || name.startsWith("lookup_");
+  return {
+    readOnlyHint: readOnly,
+    destructiveHint: !readOnly && !ADDITIVE_TOOLS.has(name),
+    idempotentHint: readOnly,
+    openWorldHint: false,
+  };
+}
+
+function formatValidationErrors(errors: ErrorObject[] | null | undefined): string {
+  if (!errors || errors.length === 0) return "arguments do not match the advertised input schema";
+  return errors
+    .map((error) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`)
+    .join("; ");
+}
+
 import { compositionTools } from "./tools/composition.js";
 import { concernTools } from "./tools/concerns.js";
 import { contradictionTools } from "./tools/contradictions.js";
@@ -48,12 +85,27 @@ import { vocabularyTools } from "./tools/vocabulary.js";
 import { xrefTools } from "./tools/xrefs.js";
 
 function parseArgs(argv: string[]): { workspace: string } {
-  // Minimal flag parser — accepts `--workspace <path>` or falls back to cwd.
+  // An explicit target always wins. Claude Code provides its project root in
+  // the server environment; other local clients normally launch in the target
+  // repository. For the latter case, normalize a nested cwd to the Git root.
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1];
     if (argv[i] === "--workspace" && value) {
       return { workspace: value };
     }
+  }
+  const fromEnvironment =
+    process.env.AMANUENSIS_WORKSPACE?.trim() || process.env.CLAUDE_PROJECT_DIR?.trim();
+  if (fromEnvironment) return { workspace: fromEnvironment };
+  try {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (root) return { workspace: root };
+  } catch {
+    // Non-Git workspaces are supported; their current directory is the root.
   }
   return { workspace: process.cwd() };
 }
@@ -113,16 +165,21 @@ async function main(): Promise<void> {
     ...compareTools,
   ];
   const byName = new Map(allTools.map((t) => [t.name, t]));
+  const ajv = new Ajv({ allErrors: true, strict: true, strictSchema: true, useDefaults: false });
+  const validators = new Map<string, ValidateFunction>(
+    allTools.map((tool) => [tool.name, ajv.compile(tool.inputSchema)]),
+  );
 
   const server = new Server(
     {
       name: "amanuensis-memory",
-      version: "0.1.0",
+      version: "0.2.0-alpha.0",
     },
     {
       capabilities: {
         tools: {},
       },
+      instructions: SERVER_INSTRUCTIONS,
     },
   );
 
@@ -132,6 +189,7 @@ async function main(): Promise<void> {
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema as Record<string, unknown>,
+        annotations: toolAnnotations(t.name),
       })),
     };
   });
@@ -143,6 +201,13 @@ async function main(): Promise<void> {
       return jsonResult({ ok: false, error: `unknown tool: ${name}` });
     }
     const args = (rawArgs ?? {}) as Record<string, unknown>;
+    const validate = validators.get(name);
+    if (!validate?.(args)) {
+      return jsonResult({
+        ok: false,
+        error: `invalid arguments for ${name}: ${formatValidationErrors(validate?.errors)}`,
+      });
+    }
     try {
       const data = tool.handler(args, ctx);
       return jsonResult(data);

@@ -17,13 +17,24 @@ export interface ToolDefinition {
 }
 
 /**
- * Every tool returns structured JSON wrapped as a text content block.
- * Errors follow `{ ok: false, error }`.
+ * Every tool returns structured JSON and the same value serialized as a text
+ * block for older clients. `{ ok: false, error }` is also surfaced through
+ * MCP's protocol-level `isError` signal so hosts can react without reparsing
+ * prose.
  */
 export function jsonResult(data: unknown) {
-  return {
+  const result: {
+    content: Array<{ type: "text"; text: string }>;
+    structuredContent?: Record<string, unknown>;
+    isError?: boolean;
+  } = {
     content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
   };
+  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+    result.structuredContent = data as Record<string, unknown>;
+    if ((data as { ok?: unknown }).ok === false) result.isError = true;
+  }
+  return result;
 }
 
 export function ok(extra: Record<string, unknown> = {}) {
@@ -40,6 +51,61 @@ export function requireString(args: Record<string, unknown>, key: string): strin
     throw new ToolError(`missing required string: ${key}`);
   }
   return v;
+}
+
+/**
+ * Normalize a repository-relative source path and reserve `.amanuensis/` for
+ * tool state. This guard belongs at durable source/evidence ingress so a
+ * model cannot turn the conspectus into evidence about itself.
+ */
+export function requireWorkspaceSourcePath(value: unknown, label = "file_path"): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ToolError(`missing required string: ${label}`);
+  }
+  const slashPath = value.replace(/\\/g, "/").replace(/^\.\/+/, "");
+  const segments = slashPath.split("/");
+  if (
+    slashPath.length === 0 ||
+    slashPath.startsWith("/") ||
+    /^[A-Za-z]:\//.test(slashPath) ||
+    segments.some((segment) => segment === "..")
+  ) {
+    throw new ToolError(`${label} must be a relative, non-traversing workspace source path`);
+  }
+  if (segments[0]?.toLowerCase() === ".amanuensis") {
+    throw new ToolError(`${label} points into reserved Amanuensis tool state`);
+  }
+  return slashPath;
+}
+
+export function requireWorkspaceCitation(
+  value: unknown,
+  label = "citation",
+  options: { strict?: boolean } = {},
+): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ToolError(`missing required string: ${label}`);
+  }
+  const separator = value.indexOf(":");
+  const revision = value.lastIndexOf("@");
+  if (separator <= 0 || revision <= separator + 1 || revision === value.length - 1) {
+    if (options.strict === false) {
+      const normalized = value.replace(/\\/g, "/");
+      // Match a root-path token after any non-path delimiter (`=`, prose
+      // punctuation, quotes, whitespace), while allowing a legitimate nested
+      // `some-dir/.amanuensis` source path.
+      const mentionsReservedState = /(^|[^A-Za-z0-9._/-])(?:\.\/)*\.amanuensis(?:\/|$)/i.test(
+        normalized,
+      );
+      if (mentionsReservedState) {
+        throw new ToolError(`${label} points into reserved Amanuensis tool state`);
+      }
+      return value;
+    }
+    throw new ToolError(`${label} must use file:symbol@sha form`);
+  }
+  const sourcePath = requireWorkspaceSourcePath(value.slice(0, separator), label);
+  return `${sourcePath}${value.slice(separator)}`;
 }
 
 export function optString(args: Record<string, unknown>, key: string): string | null {

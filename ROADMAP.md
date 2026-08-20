@@ -503,7 +503,7 @@ Risks:
 - Extra passes can increase cost without improving decision quality.
 
 **Practice basis:** GP2, GP3, GP4, GP5, GP6, GP13, GP15, GP19, GP26, GP30, VP1, VP2, VP3, VP5, VP6, VP15, VP16<br>
-**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-concerns.agent.md`, `mcp-server/src/invariants.ts`, `mcp-server/src/tools/review.ts`, `mcp-server/test-adversarial-correctness.mjs`, `mcp-server/test-review-brief.mjs`, `mcp-server/src/tools/review-analysis.ts`, `mcp-server/fixtures/review-analysis/manifest.json`, `mcp-server/test-review-analysis.mjs`, `dev/adr/0008-independent-review-custody-and-blinding.md`
+**Baseline evidence:** `.claude/skills/amanuensis/references/phase-4-adversarial.md`, `.claude/skills/amanuensis/references/phase-3-concerns.md`, `mcp-server/src/invariants.ts`, `mcp-server/src/tools/review.ts`, `mcp-server/test-adversarial-correctness.mjs`, `mcp-server/test-review-brief.mjs`, `mcp-server/src/tools/review-analysis.ts`, `mcp-server/fixtures/review-analysis/manifest.json`, `mcp-server/test-review-analysis.mjs`, `dev/adr/0008-independent-review-custody-and-blinding.md`
 
 #### A8 — Composition and integral HEAD verification
 
@@ -573,7 +573,7 @@ Risks:
 - Progressive disclosure may hide uncertainty behind an extra click.
 
 **Practice basis:** GP7, GP11, GP12, GP14, GP28, VP12, VP20<br>
-**Baseline evidence:** `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/amanuensis_materializer/renderers.py`, `agents/amanuensis.agent.md`, `mcp-server/src/tools/review-session.ts`, `mcp-server/fixtures/review-session/semantic-states.json`, `mcp-server/test-review-session.mjs`, `dev/adr/0010-derived-review-surface-and-semantic-readback.md`
+**Baseline evidence:** `mcp-server/src/tools/dashboard.ts`, `mcp-server/src/tools/materialize.ts`, `materializer/amanuensis_materializer/renderers.py`, `.claude/skills/amanuensis/SKILL.md`, `mcp-server/src/tools/review-session.ts`, `mcp-server/fixtures/review-session/semantic-states.json`, `mcp-server/test-review-session.mjs`, `dev/adr/0010-derived-review-surface-and-semantic-readback.md`
 
 #### A10 — CodebaseBrief architecture contract
 
@@ -643,7 +643,7 @@ Risks:
 - A persuasive lean may still dominate human choice despite formal authority boundaries.
 
 **Practice basis:** GP2, GP3, GP4, GP5, GP12, GP13, GP16, GP19, GP26, VP1, VP8, VP15, VP16<br>
-**Baseline evidence:** `agents/amanuensis-adversarial.agent.md`, `agents/amanuensis-structural.agent.md`, `agents/amanuensis.agent.md`, `dev/cross-domain-analysis.md`, `mcp-server/src/tools/design-session.ts`, `mcp-server/test-design-session.mjs`, `dev/adr/0012-independent-dialectical-design.md`
+**Baseline evidence:** `.claude/skills/amanuensis/references/phase-4-adversarial.md`, `.claude/skills/amanuensis/references/phase-2-structural.md`, `.claude/skills/amanuensis/SKILL.md`, `dev/cross-domain-analysis.md`, `mcp-server/src/tools/design-session.ts`, `mcp-server/test-design-session.mjs`, `dev/adr/0012-independent-dialectical-design.md`
 
 #### A12 — Decision custody and consequence tracking
 

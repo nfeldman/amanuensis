@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-// Mirror the canonical agents/ and materializer/ directories (at the
-// Amanuensis repo root) into the mcp-server package so they ship
-// inside the published npm tarball. The `files` field in
-// package.json includes `agents/` and `materializer/`; this script
-// ensures those directories exist and match the repo-root sources.
+// Mirror the canonical skill and materializer
+// into the mcp-server package so they ship inside the published npm tarball.
+// The derivative mirrors are generated only for packaging; their sources of
+// truth remain in the repository root.
 //
 // Run automatically by `npm pack` / `npm publish` via the `prepack`
 // script. Safe to run ad-hoc: `node scripts/prepack-bundle-assets.mjs`.
@@ -18,14 +17,20 @@ const moduleDir = dirname(fileURLToPath(import.meta.url));
 const mcpRoot = resolve(moduleDir, "..");
 const repoRoot = resolve(mcpRoot, "..");
 
+// v0.1 generated a VS Code custom-agent mirror here. It is no longer part of
+// the portable package; clear any stale local copy before calculating the
+// publish artifact.
+const obsoleteAgents = join(mcpRoot, "agents");
+if (existsSync(obsoleteAgents)) rmSync(obsoleteAgents, { recursive: true, force: true });
+
 // Each target: source (absolute, under repoRoot), dest (absolute,
 // under mcpRoot), and an optional `skip` predicate that receives a
 // path relative to the source root and returns true to exclude.
 const targets = [
   {
-    name: "agents",
-    source: join(repoRoot, "agents"),
-    dest: join(mcpRoot, "agents"),
+    name: "skill",
+    source: join(repoRoot, ".claude", "skills", "amanuensis"),
+    dest: join(mcpRoot, "skills", "amanuensis"),
   },
   {
     name: "materializer",
@@ -34,13 +39,14 @@ const targets = [
     // Skip dev-only artifacts. The published package ships the code
     // the MCP server subprocesses into (materialize.py + the
     // amanuensis_materializer/ package) plus minimal docs; it should
-    // NOT ship test fixtures, ruff caches, or the test script.
+    // NOT ship test fixtures, ruff caches, or test scripts.
     skip: (relPath) =>
       relPath === ".ruff_cache" ||
       relPath.startsWith(".ruff_cache/") ||
       relPath === "__pycache__" ||
       relPath.includes("/__pycache__") ||
       relPath === "test-materializer.py" ||
+      relPath === "test-readback.py" ||
       relPath === ".gitignore",
   },
 ];

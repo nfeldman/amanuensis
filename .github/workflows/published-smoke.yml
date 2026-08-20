@@ -7,8 +7,8 @@ name: published smoke
 #
 # - missing files in the npm tarball (the `files` allowlist drops
 #   something the runtime needs)
-# - prepack bundling failed silently (agents/ or materializer/ not
-#   copied into the package)
+# - prepack bundling failed silently (the skill or materializer was not copied
+#   into the package)
 # - bin shims on PATH don't resolve correctly post-install
 # - native dependencies (better-sqlite3) don't build on a fresh OS
 # - the published version is broken in a way the source tree isn't
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version or dist-tag to install (e.g. latest, 0.1.0, next)"
+        description: "Version or dist-tag to install (e.g. latest, 0.2.0-alpha.0)"
         required: false
         default: "latest"
 
@@ -51,42 +51,29 @@ jobs:
       - name: amanuensis --help
         run: amanuensis --help
 
-      - name: amanuensis init writes the expected files
+      - name: amanuensis init writes every client adapter
         shell: bash
         run: |
           set -euo pipefail
-          ws="$RUNNER_TEMP/smoke-workspace"
-          mkdir -p "$ws"
-          cd "$ws"
-          amanuensis init
-          # Agent files land under .github/agents/ (the VS Code custom-agent
-          # discovery path the installer targets by default).
-          test -f .github/agents/amanuensis.agent.md
-          test -f .github/agents/amanuensis-scoper.agent.md
-          test -f .github/agents/amanuensis-structural.agent.md
-          test -f .github/agents/amanuensis-concerns.agent.md
-          test -f .github/agents/amanuensis-adversarial.agent.md
-          test -f .github/agents/amanuensis-memory-auditor.agent.md
-          test -f .github/agents/amanuensis-notes.agent.md
-          test -f .github/agents/references/concern-territories.md
-          test -f .github/agents/references/artifact-templates.md
-          # mcp.json got written with the server entry pointing at the bin name.
-          test -f .vscode/mcp.json
-          node -e "
-            const c = JSON.parse(require('fs').readFileSync('.vscode/mcp.json', 'utf8'));
-            const e = c.servers && c.servers['amanuensis-memory'];
-            if (!e) { console.error('mcp.json missing amanuensis-memory entry'); process.exit(1); }
-            if (e.command !== 'amanuensis-memory') { console.error('unexpected command:', e.command); process.exit(1); }
-            if (!Array.isArray(e.args) || !e.args.includes('--workspace')) { console.error('expected --workspace in args, got:', e.args); process.exit(1); }
-            console.log('mcp.json OK');
-          "
+          for client in claude codex vscode generic; do
+            ws="$RUNNER_TEMP/smoke-$client"
+            mkdir -p "$ws"
+            amanuensis init --client "$client" --dir "$ws"
+          done
+          test -f "$RUNNER_TEMP/smoke-claude/.claude/skills/amanuensis/SKILL.md"
+          test -f "$RUNNER_TEMP/smoke-claude/.mcp.json"
+          test -f "$RUNNER_TEMP/smoke-codex/.agents/skills/amanuensis/SKILL.md"
+          test -f "$RUNNER_TEMP/smoke-codex/.codex/config.toml"
+          test -f "$RUNNER_TEMP/smoke-vscode/.agents/skills/amanuensis/SKILL.md"
+          test -f "$RUNNER_TEMP/smoke-vscode/.vscode/mcp.json"
+          test -f "$RUNNER_TEMP/smoke-generic/.agents/skills/amanuensis/SKILL.md"
+          test ! -e "$RUNNER_TEMP/smoke-generic/.mcp.json"
 
       - name: amanuensis init --dry-run is repeatable on an installed workspace
         shell: bash
         run: |
           set -euo pipefail
-          cd "$RUNNER_TEMP/smoke-workspace"
-          amanuensis init --dry-run
+          amanuensis init --client claude --dir "$RUNNER_TEMP/smoke-claude" --dry-run
 
       - name: MCP server starts and responds to tools/list over stdio
         shell: bash

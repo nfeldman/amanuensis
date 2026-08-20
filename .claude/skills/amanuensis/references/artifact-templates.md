@@ -1,8 +1,8 @@
 # Artifact Templates
 
-Amanuensis's output artifact formats. Coordinators and phase agents
-write these prose artifacts to the project storage directory
-(`~/.amanuensis/workspaces/<owner>/<project>/`) during survey work.
+Amanuensis's output artifact formats. Coordinators and phase agents write these
+prose artifacts to the project-local `.amanuensis/` storage directory during
+survey work.
 
 Structured data — file ledgers, dispositions, findings, field notes,
 evidence rows, seams, diagnosticity matrices — lives in `memory.db`
@@ -140,8 +140,8 @@ section lists the ones every agent must know before touching code.]
 | `scoping` | File scope only. "File F participates in subsystem S." No behavioral claims. |
 | `structural` | Types, state containers, flows, concurrency model. No correctness claims. |
 | `concerns` | Concern dispositions with evidence. Confirmed findings at evidence_quality ≥ code-verified. |
-| `adversarial` | As above, plus survived adversarial probes. Highest confidence findings. |
-| `mapped` | Complete. Seam contracts filled in. Ready for composition with mapped peers. |
+| `adversarial` | Adversarial work is authorized and in progress. Only findings with recorded adversarial support count as survived. |
+| `mapped` | Workflow-marked complete with seam contracts filled in. Inspect the records; status alone does not prove universal challenge coverage. |
 
 **Any claim exceeding the authorized level must be flagged explicitly
 as speculative.**

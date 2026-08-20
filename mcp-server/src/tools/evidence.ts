@@ -5,6 +5,7 @@ import {
   requireEnum,
   requireInt,
   requireString,
+  requireWorkspaceSourcePath,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -52,7 +53,7 @@ export const evidenceTools: ToolDefinition[] = [
     },
     handler: (args, ctx) => {
       requireActiveSession(ctx, "add_evidence");
-      const filePath = requireString(args, "file_path");
+      const filePath = requireWorkspaceSourcePath(args.file_path);
       const refSha = requireString(args, "ref_sha");
       const kind = requireEnum(args, "kind", KINDS);
       const symbol = optString(args, "symbol");

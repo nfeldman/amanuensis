@@ -4,9 +4,9 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "${workspaceFolder}/mcp-server/dist/index.js",
+        "${CLAUDE_PROJECT_DIR:-.}/mcp-server/dist/index.js",
         "--workspace",
-        "${workspaceFolder}"
+        "${CLAUDE_PROJECT_DIR:-.}"
       ],
       "env": {
         "AMANUENSIS_AUTOPROGRESS": "1"

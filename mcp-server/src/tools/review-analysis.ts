@@ -6,6 +6,7 @@ import {
   requireInt,
   requireString,
   requireStringArray,
+  requireWorkspaceSourcePath,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -342,7 +343,7 @@ function validateEvidence(
 ): void {
   const prefixes = parseJson<string[]>(run.allowed_source_prefixes, []);
   for (const row of rows) {
-    const filePath = String(row.file_path);
+    const filePath = requireWorkspaceSourcePath(row.file_path);
     const refSha = String(row.ref_sha);
     if (!pathAllowed(filePath, prefixes)) {
       throw new ToolError(`evidence source outside allowed_source_prefixes: ${filePath}`);
@@ -368,7 +369,7 @@ function parseNewEvidence(args: Record<string, unknown>): EvidenceInput[] {
     keys.add(localKey);
     return {
       local_key: localKey,
-      file_path: requireString(row, "file_path").replace(/^\.\//, ""),
+      file_path: requireWorkspaceSourcePath(row.file_path),
       symbol: optString(row, "symbol"),
       line_range: optString(row, "line_range"),
       ref_sha: requireString(row, "ref_sha"),

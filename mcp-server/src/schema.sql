@@ -12,7 +12,7 @@
 -- The database is the index that makes retrieval intelligent.
 --
 -- Initialize per-project:
---   sqlite3 ~/.amanuensis/workspaces/<owner>/<project>/memory.db < ~/.amanuensis/schema.sql
+--   sqlite3 /path/to/project/.amanuensis/memory.db < schema.sql
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -559,7 +559,7 @@ ORDER BY demand_count DESC;
 ----------------------------------------------------------------------
 -- Everything below promotes structure that was markdown-only (seams,
 -- artifacts) or free-text (evidence, diagnosticity analysis) in the
--- ancestor schema. The motivation is that the VS Code materializer and
+-- ancestor schema. The motivation is that the materializer and
 -- the agents need these things as queryable, linkable, hash-comparable
 -- rows — not as prose the materializer has to re-parse every run.
 

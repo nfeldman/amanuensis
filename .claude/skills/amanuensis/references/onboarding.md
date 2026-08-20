@@ -13,10 +13,6 @@ moving. The full open-question queue is surfaced at the end of Phase 7 for
 the human to work through asynchronously. See `open-questions.md` for the
 categories.
 
-If the human picked **orderly batches** (option B) at the up-front gate,
-treat onboarding Phases 1–7 as the first batch and only stop after
-Phase 7's checkpoint. Subsequent subsystem surveys are separate batches.
-
 ## Setup
 
 1. Call `start_session(intent="onboarding")`. Remember the `session_id`.
@@ -27,6 +23,8 @@ Phase 7's checkpoint. Subsequent subsystem surveys are separate batches.
 ## Phase 0 · Orientation
 
 - Confirm you can read the workspace; list top-level contents.
+- Exclude `.amanuensis/` from every repository scan and file ledger. It is
+  Amanuensis's project-local state, not evidence about the target system.
 - Read `references/concern-territories.md` (the territory catalog used
   in Phase 4) and `references/artifact-templates.md` (output formats).
 - Enumerate available language-intelligence tools (call hierarchy, find
@@ -159,15 +157,7 @@ Once `materialize_docs()` returns, emit a one-screen summary:
   the highest-impact entries).
 - Path to the rendered `docs/` and to the prose artifacts.
 
-Then **continue to the next scheduled work** based on the up-front
-gate:
-
-- Autopilot (A) → start surveying the highest-priority `unmapped`
-  subsystem.
-- Orderly batches (B) → checkpoint here; ask the human whether to
-  continue with the first survey batch or adjust scope.
-- Single subsystem (C) with onboarding completed → survey that
-  subsystem.
-
-No additional gate between onboarding completion and the next survey
-unless option B was chosen.
+Then continue to the next work implied by the request. For an unscoped cold
+start, survey the highest-priority `unmapped` subsystem and proceed through the
+remaining plan. For a named subsystem, survey that subsystem. There is no
+review gate between onboarding and survey work.

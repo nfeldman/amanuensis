@@ -1,203 +1,134 @@
 # Amanuensis
 
-Amanuensis reads a codebase and writes down what it finds. The result is a *conspectus*: a
-record where every claim points to a specific line of code and carries a confidence level
-with the reason behind it, and where anything the tool could not verify is labeled as such,
-sitting in plain view next to what it confirmed.
+## Give your code agents a memory they have to earn.
 
-The path from a completed survey to a revision-aware system of record, super review, and
-architecture support is defined in the [living-conspectus roadmap](ROADMAP.md).
+Amanuensis turns a codebase into a living, evidence-backed map that agents can actually
+rely on.
 
-Why frame it that way instead of calling it an "AI code reviewer"? Because finding
-problems was never the hard part. Any capable model will list twenty suspicious things in
-a minute. The hard part, and the only part that actually saves you time, is knowing which
-of the twenty are real without checking each one yourself. Speed of generation is cheap
-now. Trustworthy output is not, and closing that gap is the whole reason this exists.
+It is for developers using agents on systems that are too large, consequential, or
+long-lived to reconstruct safely from scratch in every session.
 
-So Amanuensis does not try to review faster. It tries to produce a review you can act on
-without redoing it. The longer version of that argument, including why it generalizes past
-code and why it is not a threat to anyone, is in [Value proposition](#value-proposition) at
-the end.
+Instead, an agent (AI or human) can begin with a durable account of what the code does, why that
+account is believed, what changed, what is now stale, which findings survived challenge, and which
+questions are still open.
 
-## Does it hold up?
+That changes the job. Review becomes less about generating plausible concerns and more
+about resolving the ones that survive scrutiny. Design starts from the real constraints of
+the system. Work can continue across sessions without turning yesterday's understanding
+into today's folklore.
 
-Two answers, because there are two claims.
+## What Amanuensis makes possible
 
-On real code: pointed at Grafana, it found real bugs and backed each one with evidence you
-can check yourself ([grafana-conspectus](https://github.com/nfeldman/grafana-conspectus)).
-That is an existence proof rather than a benchmark, but it is a real one.
+- **Build a codebase memory.** Survey structure, behavior, seams, risks, intent, and
+  uncertainty into a durable conspectus rather than a disposable chat transcript.
+- **Keep that memory alive.** Bind knowledge to Git history, detect relevant changes,
+  withdraw stale authority, and schedule focused revalidation instead of starting over.
+- **Review with context.** Combine the diff with prior findings, affected seams, open
+  obligations, and independent attempts to generate, refute, and verify concerns.
+- **Prove repairs.** Keep “fixed” separate from “verified-fixed” until new evidence exists
+  at the repaired revision.
+- **Think in productive tension.** Run design work through independent immanent,
+  adversarial, and speculative lenses without collapsing disagreement into false
+  consensus.
+- **Carry decisions forward.** Preserve alternatives, premises, consequences, falsifiers,
+  research inputs, and the authority behind an accepted choice.
+- **Work unattended without losing the plot.** Bound authority up front, recover from
+  interruption, reconcile every dispatched result, and verify published output against
+  durable state before calling the run complete.
 
-On the method: the design rests on a few ideas about how to make a language model
-dependable. I reached them by trial and error while building the thing, not by reading a
-paper. I have since checked them three ways: a review of the recent research on LLM and
-multi-agent reliability, a set of controlled experiments, and an audit of this codebase
-scored in parallel by two different models. All three line up with the design. The audit
-rated the core of it as strong, and found something more useful than a grade: the parts
-doing the real work are the rules the server enforces on its own, not the instructions
-written into a prompt.
+## Trust is part of the architecture
 
-The ideas below are the valuable part. The code is one way to implement them.
+Amanuensis does not depend on a prompt asking the model to be careful. Its MCP server owns
+the record and enforces the rules:
 
-## The idea, in plain terms
+- claims need evidence and a repository revision;
+- claim supersession and invalidation remain revision-bound and historical;
+- independent review cannot aggregate before its generator, refuter, and verifier fan-in lands;
+- repairs need post-fix proof;
+- partial fan-in cannot masquerade as completion; and
+- generated documentation must pass state, coverage, and content read-back.
 
-A language model is a fluent narrator. Ask it about code and it gives you confident,
-readable prose whether or not the prose is correct. That is the trap. A wrong answer looks
-exactly like a right one, so the model's confidence tells you nothing on its own. The
-design treats that confidence as unreliable and makes the model earn each claim instead.
-Four rules do most of that work:
+The result is a reusable situation model for code: compact enough to work from, detailed
+enough to inspect, and explicit about the edge of what is known.
 
-1. **Read before you judge.** No conclusion from a name or a file path, only from what the
-   code actually does. `UserCache` is not a cache until you have watched it cache something.
-2. **Prove it or drop it.** Every finding cites its evidence. A claim the tool cannot
-   support is marked unverified rather than asserted, and stays that way until someone
-   verifies it.
-3. **Attack your own findings.** After the first pass gathers problems, a separate pass
-   tries to knock each one down, hunting for the retry loop, the lock, or the invariant
-   that means it was never a bug. What survives is what you keep. What does not is written
-   down as ruled out, with the reason, so nobody rediscovers it next month.
-4. **Remember.** The record persists across sessions. Confirmed, suspected, and ruled out
-   all carry forward, so the tool builds on last week's work instead of starting over and
-   re-inventing it.
+## Beta
 
-None of these is clever by itself. What makes them stick is where they live: in the server
-that stores the conspectus, not in a prompt that asks the model to behave. A claim that
-outruns its evidence, or a finding overturned with no new proof, is rejected when it is
-written. That is what lets the discipline hold when the tool runs unattended, which is the
-setting where prompt-only rules fall apart.
+The v2 implementation is distributed as `0.2.0-alpha.0` and passes
+its full CI suite. The tool is in beta and is being dogfooded now in active development
+work.
 
-## How a survey runs
+Its internal contracts and failure gates are extensively tested. What is still being
+learned is the practical part: whether the conspectus stays useful as a real project
+changes, how much repeated explanation and verification it saves, and where the workflow
+creates friction. Longitudinal results are not yet available.
 
-A survey moves through phases, and each phase sets a ceiling on what may be claimed. The
-tool cannot report a bug in a subsystem it has only skimmed.
+Until `1.0.0`, expect breaking changes between releases.
 
-| Phase | What happens | What may be claimed afterward |
-|---|---|---|
-| **Scope** | Lists the files and boundaries in play. No code read yet, so later phases cannot cherry-pick a convenient sample. | Only that a file belongs to a subsystem. |
-| **Structural** | Maps types, state, data flow, and the concurrency model. | Structure. No correctness claims. |
-| **Concerns** | Works a checklist fitted to this codebase's languages and runtime, not a generic lint pass. Each concern ends in a disposition backed by evidence. | Findings, with citations. |
-| **Adversarial** | A separate agent tries to disprove each finding and each shaky disposition. | The findings that survived the attack. |
-| **Mapped** | Boundaries between subsystems filled in. | Complete. |
+The [roadmap](ROADMAP.md) carries the exact implementation evidence and current claim
+boundaries.
 
-The pieces underneath:
+## Try the current beta
 
-- **Contracts enforced in the server.** The depth ceiling above and the "no overturn
-  without new evidence" rule are checked when data is written. Breaking either returns an
-  error, whether or not a person is watching.
-- **Evidence with a paper trail.** Every citation is a stored record: file, symbol,
-  commit, and how the observation was made. Asking what rests on a given piece of evidence
-  is a lookup, not a search.
-- **Concerns fitted to the codebase.** The checklist is derived for the specific system.
-  Territories that do not apply are recorded with the reason they were skipped.
-- **Competing explanations, handled honestly.** When two concerns could explain the same
-  symptom, the tool scores them against shared evidence and drops the one the evidence
-  contradicts most, instead of quietly picking a favorite.
-- **Composition tracked on purpose.** Bugs that exist only in how two subsystems meet get
-  their own place, and a boundary is assessed only once both sides are mapped.
-- **Output that stays current.** A small Python step renders the whole record into a
-  cross-linked doc site and re-renders only the pages whose sources changed.
-- **Unattended runs, same bar.** A headless mode runs an entire survey on its own, trading
-  the human's pause for a queue of open questions. The evidence bar does not move, because
-  it lives in the server rather than in the pause.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│  Custom agents (.agent.md)              │
-│  coordinator ─┬─ scoper                 │
-│               ├─ structural             │
-│               ├─ concerns               │
-│               ├─ adversarial            │
-│               ├─ notes                  │
-│               └─ memory-auditor         │
-└───────────────┬─────────────────────────┘
-                │ MCP (stdio)
-                ▼
-┌─────────────────────────────────────────┐
-│  amanuensis-memory MCP server           │
-│  (TypeScript · better-sqlite3)          │
-│  Owns memory.db (WAL) and a git-backed  │
-│  storage dir. The contracts live here.  │
-└───────────────┬─────────────┬───────────┘
-                │             │ subprocess
-                ▼             ▼
-        ┌──────────────┐  ┌──────────────────────┐
-        │ memory.db +  │  │ Python materializer  │
-        │ prose        │  │ renders → docs/      │
-        │ artifacts    │  │                      │
-        └──────────────┘  └──────────────────────┘
-```
-
-## Quick start
-
-**Prerequisites:** Node.js ≥ 20, Python 3.11+ (standard library only), and a VS Code
-MCP-compatible agent runtime.
+Install the current prerelease from npm:
 
 ```bash
 npm install -g @gruetech/amanuensis
-cd your-project
-amanuensis init          # writes the agent files and wires the MCP server into .vscode/mcp.json
+amanuensis init --client claude --dir /path/to/your/project
 ```
 
-Invoke the **amanuensis** agent and say **"run onboarding."** The coordinator walks the
-onboarding phases, fits the concern checklist to your codebase, and produces a seeded
-`memory.db`, the prose artifacts, and a rendered `docs/` site. From there:
+To work from source instead:
 
-- **Survey a subsystem** with "survey B-01." It runs scope, structural, concerns, and
-  adversarial in order, pausing at each boundary for your review.
-- **Browse** with "what have you noticed?"
-- **Audit** with "audit the conspectus," which sweeps for unresolved contradictions, stale
-  entries, and findings that need another look.
+```bash
+git clone https://github.com/nfeldman/amanuensis
+cd amanuensis
+mise install
+mise exec -- npm --prefix mcp-server ci
+mise exec -- npm --prefix mcp-server run build
 
-The project storage directory is a git repo, and every session commits, so history and
-rollback come for free.
+mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/your/project --dry-run
+mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/your/project
+```
 
-## Value proposition
+Use `--client codex` or `--client vscode` instead when that is where the project will run.
+For another local MCP-capable agent, use `--client generic`; the installer adds the
+portable Agent Skill and prints the stdio registration command and environment. If that
+host loads Agent Skills (or equivalent workflow instructions), ask the agent to **run
+onboarding**; otherwise the MCP tools and concise server instructions remain available,
+but the complete workflow is not installed automatically.
 
-**So what? Everyone is finding bugs faster now.**
+Each client-specific adapter writes the documented discovery shape for the same local MCP
+server and workflow. Direct stdio compatibility is tested independently; host discovery
+still follows each client's own trust and activation rules. The adapters exist because MCP
+standardizes tool calls, not the project config file each host discovers.
 
-True. It is also easy to draw the wrong lesson from it.
+The source beta uses the repository-pinned Node.js and Python versions through `mise`. The
+package contract remains Node.js ≥20; the materializer supports Python 3.11+.
+Survey state lives with the target at `<project>/.amanuensis/`, is excluded from the
+project's source history, and retains its own checkpoint history.
 
-A capable model can scan a repository and produce dozens of plausible bug reports in
-minutes. The expensive part is deciding which ones are real. If you still have to verify
-every claim by hand, the bottleneck has not disappeared. It moved downstream and filled up
-with confident-sounding noise.
+## Help shape it
 
-Useful output is output you can act on without repeating the work. That takes a system that
-tests its own findings, ties them to evidence, keeps its confidence proportional to what it
-proved, and admits uncertainty after looking rather than instead of looking. That is not a
-better prompt. It is engineering.
+Amanuensis is early enough that careful use and specific criticism can materially improve
+the product. If you work with coding agents on a substantial codebase, try the beta and
+tell us:
 
-### The bugs are the demonstration
+- where durable context saved you from repeating work;
+- where the record became noisy, stale, or difficult to trust;
+- which review or design surfaces changed a decision;
+- where the safeguards created useful discipline or needless friction; and
+- what would make Amanuensis worth keeping in the loop every day.
 
-Code review is the example because the evidence is concrete: every finding has to survive an
-attempt to disprove it, claims cannot outrun the evidence recorded in the system itself,
-uncertain conclusions stay uncertain, and work already ruled out is remembered rather than
-rediscovered next session.
+Bug reports, workflow reports, failed experiments, and concrete examples are all useful.
+[Open an issue](https://github.com/nfeldman/amanuensis/issues) to share feedback or propose
+a collaboration.
 
-The broader result is a method for making a probabilistic model dependable at a specific
-task. The same approach applies to contract review, incident triage, compliance work, and
-research synthesis. "AI can find bugs" is old news. The more useful claim is that the
-reliability work most people assumed would need a lab and a benchmark suite is now within
-reach of one careful person, end to end.
+## Go deeper
 
-### Why this is not a threat
-
-Typing speed was never the limit. The limit is how much of a system one person can examine,
-understand, and trust at once. A tool like this spends machine time on the repetitive
-checking and keeps human attention for judgment. It stays honest about the edge of what it
-knows, which keeps you in the loop instead of quietly standing in for you.
-
-When generation is cheap, producing more output matters less. The valuable skill is making
-the output dependable, and that skill is a human and learnable one. Amanuensis is one worked
-example, built in the open so the method can be inspected rather than merely claimed.
-
-## Development
-
-This repository is the source. Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md).
-The MCP server's developer reference, including the auto-generated tool inventory, is at
-[mcp-server/DEVELOPMENT.md](mcp-server/DEVELOPMENT.md).
+- [Roadmap and current evidence status](ROADMAP.md)
+- [Contributor setup and test commands](CONTRIBUTING.md)
+- [MCP server protocols and generated tool inventory](mcp-server/DEVELOPMENT.md)
+- [Practice-catalog v2.10 reconciliation](dev/adr/0020-practice-catalog-v2.10-reconciliation.md)
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [LICENSE](LICENSE).

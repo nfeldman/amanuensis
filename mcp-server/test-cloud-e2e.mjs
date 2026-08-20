@@ -11,7 +11,7 @@
 // env-var signalling, and checks the resulting storage structure,
 // commit layout, and comparison output.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -313,14 +313,13 @@ t("non-writable AMANUENSIS_STORAGE_ROOT fails with a clear error", () => {
   }
 });
 
-// ---- autoprogress agent file ships with the installer ----
-t("amanuensis-auto.agent.md is present in the bundled agents", () => {
-  // The installer picks up agents from ../agents/ in dev mode. Verify
-  // the auto variant is there so cloud users get it via `amanuensis
-  // init`.
+// ---- autonomous behavior is part of the portable workflow ----
+t("portable skill specifies autonomous progress", () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const agents = resolve(here, "..", "agents");
-  assert(existsSync(join(agents, "amanuensis-auto.agent.md")), "amanuensis-auto.agent.md missing");
+  const skill = resolve(here, "..", ".claude", "skills", "amanuensis", "SKILL.md");
+  assert(existsSync(skill), "portable Amanuensis skill missing");
+  const body = readFileSync(skill, "utf8");
+  assert(body.includes("run autonomously by default"), "autonomous default missing from skill");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

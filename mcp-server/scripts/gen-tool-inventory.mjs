@@ -57,7 +57,10 @@ async function fetchToolList() {
     const srv = spawn(
       process.execPath,
       [join(mcpRoot, "dist", "index.js"), "--workspace", workspace],
-      { stdio: ["pipe", "pipe", "pipe"] },
+      {
+        env: { ...process.env, AMANUENSIS_STORAGE_ROOT: join(workspace, "storage") },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
     );
     let out = "";
     let stderr = "";
@@ -66,7 +69,7 @@ async function fetchToolList() {
     const killTimer = setTimeout(() => {
       srv.kill("SIGTERM");
       rejectFn(new Error("server did not respond in time\n" + stderr));
-    }, 15_000);
+    }, 30_000);
 
     const send = (msg) => srv.stdin.write(JSON.stringify(msg) + "\n");
     send({ jsonrpc: "2.0", id: 1, method: "initialize", params: {

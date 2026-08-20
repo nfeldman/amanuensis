@@ -7,6 +7,8 @@ import {
   requireEnum,
   requireInt,
   requireString,
+  requireWorkspaceCitation,
+  requireWorkspaceSourcePath,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -97,8 +99,13 @@ export const findingTools: ToolDefinition[] = [
       const severity = requireEnum(args, "severity", SEVERITY);
       const status = requireEnum(args, "status", STATUS);
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
-      const fixLocation = optString(args, "fix_location");
-      const primaryFiles = optStringArray(args, "primary_files");
+      const rawFixLocation = optString(args, "fix_location");
+      const fixLocation = rawFixLocation
+        ? requireWorkspaceSourcePath(rawFixLocation, "fix_location")
+        : null;
+      const primaryFiles = optStringArray(args, "primary_files")?.map((citation) =>
+        requireWorkspaceCitation(citation, "primary_files"),
+      );
       const businessContext = optString(args, "business_context");
       const refSha = requireString(args, "ref_sha");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
@@ -182,7 +189,10 @@ export const findingTools: ToolDefinition[] = [
       const sessionId = requireActiveSession(ctx, "update_finding_status");
       const findingId = requireString(args, "finding_id");
       const status = requireEnum(args, "status", STATUS);
-      const fixLocation = optString(args, "fix_location");
+      const rawFixLocation = optString(args, "fix_location");
+      const fixLocation = rawFixLocation
+        ? requireWorkspaceSourcePath(rawFixLocation, "fix_location")
+        : null;
       const requestedFixSha = optString(args, "fix_sha");
       const resolutionNote = optString(args, "resolution_note");
       const row = ctx.db

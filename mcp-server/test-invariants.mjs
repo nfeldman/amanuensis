@@ -12,17 +12,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
 import { resolveProject } from "./dist/project.js";
-import { projectTools } from "./dist/tools/project.js";
-import { subsystemTools } from "./dist/tools/subsystems.js";
+import { artifactTools } from "./dist/tools/artifacts.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { dispositionTools } from "./dist/tools/dispositions.js";
-import { findingTools } from "./dist/tools/findings.js";
-import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
-import { artifactTools } from "./dist/tools/artifacts.js";
+import { findingTools } from "./dist/tools/findings.js";
+import { projectTools } from "./dist/tools/project.js";
+import { subsystemTools } from "./dist/tools/subsystems.js";
 
-let passed = 0, failed = 0;
+let passed = 0,
+  failed = 0;
 function t(label, fn) {
   try {
     fn();
@@ -38,7 +39,9 @@ function assert(cond, msg) {
 }
 function assertThrows(fn, expectedSubstring) {
   let threw = false;
-  try { fn(); } catch (e) {
+  try {
+    fn();
+  } catch (e) {
     threw = true;
     if (expectedSubstring && !e.message.includes(expectedSubstring)) {
       throw new Error(`expected error containing "${expectedSubstring}", got: ${e.message}`);
@@ -105,19 +108,27 @@ function advanceTo(ctx, id, status) {
     // Satisfy each phase's prerequisite before the status advance.
     if (order[i] === "structural") {
       // Scoping prerequisite: ≥1 file_ledger row.
-      call("add_files_to_scope", {
-        subsystem_id: id,
-        ref_sha: "fixture-ref",
-        files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "fixture" }],
-      }, ctx);
+      call(
+        "add_files_to_scope",
+        {
+          subsystem_id: id,
+          ref_sha: "fixture-ref",
+          files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "fixture" }],
+        },
+        ctx,
+      );
     }
     if (order[i] === "concerns") {
       // Structural prerequisite: subsystem-survey artifact registered.
-      call("register_artifact", {
-        path: `${id}-survey.md`,
-        kind: "subsystem-survey",
-        subsystem_id: id,
-      }, ctx);
+      call(
+        "register_artifact",
+        {
+          path: `${id}-survey.md`,
+          kind: "subsystem-survey",
+          subsystem_id: id,
+        },
+        ctx,
+      );
     }
     if (order[i] === "adversarial") {
       // Concerns prerequisite: ≥1 disposition. Use a fixture concern so
@@ -126,17 +137,21 @@ function advanceTo(ctx, id, status) {
       call("add_concern", { code: "FIXTURE-1", category: "cache", origin: "seeded" }, ctx);
       const existing = call("get_dispositions", { subsystem_id: id }, ctx);
       if (!Array.isArray(existing) || existing.length === 0) {
-        call("set_disposition", {
-          subsystem_id: id,
-          concern_code: "FIXTURE-1",
-          classification: "ruled-out",
-          evidence: `src/${id}/index.ts:fixture@fixture-ref`,
-          evidence_quality: "code-verified",
-          linchpin_dependent: false,
-          rationale: "fixture disposition for advanceTo",
-          ref_sha: "fixture-ref",
-          pass_type: "survey",
-        }, ctx);
+        call(
+          "set_disposition",
+          {
+            subsystem_id: id,
+            concern_code: "FIXTURE-1",
+            classification: "ruled-out",
+            evidence: `src/${id}/index.ts:fixture@fixture-ref`,
+            evidence_quality: "code-verified",
+            linchpin_dependent: false,
+            rationale: "fixture disposition for advanceTo",
+            ref_sha: "fixture-ref",
+            pass_type: "survey",
+          },
+          ctx,
+        );
       }
     }
     // mapped: gate is 0 open findings; vacuously satisfied when advanceTo
@@ -172,7 +187,9 @@ t("set_disposition without active session is rejected", () => {
         ),
       "requires an active session",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("add_field_note without active session is rejected", () => {
@@ -182,7 +199,9 @@ t("add_field_note without active session is rejected", () => {
       () => call("add_field_note", { category: "anomaly", observation: "x" }, ctx),
       "requires an active session",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("read tools do not require an active session", () => {
@@ -191,7 +210,9 @@ t("read tools do not require an active session", () => {
     // Should succeed without a session.
     const list = call("list_subsystems", {}, ctx);
     assert(Array.isArray(list));
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Knowledge-depth gate ----
@@ -220,7 +241,9 @@ t("set_disposition on unmapped subsystem is rejected", () => {
         ),
       "knowledge-depth contract",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("set_disposition on structural subsystem is rejected (must be ≥concerns)", () => {
@@ -247,7 +270,9 @@ t("set_disposition on structural subsystem is rejected (must be ≥concerns)", (
         ),
       "requires at least 'concerns'",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("adversarial-pass disposition on concerns-only subsystem is rejected", () => {
@@ -274,7 +299,9 @@ t("adversarial-pass disposition on concerns-only subsystem is rejected", () => {
         ),
       "requires at least 'adversarial'",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("set_disposition on deferred subsystem is rejected even if it had prior depth", () => {
@@ -302,7 +329,9 @@ t("set_disposition on deferred subsystem is rejected even if it had prior depth"
         ),
       "deferred",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("set_disposition positive path works at concerns status", () => {
@@ -326,7 +355,9 @@ t("set_disposition positive path works at concerns status", () => {
       ctx,
     );
     assert(r.ok);
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("add_finding on unmapped subsystem rejected; works at concerns", () => {
@@ -369,7 +400,9 @@ t("add_finding on unmapped subsystem rejected; works at concerns", () => {
       ctx,
     );
     assert(r.ok);
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("update_finding_status enforces gate on the underlying subsystem", () => {
@@ -392,11 +425,18 @@ t("update_finding_status enforces gate on the underlying subsystem", () => {
       ctx,
     );
     // This should work — B-01 is at concerns.
-    const r1 = call("update_finding_status", {
-      finding_id: "B01-1", status: "confirmed-acceptable",
-    }, ctx);
+    const r1 = call(
+      "update_finding_status",
+      {
+        finding_id: "B01-1",
+        status: "confirmed-acceptable",
+      },
+      ctx,
+    );
     assert(r1.ok);
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Monotonic-transition gate ----
@@ -410,7 +450,9 @@ t("update_subsystem_status rejects regression", () => {
       () => call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx),
       "regress",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("upsert_subsystem update path rejects status regression", () => {
@@ -423,7 +465,9 @@ t("upsert_subsystem update path rejects status regression", () => {
       () => call("upsert_subsystem", { id: "B-01", name: "B01", status: "concerns" }, ctx),
       "regress",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("deferred is bidirectional from any status", () => {
@@ -436,7 +480,9 @@ t("deferred is bidirectional from any status", () => {
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     const rows = call("list_subsystems", {}, ctx);
     assert(rows[0].status === "concerns");
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("forward transitions succeed", () => {
@@ -446,7 +492,9 @@ t("forward transitions succeed", () => {
     advanceTo(ctx, "B-01", "mapped");
     const rows = call("list_subsystems", {}, ctx);
     assert(rows[0].status === "mapped");
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- reset_subsystem ----
@@ -513,7 +561,9 @@ t("reset_subsystem clears dependents and allows regression", () => {
         ),
       "requires at least 'concerns'",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("reset_subsystem rejects short reason", () => {
@@ -521,14 +571,12 @@ t("reset_subsystem rejects short reason", () => {
   try {
     startSession(ctx);
     advanceTo(ctx, "B-01", "concerns");
-    const r = call(
-      "reset_subsystem",
-      { id: "B-01", to_status: "unmapped", reason: "x" },
-      ctx,
-    );
+    const r = call("reset_subsystem", { id: "B-01", to_status: "unmapped", reason: "x" }, ctx);
     assert(!r.ok);
     assert(r.error.includes("8 characters"));
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("reset_subsystem to unmapped also clears file_ledger", () => {
@@ -552,8 +600,13 @@ t("reset_subsystem to unmapped also clears file_ledger", () => {
       ctx,
     );
     assert(r.ok);
-    assert(r.deleted.file_ledger === 1, `file_ledger should be cleared, got: ${JSON.stringify(r.deleted)}`);
-  } finally { cleanup(); }
+    assert(
+      r.deleted.file_ledger === 1,
+      `file_ledger should be cleared, got: ${JSON.stringify(r.deleted)}`,
+    );
+  } finally {
+    cleanup();
+  }
 });
 
 t("reset_subsystem to structural preserves file_ledger", () => {
@@ -576,12 +629,16 @@ t("reset_subsystem to structural preserves file_ledger", () => {
       ctx,
     );
     assert(r.ok);
-    assert(r.deleted.file_ledger === undefined || r.deleted.file_ledger === 0,
-      `file_ledger should be preserved, got: ${JSON.stringify(r.deleted)}`);
+    assert(
+      r.deleted.file_ledger === undefined || r.deleted.file_ledger === 0,
+      `file_ledger should be preserved, got: ${JSON.stringify(r.deleted)}`,
+    );
     // Ledger is still queryable.
     const files = call("get_subsystem_files", { subsystem_id: "B-01" }, ctx);
     assert(files.length >= 1, `ledger should have ≥1 file, got: ${files.length}`);
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Cascade interactions ----
@@ -636,12 +693,14 @@ t("reset_subsystem with a contradiction on its finding fails transactionally", (
         const findings = call("get_findings", { subsystem_id: "B-01" }, ctx);
         assert(findings.length === 0, "findings should be cleared on success");
       }
-    } catch (e) {
+    } catch {
       // If it failed, findings should STILL be present — no partial delete.
       const findings = call("get_findings", { subsystem_id: "B-01" }, ctx);
       assert(findings.length === 2, "findings should be intact after rollback");
     }
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Session-required tools round trip ----
@@ -689,7 +748,9 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
       ctx,
     );
     assert(r.ok);
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Phase prerequisite gates ----
@@ -704,7 +765,9 @@ t("advance to 'structural' without file_ledger is rejected", () => {
       () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),
       "file ledger is empty",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
@@ -713,13 +776,19 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
     startSession(ctx);
     call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
-    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
       "no subsystem-survey artifact",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("advance to 'adversarial' without dispositions is rejected", () => {
@@ -728,15 +797,25 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
     startSession(ctx);
     call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
-    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-    call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
+    call(
+      "register_artifact",
+      { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx),
       "no concern dispositions",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("skipping phases blocked at first missing prerequisite", () => {
@@ -750,7 +829,9 @@ t("skipping phases blocked at first missing prerequisite", () => {
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
       "file ledger is empty",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("phase prerequisites: happy path passes all gates", () => {
@@ -759,42 +840,172 @@ t("phase prerequisites: happy path passes all gates", () => {
     startSession(ctx);
     call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
-    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
-    call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
+    call(
+      "register_artifact",
+      { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
     call("add_concern", { code: "CC-gate", category: "cache", origin: "seeded" }, ctx);
-    call("set_disposition", {
-      subsystem_id: "B-01", concern_code: "CC-gate", classification: "ruled-out",
-      evidence: "a.ts:f@r", evidence_quality: "code-verified", linchpin_dependent: false,
-      rationale: "test", ref_sha: "r", pass_type: "survey",
-    }, ctx);
+    call(
+      "set_disposition",
+      {
+        subsystem_id: "B-01",
+        concern_code: "CC-gate",
+        classification: "ruled-out",
+        evidence: "a.ts:f@r",
+        evidence_quality: "code-verified",
+        linchpin_dependent: false,
+        rationale: "test",
+        ref_sha: "r",
+        pass_type: "survey",
+      },
+      ctx,
+    );
     call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
     // No open findings → can map.
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 // ---- Evidence-required-to-overturn gate ----
+
+t("project-local Amanuensis state is rejected at source and evidence ingress", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx, "self-source-guard");
+    call("upsert_subsystem", { id: "B-SELF", name: "Self state" }, ctx);
+    for (const path of [
+      ".amanuensis/memory.db",
+      "./.amanuensis/docs/index.md",
+      ".AMANUENSIS\\workspace_path",
+    ]) {
+      assertThrows(
+        () =>
+          call(
+            "add_files_to_scope",
+            { subsystem_id: "B-SELF", ref_sha: "r", files: [{ file_path: path }] },
+            ctx,
+          ),
+        "reserved Amanuensis tool state",
+      );
+      assertThrows(
+        () => call("add_evidence", { file_path: path, ref_sha: "r", kind: "code-verified" }, ctx),
+        "reserved Amanuensis tool state",
+      );
+    }
+    assertThrows(
+      () =>
+        call(
+          "set_disposition",
+          {
+            subsystem_id: "B-SELF",
+            concern_code: "SELF-1",
+            classification: "ruled-out",
+            evidence: ".amanuensis/memory.db:db@r",
+            evidence_quality: "code-verified",
+            rationale: "must reject before write",
+            ref_sha: "r",
+            pass_type: "survey",
+          },
+          ctx,
+        ),
+      "reserved Amanuensis tool state",
+    );
+    for (const evidence of [
+      "see .amanuensis/memory.db for the record",
+      "see:.amanuensis/memory.db",
+      "x,.amanuensis/memory.db",
+      "source=.amanuensis/memory.db",
+      "(.AMANUENSIS\\workspace_path)",
+    ]) {
+      assertThrows(
+        () =>
+          call(
+            "set_disposition",
+            {
+              subsystem_id: "B-SELF",
+              concern_code: "SELF-2",
+              classification: "ruled-out",
+              evidence,
+              evidence_quality: "code-verified",
+              rationale: "legacy prose must reject embedded self-state paths",
+              ref_sha: "r",
+              pass_type: "survey",
+            },
+            ctx,
+          ),
+        "reserved Amanuensis tool state",
+      );
+    }
+    assertThrows(
+      () =>
+        call(
+          "add_finding",
+          {
+            finding_id: "BSELF-1",
+            subsystem_id: "B-SELF",
+            symptom: "self citation",
+            root_cause: "reserved path",
+            severity: "LOW",
+            status: "confirmed-bug",
+            primary_files: [".amanuensis/docs/index.md:page@r"],
+            ref_sha: "r",
+            pass_type: "survey",
+          },
+          ctx,
+        ),
+      "reserved Amanuensis tool state",
+    );
+    const fileCount = ctx.db.prepare("SELECT COUNT(*) AS n FROM file_ledger").get().n;
+    const evidenceCount = ctx.db.prepare("SELECT COUNT(*) AS n FROM evidence").get().n;
+    const dispositionCount = ctx.db.prepare("SELECT COUNT(*) AS n FROM dispositions").get().n;
+    const findingCount = ctx.db.prepare("SELECT COUNT(*) AS n FROM findings").get().n;
+    assert(fileCount === 0, `self-source rejection wrote ${fileCount} file rows`);
+    assert(evidenceCount === 0, `self-evidence rejection wrote ${evidenceCount} evidence rows`);
+    assert(dispositionCount === 0, `self-disposition rejection wrote ${dispositionCount} rows`);
+    assert(findingCount === 0, `self-finding rejection wrote ${findingCount} rows`);
+  } finally {
+    cleanup();
+  }
+});
 
 t("overturn to ruled-out without new session evidence is rejected", () => {
   const { ctx, cleanup } = freshCtx();
   try {
     startSession(ctx, "overturn-neg");
     advanceTo(ctx, "B-07", "concerns");
-    call("add_finding", {
-      finding_id: "B07-1", subsystem_id: "B-07",
-      symptom: "unbounded cache growth", root_cause: "no TTL on entries",
-      severity: "HIGH", status: "confirmed-bug",
-      ref_sha: "fixture-ref", pass_type: "survey",
-    }, ctx);
+    call(
+      "add_finding",
+      {
+        finding_id: "B07-1",
+        subsystem_id: "B-07",
+        symptom: "unbounded cache growth",
+        root_cause: "no TTL on entries",
+        severity: "HIGH",
+        status: "confirmed-bug",
+        ref_sha: "fixture-ref",
+        pass_type: "survey",
+      },
+      ctx,
+    );
     // Bare reclassification with no new evidence attached this session → rejected.
     assertThrows(
       () => call("update_finding_status", { finding_id: "B07-1", status: "ruled-out" }, ctx),
       "no new evidence",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("fixed transition requires repository-bound repair coordinates", () => {
@@ -802,17 +1013,27 @@ t("fixed transition requires repository-bound repair coordinates", () => {
   try {
     startSession(ctx, "overturn-fixed");
     advanceTo(ctx, "B-07", "concerns");
-    call("add_finding", {
-      finding_id: "B07-2", subsystem_id: "B-07",
-      symptom: "off-by-one", root_cause: "wrong bound",
-      severity: "LOW", status: "confirmed-bug",
-      ref_sha: "fixture-ref", pass_type: "survey",
-    }, ctx);
+    call(
+      "add_finding",
+      {
+        finding_id: "B07-2",
+        subsystem_id: "B-07",
+        symptom: "off-by-one",
+        root_cause: "wrong bound",
+        severity: "LOW",
+        status: "confirmed-bug",
+        ref_sha: "fixture-ref",
+        pass_type: "survey",
+      },
+      ctx,
+    );
     assertThrows(
       () => call("update_finding_status", { finding_id: "B07-2", status: "fixed" }, ctx),
       "fix_location and fix_sha",
     );
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 t("overturn to ruled-out succeeds once disproving evidence is attached this session", () => {
@@ -820,23 +1041,47 @@ t("overturn to ruled-out succeeds once disproving evidence is attached this sess
   try {
     startSession(ctx, "overturn-pos");
     advanceTo(ctx, "B-07", "concerns");
-    call("add_finding", {
-      finding_id: "B07-3", subsystem_id: "B-07",
-      symptom: "race on shared map", root_cause: "no lock",
-      severity: "HIGH", status: "confirmed-bug",
-      ref_sha: "fixture-ref", pass_type: "survey",
-    }, ctx);
-    const ev = call("add_evidence", {
-      file_path: "src/B-07/cache.ts", symbol: "get", line_range: "10-20",
-      ref_sha: "fixture-ref", kind: "code-verified",
-      excerpt: "callers hold the region lock", note: "compensating mechanism found in adversarial pass",
-    }, ctx);
-    call("attach_evidence_to_finding", {
-      finding_id: "B07-3", evidence_id: ev.id, role: "compensating",
-    }, ctx);
+    call(
+      "add_finding",
+      {
+        finding_id: "B07-3",
+        subsystem_id: "B-07",
+        symptom: "race on shared map",
+        root_cause: "no lock",
+        severity: "HIGH",
+        status: "confirmed-bug",
+        ref_sha: "fixture-ref",
+        pass_type: "survey",
+      },
+      ctx,
+    );
+    const ev = call(
+      "add_evidence",
+      {
+        file_path: "src/B-07/cache.ts",
+        symbol: "get",
+        line_range: "10-20",
+        ref_sha: "fixture-ref",
+        kind: "code-verified",
+        excerpt: "callers hold the region lock",
+        note: "compensating mechanism found in adversarial pass",
+      },
+      ctx,
+    );
+    call(
+      "attach_evidence_to_finding",
+      {
+        finding_id: "B07-3",
+        evidence_id: ev.id,
+        role: "compensating",
+      },
+      ctx,
+    );
     const r = call("update_finding_status", { finding_id: "B07-3", status: "ruled-out" }, ctx);
     assert(r.previous_status === "confirmed-bug", "overturn with session evidence should succeed");
-  } finally { cleanup(); }
+  } finally {
+    cleanup();
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

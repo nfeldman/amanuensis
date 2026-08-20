@@ -58,7 +58,7 @@ Bumping `MATERIALIZER_VERSION` in `manifest.py` invalidates every page.
 ## Run
 
 ```bash
-python3 materialize.py --storage ~/.amanuensis/workspaces/<owner>/<repo>
+python3 materialize.py --storage /path/to/project/.amanuensis
 ```
 
 With optional flags:

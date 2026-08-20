@@ -929,8 +929,8 @@
             "M11"
           ],
           "baselineEvidence": [
-            "agents/amanuensis-adversarial.agent.md",
-            "agents/amanuensis-concerns.agent.md",
+            ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+            ".claude/skills/amanuensis/references/phase-3-concerns.md",
         "mcp-server/src/invariants.ts",
         "mcp-server/src/tools/review.ts",
         "mcp-server/test-adversarial-correctness.mjs",
@@ -1043,7 +1043,7 @@
             "mcp-server/src/tools/dashboard.ts",
             "mcp-server/src/tools/materialize.ts",
             "materializer/amanuensis_materializer/renderers.py",
-            "agents/amanuensis.agent.md",
+            ".claude/skills/amanuensis/SKILL.md",
             "mcp-server/src/tools/review-session.ts",
             "mcp-server/fixtures/review-session/semantic-states.json",
             "mcp-server/test-review-session.mjs",
@@ -1155,9 +1155,9 @@
             "M11"
           ],
           "baselineEvidence": [
-            "agents/amanuensis-adversarial.agent.md",
-            "agents/amanuensis-structural.agent.md",
-            "agents/amanuensis.agent.md",
+            ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+            ".claude/skills/amanuensis/references/phase-2-structural.md",
+            ".claude/skills/amanuensis/SKILL.md",
             "dev/cross-domain-analysis.md",
             "mcp-server/src/tools/design-session.ts",
             "mcp-server/test-design-session.mjs",

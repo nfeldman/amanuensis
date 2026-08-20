@@ -24,8 +24,8 @@ that can't be corrected:
   goes in this concern's `business_context`?"
 
 **Stop (rare)** — the few cases where guessing would corrupt the
-conspectus or risk destructive action. See SKILL.md "When you DO ask
-the human" for the full list.
+conspectus or risk destructive action. See SKILL.md "Conditions that stop
+execution" for the full list.
 
 When in doubt, record and continue. The human can always re-direct
 at the next checkpoint; you cannot un-stop a stopped run.
