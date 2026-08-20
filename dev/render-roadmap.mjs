@@ -44,6 +44,9 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
 const FULL_BRANCH_REF = /^refs\/heads\/[A-Za-z0-9._/-]+$/;
 const CATALOG_SNAPSHOT = JSON.parse(readFileSync(CATALOG, "utf8"));
 const REQUIRED_PRACTICES = new Set(CATALOG_SNAPSHOT.ids);
+const PACKAGE_MANIFEST = JSON.parse(
+  readFileSync(resolve(ROOT, "mcp-server/package.json"), "utf8"),
+);
 
 function loadRoadmap() {
   return JSON.parse(readFileSync(SOURCE, "utf8"));
@@ -160,10 +163,84 @@ function validateRoadmap(roadmap) {
     "delivery.integration.readback.mismatchCount must be zero",
     errors,
   );
+  const release = roadmap.delivery?.release;
   assert(
-    roadmap.delivery?.release?.status === "unestablished" &&
-      roadmap.delivery?.release?.tag === null,
-    "delivery.release must remain unestablished with no tag",
+    release?.status === "established",
+    "delivery.release.status must be established",
+    errors,
+  );
+  assert(
+    release?.package === PACKAGE_MANIFEST.name && release?.version === PACKAGE_MANIFEST.version,
+    "delivery.release package and version must match mcp-server/package.json",
+    errors,
+  );
+  assert(
+    release?.tag === `v${release?.version}`,
+    "delivery.release.tag must equal v<release.version>",
+    errors,
+  );
+  assert(
+    FULL_SHA.test(release?.tagCommit ?? ""),
+    "delivery.release.tagCommit must be a full SHA",
+    errors,
+  );
+  assert(release?.registry === "npmjs", "delivery.release.registry must be npmjs", errors);
+  assert(release?.distTag === "latest", "delivery.release.distTag must be latest", errors);
+  assert(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(release?.publishedAt ?? ""),
+    "delivery.release.publishedAt must be an ISO UTC timestamp",
+    errors,
+  );
+  assert(
+    FULL_SHA.test(release?.shasum ?? ""),
+    "delivery.release.shasum must be a SHA-1",
+    errors,
+  );
+  assert(
+    /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(release?.integrity ?? ""),
+    "delivery.release.integrity must be an npm sha512 integrity value",
+    errors,
+  );
+  assert(
+    release?.publish?.provider === "github-actions" &&
+      release?.publish?.workflow === "publish.yml",
+    "delivery.release.publish must identify the GitHub Actions publish workflow",
+    errors,
+  );
+  assert(
+    Number.isInteger(release?.publish?.runId) && release.publish.runId > 0,
+    "delivery.release.publish.runId must be a positive integer",
+    errors,
+  );
+  assert(
+    release?.publish?.headSha === release?.tagCommit,
+    "delivery.release.publish.headSha must equal the tag commit",
+    errors,
+  );
+  assert(
+    release?.publish?.conclusion === "success",
+    "delivery.release.publish.conclusion must be success",
+    errors,
+  );
+  assert(
+    release?.publishedSmoke?.provider === "github-actions" &&
+      release?.publishedSmoke?.workflow === "published-smoke.yml",
+    "delivery.release.publishedSmoke must identify the published-smoke workflow",
+    errors,
+  );
+  assert(
+    Number.isInteger(release?.publishedSmoke?.runId) && release.publishedSmoke.runId > 0,
+    "delivery.release.publishedSmoke.runId must be a positive integer",
+    errors,
+  );
+  assert(
+    release?.publishedSmoke?.version === release?.version,
+    "delivery.release.publishedSmoke.version must equal the release version",
+    errors,
+  );
+  assert(
+    release?.publishedSmoke?.conclusion === "success",
+    "delivery.release.publishedSmoke.conclusion must be success",
     errors,
   );
   assert(/^\d{4}-\d{2}-\d{2}$/.test(roadmap.updated ?? ""), "updated must be YYYY-MM-DD", errors);
@@ -704,8 +781,21 @@ function render(roadmap) {
     `**Conspectus read-back:** \`${integration.readback.runId}\` passed state, coverage, and content with ${integration.readback.mismatchCount} mismatches at source \`${integration.readback.sourceSha}\`; durable storage commit \`${integration.readback.storageCommit}\`.`,
   );
   lines.push("");
+  const release = roadmap.delivery.release;
+  const tagUrl = `https://github.com/${integration.repository}/tree/${release.tag}`;
+  const packageUrl = `https://www.npmjs.com/package/${release.package}/v/${release.version}`;
+  const publishUrl = `https://github.com/${integration.repository}/actions/runs/${release.publish.runId}`;
+  const publishedSmokeUrl = `https://github.com/${integration.repository}/actions/runs/${release.publishedSmoke.runId}`;
   lines.push(
-    `**Tagged release:** ${roadmap.delivery.release.status}; tag ${roadmap.delivery.release.tag ?? "none"}.`,
+    `**Release:** ${release.status}; [${release.tag}](${tagUrl}) published [${release.package}@${release.version}](${packageUrl}) as \`${release.distTag}\` on ${release.registry}.`,
+  );
+  lines.push("");
+  lines.push(
+    `**Publication evidence:** [${release.publish.workflow} run ${release.publish.runId}](${publishUrl}) concluded ${release.publish.conclusion} at tag commit \`${release.tagCommit}\`; registry shasum \`${release.shasum}\`.`,
+  );
+  lines.push("");
+  lines.push(
+    `**Published-package smoke:** [${release.publishedSmoke.workflow} run ${release.publishedSmoke.runId}](${publishedSmokeUrl}) concluded ${release.publishedSmoke.conclusion} for \`${release.publishedSmoke.version}\`.`,
   );
   if (nextInitiative) {
     lines.push("");

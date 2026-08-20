@@ -225,13 +225,31 @@ try {
     "productProof must remain unestablished until criterion-linked product evidence is implemented",
   );
 
-  const fabricatedRelease = writeCase("fabricated-release", (value) => {
-    value.delivery.release = { status: "established", tag: "v2.0.0" };
+  const mismatchedReleaseTag = writeCase("mismatched-release-tag", (value) => {
+    value.delivery.release.tag = "v2.0.0";
   });
   run(
-    ["--write", "--source", fabricatedRelease, "--output", projection],
+    ["--write", "--source", mismatchedReleaseTag, "--output", projection],
     1,
-    "delivery.release must remain unestablished with no tag",
+    "delivery.release.tag must equal v<release.version>",
+  );
+
+  const regressedReleaseStatus = writeCase("regressed-release-status", (value) => {
+    value.delivery.release.status = "unestablished";
+  });
+  run(
+    ["--write", "--source", regressedReleaseStatus, "--output", projection],
+    1,
+    "delivery.release.status must be established",
+  );
+
+  const failedPublishedSmoke = writeCase("failed-published-smoke", (value) => {
+    value.delivery.release.publishedSmoke.conclusion = "failure";
+  });
+  run(
+    ["--write", "--source", failedPublishedSmoke, "--output", projection],
+    1,
+    "delivery.release.publishedSmoke.conclusion must be success",
   );
 
   const unevidencedStageExit = writeCase("unevidenced-stage-exit", (value) => {

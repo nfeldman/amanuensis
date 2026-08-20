@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "roadmapVersion": "1.3",
-  "updated": "2026-08-19",
+  "updated": "2026-08-20",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
-  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction are integrated on main. That establishes the v2 implementation and its repository custody, not product efficacy, a real operating envelope, or a tagged release.",
+  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction are integrated on main, and the v2 alpha is tagged and published. That establishes implementation, repository custody, and package delivery—not product efficacy or a real operating envelope.",
   "delivery": {
     "implementation": "integrated",
     "productProof": "unestablished",
@@ -35,8 +35,30 @@
       }
     },
     "release": {
-      "status": "unestablished",
-      "tag": null
+      "status": "established",
+      "tag": "v0.2.0-alpha.0",
+      "tagCommit": "cb1f2fb4f5865f361d65165beee272afacfd372e",
+      "registry": "npmjs",
+      "package": "@gruetech/amanuensis",
+      "version": "0.2.0-alpha.0",
+      "distTag": "latest",
+      "publishedAt": "2026-08-20T21:30:24.862Z",
+      "shasum": "5ebb6681aa6f625e73695567824d8f6ef4f4cdbf",
+      "integrity": "sha512-CcimaTdgTrC9u2cZMM1nfP5S0avwJZdkSILivkB+kt8zwagRD+RxCo2PXHU90KooXv9ao3Z9+YNUO9CP+l/Zfw==",
+      "publish": {
+        "provider": "github-actions",
+        "workflow": "publish.yml",
+        "runId": 32418903180,
+        "headSha": "cb1f2fb4f5865f361d65165beee272afacfd372e",
+        "conclusion": "success"
+      },
+      "publishedSmoke": {
+        "provider": "github-actions",
+        "workflow": "published-smoke.yml",
+        "runId": 32419802635,
+        "version": "0.2.0-alpha.0",
+        "conclusion": "success"
+      }
     }
   },
   "baselineObservations": [
