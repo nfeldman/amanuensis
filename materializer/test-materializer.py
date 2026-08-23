@@ -245,6 +245,16 @@ def main() -> None:
         assert 'class="identifier-definition"' in html_concerns
         assert 'title="CC-1 — Cache Coherence"' in html_concerns
         assert 'aria-label="CC-1 — Cache Coherence"' in html_concerns
+        assert 'id="coverage-overview"' in html_concerns
+        assert 'class="coverage-index"' in html_concerns
+        assert '<strong>3</strong><span>Recorded reviews</span>' in html_concerns
+        assert html_concerns.count('<article class="coverage-subsystem">') == 3
+        assert html_concerns.count('class="coverage-token coverage-state-') == 3
+        assert '<details class="coverage-matrix-disclosure">' in html_concerns
+        assert '<table class="coverage-matrix">' in html_concerns
+        assert html_concerns.count('<td class="coverage-matrix-empty">') == 6
+        assert 'href="subsystems/b02-auth-service.html#concern-disposition-tc-1"' in html_concerns
+        assert "Coverage heatmap" not in html_concerns
         assert 'class="severity severity-high"' in html_findings
         assert "<table" not in html_findings and "<p>|" not in html_findings
         html_entry = (docs / "entry-point.html").read_text()

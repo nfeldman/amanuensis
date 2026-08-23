@@ -109,9 +109,15 @@ Current typed projections:
 - Concern-review records keep concern, verdict, evidence, and any actual
   linchpin together; rationale receives the reading measure.
 - Symbol/role/source inventories and subsystem plans are record registers.
-- State-container lifecycles, coverage matrices, and other genuine cross-record
-  comparisons remain tables. Merge a subordinate location into the row header
-  when that improves scanning without losing its label.
+- State-container lifecycles and other genuine cross-record comparisons remain
+  tables. A large sparse coverage matrix is different: make a sparse index of
+  recorded reviews the default HTML surface, separate neutral coverage measure
+  from review outcome, and omit unassessed intersections from that overview.
+  Retain the complete semantic matrix as secondary apparatus for exact
+  row-and-column lookup, with sticky headers and a bounded local scroll area.
+  This is progressive disclosure of comparison detail, not deletion of data.
+  Merge a subordinate location into the row header when that improves scanning
+  without losing its label.
 - Two-column term/meaning and metric/value data become definition lists.
 
 Use ruled registers rather than a grid of rounded cards. The goal is a quiet,

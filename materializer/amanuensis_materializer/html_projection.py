@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.4.0"
+HTML_PROJECTION_VERSION = "1.5.0"
 
 
 @dataclass(frozen=True)
@@ -317,7 +317,70 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .section-current-state .table-wrap { max-width: 54rem; }
 .section-current-state table { font-size: .92rem; }
 .section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.section-coverage-heatmap table td:not(:first-child), .section-coverage-heatmap table th:not(:first-child) { text-align: center; }
+
+.coverage-index { margin: 1.1rem 0 1.8rem; }
+.coverage-summary {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+}
+.coverage-summary-item { min-width: 0; padding: .85rem 1rem; border-right: 1px solid var(--rule); }
+.coverage-summary-item:last-child { border-right: 0; }
+.coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
+.coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.coverage-intro { max-width: 74ch; margin: 1rem 0 1.25rem; color: var(--text-muted); }
+.coverage-subsystem-list {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
+}
+.coverage-subsystem {
+  display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
+  gap: .7rem 1rem; min-width: 0; padding: .8rem 1rem;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.coverage-subsystem-head { min-width: 0; }
+.coverage-subsystem-title { margin: 0; font: 650 .9rem/1.32 var(--body); text-wrap: pretty; }
+.coverage-subsystem-title a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-subsystem-id { display: block; margin-top: .22rem; color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.coverage-measure { min-width: 0; }
+.coverage-review-count { margin: 0; color: var(--text-muted); font: .67rem/1.35 var(--mono); }
+.coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
+.coverage-progress > span { display: block; height: 100%; background: var(--accent); }
+.coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
+.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: currentColor; }
+.coverage-state-confirmed-bug { color: var(--danger); }
+.coverage-state-confirmed-acceptable { color: var(--signal); }
+.coverage-state-ruled-out { color: var(--good); }
+.coverage-state-out-of-scope { color: var(--quiet); }
+.coverage-state-unresolved-competition, .coverage-state-unknown { color: var(--signal); }
+.coverage-tokens { display: flex; flex-wrap: wrap; gap: .32rem; grid-column: 1 / -1; }
+.coverage-token {
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
+  padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
+  background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
+}
+.coverage-token:hover, .coverage-token:focus-visible { border-color: currentColor; color: var(--text); }
+.coverage-token-mark, .coverage-matrix-mark {
+  display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
+  border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
+}
+.coverage-linchpin { color: var(--accent); font-size: .58rem; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
+.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+.coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
+.coverage-matrix-note { max-width: 72ch; margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
+.coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
+.coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
+.coverage-matrix th, .coverage-matrix td { text-align: center; }
+.coverage-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 2.65rem; padding: .5rem .35rem; background: var(--canvas); }
+.coverage-matrix thead th:first-child { left: 0; z-index: 5; min-width: 18rem; text-align: left; }
+.coverage-matrix tbody th { position: sticky; left: 0; z-index: 2; width: 18rem; max-width: 18rem; padding: .5rem .65rem; background: var(--surface); text-align: left; text-transform: none; letter-spacing: 0; font: 650 .75rem/1.3 var(--body); }
+.coverage-matrix tbody th a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-matrix-subsystem-id { display: block; margin-top: .12rem; color: var(--text-subtle); font-size: .58rem; }
+.coverage-matrix td { width: 2.65rem; height: 2.25rem; padding: .25rem; }
+.coverage-matrix td > a { display: inline-grid; place-items: center; color: inherit; text-decoration: none; }
+.coverage-matrix-empty { color: var(--rule-strong); font-family: var(--mono); }
 
 .record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .record {
@@ -510,6 +573,14 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .prose-flow { column-count: 3; }
 }
 
+@container report (min-width: 165ch) {
+  .coverage-subsystem-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container report (max-width: 92ch) {
+  .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 620px) {
   h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
   .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
@@ -530,6 +601,11 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .topology-cross-edge { grid-template-columns: 1fr; }
   .topology-cross-edge .topology-node:last-child { text-align: left; }
   .topology-cross-relation { text-align: left; }
+  .coverage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-summary-item:nth-child(2) { border-right: 0; }
+  .coverage-summary-item:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+  .coverage-subsystem { grid-template-columns: 1fr; }
+  .coverage-tokens { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -922,6 +998,14 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+
+_COVERAGE_STATES = {
+    "🔴": ("confirmed-bug", "Confirmed defect", "!"),
+    "🟡": ("confirmed-acceptable", "Accepted behavior", "✓"),
+    "🟢": ("ruled-out", "Ruled out", "×"),
+    "⚪": ("out-of-scope", "Out of scope", "○"),
+    "⚠": ("unresolved-competition", "Competing explanations", "?"),
+}
 
 
 _DISPLAY_FIELD = {
@@ -1352,6 +1436,242 @@ class MarkdownRenderer:
             + '</div>'
         )
 
+    def _coverage_index(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+    ) -> str:
+        """Sparse, task-oriented projection of the exact coverage matrix."""
+
+        concern_codes = [_plain(header) for header in headers[1:]]
+        totals = {state[0]: 0 for state in _COVERAGE_STATES.values()}
+        linchpin_total = 0
+        records: list[dict[str, Any]] = []
+
+        def outcome(value: str) -> tuple[str, str, str, bool] | None:
+            plain = _plain(value)
+            if not plain or plain == "—":
+                return None
+            for symbol, (key, label, mark) in _COVERAGE_STATES.items():
+                if symbol in plain:
+                    return key, label, mark, "🔗" in plain
+            return "unknown", "Recorded outcome", "?", "🔗" in plain
+
+        for values, markers in rows:
+            identity = values[0]
+            link = re.search(r"\[([^]]+)\]\(([^)]+)\)", identity)
+            subsystem_id = _plain(link.group(1)) if link else _plain(identity).split(" ", 1)[0]
+            route = _html_href(link.group(2)) if link else self._route(subsystem_id)
+            subsystem_name = _plain(identity)
+            if subsystem_name.startswith(subsystem_id):
+                subsystem_name = subsystem_name[len(subsystem_id) :].strip()
+            subsystem_name = subsystem_name or subsystem_id
+
+            reviews: list[dict[str, Any]] = []
+            counts: dict[str, int] = {}
+            for code, value in zip(concern_codes, values[1:], strict=True):
+                state = outcome(value)
+                if not state:
+                    continue
+                key, label, mark, linchpin = state
+                counts[key] = counts.get(key, 0) + 1
+                if key in totals:
+                    totals[key] += 1
+                if linchpin:
+                    linchpin_total += 1
+                reviews.append(
+                    {
+                        "code": code,
+                        "key": key,
+                        "label": label,
+                        "mark": mark,
+                        "linchpin": linchpin,
+                    }
+                )
+            records.append(
+                {
+                    "markers": markers,
+                    "id": subsystem_id,
+                    "name": subsystem_name,
+                    "route": route,
+                    "reviews": reviews,
+                    "counts": counts,
+                }
+            )
+
+        review_total = sum(len(record["reviews"]) for record in records)
+        intersection_total = len(records) * len(concern_codes)
+        unassessed = intersection_total - review_total
+
+        summary_items = (
+            (review_total, "Recorded reviews"),
+            (len(records), "Subsystems"),
+            (len(concern_codes), "Active concerns"),
+            (totals.get("confirmed-bug", 0), "Confirmed defects"),
+        )
+        summary = "".join(
+            '<div class="coverage-summary-item">'
+            f'<strong>{value:,}</strong><span>{html.escape(label)}</span></div>'
+            for value, label in summary_items
+        )
+
+        count_labels = {
+            "confirmed-bug": lambda count: f"{count} defect{'s' if count != 1 else ''}",
+            "confirmed-acceptable": lambda count: f"{count} accepted",
+            "ruled-out": lambda count: f"{count} ruled out",
+            "out-of-scope": lambda count: f"{count} out of scope",
+            "unresolved-competition": lambda count: f"{count} unresolved",
+            "unknown": lambda count: f"{count} recorded",
+        }
+
+        subsystem_items: list[str] = []
+        matrix_rows: list[str] = []
+        for record in records:
+            route = str(record["route"] or "")
+            name = str(record["name"])
+            subsystem_id = str(record["id"])
+            name_html = html.escape(name)
+            primary = (
+                f'<a href="{html.escape(route, quote=True)}">{name_html}</a>'
+                if route
+                else name_html
+            )
+            reviews = list(record["reviews"])
+            reviewed = len(reviews)
+            progress = reviewed / len(concern_codes) * 100 if concern_codes else 0
+            outcome_counts = "".join(
+                f'<span class="coverage-state-{html.escape(key, quote=True)}">'
+                f'{html.escape(count_labels[key](count))}</span>'
+                for key in (
+                    "confirmed-bug",
+                    "unresolved-competition",
+                    "confirmed-acceptable",
+                    "ruled-out",
+                    "out-of-scope",
+                    "unknown",
+                )
+                if (count := record["counts"].get(key, 0))
+            )
+
+            tokens: list[str] = []
+            review_map = {review["code"]: review for review in reviews}
+            matrix_cells: list[str] = []
+            for code in concern_codes:
+                review = review_map.get(code)
+                if not review:
+                    matrix_cells.append(
+                        '<td class="coverage-matrix-empty"><span title="Not assessed">'
+                        '<span aria-hidden="true">·</span><span class="visually-hidden">Not assessed</span>'
+                        '</span></td>'
+                    )
+                    continue
+
+                key = str(review["key"])
+                label = str(review["label"])
+                mark = str(review["mark"])
+                linchpin = bool(review["linchpin"])
+                destination = (
+                    f'{route}#concern-disposition-{slugify(code)}' if route else f'#{slugify(code)}'
+                )
+                description = f"{code} — {label} in {name}"
+                if linchpin:
+                    description += "; linchpin-dependent"
+                safe_description = html.escape(description, quote=True)
+                linchpin_html = (
+                    '<span class="coverage-linchpin" aria-hidden="true">◆</span>'
+                    if linchpin
+                    else ""
+                )
+                tokens.append(
+                    f'<a class="coverage-token coverage-state-{html.escape(key, quote=True)}" '
+                    f'href="{html.escape(destination, quote=True)}" title="{safe_description}" '
+                    f'aria-label="{safe_description}">'
+                    f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
+                    f'<span>{html.escape(code)}</span>{linchpin_html}</a>'
+                )
+                matrix_cells.append(
+                    f'<td class="coverage-matrix-cell coverage-state-{html.escape(key, quote=True)}">'
+                    f'<a href="{html.escape(destination, quote=True)}" title="{safe_description}" '
+                    f'aria-label="{safe_description}"><span class="coverage-matrix-mark" '
+                    f'aria-hidden="true">{html.escape(mark)}</span>{linchpin_html}</a></td>'
+                )
+
+            marker_html = "".join(record["markers"])
+            subsystem_items.append(
+                marker_html
+                + '<article class="coverage-subsystem">'
+                '<header class="coverage-subsystem-head">'
+                f'<h3 class="coverage-subsystem-title">{primary}</h3>'
+                f'<span class="coverage-subsystem-id">{html.escape(subsystem_id)}</span></header>'
+                '<div class="coverage-measure">'
+                f'<p class="coverage-review-count">{reviewed} recorded review'
+                f'{"s" if reviewed != 1 else ""} of {len(concern_codes)}</p>'
+                f'<span class="coverage-progress" aria-hidden="true"><span style="width:{progress:.2f}%"></span></span>'
+                f'<p class="coverage-outcome-counts">{outcome_counts}</p></div>'
+                f'<div class="coverage-tokens" aria-label="Recorded concern reviews">{"".join(tokens)}</div>'
+                '</article>'
+            )
+            matrix_rows.append(
+                marker_html
+                + '<tr><th scope="row">'
+                + primary
+                + f'<span class="coverage-matrix-subsystem-id">{html.escape(subsystem_id)}</span></th>'
+                + "".join(matrix_cells)
+                + '</tr>'
+            )
+
+        legend_items = [
+            (key, label, mark)
+            for key, label, mark in _COVERAGE_STATES.values()
+        ]
+        legend = "".join(
+            f'<span class="coverage-legend-item coverage-state-{html.escape(key, quote=True)}">'
+            f'<span class="coverage-token-mark" aria-hidden="true">{html.escape(mark)}</span>'
+            f'<span>{html.escape(label)}</span></span>'
+            for key, label, mark in legend_items
+        )
+        legend += (
+            '<span class="coverage-legend-item"><span class="coverage-linchpin" '
+            'aria-hidden="true">◆</span><span>Linchpin-dependent</span></span>'
+            '<span class="coverage-legend-item"><span class="coverage-matrix-empty" '
+            'aria-hidden="true">·</span><span>Not assessed</span></span>'
+        )
+
+        matrix_head = "".join(
+            f'<th scope="col"><a href="#{html.escape(slugify(code), quote=True)}">'
+            f'{html.escape(code)}</a></th>'
+            for code in concern_codes
+        )
+        matrix = (
+            '<div class="table-wrap coverage-matrix-wrap"><table class="coverage-matrix">'
+            '<caption>Full concern review matrix</caption><thead><tr><th scope="col">Subsystem</th>'
+            + matrix_head
+            + '</tr></thead><tbody>'
+            + "".join(matrix_rows)
+            + '</tbody></table></div>'
+        )
+        linchpin_note = (
+            f" {linchpin_total} review{'s are' if linchpin_total != 1 else ' is'} linchpin-dependent."
+            if linchpin_total
+            else ""
+        )
+        return (
+            '<div class="coverage-index">'
+            f'<div class="coverage-summary">{summary}</div>'
+            f'<p class="coverage-intro">Only the {review_total} recorded reviews are expanded below; '
+            f'{unassessed:,} unassessed intersections do not consume reading space. The thin rule '
+            'shows recorded coverage; the labelled markers show review outcomes.'
+            f'{html.escape(linchpin_note)}</p>'
+            f'<div class="coverage-subsystem-list">{"".join(subsystem_items)}</div>'
+            f'<div class="coverage-legend" aria-label="Review outcome legend">{legend}</div>'
+            '<details class="coverage-matrix-disclosure"><summary><span>Full cross-reference matrix</span>'
+            f'<span>{len(records)} subsystems × {len(concern_codes)} concerns</span></summary>'
+            '<p class="coverage-matrix-note">Use the matrix when exact row-and-column comparison matters. '
+            'Headers and subsystem names remain fixed while the matrix scrolls.</p>'
+            + matrix
+            + '</details></div>'
+        )
+
     def _table(
         self,
         headers: list[str],
@@ -1365,6 +1685,12 @@ class MarkdownRenderer:
             return self._connection_topology(rows, caption, kind="dependency")
         if signature == _SEAM_TOPOLOGY_PROJECTION:
             return self._connection_topology(rows, caption, kind="seam")
+        if (
+            len(signature) > 1
+            and signature[0] == "subsystem"
+            and all(_IDENTIFIER_PATTERN.fullmatch(header.upper()) for header in signature[1:])
+        ):
+            return self._coverage_index(headers, rows)
         projection = _RECORD_PROJECTIONS.get(signature)
         if projection:
             return self._record_list(headers, rows, caption, projection)
@@ -1418,6 +1744,13 @@ class MarkdownRenderer:
 
             if line.startswith("<!--") and line.rstrip().endswith("-->"):
                 body.append(line)
+                i += 1
+                continue
+
+            if (
+                current_section in {"coverage-overview", "coverage-heatmap"}
+                and line.startswith("**Legend**:")
+            ):
                 i += 1
                 continue
 

@@ -486,7 +486,7 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT code, category, origin, status, discovered_in, notes FROM concerns ORDER BY status, code",
     )
-    out = ["# Concerns", "", "## Coverage heatmap", "", concern_coverage_heatmap(conn), ""]
+    out = ["# Concerns", "", "## Coverage overview", "", concern_coverage_heatmap(conn), ""]
     active = [c for c in cs if c["status"] == "active"]
     retired = [c for c in cs if c["status"] in ("retired", "merged")]
     if active:

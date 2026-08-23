@@ -138,13 +138,28 @@ name; table headers, matrix axes, navigation, and compact metadata are not
 exceptions. Print the ordinary name beside the token where the available
 measure allows it, while the definition markup keeps dense views recoverable.
 
+### `CoverageIndex`
+
+The primary coverage surface expands only recorded subsystem–concern reviews.
+It gives each subsystem a neutral recorded-review measure, then shows labelled
+outcome markers that link directly to the corresponding concern review. Empty
+intersections do not consume visual space, and coverage is not encoded as an
+outcome color.
+
+The complete cross-reference matrix remains available in a disclosure as
+semantic table markup. It uses fixed row and column headers, a bounded local
+scroll area, labelled non-color-only marks, and direct links from recorded
+cells. The matrix is exact apparatus; it is not the page's default overview.
+
 ## Record-presentation grammar
 
 The Markdown and database forms preserve portable structure; the HTML form
 must optimize for the reader's operation rather than reproduce storage columns.
 
 - Keep semantic tables for genuine two-dimensional comparisons such as
-  coverage matrices and lifecycle attributes across state containers.
+  lifecycle attributes across state containers. Preserve the exact coverage
+  matrix as secondary apparatus, but use the sparse `CoverageIndex` as its
+  primary human projection when unassessed intersections dominate.
 - Render prose-heavy findings, file ledgers, dispositions, inventories, and
   subsystem plans as ruled record registers.
 - Use `<dl>` for compact term/meaning and metric/value material.

@@ -43,8 +43,9 @@ zero mismatches. Inspection of the generated HTML found:
 - 19 file-ledger records, 12 concern-disposition records, and 13 structural-
   inventory records on the W-01 subsystem page;
 - one lifecycle table retained on W-01; and
-- the 34-by-36 concern coverage heatmap retained as a table on `concerns.html`,
-  while concern prose on the checklist becomes a record register.
+- the 34-by-36 concern coverage relation retained as a complete semantic matrix
+  on `concerns.html`, while a sparse linked coverage index becomes the default
+  surface and concern prose on the checklist remains a record register.
 
 The later typography and terrain pass additionally verified in generated
 markup that:
