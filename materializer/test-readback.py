@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import subprocess
 import sys
@@ -106,7 +107,9 @@ def main() -> None:
         body = findings.read_text()
         target = "subsystems/b01-reader.md"
         assert target in body, body
-        findings.write_text(body.replace(f"[B-01]({target})", "B-01", 1))
+        target_link = re.compile(rf"\[([^\]]+)\]\({re.escape(target)}\)")
+        assert target_link.search(body), body
+        findings.write_text(target_link.sub(r"\1", body, count=1))
         missing_link = run(storage, "--readback-only", expect=1)
         assert_axes(missing_link, state=True, coverage=False, content=False)
         assert any(

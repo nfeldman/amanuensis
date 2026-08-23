@@ -1,0 +1,40 @@
+name: deploy report to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.repository == 'nfeldman/amanuensis'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Verify report entry point
+        run: test -s docs/index.html
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+      - name: Upload report
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+      - name: Deploy report
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Amanuensis HTML projection 1.11.1">
+<meta name="description" content="Survey record for Report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes.">
+<title>Report interface design and validation studies · Amanuensis · Amanuensis</title>
+<script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --canvas: #f3f4ef;
+  --canvas-subtle: #eaeae6;
+  --surface: #fbfcf7;
+  --text: #1d261b;
+  --text-muted: #596153;
+  --text-subtle: #7a8273;
+  --rule: #cdd1c5;
+  --rule-strong: #a4ac9d;
+  --accent: #48651f;
+  --accent-strong: #314a16;
+  --accent-soft: #e4ebd3;
+  --signal: #9b5b27;
+  --quiet: #697263;
+  --survey-unmapped: #858b81;
+  --survey-scoping: #75836d;
+  --survey-structural: #637a55;
+  --survey-concerns: #536f3f;
+  --survey-adversarial: #42672a;
+  --survey-mapped: #315c18;
+  --survey-deferred: #7a7e75;
+  --severity-low: #767b75;
+  --severity-medium: #b07b00;
+  --severity-high: #bd5217;
+  --severity-critical: #aa2438;
+  --evidence-code: #3f611f;
+  --evidence-contract: #4d6a31;
+  --evidence-test: #5b7343;
+  --evidence-config: #687a56;
+  --evidence-doc: #737f65;
+  --evidence-comment: #7b8471;
+  --evidence-name: #82887a;
+  --evidence-pattern: #878b83;
+  --disposition-defect: #aa2438;
+  --disposition-acceptable: #4b6b2e;
+  --disposition-ruled-out: #616b5c;
+  --disposition-out-of-scope: #7d8380;
+  --disposition-ambiguous: #6f5b76;
+  --resolution-open: #98532f;
+  --resolution-pending: #806c27;
+  --resolution-closed: #3f6428;
+  --resolution-accepted: #5a7043;
+  --source-aligned: #607446;
+  --source-stale: #98532f;
+  --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --rail: 17.25rem;
+  --measure: 120ch;
+  --page: 128rem;
+  --baseline: .25rem;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #171a15;
+  --canvas-subtle: #131510;
+  --surface: #20231d;
+  --text: #edf0e6;
+  --text-muted: #b7bdac;
+  --text-subtle: #929989;
+  --rule: #3b4234;
+  --rule-strong: #5d6651;
+  --accent: #b4d35d;
+  --accent-strong: #d5e88b;
+  --accent-soft: #35431f;
+  --signal: #d5a064;
+  --quiet: #a3aa98;
+  --survey-unmapped: #9ba093;
+  --survey-scoping: #a0ad83;
+  --survey-structural: #a5b977;
+  --survey-concerns: #aac56a;
+  --survey-adversarial: #b1d05e;
+  --survey-mapped: #b8dc55;
+  --survey-deferred: #9a9e95;
+  --severity-low: #a0a8a3;
+  --severity-medium: #e2bf4f;
+  --severity-high: #f09a58;
+  --severity-critical: #f27b88;
+  --evidence-code: #b4d171;
+  --evidence-contract: #afc775;
+  --evidence-test: #abc078;
+  --evidence-config: #a6b67c;
+  --evidence-doc: #a3ae82;
+  --evidence-comment: #a0a789;
+  --evidence-name: #9ea18f;
+  --evidence-pattern: #9b9d94;
+  --disposition-defect: #f27b88;
+  --disposition-acceptable: #afd378;
+  --disposition-ruled-out: #a6ae9c;
+  --disposition-out-of-scope: #8e9692;
+  --disposition-ambiguous: #b7a0bd;
+  --resolution-open: #d99468;
+  --resolution-pending: #c6ad61;
+  --resolution-closed: #b0d775;
+  --resolution-accepted: #bdcf98;
+  --source-aligned: #b3c581;
+  --source-stale: #d99468;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #171a15; --canvas-subtle: #131510; --surface: #20231d;
+    --text: #edf0e6; --text-muted: #b7bdac; --text-subtle: #929989;
+    --rule: #3b4234; --rule-strong: #5d6651;
+    --accent: #b4d35d; --accent-strong: #d5e88b; --accent-soft: #35431f;
+    --signal: #d5a064; --quiet: #a3aa98;
+    --survey-unmapped: #9ba093; --survey-scoping: #a0ad83;
+    --survey-structural: #a5b977; --survey-concerns: #aac56a;
+    --survey-adversarial: #b1d05e; --survey-mapped: #b8dc55; --survey-deferred: #9a9e95;
+    --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
+    --severity-high: #f09a58; --severity-critical: #f27b88;
+    --evidence-code: #b4d171; --evidence-contract: #afc775; --evidence-test: #abc078;
+    --evidence-config: #a6b67c; --evidence-doc: #a3ae82; --evidence-comment: #a0a789;
+    --evidence-name: #9ea18f; --evidence-pattern: #9b9d94;
+    --disposition-defect: #f27b88; --disposition-acceptable: #afd378;
+    --disposition-ruled-out: #a6ae9c; --disposition-out-of-scope: #8e9692;
+    --disposition-ambiguous: #b7a0bd;
+    --resolution-open: #d99468; --resolution-pending: #c6ad61;
+    --resolution-closed: #b0d775; --resolution-accepted: #bdcf98;
+    --source-aligned: #b3c581; --source-stale: #d99468;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--canvas-subtle); }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--canvas);
+  font-family: var(--body);
+  font-size: 1rem;
+  line-height: 1.58;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  font-variant-ligatures: common-ligatures contextual;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-strong); text-decoration-thickness: .08em; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .14em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed; left: 1rem; top: -5rem; z-index: 100;
+  padding: .55rem .8rem; background: var(--text); color: var(--canvas);
+}
+.skip-link:focus { top: 1rem; }
+.shell { min-height: 100vh; }
+.nav-rail {
+  position: fixed; inset: 0 auto 0 0; width: var(--rail); z-index: 20;
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding: 2rem 1.35rem 1.5rem;
+  background: var(--canvas-subtle); border-right: 1px solid var(--rule);
+}
+.brand { display: block; color: var(--text); text-decoration: none; margin: 0 0 1.6rem; }
+.brand-mark {
+  display: block; font: 600 1.35rem/1.05 var(--heading); letter-spacing: -.015em;
+}
+.brand-sub { display: block; margin-top: .32rem; color: var(--text-muted); font: .73rem/1.4 var(--body); }
+.search-label { display: block; margin-bottom: .35rem; color: var(--text-muted); font: .67rem/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.nav-search {
+  width: 100%; padding: .55rem .65rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--rule-strong); border-radius: 0; font: .82rem/1.3 var(--body);
+}
+.nav-search::placeholder { color: var(--text-subtle); }
+.rail-nav { margin-top: 1.5rem; }
+.nav-group { margin: 0 0 1.35rem; }
+.nav-group-title {
+  margin: 0 0 .32rem; color: var(--text-subtle);
+  font: 600 .64rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-item { margin: .08rem 0; }
+.nav-item[hidden], .nav-group[hidden] { display: none; }
+.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
+.nav-link:hover { color: var(--text); background: var(--surface); }
+.nav-link[aria-current="page"] { color: var(--accent-strong); }
+.nav-link[aria-current="page"] .nav-name { font-weight: 700; }
+.nav-tick { width: .34rem; height: .34rem; margin-top: .44rem; border: 1px solid var(--rule-strong); background: transparent; }
+.nav-link[aria-current="page"] .nav-tick { border-color: var(--accent); background: var(--accent); }
+.nav-tick.status-unmapped { border-color: var(--survey-unmapped); }
+.nav-tick.status-scoping { background: var(--survey-scoping); border-color: var(--survey-scoping); }
+.nav-tick.status-structural { background: var(--survey-structural); border-color: var(--survey-structural); }
+.nav-tick.status-concerns { background: var(--survey-concerns); border-color: var(--survey-concerns); }
+.nav-tick.status-adversarial { background: var(--survey-adversarial); border-color: var(--survey-adversarial); }
+.nav-tick.status-mapped { background: var(--survey-mapped); border-color: var(--survey-mapped); }
+.nav-tick.status-deferred { border-color: var(--survey-deferred); border-style: dashed; }
+.nav-name { display: block; font-size: .82rem; line-height: 1.3; }
+.nav-id { display: block; margin-top: .12rem; color: var(--text-subtle); font: .64rem/1.3 var(--mono); }
+.rail-foot { margin-top: auto; padding-top: 1.5rem; }
+.rail-actions { display: flex; gap: .5rem; align-items: center; }
+.quiet-button {
+  border: 1px solid var(--rule); padding: .36rem .5rem; color: var(--text-muted);
+  background: transparent; border-radius: 0; cursor: pointer; font: .68rem/1 var(--mono);
+}
+.quiet-button:hover { border-color: var(--accent); color: var(--accent-strong); }
+.rail-note { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.45 var(--mono); }
+
+.document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
+.mobile-bar { display: none; }
+.document-inner { width: min(100%, var(--page)); margin: 0 auto; padding: 4.5rem clamp(2rem, 5vw, 6.5rem) 5.5rem; }
+.page-head { padding: 0 0 2.25rem; border-bottom: 1px solid var(--rule); }
+.eyebrow { margin: 0 0 1rem; color: var(--accent); font: 650 .69rem/1.3 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+h1 {
+  margin: 0; font: 600 clamp(2.8rem, 4.8vw, 5.2rem)/.98 var(--heading);
+  letter-spacing: -.042em; text-wrap: balance;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+}
+.page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
+.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
+.snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
+.snapshot-item b { color: var(--text); font-weight: 650; }
+.freshness { display: inline-flex; gap: .38rem; align-items: center; }
+.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
+.freshness.stale::before { background: var(--source-stale); }
+
+.content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
+.content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
+.content section:last-child { border-bottom: 0; }
+.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
+.content-findings .section-high-findings { --enum-color: var(--severity-high); }
+.content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
+.content-findings .section-low-findings { --enum-color: var(--severity-low); }
+.content-findings section > h2::before {
+  content: ""; display: inline-block; width: .14em; height: .72em;
+  margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
+}
+.finding-subsystem-heading {
+  margin: 2rem 0 .55rem;
+  color: var(--text);
+  font: 600 clamp(1.25rem, 1.6vw, 1.6rem)/1.25 var(--heading);
+}
+.finding-subsystem-heading a { color: inherit; text-decoration-color: var(--rule-strong); }
+.finding-subsystem-heading + .record-list-finding { margin-top: 0; }
+.content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
+h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
+h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
+h3 { margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
+h4 { margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
+h5, h6 { margin: 1.4rem 0 .5rem; font-size: .85rem; }
+.heading-anchor { position: absolute; left: -1.2rem; color: var(--text-subtle); text-decoration: none; opacity: 0; font-family: var(--mono); }
+:is(h2,h3,h4,h5,h6):hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
+p { max-width: var(--measure); margin: 0 0 1rem; }
+strong { font-weight: 680; }
+em { font-family: var(--heading); }
+code {
+  padding: .08rem .25rem; color: var(--accent-strong); background: var(--accent-soft);
+  font: .82em/1.4 var(--mono); overflow-wrap: anywhere;
+}
+ul, ol { max-width: var(--measure); margin: .4rem 0 1.2rem; padding-left: 1.35rem; }
+li { padding-left: .25rem; margin: 0 0 .48rem; }
+li::marker { color: var(--accent); }
+blockquote { max-width: var(--measure); margin: 1.2rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 3px solid var(--accent); color: var(--text-muted); }
+blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
+.raw-prose-note { border-left-color: var(--signal); }
+
+.prose-flow {
+  max-width: var(--measure);
+  margin: 1rem 0 1.5rem;
+  orphans: 3;
+  widows: 3;
+}
+.prose-flow > p {
+  max-width: none;
+  margin: 0 0 1em;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+.prose-flow > p:last-child { margin-bottom: 0; }
+
+.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.48; }
+caption { padding: .55rem 0; color: var(--text-subtle); text-align: left; font: .65rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+th { padding: .6rem .7rem; color: var(--text-muted); border-bottom: 1px solid var(--rule-strong); text-align: left; vertical-align: bottom; font: 650 .65rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+td { padding: .7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+td:first-child, th:first-child { padding-left: .7rem; }
+.section-current-state .table-wrap { max-width: 54rem; }
+.section-current-state table { font-size: .92rem; }
+.section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.coverage-index { margin: 1.1rem 0 1.8rem; }
+.coverage-summary {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+}
+.coverage-summary-item { min-width: 0; padding: .85rem 1rem; border-right: 1px solid var(--rule); }
+.coverage-summary-item:last-child { border-right: 0; }
+.coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
+.coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.coverage-intro { max-width: var(--measure); margin: 1rem 0 1.25rem; color: var(--text-muted); }
+.coverage-subsystem-list {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
+}
+.coverage-subsystem {
+  display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
+  gap: .7rem 1rem; align-content: start; min-width: 0; padding: .8rem 1rem;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.coverage-subsystem-head { min-width: 0; }
+.coverage-subsystem-title { margin: 0; font: 650 .9rem/1.32 var(--body); text-wrap: pretty; }
+.coverage-subsystem-title a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-subsystem-id { display: block; margin-top: .22rem; color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.coverage-measure { min-width: 0; }
+.coverage-review-count { margin: 0; color: var(--text-muted); font: .67rem/1.35 var(--mono); }
+.coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
+.coverage-progress > span { display: block; height: 100%; background: var(--accent); }
+.coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
+.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: var(--enum-color); }
+.coverage-state-confirmed-bug { --enum-color: var(--disposition-defect); }
+.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.coverage-state-out-of-scope { --enum-color: var(--disposition-out-of-scope); }
+.coverage-state-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.coverage-state-unknown { --enum-color: var(--quiet); }
+.coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
+.coverage-token {
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
+  padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
+  background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
+}
+.coverage-token:hover, .coverage-token:focus-visible { border-color: var(--enum-color); color: var(--text); }
+.coverage-token-mark, .coverage-matrix-mark {
+  display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
+  color: var(--enum-color); border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
+}
+.coverage-linchpin { color: var(--accent); font-size: .58rem; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
+.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
+.coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
+.coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
+.coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
+.coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
+.coverage-matrix th, .coverage-matrix td { text-align: center; }
+.coverage-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 2.65rem; padding: .5rem .35rem; background: var(--canvas); }
+.coverage-matrix thead th:first-child { left: 0; z-index: 5; min-width: 18rem; text-align: left; }
+.coverage-matrix tbody th { position: sticky; left: 0; z-index: 2; width: 18rem; max-width: 18rem; padding: .5rem .65rem; background: var(--surface); text-align: left; text-transform: none; letter-spacing: 0; font: 650 .75rem/1.3 var(--body); }
+.coverage-matrix tbody th a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-matrix-subsystem-id { display: block; margin-top: .12rem; color: var(--text-subtle); font-size: .58rem; }
+.coverage-matrix td { width: 2.65rem; height: 2.25rem; padding: .25rem; }
+.coverage-matrix td > a { display: inline-grid; place-items: center; color: inherit; text-decoration: none; }
+.coverage-matrix-empty { color: var(--rule-strong); font-family: var(--mono); }
+
+.record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.record {
+  display: grid; grid-template-columns: minmax(11.5rem, .34fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule);
+}
+.record:last-child { border-bottom: 0; }
+.record-meta { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
+.record-primary code { font-size: .75rem; }
+.record-facts { margin: .7rem 0 0; }
+.record-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55rem; align-items: center; padding: .23rem 0; }
+.record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
+.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
+.record-field:last-child { border-right: 0; }
+.record-field:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+.record-label { margin: 0 0 .48rem; }
+.record-copy { color: var(--text); line-height: 1.55; }
+.record-copy code { overflow-wrap: anywhere; }
+.record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
+.record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+h1, h2, .brand-mark, .record-primary, .record-lede {
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  font-feature-settings: "kern" 1, "liga" 1, "clig" 1;
+  text-rendering: optimizeLegibility;
+}
+.record-finding { display: block; }
+.record-finding .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .65rem 1.25rem; align-items: center;
+  padding: .85rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-finding .record-primary { align-self: start; margin-top: .08rem; }
+.record-finding .record-facts {
+  display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem;
+  align-items: center; min-width: 0; margin: 0;
+}
+.record-finding .record-facts > div {
+  display: flex; gap: .35rem; align-items: center;
+  min-width: 0; padding: 0;
+}
+.record-finding .record-facts dd { overflow-wrap: normal; }
+.record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
+.record-finding .record-fact-status { justify-self: start; }
+.record-finding .record-fact-ref-sha { justify-self: end; }
+.record-finding .record-fact-status dt,
+.record-finding .record-fact-ref-sha dt {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.record-finding .record-fields { display: block; }
+.record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
+.record-finding .record-field + .record-field { margin-top: 1rem; }
+.record-file-ledger { grid-template-columns: minmax(14rem, .42fr) minmax(0, 1fr); }
+.record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
+.record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern-disposition { display: block; }
+.record-concern-disposition .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .8rem 1.5rem; align-items: start;
+  padding: .9rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-disposition .record-primary { margin-top: .1rem; }
+.record-concern-disposition .record-facts {
+  display: flex; flex-wrap: wrap; gap: .48rem 1.35rem; align-items: center;
+  min-width: 0; margin: 0;
+}
+.record-concern-disposition .record-facts > div {
+  display: grid; grid-template-columns: auto auto; gap: .45rem;
+  align-items: center; min-width: max-content; padding: 0;
+}
+.record-concern-disposition .record-facts dd { overflow-wrap: normal; }
+.concern-family { margin: 2rem 0 2.6rem; }
+.concern-family-heading {
+  display: flex; flex-wrap: wrap; gap: .45rem .8rem; align-items: baseline;
+  margin: 0 0 .55rem; color: var(--text); font: 600 1.35rem/1.25 var(--heading);
+}
+.concern-territory { color: var(--text-subtle); font: .62rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.record-list-concern-checklist { margin-top: 0; }
+.record-concern-checklist { display: block; }
+.record-concern-checklist .record-meta {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: .6rem 1.25rem; align-items: center;
+  padding: .72rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-checklist .record-primary { font-size: 1rem; }
+.record-concern-checklist .record-facts { min-width: 0; margin: 0; }
+.record-concern-checklist .record-facts > div {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem .5rem;
+  align-items: baseline; min-width: 0; padding: 0;
+}
+.record-concern-checklist .record-facts dd { overflow-wrap: normal; }
+.record-concern-checklist .record-body { padding: 1rem 1.1rem 1.15rem; }
+.record-probe { max-width: var(--measure); color: var(--text); font-size: .86rem; line-height: 1.58; }
+.record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
+.file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
+.identifier-definition {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: .06em;
+  text-underline-offset: .2em;
+  cursor: help;
+}
+a .identifier-definition { text-decoration-color: currentColor; }
+.record-subsystem { display: block; }
+.record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
+.record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
+.record-primary-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.record-subsystem .record-facts { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center; margin-top: .55rem; }
+.record-subsystem .record-facts > div { display: flex; grid-template-columns: none; gap: .35rem; align-items: baseline; padding: 0; }
+.record-subsystem .record-facts dt { font-size: .58rem; }
+.record-subsystem .record-facts dd { font-size: .7rem; }
+.record-subsystem .record-fact-id dt, .record-subsystem .record-fact-status dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.record-subsystem .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.summary-list { max-width: 54rem; margin: 1rem 0 1.5rem; border-top: 1px solid var(--rule-strong); }
+.summary-list > div { display: grid; grid-template-columns: minmax(10rem, .42fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.summary-list dt, .summary-list dd { margin: 0; padding: .65rem .75rem; }
+.summary-list dt { color: var(--text-muted); font-weight: 650; }
+.summary-list dd { border-left: 1px solid var(--rule); }
+
+.subsystem-atlas { margin: 1.2rem 0 1.7rem; }
+.atlas-summary, .topology-summary {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid var(--rule); }
+.atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.atlas-region-head {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  padding: .7rem .8rem; background: var(--canvas-subtle); border-bottom: 1px solid var(--rule);
+}
+.atlas-region-head h3 { margin: 0; color: var(--text); font: 600 .86rem/1.3 var(--heading); }
+.atlas-region-count { color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.atlas-list { max-width: none; margin: 0; padding: 0; list-style: none; }
+.atlas-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; align-items: start;
+  min-height: 3.25rem; margin: 0; padding: .68rem .8rem; border-bottom: 1px solid var(--rule);
+}
+.atlas-item:last-child { border-bottom: 0; }
+.atlas-item:focus-within, .atlas-item:hover { background: color-mix(in srgb, var(--accent-soft) 32%, transparent); }
+.atlas-subsystem { min-width: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
+.atlas-subsystem strong { display: block; margin-bottom: .13rem; font: 650 .7rem/1.25 var(--mono); }
+.atlas-depth .status { padding: .08rem .28rem; font-size: .58rem; }
+
+.topology { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.topology-component {
+  display: grid; grid-template-columns: minmax(13rem, .32fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.topology-component:last-child { border-bottom: 0; }
+.topology-hub { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.topology-hub-label, .topology-cross-label {
+  margin: 0 0 .48rem; color: var(--text-subtle);
+  font: 600 .61rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.topology-hub-title { margin: 0; color: var(--text-muted); font: .83rem/1.42 var(--body); }
+.topology-hub-title strong { display: block; margin-bottom: .2rem; font: 650 .78rem/1.25 var(--mono); }
+.topology-hub-count { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.4 var(--mono); }
+.topology-spokes { min-width: 0; }
+.topology-spoke {
+  display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); min-width: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.topology-spoke:last-child { border-bottom: 0; }
+.topology-spoke:focus-within, .topology-spoke:hover { background: color-mix(in srgb, var(--accent-soft) 28%, transparent); }
+.topology-edge-mark {
+  display: flex; align-items: center; justify-content: center; min-height: 5.1rem;
+  color: var(--accent); border-right: 1px solid var(--rule); font: 1.2rem/1 var(--heading);
+}
+.topology-edge-body { min-width: 0; padding: .78rem .9rem .85rem; }
+.topology-edge-head { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; margin: 0 0 .25rem; }
+.topology-edge-key { color: var(--accent-strong); font: 650 .7rem/1.3 var(--mono); }
+.topology-qualifier { color: var(--text-subtle); font: .61rem/1.3 var(--mono); }
+.topology-peer { margin: 0 0 .32rem; color: var(--text-muted); font-size: .8rem; }
+.topology-peer-label { margin-right: .28rem; color: var(--text-subtle); font: .61rem/1.3 var(--mono); text-transform: uppercase; }
+.topology-peer strong { font-family: var(--mono); font-size: .72rem; }
+.topology-object { max-width: 64ch; margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; }
+.topology-cross { grid-column: 1 / -1; padding: .8rem 1rem 1rem; background: color-mix(in srgb, var(--canvas-subtle) 55%, transparent); border-top: 1px solid var(--rule); }
+.topology-cross-list { display: grid; gap: .55rem; }
+.topology-cross-edge { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .7rem; align-items: center; }
+.topology-cross-edge .topology-node:last-child { text-align: right; }
+.topology-cross-relation { min-width: 7rem; color: var(--text-subtle); text-align: center; font: .62rem/1.35 var(--mono); }
+.topology-cross-relation strong { display: block; color: var(--accent-strong); }
+.topology-cross-object { display: block; max-width: 42ch; margin-top: .18rem; color: var(--text-muted); font-family: var(--body); font-size: .72rem; }
+
+.table-key { display: block; color: var(--text); font: 650 .76rem/1.35 var(--mono); letter-spacing: 0; text-transform: none; }
+.table-detail { display: block; margin-top: .28rem; color: var(--text-subtle); font: .68rem/1.4 var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.status, .evidence-label, .severity {
+  --enum-color: var(--quiet);
+  display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
+  color: color-mix(in srgb, var(--enum-color) 72%, var(--text));
+  background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--enum-color) 68%, var(--rule));
+  border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
+}
+.status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }
+.status-unmapped { --enum-color: var(--survey-unmapped); }
+.status-scoping { --enum-color: var(--survey-scoping); }
+.status-structural { --enum-color: var(--survey-structural); }
+.status-concerns { --enum-color: var(--survey-concerns); }
+.status-adversarial { --enum-color: var(--survey-adversarial); }
+.status-mapped { --enum-color: var(--survey-mapped); }
+.status-deferred { --enum-color: var(--survey-deferred); border-style: dashed; }
+.status-confirmed-bug { --enum-color: var(--disposition-defect); }
+.status-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.status-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.status-out-of-scope { --enum-color: var(--disposition-out-of-scope); border-style: dashed; }
+.status-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.status-open { --enum-color: var(--resolution-open); }
+.status-fixed-pending-verification { --enum-color: var(--resolution-pending); }
+.status-fixed, .status-resolved, .status-verified-fixed { --enum-color: var(--resolution-closed); }
+.status-accepted { --enum-color: var(--resolution-accepted); }
+.severity-critical { --enum-color: var(--severity-critical); }
+.severity-high { --enum-color: var(--severity-high); }
+.severity-medium { --enum-color: var(--severity-medium); }
+.severity-low { --enum-color: var(--severity-low); }
+.evidence-label { border-style: dotted; }
+.evidence-code-verified { --enum-color: var(--evidence-code); }
+.evidence-contract-stated { --enum-color: var(--evidence-contract); }
+.evidence-test-observed { --enum-color: var(--evidence-test); }
+.evidence-config-asserted { --enum-color: var(--evidence-config); }
+.evidence-doc-asserted { --enum-color: var(--evidence-doc); }
+.evidence-comment-asserted { --enum-color: var(--evidence-comment); }
+.evidence-name-inferred { --enum-color: var(--evidence-name); }
+.evidence-pattern-matched { --enum-color: var(--evidence-pattern); }
+
+.figure { margin: 1.4rem 0 1.7rem; padding: 1rem 0 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.figure-label { margin: 0 0 .9rem; color: var(--text-subtle); font: .65rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.relationship-map { display: grid; gap: .55rem; }
+.relationship { display: grid; grid-template-columns: minmax(8rem, 1fr) 3.5rem minmax(8rem, 1fr); gap: .65rem; align-items: center; }
+.relationship-node { display: block; min-width: 0; padding: .65rem .75rem; border-left: 3px solid var(--accent); background: var(--canvas-subtle); text-decoration: none; }
+.relationship-node strong { display: block; color: var(--accent-strong); font: .74rem/1.3 var(--mono); }
+.relationship-node span { display: block; margin-top: .16rem; color: var(--text-muted); font-size: .78rem; overflow-wrap: anywhere; }
+.relationship-edge { color: var(--text-subtle); text-align: center; font: .62rem/1.15 var(--mono); }
+.relationship-edge b { display: block; color: var(--accent); font-size: 1.1rem; font-weight: 400; }
+.bar-chart { display: grid; gap: .6rem; }
+.bar-row { display: grid; grid-template-columns: minmax(7rem, 12rem) 1fr 3rem; gap: .7rem; align-items: center; }
+.bar-label, .bar-value { font: .7rem/1.3 var(--mono); }
+.bar-track { height: .5rem; background: var(--canvas-subtle); }
+.bar-fill { height: 100%; background: var(--accent); }
+.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
+
+.page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
+.page-foot p { margin: 0; max-width: 52rem; }
+.page-foot a { color: inherit; }
+.empty-search { display: none; margin: 1rem 0; color: var(--text-muted); font-size: .8rem; }
+.empty-search.visible { display: block; }
+
+@media (max-width: 900px) {
+  .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
+  .js .nav-rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
+  .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
+  .document { margin-left: 0; }
+  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  :is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }
+  .mobile-brand { font: 600 1rem/1 var(--heading); }
+  .document-inner { padding: 2.5rem 1.35rem 4rem; }
+  .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container report (min-width: 120ch) {
+  .prose-flow {
+    max-width: none;
+    column-count: 2;
+    column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
+    column-rule: 1px solid var(--rule);
+  }
+}
+
+@container report (min-width: 190ch) {
+  .prose-flow { column-count: 3; }
+}
+
+@container report (min-width: 165ch) {
+  .coverage-subsystem-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container report (max-width: 92ch) {
+  .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container report (max-width: 52ch) {
+  .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-facts > div { justify-content: flex-start; }
+}
+
+@media (max-width: 620px) {
+  h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
+  .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+  .relationship-edge { text-align: left; }
+  .relationship-edge b { display: inline; margin-right: .4rem; }
+  .bar-row { grid-template-columns: 7rem 1fr 2.5rem; }
+  .heading-anchor { display: none; }
+  .record { grid-template-columns: 1fr; }
+  .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-concern-disposition .record-meta { grid-template-columns: 1fr; }
+  .record-fields { grid-template-columns: 1fr; }
+  .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-field:last-child { border-bottom: 0; }
+  .summary-list > div { grid-template-columns: 1fr; }
+  .summary-list dd { padding-top: 0; border-left: 0; }
+  .atlas-regions { grid-template-columns: 1fr; }
+  .topology-component { grid-template-columns: 1fr; }
+  .topology-hub { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .topology-cross-edge { grid-template-columns: 1fr; }
+  .topology-cross-edge .topology-node:last-child { text-align: left; }
+  .topology-cross-relation { text-align: left; }
+  .coverage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-summary-item:nth-child(2) { border-right: 0; }
+  .coverage-summary-item:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+  .coverage-subsystem { grid-template-columns: 1fr; }
+  .coverage-tokens { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+@media print {
+  :root { --canvas: #fff; --surface: #fff; --text: #171b19; --text-muted: #4c5551; --rule: #c7ccc9; }
+  .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
+  .document { margin: 0; }
+  .document-inner { width: auto; padding: 0; }
+  .content section, .figure, .table-wrap, .record { break-inside: avoid-page; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="shell">
+  <aside class="nav-rail" aria-label="Amanuensis report navigation">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">Amanuensis</span>
+      <span class="brand-sub">Architecture survey · Amanuensis</span>
+    </a>
+    <label class="search-label" for="conspectus-search">Find a page <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Name, ID, or topic…" autocomplete="off">
+    <p class="empty-search" data-empty-search>No matching page in this projection.</p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title">Orientation</h2><ul class="nav-list"><li class="nav-item" data-search="overview start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><a class="nav-link" href="../index.html" title="Start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li><li class="nav-item" data-search="architecture read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><a class="nav-link" href="../architecture.html" title="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystem map see every architectural region, how deeply it has been surveyed, and where a reader should enter it."><a class="nav-link" href="../master-plan.html" title="See every architectural region, how deeply it has been surveyed, and where a reader should enter it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystem map</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Evidence</h2><ul class="nav-list"><li class="nav-item" data-search="findings review defects that survived the evidence and adversarial gates, ordered by impact."><a class="nav-link" href="../findings.html" title="Review defects that survived the evidence and adversarial gates, ordered by impact."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Findings</span></span></a></li><li class="nav-item" data-search="review coverage see which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><a class="nav-link" href="../concerns.html" title="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="system boundaries inspect shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="../seams.html" title="Inspect shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="conflicting evidence find places where credible records disagree instead of having their differences silently smoothed away."><a class="nav-link" href="../contradictions.html" title="Find places where credible records disagree instead of having their differences silently smoothed away."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li><li class="nav-item" data-search="competing explanations follow evidence matrices used when more than one concern could explain the same observed symptom."><a class="nav-link" href="../diagnosticity.html" title="Follow evidence matrices used when more than one concern could explain the same observed symptom."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Working record</h2><ul class="nav-list"><li class="nav-item" data-search="decisions needed work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><a class="nav-link" href="../open-questions.html" title="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="field notes browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><a class="nav-link" href="../field-notes.html" title="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Field notes</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Reference</h2><ul class="nav-list"><li class="nav-item" data-search="codebase glossary translate project-native names into the meanings amanuensis observed in context."><a class="nav-link" href="../vocabulary.html" title="Translate project-native names into the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li><li class="nav-item" data-search="reader&#x27;s guide understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><a class="nav-link" href="../how-to-read.html" title="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="onboarding record review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."><a class="nav-link" href="../onboarding-report.html" title="Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><a class="nav-link" href="../entry-point.html" title="Use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li><li class="nav-item" data-search="review checklist see the concern set used to test each subsystem and the provenance of those checks."><a class="nav-link" href="../concern-checklist.html" title="See the concern set used to test each subsystem and the provenance of those checks."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Subsystems</h2><ul class="nav-list"><li class="nav-item" data-search="survey methodology and agent contracts b-01 survey record for survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b01-survey-methodology-and-agent-contracts.html" title="Survey record for Survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey methodology and agent contracts</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="mcp core, persistence, and lifecycle b-02 survey record for mcp core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b02-mcp-core-persistence-and-lifecycle.html" title="Survey record for MCP core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">MCP core, persistence, and lifecycle</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="knowledge tools and workflow api b-03 survey record for knowledge tools and workflow api: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b03-knowledge-tools-and-workflow-api.html" title="Survey record for Knowledge tools and workflow API: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Knowledge tools and workflow API</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="diff-aware materializer b-04 survey record for diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b04-diff-aware-materializer.html" title="Survey record for Diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Diff-aware materializer</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="packaging, installer, validation, and product docs b-05 survey record for packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b05-packaging-installer-validation-and-product-docs.html" title="Survey record for Packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Packaging, installer, validation, and product docs</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="report interface design and validation studies b-06 survey record for report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b06-report-interface-design-and-validation-studies.html" title="Survey record for Report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes." aria-current="page"><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Report interface design and validation studies</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="embedded research surveys and platform trials b-07 survey record for embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="b07-embedded-research-surveys-and-platform-trials.html" title="Survey record for Embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Embedded research surveys and platform trials</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li></ul></section></nav>
+    <div class="rail-foot">
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="b06-report-interface-design-and-validation-studies.md">Markdown source</a></div>
+      <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
+    </div>
+  </aside>
+  <main class="document" id="content">
+    <div class="mobile-bar"><span class="mobile-brand">Amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="document-inner">
+      <header class="page-head">
+        <p class="eyebrow">Subsystem · <span data-identifier-defined>B-06</span></p>
+        <h1>Report interface design and validation studies</h1>
+        <p class="page-hint">Survey record for Report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes.</p>
+        <div class="snapshot-strip">
+          <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 1094bea66db8</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-08-23 20:15:41</span>
+          <span class="snapshot-item"><span class="freshness">No recorded stale entries</span></span>
+          <span class="snapshot-item">Survey depth&nbsp; <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></span>
+        </div>
+      </header>
+      <article class="content content-subsystem"><p><strong>Status</strong>: <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span> <strong>Layer</strong>: design evidence</p>
+<section class="section-scope">
+<h2 id="scope"><a class="heading-anchor" href="#scope" aria-label="Link to Scope">§</a>Scope</h2>
+<p>design/delightful-output-panel/**; source captures, blind panel records, prototypes, task tests, screenshots, and validation reports used to define and test the human report projection.</p>
+</section>
+<section class="section-start-here">
+<h2 id="start-here"><a class="heading-anchor" href="#start-here" aria-label="Link to Start here">§</a>Start here</h2>
+<p>design/delightful-output-panel/README.md; design/delightful-output-panel/design-language.md; design/delightful-output-panel/validation/report.md</p>
+</section>
+<section class="section-notes">
+<h2 id="notes"><a class="heading-anchor" href="#notes" aria-label="Link to Notes">§</a>Notes</h2>
+<p>Tracked design-evidence corpus newly added after the original five-subsystem survey; treat prototypes and screenshots as validation witnesses, not runtime production code.</p>
+</section>
+<section class="section-file-ledger">
+<h2 id="file-ledger"><a class="heading-anchor" href="#file-ledger" aria-label="Link to File ledger">§</a>File ledger</h2>
+<div class="record-list record-list-file-ledger" role="list" aria-label="file ledger"><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-readme-md" data-record-label="file ledger design/delightful-output-panel/README.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-readme-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/README.md" rel="noreferrer" title="Open design/delightful-output-panel/README.md at the reviewed revision on GitHub"><code>README.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/README.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Artifact index, method, custody boundaries, and outcome for the report-interface study.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-actionable-redesign-md" data-record-label="file ledger design/delightful-output-panel/actionable-redesign.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-actionable-redesign-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/actionable-redesign.md" rel="noreferrer" title="Open design/delightful-output-panel/actionable-redesign.md at the reviewed revision on GitHub"><code>actionable-redesign.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/actionable-redesign.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Implementation handoff linking design judgments to renderer seams and component contracts.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-blind-brief-md" data-record-label="file ledger design/delightful-output-panel/blind-brief.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-blind-brief-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/blind-brief.md" rel="noreferrer" title="Open design/delightful-output-panel/blind-brief.md at the reviewed revision on GitHub"><code>blind-brief.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/blind-brief.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Frozen first-reading brief that bounds the independent panel's task and source context.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-current-report-stress-test-md" data-record-label="file ledger design/delightful-output-panel/current-report-stress-test.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-current-report-stress-test-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/current-report-stress-test.md" rel="noreferrer" title="Open design/delightful-output-panel/current-report-stress-test.md at the reviewed revision on GitHub"><code>current-report-stress-test.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/current-report-stress-test.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Recorded probes of the production report used as design evidence and regression targets.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-design-language-md" data-record-label="file ledger design/delightful-output-panel/design-language.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-design-language-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/design-language.md" rel="noreferrer" title="Open design/delightful-output-panel/design-language.md at the reviewed revision on GitHub"><code>design-language.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/design-language.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Primary design-system contract for information architecture, component semantics, interaction, and verification.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-blind-editorial-decision-design-md" data-record-label="file ledger design/delightful-output-panel/panel/blind-editorial-decision-design.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-blind-editorial-decision-design-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/blind-editorial-decision-design.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/blind-editorial-decision-design.md at the reviewed revision on GitHub"><code>blind-editorial-decision-design.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/blind-editorial-decision-design.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Independent editorial panel witness contributing one decision-oriented design reading.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-blind-ia-wayfinding-md" data-record-label="file ledger design/delightful-output-panel/panel/blind-ia-wayfinding.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-blind-ia-wayfinding-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/blind-ia-wayfinding.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/blind-ia-wayfinding.md at the reviewed revision on GitHub"><code>blind-ia-wayfinding.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/blind-ia-wayfinding.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Independent information-architecture panel witness contributing navigation findings.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-blind-interaction-art-direction-md" data-record-label="file ledger design/delightful-output-panel/panel/blind-interaction-art-direction.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-blind-interaction-art-direction-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/blind-interaction-art-direction.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/blind-interaction-art-direction.md at the reviewed revision on GitHub"><code>blind-interaction-art-direction.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/blind-interaction-art-direction.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Independent interaction and art-direction panel witness.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-method-and-lineage-md" data-record-label="file ledger design/delightful-output-panel/panel/method-and-lineage.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-method-and-lineage-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/method-and-lineage.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/method-and-lineage.md at the reviewed revision on GitHub"><code>method-and-lineage.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/method-and-lineage.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Records panel custody, heterogeneity, and interpretation boundaries.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-art-direction-md" data-record-label="file ledger design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-art-direction-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md at the reviewed revision on GitHub"><code>blind-art-direction.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rerun art-direction witness used to test stability of panel conclusions.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-editorial-md" data-record-label="file ledger design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-editorial-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md at the reviewed revision on GitHub"><code>blind-editorial.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rerun editorial witness with observations, inferences, and acceptance checks.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-wayfinding-md" data-record-label="file ledger design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-blind-wayfinding-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md at the reviewed revision on GitHub"><code>blind-wayfinding.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rerun wayfinding witness with alternative IA directions and checks.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-method-and-fan-in-md" data-record-label="file ledger design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-method-and-fan-in-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md at the reviewed revision on GitHub"><code>method-and-fan-in.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rerun protocol and fan-in record controlling interpretation of independent outputs.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-synthesis-md" data-record-label="file ledger design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-rerun-2026-08-22-synthesis-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md at the reviewed revision on GitHub"><code>synthesis.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rerun synthesis preserving disagreements and selected renderer sequence.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-panel-synthesis-and-directions-md" data-record-label="file ledger design/delightful-output-panel/panel/synthesis-and-directions.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-panel-synthesis-and-directions-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/panel/synthesis-and-directions.md" rel="noreferrer" title="Open design/delightful-output-panel/panel/synthesis-and-directions.md at the reviewed revision on GitHub"><code>synthesis-and-directions.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/panel/synthesis-and-directions.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Primary panel synthesis with competing directions, rejected tradeoffs, and unresolved disagreements.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-prototype-current-index-html" data-record-label="file ledger design/delightful-output-panel/prototype-current/index.html"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-prototype-current-index-html"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/prototype-current/index.html" rel="noreferrer" title="Open design/delightful-output-panel/prototype-current/index.html at the reviewed revision on GitHub"><code>index.html</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/prototype-current/index.html</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Captured current-production comparison fixture used by task tests and visual validation.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-prototype-index-html" data-record-label="file ledger design/delightful-output-panel/prototype/index.html"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-prototype-index-html"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/prototype/index.html" rel="noreferrer" title="Open design/delightful-output-panel/prototype/index.html at the reviewed revision on GitHub"><code>index.html</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/prototype/index.html</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Authored proposed report-interface prototype.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-revision-2026-08-23-md" data-record-label="file ledger design/delightful-output-panel/revision-2026-08-23.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-revision-2026-08-23-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/revision-2026-08-23.md" rel="noreferrer" title="Open design/delightful-output-panel/revision-2026-08-23.md at the reviewed revision on GitHub"><code>revision-2026-08-23.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/revision-2026-08-23.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Later product ruling that retains IA decisions and revises UI/register choices.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-source-capture-md" data-record-label="file ledger design/delightful-output-panel/source-capture.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-source-capture-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/source-capture.md" rel="noreferrer" title="Open design/delightful-output-panel/source-capture.md at the reviewed revision on GitHub"><code>source-capture.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/source-capture.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Provenance and hash record for the representative source report used by the panel.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-task-tests-md" data-record-label="file ledger design/delightful-output-panel/task-tests.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-task-tests-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/task-tests.md" rel="noreferrer" title="Open design/delightful-output-panel/task-tests.md at the reviewed revision on GitHub"><code>task-tests.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/task-tests.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Reader-task fixtures and direction-comparison acceptance expectations.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-validation-index-html-png" data-record-label="file ledger design/delightful-output-panel/validation/index.html.png"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-validation-index-html-png"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/validation/index.html.png" rel="noreferrer" title="Open design/delightful-output-panel/validation/index.html.png at the reviewed revision on GitHub"><code>index.html.png</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/validation/index.html.png</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rendered production-projection witness for visual comparison.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-validation-prototype-desktop-png" data-record-label="file ledger design/delightful-output-panel/validation/prototype-desktop.png"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-validation-prototype-desktop-png"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/validation/prototype-desktop.png" rel="noreferrer" title="Open design/delightful-output-panel/validation/prototype-desktop.png at the reviewed revision on GitHub"><code>prototype-desktop.png</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/validation/prototype-desktop.png</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Rendered prototype witness for visual comparison.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-validation-report-md" data-record-label="file ledger design/delightful-output-panel/validation/report.md"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-validation-report-md"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/validation/report.md" rel="noreferrer" title="Open design/delightful-output-panel/validation/report.md at the reviewed revision on GitHub"><code>report.md</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/validation/report.md</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Consolidated automated, visual, task, custody, and limitation results.</div></div></div></article><article class="record record-file-ledger" role="listitem" aria-labelledby="file-ledger-design-delightful-output-panel-validation-validate-prototype-mjs" data-record-label="file ledger design/delightful-output-panel/validation/validate-prototype.mjs"><header class="record-meta"><h3 class="record-primary" id="file-ledger-design-delightful-output-panel-validation-validate-prototype-mjs"><a class="file-source-link" href="https://github.com/nfeldman/amanuensis/blob/073cee86/design/delightful-output-panel/validation/validate-prototype.mjs" rel="noreferrer" title="Open design/delightful-output-panel/validation/validate-prototype.mjs at the reviewed revision on GitHub"><code>validate-prototype.mjs</code></a></h3><dl class="record-facts"><div class="record-fact record-fact-path"><dt>Path</dt><dd><code>design/delightful-output-panel/validation/validate-prototype.mjs</code></dd></div><div class="record-fact record-fact-classification"><dt>Review</dt><dd>examined</dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Why this file is in scope</p><div class="record-copy">Executable validation instrument for structure, content, and regression checks.</div></div></div></article></div>
+</section>
+<section class="section-concern-review">
+<h2 id="concern-review"><a class="heading-anchor" href="#concern-review" aria-label="Link to Concern review">§</a>Concern review</h2>
+<div class="record-list record-list-concern-disposition" role="list" aria-label="concern review"><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-at-1" data-record-label="concern disposition AT-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-at-1"><strong><a href="../concerns.html#at-1"><abbr class="identifier-definition" title="AT-1 — Atomicity: Inspect multi-table resets, status advances, finding transitions, and diagnosticity resolution for transaction boundaries covering all dependent writes." aria-label="AT-1 — Atomicity: Inspect multi-table resets, status advances, finding transitions, and diagnosticity resolution for transaction boundaries covering all dependent writes.">AT-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> contains tracked design witnesses and prototypes, not multi-table state transitions or diagnosticity mutations; atomic database updates belong to <a href="b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a>/<a href="b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a>.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-at-2" data-record-label="concern disposition AT-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-at-2"><strong><a href="../concerns.html#at-2"><abbr class="identifier-definition" title="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op." aria-label="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op.">AT-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> does not checkpoint SQLite WAL state or storage-git commits; that lifecycle is owned by <a href="b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a>/<a href="b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a>.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cc-1" data-record-label="concern disposition CC-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cc-1"><strong><a href="../concerns.html#cc-1"><abbr class="identifier-definition" title="CC-1 — Cache Coherence: Compare every materialized page with its declared DB/prose source set; omitted dependencies must not leave a page falsely unchanged." aria-label="CC-1 — Cache Coherence: Compare every materialized page with its declared DB/prose source set; omitted dependencies must not leave a page falsely unchanged.">CC-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> specifies presentation and validation expectations but does not plan incremental materialized-page dependencies; <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a> owns that mechanism.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cr-1" data-record-label="concern disposition CR-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cr-1"><strong><a href="../concerns.html#cr-1"><abbr class="identifier-definition" title="CR-1 — Concurrency: Verify concurrent agents, advisory write locks, SQLite WAL writers, and storage git commits cannot lose or misattribute landed work." aria-label="CR-1 — Concurrency: Verify concurrent agents, advisory write locks, SQLite WAL writers, and storage git commits cannot lose or misattribute landed work.">CR-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The panel's independence protocol is methodological, while concurrent agents, advisory locks, SQLite writers, and storage commits are outside this isolated design workspace.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-ep-1" data-record-label="concern disposition EP-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-ep-1"><strong><a href="../concerns.html#ep-1"><abbr class="identifier-definition" title="EP-1 — Exceptional Paths: Verify a failed page render cannot publish a globally green or internally inconsistent documentation set." aria-label="EP-1 — Exceptional Paths: Verify a failed page render cannot publish a globally green or internally inconsistent documentation set.">EP-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong>'s validator checks fixed prototype files but does not publish the production documentation set; production render failure semantics belong to <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a>.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-ep-2" data-record-label="concern disposition EP-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-ep-2"><strong><a href="../concerns.html#ep-2"><abbr class="identifier-definition" title="EP-2 — Exceptional Paths: Verify each mutating tool either commits all dependent rows or leaves pre-call state intact when validation, SQL, or filesystem work fails." aria-label="EP-2 — Exceptional Paths: Verify each mutating tool either commits all dependent rows or leaves pre-call state intact when validation, SQL, or filesystem work fails.">EP-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">No MCP mutation or dependent database-row update is implemented in <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong>.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-if-1" data-record-label="concern disposition IF-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-if-1"><strong><a href="../concerns.html#if-1"><abbr class="identifier-definition" title="IF-1 — Incremental Full Divergence: Compare incremental materialization, force-full materialization, and clean-export outputs for exact state, coverage, and content correspondence." aria-label="IF-1 — Incremental Full Divergence: Compare incremental materialization, force-full materialization, and clean-export outputs for exact state, coverage, and content correspondence.">IF-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Incremental/full/clean-export correspondence is a <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a> implementation concern; <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> records desired read-back behavior only.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-rl-1" data-record-label="concern disposition RL-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-rl-1"><strong><a href="../concerns.html#rl-1"><abbr class="identifier-definition" title="RL-1 — Resource Lifecycle: Verify database handles, spawned processes, temporary directories, and materializer locks release on success, error, timeout, and cancellation." aria-label="RL-1 — Resource Lifecycle: Verify database handles, spawned processes, temporary directories, and materializer locks release on success, error, timeout, and cancellation.">RL-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> has no database handles, child-process orchestration, temporary-directory lifecycle, or materializer lock ownership.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-rl-2" data-record-label="concern disposition RL-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-rl-2"><strong><a href="../concerns.html#rl-2"><abbr class="identifier-definition" title="RL-2 — Resource Lifecycle: Verify sessions, dispatches, open questions, and write locks have explicit terminal or recovery paths and cannot remain silently authoritative after abandonment." aria-label="RL-2 — Resource Lifecycle: Verify sessions, dispatches, open questions, and write locks have explicit terminal or recovery paths and cannot remain silently authoritative after abandonment.">RL-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Survey sessions, dispatches, open questions, and authoritative write locks are not managed by <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong>; optional browser trail state is explicitly non-authoritative.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-1" data-record-label="concern disposition SC-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-1"><strong><a href="../concerns.html#sc-1"><abbr class="identifier-definition" title="SC-1 — Seam Contract: Verify schema columns/views, TypeScript tool queries, and Python materializer reads evolve together and fail closed on contract drift." aria-label="SC-1 — Seam Contract: Verify schema columns/views, TypeScript tool queries, and Python materializer reads evolve together and fail closed on contract drift.">SC-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Schema/view/TypeScript/Python evolution is implemented across <a href="b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a>, <a href="b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a>, and <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a>, not in this design-evidence corpus.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-2" data-record-label="concern disposition SC-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-2"><strong><a href="../concerns.html#sc-2"><abbr class="identifier-definition" title="SC-2 — Seam Contract: Verify package-time agent/materializer mirrors are derived from root sources and CI detects stale or host-dependent packaged assets." aria-label="SC-2 — Seam Contract: Verify package-time agent/materializer mirrors are derived from root sources and CI detects stale or host-dependent packaged assets.">SC-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Packaged agent and materializer mirror derivation is owned by <a href="b05-packaging-installer-validation-and-product-docs.html"><abbr class="identifier-definition" title="B-05 — Packaging, installer, validation, and product docs" aria-label="B-05 — Packaging, installer, validation, and product docs">B-05</abbr></a>; <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> is neither a package source mirror nor its CI gate.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-3" data-record-label="concern disposition SC-3"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-3"><strong><a href="../concerns.html#sc-3"><abbr class="identifier-definition" title="SC-3 — Seam Contract: Verify the B-06 report-presentation contract and B-04 typed HTML projection agree on record-vs-table selection, label translation, identifier definitions, and revision-bound read-back." aria-label="SC-3 — Seam Contract: Verify the B-06 report-presentation contract and B-04 typed HTML projection agree on record-vs-table selection, label translation, identifier definitions, and revision-bound read-back.">SC-3</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The refined <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> sparse-coverage, contextual-identifier, and reading-measure contract is implemented explicitly by <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a>; both the 42-check design validator and full materializer integration/red-path suite pass at e33bb5f.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-4" data-record-label="concern disposition SC-4"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-4"><strong><a href="../concerns.html#sc-4"><abbr class="identifier-definition" title="SC-4 — Seam Contract: Verify the B-06 product ruling/design language and B-01 reporting-style contract agree on project identity, practitioner register, specialized labels, record grammar, and identifier treatment." aria-label="SC-4 — Seam Contract: Verify the B-06 product ruling/design language and B-01 reporting-style contract agree on project identity, practitioner register, specialized labels, record grammar, and identifier treatment.">SC-4</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> and <a href="b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a> now state the same sparse-coverage, contextual-identifier, intact-status-label, and 120ch/190ch prose-flow rules; executable projection/design checks pass.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-5" data-record-label="concern disposition SC-5"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-5"><strong><a href="../concerns.html#sc-5"><abbr class="identifier-definition" title="SC-5 — Seam Contract: Verify B-07 research limitations survive transfer into B-06 report-design rules: report-owned re-entry must not imply personal history, and corpus/prototype evidence must not be promoted to reader-performance or…" aria-label="SC-5 — Seam Contract: Verify B-07 research limitations survive transfer into B-06 report-design rules: report-owned re-entry must not imply personal history, and corpus/prototype evidence must not be promoted to reader-performance or…">SC-5</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> separates immutable publication delta, optional clearable device-local trail, and active survey state; it forbids last-visit language without a reader baseline and retains reader/AT/browser limits. This preserves <a href="b07-embedded-research-surveys-and-platform-trials.html"><abbr class="identifier-definition" title="B-07 — Embedded research surveys and platform trials" aria-label="B-07 — Embedded research surveys and platform trials">B-07</abbr></a>'s evidence scope instead of promoting it to a production efficacy claim.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-si-1" data-record-label="concern disposition SI-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-si-1"><strong><a href="../concerns.html#si-1"><abbr class="identifier-definition" title="SI-1 — Scope Identity: Verify project-key derivation, stored workspacepath collision detection, and storage-root confinement cannot conflate two workspaces or escape the root." aria-label="SI-1 — Scope Identity: Verify project-key derivation, stored workspacepath collision detection, and storage-root confinement cannot conflate two workspaces or escape the root.">SI-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> neither derives project keys nor selects workspace/storage roots.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-si-2" data-record-label="concern disposition SI-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-si-2"><strong><a href="../concerns.html#si-2"><abbr class="identifier-definition" title="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA." aria-label="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA.">SI-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The current contract separates source and publication identity from survey reach and active work, and the frozen/current fixtures name their distinct revisions and roles.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tb-1" data-record-label="concern disposition TB-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tb-1"><strong><a href="../concerns.html#tb-1"><abbr class="identifier-definition" title="TB-1 — Temporal Bounds: Inspect every git and Python subprocess invocation for bounded completion, cancellation, and actionable failure propagation." aria-label="TB-1 — Temporal Bounds: Inspect every git and Python subprocess invocation for bounded completion, cancellation, and actionable failure propagation.">TB-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> contains no git or Python subprocess invocation requiring timeout and cancellation policy.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tr-1" data-record-label="concern disposition TR-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tr-1"><strong><a href="../concerns.html#tr-1"><abbr class="identifier-definition" title="TR-1 — Trust Boundary: Verify MCP string/path/enum inputs cannot escape storage, inject SQL or git arguments, or create authority beyond the active subsystem depth." aria-label="TR-1 — Trust Boundary: Verify MCP string/path/enum inputs cannot escape storage, inject SQL or git arguments, or create authority beyond the active subsystem depth.">TR-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy"><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> has no MCP input surface, SQL execution, git-argument construction, or conspectus authority transition.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tr-2" data-record-label="concern disposition TR-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tr-2"><strong><a href="../concerns.html#tr-2"><abbr class="identifier-definition" title="TR-2 — Trust Boundary: Verify installer parsing and config merging preserve unrelated user configuration, back up destructive overwrites, and reject path traversal." aria-label="TR-2 — Trust Boundary: Verify installer parsing and config merging preserve unrelated user configuration, back up destructive overwrites, and reject path traversal.">TR-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-contract-stated" title="An explicit schema, type, or behavioral contract states this claim.">Contract stated</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Installer parsing, backup, path validation, and user-config merge behavior are <a href="b05-packaging-installer-validation-and-product-docs.html"><abbr class="identifier-definition" title="B-05 — Packaging, installer, validation, and product docs" aria-label="B-05 — Packaging, installer, validation, and product docs">B-05</abbr></a> responsibilities.</div></div></div></article></div>
+</section>
+<section class="section-seams">
+<h2 id="seams"><a class="heading-anchor" href="#seams" aria-label="Link to Seams">§</a>Seams</h2>
+<div class="table-wrap"><table><caption>seams</caption><thead><tr><th scope="col">Seam</th><th scope="col">Shared object</th><th scope="col">Other party</th></tr></thead><tbody><tr><td data-label="Seam"><strong><a href="../seams.html#sm-06"><abbr class="identifier-definition" title="SM-06 — Report interface design and validation studies ↔ Diff-aware materializer: Report projection design/component contract" aria-label="SM-06 — Report interface design and validation studies ↔ Diff-aware materializer: Report projection design/component contract">SM-06</abbr></a></strong></td><td data-label="Shared object">report projection design/component contract</td><td data-label="Other party"><strong><a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a></strong></td></tr><tr><td data-label="Seam"><strong><a href="../seams.html#sm-07"><abbr class="identifier-definition" title="SM-07 — Report interface design and validation studies ↔ Survey methodology and agent contracts: Reporting terminology and information-architecture contract" aria-label="SM-07 — Report interface design and validation studies ↔ Survey methodology and agent contracts: Reporting terminology and information-architecture contract">SM-07</abbr></a></strong></td><td data-label="Shared object">reporting terminology and information-architecture contract</td><td data-label="Other party"><strong><a href="b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a></strong></td></tr><tr><td data-label="Seam"><strong><a href="../seams.html#sm-08"><abbr class="identifier-definition" title="SM-08 — Embedded research surveys and platform trials ↔ Report interface design and validation studies: Research-backed report design constraints" aria-label="SM-08 — Embedded research surveys and platform trials ↔ Report interface design and validation studies: Research-backed report design constraints">SM-08</abbr></a></strong></td><td data-label="Shared object">research-backed report design constraints</td><td data-label="Other party"><strong><a href="b07-embedded-research-surveys-and-platform-trials.html"><abbr class="identifier-definition" title="B-07 — Embedded research surveys and platform trials" aria-label="B-07 — Embedded research surveys and platform trials">B-07</abbr></a></strong></td></tr></tbody></table></div>
+</section>
+<section class="section-vocabulary">
+<h2 id="vocabulary"><a class="heading-anchor" href="#vocabulary" aria-label="Link to Vocabulary">§</a>Vocabulary</h2>
+<ul><li><strong>production custody</strong> — The provenance chain that connects a design study's captured reading object to an actual generated report revision.</li><li><strong>reader-task fixture</strong> — A frozen user goal and success criterion used to assess whether a report projection supports a concrete reading task.</li></ul>
+</section>
+<section class="section-survey-notes">
+<h2 id="survey-notes"><a class="heading-anchor" href="#survey-notes" aria-label="Link to Survey notes">§</a>Survey notes</h2>
+<p>Survey revision: <code>073cee86946b7693b6ba7a93cec67c8977b353ff</code></p>
+</section>
+<section class="section-observed-scope">
+<h2 id="observed-scope"><a class="heading-anchor" href="#observed-scope" aria-label="Link to Observed scope">§</a>Observed scope</h2>
+<p>This subsystem is an isolated design-evidence workspace, not a production materializer input. It contains a frozen representative report capture, independent panel readings, product rulings, two self-contained prototypes, an executable structural validator, screenshots, and a validation report. The directory itself states the custody boundary and the method sequence (<code>design/delightful-output-panel/README.md:1-39@073cee8</code>).</p>
+</section>
+<section class="section-key-types-and-contracts">
+<h2 id="key-types-and-contracts"><a class="heading-anchor" href="#key-types-and-contracts" aria-label="Link to Key types and contracts">§</a>Key types and contracts</h2>
+<div class="table-wrap"><table><caption>key types and contracts</caption><thead><tr><th scope="col">Symbol or record</th><th scope="col">Role</th><th scope="col">Source</th></tr></thead><tbody><tr><td data-label="Symbol or record"><code>ConditionBand</code></td><td data-label="Role">Keeps source identity, survey reach, consequence, and publication integrity visibly separate.</td><td data-label="Source"><code>design/delightful-output-panel/design-language.md:63-69@073cee8</code></td></tr><tr><td data-label="Symbol or record"><code>FindingRecord</code></td><td data-label="Role">Consequence-led finding presentation with essential qualification visible and secondary receipts disclosable.</td><td data-label="Source"><code>design/delightful-output-panel/design-language.md:79-93@073cee8</code></td></tr><tr><td data-label="Symbol or record"><code>ReentryPanel</code></td><td data-label="Role">Separates publication comparison, device-local trail state, and active survey work.</td><td data-label="Source"><code>design/delightful-output-panel/design-language.md:113-121@073cee8</code></td></tr><tr><td data-label="Symbol or record"><code>IntegrityNotice</code></td><td data-label="Role">Defines <code>verified</code>, <code>warning</code>, and <code>not checked</code> strictly as projection read-back states.</td><td data-label="Source"><code>design/delightful-output-panel/design-language.md:123-127@073cee8</code></td></tr><tr><td data-label="Symbol or record"><code>IdentifierDefinition</code></td><td data-label="Role">Requires known opaque codes to carry semantic definitions in dense and expanded views.</td><td data-label="Source"><code>design/delightful-output-panel/design-language.md:133-139@073cee8</code></td></tr><tr><td data-label="Symbol or record"><code>check(condition, label, detail)</code></td><td data-label="Role">Accumulates one structural assertion into per-process pass or failure registers.</td><td data-label="Source"><code>design/delightful-output-panel/validation/validate-prototype.mjs:9-15@073cee8</code></td></tr></tbody></table></div>
+</section>
+<section class="section-state-containers">
+<h2 id="state-containers"><a class="heading-anchor" href="#state-containers" aria-label="Link to State containers">§</a>State containers</h2>
+<div class="table-wrap"><table><caption>state containers</caption><thead><tr><th scope="col">State</th><th scope="col">Location</th><th scope="col">Stores</th><th scope="col">Lifetime</th><th scope="col">Population and invalidation</th></tr></thead><tbody><tr><td data-label="State">Representative publication capture</td><td data-label="Location"><code>source-capture.md</code> and prototype literals</td><td data-label="Stores">Branch, checked SHA, survey reach, finding counts, hashes, and active work label</td><td data-label="Lifetime">Persistent tracked witness</td><td data-label="Population and invalidation">Captured once from AxiomDB; intentionally not updated as the live source advances (<code>design/delightful-output-panel/source-capture.md:1-35@073cee8</code>).</td></tr><tr><td data-label="State">Current product ruling</td><td data-label="Location"><code>revision-2026-08-23.md</code> and <code>design-language.md</code></td><td data-label="Stores">Retained IA rules, rejected interface tropes, record grammar, component and interaction contracts</td><td data-label="Lifetime">Persistent tracked authority within this study</td><td data-label="Population and invalidation">Updated by a later product review; the README names it as the current ruling (<code>design/delightful-output-panel/README.md:41-50@073cee8</code>).</td></tr><tr><td data-label="State">Validation registers</td><td data-label="Location"><code>passes[]</code>, <code>failures[]</code></td><td data-label="Stores">Assertion labels and failure detail</td><td data-label="Lifetime">One Node.js process</td><td data-label="Population and invalidation"><code>check</code> appends; any failure prints and exits non-zero (<code>design/delightful-output-panel/validation/validate-prototype.mjs:9-15@073cee8</code>, <code>:100-107@073cee8</code>).</td></tr><tr><td data-label="State">Prototype interaction state</td><td data-label="Location">DOM <code>hidden</code>, <code>nav-open</code>, <code>aria-expanded</code></td><td data-label="Stores">Current search filtering and mobile navigation visibility</td><td data-label="Lifetime">One page instance</td><td data-label="Population and invalidation">Event handlers recompute it from input and navigation events (<code>design/delightful-output-panel/prototype/index.html:615-669@073cee8</code>).</td></tr><tr><td data-label="State">Device-local preferences</td><td data-label="Location">localStorage keys <code>field-docket-theme</code> and <code>field-docket-trail</code></td><td data-label="Stores">Theme choice and optional pinned trail</td><td data-label="Lifetime">Browser origin/device until cleared</td><td data-label="Population and invalidation">Explicit button handlers write and remove values; storage exceptions are tolerated (<code>design/delightful-output-panel/prototype/index.html:603-613@073cee8</code>, <code>:671-684@073cee8</code>).</td></tr></tbody></table></div>
+</section>
+<section class="section-primary-data-flows">
+<h2 id="primary-data-flows"><a class="heading-anchor" href="#primary-data-flows" aria-label="Link to Primary data flows">§</a>Primary data flows</h2>
+<ol><li>The panel freezes a representative AxiomDB report and its hashes in <code>source-capture.md</code> (<code>design/delightful-output-panel/source-capture.md:1-35@073cee8</code>).</li><li>Three readers receive the sealed brief independently; the lead freezes their readings before consulting existing research (<code>design/delightful-output-panel/README.md:8-25@073cee8</code>).</li><li>Synthesis, later product review, and the record-presentation survey produce the current ruling and design grammar (<code>design/delightful-output-panel/README.md:41-50@073cee8</code>).</li><li>The grammar is embodied in the historical and current prototype fixtures and translated into explicit renderer seams (<code>design/delightful-output-panel/README.md:54-67@073cee8</code>; <code>design/delightful-output-panel/actionable-redesign.md:7-56@073cee8</code>).</li><li><code>validate-prototype.mjs</code> reads both HTML files, evaluates structural/content assertions, and exits non-zero on any failed assertion (<code>design/delightful-output-panel/validation/validate-prototype.mjs:1-15@073cee8</code>, <code>:100-107@073cee8</code>). At this survey revision it produced 42 passing checks and no failures (test-observed in session <code>mt5e271s-uwd7er9m</code>).</li><li>The validation report preserves the distinction between markup/read-back checks, visual inspection, reader-task walkthroughs, and unperformed accessibility or representative-reader validation (<code>design/delightful-output-panel/validation/report.md:30-40@073cee8</code>, <code>:74-96@073cee8</code>, <code>:112-123@073cee8</code>).</li></ol>
+</section>
+<section class="section-concurrency-model">
+<h2 id="concurrency-model"><a class="heading-anchor" href="#concurrency-model" aria-label="Link to Concurrency model">§</a>Concurrency model</h2>
+<p>The design corpus is build-time and review-time evidence. Its executable validator is a single Node.js process performing synchronous file reads and sequential assertions (<code>design/delightful-output-panel/validation/validate-prototype.mjs:1-15@073cee8</code>). The prototype's browser handlers mutate only one document and same-origin device-local storage; no network fetch or shared server state participates (<code>design/delightful-output-panel/design-language.md:254-274@073cee8</code>). Independent panel work is a methodological concurrency boundary: readings are produced independently and aggregated only after exact fan-in, rather than sharing mutable execution state (<code>design/delightful-output-panel/README.md:8-25@073cee8</code>).</p>
+</section>
+<section class="section-seam-contracts">
+<h2 id="seam-contracts"><a class="heading-anchor" href="#seam-contracts" aria-label="Link to Seam contracts">§</a>Seam contracts</h2>
+<h3 id="sm-06-report-projection-design-and-component-contract"><a class="heading-anchor" href="#sm-06-report-projection-design-and-component-contract" aria-label="Link to SM-06 · Report projection design and component contract">§</a><a href="../seams.html#sm-06"><abbr class="identifier-definition" title="SM-06 — Report interface design and validation studies ↔ Diff-aware materializer: Report projection design/component contract" aria-label="SM-06 — Report interface design and validation studies ↔ Diff-aware materializer: Report projection design/component contract">SM-06</abbr></a> · Report projection design and component contract</h3>
+<p><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> writes the design language, product ruling, prototypes, reader-task fixtures, and validation expectations. <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a> reads these as implementation and verification inputs; <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> does not write the production projection. The schema owner for report data remains <a href="b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a>, while <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> owns presentation requirements. Ordering is causal: frozen evidence and a ruling precede renderer application and read-back. Staleness tolerance is revision-bound rather than eventual; claims must name the captured or current fixture.</p>
+<h3 id="sm-07-reporting-terminology-and-information-architecture-contract"><a class="heading-anchor" href="#sm-07-reporting-terminology-and-information-architecture-contract" aria-label="Link to SM-07 · Reporting terminology and information-architecture contract">§</a><a href="../seams.html#sm-07"><abbr class="identifier-definition" title="SM-07 — Report interface design and validation studies ↔ Survey methodology and agent contracts: Reporting terminology and information-architecture contract" aria-label="SM-07 — Report interface design and validation studies ↔ Survey methodology and agent contracts: Reporting terminology and information-architecture contract">SM-07</abbr></a> · Reporting terminology and information-architecture contract</h3>
+<p><strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> supplies panel evidence and the current product ruling. <a href="b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a> publishes the practitioner-facing reporting-style contract consumed by survey coordinators and projections. The documents explicitly distinguish information architecture from interface direction and preserve only two specialized labels (<code>design/delightful-output-panel/README.md:41-50@073cee8</code>).</p>
+</section>
+<section class="section-inferences">
+<h2 id="inferences"><a class="heading-anchor" href="#inferences" aria-label="Link to Inferences">§</a>Inferences</h2>
+<ul><li>The subsystem's primary correctness risk is witness conflation: a model-panel opinion, a structural assertion, a visual screenshot, a task walkthrough, and a production read-back authorize different claims. The directory records these boundaries, but downstream consumers must preserve them.</li><li>The historical prototype intentionally retains superseded vocabulary and visual tropes. Validation of the current fixture therefore must remain fixture-specific; scanning both files without distinguishing their roles would create false positives.</li></ul>
+</section>
+<section class="section-open-questions">
+<h2 id="open-questions"><a class="heading-anchor" href="#open-questions" aria-label="Link to Open questions">§</a>Open questions</h2>
+<ul><li>The design language leaves browser-specific forced-colors, zoom, screen-reader order, print pagination, and representative-reader performance as pre-production gates (<code>design/delightful-output-panel/validation/report.md:112-123@073cee8</code>).</li><li>The production privacy and persistence policy for optional device-local trail pinning remains unresolved (<code>design/delightful-output-panel/validation/report.md:120@073cee8</code>).</li></ul>
+</section>
+<section class="section-concern-review">
+<h2 id="concern-review-2"><a class="heading-anchor" href="#concern-review-2" aria-label="Link to Concern review">§</a>Concern review</h2>
+<p>Sixteen calibrated concerns reached terminal survey dispositions. <code><abbr class="identifier-definition" title="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA." aria-label="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA.">SI-2</abbr></code> (revision identity) is <span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span>: the design contract keeps source identity, publication identity, survey reach, and active work separate, and the frozen and current fixtures identify distinct roles and revisions (disposition <code><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr>/<abbr class="identifier-definition" title="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA." aria-label="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA.">SI-2</abbr></code>; evidence rows 29 and 28). The other fifteen concerns are <span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span> because their mutation, concurrency, packaging, installer, or production-materialization mechanisms are owned by <a href="b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a> through <a href="b05-packaging-installer-validation-and-product-docs.html"><abbr class="identifier-definition" title="B-05 — Packaging, installer, validation, and product docs" aria-label="B-05 — Packaging, installer, validation, and product docs">B-05</abbr></a>; the declared isolation boundary is evidence row 30. No confirmed bug or competing-concern matrix was produced.</p>
+</section>
+<section class="section-adversarial-review">
+<h2 id="adversarial-review"><a class="heading-anchor" href="#adversarial-review" aria-label="Link to Adversarial review">§</a>Adversarial review</h2>
+<ul><li><strong>Claim A:</strong> <strong><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr></strong> preserves exact revision identity and keeps its historical prototype distinct from the current product fixture (<code><abbr class="identifier-definition" title="B-06 — Report interface design and validation studies" aria-label="B-06 — Report interface design and validation studies">B-06</abbr>/<abbr class="identifier-definition" title="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA." aria-label="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA.">SI-2</abbr></code>).</li><li><strong>Claim B sought:</strong> a mismatched recorded hash, a current-state claim applied to the historical capture, or a validator assertion that scans both fixtures without role-specific expectations.</li><li><strong>Evidence for the challenge:</strong> a fresh SHA-256 comparison matched <code>prototype/index.html</code> to <code>e8eddfe2…</code> and <code>prototype-current/index.html</code> to <code>22da3388…</code>, the values recorded in the validation report (evidence row 28). The validator addresses <code>html</code> and <code>currentHtml</code> in separate assertion groups (<code>design/delightful-output-panel/validation/validate-prototype.mjs:17-75@073cee8</code>, <code>:77-98@073cee8</code>).</li><li><strong>Verdict:</strong> <code>upheld</code>. No confirmed bugs or linchpin-dependent dispositions existed to challenge. Two explicitly open product-validation obligations remain open questions rather than disguised confirmations.</li></ul>
+</section></article>
+      <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="b06-report-interface-design-and-validation-studies.md">Inspect Markdown</a></p></footer>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const themeButton = document.querySelector('[data-theme-toggle]');
+  const themeStorageKey = 'amanuensis-theme';
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+  let storedTheme = null;
+  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
+  if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
+
+  const updateThemeLabel = () => {
+    if (!themeButton) return;
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
+    themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
+  };
+  const applyTheme = (theme) => {
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    updateThemeLabel();
+  };
+  updateThemeLabel();
+  themeButton?.addEventListener('click', () => {
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    const theme = dark ? 'light' : 'dark';
+    applyTheme(theme);
+    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== themeStorageKey) return;
+    applyTheme(event.newValue);
+  });
+  systemTheme.addEventListener?.('change', updateThemeLabel);
+
+  const menuButton = document.querySelector('[data-nav-toggle]');
+  const navRail = document.querySelector('.nav-rail');
+  const documentInner = document.querySelector('.document-inner');
+  const narrow = matchMedia('(max-width: 900px)');
+  const setMenuOpen = (open, restoreFocus = false) => {
+    const effectiveOpen = Boolean(open && narrow.matches);
+    body.classList.toggle('nav-open', effectiveOpen);
+    menuButton?.setAttribute('aria-expanded', String(effectiveOpen));
+    if (navRail) navRail.inert = narrow.matches && !effectiveOpen;
+    if (documentInner) documentInner.inert = effectiveOpen;
+    if (effectiveOpen) navRail?.querySelector('a, input, button')?.focus();
+    else if (restoreFocus) menuButton?.focus();
+  };
+  setMenuOpen(false);
+  menuButton?.addEventListener('click', () => setMenuOpen(!body.classList.contains('nav-open')));
+  navRail?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+  narrow.addEventListener?.('change', () => setMenuOpen(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
+  });
+
+  const search = document.querySelector('[data-nav-search]');
+  const empty = document.querySelector('[data-empty-search]');
+  const filter = () => {
+    const needle = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.nav-item').forEach((item) => {
+      const match = !needle || item.dataset.search.includes(needle);
+      item.hidden = !match;
+      if (match) visible += 1;
+    });
+    document.querySelectorAll('.nav-group').forEach((group) => {
+      group.hidden = !group.querySelector('.nav-item:not([hidden])');
+    });
+    empty?.classList.toggle('visible', visible === 0);
+  };
+  search?.addEventListener('input', filter);
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault(); search?.focus(); search?.select();
+    }
+  });
+})();
+</script>
+</body>
+</html>
