@@ -80,7 +80,7 @@ def _db_source(name: str, data: Any) -> dict[str, str]:
 
 def render_index(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
-    subs = rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id")
+    subs = rows(conn, "SELECT id, name, status, layer FROM subsystems ORDER BY id")
     findings_summary = rows(
         conn,
         "SELECT COUNT(*) AS total, SUM(CASE WHEN status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs,"
@@ -203,11 +203,11 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
         "",
         runtime_boundary_placeholder(),
         "",
-        "## Subsystem dependency graph",
+        "## Subsystem dependency graph" if xrefs else "## Subsystem atlas",
         "",
         subsystem_dependency_graph(conn),
         "",
-        "## Seam graph",
+        "## Seam topology",
         "",
         seam_graph(conn),
         "",
@@ -343,7 +343,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     if s.get("scope"):
         out += ["## Scope", "", s["scope"], ""]
     if s.get("jump_in_reading"):
-        out += ["## Jump-in reading", "", s["jump_in_reading"], ""]
+        out += ["## Start here", "", s["jump_in_reading"], ""]
     if s.get("notes"):
         out += ["## Notes", "", s["notes"], ""]
 
@@ -358,7 +358,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
 
     if dispositions:
         out += [
-            "## Concern dispositions",
+            "## Concern review",
             "",
             "| Concern | Classification | Evidence quality | Linchpin? | Rationale |",
             "|---|---|---|---|---|",
@@ -392,7 +392,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
 
     if xrefs:
         out += [
-            "## Cross-references",
+            "## Related subsystems",
             "",
             "| From | → | To | Relationship | Strength | Context |",
             "|---|---|---|---|---|---|",
@@ -524,7 +524,7 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             assessable = "✅" if a.get("assessable") else "⏳"
             parties = f"**{s['party_a']}** ↔ **{s['party_b']}**"
             out.append(
-                f"| **{s['id']}** | {s['shared_object']} | {s['shared_object_kind'] or '—'} | "
+                f"| <a id=\"{s['id'].lower()}\"></a>**{s['id']}** | {s['shared_object']} | {s['shared_object_kind'] or '—'} | "
                 f"{parties} | {assessable} | {(s['notes'] or '').replace('|', '/')} |"
             )
         out.append("")
@@ -836,7 +836,7 @@ methodology's most important epistemic guardrail.
 | `unmapped` | **None.** No assertions about behavior. |
 | `scoping` | File scope only: "F is in scope for S." No behavioral claims. |
 | `structural` | Types, state containers, data flows, concurrency model. **No correctness claims.** |
-| `concerns` | Concern dispositions with evidence. Findings at evidence_quality ≥ code-verified. |
+| `concerns` | Concern review with evidence. Findings at evidence_quality ≥ code-verified. |
 | `adversarial` | As above, plus findings survived attempted refutation. **Highest confidence.** |
 | `mapped` | Complete. Seam contracts filled in. Ready for composition with mapped peers. |
 | `deferred` | Orthogonal flag: "do not survey yet." Not a knowledge level. |

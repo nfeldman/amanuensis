@@ -60,8 +60,78 @@ Two specialized labels are explicitly part of the Amanuensis voice:
 - Do not style the interface as paper, parchment, a field notebook, an archive,
   or a manuscript facsimile. Textual-critical precision does not require
   antiquarian visual treatment.
+- A bookish display face, square geometry, restrained rules, and a green-gray
+  palette may give the report character without pretending that the screen is
+  a physical page. Avoid beige fields, paper textures, curled edges, ornamental
+  stamps, and redundant document furniture.
 - Avoid decorative metaphor in navigation. Use direct labels that remain
   meaningful when read out of context.
+
+## Present records for reading, not storage inspection
+
+Markdown tables are a portable schema projection. The HTML projection must
+choose a presentation from the reader's operation, not reproduce every stored
+field as an equally prominent column.
+
+- Use a semantic table only when readers need to compare several records on
+  the same attributes in both directions. Keep row and column headers explicit.
+- Use a ruled record register for records dominated by prose or for rows whose
+  fields have different reading priorities. Use `<article>` for independently
+  addressable records and `<dl>` for compact name/value facts.
+- Keep identifiers, status, evidence quality, paths, and revision provenance
+  visible but subordinate to the language that explains consequence, role, or
+  scope. Do not spend a peer column on a short revision hash.
+- Do not split long causal prose into parallel columns merely because the
+  source has two fields. Preserve a stable reading order and a comfortable text
+  measure.
+- On wider screens, a finite run of adjacent narrative paragraphs may become a
+  balanced two-column reading field; use three columns only on genuinely wide
+  canvases. Keep source order ordinary, preserve a single-column fallback, use
+  generous gutters, and never pour records, tables, code, or an unbounded page
+  into the multicolumn flow.
+- Do not put critical qualifications behind disclosure by default. Disclosure
+  is appropriate for receipts and supporting detail after the record is usable.
+- Omit genuinely absent optional facts instead of displaying empty cells or
+  false-valued boilerplate.
+- Choose projections by a known schema or record type. Unknown tables remain
+  tables until Amanuensis has an explicit presentation contract; text-length
+  heuristics are not a substitute for semantics.
+
+Current typed projections:
+
+- Findings are one anchored article each: compact identity and status,
+  consequence-led observed behavior, then root cause in sequence.
+- File ledgers are ruled registers: filename and full path with review and
+  revision facts, beside the dominant `Why in scope` account.
+- Concern-review records keep concern, verdict, evidence, and any actual
+  linchpin together; rationale receives the reading measure.
+- Symbol/role/source inventories and subsystem plans are record registers.
+- State-container lifecycles, coverage matrices, and other genuine cross-record
+  comparisons remain tables. Merge a subordinate location into the row header
+  when that improves scanning without losing its label.
+- Two-column term/meaning and metric/value data become definition lists.
+
+Use ruled registers rather than a grid of rounded cards. The goal is a quiet,
+continuous reading surface with clear record boundaries, not a dashboard tile
+for every row.
+
+## Architecture and source routes
+
+- Do not present a nodes-only diagram as a dependency graph. If no dependency
+  edges are recorded, say so and render the linked subsystem inventory as a
+  layer atlas. Never infer edges from names, prefixes, or nearby seams.
+- A topology view must retain a complete readable relation account. Group seams
+  into connected areas, name the hub where one exists, keep the shared object
+  out of a cramped edge label, and link every subsystem and seam.
+- Use a compact atlas for place and a separate topology for recorded relations;
+  neither should become a decorative heroic graph or the only route to content.
+- When the recorded workspace has a verified `github.com` origin, make file
+  identities open the reviewed path at that record's revision. Keep the full
+  repository-relative path visible and copyable. Never guess a repository URL.
+- Translate method/storage labels at the projection boundary. Prefer `Concern
+  review` over `Concern dispositions`, `Start here` over `Jump-in reading`, and
+  `Related subsystems` over `Cross-references` as page headings. Durable schema
+  names may remain unchanged.
 
 ## Projection copy examples
 

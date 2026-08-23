@@ -1,14 +1,14 @@
-"""Mermaid diagram generation from DB state.
+"""Architecture projection generation from database state.
 
 Every diagram is a pure function of DB rows — no hand-authored content.
-Returned as markdown strings containing a mermaid fenced block.
+Surfaces may be portable Markdown tables or Mermaid where a graph exists.
 """
 from __future__ import annotations
 
 import sqlite3
 
 from .db import rows
-from .slugs import subsystem_slug
+from .slugs import subsystem_page
 
 
 def _safe_label(text: str) -> str:
@@ -17,46 +17,52 @@ def _safe_label(text: str) -> str:
 
 
 def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
-    """Directed graph from xrefs, colored by subsystem status."""
+    """Dependency surface from xrefs, or a truthful layer atlas without them."""
     edges = rows(
         conn,
-        "SELECT from_id, to_id, relationship, strength FROM xrefs ORDER BY from_id",
+        "SELECT from_id, to_id, relationship, strength, context FROM xrefs ORDER BY from_id",
     )
     subs = {
         r["id"]: r
-        for r in rows(conn, "SELECT id, name, status FROM subsystems")
+        for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")
     }
     if not subs and not edges:
         return "_No subsystems recorded yet._"
-    lines = ["```mermaid", "graph LR"]
-    # Declare nodes with labels.
-    for sid, s in sorted(subs.items()):
-        label = f"{sid}<br/>{_safe_label(s['name'])}"
-        node = subsystem_slug(sid)
-        lines.append(f'    {node}["{label}"]')
-    # Edges.
-    for e in edges:
-        a = subsystem_slug(e["from_id"])
-        b = subsystem_slug(e["to_id"])
-        lines.append(f'    {a} -->|{_safe_label(e["relationship"])}| {b}')
-    # Class definitions for status coloring.
-    lines.extend(
-        [
-            "    classDef mapped fill:#d9f7d9,stroke:#1e7a1e,color:#0a3a0a;",
-            "    classDef adversarial fill:#fff4c7,stroke:#b58900,color:#584500;",
-            "    classDef concerns fill:#fff4c7,stroke:#b58900,color:#584500;",
-            "    classDef structural fill:#ffe6c7,stroke:#b5561e,color:#582b08;",
-            "    classDef scoping fill:#e6f0ff,stroke:#1e4fb5,color:#0a2358;",
-            "    classDef unmapped fill:#f0f0f0,stroke:#888,color:#333;",
-            "    classDef deferred fill:#fce0e0,stroke:#a33,color:#500;",
+    if not edges:
+        lines = [
+            "_No dependency edges are recorded in this publication. The layer map below is a subsystem atlas, not an inferred dependency graph._",
+            "",
+            "| Region | Subsystem | Survey depth |",
+            "|---|---|---|",
         ]
-    )
-    for sid, s in subs.items():
-        node = subsystem_slug(sid)
-        lines.append(f"    class {node} {s['status']};")
-    lines.append("```")
-    return "\n".join(lines)
+        for sid, subsystem in sorted(subs.items(), key=lambda item: ((item[1].get("layer") or "Other"), item[0])):
+            name = subsystem["name"]
+            route = subsystem_page(sid, name)
+            region = _safe_label(subsystem.get("layer") or "Other")
+            lines.append(
+                f"| {region} | **[{sid}]({route})** {_safe_label(name)} | {subsystem['status']} |"
+            )
+        return "\n".join(lines)
 
+    lines = [
+        "| From | Relationship | To | Strength | Context |",
+        "|---|---|---|---|---|",
+    ]
+    for edge in edges:
+        from_subsystem = subs.get(edge["from_id"], {"name": edge["from_id"]})
+        to_subsystem = subs.get(edge["to_id"], {"name": edge["to_id"]})
+        from_name = from_subsystem["name"]
+        to_name = to_subsystem["name"]
+        from_route = subsystem_page(edge["from_id"], from_name)
+        to_route = subsystem_page(edge["to_id"], to_name)
+        context = _safe_label(edge.get("context") or "No additional context recorded")
+        lines.append(
+            f"| **[{edge['from_id']}]({from_route})** {_safe_label(from_name)} "
+            f"| {_safe_label(edge['relationship'])} "
+            f"| **[{edge['to_id']}]({to_route})** {_safe_label(to_name)} "
+            f"| {edge['strength']} | {context} |"
+        )
+    return "\n".join(lines)
 
 def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
     """Table-form heatmap (mermaid doesn't do heatmaps natively; we use
@@ -130,26 +136,28 @@ def runtime_boundary_placeholder() -> str:
 
 
 def seam_graph(conn: sqlite3.Connection) -> str:
-    """Seams as labeled edges between subsystems."""
+    """Seams as a portable relation table; HTML builds connected areas."""
     seams = rows(conn, "SELECT * FROM seams ORDER BY id")
     if not seams:
         return "_No seams recorded yet._"
-    lines = ["```mermaid", "graph LR"]
     subs = {
         r["id"]: r for r in rows(conn, "SELECT id, name FROM subsystems")
     }
-    nodes: dict[str, bool] = {}
+    lines = [
+        "| Seam | Party A | Shared object | Party B |",
+        "|---|---|---|---|",
+    ]
     for s in seams:
-        for sid in (s["party_a"], s["party_b"]):
-            if sid in nodes:
-                continue
-            name = subs.get(sid, {}).get("name", sid)
-            lines.append(f'    {subsystem_slug(sid)}["{sid}<br/>{_safe_label(name)}"]')
-            nodes[sid] = True
-    for s in seams:
-        a = subsystem_slug(s["party_a"])
-        b = subsystem_slug(s["party_b"])
-        label = f"{s['id']}<br/>{_safe_label(s['shared_object'])}"
-        lines.append(f'    {a} <-->|"{label}"| {b}')
-    lines.append("```")
+        party_a = s["party_a"]
+        party_b = s["party_b"]
+        name_a = subs.get(party_a, {}).get("name", party_a)
+        name_b = subs.get(party_b, {}).get("name", party_b)
+        route_a = subsystem_page(party_a, name_a)
+        route_b = subsystem_page(party_b, name_b)
+        lines.append(
+            f"| **[{s['id']}](seams.md#{s['id'].lower()})** "
+            f"| **[{party_a}]({route_a})** {_safe_label(name_a)} "
+            f"| {_safe_label(s['shared_object'])} "
+            f"| **[{party_b}]({route_b})** {_safe_label(name_b)} |"
+        )
     return "\n".join(lines)

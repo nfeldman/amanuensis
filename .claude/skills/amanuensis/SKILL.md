@@ -118,7 +118,7 @@ Authorized claims still scale with status — this is **not** relaxed:
 | `unmapped` | None. |
 | `scoping` | File scope only. |
 | `structural` | Types, state containers, flows, concurrency model. No correctness claims. |
-| `concerns` | Concern dispositions with evidence. |
+| `concerns` | Concern review decisions with evidence. |
 | `adversarial` | Adversarial work is authorized and in progress. Treat a finding as survived only when its recorded adversarial evidence or terminal review aggregation says so. |
 | `mapped` | Workflow-marked complete with seam contracts filled in. Status alone is not proof that every finding survived challenge; the underlying records govern. |
 

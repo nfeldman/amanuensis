@@ -1,4 +1,4 @@
-# Field Docket design language
+# Amanuensis report design language
 
 Implementation-ready language for Amanuensis's self-contained HTML projection. The working specimen is `prototype/index.html`; this document describes the durable rules behind it, not its every pixel.
 
@@ -6,7 +6,7 @@ Implementation-ready language for Amanuensis's self-contained HTML projection. T
 
 > **Lead with consequence, keep the coordinate, expose the warrant, and never make the reader infer whether the publication itself is coherent.**
 
-Delight is the feeling that the report remembers the reader's purpose while refusing false certainty. It comes from legible hierarchy, precise status language, quick recovery, tactile editorial composition, and receipts that are close but not oppressive.
+Delight is the feeling that the report serves the reader's purpose while refusing false certainty. It comes from legible hierarchy, precise status language, quick recovery, a distinctive software-publication character, and receipts that are close but not oppressive.
 
 ## Non-negotiable separations
 
@@ -28,11 +28,11 @@ Never collapse these into one score, badge, or color:
 ### Six global landmarks
 
 1. **Current briefing** — one-breath project model, four-axis condition band, lead matter, task routes.
-2. **Risks & decisions** — vertical casefiles grouped by action: contain/verify, repair, clarify intent/capability, survey next.
+2. **Risks & decisions** — vertical findings grouped by action: contain/verify, repair, clarify intent/capability, survey next.
 3. **System terrain** — architectural regions, 34 subsystem records, status, findings, and readable seams.
 4. **Trust boundary** — evidence contract, coverage, questions, contradictions, diagnosticity, field notes, and projection integrity.
 5. **Re-entry** — publication comparison, device-local optional trail, and active survey work as three separate rows.
-6. **Case register** — compact expert comparison mode plus durable source routes.
+6. **Finding register** — compact expert comparison mode plus durable source routes.
 
 Reference/method pages remain first-class and searchable, but do not compete as equal first-level entrances.
 
@@ -76,7 +76,7 @@ Task routes jump or highlight this sequence. They do not secretly reorder the pu
 
 **Rules:** semantic anchors with descriptive destinations; no client-only routing; highlight/jump only.
 
-### `Casefile`
+### `FindingRecord`
 
 **Purpose:** make a finding usable without stripping qualification.
 
@@ -112,7 +112,7 @@ Format: `[party A] — typed shared object/action → [party B]`, with both name
 
 ### `ReentryPanel`
 
-Three fixed cards:
+Three fixed rows:
 
 1. **Publication delta:** two immutable endpoints and actual changes, or `comparison unavailable`.
 2. **This device:** optional local trail, explicitly local and clearable.
@@ -129,6 +129,27 @@ No timestamp or active-session phrase may be converted into “since your last v
 ### `SourceEscape`
 
 Every page retains a one-action Markdown companion plus branch/SHA/publication identity. Links use the report's ordinary local relative paths in production; the prototype uses explicit `file://` routes only because it lives outside the generated AxiomDB directory.
+
+## Record-presentation grammar
+
+The Markdown and database forms preserve portable structure; the HTML form
+must optimize for the reader's operation rather than reproduce storage columns.
+
+- Keep semantic tables for genuine two-dimensional comparisons such as
+  coverage matrices and lifecycle attributes across state containers.
+- Render prose-heavy findings, file ledgers, dispositions, inventories, and
+  subsystem plans as ruled record registers.
+- Use `<dl>` for compact term/meaning and metric/value material.
+- Keep identity and provenance visible as subordinate facts. Do not give a
+  short SHA a peer column beside a paragraph.
+- Put long dependent prose in a single reading sequence. Parallel columns are
+  for comparison, not merely because two source fields exist.
+- Select the projection by known schema. Unknown tables stay tables until they
+  have an explicit contract.
+- Avoid generic card grids; use continuous ruled registers with stable anchors.
+
+The measured corpus and per-schema decisions are recorded in
+[`../../scholiast/report-record-presentation/conspectus.md`](../../scholiast/report-record-presentation/conspectus.md).
 
 ## Content grammar
 
@@ -160,39 +181,66 @@ Calm, exact, and humane. Prefer consequences and verbs. Write limits in full sen
 
 ## Visual tokens
 
-The prototype token block is the reference implementation.
+The current prototype and production projection share the reference character:
+green-gray rather than corporate blue, square construction rather than toy-like
+rounding, and a local book face used sparingly for display. This is typographic
+character, not a paper simulation.
 
 ### Core palette
 
 | Token | Light | Dark | Job |
 |---|---|---|---|
-| `--paper` | `#f4f1e8` | `#131a17` | page field |
-| `--surface` | `#fffdf7` | `#1b2420` | reading surface/cards |
-| `--ink` | `#17211e` | `#edf0e8` | primary text |
-| `--ink-soft` | `#4e5c56` | `#b4c0b9` | secondary prose |
-| `--teal-deep` | `#083d38` | `#b0ded6` | links, identity, mapped/source signal |
-| `--coral-deep` | `#812b22` | `#ffb3a4` | critical/consequential emphasis |
-| `--amber` | `#8d5a16` | `#e4b46d` | coverage/qualified attention |
-| `--blue` | `#315f80` | `#91b9d2` | publication/integrity state |
+| `--canvas` | `#f2f4f1` | `#151b19` | application field |
+| `--canvas-subtle` | `#e7ebe7` | `#101513` | navigation and record metadata field |
+| `--surface` | `#fbfcf8` | `#1c2421` | continuous reading surface |
+| `--text` | `#18221f` | `#e7ece8` | primary text |
+| `--text-muted` | `#52615c` | `#a9b5b0` | secondary prose |
+| `--rule` | `#c9d0ca` | `#34413c` | ordinary divisions |
+| `--accent` | `#235b58` | `#79b6ae` | links, identity, mapped/source signal |
+| `--signal` | `#9b5b27` | `#d5a064` | qualified attention |
+| `--danger` | `#9c3d37` | `#e28a81` | critical/consequential emphasis |
 
-Measured contrast ratios for primary pairs are 6.91:1 or greater in both themes: light ink/surface 16.22, soft/surface 6.91, teal-deep/surface 11.90, coral-deep/coral-soft 6.97; dark equivalents 13.81, 8.47, 10.81, and 7.60. Runtime zoom/forced-colors/AT validation remains required before a conformance claim.
+Do not introduce beige fields, texture images, gradients that simulate paper,
+drop shadows that make every record float, or a generic blue primary. Runtime
+contrast, zoom, forced-colors, and assistive-technology validation remain
+required before a conformance claim.
 
 ### Typography
 
-- Display: local system book serif stack; no downloaded font.
+- Display: `Iowan Old Style`, `Palatino Linotype`, `Book Antiqua`, `Georgia`,
+  then the platform serif; no downloaded font.
 - Body: platform sans stack.
 - Metadata: platform monospace stack.
-- H1: `clamp(3.2rem, 7vw, 6.8rem)`, tight line height; mobile clamps independently.
-- Reading prose: 16px base, 1.62 line height, maximum `72ch`.
+- H1: editorial publication scale (`clamp(2.8rem, 4.8vw, 5.2rem)` in the
+  production shell), tight line height and optical ligatures; mobile clamps
+  independently.
+- Reading prose: 16px base, 1.58 line height, maximum `72ch` in ordinary
+  single-column passages.
+- Finite runs of adjacent narrative paragraphs may balance into two columns at
+  `1180px` and three at `1760px`. Use a generous ruled gutter, preserve DOM
+  order, and exclude records, tables, figures, lists, code, and long unbounded
+  report flows.
+
+This uses the standard
+[CSS Multi-column Layout Level 1](https://www.w3.org/TR/css-multicol-1/),
+which is included in the [CSS Snapshot 2026](https://www.w3.org/TR/css-2026/).
+It does not depend on named flows from the older
+[CSS Regions draft](https://www.w3.org/TR/css-regions-1/). Level 2 multicolumn
+features such as styling individual column boxes remain progressive and are
+not required by the projection.
 - Never use display type for status text or code handles.
 
 ### Spacing and shape
 
 - Base increments: `.25rem`, `.5rem`, `.75rem`, `1rem`, `1.5rem`, `2.25rem`, `3rem`, `4.5rem`.
-- Borders are square or softly `.2rem`; pills are reserved for compact metadata, never whole cards.
-- Use double rules for publication boundaries and one coral side-rule for consequential casefiles.
-- Shadows are low-contrast depth cues, not floating-app chrome.
-- Maximalism is a rare static event (hero scale/grid), never a constant texture.
+- Borders and controls are square. A circular dot may indicate state, but
+  containers and badges do not become pills.
+- Use single restrained rules for publication and record boundaries. Do not let
+  a decorative thick rule collide with a bordered container.
+- Keep the reading surface continuous; avoid card shadows and floating-app
+  chrome.
+- Use typographic contrast, spacing, and a small number of status colors for
+  hierarchy. Do not add texture as atmosphere.
 
 ## Interaction contract
 
@@ -218,7 +266,10 @@ Keyboard: `Cmd/Ctrl+K` focuses search; Escape closes only the mobile drawer; nat
 
 ## Responsive behavior
 
-- **≥1120px:** fixed 19rem rail; four-column condition band; three-column atlas; sticky local section map.
+- **≥1760px:** fixed rail; finite prose fields may balance into three columns;
+  the page canvas tops out at `104rem`.
+- **1180–1759px:** fixed rail; eligible finite prose fields balance into two
+  columns; three-column atlas where useful.
 - **881–1119px:** fixed rail; 2×2 condition band/routes; two-column atlas.
 - **≤880px:** navigation drawer with labelled button; content full width; local section map enters document flow.
 - **≤620px:** all evidence cards single column; relationship trails scroll as complete labelled units; finding register becomes ID + body + second-row metadata.
@@ -227,7 +278,9 @@ Keyboard: `Cmd/Ctrl+K` focuses search; Escape closes only the mobile drawer; nat
 
 ## Amanuensis implementation map
 
-No production files were changed. These are the intended seams in `/Users/nfeldman/repos/amanuensis/materializer/amanuensis_materializer/html_projection.py`.
+The first production increment is implemented in
+`/Users/nfeldman/repos/amanuensis/materializer/amanuensis_materializer/html_projection.py`.
+The table below distinguishes landed behavior from later work.
 
 | Current seam | Proposed responsibility |
 |---|---|
@@ -235,7 +288,7 @@ No production files were changed. These are the intended seams in `/Users/nfeldm
 | page inventory assembled upstream | Group six global landmarks first, then subsystem regions; retain every existing route and Markdown companion |
 | `_nav()` | Render compact landmarks plus native `<details>` regions; search index includes page, subsystem, finding, seam, question, heading, and topic objects |
 | `_shell()` | Render `CompassLine`, `ConditionBand`, route cards, re-entry state, source escape, and local section map around the article |
-| `MarkdownRenderer.render()` | Continue semantic Markdown baseline; add explicit renderer hooks for structured finding casefiles and relationship trails rather than heuristically styling arbitrary tables |
+| `MarkdownRenderer._table()` | Implemented: exact schema hooks select ruled records, definition lists, lifecycle tables, or unchanged semantic tables; arbitrary text-length heuristics are prohibited |
 | `_status_html()` / evidence/severity hints | Preserve plain labels; supply axis-specific wording and never reuse “good” color for source freshness |
 | `render_html_projection()` | Build a complete in-memory publication manifest, verify aggregates/links/fragments against emitted bytes, then publish or surface an explicit integrity warning according to product policy |
 | `_CSS` / `_JS` | Split internally into named constants/modules if useful, but continue embedding the final bytes so `file://` and static hosting require no dependencies |

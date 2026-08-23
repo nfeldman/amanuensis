@@ -18,6 +18,12 @@ All human-facing titles, labels, hints, and generated prose follow
 textual-critical vocabulary only when it precisely names an evidence
 relationship.
 
+The table syntax below is a durable, portable schema projection. It does not
+require the HTML reading surface to preserve every field as a peer column.
+The HTML materializer applies the typed presentation grammar in
+[`reporting-style.md`](reporting-style.md), while retaining a real table for
+records whose reader task is genuinely two-dimensional comparison.
+
 ---
 
 ## 1 · Onboarding report (`onboarding-report.md`)
@@ -144,7 +150,7 @@ section lists the ones every agent must know before touching code.]
 | `unmapped` | None. No assertions about behavior. |
 | `scoping` | File scope only. "File F participates in subsystem S." No behavioral claims. |
 | `structural` | Types, state containers, flows, concurrency model. No correctness claims. |
-| `concerns` | Concern dispositions with evidence. Confirmed findings at evidence_quality ≥ code-verified. |
+| `concerns` | Concern review decisions with evidence. Confirmed findings at evidence_quality ≥ code-verified. |
 | `adversarial` | Adversarial work is authorized and in progress. Only findings with recorded adversarial support count as survived. |
 | `mapped` | Workflow-marked complete with seam contracts filled in. Inspect the records; status alone does not prove universal challenge coverage. |
 

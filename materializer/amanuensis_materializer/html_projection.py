@@ -14,14 +14,14 @@ import html
 import posixpath
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.1.0"
+HTML_PROJECTION_VERSION = "1.3.0"
 
 
 @dataclass(frozen=True)
@@ -104,71 +104,73 @@ DISPLAY_STATUS = {
     "comment-asserted": "Comment asserted",
     "name-inferred": "Name inferred",
     "pattern-matched": "Pattern matched",
-    "fixed-pending-verification": "Fix awaiting verification",
+    "fixed-pending-verification": "Unverified fix",
     "verified-fixed": "Verified fixed",
 }
 
 _CSS = r"""
 :root {
   color-scheme: light dark;
-  --canvas: #f6f7f9;
-  --canvas-subtle: #eef1f5;
-  --surface: #ffffff;
-  --text: #111827;
-  --text-muted: #4b5563;
-  --text-subtle: #6b7280;
-  --rule: #dbe1e8;
-  --rule-strong: #aeb8c5;
-  --accent: #2563eb;
-  --accent-strong: #1d4ed8;
-  --accent-soft: #eaf1ff;
-  --signal: #9a5b00;
-  --signal-soft: #fff4df;
-  --danger: #b42318;
-  --danger-soft: #feeceb;
-  --good: #177245;
-  --good-soft: #e8f6ee;
-  --quiet: #64748b;
-  --quiet-soft: #eef2f7;
-  --heading: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --canvas: #f2f4f1;
+  --canvas-subtle: #e7ebe7;
+  --surface: #fbfcf8;
+  --text: #18221f;
+  --text-muted: #52615c;
+  --text-subtle: #74817d;
+  --rule: #c9d0ca;
+  --rule-strong: #9ca9a2;
+  --accent: #235b58;
+  --accent-strong: #123f3d;
+  --accent-soft: #d8e8e4;
+  --signal: #9b5b27;
+  --signal-soft: #f3e4d3;
+  --danger: #9c3d37;
+  --danger-soft: #f4dfdc;
+  --good: #2e6a4d;
+  --good-soft: #dcecdf;
+  --quiet: #65736e;
+  --quiet-soft: #e4e8e5;
+  --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --rail: 17.25rem;
   --measure: 72ch;
+  --page: 104rem;
+  --baseline: .25rem;
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0f131a;
-  --canvas-subtle: #0a0d12;
-  --surface: #151a22;
-  --text: #e5e7eb;
-  --text-muted: #b0b8c5;
-  --text-subtle: #8d98a8;
-  --rule: #293241;
-  --rule-strong: #526074;
-  --accent: #60a5fa;
-  --accent-strong: #93c5fd;
-  --accent-soft: #172d4d;
-  --signal: #f0b35c;
-  --signal-soft: #3d2a12;
-  --danger: #fb8b83;
-  --danger-soft: #43201f;
-  --good: #72d19a;
-  --good-soft: #173425;
-  --quiet: #a4afbf;
-  --quiet-soft: #222a36;
+  --canvas: #151b19;
+  --canvas-subtle: #101513;
+  --surface: #1c2421;
+  --text: #e7ece8;
+  --text-muted: #a9b5b0;
+  --text-subtle: #84918c;
+  --rule: #34413c;
+  --rule-strong: #52615b;
+  --accent: #79b6ae;
+  --accent-strong: #a1d0ca;
+  --accent-soft: #233d38;
+  --signal: #d5a064;
+  --signal-soft: #3b2b1c;
+  --danger: #e28a81;
+  --danger-soft: #3d2422;
+  --good: #83c09c;
+  --good-soft: #1f392b;
+  --quiet: #9ca9a4;
+  --quiet-soft: #29322f;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #0f131a; --canvas-subtle: #0a0d12; --surface: #151a22;
-    --text: #e5e7eb; --text-muted: #b0b8c5; --text-subtle: #8d98a8;
-    --rule: #293241; --rule-strong: #526074;
-    --accent: #60a5fa; --accent-strong: #93c5fd; --accent-soft: #172d4d;
-    --signal: #f0b35c; --signal-soft: #3d2a12;
-    --danger: #fb8b83; --danger-soft: #43201f;
-    --good: #72d19a; --good-soft: #173425;
-    --quiet: #a4afbf; --quiet-soft: #222a36;
+    --canvas: #151b19; --canvas-subtle: #101513; --surface: #1c2421;
+    --text: #e7ece8; --text-muted: #a9b5b0; --text-subtle: #84918c;
+    --rule: #34413c; --rule-strong: #52615b;
+    --accent: #79b6ae; --accent-strong: #a1d0ca; --accent-soft: #233d38;
+    --signal: #d5a064; --signal-soft: #3b2b1c;
+    --danger: #e28a81; --danger-soft: #3d2422;
+    --good: #83c09c; --good-soft: #1f392b;
+    --quiet: #9ca9a4; --quiet-soft: #29322f;
   }
 }
 
@@ -179,9 +181,14 @@ body {
   color: var(--text);
   background: var(--canvas);
   font-family: var(--body);
-  font-size: 15.5px;
-  line-height: 1.62;
+  font-size: 1rem;
+  line-height: 1.58;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  font-variant-ligatures: common-ligatures contextual;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent-strong); text-decoration-thickness: .08em; text-underline-offset: .18em; }
 a:hover { text-decoration-thickness: .14em; }
@@ -203,13 +210,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 }
 .brand { display: block; color: var(--text); text-decoration: none; margin: 0 0 1.6rem; }
 .brand-mark {
-  display: block; font: 720 1.08rem/1.2 var(--heading); letter-spacing: -.015em;
+  display: block; font: 600 1.35rem/1.05 var(--heading); letter-spacing: -.015em;
 }
 .brand-sub { display: block; margin-top: .32rem; color: var(--text-muted); font: .73rem/1.4 var(--body); }
 .search-label { display: block; margin-bottom: .35rem; color: var(--text-muted); font: .67rem/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
 .nav-search {
   width: 100%; padding: .55rem .65rem; color: var(--text); background: var(--surface);
-  border: 1px solid var(--rule-strong); border-radius: .38rem; font: .82rem/1.3 var(--body);
+  border: 1px solid var(--rule-strong); border-radius: 0; font: .82rem/1.3 var(--body);
 }
 .nav-search::placeholder { color: var(--text-subtle); }
 .rail-nav { margin-top: 1.5rem; }
@@ -221,7 +228,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-item { margin: .08rem 0; }
 .nav-item[hidden], .nav-group[hidden] { display: none; }
-.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: .35rem; }
+.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
 .nav-link:hover { color: var(--text); background: var(--surface); }
 .nav-link[aria-current="page"] { color: var(--accent-strong); }
 .nav-link[aria-current="page"] .nav-name { font-weight: 700; }
@@ -236,19 +243,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 .rail-actions { display: flex; gap: .5rem; align-items: center; }
 .quiet-button {
   border: 1px solid var(--rule); padding: .36rem .5rem; color: var(--text-muted);
-  background: transparent; border-radius: .35rem; cursor: pointer; font: .68rem/1 var(--mono);
+  background: transparent; border-radius: 0; cursor: pointer; font: .68rem/1 var(--mono);
 }
 .quiet-button:hover { border-color: var(--accent); color: var(--accent-strong); }
 .rail-note { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.45 var(--mono); }
 
 .document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
 .mobile-bar { display: none; }
-.document-inner { width: min(100%, 78rem); margin: 0 auto; padding: 4.2rem clamp(2rem, 5vw, 5.8rem) 5rem; }
-.page-head { padding: 0 0 2rem; border-bottom: 1px solid var(--rule); }
-.eyebrow { margin: 0 0 .9rem; color: var(--accent); font: 600 .69rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
-h1 { max-width: 28ch; margin: 0; font: 720 clamp(2rem, 3.2vw, 3.25rem)/1.08 var(--heading); letter-spacing: -.035em; text-wrap: balance; }
-.page-hint { max-width: 68ch; margin: .9rem 0 0; color: var(--text-muted); font: .98rem/1.55 var(--body); }
-.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: .45rem; }
+.document-inner { width: min(100%, var(--page)); margin: 0 auto; padding: 4.5rem clamp(2rem, 5vw, 6.5rem) 5.5rem; }
+.page-head { padding: 0 0 2.25rem; border-bottom: 1px solid var(--rule); }
+.eyebrow { margin: 0 0 1rem; color: var(--accent); font: 650 .69rem/1.3 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+h1 {
+  margin: 0; font: 600 clamp(2.8rem, 4.8vw, 5.2rem)/.98 var(--heading);
+  letter-spacing: -.042em; text-wrap: balance;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+}
+.page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
+.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
 .snapshot-item b { color: var(--text); font-weight: 650; }
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
@@ -256,19 +267,19 @@ h1 { max-width: 28ch; margin: 0; font: 720 clamp(2rem, 3.2vw, 3.25rem)/1.08 var(
 .freshness.stale::before { background: var(--signal); }
 
 .content { max-width: 100%; padding-top: .35rem; }
-.content section { position: relative; padding: 2.25rem 0; border-bottom: 1px solid var(--rule); }
+.content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content section:last-child { border-bottom: 0; }
 .content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
 h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
-h2 { max-width: 32ch; margin: 0 0 1.05rem; font: 700 1.55rem/1.22 var(--heading); letter-spacing: -.018em; }
-h3 { max-width: 42ch; margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
-h4 { max-width: 52ch; margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
+h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
+h3 { margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
+h4 { margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
 h5, h6 { margin: 1.4rem 0 .5rem; font-size: .85rem; }
 .heading-anchor { position: absolute; left: -1.2rem; color: var(--text-subtle); text-decoration: none; opacity: 0; font-family: var(--mono); }
 :is(h2,h3,h4,h5,h6):hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
 p { max-width: var(--measure); margin: 0 0 1rem; }
 strong { font-weight: 680; }
-em { font-family: inherit; }
+em { font-family: var(--heading); }
 code {
   padding: .08rem .25rem; color: var(--accent-strong); background: var(--accent-soft);
   font: .82em/1.4 var(--mono); overflow-wrap: anywhere;
@@ -277,25 +288,160 @@ ul, ol { max-width: var(--measure); margin: .4rem 0 1.2rem; padding-left: 1.35re
 li { padding-left: .25rem; margin: 0 0 .48rem; }
 li::marker { color: var(--accent); }
 blockquote { max-width: var(--measure); margin: 1.2rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 3px solid var(--accent); color: var(--text-muted); }
-blockquote p { margin: 0; font: italic .96rem/1.58 var(--body); }
+blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
 .raw-prose-note { border-left-color: var(--signal); }
 
-.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: .45rem; }
+.prose-flow {
+  max-width: none;
+  margin: 1rem 0 1.5rem;
+  orphans: 3;
+  widows: 3;
+}
+.prose-flow > p {
+  max-width: none;
+  margin: 0 0 1em;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+.prose-flow > p:last-child { margin-bottom: 0; }
+
+.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0; }
 table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.48; }
 caption { padding: .55rem 0; color: var(--text-subtle); text-align: left; font: .65rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
 th { padding: .6rem .7rem; color: var(--text-muted); border-bottom: 1px solid var(--rule-strong); text-align: left; vertical-align: bottom; font: 650 .65rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 td { padding: .7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-td:first-child, th:first-child { padding-left: .15rem; }
+td:first-child, th:first-child { padding-left: .7rem; }
 .section-current-state .table-wrap { max-width: 54rem; }
 .section-current-state table { font-size: .92rem; }
 .section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .section-coverage-heatmap table td:not(:first-child), .section-coverage-heatmap table th:not(:first-child) { text-align: center; }
 
+.record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.record {
+  display: grid; grid-template-columns: minmax(11.5rem, .34fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule);
+}
+.record:last-child { border-bottom: 0; }
+.record-meta { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
+.record-primary code { font-size: .75rem; }
+.record-facts { margin: .7rem 0 0; }
+.record-facts > div { display: grid; grid-template-columns: 7.25rem minmax(0, 1fr); gap: .65rem; align-items: center; padding: .23rem 0; }
+.record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.record-facts :is(.status, .evidence-label, .severity) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
+.record-field:last-child { border-right: 0; }
+.record-field:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+.record-label { margin: 0 0 .48rem; }
+.record-copy { color: var(--text); line-height: 1.55; }
+.record-copy code { overflow-wrap: anywhere; }
+.record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
+.record-lede { max-width: 54ch; margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+.record-finding .record-fields { display: block; }
+.record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
+.record-finding .record-field + .record-field { margin-top: 1rem; }
+.record-file-ledger { grid-template-columns: minmax(14rem, .42fr) minmax(0, 1fr); }
+.record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
+.record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
+.file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
+.record-subsystem { display: block; }
+.record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
+.record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
+.record-primary-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.record-subsystem .record-facts { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center; margin-top: .55rem; }
+.record-subsystem .record-facts > div { display: flex; grid-template-columns: none; gap: .35rem; align-items: baseline; padding: 0; }
+.record-subsystem .record-facts dt { font-size: .58rem; }
+.record-subsystem .record-facts dd { font-size: .7rem; }
+.record-subsystem .record-fact-id dt, .record-subsystem .record-fact-status dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.record-subsystem .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.summary-list { max-width: 54rem; margin: 1rem 0 1.5rem; border-top: 1px solid var(--rule-strong); }
+.summary-list > div { display: grid; grid-template-columns: minmax(10rem, .42fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.summary-list dt, .summary-list dd { margin: 0; padding: .65rem .75rem; }
+.summary-list dt { color: var(--text-muted); font-weight: 650; }
+.summary-list dd { border-left: 1px solid var(--rule); }
+
+.subsystem-atlas { margin: 1.2rem 0 1.7rem; }
+.atlas-summary, .topology-summary {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid var(--rule); }
+.atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.atlas-region-head {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  padding: .7rem .8rem; background: var(--canvas-subtle); border-bottom: 1px solid var(--rule);
+}
+.atlas-region-head h3 { margin: 0; color: var(--text); font: 600 .86rem/1.3 var(--heading); }
+.atlas-region-count { color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.atlas-list { max-width: none; margin: 0; padding: 0; list-style: none; }
+.atlas-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; align-items: start;
+  min-height: 3.25rem; margin: 0; padding: .68rem .8rem; border-bottom: 1px solid var(--rule);
+}
+.atlas-item:last-child { border-bottom: 0; }
+.atlas-item:focus-within, .atlas-item:hover { background: color-mix(in srgb, var(--accent-soft) 32%, transparent); }
+.atlas-subsystem { min-width: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
+.atlas-subsystem strong { display: block; margin-bottom: .13rem; font: 650 .7rem/1.25 var(--mono); }
+.atlas-depth .status { padding: .08rem .28rem; font-size: .58rem; }
+
+.topology { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.topology-component {
+  display: grid; grid-template-columns: minmax(13rem, .32fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.topology-component:last-child { border-bottom: 0; }
+.topology-hub { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.topology-hub-label, .topology-cross-label {
+  margin: 0 0 .48rem; color: var(--text-subtle);
+  font: 600 .61rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.topology-hub-title { margin: 0; color: var(--text-muted); font: .83rem/1.42 var(--body); }
+.topology-hub-title strong { display: block; margin-bottom: .2rem; font: 650 .78rem/1.25 var(--mono); }
+.topology-hub-count { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.4 var(--mono); }
+.topology-spokes { min-width: 0; }
+.topology-spoke {
+  display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); min-width: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.topology-spoke:last-child { border-bottom: 0; }
+.topology-spoke:focus-within, .topology-spoke:hover { background: color-mix(in srgb, var(--accent-soft) 28%, transparent); }
+.topology-edge-mark {
+  display: flex; align-items: center; justify-content: center; min-height: 5.1rem;
+  color: var(--accent); border-right: 1px solid var(--rule); font: 1.2rem/1 var(--heading);
+}
+.topology-edge-body { min-width: 0; padding: .78rem .9rem .85rem; }
+.topology-edge-head { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; margin: 0 0 .25rem; }
+.topology-edge-key { color: var(--accent-strong); font: 650 .7rem/1.3 var(--mono); }
+.topology-qualifier { color: var(--text-subtle); font: .61rem/1.3 var(--mono); }
+.topology-peer { margin: 0 0 .32rem; color: var(--text-muted); font-size: .8rem; }
+.topology-peer-label { margin-right: .28rem; color: var(--text-subtle); font: .61rem/1.3 var(--mono); text-transform: uppercase; }
+.topology-peer strong { font-family: var(--mono); font-size: .72rem; }
+.topology-object { max-width: 64ch; margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; }
+.topology-cross { grid-column: 1 / -1; padding: .8rem 1rem 1rem; background: color-mix(in srgb, var(--canvas-subtle) 55%, transparent); border-top: 1px solid var(--rule); }
+.topology-cross-list { display: grid; gap: .55rem; }
+.topology-cross-edge { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .7rem; align-items: center; }
+.topology-cross-edge .topology-node:last-child { text-align: right; }
+.topology-cross-relation { min-width: 7rem; color: var(--text-subtle); text-align: center; font: .62rem/1.35 var(--mono); }
+.topology-cross-relation strong { display: block; color: var(--accent-strong); }
+.topology-cross-object { display: block; max-width: 42ch; margin-top: .18rem; color: var(--text-muted); font-family: var(--body); font-size: .72rem; }
+
+.table-key { display: block; color: var(--text); font: 650 .76rem/1.35 var(--mono); letter-spacing: 0; text-transform: none; }
+.table-detail { display: block; margin-top: .28rem; color: var(--text-subtle); font: .68rem/1.4 var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 .status, .evidence-label, .severity {
   display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
-  border: 1px solid currentColor; border-radius: 999px; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
+  border: 1px solid currentColor; border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
 }
 .status::before, .severity::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: currentColor; }
 .status-mapped, .status-ruled-out, .status-resolved { color: var(--good); background: var(--good-soft); }
@@ -323,7 +469,7 @@ td:first-child, th:first-child { padding-left: .15rem; }
 .bar-label, .bar-value { font: .7rem/1.3 var(--mono); }
 .bar-track { height: .5rem; background: var(--canvas-subtle); }
 .bar-fill { height: 100%; background: var(--accent); }
-.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: .45rem; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
+.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
 
 .page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
 .page-foot p { margin: 0; max-width: 52rem; }
@@ -336,18 +482,44 @@ td:first-child, th:first-child { padding-left: .15rem; }
   .js .nav-rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
   .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
   .document { margin-left: 0; }
-  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: color-mix(in srgb, var(--surface) 92%, transparent); border-bottom: 1px solid var(--rule); backdrop-filter: blur(10px); }
-  .mobile-brand { font: 700 1rem/1 var(--heading); }
+  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  .mobile-brand { font: 600 1rem/1 var(--heading); }
   .document-inner { padding: 2.5rem 1.35rem 4rem; }
+  .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1180px) {
+  .prose-flow {
+    column-count: 2;
+    column-gap: clamp(2.75rem, 4.25vw, 4.75rem);
+    column-rule: 1px solid var(--rule);
+  }
+}
+
+@media (min-width: 1760px) {
+  .prose-flow { column-count: 3; }
 }
 
 @media (max-width: 620px) {
-  h1 { font-size: 2.45rem; }
+  h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
   .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
   .relationship-edge { text-align: left; }
   .relationship-edge b { display: inline; margin-right: .4rem; }
   .bar-row { grid-template-columns: 7rem 1fr 2.5rem; }
   .heading-anchor { display: none; }
+  .record { grid-template-columns: 1fr; }
+  .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-fields { grid-template-columns: 1fr; }
+  .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-field:last-child { border-bottom: 0; }
+  .summary-list > div { grid-template-columns: 1fr; }
+  .summary-list dd { padding-top: 0; border-left: 0; }
+  .atlas-regions { grid-template-columns: 1fr; }
+  .topology-component { grid-template-columns: 1fr; }
+  .topology-hub { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .topology-cross-edge { grid-template-columns: 1fr; }
+  .topology-cross-edge .topology-node:last-child { text-align: left; }
+  .topology-cross-relation { text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -359,7 +531,7 @@ td:first-child, th:first-child { padding-left: .15rem; }
   .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
   .document { margin: 0; }
   .document-inner { width: auto; padding: 0; }
-  .content section, .figure, .table-wrap { break-inside: avoid-page; }
+  .content section, .figure, .table-wrap, .record { break-inside: avoid-page; }
   a { color: inherit; text-decoration: none; }
 }
 """
@@ -535,6 +707,23 @@ def _inline(text: str) -> str:
         text,
     )
 
+    # Retained survey prose may use durable schema vocabulary. Translate it at
+    # the human projection boundary without rewriting the Markdown record.
+    display_phrases = {
+        "concern dispositions": "concern review",
+        "evidence dispositions": "concern review",
+        "jump-in reading": "start here",
+    }
+    for source, replacement in display_phrases.items():
+        text = re.sub(
+            re.escape(source),
+            lambda match, value=replacement: value.capitalize()
+            if match.group(0)[0].isupper()
+            else value,
+            text,
+            flags=re.IGNORECASE,
+        )
+
     text = html.escape(text, quote=False)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"__(.+?)__", r"<strong>\1</strong>", text)
@@ -557,10 +746,121 @@ def _is_table_separator(line: str) -> bool:
     return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
 
 
+@dataclass(frozen=True)
+class RecordProjection:
+    """Explicit presentation contract for one known Markdown table schema."""
+
+    kind: str
+    key: str
+    metadata: tuple[str, ...]
+    content: tuple[str, ...]
+
+
+def _header_key(value: str) -> str:
+    return re.sub(r"\s+", " ", _plain(value)).strip().lower()
+
+
+_RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
+    ("id", "subsystem", "status", "symptom", "root cause", "ref sha"): RecordProjection(
+        "finding", "id", ("subsystem", "status", "ref sha"), ("symptom", "root cause")
+    ),
+    ("path", "classification", "why in scope", "ref sha"): RecordProjection(
+        "file-ledger", "path", ("classification", "ref sha"), ("why in scope",)
+    ),
+    ("concern", "classification", "evidence quality", "linchpin?", "rationale"): RecordProjection(
+        "concern-disposition",
+        "concern",
+        ("classification", "evidence quality", "linchpin?"),
+        ("rationale",),
+    ),
+    ("symbol", "role", "source"): RecordProjection(
+        "structural-inventory", "symbol", ("source",), ("role",)
+    ),
+    ("priority", "id", "name", "status", "scope", "jump-in", "findings"): RecordProjection(
+        "subsystem",
+        "name",
+        ("id", "status", "findings", "priority"),
+        ("scope", "jump-in"),
+    ),
+    ("code", "category", "origin", "discovered in", "notes"): RecordProjection(
+        "concern", "code", ("category", "origin", "discovered in"), ("notes",)
+    ),
+    ("code", "category", "discovered in", "notes"): RecordProjection(
+        "concern", "code", ("category", "discovered in"), ("notes",)
+    ),
+    ("code", "category", "territory", "codebase-specific probe (abbreviated)", "primary subsystems"): RecordProjection(
+        "concern",
+        "code",
+        ("category", "territory", "primary subsystems"),
+        ("codebase-specific probe (abbreviated)",),
+    ),
+    ("territory", "verdict", "derived", "rationale"): RecordProjection(
+        "territory", "territory", ("verdict", "derived"), ("rationale",)
+    ),
+    ("id", "sev", "subsystem", "one-line"): RecordProjection(
+        "finding-summary", "id", ("sev", "subsystem"), ("one-line",)
+    ),
+    ("#", "category", "question", "resolution", "answer"): RecordProjection(
+        "open-question", "#", ("category", "resolution"), ("question", "answer")
+    ),
+    ("seam", "shared object", "kind", "parties", "assessable?", "notes"): RecordProjection(
+        "seam", "seam", ("kind", "parties", "assessable?"), ("shared object", "notes")
+    ),
+}
+
+
+_SUMMARY_LIST_PROJECTIONS = {
+    ("metric", "value"),
+    ("status", "what it means"),
+    ("status", "what claims are authorized"),
+    ("mapping status", "authorized claims"),
+    ("quality", "what it means"),
+    ("severity", "typical shape"),
+    ("task", "start here"),
+    ("if you're here because…", "start here"),
+    ("prefix", "maps"),
+    ("exit", "meaning"),
+    ("territory", "attenuating condition"),
+}
+
+
+_LIFECYCLE_TABLE_PROJECTIONS = {
+    ("name", "location", "stores", "lifetime", "populated by", "invalidated by"),
+    ("name", "location", "what it stores", "lifetime", "populated by", "invalidated by"),
+}
+
+
+_SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
+_DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
+_SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+
+
+_DISPLAY_FIELD = {
+    "ref sha": "Revision",
+    "id": "ID",
+    "classification": "Verdict",
+    "evidence quality": "Evidence",
+    "linchpin?": "Linchpin dependency",
+    "why in scope": "Why this file is in scope",
+    "codebase-specific probe (abbreviated)": "What to examine",
+    "jump-in": "Start here",
+    "sev": "Severity",
+    "one-line": "Finding",
+    "assessable?": "Assessment ready",
+    "#": "Number",
+}
+
+
 class MarkdownRenderer:
-    def __init__(self, route_map: dict[str, str], current_html_path: str) -> None:
+    def __init__(
+        self,
+        route_map: dict[str, str],
+        current_html_path: str,
+        repository_url: str | None = None,
+    ) -> None:
         self.route_map = route_map
         self.current_html_path = current_html_path
+        self.repository_url = repository_url.rstrip("/") if repository_url else None
         self.used_slugs: dict[str, int] = {}
 
     def _heading_slug(self, title: str) -> str:
@@ -630,6 +930,388 @@ class MarkdownRenderer:
                 )
                 return f'<figure class="figure"><figcaption class="figure-label">Staleness distribution</figcaption><div class="bar-chart">{bars}</div></figure>'
         return f'<figure class="figure"><figcaption class="figure-label">Diagram source</figcaption><pre class="diagram-source">{html.escape(source)}</pre></figure>'
+
+    def _field_label(self, key: str, kind: str) -> str:
+        if key == "classification" and kind == "file-ledger":
+            return "Review"
+        return _DISPLAY_FIELD.get(key, key.replace("-", " ").capitalize())
+
+    def _github_file_url(self, path: str, revision: str) -> str | None:
+        clean_path = _plain(path)
+        clean_revision = _plain(revision)
+        parts = PurePosixPath(clean_path).parts
+        if (
+            not self.repository_url
+            or not re.fullmatch(r"https://github\.com/[^/]+/[^/]+", self.repository_url)
+            or not re.fullmatch(r"[0-9a-fA-F]{7,40}", clean_revision)
+            or not parts
+            or clean_path.startswith("/")
+            or ".." in parts
+        ):
+            return None
+        return f"{self.repository_url}/blob/{clean_revision}/{quote(clean_path, safe='/')}"
+
+    def _record_list(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+        projection: RecordProjection,
+    ) -> str:
+        keys = [_header_key(header) for header in headers]
+        rendered: list[str] = []
+
+        for row_number, (values, markers) in enumerate(rows, start=1):
+            record = dict(zip(keys, values, strict=True))
+            key_raw = record[projection.key]
+            key_text = _plain(key_raw) or f"Record {row_number}"
+            heading_id = self._heading_slug(f"{projection.kind}-{key_text}")
+
+            facts: list[tuple[str, str, str]] = []
+            if projection.kind == "file-ledger":
+                path = key_text
+                basename = posixpath.basename(path) or path
+                file_url = self._github_file_url(key_raw, record.get("ref sha", ""))
+                filename = f"<code>{html.escape(basename)}</code>"
+                primary = (
+                    f'<a class="file-source-link" href="{html.escape(file_url, quote=True)}" '
+                    f'rel="noreferrer" title="Open {html.escape(path, quote=True)} at the reviewed revision on GitHub">{filename}</a>'
+                    if file_url
+                    else filename
+                )
+                facts.append(("path", "Path", key_raw))
+            elif projection.kind == "open-question":
+                primary = f"Question {html.escape(key_text)}"
+            elif projection.kind == "subsystem":
+                subsystem_id = _plain(record.get("id", ""))
+                route = self._route(subsystem_id)
+                label = _inline(key_raw)
+                primary = (
+                    f'<a class="record-primary-link" href="{html.escape(route, quote=True)}">{label}</a>'
+                    if route
+                    else label
+                )
+            else:
+                primary = _inline(key_raw)
+
+            if projection.kind == "finding":
+                severity = re.match(r"(critical|high|medium|low)(?:\s|$)", caption, re.IGNORECASE)
+                if severity:
+                    facts.append(("severity", "Severity", severity.group(1).upper()))
+
+            for key in projection.metadata:
+                value = record.get(key, "")
+                if not _plain(value):
+                    continue
+                facts.append((key, self._field_label(key, projection.kind), value))
+
+            facts_html = "".join(
+                f'<div class="record-fact record-fact-{html.escape(slugify(key), quote=True)}"><dt>{html.escape(label)}</dt><dd>{_inline(value)}</dd></div>'
+                for key, label, value in facts
+            )
+            meta = (
+                '<header class="record-meta">'
+                f'<h3 class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</h3>'
+                + (f'<dl class="record-facts">{facts_html}</dl>' if facts_html else "")
+                + "</header>"
+            )
+
+            if projection.kind == "finding":
+                symptom = record["symptom"]
+                parts = re.split(r"(?<=[.!?])\s+", symptom, maxsplit=1)
+                lede = f'<p class="record-lede">{_inline(parts[0])}</p>'
+                fields: list[str] = []
+                if len(parts) == 2 and _plain(parts[1]):
+                    fields.append(
+                        '<div class="record-field"><p class="record-label">Observed behavior</p>'
+                        f'<div class="record-copy">{_inline(parts[1])}</div></div>'
+                    )
+                fields.append(
+                    '<div class="record-field"><p class="record-label">Root cause</p>'
+                    f'<div class="record-copy">{_inline(record["root cause"])}</div></div>'
+                )
+                content = f'<div class="record-body">{lede}<div class="record-fields">{"".join(fields)}</div></div>'
+            else:
+                fields = []
+                for key in projection.content:
+                    value = record.get(key, "")
+                    if not _plain(value):
+                        continue
+                    fields.append(
+                        f'<div class="record-field"><p class="record-label">{html.escape(self._field_label(key, projection.kind))}</p>'
+                        f'<div class="record-copy">{_inline(value)}</div></div>'
+                    )
+                content = f'<div class="record-fields">{"".join(fields)}</div>'
+
+            aria = html.escape(f"{projection.kind.replace('-', ' ')} {key_text}", quote=True)
+            rendered.append(
+                "".join(markers)
+                + f'<article class="record record-{projection.kind}" role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
+                + meta
+                + content
+                + "</article>"
+            )
+
+        label = html.escape(caption, quote=True)
+        return f'<div class="record-list record-list-{projection.kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
+
+    def _summary_list(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        items: list[str] = []
+        for values, markers in rows:
+            key, value = values[:2]
+            items.append(
+                "".join(markers)
+                + f'<div><dt>{_inline(key)}</dt><dd>{_inline(value)}</dd></div>'
+            )
+        return (
+            f'<dl class="summary-list" aria-label="{html.escape(caption, quote=True)}">'
+            + "".join(items)
+            + "</dl>"
+        )
+
+    def _subsystem_atlas(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        regions: dict[str, list[tuple[str, str, list[str]]]] = {}
+        for values, markers in rows:
+            region, subsystem, depth = values[:3]
+            regions.setdefault(_plain(region) or "Other", []).append((subsystem, depth, markers))
+
+        region_html: list[str] = []
+        for region, subsystems in regions.items():
+            items = "".join(
+                "".join(markers)
+                + '<li class="atlas-item">'
+                + f'<div class="atlas-subsystem">{_inline(subsystem)}</div>'
+                + f'<div class="atlas-depth">{_inline(depth)}</div>'
+                + "</li>"
+                for subsystem, depth, markers in subsystems
+            )
+            region_html.append(
+                '<section class="atlas-region">'
+                '<header class="atlas-region-head">'
+                f'<h3>{html.escape(region)}</h3>'
+                f'<span class="atlas-region-count">{len(subsystems)} subsystem{"s" if len(subsystems) != 1 else ""}</span>'
+                '</header>'
+                f'<ul class="atlas-list">{items}</ul>'
+                '</section>'
+            )
+
+        label = html.escape(caption, quote=True)
+        return (
+            f'<div class="subsystem-atlas" role="group" aria-label="{label}">'
+            '<div class="atlas-summary">'
+            f'<strong>{sum(len(items) for items in regions.values())} subsystems</strong>'
+            f'<span>{len(regions)} architectural region{"s" if len(regions) != 1 else ""}</span>'
+            '<span>Names open the subsystem report</span>'
+            '</div>'
+            f'<div class="atlas-regions">{"".join(region_html)}</div>'
+            '</div>'
+        )
+
+    @staticmethod
+    def _record_identifier(value: str) -> str:
+        plain = _plain(value)
+        match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
+        return match.group(0) if match else plain
+
+    def _connection_topology(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+        *,
+        kind: str,
+    ) -> str:
+        edges: list[dict[str, Any]] = []
+        nodes: dict[str, str] = {}
+        adjacency: dict[str, set[str]] = {}
+
+        for values, markers in rows:
+            if kind == "seam":
+                key, left, detail, right = values[:4]
+                qualifier = ""
+                directed = False
+            else:
+                left, key, right, qualifier, detail = values[:5]
+                directed = True
+            left_id = self._record_identifier(left)
+            right_id = self._record_identifier(right)
+            nodes.setdefault(left_id, left)
+            nodes.setdefault(right_id, right)
+            adjacency.setdefault(left_id, set()).add(right_id)
+            adjacency.setdefault(right_id, set()).add(left_id)
+            edges.append(
+                {
+                    "key": key,
+                    "left": left_id,
+                    "right": right_id,
+                    "detail": detail,
+                    "qualifier": qualifier,
+                    "directed": directed,
+                    "markers": markers,
+                }
+            )
+
+        components: list[set[str]] = []
+        unseen = set(nodes)
+        while unseen:
+            start = min(unseen)
+            component: set[str] = set()
+            stack = [start]
+            while stack:
+                node = stack.pop()
+                if node in component:
+                    continue
+                component.add(node)
+                stack.extend(sorted(adjacency.get(node, set()) - component, reverse=True))
+            unseen -= component
+            components.append(component)
+        components.sort(key=lambda component: (-len(component), min(component)))
+
+        degree = {node: len(adjacency.get(node, set())) for node in nodes}
+        component_html: list[str] = []
+        for component_number, component in enumerate(components, start=1):
+            hub = sorted(component, key=lambda node: (-degree[node], node))[0]
+            component_edges = [
+                edge for edge in edges
+                if edge["left"] in component and edge["right"] in component
+            ]
+            spokes = [edge for edge in component_edges if hub in {edge["left"], edge["right"]}]
+            cross_edges = [edge for edge in component_edges if edge not in spokes]
+
+            spoke_html: list[str] = []
+            for edge in spokes:
+                peer = edge["right"] if edge["left"] == hub else edge["left"]
+                if edge["directed"]:
+                    outbound = edge["left"] == hub
+                    arrow = "→" if outbound else "←"
+                    peer_label = "To" if outbound else "From"
+                    direction = "Outgoing" if outbound else "Incoming"
+                else:
+                    arrow = "↔"
+                    peer_label = "With"
+                    direction = "Two-way seam"
+                qualifier = (
+                    f'<span class="topology-qualifier">{html.escape(direction)} · {_inline(edge["qualifier"])}</span>'
+                    if _plain(edge["qualifier"])
+                    else f'<span class="topology-qualifier">{html.escape(direction)}</span>'
+                )
+                spoke_html.append(
+                    "".join(edge["markers"])
+                    + '<article class="topology-spoke" role="listitem">'
+                    f'<div class="topology-edge-mark" aria-hidden="true">{arrow}</div>'
+                    '<div class="topology-edge-body">'
+                    '<p class="topology-edge-head">'
+                    f'<span class="topology-edge-key">{_inline(edge["key"])}</span>{qualifier}</p>'
+                    f'<p class="topology-peer"><span class="topology-peer-label">{peer_label}</span>'
+                    f'<span class="topology-node">{_inline(nodes[peer])}</span></p>'
+                    f'<p class="topology-object">{_inline(edge["detail"])}</p>'
+                    '</div></article>'
+                )
+
+            cross_html = ""
+            if cross_edges:
+                cross_items: list[str] = []
+                for edge in cross_edges:
+                    arrow = "→" if edge["directed"] else "↔"
+                    qualifier = f' · {_inline(edge["qualifier"])}' if _plain(edge["qualifier"]) else ""
+                    cross_items.append(
+                        "".join(edge["markers"])
+                        + '<div class="topology-cross-edge">'
+                        f'<span class="topology-node">{_inline(nodes[edge["left"]])}</span>'
+                        '<span class="topology-cross-relation">'
+                        f'<strong>{_inline(edge["key"])}</strong>{html.escape(arrow)}{qualifier}'
+                        f'<span class="topology-cross-object">{_inline(edge["detail"])}</span>'
+                        '</span>'
+                        f'<span class="topology-node">{_inline(nodes[edge["right"]])}</span>'
+                        '</div>'
+                    )
+                cross_html = (
+                    '<div class="topology-cross"><p class="topology-cross-label">Other connection in this area</p>'
+                    f'<div class="topology-cross-list">{"".join(cross_items)}</div></div>'
+                )
+
+            component_label = html.escape(f"Connected area {component_number}", quote=True)
+            component_html.append(
+                f'<section class="topology-component" aria-label="{component_label}">'
+                '<header class="topology-hub">'
+                f'<p class="topology-hub-label">Connected area {component_number} · hub</p>'
+                f'<h3 class="topology-hub-title">{_inline(nodes[hub])}</h3>'
+                f'<p class="topology-hub-count">{len(component)} subsystems · {len(component_edges)} connection{"s" if len(component_edges) != 1 else ""}</p>'
+                '</header>'
+                f'<div class="topology-spokes" role="list">{"".join(spoke_html)}</div>'
+                + cross_html
+                + '</section>'
+            )
+
+        noun = "seams" if kind == "seam" else "dependencies"
+        label = html.escape(caption, quote=True)
+        return (
+            f'<div class="topology topology-{kind}" role="group" aria-label="{label}">'
+            '<div class="topology-summary">'
+            f'<strong>{len(components)} connected area{"s" if len(components) != 1 else ""}</strong>'
+            f'<span>{len(nodes)} subsystems · {len(edges)} {noun}</span>'
+            '<span>Follow any name to its subsystem report</span>'
+            '</div>'
+            + "".join(component_html)
+            + '</div>'
+        )
+
+    def _table(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        signature = tuple(_header_key(header) for header in headers)
+        if signature == _SUBSYSTEM_ATLAS_PROJECTION:
+            return self._subsystem_atlas(rows, caption)
+        if signature == _DEPENDENCY_TOPOLOGY_PROJECTION:
+            return self._connection_topology(rows, caption, kind="dependency")
+        if signature == _SEAM_TOPOLOGY_PROJECTION:
+            return self._connection_topology(rows, caption, kind="seam")
+        projection = _RECORD_PROJECTIONS.get(signature)
+        if projection:
+            return self._record_list(headers, rows, caption, projection)
+        if signature in _SUMMARY_LIST_PROJECTIONS:
+            return self._summary_list(rows, caption)
+
+        lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
+        visible_headers = [header for index, header in enumerate(headers) if not lifecycle or index != 1]
+        head = "".join(f'<th scope="col">{_inline(cell)}</th>' for cell in visible_headers)
+        table_rows: list[str] = []
+        for values, markers in rows:
+            cells: list[str] = []
+            for index, value in enumerate(values):
+                if lifecycle and index == 1:
+                    continue
+                label = _plain(headers[index])
+                if lifecycle and index == 0:
+                    location = values[1]
+                    location_html = (
+                        f'<span class="table-detail"><span class="visually-hidden">Location: </span>{_inline(location)}</span>'
+                        if _plain(location)
+                        else ""
+                    )
+                    cells.append(
+                        f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inline(value)}</span>{location_html}</th>'
+                    )
+                else:
+                    cells.append(
+                        f'<td data-label="{html.escape(label, quote=True)}">{_inline(value)}</td>'
+                    )
+            table_rows.append("".join(markers) + f'<tr>{"".join(cells)}</tr>')
+        kind = " lifecycle-table" if lifecycle else ""
+        return (
+            f'<div class="table-wrap{kind}"><table><caption>{html.escape(caption)}</caption>'
+            f'<thead><tr>{head}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>'
+        )
 
     def render(self, markdown: str) -> tuple[str, str]:
         lines = markdown.splitlines()
@@ -709,16 +1391,11 @@ class MarkdownRenderer:
                     pending_markers = []
                     i += 1
                 caption = current_section.replace("-", " ") or "Data"
-                head = "".join(f"<th scope=\"col\">{_inline(cell)}</th>" for cell in headers)
-                table_rows = []
+                normalized_rows = []
                 for values, markers in rows:
                     values += [""] * max(0, len(headers) - len(values))
-                    cells = "".join(
-                        f'<td data-label="{html.escape(_plain(headers[n]), quote=True)}">{_inline(value)}</td>'
-                        for n, value in enumerate(values[: len(headers)])
-                    )
-                    table_rows.append("".join(markers) + f"<tr>{cells}</tr>")
-                body.append(f'<div class="table-wrap"><table><caption>{html.escape(caption)}</caption><thead><tr>{head}</tr></thead><tbody>{"".join(table_rows)}</tbody></table></div>')
+                    normalized_rows.append((values[: len(headers)], markers))
+                body.append(self._table(headers, normalized_rows, caption))
                 continue
 
             list_match = re.match(r"^\s*([-*+] |\d+\. )(.*)$", line)
@@ -762,7 +1439,39 @@ class MarkdownRenderer:
 
         if in_section:
             body.append("</section>")
-        return title, "\n".join(body)
+        return title, "\n".join(_compose_prose_runs(body))
+
+
+def _compose_prose_runs(elements: list[str]) -> list[str]:
+    """Give finite runs of sustained prose an editorial multicolumn surface.
+
+    Source order remains ordinary paragraphs. Only adjacent top-level
+    paragraphs with enough text to form a useful reading field are wrapped;
+    headings, lists, records, tables, figures, and code always terminate a run.
+    """
+
+    composed: list[str] = []
+    run: list[str] = []
+
+    def flush() -> None:
+        if not run:
+            return
+        character_count = sum(len(re.sub(r"<[^>]+>", "", paragraph)) for paragraph in run)
+        use_columns = (len(run) >= 2 and character_count >= 700) or character_count >= 1300
+        if use_columns:
+            composed.append('<div class="prose-flow">' + "".join(run) + "</div>")
+        else:
+            composed.extend(run)
+        run.clear()
+
+    for element in elements:
+        if element.startswith("<p>") and element.endswith("</p>"):
+            run.append(element)
+            continue
+        flush()
+        composed.append(element)
+    flush()
+    return composed
 
 
 def _page_eyebrow(page: SitePage) -> str:
@@ -900,7 +1609,11 @@ def render_html_projection(
         if not source.is_file():
             warnings.append(f"HTML source missing for {page.markdown_path}")
             continue
-        parser = MarkdownRenderer(route_map, page.html_path)
+        parser = MarkdownRenderer(
+            route_map,
+            page.html_path,
+            repository_url=str(context.get("repository_url") or "") or None,
+        )
         source_title, body = parser.render(source.read_text())
         document = _shell(page, pages, source_title, body, context)
         target = output / page.html_path

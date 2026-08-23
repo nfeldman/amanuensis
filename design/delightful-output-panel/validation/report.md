@@ -1,7 +1,7 @@
 # Prototype validation report
 
 **Prototype:** `design/delightful-output-panel/prototype/index.html` in the isolated worktree  
-**Validated:** 2026-08-22  
+**Validated:** 2026-08-23
 **Prototype SHA-256:** `e8eddfe2fcc3a285613b4377642ed196d18173a63929c4ecdcdd15ed0e0f92c6`
 
 ## Automated result
@@ -29,9 +29,42 @@ A second stdlib HTML parser stack check reported zero unmatched or misnested exp
 
 ## Current-publication fixture
 
-The compact first-page fixture at `../prototype-current/index.html` was added after the report advanced to `34 / 34` mapped subsystems and 15 open findings (one critical, two high), then revised on 2026-08-23 after product review separated the IA result from the UI direction. Its current SHA-256 is `a535b4c32d00263fdbaa2061f7e498dd04562327c04731b42fd22ebffcf666a6`.
+The compact first-page fixture at `../prototype-current/index.html` was added after the report advanced to `34 / 34` mapped subsystems and 15 open findings (one critical, two high), then revised on 2026-08-23 after product review separated the IA result from the UI direction. Its current SHA-256 is `22da33881a7bb51088e6e025f223339e69f2124c4a89da8dafd56cc22bb57d5e`.
 
-Fourteen current-fixture assertions pass inside the 40-check validator: document structure, project-first identity, secondary Amanuensis identity, bounded navigation, three semantic finding records, retained `Decision docket`/`Warrants` vocabulary, direct practitioner labels, retired clinical labels, absence of paper/editorial visual tokens, no JavaScript requirement, no remote assets, unique IDs, and resolved fragments. This is markup/read-back validation, not a visual or usability result.
+Sixteen current-fixture assertions pass inside the 42-check validator: document structure, project-first identity, secondary Amanuensis identity, bounded navigation, three semantic finding records, retained `Decision docket`/`Warrants` vocabulary, direct practitioner labels, retired clinical labels, absence of literal paper/texture tokens, presence of the green-gray palette and mid-century display stack, square container geometry, no JavaScript requirement, no remote assets, unique IDs, and resolved fragments. This is markup/read-back validation, not a visual or usability result.
+
+## Production projection result
+
+The typed record grammar was applied to the active AxiomDB publication and the
+materializer's independent state, coverage, and content read-back passed with
+zero mismatches. Inspection of the generated HTML found:
+
+- 15 finding articles and no table on `findings.html`;
+- 19 file-ledger records, 12 concern-disposition records, and 13 structural-
+  inventory records on the W-01 subsystem page;
+- one lifecycle table retained on W-01; and
+- the 34-by-36 concern coverage heatmap retained as a table on `concerns.html`,
+  while concern prose on the checklist becomes a record register.
+
+The later typography and terrain pass additionally verified in generated
+markup that:
+
+- title and orientation copy have no inherited reading-measure cap;
+- finite narrative runs retain ordinary source order and progressively become
+  two columns from `1180px` and three from `1760px`;
+- `master-plan.html` contains 34 subsystem records and no table;
+- AxiomDB's zero recorded dependency edges produce a linked 34-subsystem atlas
+  rather than an inferred graph;
+- seven recorded seams produce four linked connected areas;
+- file-ledger identities open the reviewed revision on AxiomDB's verified
+  GitHub origin; and
+- the HTML projection contains none of the legacy reader-facing phrases
+  `Concern dispositions`, `Jump-in reading`, `evidence dispositions`, or
+  `Fix awaiting verification`.
+
+The materializer integration test includes red-capable assertions for both
+sides of the grammar: prose-heavy findings must not regress to a table, and
+lifecycle data must remain a table.
 
 ## Visual result
 
@@ -59,18 +92,27 @@ These are artifact walkthroughs, not human-subject results.
 
 ## Custody check
 
-Panel/research changes are contained in the isolated worktree:
+The original panel/research pass was contained in:
 
 - `design/delightful-output-panel/`
 - `scholiast/task-workspace-reorientation-indexes/`
 
-`materializer/amanuensis_materializer/html_projection.py` was already an untracked working-tree file and was read only by this panel. No production Amanuensis renderer or AxiomDB report file was modified by the rerun.
+The later product revision deliberately changed the production renderer and
+added a separate research workspace at
+`scholiast/report-record-presentation/`. The active AxiomDB HTML companions and
+projection manifests were regenerated from its existing conspectus state; no
+survey database or authored Markdown source was rewritten by the presentation
+change.
 
 ## Remaining validation limits
 
 - No representative-reader study was performed.
 - No assistive-technology conformance claim is made.
-- Narrow responsive states are implemented and structurally inspected, but the available headless Firefox invocation did not produce a screenshot; browser-specific narrow visual QA remains.
+- Narrow responsive states are implemented and structurally inspected, but
+  automated inspection of the active local `file://` projection was blocked by
+  the browser security boundary; browser-specific optical QA remains.
 - Forced colors, 200%/400% zoom, screen-reader order, and print pagination remain pre-production gates.
 - Device-local trail pinning has parse-level validation; the production privacy/persistence policy remains unresolved.
-- The current-publication fixture could not be rendered through the in-app browser because local `file://` navigation was rejected by that browser's URL policy; no live-browser claim is made for it.
+- The current-publication fixture is available as a local `file://` page, but
+  this pass makes no automated live-browser or representative-reader claim for
+  it.

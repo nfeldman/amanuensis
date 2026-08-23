@@ -81,7 +81,10 @@ check(/<strong>AxiomDB<\/strong><span>Architecture survey · Amanuensis<\/span>/
 check(/Decision docket/.test(currentHtml) && /<summary>Warrants<\/summary>/.test(currentHtml), 'current fixture: retained precise register');
 check(/Project status/.test(currentHtml) && /Continue reviewing/.test(currentHtml) && /Supporting evidence/.test(currentHtml), 'current fixture: direct practitioner labels');
 check(!/(?:Casefiles?|Resume this report|Evidence trail|Unseen territory|Field Docket)/i.test(currentHtml), 'current fixture: retired labels are absent');
-check(!/(?:--paper|--ink|ui-serif|Georgia|linear-gradient)/i.test(currentHtml), 'current fixture: paper/editorial visual tokens are absent');
+check(!/(?:--paper|--ink|linear-gradient|background-image)/i.test(currentHtml), 'current fixture: literal paper and texture tokens are absent');
+check(/Iowan Old Style/.test(currentHtml) && /#235b58/i.test(currentHtml), 'current fixture: green-gray palette and mid-century type are present');
+const currentRadii = [...currentHtml.matchAll(/border-radius:\s*([^;}]+)/gi)].map((match) => match[1].trim());
+check(currentRadii.every((value) => /^0(?:\D|$)/.test(value)), 'current fixture: geometry stays square', currentRadii.join(', '));
 check((currentHtml.match(/<nav\b/g) || []).length === 1 && (currentHtml.match(/<nav[\s\S]*?<\/nav>/g)?.[0].match(/<a\b/g) || []).length === 4, 'current fixture: navigation is bounded');
 check((currentHtml.match(/<article\b/g) || []).length === 3, 'current fixture: three semantic finding records');
 check(!/<script\b/.test(currentHtml), 'current fixture: no JavaScript required');

@@ -32,13 +32,22 @@ verify-before-apply, exact fan-in, and read-back of delivered artifacts.
   `/Users/nfeldman/repos/amanuensis/design/delightful-output-panel/`
 - Research custody for the current reorientation facet:
   `scholiast/task-workspace-reorientation-indexes/` in this isolated worktree.
-- Production Amanuensis and AxiomDB files: read-only for this panel.
+- Research custody for record presentation:
+  `scholiast/report-record-presentation/` in the Amanuensis repository.
+- The initial panel treated production Amanuensis and AxiomDB files as
+  read-only. Product revision work now lands separately in the production
+  renderer and is validated against the active AxiomDB projection.
 
 ## Outcome
 
 The panel initially selected **Field Docket**: decision-first content inside a stable map. Subsequent product review separated the information-architecture result from the interface direction. The IA findings remain useful; the busy paper/editorial treatment and clinical vocabulary do not.
 
-`revision-2026-08-23.md` is the current product ruling. It keeps project-first identity, distinct status dimensions, consequential findings, supporting evidence, and report-owned return paths. The revised interface uses a neutral software-tool visual language and a software-practitioner register, with precise textual-critical terms where useful. `Decision docket` and `Warrants` remain deliberate exceptions.
+`revision-2026-08-23.md` is the current product ruling. It keeps project-first identity, distinct status dimensions, consequential findings, supporting evidence, and report-owned return paths. The revised interface is a clean green-gray software surface with square geometry, restrained outlines, and mid-century display typography—not a simulated paper artifact. Its register is that of a software practitioner, with precise textual-critical terms where useful. `Decision docket` and `Warrants` remain deliberate exceptions.
+
+The record-presentation survey adds the missing implementation rule: the HTML
+projection is organized around reader operations, not database columns.
+Narrative rows become ruled registers, compact facts become definition lists,
+and genuine cross-record comparisons remain semantic tables.
 
 The prototype freezes the coherent AxiomDB state captured at 2026-08-22 18:15:05 EDT: 25/34 mapped and 14 confirmed open findings, including `V02-1` critical and `R04-1` high. The source survey remained active after capture.
 
@@ -54,6 +63,8 @@ The prototype freezes the coherent AxiomDB state captured at 2026-08-22 18:15:05
 - `source-capture.md` — frozen representative facts, timestamps, hashes, and the moving-source caveat.
 - `current-report-stress-test.md` — applies the prototype anatomy to the later 34/34, 15-finding AxiomDB publication.
 - `actionable-redesign.md` — staged renderer seams, component contracts, and red-capable test order.
+- `../../scholiast/report-record-presentation/conspectus.md` — corpus-backed
+  table/register/definition-list grammar and per-schema decisions.
 
 ### Panel record
 
@@ -78,3 +89,11 @@ The current narrow research facet is intentionally outside this design directory
 `scholiast/task-workspace-reorientation-indexes/`
 
 It contains the conspectus, append-only source ledger, seven-field claims, notes, counterevidence pass, and explicit static-report transfer boundary. A previously named `delightful-orienting-codebase-reports` workspace was not present when checked; the rerun synthesis therefore supersedes any earlier references to claims from that missing path.
+
+The distinct record-presentation facet is at:
+
+`scholiast/report-record-presentation/`
+
+It measures the current AxiomDB report corpus and establishes typed projections
+for findings, file ledgers, concern dispositions, inventories, lifecycle data,
+and genuine matrices without importing the broader reorientation context.

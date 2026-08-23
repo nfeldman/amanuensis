@@ -22,6 +22,8 @@ The orchestrator:
 """
 from __future__ import annotations
 
+import re
+import subprocess
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -45,6 +47,39 @@ from .slugs import matrix_page, subsystem_page
 from .xref import XrefIndex, resolve_all
 
 PageFn = Callable[[], RenderResult]
+
+
+def _github_repository_url(workspace: Path) -> str | None:
+    """Return a verified github.com web URL for the workspace's origin."""
+
+    if not workspace.is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    remote = result.stdout.strip()
+    patterns = (
+        r"^git@github\.com:(?P<path>[^\s]+)$",
+        r"^ssh://git@github\.com/(?P<path>[^\s]+)$",
+        r"^https?://github\.com/(?P<path>[^\s]+)$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, remote, re.IGNORECASE)
+        if not match:
+            continue
+        path = re.sub(r"\.git$", "", match.group("path").rstrip("/"), flags=re.IGNORECASE)
+        if path.count("/") == 1:
+            return f"https://github.com/{path}"
+    return None
 
 
 @dataclass
@@ -188,6 +223,7 @@ class Materializer:
                 **git,
                 "project_name": project_name,
                 "stale_entry_count": int(stale["n"] or 0),
+                "repository_url": _github_repository_url(workspace),
             }
             site_pages = [
                 SitePage(
@@ -324,7 +360,7 @@ class Materializer:
                     xref_display=f"{s['id']}",
                     title=s["name"],
                     label=s["name"],
-                    hint=f"Survey record for {s['name']}: scope, reading path, evidence dispositions, findings, boundaries, vocabulary, and notes.",
+                    hint=f"Survey record for {s['name']}: scope, reading path, concern review, findings, boundaries, vocabulary, and notes.",
                     group="Subsystems",
                     kind="subsystem",
                     status=s["status"],

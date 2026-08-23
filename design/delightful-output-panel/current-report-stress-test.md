@@ -29,17 +29,30 @@ The overview duplicates its orientation hint, then presents a six-row count tabl
 
 `V02-1` places a long symptom and an even longer three-part causal chain inside a six-column row. Two high findings follow in the same geometry. On narrow screens the table wrapper permits horizontal panning, but that is not a readable decision surface.
 
-**Prototype result:** the semantic finding record keeps severity, resolution, consequence, reachability, evidence, uncertainty, and next safe move in a vertical sequence. This direction survives the current report unchanged.
+**Applied result:** the production projection now maps each finding row to one
+semantic article. Identity/status facts stay compact; the first observed-
+behavior sentence becomes a lede; the rest of the observed behavior and root
+cause follow at a stable reading measure. It does not force the two long prose
+fields into parallel columns or manufacture an unsupported title.
 
-**Red acceptance condition:** every durable finding row maps to exactly one semantic article and stable anchor; `V02-1` is readable at 375 px without horizontal panning.
+**Red acceptance condition:** every durable finding row maps to exactly one semantic article and stable anchor; `V02-1` is readable at 375 px without horizontal panning. Structural tests now cover the article mapping; browser-level narrow reading remains a pre-publication gate.
 
-### 3. Architecture: the promised atlas has no usable plate
+### 3. Architecture: place and relation were conflated
 
-The runtime map is a placeholder. The subsystem dependency graph becomes a raw `Diagram source` block containing nodes but no useful rendered relationships. The seam graph later on the page is more informative than the promised primary object.
+The previous runtime map was a placeholder. The subsystem dependency graph
+became a raw `Diagram source` block containing nodes but no useful rendered
+relationships. The seam graph later on the page was more informative than the
+promised primary object.
 
 **Prototype result:** a small region atlas is useful as a coordinate, but a heroic dependency graph should not be the entrance. The production architecture view needs a linked plate only when edges exist, plus an equivalent textual relation list.
 
 **Red acceptance condition:** no production architecture page labels raw Mermaid as the delivered diagram; every visible edge has a readable equivalent and local link.
+
+**Applied result:** the renderer now fails closed when dependency edges are
+absent: it says so and emits a linked subsystem atlas grouped by recorded
+architectural region. Recorded seams render as linked connected areas with a
+named hub, readable endpoints, and shared-object text. It does not infer
+dependencies from layer, naming, or seam proximity.
 
 ### 4. Subsystem: structured state and embedded prose disagree
 

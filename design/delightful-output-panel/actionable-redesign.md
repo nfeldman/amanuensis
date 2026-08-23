@@ -2,14 +2,14 @@
 
 ## Outcome
 
-Use the IA findings as the structural contract, not as a mandate for the panel's visual language. Ship a typed, report-owned reading surface with project-first identity, direct software terminology, and a quiet contemporary tool interface. Keep **Decision docket** and **Warrants** where they are semantically exact. The first production increment should improve truthfulness and reading order before adding new data models.
+Use the IA findings as the structural contract, not as a mandate for the panel's visual language. Ship a typed, report-owned reading surface with project-first identity, direct software terminology, green-gray color, square geometry, restrained rules, and mid-century display typography. Keep **Decision docket** and **Warrants** where they are semantically exact. The first production increment improves truthfulness and reading order before adding new data models.
 
 ## Renderer seams
 
 | Increment | Primary seam | Change | Test first |
 | --- | --- | --- | --- |
 | 1. Truthful shell | `html_projection.py` snapshot/page shell | Remove duplicate hint; scope freshness copy; accessible badge definitions; explicit zero-state basis | Prohibited-copy and badge-domain fixtures |
-| 2. Typed findings | `renderers.py::render_findings` plus HTML projection | Replace six-column prose rows with semantic finding records; use already-selected `f.*` fields | One database row ↔ one article/marker/anchor/evidence route |
+| 2. Typed records | `MarkdownRenderer._table()` plus HTML projection | Replace prose-heavy schema rows with explicit finding, file, disposition, inventory, and subsystem registers; preserve genuine comparisons as tables | Known schema ↔ one typed projection; unknown table remains a table |
 | 3. Action overview | overview renderer/query | Critical/high open records, decisions, assumptions, active-run caveat; visible ordering rule | Recomputed database counts and active-session ordering |
 | 4. Subsystem anatomy | `SitePage.kind == subsystem` projection | Current status, action summary, purpose/boundary, jump-in reading, findings, seams, files, dispositions, history | Current-vs-historical state conflict fixture |
 | 5. Mobile behavior | embedded CSS/JS | Inert closed rail; dialog/drawer focus lifecycle; 44 px controls; announced search results | Headless keyboard traversal at 375/768/1024 px |
@@ -21,7 +21,8 @@ Use the IA findings as the structural contract, not as a mandate for the panel's
 ### `FindingRecord`
 
 - `<article data-finding-id="…" aria-labelledby="…">`
-- consequence-led heading;
+- compact finding identity and a consequence-led lede; do not invent a title
+  from source material that has no authored title field;
 - separate severity and resolution labels;
 - `Why this matters`, `Observed behavior`, `Root cause`, `Warrants`, and `Supporting evidence` regions;
 - business context, primary files, checked SHA, assumptions/decisions, and subsystem link;
@@ -48,7 +49,7 @@ No aggregate status or color-only meaning.
 
 ## Prototype/testing order
 
-1. Bind the retained IA anatomy to a current AxiomDB fixture (`34/34`, 15 findings, one critical, two high, active session) using the revised neutral software-tool visual language.
+1. Bind the retained IA anatomy to a current AxiomDB fixture (`34/34`, 15 findings, one critical, two high, active session) using the revised green-gray, square-edged software-publication language.
 2. Run the five reader-task fixtures in `task-tests.md`; add a sixth state-conflict fixture for W-01.
 3. Run structural validation and readback red arms.
 4. Run browser keyboard/responsive checks once local-page execution is available.

@@ -170,7 +170,19 @@ def main() -> None:
         # Write two prose artifacts to prove passthrough works.
         (storage / "entry-point.md").write_text(
             "# Entry point\n\nThis is a fictional test codebase with three subsystems: "
-            "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n"
+            "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n\n"
+            "## File ledger\n\n"
+            "| Path | Classification | Why in scope | Ref SHA |\n"
+            "|---|---|---|---|\n"
+            "| `scheduler/main.ts` | examined | Owns the job dispatch boundary and its auth call. | `deadbeef` |\n\n"
+            "## State containers\n\n"
+            "| Name | Location | Stores | Lifetime | Populated by | Invalidated by |\n"
+            "|---|---|---|---|---|---|\n"
+            "| `JobQueue` | `scheduler/main.ts` | Pending jobs | Process | Dispatcher | Restart |\n\n"
+            "## Non applicable territories\n\n"
+            "| Territory | Attenuating condition |\n"
+            "|---|---|\n"
+            "| Native memory | The runtime owns allocation for this service. |\n"
         )
         (storage / "onboarding-report.md").write_text(
             "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
@@ -209,7 +221,12 @@ def main() -> None:
         assert "Find a page" in html_index
         assert "Reading hint" not in html_index
         assert "Living architecture" not in html_index
-        assert "--paper" not in html_index and "Iowan Old Style" not in html_index
+        assert "--paper" not in html_index and "Iowan Old Style" in html_index
+        assert "--accent: #235b58" in html_index
+        assert "column-count: 2" in html_index and "column-count: 3" in html_index
+        assert "--page: 104rem" in html_index
+        assert ".page-hint { max-width: none" in html_index
+        assert "border-radius: 999px" not in html_index
         assert ".js .nav-rail" in html_index, "mobile drawer must be enhancement-only"
         assert "navRail.inert" in html_index, "closed enhanced drawer must leave the tab order"
         assert "setMenuOpen(false, true)" in html_index, "Escape must close the drawer and restore focus"
@@ -218,9 +235,67 @@ def main() -> None:
         html_findings = (docs / "findings.html").read_text()
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
         assert "status-open" in html_findings
-        assert "<table" in html_findings and "<p>|" not in html_findings
+        assert 'class="record-list record-list-finding"' in html_findings
+        assert 'class="record record-finding"' in html_findings
+        assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
+        assert 'class="severity severity-high"' in html_findings
+        assert "<table" not in html_findings and "<p>|" not in html_findings
+        html_entry = (docs / "entry-point.html").read_text()
+        assert 'class="record-list record-list-file-ledger"' in html_entry
+        assert "scheduler/main.ts" in html_entry and "Why this file is in scope" in html_entry
+        assert 'class="table-wrap lifecycle-table"' in html_entry
+        assert "Location: " in html_entry and "JobQueue" in html_entry
+        assert 'class="summary-list"' in html_entry and "Native memory" in html_entry
+        html_master_plan = (docs / "master-plan.html").read_text()
+        assert 'class="record-list record-list-subsystem"' in html_master_plan
+        html_b02 = (docs / "subsystems/b02-auth-service.html").read_text()
+        assert 'class="record-list record-list-concern-disposition"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
-        assert "relationship-map" in html_architecture
+        assert '<div class="topology topology-dependency"' in html_architecture
+        assert '<div class="topology topology-seam"' in html_architecture
+        assert "jobs_queue" in html_architecture and "Connected area" in html_architecture
+
+        # A nodes-only dependency source must fail closed into a linked layer
+        # atlas rather than exposing raw Mermaid or implying edges.
+        from amanuensis_materializer.diagrams import subsystem_dependency_graph
+        from amanuensis_materializer.html_projection import MarkdownRenderer
+
+        atlas_db = sqlite3.connect(storage / "memory.db")
+        atlas_db.execute("DELETE FROM xrefs")
+        atlas_markdown = subsystem_dependency_graph(atlas_db)
+        atlas_db.rollback()
+        atlas_db.close()
+        _, atlas_body = MarkdownRenderer({}, "architecture.html").render(
+            "# Architecture\n\n## Subsystem atlas\n\n" + atlas_markdown
+        )
+        assert 'class="subsystem-atlas"' in atlas_body
+        assert "not an inferred dependency graph" in atlas_body
+        assert "<table" not in atlas_body and "Diagram source" not in atlas_body
+
+        _, github_ledger = MarkdownRenderer(
+            {}, "entry-point.html", repository_url="https://github.com/acme/fictional"
+        ).render(
+            "# Files\n\n## File ledger\n\n"
+            "| Path | Classification | Why in scope | Ref SHA |\n"
+            "|---|---|---|---|\n"
+            "| `scheduler/main.ts` | examined | Owns dispatch. | `deadbeef` |\n"
+        )
+        assert 'href="https://github.com/acme/fictional/blob/deadbeef/scheduler/main.ts"' in github_ledger
+        long_paragraph = "A precise architectural account remains readable when its evidence and limits stay adjacent. " * 10
+        _, column_prose = MarkdownRenderer({}, "entry-point.html").render(
+            "# Reading field\n\n## Account\n\n"
+            + long_paragraph
+            + "\n\n"
+            + long_paragraph
+        )
+        assert '<div class="prose-flow">' in column_prose
+        assert column_prose.index(long_paragraph.strip()) < column_prose.rindex(long_paragraph.strip())
+        _, humanized_prose = MarkdownRenderer({}, "entry-point.html").render(
+            "# Record\n\n## History\n\n"
+            "**Concern dispositions** were recorded after **Jump-in reading**."
+        )
+        assert "Concern review" in humanized_prose and "Start here" in humanized_prose
+        assert "Concern dispositions" not in humanized_prose and "Jump-in reading" not in humanized_prose
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
         htr = (docs / "how-to-read.md").read_text()
