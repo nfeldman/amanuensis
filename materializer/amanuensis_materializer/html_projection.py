@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.8.0"
+HTML_PROJECTION_VERSION = "1.9.0"
 
 
 @dataclass(frozen=True)
@@ -109,12 +109,36 @@ DISPLAY_STATUS = {
     "verified-fixed": "Verified fixed",
 }
 
+STATUS_AXIS = {
+    **{
+        key: "survey"
+        for key in (
+            "unmapped", "scoping", "structural", "concerns",
+            "adversarial", "mapped", "deferred",
+        )
+    },
+    **{
+        key: "disposition"
+        for key in (
+            "confirmed-bug", "confirmed-acceptable", "ruled-out",
+            "out-of-scope", "unresolved-competition",
+        )
+    },
+    **{
+        key: "resolution"
+        for key in (
+            "open", "fixed", "resolved", "accepted",
+            "fixed-pending-verification", "verified-fixed",
+        )
+    },
+}
+
 _CSS = r"""
 :root {
   color-scheme: light dark;
   --canvas: #f2f4f1;
-  --canvas-subtle: #e7ebe7;
-  --surface: #fbfcf8;
+  --canvas-subtle: #e9e9e9;
+  --surface: #fbfcf9;
   --text: #18221f;
   --text-muted: #52615c;
   --text-subtle: #74817d;
@@ -124,15 +148,37 @@ _CSS = r"""
   --accent-strong: #123f3d;
   --accent-soft: #d8e8e4;
   --signal: #9b5b27;
-  --signal-soft: #f3e4d3;
-  --caution: #75651f;
-  --caution-soft: #eee8ce;
-  --danger: #9c3d37;
-  --danger-soft: #f4dfdc;
-  --good: #2e6a4d;
-  --good-soft: #dcecdf;
   --quiet: #65736e;
-  --quiet-soft: #e4e8e5;
+  --survey-unmapped: #858d89;
+  --survey-scoping: #6f817c;
+  --survey-structural: #59766f;
+  --survey-concerns: #436b63;
+  --survey-adversarial: #2e6057;
+  --survey-mapped: #174f46;
+  --survey-deferred: #777b79;
+  --severity-low: #767b75;
+  --severity-medium: #8a7128;
+  --severity-high: #a0522f;
+  --severity-critical: #922f34;
+  --evidence-code: #1f5c55;
+  --evidence-contract: #32645d;
+  --evidence-test: #416c65;
+  --evidence-config: #526f69;
+  --evidence-doc: #5f756f;
+  --evidence-comment: #6b7b76;
+  --evidence-name: #747e7a;
+  --evidence-pattern: #7d8582;
+  --disposition-defect: #922f34;
+  --disposition-acceptable: #276052;
+  --disposition-ruled-out: #586864;
+  --disposition-out-of-scope: #7d8380;
+  --disposition-ambiguous: #6f5b76;
+  --resolution-open: #98532f;
+  --resolution-pending: #806c27;
+  --resolution-closed: #225d50;
+  --resolution-accepted: #3d685e;
+  --source-aligned: #3f6b64;
+  --source-stale: #98532f;
   --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -144,8 +190,8 @@ _CSS = r"""
 
 :root[data-theme="dark"] {
   --canvas: #151b19;
-  --canvas-subtle: #101513;
-  --surface: #1c2421;
+  --canvas-subtle: #121313;
+  --surface: #1f2120;
   --text: #e7ece8;
   --text-muted: #a9b5b0;
   --text-subtle: #84918c;
@@ -155,28 +201,60 @@ _CSS = r"""
   --accent-strong: #a1d0ca;
   --accent-soft: #233d38;
   --signal: #d5a064;
-  --signal-soft: #3b2b1c;
-  --caution: #d0bc6a;
-  --caution-soft: #37331f;
-  --danger: #e28a81;
-  --danger-soft: #3d2422;
-  --good: #83c09c;
-  --good-soft: #1f392b;
   --quiet: #9ca9a4;
-  --quiet-soft: #29322f;
+  --survey-unmapped: #89928e;
+  --survey-scoping: #88a09a;
+  --survey-structural: #82aea5;
+  --survey-concerns: #78b9ae;
+  --survey-adversarial: #6bc3b4;
+  --survey-mapped: #62ccb9;
+  --survey-deferred: #929895;
+  --severity-low: #a0a8a3;
+  --severity-medium: #c6ad61;
+  --severity-high: #d99468;
+  --severity-critical: #e17b79;
+  --evidence-code: #79b6ae;
+  --evidence-contract: #83b3ac;
+  --evidence-test: #8dafaa;
+  --evidence-config: #96aaa6;
+  --evidence-doc: #9da7a4;
+  --evidence-comment: #a2a6a4;
+  --evidence-name: #a6aaa8;
+  --evidence-pattern: #aaadab;
+  --disposition-defect: #e17b79;
+  --disposition-acceptable: #78b9a6;
+  --disposition-ruled-out: #a2aaa6;
+  --disposition-out-of-scope: #8e9692;
+  --disposition-ambiguous: #b7a0bd;
+  --resolution-open: #d99468;
+  --resolution-pending: #c6ad61;
+  --resolution-closed: #78b9a6;
+  --resolution-accepted: #8bb5a9;
+  --source-aligned: #8eafa7;
+  --source-stale: #d99468;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #151b19; --canvas-subtle: #101513; --surface: #1c2421;
+    --canvas: #151b19; --canvas-subtle: #121313; --surface: #1f2120;
     --text: #e7ece8; --text-muted: #a9b5b0; --text-subtle: #84918c;
     --rule: #34413c; --rule-strong: #52615b;
     --accent: #79b6ae; --accent-strong: #a1d0ca; --accent-soft: #233d38;
-    --signal: #d5a064; --signal-soft: #3b2b1c;
-    --caution: #d0bc6a; --caution-soft: #37331f;
-    --danger: #e28a81; --danger-soft: #3d2422;
-    --good: #83c09c; --good-soft: #1f392b;
-    --quiet: #9ca9a4; --quiet-soft: #29322f;
+    --signal: #d5a064; --quiet: #9ca9a4;
+    --survey-unmapped: #89928e; --survey-scoping: #88a09a;
+    --survey-structural: #82aea5; --survey-concerns: #78b9ae;
+    --survey-adversarial: #6bc3b4; --survey-mapped: #62ccb9; --survey-deferred: #929895;
+    --severity-low: #a0a8a3; --severity-medium: #c6ad61;
+    --severity-high: #d99468; --severity-critical: #e17b79;
+    --evidence-code: #79b6ae; --evidence-contract: #83b3ac; --evidence-test: #8dafaa;
+    --evidence-config: #96aaa6; --evidence-doc: #9da7a4; --evidence-comment: #a2a6a4;
+    --evidence-name: #a6aaa8; --evidence-pattern: #aaadab;
+    --disposition-defect: #e17b79; --disposition-acceptable: #78b9a6;
+    --disposition-ruled-out: #a2aaa6; --disposition-out-of-scope: #8e9692;
+    --disposition-ambiguous: #b7a0bd;
+    --resolution-open: #d99468; --resolution-pending: #c6ad61;
+    --resolution-closed: #78b9a6; --resolution-accepted: #8bb5a9;
+    --source-aligned: #8eafa7; --source-stale: #d99468;
   }
 }
 
@@ -240,9 +318,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 .nav-link[aria-current="page"] .nav-name { font-weight: 700; }
 .nav-tick { width: .34rem; height: .34rem; margin-top: .44rem; border: 1px solid var(--rule-strong); background: transparent; }
 .nav-link[aria-current="page"] .nav-tick { border-color: var(--accent); background: var(--accent); }
-.nav-tick.status-mapped { background: var(--good); border-color: var(--good); }
-.nav-tick.status-adversarial, .nav-tick.status-concerns { background: var(--signal); border-color: var(--signal); }
-.nav-tick.status-deferred { background: var(--quiet); border-color: var(--quiet); }
+.nav-tick.status-unmapped { border-color: var(--survey-unmapped); }
+.nav-tick.status-scoping { background: var(--survey-scoping); border-color: var(--survey-scoping); }
+.nav-tick.status-structural { background: var(--survey-structural); border-color: var(--survey-structural); }
+.nav-tick.status-concerns { background: var(--survey-concerns); border-color: var(--survey-concerns); }
+.nav-tick.status-adversarial { background: var(--survey-adversarial); border-color: var(--survey-adversarial); }
+.nav-tick.status-mapped { background: var(--survey-mapped); border-color: var(--survey-mapped); }
+.nav-tick.status-deferred { border-color: var(--survey-deferred); border-style: dashed; }
 .nav-name { display: block; font-size: .82rem; line-height: 1.3; }
 .nav-id { display: block; margin-top: .12rem; color: var(--text-subtle); font: .64rem/1.3 var(--mono); }
 .rail-foot { margin-top: auto; padding-top: 1.5rem; }
@@ -269,8 +351,8 @@ h1 {
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
 .snapshot-item b { color: var(--text); font-weight: 650; }
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
-.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--good); border-radius: 50%; }
-.freshness.stale::before { background: var(--signal); }
+.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
+.freshness.stale::before { background: var(--source-stale); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
@@ -352,26 +434,27 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
 .coverage-progress > span { display: block; height: 100%; background: var(--accent); }
 .coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
-.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: currentColor; }
-.coverage-state-confirmed-bug { color: var(--danger); }
-.coverage-state-confirmed-acceptable { color: var(--signal); }
-.coverage-state-ruled-out { color: var(--good); }
-.coverage-state-out-of-scope { color: var(--quiet); }
-.coverage-state-unresolved-competition, .coverage-state-unknown { color: var(--signal); }
+.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: var(--enum-color); }
+.coverage-state-confirmed-bug { --enum-color: var(--disposition-defect); }
+.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.coverage-state-out-of-scope { --enum-color: var(--disposition-out-of-scope); }
+.coverage-state-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.coverage-state-unknown { --enum-color: var(--quiet); }
 .coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
 .coverage-token {
   display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
   padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
   background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
 }
-.coverage-token:hover, .coverage-token:focus-visible { border-color: currentColor; color: var(--text); }
+.coverage-token:hover, .coverage-token:focus-visible { border-color: var(--enum-color); color: var(--text); }
 .coverage-token-mark, .coverage-matrix-mark {
   display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
-  border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
+  color: var(--enum-color); border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
 }
 .coverage-linchpin { color: var(--accent); font-size: .58rem; }
 .coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
-.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
 .coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
 .coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
@@ -557,21 +640,42 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .status, .evidence-label, .severity {
+  --enum-color: var(--quiet);
   display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
-  border: 1px solid currentColor; border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
+  color: var(--text-muted); background: transparent;
+  border: 1px solid color-mix(in srgb, var(--enum-color) 72%, var(--rule));
+  border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
 }
-.status::before, .severity::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: currentColor; }
-.status-mapped, .status-ruled-out, .status-resolved { color: var(--good); background: var(--good-soft); }
-.status-adversarial, .status-concerns, .status-structural, .status-scoping, .status-open, .status-unresolved-competition { color: var(--signal); background: var(--signal-soft); }
-.status-confirmed-bug, .severity-critical { color: var(--danger); background: var(--danger-soft); }
-.severity-high { color: var(--signal); background: var(--signal-soft); }
-.status-unmapped, .status-deferred, .status-out-of-scope { color: var(--quiet); background: var(--quiet-soft); }
-.status-confirmed-acceptable, .status-fixed, .status-accepted, .status-verified-fixed { color: var(--accent); background: var(--accent-soft); }
-.status-fixed-pending-verification { color: var(--signal); background: var(--signal-soft); }
-.severity-medium { color: var(--caution); background: var(--caution-soft); }
-.severity-low { color: var(--accent); background: var(--accent-soft); }
-.evidence-label { color: var(--accent); background: var(--accent-soft); border-style: dotted; }
-.evidence-label.weak { color: var(--signal); background: var(--signal-soft); }
+.status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }
+.status-unmapped { --enum-color: var(--survey-unmapped); }
+.status-scoping { --enum-color: var(--survey-scoping); }
+.status-structural { --enum-color: var(--survey-structural); }
+.status-concerns { --enum-color: var(--survey-concerns); }
+.status-adversarial { --enum-color: var(--survey-adversarial); }
+.status-mapped { --enum-color: var(--survey-mapped); }
+.status-deferred { --enum-color: var(--survey-deferred); border-style: dashed; }
+.status-confirmed-bug { --enum-color: var(--disposition-defect); }
+.status-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.status-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.status-out-of-scope { --enum-color: var(--disposition-out-of-scope); border-style: dashed; }
+.status-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.status-open { --enum-color: var(--resolution-open); }
+.status-fixed-pending-verification { --enum-color: var(--resolution-pending); }
+.status-fixed, .status-resolved, .status-verified-fixed { --enum-color: var(--resolution-closed); }
+.status-accepted { --enum-color: var(--resolution-accepted); }
+.severity-critical { --enum-color: var(--severity-critical); }
+.severity-high { --enum-color: var(--severity-high); }
+.severity-medium { --enum-color: var(--severity-medium); }
+.severity-low { --enum-color: var(--severity-low); }
+.evidence-label { border-style: dotted; }
+.evidence-code-verified { --enum-color: var(--evidence-code); }
+.evidence-contract-stated { --enum-color: var(--evidence-contract); }
+.evidence-test-observed { --enum-color: var(--evidence-test); }
+.evidence-config-asserted { --enum-color: var(--evidence-config); }
+.evidence-doc-asserted { --enum-color: var(--evidence-doc); }
+.evidence-comment-asserted { --enum-color: var(--evidence-comment); }
+.evidence-name-inferred { --enum-color: var(--evidence-name); }
+.evidence-pattern-matched { --enum-color: var(--evidence-pattern); }
 
 .figure { margin: 1.4rem 0 1.7rem; padding: 1rem 0 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .figure-label { margin: 0 0 .9rem; color: var(--text-subtle); font: .65rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
@@ -777,7 +881,8 @@ def _status_html(value: str, *, severity: bool = False) -> str:
         return f'<span class="severity severity-{key.lower()}" title="{html.escape(hint, quote=True)}">{html.escape(label)}</span>'
     hint = STATUS_HINTS.get(key, "Recorded workflow state.")
     label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
-    return f'<span class="status status-{html.escape(key)}" title="{html.escape(hint, quote=True)}">{html.escape(label)}</span>'
+    axis = STATUS_AXIS.get(key, "workflow")
+    return f'<span class="status status-{axis} status-{html.escape(key)}" title="{html.escape(hint, quote=True)}">{html.escape(label)}</span>'
 
 
 def _code_html(value: str) -> str:
@@ -785,9 +890,8 @@ def _code_html(value: str) -> str:
     if key in STATUS_HINTS:
         return _status_html(key)
     if key in EVIDENCE_HINTS:
-        weak = key in {"comment-asserted", "name-inferred", "pattern-matched"}
         label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
-        cls = "evidence-label weak" if weak else "evidence-label"
+        cls = f"evidence-label evidence-{key}"
         return f'<span class="{cls}" title="{html.escape(EVIDENCE_HINTS[key], quote=True)}">{html.escape(label)}</span>'
     if value == "ACH":
         return '<abbr title="Analysis of Competing Hypotheses">ACH</abbr>'
@@ -800,6 +904,8 @@ def _inline(text: str) -> str:
     stripped = text.strip()
     if stripped.lower() in STATUS_HINTS:
         return _status_html(stripped)
+    if stripped.lower() in EVIDENCE_HINTS:
+        return _code_html(stripped)
     if stripped.upper() in SEVERITY_HINTS:
         return _status_html(stripped, severity=True)
 

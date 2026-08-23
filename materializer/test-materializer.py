@@ -239,7 +239,7 @@ def main() -> None:
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
-        assert "status-open" in html_findings
+        assert 'class="status status-resolution status-open"' in html_findings
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
@@ -255,8 +255,12 @@ def main() -> None:
         assert "min-width: max-content; padding: 0" in html_findings
         assert "@container report (max-width: 52ch)" in html_findings
         assert ".record-finding .record-fact-ref-sha code { white-space: nowrap" in html_findings
-        assert '.severity-critical { color: var(--danger); background: var(--danger-soft); }' in html_findings
-        assert '.severity-high { color: var(--signal); background: var(--signal-soft); }' in html_findings
+        assert '--canvas-subtle: #e9e9e9' in html_findings
+        assert '--surface: #fbfcf9' in html_findings
+        assert '.severity-critical { --enum-color: var(--severity-critical); }' in html_findings
+        assert '.severity-high { --enum-color: var(--severity-high); }' in html_findings
+        assert 'color: var(--text-muted); background: transparent;' in html_findings
+        assert 'background: var(--source-aligned)' in html_findings
         html_concerns = (docs / "concerns.html").read_text()
         assert 'class="identifier-definition"' in html_concerns
         assert 'title="CC-1 — Cache Coherence"' in html_concerns
@@ -266,6 +270,8 @@ def main() -> None:
         assert '<strong>3</strong><span>Recorded reviews</span>' in html_concerns
         assert html_concerns.count('<article class="coverage-subsystem">') == 3
         assert html_concerns.count('class="coverage-token coverage-state-') == 3
+        assert '.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }' in html_concerns
+        assert '.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }' in html_concerns
         assert "align-content: start" in html_concerns
         assert "align-items: flex-start; align-self: start" in html_concerns
         assert '<span class="coverage-subsystem-id" data-identifier-defined>B-01</span>' in html_concerns
@@ -297,6 +303,8 @@ def main() -> None:
         assert '.record-concern-disposition { display: block; }' in html_b02
         assert 'white-space: nowrap; overflow-wrap: normal;' in html_b02
         assert 'title="TC-1 — Trust Boundary"' in html_b02
+        assert 'class="status status-disposition status-confirmed-bug"' in html_b02
+        assert 'class="evidence-label evidence-code-verified"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
         assert '<div class="topology topology-dependency"' in html_architecture
         assert '<div class="topology topology-seam"' in html_architecture

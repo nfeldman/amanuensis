@@ -109,8 +109,10 @@ Current typed projections:
   measures. When findings are grouped by severity, carry severity once in the
   plain-language group heading rather than repeating it in every article. Do
   not append a bare parenthesized count to that heading; expose counts where a
-  reader is actually comparing quantities. Give each severity a distinct,
-  non-color-only signal.
+  reader is actually comparing quantities. Treat severity as one ordinal ramp:
+  low is neutral, then consequence increases through ochre and rust to oxblood.
+  The written label remains authoritative; color is only a small redundant
+  signal.
 - File ledgers are ruled registers: filename and full path with review and
   revision facts, beside the dominant `Why in scope` account.
 - Concern-review records keep concern, verdict, evidence, and any actual
@@ -130,6 +132,14 @@ Current typed projections:
 Use ruled registers rather than a grid of rounded cards. The goal is a quiet,
 continuous reading surface with clear record boundaries, not a dashboard tile
 for every row.
+
+Color must follow the enum it encodes. Survey depth and evidence quality use
+sequential green-gray ramps; severity uses an ordinal warm ramp; concern
+disposition and finding resolution use their own categorical mappings; source
+alignment is a separate binary relationship. Do not use omnibus `good`, `bad`,
+or `warning` colors across these axes. Keep enum text in the ordinary ink color
+and confine chroma to a small marker and border. Never make `low`, `ruled out`,
+or `source aligned` look like the same claim as `mapped`.
 
 ## Architecture and source routes
 

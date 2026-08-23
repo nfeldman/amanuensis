@@ -219,14 +219,39 @@ character, not a paper simulation.
 | Token | Light | Dark | Job |
 |---|---|---|---|
 | `--canvas` | `#f2f4f1` | `#151b19` | application field |
-| `--canvas-subtle` | `#e7ebe7` | `#101513` | navigation and record metadata field |
-| `--surface` | `#fbfcf8` | `#1c2421` | continuous reading surface |
+| `--canvas-subtle` | `#e9e9e9` | `#121313` | navigation and record metadata field |
+| `--surface` | `#fbfcf9` | `#1f2120` | continuous reading surface |
 | `--text` | `#18221f` | `#e7ece8` | primary text |
 | `--text-muted` | `#52615c` | `#a9b5b0` | secondary prose |
 | `--rule` | `#c9d0ca` | `#34413c` | ordinary divisions |
-| `--accent` | `#235b58` | `#79b6ae` | links, identity, mapped/source signal |
+| `--accent` | `#235b58` | `#79b6ae` | links and identity |
 | `--signal` | `#9b5b27` | `#d5a064` | qualified attention |
-| `--danger` | `#9c3d37` | `#e28a81` | critical/consequential emphasis |
+
+The navigation field and reading surface are ten percentage points less
+saturated than the previous values. Large-area color should establish the
+reading field quietly, not compete with the information printed on it.
+
+### Enum color grammar
+
+Color belongs to an information axis, never to a generic idea of “good” or
+“bad.” Enum labels remain ordinary ink; only the small marker and its hairline
+border receive the enum color. Background tints are omitted. This confines
+color to data ink, keeps every state legible without color, and prevents large
+badges from becoming the page hierarchy.
+
+| Enum | Scale logic | Light-theme sequence or mapping |
+|---|---|---|
+| Survey depth | sequential green-gray; greater depth means greater chroma and darkness | unmapped `#858d89` → scoping `#6f817c` → structural `#59766f` → concerns `#436b63` → adversarial `#2e6057` → mapped `#174f46`; deferred is dashed neutral `#777b79` |
+| Finding severity | ordinal warm ramp; consequence increases from neutral through ochre and rust to oxblood | low `#767b75`, medium `#8a7128`, high `#a0522f`, critical `#922f34` |
+| Evidence quality | sequential green-gray; direct verification is strongest, inference is nearest neutral | code `#1f5c55`, contract `#32645d`, test `#416c65`, config `#526f69`, docs `#5f756f`, comment `#6b7b76`, name `#747e7a`, pattern `#7d8582` |
+| Concern disposition | nominal; outcome types must not imply a false order | defect `#922f34`, acceptable `#276052`, ruled out `#586864`, out of scope `#7d8380` with dashed border, competing explanations `#6f5b76` |
+| Finding resolution | categorical action state | open `#98532f`, awaiting verification `#806c27`, verified/closed `#225d50`, accepted `#3d685e` |
+| Source alignment | binary source relationship, not project quality | aligned `#3f6b64`, stale `#98532f` |
+
+Dark-theme tokens preserve the same ordering with lighter markers. Reuse a hue
+across axes only when the semantics agree: a stale source and an open action
+may share rust; a ruled-out concern does not borrow the mapped green. “Low” is
+not “good,” and source alignment is not a project-health verdict.
 
 Do not introduce beige fields, texture images, gradients that simulate paper,
 drop shadows that make every record float, or a generic blue primary. Runtime
@@ -269,8 +294,9 @@ not required by the projection.
   a decorative thick rule collide with a bordered container.
 - Keep the reading surface continuous; avoid card shadows and floating-app
   chrome.
-- Use typographic contrast, spacing, and a small number of status colors for
-  hierarchy. Do not add texture as atmosphere.
+- Use typographic contrast and spacing for hierarchy. Enum color is a small,
+  redundant data mark, never the main differentiator. Do not add texture as
+  atmosphere.
 
 ## Interaction contract
 
