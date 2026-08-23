@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.7.0"
+HTML_PROJECTION_VERSION = "1.8.0"
 
 
 @dataclass(frozen=True)
@@ -125,6 +125,8 @@ _CSS = r"""
   --accent-soft: #d8e8e4;
   --signal: #9b5b27;
   --signal-soft: #f3e4d3;
+  --caution: #75651f;
+  --caution-soft: #eee8ce;
   --danger: #9c3d37;
   --danger-soft: #f4dfdc;
   --good: #2e6a4d;
@@ -154,6 +156,8 @@ _CSS = r"""
   --accent-soft: #233d38;
   --signal: #d5a064;
   --signal-soft: #3b2b1c;
+  --caution: #d0bc6a;
+  --caution-soft: #37331f;
   --danger: #e28a81;
   --danger-soft: #3d2422;
   --good: #83c09c;
@@ -169,6 +173,7 @@ _CSS = r"""
     --rule: #34413c; --rule-strong: #52615b;
     --accent: #79b6ae; --accent-strong: #a1d0ca; --accent-soft: #233d38;
     --signal: #d5a064; --signal-soft: #3b2b1c;
+    --caution: #d0bc6a; --caution-soft: #37331f;
     --danger: #e28a81; --danger-soft: #3d2422;
     --good: #83c09c; --good-soft: #1f392b;
     --quiet: #9ca9a4; --quiet-soft: #29322f;
@@ -270,6 +275,7 @@ h1 {
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content section:last-child { border-bottom: 0; }
+.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
 .content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
 h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
 h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
@@ -392,7 +398,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
 .record-primary code { font-size: .75rem; }
 .record-facts { margin: .7rem 0 0; }
-.record-facts > div { display: grid; grid-template-columns: 7.25rem minmax(0, 1fr); gap: .65rem; align-items: center; padding: .23rem 0; }
+.record-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55rem; align-items: center; padding: .23rem 0; }
 .record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
 .record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
 .record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
@@ -405,6 +411,28 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-copy code { overflow-wrap: anywhere; }
 .record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
 .record-lede { max-width: 54ch; margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+.record-finding { display: block; }
+.record-finding .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .65rem 1.25rem; align-items: center;
+  padding: .85rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-finding .record-primary { align-self: start; margin-top: .08rem; }
+.record-finding .record-facts {
+  display: flex; flex-wrap: wrap; gap: .4rem 1rem;
+  align-items: center; min-width: 0; margin: 0;
+}
+.record-finding .record-facts > div {
+  display: flex; gap: .35rem; align-items: center;
+  min-width: max-content; padding: 0;
+}
+.record-finding .record-facts dd { overflow-wrap: normal; }
+.record-finding .record-fact-subsystem dd,
+.record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
+.record-finding .record-fact-status dt {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 .record-finding .record-fields { display: block; }
 .record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
 .record-finding .record-field + .record-field { margin-top: 1rem; }
@@ -535,11 +563,12 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .status::before, .severity::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: currentColor; }
 .status-mapped, .status-ruled-out, .status-resolved { color: var(--good); background: var(--good-soft); }
 .status-adversarial, .status-concerns, .status-structural, .status-scoping, .status-open, .status-unresolved-competition { color: var(--signal); background: var(--signal-soft); }
-.status-confirmed-bug, .severity-critical, .severity-high { color: var(--danger); background: var(--danger-soft); }
+.status-confirmed-bug, .severity-critical { color: var(--danger); background: var(--danger-soft); }
+.severity-high { color: var(--signal); background: var(--signal-soft); }
 .status-unmapped, .status-deferred, .status-out-of-scope { color: var(--quiet); background: var(--quiet-soft); }
 .status-confirmed-acceptable, .status-fixed, .status-accepted, .status-verified-fixed { color: var(--accent); background: var(--accent-soft); }
 .status-fixed-pending-verification { color: var(--signal); background: var(--signal-soft); }
-.severity-medium { color: var(--signal); background: var(--signal-soft); }
+.severity-medium { color: var(--caution); background: var(--caution-soft); }
 .severity-low { color: var(--accent); background: var(--accent-soft); }
 .evidence-label { color: var(--accent); background: var(--accent-soft); border-style: dotted; }
 .evidence-label.weak { color: var(--signal); background: var(--signal-soft); }
@@ -597,29 +626,6 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @container report (max-width: 92ch) {
   .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
-  .record-finding { grid-template-columns: minmax(0, 1fr); }
-  .record-finding .record-meta {
-    display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
-    gap: .65rem 1.25rem; align-items: center;
-    border-right: 0; border-bottom: 1px solid var(--rule);
-  }
-  .record-finding .record-primary { align-self: start; margin-top: .12rem; }
-  .record-finding .record-facts {
-    display: flex; flex-wrap: wrap; gap: .45rem 1.15rem;
-    align-items: center; min-width: 0; margin: 0;
-  }
-  .record-finding .record-facts > div {
-    display: flex; gap: .38rem; align-items: center;
-    min-width: max-content; padding: 0;
-  }
-  .record-finding .record-facts dd { overflow-wrap: normal; }
-  .record-finding .record-fact-subsystem dd,
-  .record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
-  .record-finding .record-fact-severity dt,
-  .record-finding .record-fact-status dt {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
 }
 
 @container report (max-width: 52ch) {
@@ -1221,11 +1227,6 @@ class MarkdownRenderer:
                 )
             else:
                 primary = _inline(key_raw)
-
-            if projection.kind == "finding":
-                severity = re.match(r"(critical|high|medium|low)(?:\s|$)", caption, re.IGNORECASE)
-                if severity:
-                    facts.append(("severity", "Severity", severity.group(1).upper()))
 
             for key in projection.metadata:
                 value = record.get(key, "")
@@ -2072,7 +2073,7 @@ def _shell(
           {status_meta}
         </div>
       </header>
-      <article class="content">{body}</article>
+      <article class="content content-{html.escape(slugify(page.kind), quote=True)}">{body}</article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
     </div>
   </main>

@@ -243,12 +243,20 @@ def main() -> None:
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
+        assert 'class="content content-findings"' in html_findings
+        assert 'id="high-findings"' in html_findings
+        assert '>High</span> findings</h2>' in html_findings
+        assert 'record-fact-severity' not in html_findings
+        assert '.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
+        assert '.record-finding { display: block; }' in html_findings
+        assert 'grid-template-columns: max-content minmax(0, 1fr); gap: .55rem' in html_findings
         assert "@container report (max-width: 92ch)" in html_findings
-        assert ".record-finding { grid-template-columns: minmax(0, 1fr); }" in html_findings
         assert ".record-finding .record-facts > div" in html_findings
         assert "min-width: max-content; padding: 0" in html_findings
         assert "@container report (max-width: 52ch)" in html_findings
         assert ".record-finding .record-fact-ref-sha code { white-space: nowrap" in html_findings
+        assert '.severity-critical { color: var(--danger); background: var(--danger-soft); }' in html_findings
+        assert '.severity-high { color: var(--signal); background: var(--signal-soft); }' in html_findings
         html_concerns = (docs / "concerns.html").read_text()
         assert 'class="identifier-definition"' in html_concerns
         assert 'title="CC-1 — Cache Coherence"' in html_concerns

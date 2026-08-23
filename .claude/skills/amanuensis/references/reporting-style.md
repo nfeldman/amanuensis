@@ -102,12 +102,15 @@ field as an equally prominent column.
 
 Current typed projections:
 
-- Findings are one anchored article each: compact identity and status,
-  consequence-led observed behavior, then root cause in sequence. Keep the
-  metadata rail only while it can preserve every fact intact. At a narrower
-  report-container measure, make identity and whole-fact units a compact
-  full-width header above the argument; stack that header again at phone
-  measures. Do not wait for text to collide before changing composition.
+- Findings are one anchored article each: a compact full-width identity header,
+  consequence-led observed behavior, then root cause in sequence. Do not use a
+  metadata rail: it makes subordinate facts consume a peer reading column.
+  Place whole-fact units beside the finding ID and stack the header at phone
+  measures. When findings are grouped by severity, carry severity once in the
+  plain-language group heading rather than repeating it in every article. Do
+  not append a bare parenthesized count to that heading; expose counts where a
+  reader is actually comparing quantities. Give each severity a distinct,
+  non-color-only signal.
 - File ledgers are ruled registers: filename and full path with review and
   revision facts, beside the dominant `Why in scope` account.
 - Concern-review records keep concern, verdict, evidence, and any actual

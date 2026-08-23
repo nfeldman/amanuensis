@@ -163,6 +163,10 @@ must optimize for the reader's operation rather than reproduce storage columns.
   primary human projection when unassessed intersections dominate.
 - Render prose-heavy findings, file ledgers, dispositions, inventories, and
   subsystem plans as ruled record registers.
+- Use a compact full-width header for every finding at every measure. Severity
+  belongs to its group heading and is not repeated inside each finding; IDs,
+  subsystem, status, and revision remain subordinate facts beside one another,
+  not a permanent metadata rail.
 - Use `<dl>` for compact term/meaning and metric/value material.
 - Keep identity and provenance visible as subordinate facts. Do not give a
   short SHA a peer column beside a paragraph.
@@ -301,9 +305,9 @@ Keyboard: `Cmd/Ctrl+K` focuses search; Escape closes only the mobile drawer; nat
 - **≤880px:** navigation drawer with labelled button; content full width; local section map enters document flow.
 - **Sticky navigation:** fragment targets reserve the mobile bar's full height,
   so a deep-linked record identity is never hidden under the control.
-- **Finding record ≤92ch:** the side rail becomes a full-width compact header;
-  ID and whole-fact units precede the consequence/root-cause sequence. At
-  `52ch`, identity and facts stack. These are report-container thresholds, so
+- **Finding record:** a full-width compact header is canonical at every
+  measure; ID and whole-fact units precede the consequence/root-cause sequence.
+  At `52ch`, identity and facts stack. This is a report-container threshold, so
   zoom and navigation width participate.
 - **≤620px:** all other evidence cards become single column; relationship
   trails scroll as complete labelled units.
