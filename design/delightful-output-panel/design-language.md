@@ -164,9 +164,11 @@ must optimize for the reader's operation rather than reproduce storage columns.
 - Render prose-heavy findings, file ledgers, dispositions, inventories, and
   subsystem plans as ruled record registers.
 - Use a compact full-width header for every finding at every measure. Severity
-  belongs to its group heading and is not repeated inside each finding; IDs,
-  subsystem, status, and revision remain subordinate facts beside one another,
-  not a permanent metadata rail.
+  belongs to its group heading and is not repeated inside each finding. Within
+  severity, group findings under the linked subsystem name. The record bar
+  contains the finding ID, status, and a right-pinned unlabelled revision; the
+  subsystem does not repeat in every record and compact identifiers do not gain
+  tooltips when their definitions are already adjacent.
 - Use `<dl>` for compact term/meaning and metric/value material.
 - Keep identity and provenance visible as subordinate facts. Do not give a
   short SHA a peer column beside a paragraph.
@@ -218,13 +220,13 @@ character, not a paper simulation.
 
 | Token | Light | Dark | Job |
 |---|---|---|---|
-| `--canvas` | `#f2f4f1` | `#151b19` | application field |
-| `--canvas-subtle` | `#e9e9e9` | `#121313` | navigation and record metadata field |
-| `--surface` | `#fbfcf9` | `#1f2120` | continuous reading surface |
-| `--text` | `#18221f` | `#e7ece8` | primary text |
-| `--text-muted` | `#52615c` | `#a9b5b0` | secondary prose |
-| `--rule` | `#c9d0ca` | `#34413c` | ordinary divisions |
-| `--accent` | `#235b58` | `#79b6ae` | links and identity |
+| `--canvas` | `#f3f4ef` | `#171a15` | application field |
+| `--canvas-subtle` | `#eaeae6` | `#131510` | navigation and record metadata field |
+| `--surface` | `#fbfcf7` | `#20231d` | continuous reading surface |
+| `--text` | `#1d261b` | `#edf0e6` | primary text |
+| `--text-muted` | `#596153` | `#b7bdac` | secondary prose |
+| `--rule` | `#cdd1c5` | `#3b4234` | ordinary divisions |
+| `--accent` | `#48651f` | `#b4d35d` | links and identity |
 | `--signal` | `#9b5b27` | `#d5a064` | qualified attention |
 
 The navigation field and reading surface are ten percentage points less
@@ -242,17 +244,23 @@ badge followed by a second typographic phrase.
 
 | Enum | Scale logic | Light-theme sequence or mapping |
 |---|---|---|
-| Survey depth | sequential green-gray; greater depth means greater chroma and darkness | unmapped `#858d89` → scoping `#6f817c` → structural `#59766f` → concerns `#436b63` → adversarial `#2e6057` → mapped `#174f46`; deferred is dashed neutral `#777b79` |
+| Survey depth | sequential leaf-green; greater depth means greater chroma and darkness | unmapped `#858b81` → scoping `#75836d` → structural `#637a55` → concerns `#536f3f` → adversarial `#42672a` → mapped `#315c18`; deferred is dashed neutral `#7a7e75` |
 | Finding severity | ordinal warm ramp; consequence increases from neutral through amber and vermilion to crimson | low `#767b75`, medium `#b07b00`, high `#bd5217`, critical `#aa2438` |
-| Evidence quality | sequential green-gray; direct verification is strongest, inference is nearest neutral | code `#1f5c55`, contract `#32645d`, test `#416c65`, config `#526f69`, docs `#5f756f`, comment `#6b7b76`, name `#747e7a`, pattern `#7d8582` |
-| Concern disposition | nominal; outcome types must not imply a false order | defect `#aa2438`, acceptable `#276052`, ruled out `#586864`, out of scope `#7d8380` with dashed border, competing explanations `#6f5b76` |
-| Finding resolution | categorical action state | open `#98532f`, awaiting verification `#806c27`, verified/closed `#225d50`, accepted `#3d685e` |
-| Source alignment | binary source relationship, not project quality | aligned `#3f6b64`, stale `#98532f` |
+| Evidence quality | sequential leaf-green; direct verification is strongest, inference is nearest neutral | code `#3f611f`, contract `#4d6a31`, test `#5b7343`, config `#687a56`, docs `#737f65`, comment `#7b8471`, name `#82887a`, pattern `#878b83` |
+| Concern disposition | nominal; outcome types must not imply a false order | defect `#aa2438`, acceptable `#4b6b2e`, ruled out `#616b5c`, out of scope `#7d8380` with dashed border, competing explanations `#6f5b76` |
+| Finding resolution | categorical action state | open `#98532f`, awaiting verification `#806c27`, verified/closed `#3f6428`, accepted `#5a7043` |
+| Source alignment | binary source relationship, not project quality | aligned `#607446`, stale `#98532f` |
 
 Dark-theme tokens preserve the same ordering with lighter markers. Reuse a hue
 across axes only when the semantics agree: a stale source and an open action
 may share rust; a ruled-out concern does not borrow the mapped green. “Low” is
 not “good,” and source alignment is not a project-health verdict.
+
+The green family takes its hue logic from living foliage rather than teal:
+shadowed olive and leaf greens in the light theme, with a controlled sunlit
+yellow-green at the active end of the dark theme. Large surfaces remain almost
+neutral; the brighter foliage colors are reserved for links, markers, and
+meaningful state.
 
 Do not introduce beige fields, texture images, gradients that simulate paper,
 drop shadows that make every record float, or a generic blue primary. Runtime

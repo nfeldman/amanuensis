@@ -106,10 +106,13 @@ Current typed projections:
   consequence-led observed behavior, then root cause in sequence. Do not use a
   metadata rail: it makes subordinate facts consume a peer reading column.
   The consequence lede and the explanatory fields share the same reading
-  measure; emphasis comes from type, not an arbitrarily narrower column.
-  Place whole-fact units beside the finding ID and stack the header at phone
-  measures. When findings are grouped by severity, carry severity once in the
-  plain-language group heading rather than repeating it in every article. Do
+  measure; emphasis comes from type, not an arbitrarily narrower column. Within
+  each severity group, group records under the subsystem's linked human name;
+  do not repeat the subsystem as a labelled fact inside every record bar. Keep
+  the finding ID and resolution together, and pin the unlabelled short revision
+  to the far edge of the bar. The full semantic label may remain visually hidden
+  for assistive technology. When findings are grouped by severity, carry
+  severity once in the plain-language group heading rather than repeating it in every article. Do
   not append a bare parenthesized count to that heading; expose counts where a
   reader is actually comparing quantities. Treat severity as one ordinal ramp:
   low is neutral, then consequence increases through amber and vermilion to
@@ -146,6 +149,12 @@ or `warning` colors across these axes. Compact tags may tint their background
 from the same axis color, but section headings must not masquerade as tags.
 Never make `low`, `ruled out`, or `source aligned` look like the same claim as
 `mapped`.
+
+Keep the green system rooted in foliage rather than blue-green institutional
+teal: quiet olive neutrals for large or low-information marks, darker leaf
+greens for light-theme links and completed states, and sunlit yellow-green only
+for small high-information accents in dark mode. Preserve neutral large-area
+surfaces so the chromatic marks keep their information value.
 
 ## Architecture and source routes
 

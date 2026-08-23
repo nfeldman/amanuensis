@@ -222,7 +222,7 @@ def main() -> None:
         assert "Reading hint" not in html_index
         assert "Living architecture" not in html_index
         assert "--paper" not in html_index and "Iowan Old Style" in html_index
-        assert "--accent: #235b58" in html_index
+        assert "--accent: #48651f" in html_index
         assert "--measure: 120ch" in html_index
         assert "column-count: 2" in html_index and "column-count: 3" in html_index
         assert "--page: 128rem" in html_index
@@ -239,9 +239,13 @@ def main() -> None:
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
-        assert 'class="status status-resolution status-open"' in html_findings
+        assert '<h3 class="finding-subsystem-heading"' in html_findings
+        assert '>Auth Service</a></h3>' in html_findings
+        assert '<span class="status status-resolution status-open">Open</span>' in html_findings
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
+        assert '<header class="record-meta" data-identifier-defined>' in html_findings
+        assert '<h4 class="record-primary"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
         assert '.record-lede { max-width: var(--measure);' in html_findings
         assert 'font-feature-settings: "kern" 1, "liga" 1, "clig" 1;' in html_findings
@@ -252,16 +256,24 @@ def main() -> None:
         assert 'Link to High findings' in html_findings
         assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
+        assert 'record-fact-subsystem' not in html_findings
         assert '.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
         assert '.record-finding { display: block; }' in html_findings
-        assert 'grid-template-columns: max-content minmax(0, 1fr); gap: .55rem' in html_findings
+        assert 'grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem' in html_findings
         assert "@container report (max-width: 92ch)" in html_findings
         assert ".record-finding .record-facts > div" in html_findings
-        assert "min-width: max-content; padding: 0" in html_findings
+        assert ".record-finding .record-fact-ref-sha { justify-self: end; }" in html_findings
+        assert ".record-finding .record-fact-ref-sha dt" in html_findings
         assert "@container report (max-width: 52ch)" in html_findings
         assert ".record-finding .record-fact-ref-sha code { white-space: nowrap" in html_findings
-        assert '--canvas-subtle: #e9e9e9' in html_findings
-        assert '--surface: #fbfcf9' in html_findings
+        first_finding_bar = html_findings.split('<article class="record record-finding"', 1)[1].split("</header>", 1)[0]
+        assert 'class="identifier-definition"' not in first_finding_bar
+        assert ' title=' not in first_finding_bar
+        assert '--canvas-subtle: #eaeae6' in html_findings
+        assert '--surface: #fbfcf7' in html_findings
+        assert '--accent: #48651f' in html_findings
+        assert '--survey-mapped: #315c18' in html_findings
+        assert '--evidence-code: #3f611f' in html_findings
         assert '.severity-critical { --enum-color: var(--severity-critical); }' in html_findings
         assert '.severity-high { --enum-color: var(--severity-high); }' in html_findings
         assert 'background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));' in html_findings
@@ -375,6 +387,9 @@ def main() -> None:
         # Verify cross-references resolved: findings page should link B-02 somewhere.
         findings = (docs / "findings.md").read_text()
         assert "](subsystems/b02-auth-service.md)" in findings, "expected B-02 link in findings.md"
+        assert "### [Auth Service](subsystems/b02-auth-service.md)" in findings
+        assert "| ID | Status | Symptom | Root cause | Ref SHA |" in findings
+        assert "| ID | Subsystem |" not in findings
         # Concerns page should link CC-1 as an anchor target.
         concerns = (docs / "concerns.md").read_text()
         assert "<a id=\"cc-1\"></a>" in concerns

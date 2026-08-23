@@ -26,7 +26,7 @@ from .diagrams import (
 )
 from .manifest import sha256_bytes, sha256_json
 from .readback import finding_marker, stale_marker
-from .slugs import matrix_slug
+from .slugs import matrix_slug, subsystem_page
 
 RenderResult = tuple[str, dict[str, str]]
 
@@ -443,6 +443,7 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     fs = rows(
         conn,
         """SELECT f.*,
+                  s.name AS subsystem_name,
                   COALESCE(r.resolution_state,
                     CASE f.status WHEN 'fixed' THEN 'fixed-pending-verification'
                                   WHEN 'ruled-out' THEN 'ruled-out'
@@ -450,6 +451,7 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                                   ELSE 'open' END) AS resolution_state,
                   r.fix_sha, r.evidence_id AS resolution_evidence_id
              FROM findings f
+             LEFT JOIN subsystems s ON s.id=f.subsystem_id
              LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
             ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                        WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
@@ -459,25 +461,32 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     if not fs:
         out.append("_No confirmed findings yet._")
     else:
-        # By severity, then sub-grouped by subsystem.
+        # Severity is the primary grouping; the full subsystem name supplies
+        # the human-oriented subheading for the records that follow.
         for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
             sev_rows = [f for f in fs if f["severity"] == sev]
             if not sev_rows:
                 continue
             out += [f"## {sev.title()} findings", ""]
-            out += [
-                "| ID | Subsystem | Status | Symptom | Root cause | Ref SHA |",
-                "|---|---|---|---|---|---|",
-            ]
-            for f in sev_rows:
-                out.append(finding_marker(str(f["finding_id"])))
-                out.append(
-                    f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
-                    f"**{f['subsystem_id']}** | {f['resolution_state']} | "
-                    f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
-                    f"`{(f['ref_sha'] or '—')[:8]}` |"
-                )
-            out.append("")
+            subsystem_ids = list(dict.fromkeys(str(f["subsystem_id"]) for f in sev_rows))
+            for subsystem_id in subsystem_ids:
+                subsystem_rows = [f for f in sev_rows if f["subsystem_id"] == subsystem_id]
+                subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
+                out += [
+                    f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
+                    "",
+                    "| ID | Status | Symptom | Root cause | Ref SHA |",
+                    "|---|---|---|---|---|",
+                ]
+                for f in subsystem_rows:
+                    out.append(finding_marker(str(f["finding_id"])))
+                    out.append(
+                        f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
+                        f"{f['resolution_state']} | "
+                        f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
+                        f"`{(f['ref_sha'] or '—')[:8]}` |"
+                    )
+                out.append("")
     return "\n".join(out) + "\n", _db_source("findings:all", fs)
 
 

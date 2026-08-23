@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.9.4"
+HTML_PROJECTION_VERSION = "1.10.0"
 
 
 @dataclass(frozen=True)
@@ -136,48 +136,48 @@ STATUS_AXIS = {
 _CSS = r"""
 :root {
   color-scheme: light dark;
-  --canvas: #f2f4f1;
-  --canvas-subtle: #e9e9e9;
-  --surface: #fbfcf9;
-  --text: #18221f;
-  --text-muted: #52615c;
-  --text-subtle: #74817d;
-  --rule: #c9d0ca;
-  --rule-strong: #9ca9a2;
-  --accent: #235b58;
-  --accent-strong: #123f3d;
-  --accent-soft: #d8e8e4;
+  --canvas: #f3f4ef;
+  --canvas-subtle: #eaeae6;
+  --surface: #fbfcf7;
+  --text: #1d261b;
+  --text-muted: #596153;
+  --text-subtle: #7a8273;
+  --rule: #cdd1c5;
+  --rule-strong: #a4ac9d;
+  --accent: #48651f;
+  --accent-strong: #314a16;
+  --accent-soft: #e4ebd3;
   --signal: #9b5b27;
-  --quiet: #65736e;
-  --survey-unmapped: #858d89;
-  --survey-scoping: #6f817c;
-  --survey-structural: #59766f;
-  --survey-concerns: #436b63;
-  --survey-adversarial: #2e6057;
-  --survey-mapped: #174f46;
-  --survey-deferred: #777b79;
+  --quiet: #697263;
+  --survey-unmapped: #858b81;
+  --survey-scoping: #75836d;
+  --survey-structural: #637a55;
+  --survey-concerns: #536f3f;
+  --survey-adversarial: #42672a;
+  --survey-mapped: #315c18;
+  --survey-deferred: #7a7e75;
   --severity-low: #767b75;
   --severity-medium: #b07b00;
   --severity-high: #bd5217;
   --severity-critical: #aa2438;
-  --evidence-code: #1f5c55;
-  --evidence-contract: #32645d;
-  --evidence-test: #416c65;
-  --evidence-config: #526f69;
-  --evidence-doc: #5f756f;
-  --evidence-comment: #6b7b76;
-  --evidence-name: #747e7a;
-  --evidence-pattern: #7d8582;
+  --evidence-code: #3f611f;
+  --evidence-contract: #4d6a31;
+  --evidence-test: #5b7343;
+  --evidence-config: #687a56;
+  --evidence-doc: #737f65;
+  --evidence-comment: #7b8471;
+  --evidence-name: #82887a;
+  --evidence-pattern: #878b83;
   --disposition-defect: #aa2438;
-  --disposition-acceptable: #276052;
-  --disposition-ruled-out: #586864;
+  --disposition-acceptable: #4b6b2e;
+  --disposition-ruled-out: #616b5c;
   --disposition-out-of-scope: #7d8380;
   --disposition-ambiguous: #6f5b76;
   --resolution-open: #98532f;
   --resolution-pending: #806c27;
-  --resolution-closed: #225d50;
-  --resolution-accepted: #3d685e;
-  --source-aligned: #3f6b64;
+  --resolution-closed: #3f6428;
+  --resolution-accepted: #5a7043;
+  --source-aligned: #607446;
   --source-stale: #98532f;
   --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -189,72 +189,72 @@ _CSS = r"""
 }
 
 :root[data-theme="dark"] {
-  --canvas: #151b19;
-  --canvas-subtle: #121313;
-  --surface: #1f2120;
-  --text: #e7ece8;
-  --text-muted: #a9b5b0;
-  --text-subtle: #84918c;
-  --rule: #34413c;
-  --rule-strong: #52615b;
-  --accent: #79b6ae;
-  --accent-strong: #a1d0ca;
-  --accent-soft: #233d38;
+  --canvas: #171a15;
+  --canvas-subtle: #131510;
+  --surface: #20231d;
+  --text: #edf0e6;
+  --text-muted: #b7bdac;
+  --text-subtle: #929989;
+  --rule: #3b4234;
+  --rule-strong: #5d6651;
+  --accent: #b4d35d;
+  --accent-strong: #d5e88b;
+  --accent-soft: #35431f;
   --signal: #d5a064;
-  --quiet: #9ca9a4;
-  --survey-unmapped: #89928e;
-  --survey-scoping: #88a09a;
-  --survey-structural: #82aea5;
-  --survey-concerns: #78b9ae;
-  --survey-adversarial: #6bc3b4;
-  --survey-mapped: #62ccb9;
-  --survey-deferred: #929895;
+  --quiet: #a3aa98;
+  --survey-unmapped: #9ba093;
+  --survey-scoping: #a0ad83;
+  --survey-structural: #a5b977;
+  --survey-concerns: #aac56a;
+  --survey-adversarial: #b1d05e;
+  --survey-mapped: #b8dc55;
+  --survey-deferred: #9a9e95;
   --severity-low: #a0a8a3;
   --severity-medium: #e2bf4f;
   --severity-high: #f09a58;
   --severity-critical: #f27b88;
-  --evidence-code: #79b6ae;
-  --evidence-contract: #83b3ac;
-  --evidence-test: #8dafaa;
-  --evidence-config: #96aaa6;
-  --evidence-doc: #9da7a4;
-  --evidence-comment: #a2a6a4;
-  --evidence-name: #a6aaa8;
-  --evidence-pattern: #aaadab;
+  --evidence-code: #b4d171;
+  --evidence-contract: #afc775;
+  --evidence-test: #abc078;
+  --evidence-config: #a6b67c;
+  --evidence-doc: #a3ae82;
+  --evidence-comment: #a0a789;
+  --evidence-name: #9ea18f;
+  --evidence-pattern: #9b9d94;
   --disposition-defect: #f27b88;
-  --disposition-acceptable: #78b9a6;
-  --disposition-ruled-out: #a2aaa6;
+  --disposition-acceptable: #afd378;
+  --disposition-ruled-out: #a6ae9c;
   --disposition-out-of-scope: #8e9692;
   --disposition-ambiguous: #b7a0bd;
   --resolution-open: #d99468;
   --resolution-pending: #c6ad61;
-  --resolution-closed: #78b9a6;
-  --resolution-accepted: #8bb5a9;
-  --source-aligned: #8eafa7;
+  --resolution-closed: #b0d775;
+  --resolution-accepted: #bdcf98;
+  --source-aligned: #b3c581;
   --source-stale: #d99468;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #151b19; --canvas-subtle: #121313; --surface: #1f2120;
-    --text: #e7ece8; --text-muted: #a9b5b0; --text-subtle: #84918c;
-    --rule: #34413c; --rule-strong: #52615b;
-    --accent: #79b6ae; --accent-strong: #a1d0ca; --accent-soft: #233d38;
-    --signal: #d5a064; --quiet: #9ca9a4;
-    --survey-unmapped: #89928e; --survey-scoping: #88a09a;
-    --survey-structural: #82aea5; --survey-concerns: #78b9ae;
-    --survey-adversarial: #6bc3b4; --survey-mapped: #62ccb9; --survey-deferred: #929895;
+    --canvas: #171a15; --canvas-subtle: #131510; --surface: #20231d;
+    --text: #edf0e6; --text-muted: #b7bdac; --text-subtle: #929989;
+    --rule: #3b4234; --rule-strong: #5d6651;
+    --accent: #b4d35d; --accent-strong: #d5e88b; --accent-soft: #35431f;
+    --signal: #d5a064; --quiet: #a3aa98;
+    --survey-unmapped: #9ba093; --survey-scoping: #a0ad83;
+    --survey-structural: #a5b977; --survey-concerns: #aac56a;
+    --survey-adversarial: #b1d05e; --survey-mapped: #b8dc55; --survey-deferred: #9a9e95;
     --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
     --severity-high: #f09a58; --severity-critical: #f27b88;
-    --evidence-code: #79b6ae; --evidence-contract: #83b3ac; --evidence-test: #8dafaa;
-    --evidence-config: #96aaa6; --evidence-doc: #9da7a4; --evidence-comment: #a2a6a4;
-    --evidence-name: #a6aaa8; --evidence-pattern: #aaadab;
-    --disposition-defect: #f27b88; --disposition-acceptable: #78b9a6;
-    --disposition-ruled-out: #a2aaa6; --disposition-out-of-scope: #8e9692;
+    --evidence-code: #b4d171; --evidence-contract: #afc775; --evidence-test: #abc078;
+    --evidence-config: #a6b67c; --evidence-doc: #a3ae82; --evidence-comment: #a0a789;
+    --evidence-name: #9ea18f; --evidence-pattern: #9b9d94;
+    --disposition-defect: #f27b88; --disposition-acceptable: #afd378;
+    --disposition-ruled-out: #a6ae9c; --disposition-out-of-scope: #8e9692;
     --disposition-ambiguous: #b7a0bd;
     --resolution-open: #d99468; --resolution-pending: #c6ad61;
-    --resolution-closed: #78b9a6; --resolution-accepted: #8bb5a9;
-    --source-aligned: #8eafa7; --source-stale: #d99468;
+    --resolution-closed: #b0d775; --resolution-accepted: #bdcf98;
+    --source-aligned: #b3c581; --source-stale: #d99468;
   }
 }
 
@@ -366,6 +366,13 @@ h1 {
   content: ""; display: inline-block; width: .14em; height: .72em;
   margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
 }
+.finding-subsystem-heading {
+  margin: 2rem 0 .55rem;
+  color: var(--text);
+  font: 600 clamp(1.25rem, 1.6vw, 1.6rem)/1.25 var(--heading);
+}
+.finding-subsystem-heading a { color: inherit; text-decoration-color: var(--rule-strong); }
+.finding-subsystem-heading + .record-list-finding { margin-top: 0; }
 .content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
 h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
 h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
@@ -516,17 +523,19 @@ h1, h2, .brand-mark, .record-primary, .record-lede {
 }
 .record-finding .record-primary { align-self: start; margin-top: .08rem; }
 .record-finding .record-facts {
-  display: flex; flex-wrap: wrap; gap: .4rem 1rem;
+  display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem;
   align-items: center; min-width: 0; margin: 0;
 }
 .record-finding .record-facts > div {
   display: flex; gap: .35rem; align-items: center;
-  min-width: max-content; padding: 0;
+  min-width: 0; padding: 0;
 }
 .record-finding .record-facts dd { overflow-wrap: normal; }
-.record-finding .record-fact-subsystem dd,
 .record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
-.record-finding .record-fact-status dt {
+.record-finding .record-fact-status { justify-self: start; }
+.record-finding .record-fact-ref-sha { justify-self: end; }
+.record-finding .record-fact-status dt,
+.record-finding .record-fact-ref-sha dt {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
@@ -886,18 +895,20 @@ def _html_href(href: str) -> str:
     return urlunsplit(("", "", path, split.query, split.fragment))
 
 
-def _status_html(value: str, *, severity: bool = False) -> str:
+def _status_html(value: str, *, severity: bool = False, show_hint: bool = True) -> str:
     raw = value.strip()
     key = raw.lower()
     if severity:
         key = raw.upper()
         label = key.title()
         hint = SEVERITY_HINTS.get(key, "Finding impact level.")
-        return f'<span class="severity severity-{key.lower()}" title="{html.escape(hint, quote=True)}">{html.escape(label)}</span>'
+        hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
+        return f'<span class="severity severity-{key.lower()}"{hint_attr}>{html.escape(label)}</span>'
     hint = STATUS_HINTS.get(key, "Recorded workflow state.")
     label = DISPLAY_STATUS.get(key, key.replace("-", " ").title())
     axis = STATUS_AXIS.get(key, "workflow")
-    return f'<span class="status status-{axis} status-{html.escape(key)}" title="{html.escape(hint, quote=True)}">{html.escape(label)}</span>'
+    hint_attr = f' title="{html.escape(hint, quote=True)}"' if show_hint else ""
+    return f'<span class="status status-{axis} status-{html.escape(key)}"{hint_attr}>{html.escape(label)}</span>'
 
 
 def _code_html(value: str) -> str:
@@ -1105,8 +1116,8 @@ def _header_key(value: str) -> str:
 
 
 _RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
-    ("id", "subsystem", "status", "symptom", "root cause", "ref sha"): RecordProjection(
-        "finding", "id", ("subsystem", "status", "ref sha"), ("symptom", "root cause")
+    ("id", "status", "symptom", "root cause", "ref sha"): RecordProjection(
+        "finding", "id", ("status", "ref sha"), ("symptom", "root cause")
     ),
     ("path", "classification", "why in scope", "ref sha"): RecordProjection(
         "file-ledger", "path", ("classification", "ref sha"), ("why in scope",)
@@ -1357,7 +1368,11 @@ class MarkdownRenderer:
 
             fact_chunks: list[str] = []
             for key, label, value in facts:
-                value_html = _inline(value)
+                value_html = (
+                    _status_html(_plain(value), show_hint=False)
+                    if projection.kind == "finding" and key == "status"
+                    else _inline(value)
+                )
                 if projection.kind == "subsystem" and key == "id":
                     value_html = f'<span data-identifier-defined>{value_html}</span>'
                 fact_chunks.append(
@@ -1365,9 +1380,11 @@ class MarkdownRenderer:
                     f'<dt>{html.escape(label)}</dt><dd>{value_html}</dd></div>'
                 )
             facts_html = "".join(fact_chunks)
+            heading_tag = "h4" if projection.kind == "finding" else "h3"
+            definition_context = " data-identifier-defined" if projection.kind == "finding" else ""
             meta = (
-                '<header class="record-meta">'
-                f'<h3 class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</h3>'
+                f'<header class="record-meta"{definition_context}>'
+                f'<{heading_tag} class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</{heading_tag}>'
                 + (f'<dl class="record-facts">{facts_html}</dl>' if facts_html else "")
                 + "</header>"
             )
@@ -1976,7 +1993,14 @@ class MarkdownRenderer:
                     in_section = True
                 anchor_id = self._heading_slug(raw)
                 label = html.escape(f"Link to {_plain(raw)}", quote=True)
-                body.append(f'<h{level} id="{anchor_id}"><a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>{_inline(raw)}</h{level}>')
+                finding_group = self.current_html_path == "findings.html" and level == 3
+                heading_class = ' class="finding-subsystem-heading"' if finding_group else ""
+                definition_context = " data-identifier-defined" if finding_group else ""
+                body.append(
+                    f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
+                    f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
+                    f'{_inline(raw)}</h{level}>'
+                )
                 i += 1
                 continue
 
