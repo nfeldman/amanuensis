@@ -30,7 +30,8 @@ from pathlib import Path
 from typing import Any
 
 from . import renderers
-from .db import open_ro, rows
+from .db import open_ro, row, rows
+from .html_projection import SitePage, render_html_projection
 from .manifest import (
     MATERIALIZER_VERSION,
     Manifest,
@@ -54,6 +55,12 @@ class PagePlan:
     build: PageFn
     xref_id: str | None = None
     xref_display: str | None = None
+    title: str = ""
+    label: str = ""
+    hint: str = ""
+    group: str = "Reference"
+    kind: str = "reference"
+    status: str | None = None
 
 
 @dataclass
@@ -65,6 +72,10 @@ class Summary:
     pages_unchanged: int = 0
     pages_retired: list[str] = field(default_factory=list)
     xref_updates: int = 0
+    html_pages_total: int = 0
+    html_pages_rendered: int = 0
+    html_pages_unchanged: int = 0
+    html_pages_retired: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     readback: dict[str, Any] | None = None
 
@@ -146,14 +157,49 @@ class Materializer:
                 self.manifest, alive, self.output
             )
             self.summary.pages_rendered = len(rendered)
-            # Adjust unchanged count if xref resolution wrote to them.
+
+            # HTML is a first-class reading surface, derived from the final
+            # post-xref Markdown bytes.  Its shared navigation is rebuilt from
+            # the complete page plan so names, statuses, and routes cannot
+            # drift independently.
+            git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+            stale = row(conn, "SELECT COUNT(*) AS n FROM entries WHERE stale=1") or {"n": 0}
+            html_context = {**git, "stale_entry_count": int(stale["n"] or 0)}
+            site_pages = [
+                SitePage(
+                    markdown_path=p.path,
+                    title=p.title,
+                    label=p.label or p.title,
+                    hint=p.hint,
+                    group=p.group,
+                    kind=p.kind,
+                    record_id=p.xref_id,
+                    status=p.status,
+                )
+                for p in plan
+            ]
+            html_result = render_html_projection(
+                self.output,
+                site_pages,
+                html_context,
+                previous_files=self.manifest.projection_files,
+            )
+            self.manifest.projection_files = html_result.files
+            self.summary.html_pages_total = len(site_pages)
+            self.summary.html_pages_rendered = html_result.rendered
+            self.summary.html_pages_unchanged = html_result.unchanged
+            self.summary.html_pages_retired = html_result.retired
+            self.summary.warnings.extend(html_result.warnings)
+            if html_result.warnings:
+                self.summary.ok = False
+
             self.manifest.version = MATERIALIZER_VERSION
             self.manifest.save(self.manifest_path)
 
             # The incremental manifest records renderer-input hashes.  The
             # projection receipt is deliberately separate and hashes the bytes
             # after global xref resolution — the bytes a reader will see.
-            expected_paths = sorted(alive)
+            expected_paths = sorted(alive | set(html_result.files))
             write_contract(self.output, expected_paths)
             if self.verify_readback:
                 self.summary.readback = ProjectionVerifier(
@@ -165,11 +211,16 @@ class Materializer:
             return {
                 "ok": self.summary.ok,
                 "output_dir": str(self.output),
+                "html_entrypoint": str(self.output / "index.html"),
                 "pages_total": self.summary.pages_total,
                 "pages_rendered": self.summary.pages_rendered,
                 "pages_unchanged": self.summary.pages_unchanged,
                 "pages_retired": self.summary.pages_retired,
                 "xref_updates": self.summary.xref_updates,
+                "html_pages_total": self.summary.html_pages_total,
+                "html_pages_rendered": self.summary.html_pages_rendered,
+                "html_pages_unchanged": self.summary.html_pages_unchanged,
+                "html_pages_retired": self.summary.html_pages_retired,
                 "warnings": self.summary.warnings,
                 "readback": self.summary.readback,
             }
@@ -180,10 +231,17 @@ class Materializer:
         """Read back an existing projection without rendering or repairing it."""
         conn = open_ro(self.storage / "memory.db")
         try:
-            expected_paths = [p.path for p in self._plan(conn)]
+            plan = self._plan(conn)
+            expected_paths = [
+                rel
+                for p in plan
+                for rel in (p.path, str(Path(p.path).with_suffix(".html")).replace("\\", "/"))
+            ]
         finally:
             conn.close()
-        return ProjectionVerifier(self.storage, self.output, expected_paths).verify()
+        summary = ProjectionVerifier(self.storage, self.output, expected_paths).verify()
+        summary["html_entrypoint"] = str(self.output / "index.html")
+        return summary
 
     # ---------------------------------------------------------------------
     def _plan(self, conn) -> list[PagePlan]:
@@ -191,32 +249,41 @@ class Materializer:
         plan: list[PagePlan] = []
 
         # Static top-level pages.
-        plan.append(PagePlan("index.md", lambda: renderers.render_index(conn, storage)))
-        plan.append(PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage)))
-        plan.append(PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage)))
-        plan.append(PagePlan("findings.md", lambda: renderers.render_findings(conn, storage)))
-        plan.append(PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage)))
-        plan.append(PagePlan("seams.md", lambda: renderers.render_seams(conn, storage)))
-        plan.append(PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage)))
-        plan.append(PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage)))
-        plan.append(PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage)))
-        plan.append(PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage)))
-        plan.append(PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage)))
-        plan.append(PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage)))
+        plan.extend(
+            [
+                PagePlan("index.md", lambda: renderers.render_index(conn, storage), title="Project overview", label="Overview", hint="Start here for the survey's present state, freshness, and highest-signal routes into the codebase.", group="Orientation", kind="overview"),
+                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.", group="Orientation", kind="architecture"),
+                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystem map", hint="See every architectural region, how deeply it has been surveyed, and where a reader should enter it.", group="Orientation", kind="registry"),
+                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Confirmed findings", label="Findings", hint="Review defects that survived the evidence and adversarial gates, ordered by impact.", group="Evidence", kind="findings"),
+                PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern.", group="Evidence", kind="coverage"),
+                PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Inspect shared objects and ordering assumptions where independently understandable subsystems meet.", group="Evidence", kind="seams"),
+                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Find places where credible records disagree instead of having their differences silently smoothed away.", group="Evidence", kind="contradictions"),
+                PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Follow evidence matrices used when more than one concern could explain the same observed symptom.", group="Evidence", kind="diagnosticity"),
+                PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving.", group="Working record", kind="questions"),
+                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Field notes", label="Field notes", hint="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings.", group="Working record", kind="notes"),
+                PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="Translate project-native names into the meanings Amanuensis observed in context.", group="Reference", kind="glossary"),
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes.", group="Reference", kind="guide"),
+            ]
+        )
 
         # Prose passthroughs for canonical artifacts — only if they
         # exist. Each passes through the file with a tiny header if
         # needed.
-        for rel_src, out_rel, title in (
-            ("onboarding-report.md", "onboarding-report.md", "Onboarding report"),
-            ("entry-point.md", "entry-point.md", "Entry point"),
-            ("concern-checklist.md", "concern-checklist.md", "Concern checklist (calibrated)"),
+        for rel_src, out_rel, title, label, hint in (
+            ("onboarding-report.md", "onboarding-report.md", "Onboarding record", "Onboarding record", "Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."),
+            ("entry-point.md", "entry-point.md", "Where to begin", "Where to begin", "Use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."),
+            ("concern-checklist.md", "concern-checklist.md", "Calibrated review checklist", "Review checklist", "See the concern set used to test each subsystem and the provenance of those checks."),
         ):
             if (storage / rel_src).is_file():
                 plan.append(
                     PagePlan(
                         out_rel,
                         (lambda r=rel_src, t=title: renderers.passthrough_prose(storage, r, t) or ("", {})),
+                        title=title,
+                        label=label,
+                        hint=hint,
+                        group="Reference",
+                        kind="artifact",
                     )
                 )
 
@@ -231,6 +298,12 @@ class Materializer:
                     build=(lambda row=s: renderers.render_subsystem(conn, storage, row)),
                     xref_id=s["id"],
                     xref_display=f"{s['id']}",
+                    title=s["name"],
+                    label=s["name"],
+                    hint=f"Survey record for {s['name']}: scope, reading path, evidence dispositions, findings, boundaries, vocabulary, and notes.",
+                    group="Subsystems",
+                    kind="subsystem",
+                    status=s["status"],
                 )
             )
 
@@ -245,6 +318,12 @@ class Materializer:
                     build=(lambda mm=m: renderers.render_diagnosticity_matrix(conn, storage, mm)),
                     xref_id=f"DM-{m['id']}",
                     xref_display=f"DM-{m['id']}",
+                    title=m["symptom"],
+                    label=m["symptom"],
+                    hint="Compare the evidence against each viable explanation and see which contradictions drove the recorded outcome.",
+                    group="Evidence matrices",
+                    kind="matrix",
+                    status=m.get("outcome"),
                 )
             )
 

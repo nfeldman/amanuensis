@@ -1,7 +1,9 @@
 # amanuensis-materializer
 
 Renders a navigable human-facing architectural conspectus from the
-Amanuensis `memory.db` and the project's prose artifacts.
+Amanuensis `memory.db` and the project's prose artifacts. Every materialized
+Markdown page has a first-class HTML companion; `index.html` is the primary
+reading surface and Markdown remains the portable, inspectable projection.
 
 The database is the agent's source of truth. The materialized docs are
 the human's source of truth. Both exist; neither is a cache of the
@@ -9,7 +11,8 @@ other.
 
 ## What it produces
 
-Under `<project-storage>/docs/`:
+Under `<project-storage>/docs/` (each `.md` page below is accompanied by a
+same-path `.html` page):
 
 ```
 index.md                project overview, navigation
@@ -30,7 +33,20 @@ subsystems/
 diagnosticity/
   dm-<id>.md            per-matrix detail pages
 .manifest.json          diff-aware rendering manifest
+.projection-contract.json post-xref publication and read-back receipt
 ```
+
+The HTML projection is self-contained: it makes no font, stylesheet,
+JavaScript, or diagram-renderer requests. It can be opened directly from the
+filesystem or served by any static server. Its global navigation uses
+human-facing page names and descriptions, exposes subsystem IDs without making
+them the primary label, supports name/ID/topic filtering, and keeps Markdown
+one click away for audit.
+
+Status, severity, evidence-quality, and survey-depth values render with plain
+language labels and explanatory hints. Generated Mermaid relationship data is
+projected into accessible linked relationship traces and staleness bars, so
+the browser view does not depend on a client-side Mermaid runtime.
 
 ## Diff-aware rendering
 
@@ -49,8 +65,13 @@ On each run we:
 3. Run a global cross-reference resolver over every alive page — IDs
    like `B-01`, `CC-1`, `SM-3`, `B01-1`, `DM-5` become working links,
    skipping code fences, inline code, and self-references.
-4. Retire pages whose generators no longer exist (their files and
-   manifest entries are deleted).
+4. Transform the finished, post-xref Markdown into HTML. Shared navigation is
+   rebuilt from the complete page plan, so renamed, added, removed, or
+   status-changed subsystems are reflected everywhere in the same run.
+5. Retire pages whose generators no longer exist (both their Markdown and
+   HTML files, plus their manifest entries, are deleted).
+6. Read both formats back independently for state markers, planned-page and
+   local-link coverage, fragment targets, and byte correspondence.
 
 Bumping `MATERIALIZER_VERSION` in `manifest.py` invalidates every page.
 `--force-full` does a full rebuild without touching the version.
@@ -71,9 +92,11 @@ With optional flags:
 On success the last line of stdout is a JSON summary the MCP server's
 `materialize_docs` tool parses.
 
-Every normal render now writes `.projection-contract.json` after global
-cross-reference resolution and reads the finished files back on independent
-state, coverage, and content axes. A read-back failure makes the command fail.
+Every normal render writes `.projection-contract.json` after global
+cross-reference resolution and HTML generation, then reads both finished
+formats back on independent state, coverage, and content axes. Healthy
+Markdown cannot mask damaged HTML, or vice versa. A read-back failure makes
+the command fail.
 
 For publication, use clean staging:
 
@@ -108,6 +131,6 @@ python3 test-readback.py
 
 Seeds a temp DB, runs the materializer five times (full render,
 no-op, prose change, add subsystem, remove subsystem) and verifies the
-manifest-driven behavior at each step. The read-back suite deletes a finding
-marker, cross-link, and stale marker independently and requires the gate to
-turn red on the appropriate axis.
+manifest-driven behavior in both formats at each step. The read-back suite
+damages finding markers, cross-links, and stale markers in Markdown and HTML
+independently and requires the gate to turn red on the appropriate axis.

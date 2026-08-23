@@ -82,6 +82,14 @@ def resolve_file(abs_path: Path, rel_path: str, index: XrefIndex) -> bool:
     def _replace(m: re.Match) -> str:
         id_ = m.group(1)
         linked = index.link(id_, rel_path)
+        # Self references render as strong text. If the renderer already
+        # supplied that emphasis, keep the token itself so repeated passes do
+        # not accumulate another pair of ``**`` delimiters.
+        if linked == f"**{id_}**":
+            before = text[max(0, m.start() - 2) : m.start()]
+            after = text[m.end() : m.end() + 2]
+            if before == "**" and after == "**":
+                return id_
         return linked if linked else m.group(0)
 
     text = ID_PAT.sub(_replace, text)

@@ -141,7 +141,9 @@ will see the queue at the Phase 7 checkpoint.
 - For each artifact, call `register_artifact(path, kind, ...)` then
   `rehash_artifact(path, ref_sha=onboarding_sha)` so the materializer
   sees the content.
-- Call `materialize_docs()` to render the navigable human docs.
+- Call `materialize_docs()` to render the navigable human docs. It returns an
+  `html_entrypoint`; this self-contained HTML index is the primary human
+  surface, with synchronized Markdown companions alongside it.
 - Call `end_session(outcome="completed")`.
 
 Commit at every phase boundary. Storage is a git repo;
@@ -155,7 +157,8 @@ Once `materialize_docs()` returns, emit a one-screen summary:
 - Concerns derived (count by territory applicability vs. disqualified).
 - Open-question queue (count by category, with a one-line preview of
   the highest-impact entries).
-- Path to the rendered `docs/` and to the prose artifacts.
+- Exact `html_entrypoint`, plus the path to the prose artifacts. Do not make a
+  person infer the HTML entry page from the output directory.
 
 Then continue to the next work implied by the request. For an unscoped cold
 start, survey the highest-priority `unmapped` subsystem and proceed through the

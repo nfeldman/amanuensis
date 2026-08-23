@@ -182,6 +182,39 @@ test("generic adapter installs only the skill and prints an explicit stdio comma
   }
 });
 
+test("--mcp-only configures a source launcher without creating a shadow skill copy", () => {
+  for (const client of ["claude", "codex", "vscode"]) {
+    const workspace = fresh();
+    try {
+      const result = runCli(["init", "--client", client, "--dir", workspace, "--mcp-only"]);
+      assert(result.status === 0, `${client}: ${result.stderr}`);
+      assert(!existsSync(skillRoot(workspace, client)), `${client}: project skill shadow created`);
+      if (client === "codex") {
+        const config = readFileSync(join(workspace, ".codex/config.toml"), "utf8");
+        assert(config.includes(SOURCE_SERVER), "Codex source server entry missing");
+      } else {
+        const path = join(workspace, client === "claude" ? ".mcp.json" : ".vscode/mcp.json");
+        const root = client === "claude" ? "mcpServers" : "servers";
+        assert(readJson(path)[root]?.["amanuensis-memory"], `${client}: MCP entry missing`);
+      }
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  }
+});
+
+test("generic --mcp-only fails instead of pretending to configure an unknown host", () => {
+  const workspace = fresh();
+  try {
+    const result = runCli(["init", "--client", "generic", "--dir", workspace, "--mcp-only"]);
+    assert(result.status !== 0, "generic --mcp-only should fail");
+    assert(result.stderr.includes("unavailable for generic clients"), result.stderr);
+    assert(readdirSync(workspace).length === 0, "generic --mcp-only wrote files");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test("JSON adapters preserve unrelated servers and write a backup", () => {
   for (const client of ["claude", "vscode"]) {
     const workspace = fresh();

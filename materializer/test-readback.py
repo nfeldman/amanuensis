@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from amanuensis_materializer.readback import finding_marker
+
 ROOT = Path(__file__).resolve().parent
 SCHEMA = ROOT.parent / "mcp-server" / "src" / "schema.sql"
 
@@ -67,6 +69,7 @@ def main() -> None:
 
         clean = run(storage, "--clean-publish")
         assert clean["ok"] and clean["published"], clean
+        assert clean["html_entrypoint"] == str((docs / "index.html").resolve())
         assert_axes(clean["readback"], state=True, coverage=True, content=True)
 
         # A clean-directory transaction owns only manifest-listed files. It
@@ -126,8 +129,38 @@ def main() -> None:
             for m in missing_stale["mismatches"]
         )
 
+        run(storage, "--clean-publish")
+
+        # HTML is independently accountable. A healthy Markdown companion
+        # must not mask a marker removed from the primary reading surface.
+        findings_html = docs / "findings.html"
+        body = findings_html.read_text()
+        marker = finding_marker("B01-1")
+        assert marker in body
+        findings_html.write_text(body.replace(marker, "", 1))
+        missing_html_finding = run(storage, "--readback-only", expect=1)
+        assert_axes(missing_html_finding, state=False, coverage=True, content=False)
+        assert any(
+            m["axis"] == "state" and m["object_type"] == "finding-html"
+            for m in missing_html_finding["mismatches"]
+        )
+
+        run(storage, "--clean-publish")
+
+        # The HTML route graph is checked separately from Markdown links.
+        body = findings_html.read_text()
+        html_target = "subsystems/b01-reader.html"
+        assert html_target in body, body
+        findings_html.write_text(body.replace(f'href="{html_target}"', 'href="missing.html"', 1))
+        missing_html_link = run(storage, "--readback-only", expect=1)
+        assert_axes(missing_html_link, state=True, coverage=False, content=False)
+        assert any(
+            m["axis"] == "coverage" and m["object_type"] == "cross-link"
+            for m in missing_html_link["mismatches"]
+        )
+
         print(
-            "OK — projection read-back turns red on independent state, coverage, and content faults"
+            "OK — Markdown and HTML read-back turn red on independent state, coverage, and content faults"
         )
 
 

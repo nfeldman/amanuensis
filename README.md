@@ -51,6 +51,12 @@ the record and enforces the rules:
 The result is a reusable situation model for code: compact enough to work from, detailed
 enough to inspect, and explicit about the edge of what is known.
 
+For people, that model is published as a self-contained HTML conspectus: a searchable,
+hyperlinked architectural atlas with plain-language names, reading hints, survey-depth and
+evidence cues, and responsive subsystem and finding pages. Markdown companions remain
+available for portability and audit. Both forms are regenerated together and must pass the
+same state, link-coverage, and byte-correspondence read-back before publication succeeds.
+
 ## Beta
 
 The v2 implementation is distributed as `0.2.0-alpha.0` and passes

@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 from collections import Counter
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,9 @@ from .db import open_ro, rows
 from .manifest import sha256_bytes
 
 CONTRACT_NAME = ".projection-contract.json"
-CONTRACT_VERSION = "1"
+CONTRACT_VERSION = "2"
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+HTML_SUFFIXES = {".html", ".htm"}
 
 
 def finding_marker(finding_id: str) -> str:
@@ -39,10 +41,48 @@ def stale_marker(entry_id: str, tier: int) -> str:
     return f"<!-- amanuensis:stale-entry:{token} -->"
 
 
-def _local_links(text: str) -> list[str]:
+class _HtmlInventory(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+        self.anchors: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if values.get("id"):
+            self.anchors.add(str(values["id"]))
+        if tag == "a" and values.get("href"):
+            self.links.append(str(values["href"]))
+
+
+def _links(text: str, suffix: str) -> list[str]:
+    if suffix in HTML_SUFFIXES:
+        parser = _HtmlInventory()
+        parser.feed(text)
+        return parser.links
+    return LINK_RE.findall(text)
+
+
+def _anchors(text: str, suffix: str) -> set[str]:
+    if suffix in HTML_SUFFIXES:
+        parser = _HtmlInventory()
+        parser.feed(text)
+        return parser.anchors
+    anchors = set(re.findall(r'<a\s+id="([^"]+)"', text))
+    # GitHub-style heading anchors are a useful fallback for authored prose.
+    for heading in re.findall(r"^#{1,6}\s+(.+?)\s*$", text, flags=re.MULTILINE):
+        value = re.sub(r"[`*_\[\]()]", "", heading).lower()
+        value = re.sub(r"[^a-z0-9 -]", "", value)
+        value = re.sub(r"[\s-]+", "-", value).strip("-")
+        if value:
+            anchors.add(value)
+    return anchors
+
+
+def _local_links(text: str, suffix: str = ".md") -> list[str]:
     return [
         target
-        for target in LINK_RE.findall(text)
+        for target in _links(text, suffix)
         if not target.startswith(("http://", "https://", "mailto:", "#"))
     ]
 
@@ -56,7 +96,10 @@ def write_contract(output: Path, page_paths: list[str]) -> dict[str, Any]:
             continue
         body = path.read_text()
         pages.append({"path": rel, "content_hash": sha256_bytes(path.read_bytes())})
-        links.extend({"source": rel, "target": target} for target in _local_links(body))
+        links.extend(
+            {"source": rel, "target": target}
+            for target in _local_links(body, path.suffix.lower())
+        )
     contract = {
         "version": CONTRACT_VERSION,
         "pages": pages,
@@ -101,12 +144,12 @@ class ProjectionVerifier:
                 )
             return self._summary(mismatches)
 
-        markdown = {
+        projection = {
             str(path.relative_to(self.output)): path.read_text()
-            for path in self.output.rglob("*.md")
+            for pattern in ("*.md", "*.html")
+            for path in self.output.rglob(pattern)
             if path.is_file()
         }
-        all_text = "\n".join(markdown.values())
 
         # State correspondence comes from the DB, not from the renderer or its
         # receipt.  A missing or duplicated marker is independently visible.
@@ -116,35 +159,41 @@ class ProjectionVerifier:
             stale = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
         finally:
             conn.close()
-        for row in findings:
-            marker = finding_marker(str(row["finding_id"]))
-            count = all_text.count(marker)
-            if count != 1:
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "finding",
-                        "object_id": str(row["finding_id"]),
-                        "detail": f"expected exactly one state marker, found {count}",
-                    }
-                )
-        for row in stale:
-            marker = stale_marker(str(row["id"]), int(row["tier"]))
-            count = all_text.count(marker)
-            if count != 1:
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "stale-entry",
-                        "object_id": f"{row['id']}:{row['tier']}",
-                        "detail": f"expected exactly one stale marker, found {count}",
-                    }
-                )
+        # The Markdown and HTML views must each carry authoritative markers.
+        # One healthy format cannot mask drift in its companion.
+        for suffix, label in ((".md", "markdown"), (".html", "html")):
+            format_text = "\n".join(
+                body for rel, body in projection.items() if Path(rel).suffix == suffix
+            )
+            for finding in findings:
+                marker = finding_marker(str(finding["finding_id"]))
+                count = format_text.count(marker)
+                if count != 1:
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": "finding" if label == "markdown" else "finding-html",
+                            "object_id": str(finding["finding_id"]),
+                            "detail": f"expected exactly one {label} state marker, found {count}",
+                        }
+                    )
+            for stale_row in stale:
+                marker = stale_marker(str(stale_row["id"]), int(stale_row["tier"]))
+                count = format_text.count(marker)
+                if count != 1:
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": "stale-entry" if label == "markdown" else "stale-entry-html",
+                            "object_id": f"{stale_row['id']}:{stale_row['tier']}",
+                            "detail": f"expected exactly one {label} stale marker, found {count}",
+                        }
+                    )
 
         # Coverage compares both the current page plan and the link receipt to
         # the completed output.  This catches retired/missing pages and links
         # stripped after xref resolution.
-        actual_pages = sorted(markdown)
+        actual_pages = sorted(projection)
         expected_set = set(self.expected_pages)
         actual_set = set(actual_pages)
         for rel in sorted(expected_set - actual_set):
@@ -162,7 +211,7 @@ class ProjectionVerifier:
                     "axis": "coverage",
                     "object_type": "page",
                     "object_id": rel,
-                    "detail": "unplanned markdown page remains in the clean projection",
+                    "detail": "unplanned page remains in the clean projection",
                 }
             )
 
@@ -170,7 +219,9 @@ class ProjectionVerifier:
             (str(link["source"]), str(link["target"])) for link in contract.get("local_links", [])
         )
         actual_links = Counter(
-            (source, target) for source, body in markdown.items() for target in _local_links(body)
+            (source, target)
+            for source, body in projection.items()
+            for target in _local_links(body, Path(source).suffix.lower())
         )
         for (source, target), expected_count in sorted(expected_links.items()):
             actual_count = actual_links[(source, target)]
@@ -201,6 +252,24 @@ class ProjectionVerifier:
                             "detail": "local link target does not resolve inside the projection",
                         }
                     )
+                elif "#" in target:
+                    fragment = target.split("#", 1)[1]
+                    target_rel = str(resolved.relative_to(self.output.resolve()))
+                    target_text = projection.get(target_rel)
+                    if target_text is None:
+                        try:
+                            target_text = resolved.read_text()
+                        except OSError:
+                            target_text = ""
+                    if fragment not in _anchors(target_text, resolved.suffix.lower()):
+                        mismatches.append(
+                            {
+                                "axis": "coverage",
+                                "object_type": "cross-link-anchor",
+                                "object_id": f"{source}->{target}",
+                                "detail": "local link fragment does not resolve to an anchor",
+                            }
+                        )
 
         # Content is a byte-for-byte drift check against the post-xref receipt.
         # It proves projection correspondence, not the semantic truth of the DB.

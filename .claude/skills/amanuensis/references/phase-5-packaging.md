@@ -64,7 +64,9 @@ materialize_docs()
 
 The materializer is diff-aware — only pages whose DB or prose
 sources changed get re-rendered. The cross-reference resolver
-re-links every ID across pages.
+re-links every ID across pages. It then publishes synchronized HTML and
+Markdown views and reads both back. Treat the returned `html_entrypoint` as
+the primary human handoff; Markdown remains the portable audit companion.
 
 ### 6. Contradiction detection
 
@@ -128,6 +130,7 @@ Emit the survey-pass summary (status block, not a gate):
 - Field notes that came out of the pass.
 - Open questions logged this pass (by category).
 - Seams that became assessable as a result of this pass.
+- The exact `html_entrypoint` returned by `materialize_docs`.
 
 Then follow the inferred scope: for a repository-wide run, pick the next
 highest-priority `unmapped` subsystem and continue until everything is

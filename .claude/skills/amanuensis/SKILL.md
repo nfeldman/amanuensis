@@ -193,6 +193,19 @@ Each checkpoint:
    questions added).
 3. Continue to the next unit of work.
 
+## Human projection
+
+`materialize_docs` publishes two synchronized views under the project storage
+`docs/` directory. HTML is the primary human reading surface; Markdown is its
+portable, inspectable companion. The tool returns `html_entrypoint`, normally
+`<project>/.amanuensis/docs/index.html`. After materialization, surface that
+exact path in the checkpoint or completion summary rather than reporting only
+the directory or `index.md`.
+
+Both views are derived. Durable authority remains in `memory.db` and the
+registered prose artifacts. Publication read-back verifies HTML and Markdown
+independently, so a healthy companion cannot mask a damaged primary view.
+
 For long runs, prefer brief status blocks over silent grinding, but do not ask
 for permission to continue inside the inferred scope.
 

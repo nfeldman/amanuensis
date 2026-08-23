@@ -85,6 +85,32 @@ the absolute pinned Node executable and in-tree `dist/index.js` path, so a GUI
 host does not depend on the shell that ran `mise`. An installed npm package uses
 the `amanuensis-memory` bin instead.
 
+### Live global skill, versioned published skill
+
+For local Amanuensis development, keep one canonical skill and link each real
+global loader to the whole skill directory:
+
+- Codex: `$CODEX_HOME/skills/amanuensis` → the checkout's
+  `.claude/skills/amanuensis` directory. Codex silently omits a skill when only
+  `SKILL.md` is linked, so the directory-level link is required.
+- Claude Code and Copilot: `~/.claude/skills/amanuensis` → the same canonical
+  directory.
+
+Do not leave a copied project skill at `.agents/skills/amanuensis` or
+`.claude/skills/amanuensis` in a development project: it shadows the global
+link and freezes that project on the copied version. Configure only the live
+source MCP launcher with:
+
+```bash
+mise exec -- node mcp-server/dist/cli.js init \
+  --client <codex|claude|vscode> --dir /path/to/project --mcp-only
+```
+
+Reload the client after changing its MCP configuration. A task that already
+loaded a skill retains that task's instructions; new tasks read through the
+global link. Published package installation continues to use ordinary `init`,
+which deliberately copies the versioned bundled skill into the project.
+
 ## Verifying the connection
 
 After starting or reloading the client, call:

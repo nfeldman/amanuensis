@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import UTC
 from pathlib import Path
 
-MATERIALIZER_VERSION = "0.2.0"
+MATERIALIZER_VERSION = "0.3.0"
 
 
 def _now_iso() -> str:
@@ -50,6 +50,11 @@ class Manifest:
     version: str = MATERIALIZER_VERSION
     generated_at: str = ""
     pages: dict[str, PageManifest] = field(default_factory=dict)
+    # Generated companions that are derived from the finished Markdown
+    # projection rather than directly from DB/prose sources.  Keeping them in
+    # the same custody manifest lets clean publication distinguish our HTML
+    # from unrelated files a human placed beside the docs.
+    projection_files: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path) -> Manifest:
@@ -79,6 +84,11 @@ class Manifest:
                 )
                 for p in data.get("pages", [])
             },
+            projection_files={
+                str(p["path"]): str(p.get("content_hash", ""))
+                for p in data.get("projection_files", [])
+                if "path" in p
+            },
         )
         return m
 
@@ -96,6 +106,10 @@ class Manifest:
                     "rendered_at": p.rendered_at,
                 }
                 for _, p in sorted(self.pages.items())
+            ],
+            "projection_files": [
+                {"path": path, "content_hash": digest}
+                for path, digest in sorted(self.projection_files.items())
             ],
         }
         path.write_text(json.dumps(serialized, indent=2, sort_keys=False))

@@ -183,6 +183,7 @@ def main() -> None:
         summary1 = run_materializer(storage)
         print("run 1:", json.dumps(summary1, indent=2))
         assert summary1["ok"] is True, summary1
+        assert summary1["html_entrypoint"] == str((storage / "docs" / "index.html").resolve())
         assert summary1["pages_rendered"] > 0
         assert summary1["pages_unchanged"] == 0, summary1
         # Verify key pages exist.
@@ -196,6 +197,21 @@ def main() -> None:
             "subsystems/f01-web-ui.md",
         ]:
             assert (docs / p).is_file(), f"missing: {p}"
+            html_page = str(Path(p).with_suffix(".html"))
+            assert (docs / html_page).is_file(), f"missing HTML companion: {html_page}"
+        html_index = (docs / "index.html").read_text()
+        assert "Amanuensis HTML projection" in html_index
+        assert "Conspectus navigation" in html_index
+        assert "Find a page" in html_index
+        assert "Reading hint" in html_index
+        assert 'href="findings.html"' in html_index
+        assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
+        html_findings = (docs / "findings.html").read_text()
+        assert 'href="subsystems/b02-auth-service.html"' in html_findings
+        assert "status-open" in html_findings
+        assert "<table" in html_findings and "<p>|" not in html_findings
+        html_architecture = (docs / "architecture.html").read_text()
+        assert "relationship-map" in html_architecture
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
         htr = (docs / "how-to-read.md").read_text()
@@ -226,6 +242,9 @@ def main() -> None:
         assert summary2["ok"] is True
         assert summary2["pages_rendered"] == 0, f"expected 0 re-renders, got {summary2['pages_rendered']}"
         assert summary2["pages_unchanged"] == summary1["pages_total"], summary2
+        assert summary2["xref_updates"] == 0, summary2
+        assert summary2["html_pages_rendered"] == 0, summary2
+        assert summary2["html_pages_unchanged"] == summary1["html_pages_total"], summary2
 
         # Third run — touch the entry-point prose; only pages that source
         # from it should re-render (index + entry-point passthrough, plus
@@ -251,6 +270,7 @@ def main() -> None:
             f"materializer's source-hash manifest and cross-reference "
             f"invalidation logic."
         )
+        assert 1 <= summary3["html_pages_rendered"] <= 4, summary3
 
         # DB-change regression guard: flip one disposition's classification
         # and verify only the affected subsystem's survey page plus the
@@ -296,6 +316,7 @@ def main() -> None:
         print("run 4:", json.dumps(summary4, indent=2))
         assert summary4["pages_total"] == summary1["pages_total"] + 1  # new subsystem page
         assert (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert (docs / "subsystems/b03-rate-limiter.html").is_file()
 
         # Fifth run — remove B-03; the page and its manifest entry should be retired.
         db = sqlite3.connect(storage / "memory.db")
@@ -306,6 +327,8 @@ def main() -> None:
         print("run 5:", json.dumps(summary5, indent=2))
         assert "subsystems/b03-rate-limiter.md" in summary5["pages_retired"]
         assert not (docs / "subsystems/b03-rate-limiter.md").is_file()
+        assert "subsystems/b03-rate-limiter.html" in summary5["html_pages_retired"]
+        assert not (docs / "subsystems/b03-rate-limiter.html").is_file()
 
         # Sixth scenario — fault injection. A renderer exception should
         # NOT abort the whole run (one bad page shouldn't fail every

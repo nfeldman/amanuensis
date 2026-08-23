@@ -44,6 +44,7 @@ type InitFlags = {
   client: Client;
   dryRun: boolean;
   force: boolean;
+  mcpOnly: boolean;
 };
 
 type PlanAction =
@@ -108,6 +109,8 @@ function printUsage(): void {
       "  --dir <path>     Target project (default: current directory).",
       "  --force          Replace conflicting Amanuensis-managed files after",
       "                   writing timestamped backups.",
+      "  --mcp-only       Configure only the project MCP launcher. Intended for",
+      "                   local development with a live global skill symlink.",
       "  --dry-run        Print the complete plan; write nothing.",
       "  --help           Show this message.",
       "",
@@ -462,7 +465,7 @@ function buildPlan(flags: InitFlags): PlanAction[] {
   };
 
   planLegacyAgents(actions, workspace);
-  planSkill(actions, workspace, flags, planMkdir);
+  if (!flags.mcpOnly) planSkill(actions, workspace, flags, planMkdir);
   if (flags.client === "claude" || flags.client === "vscode") {
     planJsonConfig(actions, workspace, flags.client, flags, planMkdir);
   } else if (flags.client === "codex") {
@@ -552,6 +555,7 @@ function cmdInit(argv: string[]): void {
       client: { type: "string" },
       dir: { type: "string", default: process.cwd() },
       force: { type: "boolean", default: false },
+      "mcp-only": { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
@@ -567,7 +571,13 @@ function cmdInit(argv: string[]): void {
     client: parseClient(values.client),
     dryRun: values["dry-run"] as boolean,
     force: values.force as boolean,
+    mcpOnly: values["mcp-only"] as boolean,
   };
+  if (flags.client === "generic" && flags.mcpOnly) {
+    throw new Error(
+      "--mcp-only is unavailable for generic clients because there is no project MCP adapter to configure",
+    );
+  }
   const requestedWorkspace = resolve(flags.dir);
   if (!existsSync(requestedWorkspace) || !statSync(requestedWorkspace).isDirectory()) {
     throw new Error(`target directory does not exist or is not a directory: ${requestedWorkspace}`);

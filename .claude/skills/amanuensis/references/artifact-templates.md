@@ -224,8 +224,9 @@ summary that persists across sessions.
 - [B01-1] (ruled out in adversarial review — supervisor bounds the blast radius)
 ```
 
-The materializer can produce a richer version at `docs/findings.md`;
-this prose index is the human-committed record.
+The materializer produces a richer primary reading surface at
+`docs/findings.html`, with `docs/findings.md` as its portable companion; this
+prose index remains the human-committed record.
 
 ---
 

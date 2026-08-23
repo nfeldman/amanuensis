@@ -46,6 +46,7 @@ def unmanaged_output_files(output: Path) -> list[str]:
         ".manifest.json",
         ".projection-contract.json",
         *(str(page["path"]) for page in manifest.get("pages", []) if "path" in page),
+        *(str(item["path"]) for item in manifest.get("projection_files", []) if "path" in item),
     }
     return sorted(
         str(path.relative_to(output))
@@ -113,7 +114,14 @@ def main() -> int:
         return 2
     if args.readback_only:
         summary = Materializer(storage=storage, output=output).verify_projection()
-        summary.update({"output_dir": str(output), "mode": "readback", "published": False})
+        summary.update(
+            {
+                "output_dir": str(output),
+                "html_entrypoint": str(output / "index.html"),
+                "mode": "readback",
+                "published": False,
+            }
+        )
         print(json.dumps(summary))
         return 0 if summary.get("ok", False) else 1
 
@@ -179,6 +187,7 @@ def main() -> int:
             verify_readback=not args.no_verify_readback,
         ).materialize()
         summary.update({"mode": "readback", "published": summary.get("ok", False)})
+    summary["html_entrypoint"] = str(output / "index.html")
     print(json.dumps(summary))
     return 0 if summary.get("ok", False) else 1
 
