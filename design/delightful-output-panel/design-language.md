@@ -299,7 +299,14 @@ Keyboard: `Cmd/Ctrl+K` focuses search; Escape closes only the mobile drawer; nat
   prose container, independent of the viewport breakpoints below.
 - **881–1119px:** fixed rail; 2×2 condition band/routes; two-column atlas.
 - **≤880px:** navigation drawer with labelled button; content full width; local section map enters document flow.
-- **≤620px:** all evidence cards single column; relationship trails scroll as complete labelled units; finding register becomes ID + body + second-row metadata.
+- **Sticky navigation:** fragment targets reserve the mobile bar's full height,
+  so a deep-linked record identity is never hidden under the control.
+- **Finding record ≤92ch:** the side rail becomes a full-width compact header;
+  ID and whole-fact units precede the consequence/root-cause sequence. At
+  `52ch`, identity and facts stack. These are report-container thresholds, so
+  zoom and navigation width participate.
+- **≤620px:** all other evidence cards become single column; relationship
+  trails scroll as complete labelled units.
 - **No JavaScript ≤880px:** rail is static at the top, not inaccessible off-canvas.
 - **Print:** rail and enhancement controls disappear; content, statuses, source identity, and disclosed evidence print in reading order.
 

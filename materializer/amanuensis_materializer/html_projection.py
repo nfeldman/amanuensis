@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.6.0"
+HTML_PROJECTION_VERSION = "1.7.0"
 
 
 @dataclass(frozen=True)
@@ -572,6 +572,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
   .document { margin-left: 0; }
   .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  :is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }
   .mobile-brand { font: 600 1rem/1 var(--heading); }
   .document-inner { padding: 2.5rem 1.35rem 4rem; }
   .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -596,6 +597,33 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @container report (max-width: 92ch) {
   .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
+  .record-finding { grid-template-columns: minmax(0, 1fr); }
+  .record-finding .record-meta {
+    display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+    gap: .65rem 1.25rem; align-items: center;
+    border-right: 0; border-bottom: 1px solid var(--rule);
+  }
+  .record-finding .record-primary { align-self: start; margin-top: .12rem; }
+  .record-finding .record-facts {
+    display: flex; flex-wrap: wrap; gap: .45rem 1.15rem;
+    align-items: center; min-width: 0; margin: 0;
+  }
+  .record-finding .record-facts > div {
+    display: flex; gap: .38rem; align-items: center;
+    min-width: max-content; padding: 0;
+  }
+  .record-finding .record-facts dd { overflow-wrap: normal; }
+  .record-finding .record-fact-subsystem dd,
+  .record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
+  .record-finding .record-fact-severity dt,
+  .record-finding .record-fact-status dt {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+}
+
+@container report (max-width: 52ch) {
+  .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 620px) {

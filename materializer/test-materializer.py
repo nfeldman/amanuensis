@@ -232,6 +232,7 @@ def main() -> None:
         assert ".page-hint { max-width: none" in html_index
         assert "border-radius: 999px" not in html_index
         assert ".js .nav-rail" in html_index, "mobile drawer must be enhancement-only"
+        assert ":is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }" in html_index
         assert "navRail.inert" in html_index, "closed enhanced drawer must leave the tab order"
         assert "setMenuOpen(false, true)" in html_index, "Escape must close the drawer and restore focus"
         assert 'href="findings.html"' in html_index
@@ -242,6 +243,12 @@ def main() -> None:
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
+        assert "@container report (max-width: 92ch)" in html_findings
+        assert ".record-finding { grid-template-columns: minmax(0, 1fr); }" in html_findings
+        assert ".record-finding .record-facts > div" in html_findings
+        assert "min-width: max-content; padding: 0" in html_findings
+        assert "@container report (max-width: 52ch)" in html_findings
+        assert ".record-finding .record-fact-ref-sha code { white-space: nowrap" in html_findings
         html_concerns = (docs / "concerns.html").read_text()
         assert 'class="identifier-definition"' in html_concerns
         assert 'title="CC-1 — Cache Coherence"' in html_concerns

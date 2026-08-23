@@ -103,7 +103,11 @@ field as an equally prominent column.
 Current typed projections:
 
 - Findings are one anchored article each: compact identity and status,
-  consequence-led observed behavior, then root cause in sequence.
+  consequence-led observed behavior, then root cause in sequence. Keep the
+  metadata rail only while it can preserve every fact intact. At a narrower
+  report-container measure, make identity and whole-fact units a compact
+  full-width header above the argument; stack that header again at phone
+  measures. Do not wait for text to collide before changing composition.
 - File ledgers are ruled registers: filename and full path with review and
   revision facts, beside the dominant `Why in scope` account.
 - Concern-review records keep concern, verdict, evidence, and any actual
