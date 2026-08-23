@@ -112,7 +112,9 @@ Current typed projections:
   plain-language group heading rather than repeating it in every article. Do
   not append a bare parenthesized count to that heading; expose counts where a
   reader is actually comparing quantities. Treat severity as one ordinal ramp:
-  low is neutral, then consequence increases through ochre and rust to oxblood.
+  low is neutral, then consequence increases through amber and vermilion to
+  crimson. Keep enough chroma that the middle of the ramp does not collapse
+  into several indistinguishable browns.
   The written label remains authoritative; color is a redundant signal. Render
   the severity group as one heading with a small color mark, never as a compact
   status tag attached to a separate display word.

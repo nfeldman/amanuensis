@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.9.2"
+HTML_PROJECTION_VERSION = "1.9.4"
 
 
 @dataclass(frozen=True)
@@ -157,9 +157,9 @@ _CSS = r"""
   --survey-mapped: #174f46;
   --survey-deferred: #777b79;
   --severity-low: #767b75;
-  --severity-medium: #8a7128;
-  --severity-high: #a0522f;
-  --severity-critical: #922f34;
+  --severity-medium: #b07b00;
+  --severity-high: #bd5217;
+  --severity-critical: #aa2438;
   --evidence-code: #1f5c55;
   --evidence-contract: #32645d;
   --evidence-test: #416c65;
@@ -168,7 +168,7 @@ _CSS = r"""
   --evidence-comment: #6b7b76;
   --evidence-name: #747e7a;
   --evidence-pattern: #7d8582;
-  --disposition-defect: #922f34;
+  --disposition-defect: #aa2438;
   --disposition-acceptable: #276052;
   --disposition-ruled-out: #586864;
   --disposition-out-of-scope: #7d8380;
@@ -210,9 +210,9 @@ _CSS = r"""
   --survey-mapped: #62ccb9;
   --survey-deferred: #929895;
   --severity-low: #a0a8a3;
-  --severity-medium: #c6ad61;
-  --severity-high: #d99468;
-  --severity-critical: #e17b79;
+  --severity-medium: #e2bf4f;
+  --severity-high: #f09a58;
+  --severity-critical: #f27b88;
   --evidence-code: #79b6ae;
   --evidence-contract: #83b3ac;
   --evidence-test: #8dafaa;
@@ -221,7 +221,7 @@ _CSS = r"""
   --evidence-comment: #a2a6a4;
   --evidence-name: #a6aaa8;
   --evidence-pattern: #aaadab;
-  --disposition-defect: #e17b79;
+  --disposition-defect: #f27b88;
   --disposition-acceptable: #78b9a6;
   --disposition-ruled-out: #a2aaa6;
   --disposition-out-of-scope: #8e9692;
@@ -244,12 +244,12 @@ _CSS = r"""
     --survey-unmapped: #89928e; --survey-scoping: #88a09a;
     --survey-structural: #82aea5; --survey-concerns: #78b9ae;
     --survey-adversarial: #6bc3b4; --survey-mapped: #62ccb9; --survey-deferred: #929895;
-    --severity-low: #a0a8a3; --severity-medium: #c6ad61;
-    --severity-high: #d99468; --severity-critical: #e17b79;
+    --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
+    --severity-high: #f09a58; --severity-critical: #f27b88;
     --evidence-code: #79b6ae; --evidence-contract: #83b3ac; --evidence-test: #8dafaa;
     --evidence-config: #96aaa6; --evidence-doc: #9da7a4; --evidence-comment: #a2a6a4;
     --evidence-name: #a6aaa8; --evidence-pattern: #aaadab;
-    --disposition-defect: #e17b79; --disposition-acceptable: #78b9a6;
+    --disposition-defect: #f27b88; --disposition-acceptable: #78b9a6;
     --disposition-ruled-out: #a2aaa6; --disposition-out-of-scope: #8e9692;
     --disposition-ambiguous: #b7a0bd;
     --resolution-open: #d99468; --resolution-pending: #c6ad61;
@@ -502,6 +502,12 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-copy code { overflow-wrap: anywhere; }
 .record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
 .record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+h1, h2, .brand-mark, .record-primary, .record-lede {
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  font-feature-settings: "kern" 1, "liga" 1, "clig" 1;
+  text-rendering: optimizeLegibility;
+}
 .record-finding { display: block; }
 .record-finding .record-meta {
   display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);

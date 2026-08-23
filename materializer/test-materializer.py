@@ -244,6 +244,8 @@ def main() -> None:
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
         assert '.record-lede { max-width: var(--measure);' in html_findings
+        assert 'font-feature-settings: "kern" 1, "liga" 1, "clig" 1;' in html_findings
+        assert 'h1, h2, .brand-mark, .record-primary, .record-lede' in html_findings
         assert 'class="content content-findings"' in html_findings
         assert 'id="high-findings"' in html_findings
         assert '>High findings</h2>' in html_findings

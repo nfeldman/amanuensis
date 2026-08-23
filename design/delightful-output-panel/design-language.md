@@ -243,9 +243,9 @@ badge followed by a second typographic phrase.
 | Enum | Scale logic | Light-theme sequence or mapping |
 |---|---|---|
 | Survey depth | sequential green-gray; greater depth means greater chroma and darkness | unmapped `#858d89` → scoping `#6f817c` → structural `#59766f` → concerns `#436b63` → adversarial `#2e6057` → mapped `#174f46`; deferred is dashed neutral `#777b79` |
-| Finding severity | ordinal warm ramp; consequence increases from neutral through ochre and rust to oxblood | low `#767b75`, medium `#8a7128`, high `#a0522f`, critical `#922f34` |
+| Finding severity | ordinal warm ramp; consequence increases from neutral through amber and vermilion to crimson | low `#767b75`, medium `#b07b00`, high `#bd5217`, critical `#aa2438` |
 | Evidence quality | sequential green-gray; direct verification is strongest, inference is nearest neutral | code `#1f5c55`, contract `#32645d`, test `#416c65`, config `#526f69`, docs `#5f756f`, comment `#6b7b76`, name `#747e7a`, pattern `#7d8582` |
-| Concern disposition | nominal; outcome types must not imply a false order | defect `#922f34`, acceptable `#276052`, ruled out `#586864`, out of scope `#7d8380` with dashed border, competing explanations `#6f5b76` |
+| Concern disposition | nominal; outcome types must not imply a false order | defect `#aa2438`, acceptable `#276052`, ruled out `#586864`, out of scope `#7d8380` with dashed border, competing explanations `#6f5b76` |
 | Finding resolution | categorical action state | open `#98532f`, awaiting verification `#806c27`, verified/closed `#225d50`, accepted `#3d685e` |
 | Source alignment | binary source relationship, not project quality | aligned `#3f6b64`, stale `#98532f` |
 
@@ -262,7 +262,9 @@ required before a conformance claim.
 ### Typography
 
 - Display: `Iowan Old Style`, `Palatino Linotype`, `Book Antiqua`, `Georgia`,
-  then the platform serif; no downloaded font.
+  then the platform serif; no downloaded font. Every display-text role
+  explicitly enables kerning plus the OpenType `liga` and `clig` features;
+  font shorthands must not silently reset those features on lower headings.
 - Body: platform sans stack.
 - Metadata: platform monospace stack.
 - H1: editorial publication scale (`clamp(2.8rem, 4.8vw, 5.2rem)` in the
