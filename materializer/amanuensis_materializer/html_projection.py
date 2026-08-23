@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.5.0"
+HTML_PROJECTION_VERSION = "1.6.0"
 
 
 @dataclass(frozen=True)
@@ -135,7 +135,7 @@ _CSS = r"""
   --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --rail: 17.25rem;
-  --measure: 72ch;
+  --measure: 120ch;
   --page: 128rem;
   --baseline: .25rem;
 }
@@ -293,7 +293,7 @@ blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
 .raw-prose-note { border-left-color: var(--signal); }
 
 .prose-flow {
-  max-width: none;
+  max-width: var(--measure);
   margin: 1rem 0 1.5rem;
   orphans: 3;
   widows: 3;
@@ -334,7 +334,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 }
 .coverage-subsystem {
   display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
-  gap: .7rem 1rem; min-width: 0; padding: .8rem 1rem;
+  gap: .7rem 1rem; align-content: start; min-width: 0; padding: .8rem 1rem;
   border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
 }
 .coverage-subsystem-head { min-width: 0; }
@@ -352,7 +352,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-state-ruled-out { color: var(--good); }
 .coverage-state-out-of-scope { color: var(--quiet); }
 .coverage-state-unresolved-competition, .coverage-state-unknown { color: var(--signal); }
-.coverage-tokens { display: flex; flex-wrap: wrap; gap: .32rem; grid-column: 1 / -1; }
+.coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
 .coverage-token {
   display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
   padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
@@ -395,7 +395,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-facts > div { display: grid; grid-template-columns: 7.25rem minmax(0, 1fr); gap: .65rem; align-items: center; padding: .23rem 0; }
 .record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
 .record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
-.record-facts :is(.status, .evidence-label, .severity) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
 .record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
 .record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
 .record-field:last-child { border-right: 0; }
@@ -412,6 +412,22 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
 .record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
 .record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern-disposition { display: block; }
+.record-concern-disposition .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .8rem 1.5rem; align-items: start;
+  padding: .9rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-disposition .record-primary { margin-top: .1rem; }
+.record-concern-disposition .record-facts {
+  display: flex; flex-wrap: wrap; gap: .48rem 1.35rem; align-items: center;
+  min-width: 0; margin: 0;
+}
+.record-concern-disposition .record-facts > div {
+  display: grid; grid-template-columns: auto auto; gap: .45rem;
+  align-items: center; min-width: max-content; padding: 0;
+}
+.record-concern-disposition .record-facts dd { overflow-wrap: normal; }
 .record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
 .file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
 .file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
@@ -563,6 +579,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @container report (min-width: 120ch) {
   .prose-flow {
+    max-width: none;
     column-count: 2;
     column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
     column-rule: 1px solid var(--rule);
@@ -590,6 +607,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .heading-anchor { display: none; }
   .record { grid-template-columns: 1fr; }
   .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-concern-disposition .record-meta { grid-template-columns: 1fr; }
   .record-fields { grid-template-columns: 1fr; }
   .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
   .record-field:last-child { border-bottom: 0; }
@@ -831,18 +849,27 @@ class _IdentifierMarkup(HTMLParser):
     """Add semantic definitions to known opaque IDs in an HTML fragment."""
 
     _PROTECTED = frozenset({"abbr", "script", "style"})
+    _VOID = frozenset({
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+        "meta", "param", "source", "track", "wbr",
+    })
 
     def __init__(self, definitions: dict[str, str]):
         super().__init__(convert_charrefs=False)
         self.definitions = definitions
         self.parts: list[str] = []
-        self.protected: list[str] = []
+        self.protected_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        del attrs
         self.parts.append(self.get_starttag_text())
-        if tag in self._PROTECTED:
-            self.protected.append(tag)
+        is_contextual_definition = any(
+            name == "data-identifier-defined" for name, _ in attrs
+        )
+        if self.protected_depth:
+            if tag not in self._VOID:
+                self.protected_depth += 1
+        elif tag in self._PROTECTED or is_contextual_definition:
+            self.protected_depth = 1
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         del tag, attrs
@@ -850,14 +877,11 @@ class _IdentifierMarkup(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         self.parts.append(f"</{tag}>")
-        if tag in self._PROTECTED:
-            for index in range(len(self.protected) - 1, -1, -1):
-                if self.protected[index] == tag:
-                    del self.protected[index]
-                    break
+        if self.protected_depth:
+            self.protected_depth -= 1
 
     def handle_data(self, data: str) -> None:
-        if self.protected:
+        if self.protected_depth:
             self.parts.append(data)
             return
 
@@ -1053,7 +1077,10 @@ class MarkdownRenderer:
         name = html.unescape(name).strip()
         if name.startswith(record_id):
             name = name[len(record_id) :].strip()
-        body = f"<strong>{html.escape(record_id)}</strong><span>{html.escape(name or record_id)}</span>"
+        body = (
+            f'<strong data-identifier-defined>{html.escape(record_id)}</strong>'
+            f'<span>{html.escape(name or record_id)}</span>'
+        )
         href = self._route(record_id)
         if href:
             return f'<a class="relationship-node" href="{html.escape(href, quote=True)}">{body}</a>'
@@ -1178,10 +1205,16 @@ class MarkdownRenderer:
                     continue
                 facts.append((key, self._field_label(key, projection.kind), value))
 
-            facts_html = "".join(
-                f'<div class="record-fact record-fact-{html.escape(slugify(key), quote=True)}"><dt>{html.escape(label)}</dt><dd>{_inline(value)}</dd></div>'
-                for key, label, value in facts
-            )
+            fact_chunks: list[str] = []
+            for key, label, value in facts:
+                value_html = _inline(value)
+                if projection.kind == "subsystem" and key == "id":
+                    value_html = f'<span data-identifier-defined>{value_html}</span>'
+                fact_chunks.append(
+                    f'<div class="record-fact record-fact-{html.escape(slugify(key), quote=True)}">'
+                    f'<dt>{html.escape(label)}</dt><dd>{value_html}</dd></div>'
+                )
+            facts_html = "".join(fact_chunks)
             meta = (
                 '<header class="record-meta">'
                 f'<h3 class="record-primary" id="{html.escape(heading_id, quote=True)}">{primary}</h3>'
@@ -1261,7 +1294,7 @@ class MarkdownRenderer:
             items = "".join(
                 "".join(markers)
                 + '<li class="atlas-item">'
-                + f'<div class="atlas-subsystem">{_inline(subsystem)}</div>'
+                + f'<div class="atlas-subsystem" data-identifier-defined>{_inline(subsystem)}</div>'
                 + f'<div class="atlas-depth">{_inline(depth)}</div>'
                 + "</li>"
                 for subsystem, depth, markers in subsystems
@@ -1383,7 +1416,7 @@ class MarkdownRenderer:
                     '<p class="topology-edge-head">'
                     f'<span class="topology-edge-key">{_inline(edge["key"])}</span>{qualifier}</p>'
                     f'<p class="topology-peer"><span class="topology-peer-label">{peer_label}</span>'
-                    f'<span class="topology-node">{_inline(nodes[peer])}</span></p>'
+                    f'<span class="topology-node" data-identifier-defined>{_inline(nodes[peer])}</span></p>'
                     f'<p class="topology-object">{_inline(edge["detail"])}</p>'
                     '</div></article>'
                 )
@@ -1397,12 +1430,12 @@ class MarkdownRenderer:
                     cross_items.append(
                         "".join(edge["markers"])
                         + '<div class="topology-cross-edge">'
-                        f'<span class="topology-node">{_inline(nodes[edge["left"]])}</span>'
+                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["left"]])}</span>'
                         '<span class="topology-cross-relation">'
                         f'<strong>{_inline(edge["key"])}</strong>{html.escape(arrow)}{qualifier}'
                         f'<span class="topology-cross-object">{_inline(edge["detail"])}</span>'
                         '</span>'
-                        f'<span class="topology-node">{_inline(nodes[edge["right"]])}</span>'
+                        f'<span class="topology-node" data-identifier-defined>{_inline(nodes[edge["right"]])}</span>'
                         '</div>'
                     )
                 cross_html = (
@@ -1415,7 +1448,7 @@ class MarkdownRenderer:
                 f'<section class="topology-component" aria-label="{component_label}">'
                 '<header class="topology-hub">'
                 f'<p class="topology-hub-label">Connected area {component_number} · hub</p>'
-                f'<h3 class="topology-hub-title">{_inline(nodes[hub])}</h3>'
+                f'<h3 class="topology-hub-title" data-identifier-defined>{_inline(nodes[hub])}</h3>'
                 f'<p class="topology-hub-count">{len(component)} subsystems · {len(component_edges)} connection{"s" if len(component_edges) != 1 else ""}</p>'
                 '</header>'
                 f'<div class="topology-spokes" role="list">{"".join(spoke_html)}</div>'
@@ -1602,7 +1635,7 @@ class MarkdownRenderer:
                 + '<article class="coverage-subsystem">'
                 '<header class="coverage-subsystem-head">'
                 f'<h3 class="coverage-subsystem-title">{primary}</h3>'
-                f'<span class="coverage-subsystem-id">{html.escape(subsystem_id)}</span></header>'
+                f'<span class="coverage-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></header>'
                 '<div class="coverage-measure">'
                 f'<p class="coverage-review-count">{reviewed} recorded review'
                 f'{"s" if reviewed != 1 else ""} of {len(concern_codes)}</p>'
@@ -1615,7 +1648,7 @@ class MarkdownRenderer:
                 marker_html
                 + '<tr><th scope="row">'
                 + primary
-                + f'<span class="coverage-matrix-subsystem-id">{html.escape(subsystem_id)}</span></th>'
+                + f'<span class="coverage-matrix-subsystem-id" data-identifier-defined>{html.escape(subsystem_id)}</span></th>'
                 + "".join(matrix_cells)
                 + '</tr>'
             )
@@ -1898,10 +1931,12 @@ def _compose_prose_runs(elements: list[str]) -> list[str]:
 
 def _page_eyebrow(page: SitePage) -> str:
     if page.kind == "subsystem":
-        return f"Subsystem · {page.record_id or 'record'}"
+        record = html.escape(page.record_id or "record")
+        return f'Subsystem · <span data-identifier-defined>{record}</span>'
     if page.kind == "matrix":
-        return f"Competing explanations · {page.record_id or 'matrix'}"
-    return page.group
+        record = html.escape(page.record_id or "matrix")
+        return f'Competing explanations · <span data-identifier-defined>{record}</span>'
+    return html.escape(page.group)
 
 
 def _nav(pages: list[SitePage], current: SitePage) -> str:
@@ -1915,7 +1950,11 @@ def _nav(pages: list[SitePage], current: SitePage) -> str:
             href = _rel_link(current.html_path, page.html_path)
             selected = ' aria-current="page"' if page.html_path == current.html_path else ""
             status_class = f" status-{page.status}" if page.status else ""
-            record = f'<span class="nav-id">{html.escape(page.record_id)}</span>' if page.record_id else ""
+            record = (
+                f'<span class="nav-id" data-identifier-defined>{html.escape(page.record_id)}</span>'
+                if page.record_id
+                else ""
+            )
             search = " ".join(filter(None, (page.label, page.record_id, page.hint, page.status))).lower()
             title = html.escape(page.hint, quote=True)
             lis.append(
@@ -1961,7 +2000,7 @@ def _shell(
     }
     nav = _identifier_markup(_nav(pages, page), definitions)
     body = _identifier_markup(body, definitions)
-    eyebrow = _identifier_markup(html.escape(_page_eyebrow(page)), definitions)
+    eyebrow = _identifier_markup(_page_eyebrow(page), definitions)
     return f'''<!doctype html>
 <html lang="en">
 <head>

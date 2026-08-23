@@ -127,11 +127,15 @@ for every row.
 ## Architecture and source routes
 
 - Treat an opaque known identifier as a coordinate plus a definition, never as
-  self-explanatory copy. Wrap every visible occurrence in semantic definition
-  markup with a descriptive native title and matching accessible name;
-  especially enforce this in table headers, matrix axes, navigation, and
-  compact metadata. Where space permits, print the human name beside the code
-  rather than relying on the tooltip alone.
+  self-explanatory copy. When its definition is not already visible beside it,
+  wrap the token in semantic definition markup with a descriptive native title
+  and matching accessible name; this is especially important in table headers,
+  matrix axes, and compact cross-references. When the human name or expansion
+  is immediately adjacent, leave the code as ordinary text: a repeated tooltip
+  and dotted affordance add noise without restoring any missing context.
+- Keep compact status and evidence labels intact. Reflow the whole fact or fact
+  group at a narrower measure; never break a status badge inside a word merely
+  to preserve a metadata column.
 - Do not present a nodes-only diagram as a dependency graph. If no dependency
   edges are recorded, say so and render the linked subsystem inventory as a
   layer atlas. Never infer edges from names, prefixes, or nearby seams.

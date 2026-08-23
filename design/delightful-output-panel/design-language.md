@@ -132,11 +132,12 @@ Every page retains a one-action Markdown companion plus branch/SHA/publication i
 
 ### `IdentifierDefinition`
 
-Every known opaque code is a coordinate with a human definition. Its visible
-token uses `<abbr>` with a descriptive native `title` and matching accessible
-name; table headers, matrix axes, navigation, and compact metadata are not
-exceptions. Print the ordinary name beside the token where the available
-measure allows it, while the definition markup keeps dense views recoverable.
+Every known opaque code is a coordinate with a human definition. When the
+definition is absent from its immediate context, its visible token uses
+`<abbr>` with a descriptive native `title` and matching accessible name; table
+headers, matrix axes, and compact cross-references are the main cases. When the
+ordinary name or expansion is already adjacent, keep the token plain and omit
+the redundant dotted affordance and tooltip.
 
 ### `CoverageIndex`
 
@@ -237,8 +238,9 @@ required before a conformance claim.
 - H1: editorial publication scale (`clamp(2.8rem, 4.8vw, 5.2rem)` in the
   production shell), tight line height and optical ligatures; mobile clamps
   independently.
-- Reading prose: 16px base, 1.58 line height, maximum `72ch` in ordinary
-  single-column passages.
+- Reading prose: 16px base, 1.58 line height, maximum `120ch` in ordinary
+  single-column passages. Paragraphs, lists, and block quotations share this
+  default rather than snapping back to a narrower legacy measure.
 - Finite runs of adjacent narrative paragraphs stay in one column until their
   own reading field reaches `120ch`, then balance into two columns. At `190ch`
   the same field may use three. Use a generous ruled gutter, preserve DOM

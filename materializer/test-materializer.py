@@ -223,6 +223,7 @@ def main() -> None:
         assert "Living architecture" not in html_index
         assert "--paper" not in html_index and "Iowan Old Style" in html_index
         assert "--accent: #235b58" in html_index
+        assert "--measure: 120ch" in html_index
         assert "column-count: 2" in html_index and "column-count: 3" in html_index
         assert "--page: 128rem" in html_index
         assert "@container report (min-width: 120ch)" in html_index
@@ -250,6 +251,12 @@ def main() -> None:
         assert '<strong>3</strong><span>Recorded reviews</span>' in html_concerns
         assert html_concerns.count('<article class="coverage-subsystem">') == 3
         assert html_concerns.count('class="coverage-token coverage-state-') == 3
+        assert "align-content: start" in html_concerns
+        assert "align-items: flex-start; align-self: start" in html_concerns
+        assert '<span class="coverage-subsystem-id" data-identifier-defined>B-01</span>' in html_concerns
+        assert '<span class="coverage-matrix-subsystem-id" data-identifier-defined>B-01</span>' in html_concerns
+        assert 'class="coverage-subsystem-id"><abbr' not in html_concerns
+        assert 'class="coverage-matrix-subsystem-id"><abbr' not in html_concerns
         assert '<details class="coverage-matrix-disclosure">' in html_concerns
         assert '<table class="coverage-matrix">' in html_concerns
         assert html_concerns.count('<td class="coverage-matrix-empty">') == 6
@@ -265,9 +272,16 @@ def main() -> None:
         assert 'class="summary-list"' in html_entry and "Native memory" in html_entry
         html_master_plan = (docs / "master-plan.html").read_text()
         assert 'class="record-list record-list-subsystem"' in html_master_plan
-        assert 'title="B-01 — Job Scheduler"' in html_master_plan
+        assert 'class="record-fact record-fact-id"' in html_master_plan
+        assert '<dd><span data-identifier-defined>' in html_master_plan
+        assert 'class="nav-id" data-identifier-defined>B-01</span>' in html_master_plan
+        assert 'class="nav-id"><abbr' not in html_master_plan
         html_b02 = (docs / "subsystems/b02-auth-service.html").read_text()
         assert 'class="record-list record-list-concern-disposition"' in html_b02
+        assert 'Subsystem · <span data-identifier-defined>B-02</span>' in html_b02
+        assert '.record-concern-disposition { display: block; }' in html_b02
+        assert 'white-space: nowrap; overflow-wrap: normal;' in html_b02
+        assert 'title="TC-1 — Trust Boundary"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
         assert '<div class="topology topology-dependency"' in html_architecture
         assert '<div class="topology topology-seam"' in html_architecture
