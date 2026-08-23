@@ -171,6 +171,13 @@ must optimize for the reader's operation rather than reproduce storage columns.
   contains the finding ID, status, and a right-pinned unlabelled revision; the
   subsystem does not repeat in every record and compact identifiers do not gain
   tooltips when their definitions are already adjacent.
+- Project the calibrated concern checklist as families, not as a five-column
+  table or a succession of metadata rails. Name the category once, keep its
+  territory coordinate adjacent, then render each concern as a compact code +
+  subsystem bar followed by the full-width examination prompt. The prompt is
+  the record, so it does not need a repeated `What to examine` label. Opaque
+  subsystem coordinates retain definitions; a concern code beside its own
+  defining prompt does not.
 - Use `<dl>` for compact term/meaning and metric/value material.
 - Keep identity and provenance visible as subordinate facts. Do not give a
   short SHA a peer column beside a paragraph.

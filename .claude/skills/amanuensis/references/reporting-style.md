@@ -123,6 +123,15 @@ Current typed projections:
   status tag attached to a separate display word.
 - File ledgers are ruled registers: filename and full path with review and
   revision facts, beside the dominant `Why in scope` account.
+- The calibrated concern checklist is a grouped reading register. Carry
+  category and territory once in a plain-language family heading, then give
+  each concern a compact identity bar containing its code and primary
+  subsystem routes above a full-width probe. Do not repeat category,
+  territory, or `What to examine` as row labels. Omit bare parenthesized totals
+  from the HTML heading; the Markdown table remains the complete portable
+  projection. Suppress a concern-code tooltip when its defining probe is the
+  adjacent record body, but retain subsystem definitions when only their
+  compact coordinates are present.
 - Concern-review records keep concern, verdict, evidence, and any actual
   linchpin together; rationale receives the reading measure.
 - Symbol/role/source inventories and subsystem plans are record registers.

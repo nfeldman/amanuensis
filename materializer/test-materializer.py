@@ -167,7 +167,7 @@ def run_materializer(storage: Path) -> dict:
 def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         storage = Path(td)
-        # Write two prose artifacts to prove passthrough works.
+        # Write prose artifacts to prove passthrough and typed HTML projections work.
         (storage / "entry-point.md").write_text(
             "# Entry point\n\nThis is a fictional test codebase with three subsystems: "
             "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n\n"
@@ -188,6 +188,15 @@ def main() -> None:
             "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
             "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n"
         )
+        (storage / "concern-checklist.md").write_text(
+            "# Concern checklist (calibrated)\n\n"
+            "## Active concerns (3)\n\n"
+            "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |\n"
+            "|---|---|---|---|---|\n"
+            "| CC-1 | cache-coherence | T2 | Does the scheduler retain stale authorization state after a policy change? | B-01, B-02 |\n"
+            "| CC-2 | cache-coherence | T2 | Trace every holder of the shared policy snapshot. | B-02 |\n"
+            "| TC-1 | trust-boundary | T10 | Verify that every public request path validates its caller. | B-02, F-01 |\n"
+        )
         (storage / "workspace_path").write_text("/example/FictionalProject\n")
         db = sqlite3.connect(storage / "memory.db")
         seed(db)
@@ -206,6 +215,7 @@ def main() -> None:
             "index.md", "architecture.md", "master-plan.md", "findings.md",
             "concerns.md", "seams.md", "contradictions.md", "diagnosticity.md",
             "vocabulary.md", "field-notes.md", "entry-point.md", "onboarding-report.md",
+            "concern-checklist.md",
             "how-to-read.md",
             "subsystems/b01-job-scheduler.md", "subsystems/b02-auth-service.md",
             "subsystems/f01-web-ui.md",
@@ -303,6 +313,23 @@ def main() -> None:
         assert html_concerns.count('<td class="coverage-matrix-empty">') == 6
         assert 'href="subsystems/b02-auth-service.html#concern-disposition-tc-1"' in html_concerns
         assert "Coverage heatmap" not in html_concerns
+        html_checklist = (docs / "concern-checklist.html").read_text()
+        assert 'id="active-concerns"' in html_checklist
+        assert '>Active concerns</h2>' in html_checklist
+        assert "Active concerns (3)" not in html_checklist
+        assert 'class="concern-family-heading"' in html_checklist
+        assert '<span>Cache coherence</span><span class="concern-territory">T2</span>' in html_checklist
+        assert html_checklist.count('class="record record-concern-checklist"') == 3
+        assert 'class="record-list record-list-concern-checklist"' in html_checklist
+        assert 'record-fact-category' not in html_checklist
+        assert 'record-fact-territory' not in html_checklist
+        assert '<dt>Review in</dt>' in html_checklist
+        assert 'class="record-probe"' in html_checklist
+        assert '.record-probe { max-width: var(--measure);' in html_checklist
+        first_concern_bar = html_checklist.split('<article class="record record-concern-checklist"', 1)[1].split("</header>", 1)[0]
+        assert 'class="identifier-definition"' not in first_concern_bar.split('<dl class="record-facts">', 1)[0]
+        assert 'title="B-01 — Job Scheduler"' in first_concern_bar
+        assert '<table' not in html_checklist
         assert "<table" not in html_findings and "<p>|" not in html_findings
         html_entry = (docs / "entry-point.html").read_text()
         assert 'class="record-list record-list-file-ledger"' in html_entry
@@ -395,6 +422,9 @@ def main() -> None:
         # Concerns page should link CC-1 as an anchor target.
         concerns = (docs / "concerns.md").read_text()
         assert "<a id=\"cc-1\"></a>" in concerns
+        checklist = (docs / "concern-checklist.md").read_text()
+        assert "## Active concerns (3)" in checklist
+        assert "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |" in checklist
         # Contradictions page should exist but note there are none currently.
         contradictions = (docs / "contradictions.md").read_text()
         assert "# Contradictions" in contradictions

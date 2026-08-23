@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.10.1"
+HTML_PROJECTION_VERSION = "1.11.0"
 
 
 @dataclass(frozen=True)
@@ -562,6 +562,28 @@ h1, h2, .brand-mark, .record-primary, .record-lede {
   align-items: center; min-width: max-content; padding: 0;
 }
 .record-concern-disposition .record-facts dd { overflow-wrap: normal; }
+.concern-family { margin: 2rem 0 2.6rem; }
+.concern-family-heading {
+  display: flex; flex-wrap: wrap; gap: .45rem .8rem; align-items: baseline;
+  margin: 0 0 .55rem; color: var(--text); font: 600 1.35rem/1.25 var(--heading);
+}
+.concern-territory { color: var(--text-subtle); font: .62rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.record-list-concern-checklist { margin-top: 0; }
+.record-concern-checklist { display: block; }
+.record-concern-checklist .record-meta {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: .6rem 1.25rem; align-items: center;
+  padding: .72rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-checklist .record-primary { font-size: 1rem; }
+.record-concern-checklist .record-facts { min-width: 0; margin: 0; }
+.record-concern-checklist .record-facts > div {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem .5rem;
+  align-items: baseline; min-width: 0; padding: 0;
+}
+.record-concern-checklist .record-facts dd { overflow-wrap: normal; }
+.record-concern-checklist .record-body { padding: 1rem 1.1rem 1.15rem; }
+.record-probe { max-width: var(--measure); color: var(--text); font-size: .86rem; line-height: 1.58; }
 .record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
 .file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
 .file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
@@ -758,6 +780,8 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @container report (max-width: 52ch) {
   .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-facts > div { justify-content: flex-start; }
 }
 
 @media (max-width: 620px) {
@@ -1143,12 +1167,6 @@ _RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
     ("code", "category", "discovered in", "notes"): RecordProjection(
         "concern", "code", ("category", "discovered in"), ("notes",)
     ),
-    ("code", "category", "territory", "codebase-specific probe (abbreviated)", "primary subsystems"): RecordProjection(
-        "concern",
-        "code",
-        ("category", "territory", "primary subsystems"),
-        ("codebase-specific probe (abbreviated)",),
-    ),
     ("territory", "verdict", "derived", "rationale"): RecordProjection(
         "territory", "territory", ("verdict", "derived"), ("rationale",)
     ),
@@ -1188,6 +1206,13 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+_CONCERN_CHECKLIST_PROJECTION = (
+    "code",
+    "category",
+    "territory",
+    "codebase-specific probe (abbreviated)",
+    "primary subsystems",
+)
 
 _COVERAGE_STATES = {
     "🔴": ("confirmed-bug", "Confirmed defect", "!"),
@@ -1427,6 +1452,72 @@ class MarkdownRenderer:
 
         label = html.escape(caption, quote=True)
         return f'<div class="record-list record-list-{projection.kind}" role="list" aria-label="{label}">{"".join(rendered)}</div>'
+
+    def _concern_checklist(
+        self,
+        headers: list[str],
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        """Project the calibrated concern table as a grouped reading register."""
+
+        keys = [_header_key(header) for header in headers]
+        groups: dict[tuple[str, str], list[tuple[dict[str, str], list[str]]]] = {}
+        for values, markers in rows:
+            record = dict(zip(keys, values, strict=True))
+            group_key = (_plain(record["category"]), _plain(record["territory"]))
+            groups.setdefault(group_key, []).append((record, markers))
+
+        rendered_groups: list[str] = []
+        for (category, territory), records in groups.items():
+            family_name = category.replace("-", " ").capitalize()
+            family_id = self._heading_slug(f"{family_name} concerns")
+            family_label = f"{family_name} · {territory}" if territory else family_name
+            articles: list[str] = []
+
+            for row_number, (record, markers) in enumerate(records, start=1):
+                code_raw = record["code"]
+                code_text = _plain(code_raw) or f"Concern {row_number}"
+                record_id = self._heading_slug(f"concern-checklist-{code_text}")
+                primary_subsystems = record.get("primary subsystems", "")
+                probe = record.get("codebase-specific probe (abbreviated)", "")
+                facts = ""
+                if _plain(primary_subsystems):
+                    facts = (
+                        '<dl class="record-facts"><div class="record-fact record-fact-primary-subsystems">'
+                        '<dt>Review in</dt>'
+                        f'<dd>{_inline(primary_subsystems)}</dd></div></dl>'
+                    )
+                articles.append(
+                    "".join(markers)
+                    + f'<article class="record record-concern-checklist" role="listitem" '
+                    f'aria-labelledby="{html.escape(record_id, quote=True)}" '
+                    f'data-record-label="{html.escape(f"concern {code_text}", quote=True)}">'
+                    '<header class="record-meta">'
+                    f'<h4 class="record-primary" id="{html.escape(record_id, quote=True)}">'
+                    f'<span data-identifier-defined>{_inline(code_raw)}</span></h4>{facts}</header>'
+                    f'<div class="record-body"><div class="record-probe">{_inline(probe)}</div></div>'
+                    '</article>'
+                )
+
+            rendered_groups.append(
+                f'<div class="concern-family" role="group" aria-labelledby="{html.escape(family_id, quote=True)}">'
+                f'<h3 class="concern-family-heading" id="{html.escape(family_id, quote=True)}" data-identifier-defined>'
+                f'<a class="heading-anchor" href="#{html.escape(family_id, quote=True)}" '
+                f'aria-label="{html.escape(f"Link to {family_label}", quote=True)}">§</a>'
+                f'<span>{html.escape(family_name)}</span>'
+                + (f'<span class="concern-territory">{html.escape(territory)}</span>' if territory else "")
+                + '</h3>'
+                f'<div class="record-list record-list-concern-checklist" role="list" '
+                f'aria-label="{html.escape(family_label, quote=True)}">{"".join(articles)}</div>'
+                '</div>'
+            )
+
+        return (
+            f'<div class="concern-checklist" aria-label="{html.escape(caption, quote=True)}">'
+            + "".join(rendered_groups)
+            + '</div>'
+        )
 
     def _summary_list(
         self,
@@ -1885,6 +1976,8 @@ class MarkdownRenderer:
             return self._connection_topology(rows, caption, kind="dependency")
         if signature == _SEAM_TOPOLOGY_PROJECTION:
             return self._connection_topology(rows, caption, kind="seam")
+        if signature == _CONCERN_CHECKLIST_PROJECTION:
+            return self._concern_checklist(headers, rows, caption)
         if (
             len(signature) > 1
             and signature[0] == "subsystem"
@@ -1985,21 +2078,28 @@ class MarkdownRenderer:
                     title = _plain(raw)
                     i += 1
                     continue
+                display_raw = raw
+                if (
+                    self.current_html_path == "concern-checklist.html"
+                    and level == 2
+                    and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
+                ):
+                    display_raw = "Active concerns"
                 if level == 2:
                     if in_section:
                         body.append("</section>")
-                    current_section = slugify(_plain(raw))
+                    current_section = slugify(_plain(display_raw))
                     body.append(f'<section class="section-{html.escape(current_section, quote=True)}">')
                     in_section = True
-                anchor_id = self._heading_slug(raw)
-                label = html.escape(f"Link to {_plain(raw)}", quote=True)
+                anchor_id = self._heading_slug(display_raw)
+                label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
                 finding_group = self.current_html_path == "findings.html" and level == 3
                 heading_class = ' class="finding-subsystem-heading"' if finding_group else ""
                 definition_context = " data-identifier-defined" if finding_group else ""
                 body.append(
                     f'<h{level}{heading_class} id="{anchor_id}"{definition_context}>'
                     f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
-                    f'{_inline(raw)}</h{level}>'
+                    f'{_inline(display_raw)}</h{level}>'
                 )
                 i += 1
                 continue
