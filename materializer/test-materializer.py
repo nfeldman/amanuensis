@@ -245,6 +245,11 @@ def main() -> None:
         assert ":is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }" in html_index
         assert "navRail.inert" in html_index, "closed enhanced drawer must leave the tab order"
         assert "setMenuOpen(false, true)" in html_index, "Escape must close the drawer and restore focus"
+        assert "const themeStorageKey = 'amanuensis-theme';" in html_index
+        assert "window.addEventListener('storage'" in html_index
+        assert "if (event.key !== themeStorageKey) return;" in html_index
+        assert "applyTheme(event.newValue);" in html_index
+        assert "systemTheme.addEventListener?.('change', updateThemeLabel);" in html_index
         assert 'href="findings.html"' in html_index
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()

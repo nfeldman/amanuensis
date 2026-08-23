@@ -329,6 +329,12 @@ Optional JavaScript may add:
 - theme preference;
 - clearly labeled device-local trail pinning.
 
+A theme choice is site-wide device-local state, not page state. Apply it before
+each page paints, and synchronize every already-open page on the same report
+origin when that preference changes. The toggle label must update with the
+rendered theme. Until a reader makes an explicit choice, continue following the
+operating-system preference.
+
 It may not:
 
 - fetch required content;

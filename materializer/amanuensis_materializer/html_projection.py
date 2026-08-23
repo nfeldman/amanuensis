@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.11.0"
+HTML_PROJECTION_VERSION = "1.11.1"
 
 
 @dataclass(frozen=True)
@@ -831,23 +831,35 @@ _JS = r"""
   const root = document.documentElement;
   const body = document.body;
   const themeButton = document.querySelector('[data-theme-toggle]');
+  const themeStorageKey = 'amanuensis-theme';
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
   let storedTheme = null;
-  try { storedTheme = localStorage.getItem('amanuensis-theme'); } catch (_) {}
+  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
   if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
 
   const updateThemeLabel = () => {
     if (!themeButton) return;
-    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
     themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
     themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
   };
+  const applyTheme = (theme) => {
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    updateThemeLabel();
+  };
   updateThemeLabel();
   themeButton?.addEventListener('click', () => {
-    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
-    root.dataset.theme = dark ? 'light' : 'dark';
-    try { localStorage.setItem('amanuensis-theme', root.dataset.theme); } catch (_) {}
-    updateThemeLabel();
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    const theme = dark ? 'light' : 'dark';
+    applyTheme(theme);
+    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
   });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== themeStorageKey) return;
+    applyTheme(event.newValue);
+  });
+  systemTheme.addEventListener?.('change', updateThemeLabel);
 
   const menuButton = document.querySelector('[data-nav-toggle]');
   const navRail = document.querySelector('.nav-rail');
