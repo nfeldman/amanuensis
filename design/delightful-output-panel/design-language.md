@@ -234,10 +234,11 @@ reading field quietly, not compete with the information printed on it.
 ### Enum color grammar
 
 Color belongs to an information axis, never to a generic idea of “good” or
-“bad.” Enum labels remain ordinary ink; only the small marker and its hairline
-border receive the enum color. Background tints are omitted. This confines
-color to data ink, keeps every state legible without color, and prevents large
-badges from becoming the page hierarchy.
+“bad.” Compact state and evidence tags use their enum color for the marker,
+hairline border, text, and a restrained ten-percent tint. The written label
+keeps every state legible without color. A section heading is not a tag:
+`Critical findings` is one heading with a small ordinal color mark, never a
+badge followed by a second typographic phrase.
 
 | Enum | Scale logic | Light-theme sequence or mapping |
 |---|---|---|

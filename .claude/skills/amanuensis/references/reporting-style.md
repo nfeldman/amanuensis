@@ -105,14 +105,17 @@ Current typed projections:
 - Findings are one anchored article each: a compact full-width identity header,
   consequence-led observed behavior, then root cause in sequence. Do not use a
   metadata rail: it makes subordinate facts consume a peer reading column.
+  The consequence lede and the explanatory fields share the same reading
+  measure; emphasis comes from type, not an arbitrarily narrower column.
   Place whole-fact units beside the finding ID and stack the header at phone
   measures. When findings are grouped by severity, carry severity once in the
   plain-language group heading rather than repeating it in every article. Do
   not append a bare parenthesized count to that heading; expose counts where a
   reader is actually comparing quantities. Treat severity as one ordinal ramp:
   low is neutral, then consequence increases through ochre and rust to oxblood.
-  The written label remains authoritative; color is only a small redundant
-  signal.
+  The written label remains authoritative; color is a redundant signal. Render
+  the severity group as one heading with a small color mark, never as a compact
+  status tag attached to a separate display word.
 - File ledgers are ruled registers: filename and full path with review and
   revision facts, beside the dominant `Why in scope` account.
 - Concern-review records keep concern, verdict, evidence, and any actual
@@ -137,9 +140,10 @@ Color must follow the enum it encodes. Survey depth and evidence quality use
 sequential green-gray ramps; severity uses an ordinal warm ramp; concern
 disposition and finding resolution use their own categorical mappings; source
 alignment is a separate binary relationship. Do not use omnibus `good`, `bad`,
-or `warning` colors across these axes. Keep enum text in the ordinary ink color
-and confine chroma to a small marker and border. Never make `low`, `ruled out`,
-or `source aligned` look like the same claim as `mapped`.
+or `warning` colors across these axes. Compact tags may tint their background
+from the same axis color, but section headings must not masquerade as tags.
+Never make `low`, `ruled out`, or `source aligned` look like the same claim as
+`mapped`.
 
 ## Architecture and source routes
 

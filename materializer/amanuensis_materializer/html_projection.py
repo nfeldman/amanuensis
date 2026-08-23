@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.9.0"
+HTML_PROJECTION_VERSION = "1.9.2"
 
 
 @dataclass(frozen=True)
@@ -358,6 +358,14 @@ h1 {
 .content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content section:last-child { border-bottom: 0; }
 .content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
+.content-findings .section-high-findings { --enum-color: var(--severity-high); }
+.content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
+.content-findings .section-low-findings { --enum-color: var(--severity-low); }
+.content-findings section > h2::before {
+  content: ""; display: inline-block; width: .14em; height: .72em;
+  margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
+}
 .content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
 h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
 h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
@@ -493,7 +501,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-copy { color: var(--text); line-height: 1.55; }
 .record-copy code { overflow-wrap: anywhere; }
 .record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
-.record-lede { max-width: 54ch; margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+.record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
 .record-finding { display: block; }
 .record-finding .record-meta {
   display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
@@ -642,8 +650,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .status, .evidence-label, .severity {
   --enum-color: var(--quiet);
   display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
-  color: var(--text-muted); background: transparent;
-  border: 1px solid color-mix(in srgb, var(--enum-color) 72%, var(--rule));
+  color: color-mix(in srgb, var(--enum-color) 72%, var(--text));
+  background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--enum-color) 68%, var(--rule));
   border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
 }
 .status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }

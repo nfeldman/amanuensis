@@ -243,9 +243,12 @@ def main() -> None:
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
+        assert '.record-lede { max-width: var(--measure);' in html_findings
         assert 'class="content content-findings"' in html_findings
         assert 'id="high-findings"' in html_findings
-        assert '>High</span> findings</h2>' in html_findings
+        assert '>High findings</h2>' in html_findings
+        assert 'Link to High findings' in html_findings
+        assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
         assert '.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
         assert '.record-finding { display: block; }' in html_findings
@@ -259,7 +262,8 @@ def main() -> None:
         assert '--surface: #fbfcf9' in html_findings
         assert '.severity-critical { --enum-color: var(--severity-critical); }' in html_findings
         assert '.severity-high { --enum-color: var(--severity-high); }' in html_findings
-        assert 'color: var(--text-muted); background: transparent;' in html_findings
+        assert 'background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));' in html_findings
+        assert '.content-findings section > h2::before' in html_findings
         assert 'background: var(--source-aligned)' in html_findings
         html_concerns = (docs / "concerns.html").read_text()
         assert 'class="identifier-definition"' in html_concerns
@@ -283,7 +287,6 @@ def main() -> None:
         assert html_concerns.count('<td class="coverage-matrix-empty">') == 6
         assert 'href="subsystems/b02-auth-service.html#concern-disposition-tc-1"' in html_concerns
         assert "Coverage heatmap" not in html_concerns
-        assert 'class="severity severity-high"' in html_findings
         assert "<table" not in html_findings and "<p>|" not in html_findings
         html_entry = (docs / "entry-point.html").read_text()
         assert 'class="record-list record-list-file-ledger"' in html_entry

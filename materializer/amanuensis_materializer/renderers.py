@@ -464,7 +464,7 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             sev_rows = [f for f in fs if f["severity"] == sev]
             if not sev_rows:
                 continue
-            out += [f"## {_sev_badge(sev)} findings", ""]
+            out += [f"## {sev.title()} findings", ""]
             out += [
                 "| ID | Subsystem | Status | Symptom | Root cause | Ref SHA |",
                 "|---|---|---|---|---|---|",
