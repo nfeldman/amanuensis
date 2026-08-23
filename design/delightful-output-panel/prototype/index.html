@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Field Docket prototype for a delightful, orienting Amanuensis report over representative AxiomDB content.">
+<title>AxiomDB field docket · Amanuensis prototype</title>
+<script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('field-docket-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --paper: #f4f1e8;
+  --paper-deep: #e7e4d8;
+  --surface: #fffdf7;
+  --surface-2: #eeeee5;
+  --ink: #17211e;
+  --ink-soft: #4e5c56;
+  --ink-faint: #6d7873;
+  --rule: #c9c9bb;
+  --rule-strong: #8e9b94;
+  --teal: #0d5b52;
+  --teal-deep: #083d38;
+  --teal-soft: #d9ebe5;
+  --coral: #b84634;
+  --coral-deep: #812b22;
+  --coral-soft: #f4dcd6;
+  --amber: #8d5a16;
+  --amber-soft: #f2e5c9;
+  --blue: #315f80;
+  --blue-soft: #dce9ef;
+  --quiet: #65716c;
+  --quiet-soft: #e5e8e2;
+  --display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --rail: 19rem;
+  --measure: 72ch;
+  --shadow: 0 1rem 3rem rgb(30 45 39 / .08);
+}
+:root[data-theme="dark"] {
+  --paper: #131a17;
+  --paper-deep: #0d1311;
+  --surface: #1b2420;
+  --surface-2: #222d28;
+  --ink: #edf0e8;
+  --ink-soft: #b4c0b9;
+  --ink-faint: #8c9a93;
+  --rule: #33433b;
+  --rule-strong: #617168;
+  --teal: #83c8bd;
+  --teal-deep: #b0ded6;
+  --teal-soft: #203f38;
+  --coral: #ef8c7b;
+  --coral-deep: #ffb3a4;
+  --coral-soft: #452a24;
+  --amber: #e4b46d;
+  --amber-soft: #3f321f;
+  --blue: #91b9d2;
+  --blue-soft: #243945;
+  --quiet: #a0ada7;
+  --quiet-soft: #29332f;
+  --shadow: 0 1rem 3rem rgb(0 0 0 / .25);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131a17; --paper-deep: #0d1311; --surface: #1b2420; --surface-2: #222d28;
+    --ink: #edf0e8; --ink-soft: #b4c0b9; --ink-faint: #8c9a93;
+    --rule: #33433b; --rule-strong: #617168;
+    --teal: #83c8bd; --teal-deep: #b0ded6; --teal-soft: #203f38;
+    --coral: #ef8c7b; --coral-deep: #ffb3a4; --coral-soft: #452a24;
+    --amber: #e4b46d; --amber-soft: #3f321f; --blue: #91b9d2; --blue-soft: #243945;
+    --quiet: #a0ada7; --quiet-soft: #29332f; --shadow: 0 1rem 3rem rgb(0 0 0 / .25);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--paper-deep); }
+body {
+  margin: 0; color: var(--ink); background: var(--paper); font: 16px/1.62 var(--body);
+  text-rendering: optimizeLegibility;
+}
+a { color: var(--teal-deep); text-decoration-thickness: .09em; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .15em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--coral); outline-offset: 3px;
+}
+button, input { font: inherit; }
+.skip-link {
+  position: fixed; z-index: 100; top: -6rem; left: 1rem; padding: .6rem .85rem;
+  color: var(--surface); background: var(--ink);
+}
+.skip-link:focus { top: 1rem; }
+.shell { min-height: 100vh; }
+.rail {
+  position: fixed; inset: 0 auto 0 0; z-index: 30; width: var(--rail); overflow-y: auto;
+  display: flex; flex-direction: column; padding: 1.6rem 1.35rem 1.3rem;
+  color: var(--ink); background: var(--paper-deep); border-right: 1px solid var(--rule);
+}
+.brand { color: var(--ink); text-decoration: none; }
+.brand-top { display: flex; align-items: center; gap: .7rem; }
+.brand-glyph {
+  display: grid; place-items: center; width: 2.1rem; height: 2.1rem; color: var(--surface);
+  background: var(--teal-deep); font: 700 .72rem/1 var(--mono); border-radius: 50% 50% 50% 12%;
+}
+.brand-name { font: 650 1.38rem/1 var(--display); letter-spacing: -.02em; }
+.brand-sub {
+  display: block; margin: .65rem 0 0 2.8rem; color: var(--ink-soft);
+  font: 650 .63rem/1.35 var(--mono); letter-spacing: .11em; text-transform: uppercase;
+}
+.search-wrap { margin-top: 1.4rem; }
+.search-label, .nav-title, .mini-label {
+  display: block; margin-bottom: .38rem; color: var(--ink-faint);
+  font: 700 .64rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.search {
+  width: 100%; min-height: 2.65rem; padding: .58rem .68rem; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--rule-strong); border-radius: .2rem;
+}
+.search-help { margin: .45rem 0 0; color: var(--ink-faint); font: .66rem/1.45 var(--mono); }
+.empty { display: none; margin: .8rem 0; color: var(--coral-deep); font-size: .82rem; }
+.empty.visible { display: block; }
+.rail-nav { margin-top: 1.4rem; }
+.rail-nav ul { list-style: none; margin: 0; padding: 0; }
+.rail-nav li { border-top: 1px solid var(--rule); }
+.rail-nav li:last-child { border-bottom: 1px solid var(--rule); }
+.rail-nav a {
+  display: grid; grid-template-columns: .55rem 1fr; gap: .55rem; padding: .58rem .12rem;
+  color: var(--ink-soft); text-decoration: none; font-size: .83rem;
+}
+.rail-nav a:hover { color: var(--ink); background: color-mix(in srgb, var(--surface) 50%, transparent); }
+.rail-nav a[aria-current="page"] { color: var(--teal-deep); font-weight: 700; }
+.nav-mark { width: .36rem; height: .36rem; margin-top: .48rem; background: var(--teal); border-radius: 50%; }
+.rail-regions { margin-top: 1.35rem; }
+.rail-regions summary { cursor: pointer; color: var(--ink-soft); font-size: .82rem; }
+.region-mini { margin: .75rem 0 0; padding: 0; list-style: none; }
+.region-mini li { display: flex; justify-content: space-between; gap: 1rem; padding: .28rem 0; color: var(--ink-soft); font-size: .74rem; }
+.region-mini code { color: var(--ink-faint); font: .66rem/1.4 var(--mono); }
+.rail-foot { margin-top: auto; padding-top: 1.5rem; }
+.button-row { display: flex; flex-wrap: wrap; gap: .45rem; }
+.quiet-button, .route-button {
+  min-height: 2.35rem; padding: .48rem .68rem; color: var(--ink-soft); background: transparent;
+  border: 1px solid var(--rule-strong); border-radius: .22rem; cursor: pointer; text-decoration: none;
+  font: 700 .68rem/1.15 var(--mono); letter-spacing: .02em;
+}
+.quiet-button:hover, .route-button:hover { color: var(--teal-deep); border-color: var(--teal); }
+.rail-note { margin: .7rem 0 0; color: var(--ink-faint); font: .64rem/1.48 var(--mono); }
+.document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
+.mobile-bar { display: none; }
+.main-inner { width: min(100%, 86rem); margin: 0 auto; padding: 3.5rem clamp(1.5rem, 4.2vw, 4.5rem) 5rem; }
+.compass {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .42rem; margin: 0 0 1.5rem;
+  color: var(--ink-soft); font: 650 .7rem/1.4 var(--mono); letter-spacing: .03em;
+}
+.compass a { color: inherit; }
+.compass-sep { color: var(--coral); }
+.hero { position: relative; padding: .4rem 0 2.6rem; border-bottom: 3px double var(--ink); }
+.hero::before {
+  content: ""; position: absolute; z-index: 0; right: 0; top: -1rem; width: min(31rem, 50%); height: 11rem;
+  background:
+    linear-gradient(90deg, transparent 49.5%, color-mix(in srgb, var(--teal) 22%, transparent) 50%) 0 0 / 2.4rem 100%,
+    linear-gradient(transparent 49.5%, color-mix(in srgb, var(--coral) 16%, transparent) 50%) 0 0 / 100% 2.4rem;
+  mask-image: linear-gradient(90deg, transparent, #000 35%); pointer-events: none;
+}
+.eyebrow { position: relative; margin: 0 0 .75rem; color: var(--teal); font: 750 .7rem/1.3 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+h1 { position: relative; max-width: 12ch; margin: 0; font: 650 clamp(3.2rem, 7vw, 6.8rem)/.9 var(--display); letter-spacing: -.055em; }
+.dek { position: relative; max-width: 64ch; margin: 1.2rem 0 0; color: var(--ink-soft); font: 1.18rem/1.52 var(--display); }
+.hero-meta { position: relative; display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1.3rem; }
+.meta-pill, .tag {
+  display: inline-flex; align-items: center; gap: .38rem; min-height: 1.85rem; padding: .22rem .5rem;
+  color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--rule); border-radius: 99rem;
+  font: 700 .65rem/1.2 var(--mono);
+}
+.meta-pill b { color: var(--ink); }
+.route-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin: 1.25rem 0 0; }
+.route-button { display: flex; align-items: center; justify-content: space-between; min-height: 3.2rem; padding: .75rem .85rem; color: var(--ink); background: var(--surface); font-family: var(--body); font-size: .82rem; }
+.route-button span { color: var(--coral); font-family: var(--mono); }
+.weatherline {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 1.7rem 0 0;
+  border: 1px solid var(--rule-strong); box-shadow: var(--shadow);
+}
+.weather-item { min-width: 0; padding: .95rem 1rem 1rem; background: var(--surface); border-right: 1px solid var(--rule); }
+.weather-item:last-child { border-right: 0; }
+.weather-kicker { display: flex; align-items: center; gap: .4rem; color: var(--ink-faint); font: 750 .61rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.weather-symbol { width: .5rem; height: .5rem; background: var(--teal); border-radius: 50%; }
+.weather-item.consequence .weather-symbol { background: var(--coral); border-radius: .1rem; }
+.weather-item.coverage .weather-symbol { background: transparent; border: 2px solid var(--amber); }
+.weather-item.integrity .weather-symbol { background: var(--blue); transform: rotate(45deg); border-radius: 0; }
+.weather-value { display: block; margin-top: .45rem; color: var(--ink); font: 700 1.02rem/1.25 var(--display); }
+.weather-note { display: block; margin-top: .3rem; color: var(--ink-soft); font-size: .72rem; line-height: 1.38; }
+.content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 2.2rem; align-items: start; }
+.content { min-width: 0; }
+.local-toc { position: sticky; top: 1rem; margin-top: 3rem; padding: 1rem 0 1rem 1.1rem; border-left: 1px solid var(--rule-strong); }
+.local-toc ul { list-style: none; margin: .7rem 0 0; padding: 0; }
+.local-toc li { margin: .42rem 0; }
+.local-toc a { color: var(--ink-soft); font-size: .76rem; text-decoration: none; }
+.local-toc a:hover { color: var(--teal-deep); text-decoration: underline; }
+.section { scroll-margin-top: 1rem; padding: 3rem 0 .2rem; }
+.section-head { display: grid; grid-template-columns: 2.5rem 1fr; gap: .8rem; align-items: start; margin-bottom: 1.2rem; }
+.section-no { color: var(--coral); font: 750 .66rem/1.3 var(--mono); padding-top: .42rem; }
+h2 { margin: 0; font: 650 clamp(1.9rem, 3.6vw, 3.2rem)/1.02 var(--display); letter-spacing: -.035em; text-wrap: balance; }
+.section-intro { max-width: var(--measure); margin: .7rem 0 0; color: var(--ink-soft); }
+.casefile { position: relative; overflow: hidden; margin-top: 1.2rem; background: var(--surface); border: 1px solid var(--rule-strong); box-shadow: var(--shadow); }
+.casefile::before { content: ""; position: absolute; inset: 0 auto 0 0; width: .38rem; background: var(--coral); }
+.case-head { padding: 1.3rem 1.35rem 1.15rem 1.65rem; border-bottom: 1px solid var(--rule); }
+.case-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0; }
+.tag.critical { color: var(--coral-deep); background: var(--coral-soft); border-color: color-mix(in srgb, var(--coral) 55%, var(--rule)); }
+.tag.high { color: var(--amber); background: var(--amber-soft); }
+.tag.verified { color: var(--teal-deep); background: var(--teal-soft); }
+.tag.open { color: var(--blue); background: var(--blue-soft); }
+.case-title { max-width: 25ch; margin: .75rem 0 0; font: 650 clamp(1.65rem, 3vw, 2.55rem)/1.08 var(--display); letter-spacing: -.025em; }
+.case-effect { max-width: 68ch; margin: .8rem 0 0; color: var(--ink-soft); font-size: .98rem; }
+.case-essential { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid var(--rule); }
+.case-cell { padding: 1.05rem 1.3rem 1.15rem 1.65rem; border-right: 1px solid var(--rule); }
+.case-cell:last-child { border-right: 0; }
+.case-cell h3, .card h3, .atlas-region h3 { margin: 0; font: 700 .72rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.case-cell p { margin: .55rem 0 0; font-size: .86rem; }
+.case-cell ul { margin: .55rem 0 0; padding-left: 1.1rem; font-size: .84rem; }
+.case-cell li + li { margin-top: .35rem; }
+.case-links { display: flex; flex-wrap: wrap; gap: .75rem 1.2rem; padding: .85rem 1.3rem .9rem 1.65rem; font-size: .78rem; }
+details.evidence { border-top: 1px solid var(--rule); }
+details.evidence summary { cursor: pointer; padding: .9rem 1.3rem .9rem 1.65rem; color: var(--teal-deep); font-weight: 750; }
+.evidence-body { padding: 0 1.3rem 1.25rem 1.65rem; }
+.evidence-body ol { padding-left: 1.2rem; }
+.evidence-body li + li { margin-top: .6rem; }
+.evidence-body code { font: .79em/1.5 var(--mono); }
+.callout {
+  margin: 1.2rem 0; padding: 1rem 1.1rem; color: var(--ink-soft); background: var(--blue-soft);
+  border-left: .34rem solid var(--blue);
+}
+.callout strong { color: var(--ink); }
+.card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+.card { padding: 1.05rem 1.1rem; background: var(--surface); border: 1px solid var(--rule); }
+.card p { margin: .55rem 0 0; color: var(--ink-soft); font-size: .84rem; }
+.card .value { color: var(--ink); font: 650 1.35rem/1.15 var(--display); }
+.reentry { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--rule-strong); }
+.reentry-card { padding: 1.05rem; border-right: 1px solid var(--rule); }
+.reentry-card:last-child { border-right: 0; }
+.reentry-card h3 { margin: 0; font: 750 .68rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.reentry-card p { margin: .55rem 0 0; color: var(--ink-soft); font-size: .82rem; }
+.reentry-card .state { color: var(--ink); font-family: var(--display); font-size: 1.05rem; }
+.pin-status { min-height: 1.3rem; margin: .65rem 0 0; color: var(--teal-deep); font: .69rem/1.4 var(--mono); }
+.integrity-note { margin-top: 1rem; }
+.integrity-note summary { cursor: pointer; color: var(--ink-soft); font-size: .8rem; }
+.integrity-note p { color: var(--ink-soft); font-size: .8rem; }
+.atlas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.atlas-region { min-width: 0; padding: .9rem; background: var(--surface); border: 1px solid var(--rule); }
+.atlas-region h3 { display: flex; justify-content: space-between; gap: .5rem; }
+.atlas-count { color: var(--ink-faint); font-weight: 600; }
+.territory-list { display: flex; flex-wrap: wrap; gap: .38rem; margin-top: .75rem; }
+.territory {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .43rem; color: var(--ink-soft);
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: .2rem; text-decoration: none;
+  font: .67rem/1.25 var(--mono);
+}
+.territory::before { content: ""; width: .36rem; height: .36rem; background: var(--teal); border-radius: 50%; }
+.territory.unmapped::before { background: transparent; border: 1px solid var(--quiet); }
+.territory.finding { border-color: color-mix(in srgb, var(--coral) 55%, var(--rule)); }
+.territory.finding::before { background: var(--coral); border-radius: .05rem; }
+.territory[hidden], .atlas-region[hidden] { display: none; }
+.trail {
+  display: grid; grid-template-columns: repeat(5, auto); align-items: center; justify-content: start;
+  gap: .55rem; margin: 1rem 0; overflow-x: auto; padding: 1rem; background: var(--surface-2); border: 1px solid var(--rule);
+}
+.trail-node { min-width: 9rem; padding: .65rem .75rem; background: var(--surface); border: 1px solid var(--rule-strong); }
+.trail-node b { display: block; font-family: var(--display); }
+.trail-node span { display: block; margin-top: .2rem; color: var(--ink-faint); font: .64rem/1.35 var(--mono); }
+.trail-edge { color: var(--coral); font: 750 .7rem/1 var(--mono); white-space: nowrap; }
+.finding-list { display: grid; gap: .65rem; }
+.finding-row { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; gap: 1rem; align-items: start; padding: .9rem 1rem; border: 1px solid var(--rule); }
+.finding-id { font: 750 .72rem/1.4 var(--mono); }
+.finding-row h3 { margin: 0; font: 650 1.05rem/1.3 var(--display); }
+.finding-row p { margin: .35rem 0 0; color: var(--ink-soft); font-size: .78rem; }
+.finding-meta { color: var(--ink-faint); font: .65rem/1.4 var(--mono); text-align: right; }
+.source-bar { display: flex; flex-wrap: wrap; gap: .6rem 1.1rem; margin-top: 1.2rem; padding: .9rem 1rem; background: var(--paper-deep); font: .68rem/1.45 var(--mono); }
+.source-bar a { color: var(--teal-deep); }
+.page-foot { margin-top: 4rem; padding-top: 1.4rem; border-top: 3px double var(--ink); color: var(--ink-soft); font-size: .78rem; }
+.no-js-note { margin-left: var(--rail); padding: .7rem 1rem; color: var(--ink); background: var(--amber-soft); border-bottom: 1px solid var(--amber); }
+@media (max-width: 1120px) {
+  .route-grid, .weatherline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .weather-item:nth-child(2) { border-right: 0; }
+  .weather-item:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
+  .atlas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 880px) {
+  .rail { position: static; width: 100%; transform: none; max-height: none; }
+  .document { margin-left: 0; }
+  .mobile-bar { display: none; }
+  .no-js-note { margin-left: 0; }
+  html.js .rail { position: fixed; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
+  html.js body.nav-open .rail { transform: translateX(0); box-shadow: 0 0 0 999px rgb(0 0 0 / .28); }
+  html.js .mobile-bar {
+    position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center;
+    padding: .68rem 1rem; background: color-mix(in srgb, var(--surface) 92%, transparent); border-bottom: 1px solid var(--rule); backdrop-filter: blur(12px);
+  }
+  .mobile-brand { font: 700 .78rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  .main-inner { padding-top: 2rem; }
+  .content-grid { grid-template-columns: 1fr; }
+  .local-toc { position: static; order: -1; margin-top: 2rem; }
+  .atlas { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .route-grid, .weatherline, .card-grid, .reentry, .case-essential { grid-template-columns: 1fr; }
+  .weather-item, .weather-item:nth-child(2), .reentry-card, .case-cell { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .weather-item:last-child, .reentry-card:last-child, .case-cell:last-child { border-bottom: 0; }
+  .hero::before { width: 100%; opacity: .5; }
+  .finding-row { grid-template-columns: 4.5rem minmax(0, 1fr); }
+  .finding-meta { grid-column: 2; text-align: left; }
+  h1 { font-size: clamp(3rem, 19vw, 5.2rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}
+@media print {
+  :root { color-scheme: light; }
+  .rail, .mobile-bar, .route-grid, .button-row, .local-toc, .quiet-button { display: none !important; }
+  .document { margin: 0; }
+  .main-inner { width: 100%; padding: 0; }
+  .hero::before { display: none; }
+  .weatherline, .casefile { box-shadow: none; break-inside: avoid; }
+  details > * { display: block !important; }
+  a { color: inherit; text-decoration: underline; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the briefing</a>
+<noscript><div class="no-js-note">All report content and links remain available. Search, theme, mobile drawer, and device-local trail pinning are optional enhancements.</div></noscript>
+<div class="shell">
+  <aside class="rail" id="rail" aria-label="AxiomDB report navigation">
+    <a class="brand" href="#top">
+      <span class="brand-top"><span class="brand-glyph" aria-hidden="true">A</span><span class="brand-name">Amanuensis</span></span>
+      <span class="brand-sub">Field docket · captured specimen</span>
+    </a>
+
+    <div class="search-wrap">
+      <label class="search-label" for="report-search">Jump by name, ID, or topic</label>
+      <input class="search" id="report-search" type="search" placeholder="Try V-02, HTTP auth, reasoning…" autocomplete="off" data-search>
+      <p class="search-help"><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd> · searches this specimen</p>
+      <p class="empty" data-empty role="status">No specimen match. The complete report would suggest nearby terms.</p>
+    </div>
+
+    <nav class="rail-nav" aria-label="Report landmarks">
+      <span class="nav-title">Landmarks</span>
+      <ul>
+        <li data-filter="briefing overview axiomdb"><a href="#briefing" aria-current="page"><span class="nav-mark" aria-hidden="true"></span><span>Current briefing</span></a></li>
+        <li data-filter="critical findings risks action v02-1"><a href="#act"><span class="nav-mark" aria-hidden="true"></span><span>Risks &amp; decisions</span></a></li>
+        <li data-filter="map atlas subsystems regions architecture"><a href="#terrain"><span class="nav-mark" aria-hidden="true"></span><span>System terrain</span></a></li>
+        <li data-filter="audit trust evidence coverage integrity"><a href="#audit"><span class="nav-mark" aria-hidden="true"></span><span>Trust boundary</span></a></li>
+        <li data-filter="resume returning change delta active session"><a href="#resume"><span class="nav-mark" aria-hidden="true"></span><span>Re-entry</span></a></li>
+        <li data-filter="findings queue cases"><a href="#cases"><span class="nav-mark" aria-hidden="true"></span><span>Case register</span></a></li>
+      </ul>
+    </nav>
+
+    <details class="rail-regions">
+      <summary>Subsystem regions · 34</summary>
+      <ul class="region-mini">
+        <li><span>Query</span><code>5 / 6</code></li>
+        <li><span>Reasoning</span><code>6 / 6</code></li>
+        <li><span>Service</span><code>3 / 5</code></li>
+        <li><span>Storage</span><code>5 / 5</code></li>
+        <li><span>Write path</span><code>5 / 5</code></li>
+        <li><span>Other regions</span><code>1 / 7</code></li>
+      </ul>
+    </details>
+
+    <div class="rail-foot">
+      <div class="button-row">
+        <button class="quiet-button" type="button" data-theme>Theme</button>
+        <a class="quiet-button" href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/index.md">Markdown</a>
+      </div>
+      <p class="rail-note">Captured 18:15 EDT · checked code <code>d19ade703e3c</code>. Derived reading surface; durable survey records remain authoritative.</p>
+    </div>
+  </aside>
+
+  <main class="document" id="main">
+    <div class="mobile-bar"><span class="mobile-brand">AxiomDB field docket</span><button class="quiet-button" type="button" data-nav aria-expanded="false" aria-controls="rail">Browse</button></div>
+    <div class="main-inner" id="top">
+      <nav class="compass" aria-label="Current location">
+        <a href="#top">AxiomDB</a><span class="compass-sep">/</span><span>Current briefing</span><span class="compass-sep">·</span><span>captured publication</span>
+      </nav>
+
+      <header class="hero" id="briefing">
+        <p class="eyebrow">Living architecture evidence register · representative prototype</p>
+        <h1>AxiomDB</h1>
+        <p class="dek">A Rust-native RDF quad store built around five embedded Fjall index permutations, SPARQL execution through Leapfrog TrieJoin and Volcano operators, and write-time OWL&nbsp;2&nbsp;EL materialization—with consequential gaps at the HTTP authorization and ordinary ABox-write boundaries.</p>
+        <div class="hero-meta" aria-label="Captured publication identity">
+          <span class="meta-pill"><b>Branch</b> main</span>
+          <span class="meta-pill"><b>Checked code</b> d19ade703e3c</span>
+          <span class="meta-pill"><b>Captured</b> 22 Aug · 18:15 EDT</span>
+          <span class="meta-pill"><b>Baseline</b> representative specimen</span>
+        </div>
+        <div class="route-grid" aria-label="Choose a reading route">
+          <a class="route-button" href="#act">Act on the leading risk <span>01 ↘</span></a>
+          <a class="route-button" href="#terrain">Understand the terrain <span>02 ↘</span></a>
+          <a class="route-button" href="#audit">Audit what is trustworthy <span>03 ↘</span></a>
+          <a class="route-button" href="#resume">Resume the survey <span>04 ↘</span></a>
+        </div>
+      </header>
+
+      <section class="weatherline" aria-label="Four separate report conditions">
+        <div class="weather-item">
+          <span class="weather-kicker"><span class="weather-symbol" aria-hidden="true"></span>Source</span>
+          <span class="weather-value">Checked at d19ade7</span>
+          <span class="weather-note">Recent source identity, not a safety verdict.</span>
+        </div>
+        <div class="weather-item coverage">
+          <span class="weather-kicker"><span class="weather-symbol" aria-hidden="true"></span>Survey reach</span>
+          <span class="weather-value">25 of 34 mapped</span>
+          <span class="weather-note">Nine records do not authorize behavioral claims.</span>
+        </div>
+        <div class="weather-item consequence">
+          <span class="weather-kicker"><span class="weather-symbol" aria-hidden="true"></span>Consequence</span>
+          <span class="weather-value">1 critical · 1 high</span>
+          <span class="weather-note">Fourteen confirmed open findings in this capture.</span>
+        </div>
+        <div class="weather-item integrity">
+          <span class="weather-kicker"><span class="weather-symbol" aria-hidden="true"></span>Publication</span>
+          <span class="weather-value">Registers agree</span>
+          <span class="weather-note">Summary counts read back against source registers.</span>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <div class="content">
+          <section class="section" id="act" data-filter="critical v02-1 http authorization system tenant security action">
+            <div class="section-head"><span class="section-no">01</span><div><h2>Act on consequence, with the warrant attached</h2><p class="section-intro">The lead rule is inspectable: severity, reachable surface, evidence strength, and the next decision. “Critical” does not erase the deployment boundary that still needs confirmation.</p></div></div>
+
+            <article class="casefile" id="v02-1" aria-labelledby="v02-title">
+              <header class="case-head">
+                <p class="case-kicker"><span class="tag critical">Critical</span><span class="tag open">Open</span><span class="tag verified">Code verified</span><span class="tag">V02-1 · V-02</span></p>
+                <h3 class="case-title" id="v02-title">Unauthenticated HTTP requests can read and write as the system tenant</h3>
+                <p class="case-effect">The HTTP SPARQL surface consults no authorization policy. With no tenant header, it selects the system context, applies no tenant row filter, and exposes query, update, and admin routes. The standalone bootstrap starts this surface and defaults its bind address to <code>0.0.0.0:7474</code>.</p>
+              </header>
+              <div class="case-essential">
+                <div class="case-cell">
+                  <h3>Do first · containment before prescription</h3>
+                  <ul>
+                    <li>Confirm whether the standalone HTTP surface is deployed or exposed.</li>
+                    <li>If exposed, restrict or disable it while policy wiring and tenant derivation are reviewed.</li>
+                    <li>Then decide the repair boundary: transport auth layer, handler checks, or both.</li>
+                  </ul>
+                </div>
+                <div class="case-cell">
+                  <h3>Visible qualification</h3>
+                  <p>Open question #4 asks whether the standalone server is a supported shipping target. That changes practical reach and grade calibration; it does not change the observed absence of HTTP authorization in this repository.</p>
+                </div>
+              </div>
+              <div class="case-links">
+                <a href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/findings.md#v02-1">Full finding in Markdown</a>
+                <a href="#v02-place">Open V-02 place</a>
+                <a href="#audit">Audit the evidence boundary</a>
+                <a href="#cases">Back to case register</a>
+              </div>
+              <details class="evidence">
+                <summary>Open the evidence aperture · three composing decisions</summary>
+                <div class="evidence-body">
+                  <ol>
+                    <li><strong>No transport authorization:</strong> the HTTP router and handlers contain no <code>AuthzPolicy</code> consultation while gRPC handlers call policy inline.</li>
+                    <li><strong>Privileged default:</strong> <code>resolve_http_tenant_context</code> derives identity from an unauthenticated header and substitutes <code>_system</code> when absent.</li>
+                    <li><strong>No row filter:</strong> the system context becomes <code>tenant_id = None</code>, so the query pipeline applies no tenant predicate. Bootstrap makes the surface reachable by default.</li>
+                  </ol>
+                  <p><strong>Receipts:</strong> <code>routes/mod.rs:65–85</code>, <code>http.rs:66–120</code>, <code>routes/sparql.rs:146–149</code>, <code>pipeline.rs:1504–1507</code>, <code>main.rs:360</code>, <code>config.rs:201</code>. Ref SHA <code>d19ade70</code>.</p>
+                </div>
+              </details>
+            </article>
+
+            <div class="callout"><strong>Editorial rule:</strong> a finding can lead because it is consequential and well supported. The interface still separates “verify exposure,” “contain,” and “repair,” because severity is not a substitute for deployment knowledge.</div>
+          </section>
+
+          <section class="section" id="terrain" data-filter="atlas architecture subsystem map query reasoning service storage write">
+            <div class="section-head"><span class="section-no">02</span><div><h2>See surveyed and blank territory together</h2><p class="section-intro">Mapped means the survey completed through stated gates; it does not mean defect-free. Hollow markers are deliberately unsurveyed or not yet claim-authorizing, not “healthy gray.”</p></div></div>
+
+            <div class="atlas" data-atlas>
+              <section class="atlas-region" data-region data-filter="query q-01 q-02 q-03 q-04 q-05 q-06 sparql planner ltj volcano results dictionary">
+                <h3><span>Query</span><span class="atlas-count">5 / 6</span></h3>
+                <div class="territory-list">
+                  <a class="territory finding" href="#cases" data-filter="q-01 sparql front end pipeline q01-1">Q-01</a><span class="territory" data-filter="q-02 physical query planner">Q-02</span><span class="territory" data-filter="q-03 leapfrog triejoin">Q-03</span><span class="territory" data-filter="q-04 volcano operators">Q-04</span><span class="territory unmapped" data-filter="q-05 results construct serialization">Q-05</span><span class="territory" data-filter="q-06 dictionary overlay">Q-06</span>
+                </div>
+              </section>
+              <section class="atlas-region" data-region data-filter="reasoning r-01 r-02 r-03 r-04 r-05 r-06 owl el scheduler shadow incremental">
+                <h3><span>Reasoning</span><span class="atlas-count">6 / 6</span></h3>
+                <div class="territory-list">
+                  <span class="territory">R-01</span><span class="territory">R-02</span><span class="territory">R-03</span><a class="territory finding" href="#r04-1" data-filter="r-04 bf deletion r04-1">R-04</a><span class="territory">R-05</span><span class="territory">R-06</span>
+                </div>
+              </section>
+              <section class="atlas-region" data-region data-filter="service v-01 v-02 v-03 v-04 v-05 grpc http auth bootstrap observability">
+                <h3><span>Service</span><span class="atlas-count">3 / 5</span></h3>
+                <div class="territory-list">
+                  <span class="territory">V-01</span><a class="territory finding" href="#v02-place" data-filter="v-02 http sparql auth x-axiomdb-tenant">V-02</a><span class="territory finding" data-filter="v-03 authorization audit">V-03</span><span class="territory unmapped" data-filter="v-04 bootstrap configuration">V-04</span><span class="territory unmapped" data-filter="v-05 observability health shutdown">V-05</span>
+                </div>
+              </section>
+              <section class="atlas-region" data-region data-filter="storage encoding s-01 s-02 s-03 s-04 s-05 fjall compaction index dictionary codec">
+                <h3><span>Storage &amp; encoding</span><span class="atlas-count">5 / 5</span></h3>
+                <div class="territory-list">
+                  <span class="territory">S-01</span><span class="territory finding">S-02</span><span class="territory">S-03</span><span class="territory">S-04</span><span class="territory">S-05</span>
+                </div>
+              </section>
+              <section class="atlas-region" data-region data-filter="write w-01 w-02 w-03 w-04 w-05 coordinator core update bulk catalog retention">
+                <h3><span>Write path</span><span class="atlas-count">5 / 5</span></h3>
+                <div class="territory-list">
+                  <span class="territory finding">W-01</span><span class="territory finding">W-02</span><span class="territory finding">W-03</span><span class="territory finding">W-04</span><span class="territory finding">W-05</span>
+                </div>
+              </section>
+              <section class="atlas-region" data-region data-filter="contract tooling identity observability verification evidence p-01 c-01 c-02 m-01 o-01 h-01 h-02">
+                <h3><span>Other regions</span><span class="atlas-count">1 / 7</span></h3>
+                <div class="territory-list">
+                  <span class="territory unmapped">P-01</span><span class="territory unmapped">C-01</span><span class="territory unmapped">C-02</span><span class="territory">M-01</span><span class="territory unmapped">O-01</span><span class="territory unmapped">H-01</span><span class="territory unmapped">H-02</span>
+                </div>
+              </section>
+            </div>
+
+            <article class="card integrity-note" id="v02-place" data-filter="v-02 http sparql surface place relationship">
+              <h3>Current place · Service / V-02</h3>
+              <p class="value">HTTP SPARQL surface and routes</p>
+              <p><strong>Mapped.</strong> Behavioral claims are available through structural analysis, concern review, and adversarial challenge. One critical finding is open. Scope: <code>http.rs</code> plus routes for SPARQL, admin, and health.</p>
+              <p><a href="#v02-1">Return to the V02-1 decision</a></p>
+            </article>
+
+            <div class="trail" aria-label="Readable relationship trail">
+              <div class="trail-node"><b>V-02</b><span>HTTP surface</span></div><span class="trail-edge">uses query context →</span><div class="trail-node"><b>Q-01</b><span>SPARQL pipeline</span></div><span class="trail-edge">reads storage →</span><div class="trail-node"><b>S-01</b><span>Fjall adapter</span></div>
+            </div>
+            <div class="trail" aria-label="Authorization and bootstrap relationship trail">
+              <div class="trail-node"><b>V-02</b><span>no policy call</span></div><span class="trail-edge">should meet →</span><div class="trail-node"><b>V-03</b><span>authorization policy</span></div><span class="trail-edge">started by →</span><div class="trail-node"><b>V-04</b><span>bootstrap · unmapped</span></div>
+            </div>
+          </section>
+
+          <section class="section" id="audit" data-filter="audit trust evidence coverage integrity contradictions markdown provenance">
+            <div class="section-head"><span class="section-no">03</span><div><h2>Audit the boundary, not a health score</h2><p class="section-intro">Each number answers a different question. The prototype keeps their meanings and source registers close enough to challenge.</p></div></div>
+
+            <div class="card-grid">
+              <article class="card"><h3>Survey reach</h3><p class="value">25 mapped · 9 unmapped</p><p>Mapped authorizes claims only to the documented survey depth. The nine unmapped records are unseen territory, not zero-risk territory.</p></article>
+              <article class="card"><h3>Finding register</h3><p class="value">14 confirmed open</p><p>One critical, one high, five medium, seven low. This is a count of confirmed findings at cited SHAs, not an estimate of all defects.</p></article>
+              <article class="card"><h3>Contradictions</h3><p class="value">0 recorded pairs</p><p>No incompatible finding pairs are currently recorded. This does not mean the publication, codebase, or unsurveyed territory contains no disagreement.</p></article>
+              <article class="card"><h3>Projection integrity</h3><p class="value">Current capture agrees</p><p>Overview and master plan both say 25/34; overview and findings register both say 14 with one critical. Integrity is checked separately from freshness.</p></article>
+            </div>
+
+            <details class="integrity-note">
+              <summary>Why projection integrity is visible · earlier captured disagreement</summary>
+              <p>During this panel, an earlier settled capture showed 22/34 and 13 findings in the overview while the underlying registers showed 23/34 and 14 findings including a critical case. The later 18:15 capture restored agreement. This is a dated provenance event, not a diagnosis and not current state.</p>
+            </details>
+
+            <div class="source-bar" aria-label="Authoritative source routes">
+              <span>Checked code <strong>d19ade703e3c</strong></span>
+              <a href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/index.md">Overview Markdown</a>
+              <a href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/findings.md">Finding register</a>
+              <a href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/master-plan.md">Subsystem register</a>
+              <a href="file:///Users/nfeldman/repos/axiomdb/.amanuensis/docs/open-questions.md">Open questions</a>
+            </div>
+          </section>
+
+          <section class="section" id="resume" data-filter="return resume change delta baseline active session local pin sm-07 q-01">
+            <div class="section-head"><span class="section-no">04</span><div><h2>Re-enter without invented change</h2><p class="section-intro">Publication delta, reader-local state, and active survey work are different records. Unknown is a complete answer when the baseline does not exist.</p></div></div>
+
+            <div class="reentry">
+              <article class="reentry-card"><h3>Publication delta</h3><p class="state">Comparison unavailable</p><p>This specimen has no earlier immutable publication endpoint. It will not translate generation time into “what changed.”</p></article>
+              <article class="reentry-card"><h3>This device</h3><p class="state">No trail pinned</p><p>Optional prototype-only memory. It is never called survey history and never changes the generated publication.</p><div class="button-row"><button class="quiet-button" type="button" data-pin>Pin V02 trail</button><button class="quiet-button" type="button" data-clear-pin>Clear</button></div><p class="pin-status" data-pin-status aria-live="polite"></p></article>
+              <article class="reentry-card"><h3>Active survey work</h3><p class="state">SM-07, then Q-01 onward</p><p>Process state copied from the current session record. It is not evidence that a new publication has completed.</p><p><a href="#v02-place">Open the current trail frame</a></p></article>
+            </div>
+          </section>
+
+          <section class="section" id="cases" data-filter="finding case register v02-1 r04-1 q01-1 w05-1">
+            <div class="section-head"><span class="section-no">05</span><div><h2>Representative case register</h2><p class="section-intro">Casefiles lead for reading; a compact register remains for comparison and expert scanning.</p></div></div>
+            <div class="finding-list">
+              <article class="finding-row" data-filter="v02-1 critical http authorization system tenant"><span class="finding-id">V02-1</span><div><h3><a href="#v02-1">HTTP routes bypass authorization</a></h3><p>Unauthenticated query/update can operate as system tenant; HTTP is started and broadly bound by default.</p></div><span class="finding-meta">Critical · V-02<br>open · d19ade70</span></article>
+              <article class="finding-row" id="r04-1" data-filter="r04-1 high reasoning abox owl el materialization"><span class="finding-id">R04-1</span><div><h3>Ordinary ABox writes do not materialize expected OWL EL inferences</h3><p>Incremental reasoners are complete and tested but have no production caller; question #10 changes remedy and grade rationale.</p></div><span class="finding-meta">High · R-04<br>open · d19ade70</span></article>
+              <article class="finding-row" data-filter="q01-1 medium query visibility metadata empty wrong rows"><span class="finding-id">Q01-1</span><div><h3>Visibility setup failures return success-shaped answers</h3><p>Catalog or epoch-map failures can become empty or wrong results while only emitting a warning.</p></div><span class="finding-meta">Medium · Q-01<br>open · d19ade70</span></article>
+              <article class="finding-row" data-filter="w05-1 medium graph catalog retention clear generation resurrection"><span class="finding-id">W05-1</span><div><h3>Unreclaimed rows can reappear after clear-generation wrap</h3><p>A graph cleared once per minute can reach the 16-bit wrap in about 45 days; old physical rows are never reclaimed.</p></div><span class="finding-meta">Medium · W-05<br>open · d19ade7</span></article>
+            </div>
+          </section>
+        </div>
+
+        <aside class="local-toc" aria-label="On this briefing">
+          <span class="mini-label">On this briefing</span>
+          <ul>
+            <li><a href="#act">01 · Leading decision</a></li>
+            <li><a href="#terrain">02 · System terrain</a></li>
+            <li><a href="#audit">03 · Trust boundary</a></li>
+            <li><a href="#resume">04 · Re-entry</a></li>
+            <li><a href="#cases">05 · Case register</a></li>
+          </ul>
+          <p class="rail-note">Location support is explicit; this particular trail/breadcrumb composition remains a prototype hypothesis.</p>
+        </aside>
+      </div>
+
+      <footer class="page-foot">
+        <p><strong>Prototype, not production.</strong> Self-contained HTML; no external fonts, stylesheets, scripts, images, analytics, or diagram runtime. All essential content and navigation survive without JavaScript. Representative content is frozen in <code>../source-capture.md</code>.</p>
+        <p>Field Docket direction · panel synthesis 2026-08-22 · durable records remain authoritative.</p>
+      </footer>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const themeButton = document.querySelector('[data-theme]');
+  const navButton = document.querySelector('[data-nav]');
+  const search = document.querySelector('[data-search]');
+  const empty = document.querySelector('[data-empty]');
+  const pinButton = document.querySelector('[data-pin]');
+  const clearPinButton = document.querySelector('[data-clear-pin]');
+  const pinStatus = document.querySelector('[data-pin-status]');
+  const pinKey = 'field-docket-trail';
+
+  function setTheme(next) {
+    root.dataset.theme = next;
+    try { localStorage.setItem('field-docket-theme', next); } catch (e) {}
+  }
+
+  themeButton?.addEventListener('click', () => {
+    const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  navButton?.addEventListener('click', () => {
+    const open = body.classList.toggle('nav-open');
+    navButton.setAttribute('aria-expanded', String(open));
+  });
+
+  document.querySelectorAll('.rail a').forEach((link) => link.addEventListener('click', () => {
+    body.classList.remove('nav-open');
+    navButton?.setAttribute('aria-expanded', 'false');
+  }));
+
+  function normalize(value) { return value.trim().toLowerCase(); }
+
+  function filterReport() {
+    const query = normalize(search?.value || '');
+    let matches = 0;
+    document.querySelectorAll('.rail-nav li').forEach((item) => {
+      const show = !query || normalize(item.dataset.filter || item.textContent).includes(query);
+      item.hidden = !show;
+      if (show && query) matches += 1;
+    });
+    document.querySelectorAll('[data-atlas] [data-region]').forEach((region) => {
+      let regionMatches = 0;
+      region.querySelectorAll('.territory').forEach((item) => {
+        const haystack = normalize(`${item.dataset.filter || ''} ${item.textContent}`);
+        const show = !query || haystack.includes(query) || normalize(region.dataset.filter || '').includes(query);
+        item.hidden = !show;
+        if (show && query) regionMatches += 1;
+      });
+      const showRegion = !query || regionMatches > 0 || normalize(region.dataset.filter || '').includes(query);
+      region.hidden = !showRegion;
+      if (showRegion && query) matches += regionMatches || 1;
+    });
+    document.querySelectorAll('.finding-row').forEach((item) => {
+      const show = !query || normalize(item.dataset.filter || item.textContent).includes(query);
+      item.hidden = !show;
+      if (show && query) matches += 1;
+    });
+    empty?.classList.toggle('visible', Boolean(query && matches === 0));
+  }
+
+  search?.addEventListener('input', filterReport);
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      search?.focus();
+      if (innerWidth <= 880) {
+        body.classList.add('nav-open');
+        navButton?.setAttribute('aria-expanded', 'true');
+      }
+    }
+    if (event.key === 'Escape') {
+      body.classList.remove('nav-open');
+      navButton?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  function renderPin() {
+    let value = '';
+    try { value = localStorage.getItem(pinKey) || ''; } catch (e) {}
+    if (pinStatus) pinStatus.textContent = value ? `Pinned on this device: ${value}` : 'No device-local trail stored.';
+  }
+  pinButton?.addEventListener('click', () => {
+    try { localStorage.setItem(pinKey, 'V02-1 → V-02 → Q-01'); } catch (e) {}
+    renderPin();
+  });
+  clearPinButton?.addEventListener('click', () => {
+    try { localStorage.removeItem(pinKey); } catch (e) {}
+    renderPin();
+  });
+  renderPin();
+})();
+</script>
+</body>
+</html>
