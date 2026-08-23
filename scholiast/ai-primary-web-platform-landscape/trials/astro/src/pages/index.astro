@@ -1,0 +1,17 @@
+---
+import '../report.css';
+---
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Trial report — Astro</title></head>
+<body><a class="skip" href="#content">Skip to content</a><header><nav aria-label="Report"><ul><li><a href="index.html" aria-current="page">Overview</a></li><li><a href="methods.html">Methods</a></li></ul></nav></header>
+<main id="content"><h1>Candidate status</h1><p>A document-first filter trial.</p><label for="filter">Filter candidates <input id="filter" data-report-filter type="search"></label>
+<table><caption>Candidate evidence</caption><thead><tr><th scope="col">Candidate</th><th scope="col">Disposition</th></tr></thead><tbody><tr><th scope="row">Native HTML</th><td>shortlist</td></tr><tr><th scope="row">Observable Framework</th><td>reject as primary</td></tr><tr><th scope="row">Quarto</th><td>benchmark</td></tr></tbody></table>
+<details><summary>Method note</summary><p>Content remains readable when JavaScript is disabled.</p></details></main>
+<script>
+  const input = document.querySelector('[data-report-filter]');
+  const rows = [...document.querySelectorAll('tbody tr')];
+  input?.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    for (const row of rows) row.hidden = !row.textContent.toLowerCase().includes(query);
+  });
+</script></body></html>

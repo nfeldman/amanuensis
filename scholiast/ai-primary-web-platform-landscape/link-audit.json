@@ -1,0 +1,32 @@
+{
+  "detector": "link-audit.py",
+  "detector_version": "1.0.0",
+  "limitations": [
+    "Resolution does not prove that a page supports the associated claim.",
+    "Anchor fragments are not checked.",
+    "Access-limited HTTP responses are not classified as broken."
+  ],
+  "local": {
+    "failures": [],
+    "references": 64,
+    "unique_targets": 46
+  },
+  "remote": {
+    "access_limited": [
+      {
+        "method": "HEAD",
+        "ok": true,
+        "status": 403,
+        "url": "https://www.hyperui.dev/blog/faqs/"
+      }
+    ],
+    "failures": [],
+    "references": 118,
+    "status_counts": {
+      "200": 115,
+      "403": 1
+    },
+    "unique_targets": 116
+  },
+  "run_date": "2026-08-22"
+}

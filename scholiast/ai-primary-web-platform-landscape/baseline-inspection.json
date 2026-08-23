@@ -1,0 +1,171 @@
+{
+  "schema_version": "1.0.0",
+  "detector_version": "1.0.0",
+  "path": "/Users/nfeldman/repos/axiomdb/.amanuensis/docs/index.html",
+  "sha256": "a49b29a5debcadbff368f60f1ad11294f31533fa7a0d137e7d66d05f4d836501",
+  "bytes": 52280,
+  "lines": 387,
+  "doctype_html": true,
+  "lang_en": true,
+  "meta_viewport": true,
+  "tag_counts": {
+    "a": 69,
+    "article": 1,
+    "aside": 2,
+    "b": 3,
+    "body": 1,
+    "br": 1,
+    "button": 2,
+    "caption": 1,
+    "code": 4,
+    "div": 7,
+    "footer": 1,
+    "h1": 1,
+    "h2": 9,
+    "head": 1,
+    "header": 1,
+    "html": 1,
+    "input": 1,
+    "label": 1,
+    "li": 59,
+    "main": 1,
+    "meta": 4,
+    "nav": 1,
+    "p": 11,
+    "script": 2,
+    "section": 9,
+    "span": 192,
+    "strong": 7,
+    "style": 1,
+    "table": 1,
+    "tbody": 1,
+    "td": 12,
+    "th": 2,
+    "thead": 1,
+    "title": 1,
+    "tr": 7,
+    "ul": 6
+  },
+  "landmarks": {
+    "aside": 2,
+    "footer": 1,
+    "header": 1,
+    "main": 1,
+    "nav": 1
+  },
+  "headings": [
+    {
+      "level": "h2",
+      "text": "Orientation"
+    },
+    {
+      "level": "h2",
+      "text": "Evidence"
+    },
+    {
+      "level": "h2",
+      "text": "Working record"
+    },
+    {
+      "level": "h2",
+      "text": "Reference"
+    },
+    {
+      "level": "h2",
+      "text": "Subsystems"
+    },
+    {
+      "level": "h1",
+      "text": "Project overview"
+    },
+    {
+      "level": "h2",
+      "text": "§Quick orientation"
+    },
+    {
+      "level": "h2",
+      "text": "§Current state"
+    },
+    {
+      "level": "h2",
+      "text": "§Navigation"
+    },
+    {
+      "level": "h2",
+      "text": "§Latest session"
+    }
+  ],
+  "heading_skips": [],
+  "ids": {
+    "total": 6,
+    "unique": 6,
+    "duplicates": []
+  },
+  "links": {
+    "total": 69,
+    "classes": {
+      "fragment": 5,
+      "local": 64
+    }
+  },
+  "remote_asset_urls": [],
+  "images": [],
+  "scripts": [
+    {
+      "src": null,
+      "type": null
+    },
+    {
+      "src": null,
+      "type": null
+    }
+  ],
+  "style_blocks": 1,
+  "controls": [
+    {
+      "tag": "input",
+      "type": "search",
+      "id": "conspectus-search",
+      "aria_label": null,
+      "aria_expanded": null
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "aria_label": null,
+      "aria_expanded": null
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "id": null,
+      "aria_label": null,
+      "aria_expanded": "false"
+    }
+  ],
+  "tables": [
+    {
+      "captions": 1,
+      "th": 2,
+      "th_scope": 2,
+      "td": 12
+    }
+  ],
+  "static_signals": {
+    "skip_link": true,
+    "focus_visible": true,
+    "prefers_reduced_motion": true,
+    "prefers_color_scheme": true,
+    "print_styles": true,
+    "uses_local_storage": true,
+    "uses_match_media": true,
+    "uses_color_mix": true,
+    "uses_backdrop_filter": true,
+    "inline_style_attribute_count": 0,
+    "inline_event_handler_count": 0,
+    "unsafe_eval_count": 0,
+    "document_write_count": 0
+  },
+  "instrument_scope": "Static HTML structure and lexical signals only; no CSS layout, keyboard, screen-reader, runtime, or semantic accessibility verdict."
+}

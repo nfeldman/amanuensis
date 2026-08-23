@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "retrieved_at": "2026-08-22",
+  "cli": "shadcn@4.19.0",
+  "project_style": "base-nova",
+  "caveat": "The CLI is pinned; the official registry address is mutable. Per-item payload hashes freeze this retrieval.",
+  "items": [
+    {
+      "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+      "name": "button",
+      "files": [
+        {
+          "path": "registry/base-nova/ui/button.tsx",
+          "content": "import { Button as ButtonPrimitive } from \"@base-ui/react/button\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\n\nimport { cn } from \"@/registry/base-nova/lib/utils\"\n\nconst buttonVariants = cva(\n  \"group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4\",\n  {\n    variants: {\n      variant: {\n        default: \"bg-primary text-primary-foreground hover:bg-primary/80\",\n        outline:\n          \"border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50\",\n        secondary:\n          \"bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground\",\n        ghost:\n          \"hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50\",\n        destructive:\n          \"bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40\",\n        link: \"text-primary underline-offset-4 hover:underline\",\n      },\n      size: {\n        default:\n          \"h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2\",\n        xs: \"h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3\",\n        sm: \"h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5\",\n        lg: \"h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2\",\n        icon: \"size-8\",\n        \"icon-xs\":\n          \"size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3\",\n        \"icon-sm\":\n          \"size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg\",\n        \"icon-lg\": \"size-9\",\n      },\n    },\n    defaultVariants: {\n      variant: \"default\",\n      size: \"default\",\n    },\n  }\n)\n\nfunction Button({\n  className,\n  variant = \"default\",\n  size = \"default\",\n  ...props\n}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {\n  return (\n    <ButtonPrimitive\n      data-slot=\"button\"\n      className={cn(buttonVariants({ variant, size, className }))}\n      {...props}\n    />\n  )\n}\n\nexport { Button, buttonVariants }\n",
+          "type": "registry:ui"
+        }
+      ],
+      "meta": {
+        "links": {
+          "docs": "https://ui.shadcn.com/docs/components/base/button",
+          "examples": "https://ui.shadcn.com/code/apps/v4/registry/bases/base/examples/button-example.tsx"
+        }
+      },
+      "type": "registry:ui",
+      "payload_sha256": "70010dfba20416cd3f644833bc57f0589f1a7b8fc5ddff29af1138a9b5a1cd37"
+    },
+    {
+      "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+      "name": "input",
+      "files": [
+        {
+          "path": "registry/base-nova/ui/input.tsx",
+          "content": "import * as React from \"react\"\nimport { Input as InputPrimitive } from \"@base-ui/react/input\"\n\nimport { cn } from \"@/registry/base-nova/lib/utils\"\n\nfunction Input({ className, type, ...props }: React.ComponentProps<\"input\">) {\n  return (\n    <InputPrimitive\n      type={type}\n      data-slot=\"input\"\n      className={cn(\n        \"h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport { Input }\n",
+          "type": "registry:ui"
+        }
+      ],
+      "meta": {
+        "links": {
+          "docs": "https://ui.shadcn.com/docs/components/base/input",
+          "examples": "https://ui.shadcn.com/code/apps/v4/registry/bases/base/examples/input-example.tsx"
+        }
+      },
+      "type": "registry:ui",
+      "payload_sha256": "d3175ee13d7c40a8486ea80798449f314cef64e0b0e978c8267248af18983615"
+    },
+    {
+      "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+      "name": "label",
+      "files": [
+        {
+          "path": "registry/base-nova/ui/label.tsx",
+          "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { cn } from \"@/registry/base-nova/lib/utils\"\n\nfunction Label({ className, ...props }: React.ComponentProps<\"label\">) {\n  return (\n    <label\n      data-slot=\"label\"\n      className={cn(\n        \"flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nexport { Label }\n",
+          "type": "registry:ui"
+        }
+      ],
+      "meta": {
+        "links": {
+          "docs": "https://ui.shadcn.com/docs/components/base/label",
+          "examples": "https://ui.shadcn.com/code/apps/v4/registry/bases/base/examples/label-example.tsx",
+          "api": "https://base-ui.com/react/components/label.md"
+        }
+      },
+      "type": "registry:ui",
+      "payload_sha256": "e2f2e12654873b352d423de9f8af6c2c1ad98d028ecf2bcd15db6ec36665e939"
+    },
+    {
+      "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+      "name": "table",
+      "files": [
+        {
+          "path": "registry/base-nova/ui/table.tsx",
+          "content": "\"use client\"\n\nimport * as React from \"react\"\n\nimport { cn } from \"@/registry/base-nova/lib/utils\"\n\nfunction Table({ className, ...props }: React.ComponentProps<\"table\">) {\n  return (\n    <div\n      data-slot=\"table-container\"\n      className=\"relative w-full overflow-x-auto\"\n    >\n      <table\n        data-slot=\"table\"\n        className={cn(\"w-full caption-bottom text-sm\", className)}\n        {...props}\n      />\n    </div>\n  )\n}\n\nfunction TableHeader({ className, ...props }: React.ComponentProps<\"thead\">) {\n  return (\n    <thead\n      data-slot=\"table-header\"\n      className={cn(\"[&_tr]:border-b\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction TableBody({ className, ...props }: React.ComponentProps<\"tbody\">) {\n  return (\n    <tbody\n      data-slot=\"table-body\"\n      className={cn(\"[&_tr:last-child]:border-0\", className)}\n      {...props}\n    />\n  )\n}\n\nfunction TableFooter({ className, ...props }: React.ComponentProps<\"tfoot\">) {\n  return (\n    <tfoot\n      data-slot=\"table-footer\"\n      className={cn(\n        \"border-t bg-muted/50 font-medium [&>tr]:last:border-b-0\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction TableRow({ className, ...props }: React.ComponentProps<\"tr\">) {\n  return (\n    <tr\n      data-slot=\"table-row\"\n      className={cn(\n        \"border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction TableHead({ className, ...props }: React.ComponentProps<\"th\">) {\n  return (\n    <th\n      data-slot=\"table-head\"\n      className={cn(\n        \"h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction TableCell({ className, ...props }: React.ComponentProps<\"td\">) {\n  return (\n    <td\n      data-slot=\"table-cell\"\n      className={cn(\n        \"p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0\",\n        className\n      )}\n      {...props}\n    />\n  )\n}\n\nfunction TableCaption({\n  className,\n  ...props\n}: React.ComponentProps<\"caption\">) {\n  return (\n    <caption\n      data-slot=\"table-caption\"\n      className={cn(\"mt-4 text-sm text-muted-foreground\", className)}\n      {...props}\n    />\n  )\n}\n\nexport {\n  Table,\n  TableHeader,\n  TableBody,\n  TableFooter,\n  TableHead,\n  TableRow,\n  TableCell,\n  TableCaption,\n}\n",
+          "type": "registry:ui"
+        }
+      ],
+      "meta": {
+        "links": {
+          "docs": "https://ui.shadcn.com/docs/components/base/table",
+          "examples": "https://ui.shadcn.com/code/apps/v4/registry/bases/base/examples/table-example.tsx"
+        }
+      },
+      "type": "registry:ui",
+      "payload_sha256": "57d0e14c749de6f7f58566d49fa8fdc15e385de5f724a84f1ab18ce37cc6e89f"
+    }
+  ]
+}

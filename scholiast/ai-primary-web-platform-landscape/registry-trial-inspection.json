@@ -1,0 +1,108 @@
+{
+  "detector": "registry-trial-inspection.py",
+  "detector_version": "1.0.0",
+  "generated_dom_detail": {
+    "client_authored_html": {
+      "buttons": 0,
+      "class_attributes": 0,
+      "class_tokens": 0,
+      "data_slot_elements": 0,
+      "divs": 1,
+      "elements": 9,
+      "labels_for_filter": 0
+    },
+    "document": {
+      "buttons": 1,
+      "class_attributes": 34,
+      "class_tokens": 209,
+      "data_slot_elements": 20,
+      "divs": 3,
+      "elements": 44,
+      "labels_for_filter": 1
+    }
+  },
+  "installed_footprint": {
+    "installed_bytes": 189709898,
+    "installed_files": 16803,
+    "installed_package_directories": 397
+  },
+  "limitations": [
+    "Static inspection only; JavaScript and assistive technology were not executed.",
+    "The fixture is a feasibility probe, not evidence of AI productivity or typical project size.",
+    "Installed bytes include the CLI and build-only packages and are not browser payload.",
+    "The copied-source group includes the CLI-generated cn utility because installed components import it."
+  ],
+  "outputs": [
+    {
+      "bundle": "trials/shadcn-copy/dist",
+      "captions": 1,
+      "classic_scripts": 1,
+      "file_count": 3,
+      "h1": 1,
+      "html_bytes": 5459,
+      "html_file_count": 1,
+      "inline_scripts": 0,
+      "landmarks": {
+        "aside": 0,
+        "footer": 0,
+        "header": 1,
+        "main": 1,
+        "nav": 1
+      },
+      "module_scripts": 0,
+      "name": "shadcn-copy-document",
+      "remote_asset_urls": [],
+      "remote_link_urls": [],
+      "scoped_headers": 5,
+      "search_inputs": 1,
+      "sha256": "acfc36fa40024c9baf6cb138c6aed57c59f69ff194fc3c2419e9b5bd61bfd074",
+      "tables": 1,
+      "total_bytes": 46216,
+      "unresolved_local_references": []
+    },
+    {
+      "bundle": "trials/shadcn-copy/dist-client",
+      "captions": 0,
+      "classic_scripts": 0,
+      "file_count": 3,
+      "h1": 0,
+      "html_bytes": 434,
+      "html_file_count": 1,
+      "inline_scripts": 0,
+      "landmarks": {
+        "aside": 0,
+        "footer": 0,
+        "header": 0,
+        "main": 0,
+        "nav": 0
+      },
+      "module_scripts": 1,
+      "name": "shadcn-copy-client-owned-reject",
+      "remote_asset_urls": [],
+      "remote_link_urls": [],
+      "scoped_headers": 0,
+      "search_inputs": 0,
+      "sha256": "ad147749398eeb16bd4e8c1195de38f926fcb4efc3ab1a2743ba7f1d768dd749",
+      "tables": 0,
+      "total_bytes": 278244,
+      "unresolved_local_references": []
+    }
+  ],
+  "registry_cli": "shadcn@4.19.0",
+  "registry_style": "base-nova",
+  "run_date": "2026-08-22",
+  "source_metrics": {
+    "fixture_authored": {
+      "bytes": 3968,
+      "files": 4,
+      "import_statements": 11,
+      "nonblank_lines": 112
+    },
+    "registry_copied_plus_init_utility": {
+      "bytes": 7434,
+      "files": 5,
+      "import_statements": 12,
+      "nonblank_lines": 197
+    }
+  }
+}

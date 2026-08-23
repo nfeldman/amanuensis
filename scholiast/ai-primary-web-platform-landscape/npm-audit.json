@@ -1,0 +1,67 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@observablehq/framework": {
+      "name": "@observablehq/framework",
+      "severity": "low",
+      "isDirect": true,
+      "via": ["esbuild"],
+      "effects": [],
+      "range": ">=1.13.4",
+      "nodes": ["node_modules/@observablehq/framework"],
+      "fixAvailable": {
+        "name": "@observablehq/framework",
+        "version": "1.13.3",
+        "isSemVerMajor": true
+      }
+    },
+    "esbuild": {
+      "name": "esbuild",
+      "severity": "low",
+      "isDirect": false,
+      "via": [{
+        "source": 1120680,
+        "name": "esbuild",
+        "dependency": "esbuild",
+        "title": "esbuild allows arbitrary file read when running the development server on Windows",
+        "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
+        "severity": "low",
+        "cwe": ["CWE-22"],
+        "cvss": {
+          "score": 2.5,
+          "vectorString": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N"
+        },
+        "range": ">=0.27.3 <0.28.1"
+      }],
+      "effects": ["@observablehq/framework"],
+      "range": "0.27.3 - 0.28.0",
+      "nodes": ["node_modules/@observablehq/framework/node_modules/esbuild"],
+      "fixAvailable": {
+        "name": "@observablehq/framework",
+        "version": "1.13.3",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 2,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 2
+    },
+    "dependencies": {
+      "prod": 1,
+      "dev": 735,
+      "optional": 213,
+      "peer": 5,
+      "peerOptional": 0,
+      "total": 735
+    }
+  },
+  "retrieved": "2026-08-22",
+  "command": "npm audit --json",
+  "scope_note": "Audit covers the combined pinned trial installation; findings may apply to build/development tools and do not imply a browser-runtime vulnerability."
+}

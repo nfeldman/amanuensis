@@ -1,0 +1,19 @@
+- Resolving items.
+┌ shadcn add button (dry run)
+│
+├ src/components/ui/button.tsx (overwrite)
+│ ┌──────────────────────────────────────────────
+│ │ --- a/src/components/ui/button.tsx
+│ │ +++ b/src/components/ui/button.tsx
+│ │ @@ -3,7 +3,6 @@
+│ │
+│ │  import { cn } from "@/lib/utils"
+│ │
+│ │ -// Trial-local customization: retain a visible provenance seam for upgrade drift.
+│ │  const buttonVariants = cva(
+│ └──────────────────────────────────────────────
+│
+└ Run without --dry-run to apply.
+
+Captured 2026-08-22 with shadcn@4.19.0 against the current official registry.
+The command made no file changes.

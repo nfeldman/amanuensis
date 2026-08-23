@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="generator" content="Observable Framework v1.13.4">
+<title>Candidate status | Trial report — Observable Framework</title>
+
+<link rel="modulepreload" href="./_observablehq/client.adcc8ae6.js">
+<link rel="modulepreload" href="./_observablehq/runtime.607a8173.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.c27a8c1f.js">
+<script type="module">
+
+import {define} from "./_observablehq/client.adcc8ae6.js";
+
+define({id: "e954f94e", outputs: ["dispositions"], body: () => {
+const dispositions = ["shortlist", "reject as primary", "benchmark"];
+return {dispositions};
+}});
+
+define({id: "8376dd5d", mode: "inline", inputs: ["dispositions","display"], body: async (dispositions,display) => {
+display(await(
+dispositions.length
+))
+}});
+
+</script>
+</head>
+<body>
+<div id="observablehq-center">
+<aside id="observablehq-toc" data-selector="h1:not(:first-of-type)[id], h2:first-child[id], :not(h1) + h2[id]">
+<nav>
+</nav>
+</aside>
+<main id="observablehq-main" class="observablehq">
+<h1 id="candidate-status" tabindex="-1"><a class="observablehq-header-anchor" href="#candidate-status">Candidate status</a></h1>
+<p>A document-first table plus one framework-native reactive expression.</p>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Disposition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Native HTML</td>
+<td>shortlist</td>
+</tr>
+<tr>
+<td>Observable Framework</td>
+<td>reject as primary</td>
+</tr>
+<tr>
+<td>Quarto</td>
+<td>benchmark</td>
+</tr>
+</tbody>
+</table>
+<div class="observablehq observablehq--block"><!--:e954f94e:--></div>
+<p>There are <strong><observablehq-loading></observablehq-loading><!--:8376dd5d:--></strong> dispositions in this fixture.</p>
+<details><summary>Method note</summary><p>The Markdown table is useful without interactivity; the computed count exercises the generated runtime.</p></details>
+</main>
+</div>
+</body>
+</html>

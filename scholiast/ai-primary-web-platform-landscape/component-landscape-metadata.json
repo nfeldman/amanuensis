@@ -1,0 +1,614 @@
+{
+  "schema_version": "1.0.0",
+  "retrieved_at": "2026-08-22",
+  "limitations": [
+    "GitHub stars and open-item counts are orientation signals, not quality rankings.",
+    "GitHub open_issues_count combines issues and pull requests.",
+    "pushed_at can reflect automation or non-product changes; it establishes recency only.",
+    "npm unpacked size is package/build footprint, not delivered browser payload.",
+    "Registry metadata and repository state can change after retrieval."
+  ],
+  "github": [
+    {
+      "repo": "shadcn-ui/ui",
+      "url": "https://github.com/shadcn-ui/ui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-21T17:28:23Z",
+      "updated_at": "2026-08-23T03:35:44Z",
+      "default_branch": "main",
+      "stargazers_count": 121874,
+      "forks_count": 9943,
+      "open_issues_and_pull_requests": 2309,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "chakra-ui/park-ui",
+      "url": "https://github.com/chakra-ui/park-ui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-04-10T23:05:11Z",
+      "updated_at": "2026-08-22T08:58:22Z",
+      "default_branch": "main",
+      "stargazers_count": 2354,
+      "forks_count": 109,
+      "open_issues_and_pull_requests": 23,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "intentui/intentui",
+      "url": "https://github.com/intentui/intentui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-18T14:41:47Z",
+      "updated_at": "2026-08-19T09:45:23Z",
+      "default_branch": "3.x",
+      "stargazers_count": 1950,
+      "forks_count": 91,
+      "open_issues_and_pull_requests": 0,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "markmead/hyperui",
+      "url": "https://github.com/markmead/hyperui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-21T08:07:23Z",
+      "updated_at": "2026-08-22T22:24:12Z",
+      "default_branch": "main",
+      "stargazers_count": 12204,
+      "forks_count": 507,
+      "open_issues_and_pull_requests": 1,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "keenthemes/reui",
+      "url": "https://github.com/keenthemes/reui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-20T05:19:44Z",
+      "updated_at": "2026-08-23T03:31:13Z",
+      "default_branch": "main",
+      "stargazers_count": 3346,
+      "forks_count": 145,
+      "open_issues_and_pull_requests": 39,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "shadcnblocks/kibo",
+      "url": "https://github.com/shadcnblocks/kibo",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-05-04T06:00:08Z",
+      "updated_at": "2026-08-22T22:51:50Z",
+      "default_branch": "main",
+      "stargazers_count": 3914,
+      "forks_count": 179,
+      "open_issues_and_pull_requests": 33,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "chakra-ui/ark",
+      "url": "https://github.com/chakra-ui/ark",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-22T09:25:17Z",
+      "updated_at": "2026-08-23T03:38:23Z",
+      "default_branch": "main",
+      "stargazers_count": 5351,
+      "forks_count": 211,
+      "open_issues_and_pull_requests": 5,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "mui/base-ui",
+      "url": "https://github.com/mui/base-ui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-21T13:00:23Z",
+      "updated_at": "2026-08-22T23:02:27Z",
+      "default_branch": "master",
+      "stargazers_count": 10691,
+      "forks_count": 516,
+      "open_issues_and_pull_requests": 422,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "adobe/react-spectrum",
+      "url": "https://github.com/adobe/react-spectrum",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-21T06:41:39Z",
+      "updated_at": "2026-08-22T22:13:46Z",
+      "default_branch": "main",
+      "stargazers_count": 15812,
+      "forks_count": 1550,
+      "open_issues_and_pull_requests": 584,
+      "license": {
+        "spdx_id": "Apache-2.0",
+        "name": "Apache License 2.0"
+      }
+    },
+    {
+      "repo": "radix-ui/primitives",
+      "url": "https://github.com/radix-ui/primitives",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-08T16:39:51Z",
+      "updated_at": "2026-08-23T03:35:57Z",
+      "default_branch": "main",
+      "stargazers_count": 19198,
+      "forks_count": 1233,
+      "open_issues_and_pull_requests": 341,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "chakra-ui/panda",
+      "url": "https://github.com/chakra-ui/panda",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-22T09:57:24Z",
+      "updated_at": "2026-08-22T10:40:07Z",
+      "default_branch": "main",
+      "stargazers_count": 6154,
+      "forks_count": 312,
+      "open_issues_and_pull_requests": 16,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "chakra-ui/chakra-ui",
+      "url": "https://github.com/chakra-ui/chakra-ui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-22T16:15:30Z",
+      "updated_at": "2026-08-23T02:55:54Z",
+      "default_branch": "main",
+      "stargazers_count": 40585,
+      "forks_count": 3640,
+      "open_issues_and_pull_requests": 13,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "unovue/shadcn-vue",
+      "url": "https://github.com/unovue/shadcn-vue",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-22T09:04:53Z",
+      "updated_at": "2026-08-23T02:27:25Z",
+      "default_branch": "dev",
+      "stargazers_count": 10481,
+      "forks_count": 674,
+      "open_issues_and_pull_requests": 138,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "huntabyte/shadcn-svelte",
+      "url": "https://github.com/huntabyte/shadcn-svelte",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-09T08:01:50Z",
+      "updated_at": "2026-08-23T01:27:44Z",
+      "default_branch": "main",
+      "stargazers_count": 9059,
+      "forks_count": 565,
+      "open_issues_and_pull_requests": 125,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "tailwindlabs/tailwindcss",
+      "url": "https://github.com/tailwindlabs/tailwindcss",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-08-14T19:43:34Z",
+      "updated_at": "2026-08-23T02:19:17Z",
+      "default_branch": "main",
+      "stargazers_count": 97289,
+      "forks_count": 5582,
+      "open_issues_and_pull_requests": 56,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    },
+    {
+      "repo": "tailwindlabs/headlessui",
+      "url": "https://github.com/tailwindlabs/headlessui",
+      "archived": false,
+      "disabled": false,
+      "pushed_at": "2026-04-13T16:12:31Z",
+      "updated_at": "2026-08-23T03:02:20Z",
+      "default_branch": "main",
+      "stargazers_count": 28717,
+      "forks_count": 1202,
+      "open_issues_and_pull_requests": 109,
+      "license": {
+        "spdx_id": "MIT",
+        "name": "MIT License"
+      }
+    }
+  ],
+  "npm": [
+    {
+      "package": "shadcn",
+      "version": "4.19.0",
+      "time.modified": "2026-08-21T17:33:29.371Z",
+      "license": "MIT",
+      "dist.unpackedSize": 819984,
+      "dependencies": {
+        "ora": "^8.2.0",
+        "zod": "^3.24.1",
+        "diff": "^8.0.2",
+        "open": "^11.0.0",
+        "execa": "^9.6.0",
+        "kleur": "^4.1.5",
+        "socks": "^2.8.8",
+        "dedent": "^1.6.0",
+        "recast": "^0.23.11",
+        "undici": "^7.27.2",
+        "postcss": "^8.5.6",
+        "prompts": "^2.4.2",
+        "fs-extra": "^11.3.1",
+        "ts-morph": "^26.0.0",
+        "commander": "^14.0.0",
+        "deepmerge": "^4.3.1",
+        "fast-glob": "^3.3.3",
+        "fuzzysort": "^3.1.0",
+        "@babel/core": "^7.28.0",
+        "cosmiconfig": "^9.0.0",
+        "browserslist": "^4.26.2",
+        "@babel/parser": "^7.28.0",
+        "tailwind-merge": "^3.0.1",
+        "tsconfig-paths": "^4.2.0",
+        "@dotenvx/dotenvx": "^1.48.4",
+        "stringify-object": "^5.0.0",
+        "zod-to-json-schema": "^3.24.6",
+        "postcss-selector-parser": "^7.1.0",
+        "@babel/preset-typescript": "^7.27.1",
+        "@modelcontextprotocol/sdk": "^1.26.0",
+        "validate-npm-package-name": "^7.0.1",
+        "@types/validate-npm-package-name": "^4.0.2",
+        "@babel/plugin-transform-typescript": "^7.28.0"
+      },
+      "engines": {
+        "node": ">=20.18.1"
+      },
+      "repository": {
+        "url": "git+https://github.com/shadcn-ui/ui.git",
+        "type": "git",
+        "directory": "packages/shadcn"
+      }
+    },
+    {
+      "package": "@base-ui/react",
+      "version": "1.7.0",
+      "time.modified": "2026-08-04T09:55:20.600Z",
+      "license": "MIT",
+      "dist.unpackedSize": 9491657,
+      "dependencies": {
+        "@babel/runtime": "^7.29.2",
+        "@base-ui/utils": "0.3.2",
+        "@floating-ui/utils": "^0.2.12",
+        "@floating-ui/react-dom": "^2.1.9",
+        "use-sync-external-store": "^1.6.0"
+      },
+      "peerDependencies": {
+        "react": "^17 || ^18 || ^19",
+        "date-fns": "^4.0.0",
+        "react-dom": "^17 || ^18 || ^19",
+        "@date-fns/tz": "^1.2.0",
+        "@types/react": "^17 || ^18 || ^19"
+      },
+      "engines": {
+        "node": ">=14.0.0"
+      },
+      "repository": {
+        "url": "git+https://github.com/mui/base-ui.git",
+        "type": "git",
+        "directory": "packages/react"
+      }
+    },
+    {
+      "package": "react-aria-components",
+      "version": "1.20.0",
+      "time.modified": "2026-08-14T09:17:39.579Z",
+      "license": "Apache-2.0",
+      "dist.unpackedSize": 6418565,
+      "dependencies": {
+        "react-aria": "3.51.0",
+        "client-only": "^0.0.1",
+        "@swc/helpers": "^0.5.0",
+        "react-stately": "3.49.0",
+        "@react-types/shared": "^3.36.1",
+        "@internationalized/date": "^3.12.3",
+        "@internationalized/string": "^3.2.10"
+      },
+      "peerDependencies": {
+        "react": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1",
+        "react-dom": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1"
+      },
+      "repository": {
+        "url": "git+https://github.com/adobe/react-spectrum.git",
+        "type": "git"
+      }
+    },
+    {
+      "package": "@ark-ui/react",
+      "version": "5.39.0",
+      "time.modified": "2026-08-22T09:51:21.415Z",
+      "license": "MIT",
+      "dist.unpackedSize": 3335390,
+      "dependencies": {
+        "@zag-js/toc": "1.43.3",
+        "@zag-js/core": "1.43.3",
+        "@zag-js/menu": "1.43.3",
+        "@zag-js/tabs": "1.43.3",
+        "@zag-js/tour": "1.43.3",
+        "@zag-js/react": "1.43.3",
+        "@zag-js/steps": "1.43.3",
+        "@zag-js/timer": "1.43.3",
+        "@zag-js/toast": "1.43.3",
+        "@zag-js/types": "1.43.3",
+        "@zag-js/utils": "1.43.3",
+        "@zag-js/avatar": "1.43.3",
+        "@zag-js/dialog": "1.43.3",
+        "@zag-js/drawer": "1.43.3",
+        "@zag-js/select": "1.43.3",
+        "@zag-js/slider": "1.43.3",
+        "@zag-js/switch": "1.43.3",
+        "@zag-js/toggle": "1.43.3",
+        "@zag-js/anatomy": "1.43.3",
+        "@zag-js/hotkeys": "1.43.3",
+        "@zag-js/listbox": "1.43.3",
+        "@zag-js/marquee": "1.43.3",
+        "@zag-js/popover": "1.43.3",
+        "@zag-js/qr-code": "1.43.3",
+        "@zag-js/tooltip": "1.43.3",
+        "@zag-js/carousel": "1.43.3",
+        "@zag-js/checkbox": "1.43.3",
+        "@zag-js/combobox": "1.43.3",
+        "@zag-js/editable": "1.43.3",
+        "@zag-js/presence": "1.43.3",
+        "@zag-js/progress": "1.43.3",
+        "@zag-js/splitter": "1.43.3",
+        "@zag-js/accordion": "1.43.3",
+        "@zag-js/clipboard": "1.43.3",
+        "@zag-js/dom-query": "1.43.3",
+        "@zag-js/pin-input": "1.43.3",
+        "@zag-js/tree-view": "1.43.3",
+        "@zag-js/async-list": "1.43.3",
+        "@zag-js/collection": "1.43.3",
+        "@zag-js/date-input": "1.43.3",
+        "@zag-js/date-utils": "1.43.3",
+        "@zag-js/file-utils": "1.43.3",
+        "@zag-js/focus-trap": "1.43.3",
+        "@zag-js/hover-card": "1.43.3",
+        "@zag-js/i18n-utils": "1.43.3",
+        "@zag-js/pagination": "1.43.3",
+        "@zag-js/tags-input": "1.43.3",
+        "@zag-js/auto-resize": "1.43.3",
+        "@zag-js/collapsible": "1.43.3",
+        "@zag-js/color-utils": "1.43.3",
+        "@zag-js/date-picker": "1.43.3",
+        "@zag-js/file-upload": "1.43.3",
+        "@zag-js/radio-group": "1.43.3",
+        "@zag-js/scroll-area": "1.43.3",
+        "@zag-js/angle-slider": "1.43.3",
+        "@zag-js/color-picker": "1.43.3",
+        "@zag-js/number-input": "1.43.3",
+        "@zag-js/rating-group": "1.43.3",
+        "@zag-js/toggle-group": "1.43.3",
+        "@zag-js/focus-visible": "1.43.3",
+        "@zag-js/image-cropper": "1.43.3",
+        "@zag-js/signature-pad": "1.43.3",
+        "@zag-js/cascade-select": "1.43.3",
+        "@zag-js/floating-panel": "1.43.3",
+        "@zag-js/highlight-word": "1.43.3",
+        "@zag-js/password-input": "1.43.3",
+        "@internationalized/date": "3.12.3",
+        "@zag-js/json-tree-utils": "1.43.3",
+        "@zag-js/navigation-menu": "1.43.3"
+      },
+      "peerDependencies": {
+        "react": ">=18.0.0",
+        "react-dom": ">=18.0.0"
+      },
+      "repository": {
+        "url": "git+https://github.com/chakra-ui/ark.git",
+        "type": "git",
+        "directory": "packages/react"
+      }
+    },
+    {
+      "package": "@pandacss/dev",
+      "version": "1.12.0",
+      "time.modified": "2026-08-15T12:42:24.167Z",
+      "license": "MIT",
+      "dist.unpackedSize": 855581,
+      "dependencies": {
+        "cac": "6.7.14",
+        "@clack/prompts": "1.6.0",
+        "@pandacss/node": "1.12.0",
+        "@pandacss/types": "1.12.0",
+        "@pandacss/config": "1.12.0",
+        "@pandacss/logger": "1.12.0",
+        "@pandacss/shared": "1.12.0",
+        "@pandacss/postcss": "1.12.0",
+        "@pandacss/preset-base": "1.12.0",
+        "@pandacss/preset-panda": "1.12.0",
+        "@pandacss/token-dictionary": "1.12.0"
+      },
+      "engines": {
+        "node": ">=20.12.0"
+      },
+      "repository": {
+        "url": "git+https://github.com/chakra-ui/panda.git",
+        "type": "git",
+        "directory": "packages/cli"
+      }
+    },
+    {
+      "package": "@chakra-ui/react",
+      "version": "3.36.1",
+      "time.modified": "2026-07-19T14:32:07.837Z",
+      "license": "MIT",
+      "dist.unpackedSize": 2663316,
+      "dependencies": {
+        "@ark-ui/react": "5.37.2",
+        "@emotion/is-prop-valid": "^1.4.0",
+        "@emotion/serialize": "^1.3.3",
+        "@emotion/use-insertion-effect-with-fallbacks": "^1.2.0",
+        "@emotion/utils": "^1.4.2",
+        "@pandacss/is-valid-prop": "^1.4.2",
+        "csstype": "^3.2.3"
+      },
+      "peerDependencies": {
+        "@emotion/react": ">=11",
+        "react": ">=18",
+        "react-dom": ">=18"
+      },
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/chakra-ui/chakra-ui",
+        "directory": "packages/react"
+      }
+    },
+    {
+      "package": "@radix-ui/react-dialog",
+      "version": "1.1.23",
+      "time.modified": "2026-07-31T15:49:47.510Z",
+      "license": "MIT",
+      "dist.unpackedSize": 99377,
+      "dependencies": {
+        "aria-hidden": "^1.2.4",
+        "@radix-ui/react-id": "1.1.4",
+        "@radix-ui/primitive": "1.1.7",
+        "react-remove-scroll": "^2.7.2",
+        "@radix-ui/react-slot": "1.3.3",
+        "@radix-ui/react-portal": "1.1.17",
+        "@radix-ui/react-context": "1.2.2",
+        "@radix-ui/react-presence": "1.1.10",
+        "@radix-ui/react-primitive": "2.1.10",
+        "@radix-ui/react-focus-scope": "1.1.16",
+        "@radix-ui/react-compose-refs": "1.1.5",
+        "@radix-ui/react-focus-guards": "1.1.6",
+        "@radix-ui/react-dismissable-layer": "1.1.19",
+        "@radix-ui/react-use-layout-effect": "1.1.4",
+        "@radix-ui/react-use-controllable-state": "1.2.6"
+      },
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "repository": {
+        "url": "git+https://github.com/radix-ui/primitives.git",
+        "type": "git",
+        "directory": "packages/react/dialog"
+      }
+    },
+    {
+      "package": "@headlessui/react",
+      "version": "2.2.10",
+      "time.modified": "2026-04-13T16:13:37.114Z",
+      "license": "MIT",
+      "dist.unpackedSize": 1017854,
+      "dependencies": {
+        "@react-aria/focus": "^3.20.2",
+        "@floating-ui/react": "^0.26.16",
+        "@tanstack/react-virtual": "^3.13.9",
+        "use-sync-external-store": "^1.5.0",
+        "@react-aria/interactions": "^3.25.0"
+      },
+      "peerDependencies": {
+        "react": "^18 || ^19 || ^19.0.0-rc",
+        "react-dom": "^18 || ^19 || ^19.0.0-rc"
+      },
+      "engines": {
+        "node": ">=10"
+      },
+      "repository": {
+        "url": "git+https://github.com/tailwindlabs/headlessui.git",
+        "type": "git",
+        "directory": "packages/@headlessui-react"
+      }
+    },
+    {
+      "package": "tailwindcss",
+      "version": "4.3.3",
+      "time.modified": "2026-08-14T19:54:08.797Z",
+      "license": "MIT",
+      "dist.unpackedSize": 772893,
+      "repository": {
+        "url": "https://github.com/tailwindlabs/tailwindcss.git",
+        "type": "git",
+        "directory": "packages/tailwindcss"
+      }
+    },
+    {
+      "package": "class-variance-authority",
+      "version": "0.7.1",
+      "time.modified": "2024-11-26T08:20:34.776Z",
+      "license": "Apache-2.0",
+      "dist.unpackedSize": 22073,
+      "dependencies": {
+        "clsx": "^2.1.1"
+      },
+      "repository": {
+        "type": "git",
+        "url": "git+https://github.com/joe-bell/cva.git"
+      }
+    },
+    {
+      "package": "tailwind-merge",
+      "version": "3.6.0",
+      "time.modified": "2026-08-22T22:35:23.506Z",
+      "license": "MIT",
+      "dist.unpackedSize": 1014786,
+      "dependencies": {},
+      "repository": {
+        "url": "git+https://github.com/dcastil/tailwind-merge.git",
+        "type": "git"
+      }
+    }
+  ]
+}

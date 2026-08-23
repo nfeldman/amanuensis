@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; font: 16px/1.5 system-ui, sans-serif; }
+body { margin: 0 auto; max-width: 64rem; padding: 1rem; }
+a { color: LinkText; }
+.skip { position: absolute; left: -10000px; }
+.skip:focus { left: 1rem; top: 1rem; background: Canvas; padding: .5rem; }
+nav ul { display: flex; gap: 1rem; list-style: none; padding: 0; }
+label { display: block; margin: 1rem 0; }
+input { font: inherit; padding: .4rem; }
+table { border-collapse: collapse; width: 100%; }
+caption { font-weight: 700; text-align: left; }
+th, td { border: 1px solid GrayText; padding: .5rem; text-align: left; }
+[hidden] { display: none !important; }
+:focus-visible { outline: .2rem solid Highlight; outline-offset: .15rem; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }

@@ -1,0 +1,45 @@
+{
+  "retrieved_at": "2026-08-22",
+  "source": "npm registry via npm view",
+  "packages": {
+    "@perspective-dev/viewer": {
+      "version": "5.2.0",
+      "dist_unpacked_size_bytes": 12999959,
+      "license": "Apache-2.0",
+      "dependency_count": 3,
+      "dist_tags": {"latest": "5.2.0"}
+    },
+    "@perspective-dev/client": {
+      "version": "5.2.0",
+      "dist_unpacked_size_bytes": 8148764,
+      "license": "Apache-2.0",
+      "dependency_count": 4,
+      "dist_tags": {"latest": "5.2.0"}
+    },
+    "@duckdb/duckdb-wasm": {
+      "version": "1.33.1-dev57.0",
+      "dist_unpacked_size_bytes": 149377663,
+      "license": "MIT",
+      "dist_tags": {"latest": "1.33.1-dev57.0", "next": "1.33.1-dev64.0"}
+    },
+    "@observablehq/plot": {
+      "version": "0.6.17",
+      "dist_unpacked_size_bytes": 1526486,
+      "license": "ISC",
+      "dependency_count": 3,
+      "dist_tags": {"latest": "0.6.17"}
+    },
+    "vega-lite": {
+      "version": "6.4.3",
+      "dist_unpacked_size_bytes": 5814897,
+      "license": "BSD-3-Clause",
+      "dependency_count": 6,
+      "dist_tags": {"latest": "6.4.3"}
+    }
+  },
+  "limitations": [
+    "Registry unpacked size is package/build footprint, not delivered browser bytes.",
+    "Dependency counts are direct only.",
+    "The DuckDB-Wasm latest dist-tag is a development-labelled version; do not treat it as a stable-release signal."
+  ]
+}

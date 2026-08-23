@@ -1,0 +1,43 @@
+{
+  "candidates": {
+    "alpine-csp": {
+      "installed_bytes": 1125432,
+      "installed_package_directories": 3,
+      "root_packages": ["@alpinejs/csp"],
+      "unresolved_optional_or_platform_dependency_count": 0
+    },
+    "astro": {
+      "installed_bytes": 145025114,
+      "installed_package_directories": 197,
+      "root_packages": ["astro"],
+      "unresolved_optional_or_platform_dependency_count": 88
+    },
+    "eleventy": {
+      "installed_bytes": 20268756,
+      "installed_package_directories": 130,
+      "root_packages": ["@11ty/eleventy"],
+      "unresolved_optional_or_platform_dependency_count": 0
+    },
+    "lit-iife": {
+      "installed_bytes": 12955992,
+      "installed_package_directories": 8,
+      "root_packages": ["lit", "esbuild"],
+      "unresolved_optional_or_platform_dependency_count": 25
+    },
+    "observable-framework": {
+      "installed_bytes": 92296491,
+      "installed_package_directories": 258,
+      "root_packages": ["@observablehq/framework"],
+      "unresolved_optional_or_platform_dependency_count": 50
+    }
+  },
+  "detector": "dependency-footprint.py",
+  "detector_version": "1.0.0",
+  "limitations": [
+    "Concrete npm 11.17.0 installation on macOS with Node 26.5.0.",
+    "Counts include optional dependencies installed for this platform and omit peer-only packages not reached as dependency edges.",
+    "Bytes can overlap across candidate closures because npm deduplicates shared packages.",
+    "Installed bytes are build-environment cost, not delivered browser bytes."
+  ],
+  "run_date": "2026-08-22"
+}

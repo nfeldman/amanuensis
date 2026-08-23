@@ -1,0 +1,17 @@
+{
+  "clean_items_accepted": 4,
+  "detector": "registry-policy.py",
+  "detector_version": "1.0.0",
+  "limitations": [
+    "Declared registry payload policy only; copied source is not executed or certified.",
+    "Package-manager lifecycle scripts, transitive dependencies, and registry server compromise are out of scope.",
+    "A clean result is not a security verdict."
+  ],
+  "red_arms_rejected": [
+    "envVars",
+    "unpinned URL",
+    "unpinned GitHub ref",
+    "path traversal"
+  ],
+  "run_date": "2026-08-22"
+}

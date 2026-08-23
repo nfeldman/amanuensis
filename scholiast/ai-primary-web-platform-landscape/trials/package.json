@@ -1,0 +1,21 @@
+{
+  "name": "amanuensis-ai-primary-web-platform-trials",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build:eleventy": "eleventy --config=eleventy/.eleventy.js --input=eleventy/src --output=eleventy/dist",
+    "build:astro": "astro build --root astro",
+    "build:observable": "observable build --config=observable/observablehq.config.js",
+    "build:lit": "esbuild lit/src/report-filter.js --bundle --format=iife --target=es2021 --outfile=lit/dist/report-filter.js",
+    "build:alpine": "cp node_modules/@alpinejs/csp/dist/cdn.min.js alpine/alpine-csp.js && cp shared/report.css alpine/report.css"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "3.1.6",
+    "@alpinejs/csp": "3.16.2",
+    "@observablehq/framework": "1.13.4",
+    "astro": "7.2.4",
+    "esbuild": "0.25.9",
+    "lit": "3.3.3"
+  }
+}
