@@ -265,8 +265,13 @@ def main() -> None:
 
         # A nodes-only dependency source must fail closed into a linked layer
         # atlas rather than exposing raw Mermaid or implying edges.
+        from amanuensis_materializer.core import _compact_definition
         from amanuensis_materializer.diagrams import subsystem_dependency_graph
         from amanuensis_materializer.html_projection import MarkdownRenderer
+
+        assert _compact_definition(
+            "Atomicity", "T7, and an internal documentation contradiction."
+        ) == "Atomicity: An internal documentation contradiction."
 
         atlas_db = sqlite3.connect(storage / "memory.db")
         atlas_db.execute("DELETE FROM xrefs")

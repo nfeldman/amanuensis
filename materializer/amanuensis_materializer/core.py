@@ -90,9 +90,11 @@ def _compact_definition(label: str, detail: str | None = None, *, limit: int = 2
     prose = re.sub(r"<[^>]+>", " ", html.unescape(detail or ""))
     prose = re.sub(r"[`*_]", "", prose)
     prose = re.sub(r"^T\d+\s*[,.:;-]?\s*", "", prose.strip(), flags=re.IGNORECASE)
+    prose = re.sub(r"^(?:and|or|but)\s+", "", prose, flags=re.IGNORECASE)
     prose = re.sub(r"\s+", " ", prose).strip()
     if prose:
         sentence = re.split(r"(?<=[.!?])\s+", prose, maxsplit=1)[0]
+        sentence = sentence[:1].upper() + sentence[1:]
         if len(sentence) > limit:
             sentence = sentence[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
         return f"{heading}: {sentence}" if heading else sentence
