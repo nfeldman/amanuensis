@@ -130,6 +130,8 @@ Current typed projections:
   tables. A large sparse coverage matrix is different: make a sparse index of
   recorded reviews the default HTML surface, separate neutral coverage measure
   from review outcome, and omit unassessed intersections from that overview.
+  Its explanatory prose uses the report's ordinary `120ch` reading measure;
+  do not restore a narrower local column around the coverage apparatus.
   Retain the complete semantic matrix as secondary apparatus for exact
   row-and-column lookup, with sticky headers and a bounded local scroll area.
   This is progressive disclosure of comparison detail, not deletion of data.

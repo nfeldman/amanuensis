@@ -22,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.10.0"
+HTML_PROJECTION_VERSION = "1.10.1"
 
 
 @dataclass(frozen=True)
@@ -430,7 +430,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-summary-item:last-child { border-right: 0; }
 .coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
 .coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.coverage-intro { max-width: 74ch; margin: 1rem 0 1.25rem; color: var(--text-muted); }
+.coverage-intro { max-width: var(--measure); margin: 1rem 0 1.25rem; color: var(--text-muted); }
 .coverage-subsystem-list {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
@@ -473,7 +473,7 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
 .coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
-.coverage-matrix-note { max-width: 72ch; margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
+.coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
 .coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
 .coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
 .coverage-matrix th, .coverage-matrix td { text-align: center; }

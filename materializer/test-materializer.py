@@ -285,6 +285,8 @@ def main() -> None:
         assert 'aria-label="CC-1 — Cache Coherence"' in html_concerns
         assert 'id="coverage-overview"' in html_concerns
         assert 'class="coverage-index"' in html_concerns
+        assert '.coverage-intro { max-width: var(--measure);' in html_concerns
+        assert '.coverage-matrix-note { max-width: var(--measure);' in html_concerns
         assert '<strong>3</strong><span>Recorded reviews</span>' in html_concerns
         assert html_concerns.count('<article class="coverage-subsystem">') == 3
         assert html_concerns.count('class="coverage-token coverage-state-') == 3

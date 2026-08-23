@@ -151,6 +151,8 @@ The complete cross-reference matrix remains available in a disclosure as
 semantic table markup. It uses fixed row and column headers, a bounded local
 scroll area, labelled non-color-only marks, and direct links from recorded
 cells. The matrix is exact apparatus; it is not the page's default overview.
+The overview explanation and matrix note retain the ordinary `120ch` report
+measure instead of introducing a coverage-specific narrow column.
 
 ## Record-presentation grammar
 
