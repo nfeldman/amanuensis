@@ -29,9 +29,9 @@ A second stdlib HTML parser stack check reported zero unmatched or misnested exp
 
 ## Current-publication fixture
 
-The compact first-viewport fixture at `../prototype-current/index.html` was added after the report advanced to `34 / 34` mapped subsystems and 15 open findings (one critical, two high). Its SHA-256 is `32b730768ba99256eb16509513f1540b43a6af38b5ee53a97084969c9e92d411`.
+The compact first-page fixture at `../prototype-current/index.html` was added after the report advanced to `34 / 34` mapped subsystems and 15 open findings (one critical, two high), then revised on 2026-08-23 after product review separated the IA result from the UI direction. Its current SHA-256 is `a535b4c32d00263fdbaa2061f7e498dd04562327c04731b42fd22ebffcf666a6`.
 
-Ten structural assertions passed: doctype, four independent condition cells, three current high-consequence finding articles, current coverage/counts, active-run caveat, report-owned re-entry language, absence of personal-task claims, semantic landmarks, and narrow responsive rules. This is markup/read-back validation, not a visual or usability result.
+Fourteen current-fixture assertions pass inside the 40-check validator: document structure, project-first identity, secondary Amanuensis identity, bounded navigation, three semantic finding records, retained `Decision docket`/`Warrants` vocabulary, direct practitioner labels, retired clinical labels, absence of paper/editorial visual tokens, no JavaScript requirement, no remote assets, unique IDs, and resolved fragments. This is markup/read-back validation, not a visual or usability result.
 
 ## Visual result
 

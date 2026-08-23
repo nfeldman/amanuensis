@@ -3,234 +3,220 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AxiomDB · Amanuensis Field Docket</title>
+  <title>AxiomDB · Architecture survey · Amanuensis</title>
   <style>
     :root {
       color-scheme: light dark;
-      --paper: #f4efe4;
-      --paper-raised: #fffaf0;
-      --ink: #172725;
-      --muted: #5f6c67;
-      --rule: #b8b29f;
-      --teal: #0c6660;
-      --teal-soft: #dcebe5;
-      --coral: #a83e2d;
-      --coral-soft: #f3d8cf;
-      --ochre: #8b651e;
-      --ochre-soft: #eee2bf;
-      --shadow: rgba(23, 39, 37, .14);
+      --canvas: #f6f7f9;
+      --surface: #ffffff;
+      --surface-subtle: #eef1f5;
+      --text: #111827;
+      --muted: #536071;
+      --subtle: #6b7280;
+      --border: #dbe1e8;
+      --border-strong: #aeb8c5;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-soft: #eaf1ff;
+      --critical: #b42318;
+      --critical-soft: #feeceb;
+      --warning: #975a00;
+      --warning-soft: #fff4df;
+      --good: #177245;
+      --good-soft: #e8f6ee;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --paper: #15211f;
-        --paper-raised: #1d2a27;
-        --ink: #edf2e8;
-        --muted: #b7c4bd;
-        --rule: #56645e;
-        --teal: #86cbc1;
-        --teal-soft: #213f3b;
-        --coral: #f3a18f;
-        --coral-soft: #512d27;
-        --ochre: #e2c579;
-        --ochre-soft: #493e23;
-        --shadow: rgba(0, 0, 0, .28);
+        --canvas: #0f131a;
+        --surface: #151a22;
+        --surface-subtle: #1d2430;
+        --text: #e5e7eb;
+        --muted: #b0b8c5;
+        --subtle: #8d98a8;
+        --border: #293241;
+        --border-strong: #526074;
+        --accent: #60a5fa;
+        --accent-strong: #93c5fd;
+        --accent-soft: #172d4d;
+        --critical: #fb8b83;
+        --critical-soft: #43201f;
+        --warning: #f0b35c;
+        --warning-soft: #3d2a12;
+        --good: #72d19a;
+        --good-soft: #173425;
       }
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      background:
-        linear-gradient(90deg, color-mix(in srgb, var(--teal) 5%, transparent) 1px, transparent 1px) 0 0 / 5rem 100%,
-        var(--paper);
-      color: var(--ink);
-      font: 17px/1.58 ui-serif, Georgia, Cambria, serif;
+      background: var(--canvas);
+      color: var(--text);
+      font: 15.5px/1.58 var(--sans);
+      text-rendering: optimizeLegibility;
     }
-    a { color: var(--teal); text-underline-offset: .18em; }
-    a:focus-visible, summary:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
-    .skip { position: absolute; left: 1rem; top: -6rem; background: var(--ink); color: var(--paper); padding: .75rem 1rem; z-index: 10; }
+    a { color: var(--accent-strong); text-underline-offset: .18em; }
+    a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .skip { position: fixed; left: 1rem; top: -5rem; z-index: 20; padding: .6rem .8rem; background: var(--text); color: var(--surface); }
     .skip:focus { top: 1rem; }
-    .mast {
-      border-bottom: 1px solid var(--rule);
-      background: color-mix(in srgb, var(--paper-raised) 92%, transparent);
+    .topbar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--surface) 94%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+    .topbar-inner, main { width: min(1040px, calc(100% - 2rem)); margin: 0 auto; }
+    .topbar-inner { min-height: 3.75rem; display: flex; align-items: center; gap: 2rem; }
+    .identity { margin-right: auto; color: var(--text); text-decoration: none; }
+    .identity strong { display: block; font-size: .95rem; line-height: 1.1; }
+    .identity span { display: block; margin-top: .18rem; color: var(--subtle); font-size: .72rem; }
+    nav { display: flex; gap: 1.2rem; font-size: .78rem; }
+    nav a { color: var(--muted); text-decoration: none; }
+    nav a:hover, nav a[aria-current] { color: var(--accent-strong); }
+    main { padding: 4.5rem 0 5rem; }
+    .kicker { margin: 0 0 .7rem; color: var(--accent-strong); font: 700 .7rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(2.75rem, 6vw, 4.8rem); line-height: .98; letter-spacing: -.05em; }
+    h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.15; letter-spacing: -.025em; }
+    h3 { margin: 0; font-size: 1.08rem; line-height: 1.35; }
+    p { max-width: 72ch; }
+    .summary { max-width: 65ch; margin: 1rem 0 0; color: var(--muted); font-size: 1.08rem; }
+    .snapshot { display: flex; flex-wrap: wrap; gap: .65rem 1.3rem; margin: 1.75rem 0 0; padding: .75rem .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; font: .72rem/1.4 var(--mono); }
+    .snapshot b { color: var(--subtle); font-weight: 500; }
+    .run-state { margin: .8rem 0 0; color: var(--muted); font-size: .8rem; }
+    .run-state strong { color: var(--warning); }
+    section { scroll-margin-top: 5rem; }
+    .section { margin-top: 4rem; }
+    .section-head { display: flex; justify-content: space-between; gap: 2rem; align-items: end; padding-bottom: 1rem; border-bottom: 1px solid var(--border-strong); }
+    .section-head p { margin: 0; max-width: 45ch; color: var(--muted); font-size: .88rem; }
+    .project-status { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 1rem 0 0; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; }
+    .project-status div { padding: .9rem 1rem; border-right: 1px solid var(--border); }
+    .project-status div:last-child { border-right: 0; }
+    .project-status dt { color: var(--subtle); font: .68rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+    .project-status dd { margin: .4rem 0 0; font-weight: 700; }
+    .project-status small { display: block; margin-top: .28rem; color: var(--muted); font-weight: 400; line-height: 1.35; }
+    .finding-list { background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; overflow: hidden; }
+    .finding { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 1.2rem; padding: 1.2rem; border-bottom: 1px solid var(--border); }
+    .finding:last-child { border-bottom: 0; }
+    .finding.featured { padding: 1.45rem 1.2rem; }
+    .finding-meta { color: var(--subtle); font: .69rem/1.6 var(--mono); }
+    .badge { display: inline-block; margin: 0 0 .55rem; padding: .18rem .46rem; border: 1px solid currentColor; border-radius: 999px; font-weight: 700; }
+    .critical { color: var(--critical); background: var(--critical-soft); }
+    .high { color: var(--warning); background: var(--warning-soft); }
+    .finding p { margin: .45rem 0 0; color: var(--muted); }
+    .finding-actions { display: flex; flex-wrap: wrap; gap: .8rem 1.2rem; margin-top: .8rem; font-size: .82rem; }
+    details { margin-top: .85rem; padding-top: .75rem; border-top: 1px solid var(--border); }
+    summary { width: fit-content; cursor: pointer; color: var(--accent-strong); font-weight: 700; }
+    .review-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .72fr); gap: 1rem; }
+    .review-grid > section, .review-grid > aside { padding: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; }
+    .review-grid p { color: var(--muted); }
+    .review-links { margin: .9rem 0 0; padding-left: 1.2rem; }
+    .review-links li { margin: .45rem 0; }
+    .locus { padding: .8rem; background: var(--surface-subtle); border-radius: .35rem; font: .75rem/1.65 var(--mono); }
+    footer { margin-top: 4rem; padding-top: 1.2rem; border-top: 1px solid var(--border); color: var(--subtle); font-size: .8rem; }
+    @media (max-width: 760px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: .7rem; padding: .8rem 0; }
+      nav { flex-wrap: wrap; }
+      main { padding-top: 3rem; }
+      .section-head, .review-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+      .project-status { grid-template-columns: 1fr 1fr; }
+      .project-status div:nth-child(2) { border-right: 0; }
+      .project-status div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+      .finding { grid-template-columns: 1fr; gap: .55rem; }
     }
-    .mast-inner, main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; }
-    .mast-inner { min-height: 4.5rem; display: flex; align-items: center; gap: 2rem; }
-    .brand { margin-right: auto; font: 700 1.1rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; }
-    .brand span { color: var(--coral); }
-    nav { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font: 650 .76rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .045em; }
-    nav a { color: var(--ink); text-decoration: none; padding: .5rem 0; }
-    nav a[aria-current] { color: var(--coral); border-bottom: 2px solid currentColor; }
-    main { padding: 3.5rem 0 5rem; }
-    .eyebrow, .label { margin: 0; color: var(--coral); font: 750 .74rem/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; }
-    h1 { max-width: 13ch; margin: .55rem 0 1rem; font-size: clamp(2.9rem, 7vw, 6.5rem); line-height: .88; letter-spacing: -.055em; }
-    h2 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.4rem); line-height: 1.04; }
-    h3 { margin: .35rem 0 .6rem; font-size: 1.25rem; line-height: 1.15; }
-    p { max-width: 73ch; }
-    .dek { max-width: 64ch; font-size: clamp(1.08rem, 2vw, 1.35rem); color: var(--muted); }
-    .identity { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(15rem, .7fr); gap: 3rem; align-items: end; }
-    .receipt { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 1rem 0; font: .78rem/1.75 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .receipt b { display: inline-block; min-width: 7.6rem; color: var(--muted); font-weight: 500; }
-    .run-note { margin: 2.5rem 0 1.25rem; padding: 1rem 1.15rem; border-left: .45rem solid var(--ochre); background: var(--ochre-soft); }
-    .run-note strong { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; }
-    .conditions { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
-    .condition { min-height: 9.5rem; padding: 1rem; border-right: 1px solid var(--rule); }
-    .condition:last-child { border-right: 0; }
-    .condition strong { display: block; margin: .5rem 0; font-size: 1.4rem; line-height: 1.05; }
-    .condition p { margin: 0; color: var(--muted); font-size: .86rem; }
-    .section-head { margin: 4rem 0 1.2rem; display: grid; grid-template-columns: 1fr minmax(14rem, 35ch); gap: 2rem; align-items: end; }
-    .section-head p { margin: 0; color: var(--muted); }
-    .docket { border-top: 4px double var(--ink); }
-    .case { display: grid; grid-template-columns: 10.5rem minmax(0, 1fr) 16rem; gap: 1.5rem; padding: 1.5rem 0 1.7rem; border-bottom: 1px solid var(--rule); }
-    .case-meta { font: .75rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .045em; }
-    .tag { display: inline-block; margin: 0 .25rem .4rem 0; padding: .18rem .42rem; border: 1px solid currentColor; }
-    .critical { color: var(--coral); background: var(--coral-soft); }
-    .high { color: var(--ochre); background: var(--ochre-soft); }
-    .action { color: var(--teal); background: var(--teal-soft); }
-    .case-copy p { margin: .4rem 0 .8rem; }
-    .case-aside { padding-left: 1rem; border-left: 1px solid var(--rule); color: var(--muted); font-size: .88rem; }
-    .case-aside strong { color: var(--ink); }
-    details { margin-top: .75rem; }
-    summary { width: fit-content; cursor: pointer; color: var(--teal); font-weight: 700; }
-    .reentry { margin-top: 4rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(17rem, .72fr); gap: 2rem; }
-    .reentry > section, .reentry > aside { padding: 1.5rem; background: var(--paper-raised); box-shadow: .25rem .3rem 0 var(--shadow); border: 1px solid var(--rule); }
-    .trail { margin: 1.25rem 0 0; padding: 0; list-style: none; }
-    .trail li { position: relative; margin: 0 0 .9rem; padding-left: 1.5rem; }
-    .trail li::before { content: "→"; position: absolute; left: 0; color: var(--coral); }
-    .basis { color: var(--muted); font-size: .87rem; }
-    .coordinate { padding-top: 1rem; border-top: 1px solid var(--rule); font: .78rem/1.75 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    footer { margin-top: 4rem; padding-top: 1.25rem; border-top: 4px double var(--ink); color: var(--muted); font-size: .85rem; }
-    @media (max-width: 800px) {
-      .mast-inner { align-items: flex-start; padding: 1rem 0; flex-direction: column; gap: .75rem; }
-      .identity, .reentry, .section-head { grid-template-columns: 1fr; gap: 1rem; }
-      .conditions { grid-template-columns: 1fr 1fr; }
-      .condition:nth-child(2) { border-right: 0; }
-      .condition:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
-      .case { grid-template-columns: 1fr; gap: .5rem; }
-      .case-aside { padding: .75rem 0 0; border-left: 0; border-top: 1px solid var(--rule); }
-    }
-    @media (max-width: 480px) {
-      .conditions { grid-template-columns: 1fr; }
-      .condition { min-height: auto; border-right: 0; border-bottom: 1px solid var(--rule); }
-      .condition:last-child { border-bottom: 0; }
-      nav { gap: .2rem .75rem; }
+    @media (max-width: 460px) {
+      .project-status { grid-template-columns: 1fr; }
+      .project-status div { border-right: 0; border-bottom: 1px solid var(--border); }
+      .project-status div:last-child { border-bottom: 0; }
     }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-    @media print { nav, .skip { display: none; } body { background: white; color: black; } .case { break-inside: avoid; } }
+    @media print { .topbar, .skip { display: none; } body { background: #fff; color: #111; } .finding { break-inside: avoid; } }
   </style>
 </head>
 <body>
-  <a class="skip" href="#main">Skip to report</a>
-  <header class="mast">
-    <div class="mast-inner">
-      <div class="brand">Amanuensis <span>/</span> field docket</div>
-      <nav aria-label="Report landmarks">
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="identity" href="#overview"><strong>AxiomDB</strong><span>Architecture survey · Amanuensis</span></a>
+      <nav aria-label="Report sections">
         <a href="#overview" aria-current="page">Overview</a>
-        <a href="#action">Action</a>
-        <a href="#atlas">Atlas</a>
-        <a href="#action">Casefiles</a>
-        <a href="#proof">Proof</a>
-        <a href="#proof">Reference</a>
+        <a href="#findings">Findings</a>
+        <a href="#subsystems">Subsystems</a>
+        <a href="#evidence">Evidence</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <section id="overview" class="identity" aria-labelledby="title">
-      <div>
-        <p class="eyebrow">AxiomDB · current-publication fixture</p>
-        <h1 id="title">The record, with a way back in.</h1>
-        <p class="dek">A codebase survey for understanding the storage, query, reasoning, and service boundaries—and for reaching the engineering actions whose evidence has survived review.</p>
+    <header id="overview">
+      <p class="kicker">Architecture survey · current publication</p>
+      <h1>AxiomDB</h1>
+      <p class="summary">A survey of the storage, query, reasoning, and service boundaries, with direct routes to findings, supporting evidence, and unresolved engineering decisions.</p>
+      <div class="snapshot" aria-label="Publication metadata">
+        <span><b>Revision</b> main @ d19ade70</span>
+        <span><b>Checked</b> 2026-08-22 20:39:52</span>
+        <span><b>Coverage</b> 34 / 34 subsystems</span>
+        <span><b>Fixture</b> frozen 2026-08-22</span>
       </div>
-      <aside class="receipt" aria-label="Publication identity">
-        <div><b>Source snapshot</b> main @ d19ade70</div>
-        <div><b>Source checked</b> 2026-08-22 20:39:52</div>
-        <div><b>Survey reach</b> 34 / 34 · seams 7 / 7</div>
-        <div><b>Fixture status</b> frozen 2026-08-22</div>
-      </aside>
+      <p class="run-state"><strong>Survey active:</strong> this publication predates the TR-* recalibration session started 2026-08-23 02:29 UTC.</p>
+    </header>
+
+    <section class="section" aria-labelledby="status-title">
+      <div class="section-head">
+        <div><p class="kicker">Project status</p><h2 id="status-title">Four independent dimensions</h2></div>
+        <p>Coverage, source alignment, open work, and publication integrity are reported separately. None is an overall score.</p>
+      </div>
+      <dl class="project-status">
+        <div><dt>Source alignment</dt><dd>No tracked records flagged<small>At revision d19ade70</small></dd></div>
+        <div><dt>Survey coverage</dt><dd>34 / 34 mapped<small>Completeness, not correctness</small></dd></div>
+        <div><dt>Open findings</dt><dd>15<small>1 critical · 2 high</small></dd></div>
+        <div><dt>Recorded contradictions</dt><dd>0<small>Not proof that every claim agrees</small></dd></div>
+      </dl>
     </section>
 
-    <aside class="run-note" role="note">
-      <strong>Survey run in progress</strong>
-      This publication predates the active TR-* recalibration session started 2026-08-23 02:29 UTC. The counts below may not include its work.
-    </aside>
-
-    <section class="conditions" aria-label="Four separate publication conditions">
-      <article class="condition">
-        <p class="label">Source scan</p>
-        <strong>No tracked records flagged</strong>
-        <p>Exact scope: records connected to tracked entry paths at d19ade70.</p>
-      </article>
-      <article class="condition">
-        <p class="label">Survey depth</p>
-        <strong>34 / 34 mapped</strong>
-        <p>Survey completeness, not software health.</p>
-      </article>
-      <article class="condition">
-        <p class="label">Engineering action</p>
-        <strong>15 open findings</strong>
-        <p>1 critical · 2 high · action and evidence remain separate.</p>
-      </article>
-      <article class="condition">
-        <p class="label">Publication integrity</p>
-        <strong>0 explicit contradictions</strong>
-        <p>No contradiction records in this snapshot; this does not establish that all claims agree.</p>
-      </article>
-    </section>
-
-    <section id="action" aria-labelledby="action-title">
-      <header class="section-head">
-        <div><p class="eyebrow">01 · Action</p><h2 id="action-title">Engineering action required</h2></div>
-        <p>Ordered by recorded severity. “Do first” separates immediate containment or verification from an unqualified repair prescription.</p>
-      </header>
-      <div class="docket">
-        <article class="case" id="v02-1" data-finding-id="V02-1" aria-labelledby="v02-title">
-          <div class="case-meta"><span class="tag critical">Critical</span><span class="tag action">Open</span><br>V02-1 · V-02<br>d19ade70</div>
-          <div class="case-copy">
-            <p class="label">Cross-tenant read and write path</p>
+    <section id="findings" class="section" aria-labelledby="findings-title">
+      <div class="section-head">
+        <div><p class="kicker">Decision docket</p><h2 id="findings-title">What needs engineering attention</h2></div>
+        <p>Ordered by recorded severity. The report distinguishes immediate containment and verification from an unqualified repair prescription.</p>
+      </div>
+      <div class="finding-list">
+        <article class="finding featured" id="v02-1" data-finding-id="V02-1" aria-labelledby="v02-title">
+          <div class="finding-meta"><span class="badge critical">Critical</span><br>V02-1 · V-02<br>d19ade70</div>
+          <div>
             <h3 id="v02-title">Unauthenticated HTTP requests can execute as the system tenant</h3>
-            <p>HTTP query and update routes consult no authorization policy, accept an unauthenticated tenant header, default an absent header to the system tenant, and are started on an all-interface bind in the shipped bootstrap.</p>
-            <details><summary>Why the evidence holds together</summary><p>Three individually understandable choices compose: no HTTP authorization layer; system-tenant defaulting; and a system tenant that intentionally bypasses tenant filtering. The casefile must keep those links visible with their source locations.</p></details>
+            <p>HTTP query and update routes consult no authorization policy, accept an unauthenticated tenant header, and default an absent header to the system tenant.</p>
+            <details><summary>Warrants</summary><p>No HTTP authorization layer, system-tenant defaulting, and a system tenant that bypasses tenant filtering compose into the recorded behavior. Each claim links to a source locus in the full finding.</p></details>
+            <div class="finding-actions"><a href="#evidence">Supporting evidence</a><a href="#subsystems">Affected subsystems</a><a href="#continue">Continue reviewing</a></div>
           </div>
-          <aside class="case-aside"><strong>Do first</strong><br>Confirm exposure and restrict or disable the standalone HTTP surface while authorization wiring and tenant derivation are reviewed.<br><br><a href="#proof">Inspect the proof route</a></aside>
         </article>
-
-        <article class="case" data-finding-id="R04-1" aria-labelledby="r04-title">
-          <div class="case-meta"><span class="tag high">High</span><span class="tag action">Open</span><br>R04-1 · R-04<br>d19ade70</div>
-          <div class="case-copy"><p class="label">Reasoning capability gap</p><h3 id="r04-title">ABox writes do not materialize OWL EL inferences in production</h3><p>Incremental reasoners exist and are tested, but production call paths do not invoke them for ABox-only writes; published capability language therefore needs correction or wiring evidence.</p></div>
-          <aside class="case-aside"><strong>Decision bearing</strong><br>Separate the code defect from the public capability claim and verify both.</aside>
+        <article class="finding" data-finding-id="R04-1" aria-labelledby="r04-title">
+          <div class="finding-meta"><span class="badge high">High</span><br>R04-1 · R-04</div>
+          <div><h3 id="r04-title">ABox writes do not materialize OWL EL inferences in production</h3><p>Incremental reasoners exist and are tested, but production call paths do not invoke them for ABox-only writes.</p></div>
         </article>
-
-        <article class="case" data-finding-id="V04-1" aria-labelledby="v04-title">
-          <div class="case-meta"><span class="tag high">High</span><span class="tag action">Open</span><br>V04-1 · V-04<br>d19ade70</div>
-          <div class="case-copy"><p class="label">Default authorization posture</p><h3 id="v04-title">The default gRPC composition installs PermitAll</h3><p>With no OPA block, the shipped composition permits every authorization check; absent tenant identity also resolves to the system tenant.</p></div>
-          <aside class="case-aside"><strong>Do first</strong><br>Make the intended default explicit before choosing fail-closed behavior or a documented deployment boundary.</aside>
+        <article class="finding" data-finding-id="V04-1" aria-labelledby="v04-title">
+          <div class="finding-meta"><span class="badge high">High</span><br>V04-1 · V-04</div>
+          <div><h3 id="v04-title">The default gRPC composition installs PermitAll</h3><p>With no OPA block, the shipped composition permits every authorization check; absent tenant identity also resolves to the system tenant.</p></div>
         </article>
       </div>
     </section>
 
-    <div class="reentry">
-      <section aria-labelledby="resume-title">
-        <p class="eyebrow">02 · Re-entry</p>
-        <h2 id="resume-title">Resume this report</h2>
-        <p class="basis">Basis: generated survey state—not reader history. No prior publication comparison is recorded in this fixture.</p>
-        <ol class="trail">
-          <li><strong>Active survey session</strong> — recalibrate TR-* findings against the recorded tenancy-boundary decision.</li>
-          <li><strong>Highest recorded consequence</strong> — V02-1, the HTTP authorization casefile above.</li>
-          <li><strong>Stable context route</strong> — Service / V-02 HTTP surface → V-03 authorization → Q-01 query visibility.</li>
-          <li><strong>Proof route</strong> — durable finding marker, checked revision, source locations, projection receipt.</li>
-        </ol>
+    <div class="review-grid section">
+      <section id="continue" aria-labelledby="continue-title">
+        <p class="kicker">Continue reviewing</p>
+        <h2 id="continue-title">Report-owned return paths</h2>
+        <p>These links come from generated survey state, not reader history or a predicted next task.</p>
+        <ul class="review-links">
+          <li><a href="#v02-1">Review the highest-severity finding</a></li>
+          <li><a href="#subsystems">Open the affected subsystem context</a></li>
+          <li><a href="#evidence">Inspect the projection and evidence basis</a></li>
+        </ul>
       </section>
-      <aside id="atlas" aria-labelledby="atlas-title">
-        <p class="eyebrow">03 · Coordinate</p>
-        <h2 id="atlas-title">Keep the map one route away</h2>
-        <p>The report is fully mapped, so the atlas should preserve place and adjacency without competing with urgent evidence.</p>
-        <p class="coordinate">AxiomDB / Service / V-02<br>↳ V-03 authorization &amp; audit<br>↳ Q-01 query pipeline<br>↳ V-04 server bootstrap</p>
+      <aside id="subsystems" aria-labelledby="subsystems-title">
+        <p class="kicker">Subsystem context</p>
+        <h2 id="subsystems-title">Service boundary</h2>
+        <p>The subsystem map preserves location and adjacency without competing with the finding itself.</p>
+        <p class="locus">AxiomDB / Service / V-02<br>↳ V-03 authorization and audit<br>↳ Q-01 query pipeline<br>↳ V-04 server bootstrap</p>
       </aside>
     </div>
 
-    <footer id="proof">
-      <p><strong>Prototype scope:</strong> current-data first-viewport fixture. It does not claim user-tested comprehension, accessibility conformance, personal history, or a live workflow. The durable source remains the generated report and its Markdown companions.</p>
+    <footer id="evidence">
+      <p><strong>Prototype scope:</strong> current-data first-page fixture. It does not claim user-tested comprehension, accessibility conformance, personal history, or live workflow knowledge. The generated report, Markdown companions, and recorded evidence remain authoritative.</p>
     </footer>
   </main>
 </body>

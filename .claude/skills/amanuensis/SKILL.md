@@ -206,6 +206,14 @@ Both views are derived. Durable authority remains in `memory.db` and the
 registered prose artifacts. Publication read-back verifies HTML and Markdown
 independently, so a healthy companion cannot mask a damaged primary view.
 
+Before writing human-facing labels, hints, prose, or HTML, read
+`references/reporting-style.md`. Keep information architecture and interface
+design as separate contracts: IA determines records, hierarchy, routes, and
+status dimensions; UI expresses that structure without renaming or merging it.
+Use a software-practitioner register with textual-critical vocabulary only
+where it precisely describes evidence relationships. Keep the project name as
+the primary identity and Amanuensis as the producing method.
+
 For long runs, prefer brief status blocks over silent grinding, but do not ask
 for permission to continue inside the inferred scope.
 
@@ -276,4 +284,6 @@ everything.
 - `references/concern-territories.md` — the 11-territory catalog
   used during onboarding Phase 4.
 - `references/artifact-templates.md` — prose artifact formats.
+- `references/reporting-style.md` — project-first identity, software/textual-
+  critical register, IA/UI boundary, labels, and visual anti-tropes.
 - `references/setup.md` — MCP wiring and the autopilot env var.

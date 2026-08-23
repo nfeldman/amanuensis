@@ -1,6 +1,6 @@
 # Current-report stress test
 
-This stress test applies the existing Field Docket prototype and the fresh blind directions to the current AxiomDB publication. It is a structured walkthrough over real report records, not a user study or accessibility conformance result.
+This stress test applies the panel's IA directions to the current AxiomDB publication. It is a structured walkthrough over real report records, not a user study, a validation of the panel's UI direction, or an accessibility conformance result. The 2026-08-23 product ruling retains the IA results while replacing the visual language and clinical labels.
 
 ## Current capture
 
@@ -21,7 +21,7 @@ Observed directly in the generated report on 2026-08-22:
 
 The overview duplicates its orientation hint, then presents a six-row count table and a ten-link directory before the active-session record. A reader can learn the publication identity but must leave the page to learn what the critical finding actually is.
 
-**Prototype result:** Field Docket passes by placing the one-breath system model, four non-composite conditions, and `V02-1` consequence in the first reading sequence. The current `34/34` state strengthens the case for action-first rather than map-first entry.
+**Prototype result:** the IA direction passes by placing the one-breath system model, four independent status dimensions, and `V02-1` consequence in the first reading sequence. The current `34/34` state strengthens the case for action-first rather than map-first entry.
 
 **Required update:** replace the historical prototype's counts (`25/34`, `14`, one high) with a generated fixture before any comparative reader test. Its structure remains valid; its numeric snapshot is intentionally frozen and must not be presented as current.
 
@@ -29,7 +29,7 @@ The overview duplicates its orientation hint, then presents a six-row count tabl
 
 `V02-1` places a long symptom and an even longer three-part causal chain inside a six-column row. Two high findings follow in the same geometry. On narrow screens the table wrapper permits horizontal panning, but that is not a readable decision surface.
 
-**Prototype result:** the semantic casefile keeps severity, resolution, consequence, reachability, evidence, uncertainty, and next safe move in a vertical sequence. This direction survives the current report unchanged.
+**Prototype result:** the semantic finding record keeps severity, resolution, consequence, reachability, evidence, uncertainty, and next safe move in a vertical sequence. This direction survives the current report unchanged.
 
 **Red acceptance condition:** every durable finding row maps to exactly one semantic article and stable anchor; `V02-1` is readable at 375 px without horizontal panning.
 
@@ -62,5 +62,4 @@ Below 900 px the rail is translated off-screen but remains in the document's tab
 - The chosen composition is still structurally useful against the present 34/34, 15-finding report.
 - It establishes neither reader performance nor WCAG conformance.
 - The existing prototype is an inspectable design fixture, not a current-state dashboard.
-- The highest-value next prototype is not a new color treatment; it is a current-data view-model fixture for overview, finding casefile, subsystem state/history, and report-owned re-entry.
-
+- The highest-value next prototype is a current-data view-model fixture for overview, finding records, subsystem state/history, and report-owned return paths.

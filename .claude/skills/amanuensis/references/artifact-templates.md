@@ -13,6 +13,11 @@ The templates below are minimal skeletons. Agents extend them as the
 subsystem requires. Do not remove the headers — the materializer and
 xref resolver rely on them.
 
+All human-facing titles, labels, hints, and generated prose follow
+[`reporting-style.md`](reporting-style.md). Keep software terms direct; use
+textual-critical vocabulary only when it precisely names an evidence
+relationship.
+
 ---
 
 ## 1 · Onboarding report (`onboarding-report.md`)

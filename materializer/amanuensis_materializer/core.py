@@ -164,7 +164,31 @@ class Materializer:
             # drift independently.
             git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
             stale = row(conn, "SELECT COUNT(*) AS n FROM entries WHERE stale=1") or {"n": 0}
-            html_context = {**git, "stale_entry_count": int(stale["n"] or 0)}
+            workspace_record = self.storage / "workspace_path"
+            workspace = self.storage.parent
+            if workspace_record.is_file():
+                recorded_workspace = workspace_record.read_text().strip()
+                if recorded_workspace:
+                    workspace = Path(recorded_workspace)
+            project_name = workspace.name or "Project"
+            onboarding_report = self.storage / "onboarding-report.md"
+            if onboarding_report.is_file():
+                for line in onboarding_report.read_text().splitlines():
+                    if line.startswith("**Codebase**:"):
+                        recorded_name = (
+                            line.partition(":")[2]
+                            .strip()
+                            .split(" — ", 1)[0]
+                            .strip()
+                        )
+                        if recorded_name:
+                            project_name = recorded_name
+                        break
+            html_context = {
+                **git,
+                "project_name": project_name,
+                "stale_entry_count": int(stale["n"] or 0),
+            }
             site_pages = [
                 SitePage(
                     markdown_path=p.path,

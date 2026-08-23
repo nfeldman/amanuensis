@@ -36,7 +36,9 @@ verify-before-apply, exact fan-in, and read-back of delivered artifacts.
 
 ## Outcome
 
-The panel selected **Field Docket**: decision-first content inside a stable atlas frame, with separate source/coverage/consequence/publication-integrity conditions. It refuses a composite health score, keeps decision-relevant qualifiers visible, and treats publication delta, device-local history, and active survey work as different records.
+The panel initially selected **Field Docket**: decision-first content inside a stable map. Subsequent product review separated the information-architecture result from the interface direction. The IA findings remain useful; the busy paper/editorial treatment and clinical vocabulary do not.
+
+`revision-2026-08-23.md` is the current product ruling. It keeps project-first identity, distinct status dimensions, consequential findings, supporting evidence, and report-owned return paths. The revised interface uses a neutral software-tool visual language and a software-practitioner register, with precise textual-critical terms where useful. `Decision docket` and `Warrants` remain deliberate exceptions.
 
 The prototype freezes the coherent AxiomDB state captured at 2026-08-22 18:15:05 EDT: 25/34 mapped and 14 confirmed open findings, including `V02-1` critical and `R04-1` high. The source survey remained active after capture.
 
@@ -44,8 +46,9 @@ The prototype freezes the coherent AxiomDB state captured at 2026-08-22 18:15:05
 
 ### Primary handoff
 
-- `prototype/index.html` — working self-contained local prototype.
-- `prototype-current/index.html` — compact first-viewport fixture bound to the later 34/34, 15-finding publication.
+- `prototype/index.html` — historical self-contained panel prototype.
+- `prototype-current/index.html` — current, quieter fixture bound to the later 34/34, 15-finding publication and the 2026-08-23 product ruling.
+- `revision-2026-08-23.md` — accepted separation of IA and UI, register, retained decisions, and rejected visual tropes.
 - `design-language.md` — tokens, components, content grammar, responsive/accessibility behavior, view model, read-back gates, and exact Amanuensis renderer seams.
 - `task-tests.md` — five concrete reader-task fixtures, direction comparison, selected-direction walkthroughs, and failure triggers.
 - `source-capture.md` — frozen representative facts, timestamps, hashes, and the moving-source caveat.

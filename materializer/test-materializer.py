@@ -173,8 +173,10 @@ def main() -> None:
             "B-01 (scheduler), B-02 (auth), and F-01 (web UI). The seam SM-01 connects them.\n"
         )
         (storage / "onboarding-report.md").write_text(
-            "# Onboarding report\n\n## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n"
+            "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
+            "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n"
         )
+        (storage / "workspace_path").write_text("/example/FictionalProject\n")
         db = sqlite3.connect(storage / "memory.db")
         seed(db)
         db.close()
@@ -201,9 +203,16 @@ def main() -> None:
             assert (docs / html_page).is_file(), f"missing HTML companion: {html_page}"
         html_index = (docs / "index.html").read_text()
         assert "Amanuensis HTML projection" in html_index
-        assert "Conspectus navigation" in html_index
+        assert "FictionalProject" in html_index
+        assert "Architecture survey · Amanuensis" in html_index
+        assert 'aria-label="FictionalProject report navigation"' in html_index
         assert "Find a page" in html_index
-        assert "Reading hint" in html_index
+        assert "Reading hint" not in html_index
+        assert "Living architecture" not in html_index
+        assert "--paper" not in html_index and "Iowan Old Style" not in html_index
+        assert ".js .nav-rail" in html_index, "mobile drawer must be enhancement-only"
+        assert "navRail.inert" in html_index, "closed enhanced drawer must leave the tab order"
+        assert "setMenuOpen(false, true)" in html_index, "Escape must close the drawer and restore focus"
         assert 'href="findings.html"' in html_index
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()

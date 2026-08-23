@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 const panelRoot = resolve(import.meta.dirname, '..');
 const target = resolve(panelRoot, 'prototype/index.html');
 const html = readFileSync(target, 'utf8');
+const currentTarget = resolve(panelRoot, 'prototype-current/index.html');
+const currentHtml = readFileSync(currentTarget, 'utf8');
 const failures = [];
 const passes = [];
 
@@ -71,6 +73,26 @@ check(!scriptSyntaxError, 'inline JavaScript parses', scriptSyntaxError);
 check(!html.includes('\u0000'), 'no NUL placeholders');
 check((html.match(/<h1\b/g) || []).length === 1, 'exactly one h1');
 check((html.match(/<article\b/g) || []).length >= 6, 'semantic article records');
+
+check(/^<!doctype html>/i.test(currentHtml), 'current fixture: HTML5 doctype');
+check(/<html\s+lang="en"/.test(currentHtml), 'current fixture: document language');
+check(/<h1>AxiomDB<\/h1>/.test(currentHtml), 'current fixture: project name is the primary heading');
+check(/<strong>AxiomDB<\/strong><span>Architecture survey · Amanuensis<\/span>/.test(currentHtml), 'current fixture: Amanuensis identity is secondary');
+check(/Decision docket/.test(currentHtml) && /<summary>Warrants<\/summary>/.test(currentHtml), 'current fixture: retained precise register');
+check(/Project status/.test(currentHtml) && /Continue reviewing/.test(currentHtml) && /Supporting evidence/.test(currentHtml), 'current fixture: direct practitioner labels');
+check(!/(?:Casefiles?|Resume this report|Evidence trail|Unseen territory|Field Docket)/i.test(currentHtml), 'current fixture: retired labels are absent');
+check(!/(?:--paper|--ink|ui-serif|Georgia|linear-gradient)/i.test(currentHtml), 'current fixture: paper/editorial visual tokens are absent');
+check((currentHtml.match(/<nav\b/g) || []).length === 1 && (currentHtml.match(/<nav[\s\S]*?<\/nav>/g)?.[0].match(/<a\b/g) || []).length === 4, 'current fixture: navigation is bounded');
+check((currentHtml.match(/<article\b/g) || []).length === 3, 'current fixture: three semantic finding records');
+check(!/<script\b/.test(currentHtml), 'current fixture: no JavaScript required');
+check(externalAssetPatterns.every((pattern) => !pattern.test(currentHtml)), 'current fixture: no external runtime assets');
+
+const currentIds = [...currentHtml.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+const currentIdSet = new Set(currentIds);
+check(currentIdSet.size === currentIds.length, 'current fixture: unique IDs');
+const currentFragments = [...currentHtml.matchAll(/\shref="#([^"]+)"/g)].map((match) => match[1]);
+const currentMissingFragments = [...new Set(currentFragments.filter((fragment) => !currentIdSet.has(fragment)))];
+check(currentMissingFragments.length === 0, 'current fixture: internal fragments resolve', currentMissingFragments.join(', '));
 
 if (failures.length) {
   console.error(`Prototype validation failed (${failures.length}):`);
