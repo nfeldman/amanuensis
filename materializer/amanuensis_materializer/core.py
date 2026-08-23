@@ -22,6 +22,7 @@ The orchestrator:
 """
 from __future__ import annotations
 
+import html
 import re
 import subprocess
 import traceback
@@ -80,6 +81,22 @@ def _github_repository_url(workspace: Path) -> str | None:
         if path.count("/") == 1:
             return f"https://github.com/{path}"
     return None
+
+
+def _compact_definition(label: str, detail: str | None = None, *, limit: int = 220) -> str:
+    """Build a concise human expansion for an opaque report identifier."""
+
+    heading = re.sub(r"\s+", " ", html.unescape(label or "")).strip(" .:—-")
+    prose = re.sub(r"<[^>]+>", " ", html.unescape(detail or ""))
+    prose = re.sub(r"[`*_]", "", prose)
+    prose = re.sub(r"^T\d+\s*[,.:;-]?\s*", "", prose.strip(), flags=re.IGNORECASE)
+    prose = re.sub(r"\s+", " ", prose).strip()
+    if prose:
+        sentence = re.split(r"(?<=[.!?])\s+", prose, maxsplit=1)[0]
+        if len(sentence) > limit:
+            sentence = sentence[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+        return f"{heading}: {sentence}" if heading else sentence
+    return heading or "Report record"
 
 
 @dataclass
@@ -224,6 +241,10 @@ class Materializer:
                 "project_name": project_name,
                 "stale_entry_count": int(stale["n"] or 0),
                 "repository_url": _github_repository_url(workspace),
+                "identifier_definitions": {
+                    identifier: definition
+                    for identifier, (_display, _target, definition) in index.entries.items()
+                },
             }
             site_pages = [
                 SitePage(
@@ -391,26 +412,64 @@ class Materializer:
 
     # ---------------------------------------------------------------------
     def _build_xref_index(self, conn, plan: list[PagePlan]) -> XrefIndex:
-        entries: dict[str, tuple[str, str]] = {}
+        del plan  # database records carry the human definitions
+        entries: dict[str, tuple[str, str, str]] = {}
 
         # Subsystems.
         for s in rows(conn, "SELECT id, name FROM subsystems"):
-            entries[s["id"]] = (s["id"], subsystem_page(s["id"], s["name"]))
+            entries[s["id"]] = (
+                s["id"],
+                subsystem_page(s["id"], s["name"]),
+                s["name"],
+            )
+
+        subsystem_names = {
+            s["id"]: s["name"] for s in rows(conn, "SELECT id, name FROM subsystems")
+        }
 
         # Concerns → concerns.md#<lower-code>
-        for c in rows(conn, "SELECT code FROM concerns"):
-            entries[c["code"]] = (c["code"], f"concerns.md#{c['code'].lower()}")
+        for c in rows(conn, "SELECT code, category, notes FROM concerns"):
+            entries[c["code"]] = (
+                c["code"],
+                f"concerns.md#{c['code'].lower()}",
+                _compact_definition(
+                    (c["category"] or "Concern").replace("-", " ").title(),
+                    c["notes"],
+                ),
+            )
 
         # Seams.
-        for s in rows(conn, "SELECT id FROM seams"):
-            entries[s["id"]] = (s["id"], "seams.md")
+        for s in rows(conn, "SELECT id, shared_object, party_a, party_b FROM seams"):
+            parties = (
+                f"{subsystem_names.get(s['party_a'], s['party_a'])} ↔ "
+                f"{subsystem_names.get(s['party_b'], s['party_b'])}"
+            )
+            entries[s["id"]] = (
+                s["id"],
+                f"seams.md#{s['id'].lower()}",
+                _compact_definition(parties, s["shared_object"]),
+            )
 
         # Findings → findings.md#<lower-id>
-        for f in rows(conn, "SELECT finding_id FROM findings"):
-            entries[f["finding_id"]] = (f["finding_id"], f"findings.md#{f['finding_id'].lower()}")
+        for f in rows(conn, "SELECT finding_id, subsystem_id, symptom FROM findings"):
+            subsystem = subsystem_names.get(f["subsystem_id"], f["subsystem_id"])
+            entries[f["finding_id"]] = (
+                f["finding_id"],
+                f"findings.md#{f['finding_id'].lower()}",
+                _compact_definition(f"Finding in {subsystem}", f["symptom"]),
+            )
 
         # Diagnosticity matrices.
-        for m in rows(conn, "SELECT id FROM diagnosticity_sessions"):
-            entries[f"DM-{m['id']}"] = (f"DM-{m['id']}", matrix_page(m["id"]))
+        for m in rows(conn, "SELECT id, subsystem_id, symptom FROM diagnosticity_sessions"):
+            subsystem = subsystem_names.get(
+                m["subsystem_id"], m["subsystem_id"] or "codebase"
+            )
+            entries[f"DM-{m['id']}"] = (
+                f"DM-{m['id']}",
+                matrix_page(m["id"]),
+                _compact_definition(
+                    f"Competing explanations in {subsystem}", m["symptom"]
+                ),
+            )
 
         return XrefIndex(entries=entries)

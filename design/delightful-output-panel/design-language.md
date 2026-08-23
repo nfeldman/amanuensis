@@ -130,6 +130,14 @@ No timestamp or active-session phrase may be converted into “since your last v
 
 Every page retains a one-action Markdown companion plus branch/SHA/publication identity. Links use the report's ordinary local relative paths in production; the prototype uses explicit `file://` routes only because it lives outside the generated AxiomDB directory.
 
+### `IdentifierDefinition`
+
+Every known opaque code is a coordinate with a human definition. Its visible
+token uses `<abbr>` with a descriptive native `title` and matching accessible
+name; table headers, matrix axes, navigation, and compact metadata are not
+exceptions. Print the ordinary name beside the token where the available
+measure allows it, while the definition markup keeps dense views recoverable.
+
 ## Record-presentation grammar
 
 The Markdown and database forms preserve portable structure; the HTML form
@@ -216,10 +224,11 @@ required before a conformance claim.
   independently.
 - Reading prose: 16px base, 1.58 line height, maximum `72ch` in ordinary
   single-column passages.
-- Finite runs of adjacent narrative paragraphs may balance into two columns at
-  `1180px` and three at `1760px`. Use a generous ruled gutter, preserve DOM
+- Finite runs of adjacent narrative paragraphs stay in one column until their
+  own reading field reaches `120ch`, then balance into two columns. At `190ch`
+  the same field may use three. Use a generous ruled gutter, preserve DOM
   order, and exclude records, tables, figures, lists, code, and long unbounded
-  report flows.
+  report flows. These are container measures, not viewport breakpoints.
 
 This uses the standard
 [CSS Multi-column Layout Level 1](https://www.w3.org/TR/css-multicol-1/),
@@ -266,10 +275,11 @@ Keyboard: `Cmd/Ctrl+K` focuses search; Escape closes only the mobile drawer; nat
 
 ## Responsive behavior
 
-- **≥1760px:** fixed rail; finite prose fields may balance into three columns;
-  the page canvas tops out at `104rem`.
-- **1180–1759px:** fixed rail; eligible finite prose fields balance into two
-  columns; three-column atlas where useful.
+- **Prose field ≥190ch:** finite narrative runs may balance into three columns;
+  the page canvas tops out at `128rem`.
+- **Prose field 120–189ch:** eligible finite narrative runs balance into two
+  columns. Below `120ch` they remain single-column. These conditions use the
+  prose container, independent of the viewport breakpoints below.
 - **881–1119px:** fixed rail; 2×2 condition band/routes; two-column atlas.
 - **≤880px:** navigation drawer with labelled button; content full width; local section map enters document flow.
 - **≤620px:** all evidence cards single column; relationship trails scroll as complete labelled units; finding register becomes ID + body + second-row metadata.

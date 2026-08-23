@@ -84,11 +84,14 @@ field as an equally prominent column.
 - Do not split long causal prose into parallel columns merely because the
   source has two fields. Preserve a stable reading order and a comfortable text
   measure.
-- On wider screens, a finite run of adjacent narrative paragraphs may become a
-  balanced two-column reading field; use three columns only on genuinely wide
-  canvases. Keep source order ordinary, preserve a single-column fallback, use
-  generous gutters, and never pour records, tables, code, or an unbounded page
-  into the multicolumn flow.
+- A finite run of adjacent narrative paragraphs may use the full available
+  single-column measure until its own reading field reaches `120ch`. At that
+  intrinsic threshold, balance it into two columns; use three columns only
+  when the same field reaches `190ch`. Query the prose container rather than
+  the viewport so navigation, zoom, and embedding geometry participate. Keep
+  source order ordinary, preserve a single-column fallback, use generous
+  gutters, and never pour records, tables, code, or an unbounded page into the
+  multicolumn flow.
 - Do not put critical qualifications behind disclosure by default. Disclosure
   is appropriate for receipts and supporting detail after the record is usable.
 - Omit genuinely absent optional facts instead of displaying empty cells or
@@ -117,6 +120,12 @@ for every row.
 
 ## Architecture and source routes
 
+- Treat an opaque known identifier as a coordinate plus a definition, never as
+  self-explanatory copy. Wrap every visible occurrence in semantic definition
+  markup with a descriptive native title and matching accessible name;
+  especially enforce this in table headers, matrix axes, navigation, and
+  compact metadata. Where space permits, print the human name beside the code
+  rather than relying on the tooltip alone.
 - Do not present a nodes-only diagram as a dependency graph. If no dependency
   edges are recorded, say so and render the linked subsystem inventory as a
   layer atlas. Never infer edges from names, prefixes, or nearby seams.

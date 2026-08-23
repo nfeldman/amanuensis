@@ -50,17 +50,22 @@ The later typography and terrain pass additionally verified in generated
 markup that:
 
 - title and orientation copy have no inherited reading-measure cap;
-- finite narrative runs retain ordinary source order and progressively become
-  two columns from `1180px` and three from `1760px`;
+- finite narrative runs retain ordinary source order, remain one column below
+  a `120ch` reading field, then progressively become two columns at `120ch`
+  and three at `190ch` through intrinsic container queries;
 - `master-plan.html` contains 34 subsystem records and no table;
 - AxiomDB's zero recorded dependency edges produce a linked 34-subsystem atlas
   rather than an inferred graph;
 - seven recorded seams produce four linked connected areas;
 - file-ledger identities open the reviewed revision on AxiomDB's verified
   GitHub origin; and
+- known opaque identifiers carry semantic definition markup, a descriptive
+  native title, and a matching accessible name wherever they appear; and
 - the HTML projection contains none of the legacy reader-facing phrases
   `Concern dispositions`, `Jump-in reading`, `evidence dispositions`, or
-  `Fix awaiting verification`.
+  `Fix awaiting verification`; and
+- Markdown and HTML contain no unresolved cross-reference placeholder bytes,
+  including links whose visible labels use inline code.
 
 The materializer integration test includes red-capable assertions for both
 sides of the grammar: prose-heavy findings must not regress to a table, and

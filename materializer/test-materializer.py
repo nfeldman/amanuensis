@@ -224,7 +224,10 @@ def main() -> None:
         assert "--paper" not in html_index and "Iowan Old Style" in html_index
         assert "--accent: #235b58" in html_index
         assert "column-count: 2" in html_index and "column-count: 3" in html_index
-        assert "--page: 104rem" in html_index
+        assert "--page: 128rem" in html_index
+        assert "@container report (min-width: 120ch)" in html_index
+        assert "@container report (min-width: 190ch)" in html_index
+        assert "@media (min-width: 1180px)" not in html_index
         assert ".page-hint { max-width: none" in html_index
         assert "border-radius: 999px" not in html_index
         assert ".js .nav-rail" in html_index, "mobile drawer must be enhancement-only"
@@ -238,6 +241,10 @@ def main() -> None:
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
         assert 'class="record-lede"' in html_findings and "Root cause" in html_findings
+        html_concerns = (docs / "concerns.html").read_text()
+        assert 'class="identifier-definition"' in html_concerns
+        assert 'title="CC-1 — Cache Coherence"' in html_concerns
+        assert 'aria-label="CC-1 — Cache Coherence"' in html_concerns
         assert 'class="severity severity-high"' in html_findings
         assert "<table" not in html_findings and "<p>|" not in html_findings
         html_entry = (docs / "entry-point.html").read_text()
@@ -248,6 +255,7 @@ def main() -> None:
         assert 'class="summary-list"' in html_entry and "Native memory" in html_entry
         html_master_plan = (docs / "master-plan.html").read_text()
         assert 'class="record-list record-list-subsystem"' in html_master_plan
+        assert 'title="B-01 — Job Scheduler"' in html_master_plan
         html_b02 = (docs / "subsystems/b02-auth-service.html").read_text()
         assert 'class="record-list record-list-concern-disposition"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
@@ -302,6 +310,8 @@ def main() -> None:
         assert "How to read this conspectus" in htr
         assert "knowledge-depth contract" in htr
         assert "evidence quality" in htr.lower()
+        assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"
+        assert "\x00" not in (docs / "how-to-read.html").read_text(), "xref placeholders leaked into HTML"
         # The index should link to it as the first navigation pointer.
         index = (docs / "index.md").read_text()
         assert "how-to-read.md" in index, "index missing link to how-to-read.md"

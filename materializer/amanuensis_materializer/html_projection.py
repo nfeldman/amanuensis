@@ -14,6 +14,7 @@ import html
 import posixpath
 import re
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -21,7 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.3.0"
+HTML_PROJECTION_VERSION = "1.4.0"
 
 
 @dataclass(frozen=True)
@@ -135,7 +136,7 @@ _CSS = r"""
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --rail: 17.25rem;
   --measure: 72ch;
-  --page: 104rem;
+  --page: 128rem;
   --baseline: .25rem;
 }
 
@@ -266,7 +267,7 @@ h1 {
 .freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--good); border-radius: 50%; }
 .freshness.stale::before { background: var(--signal); }
 
-.content { max-width: 100%; padding-top: .35rem; }
+.content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content section:last-child { border-bottom: 0; }
 .content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
@@ -351,6 +352,15 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
 .file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
 .file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
+.identifier-definition {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: .06em;
+  text-underline-offset: .2em;
+  cursor: help;
+}
+a .identifier-definition { text-decoration-color: currentColor; }
 .record-subsystem { display: block; }
 .record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
 .record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
@@ -488,15 +498,15 @@ td:first-child, th:first-child { padding-left: .7rem; }
   .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (min-width: 1180px) {
+@container report (min-width: 120ch) {
   .prose-flow {
     column-count: 2;
-    column-gap: clamp(2.75rem, 4.25vw, 4.75rem);
+    column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
     column-rule: 1px solid var(--rule);
   }
 }
 
-@media (min-width: 1760px) {
+@container report (min-width: 190ch) {
   .prose-flow { column-count: 3; }
 }
 
@@ -730,9 +740,88 @@ def _inline(text: str) -> str:
     text = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"<em>\1</em>", text)
     text = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", text)
     text = text.replace("  \n", "<br>\n")
-    for i, rendered in enumerate(placeholders):
+    for i in reversed(range(len(placeholders))):
+        rendered = placeholders[i]
         text = text.replace(f"\x00{i}\x00", rendered)
     return text
+
+
+_IDENTIFIER_PATTERN = re.compile(
+    r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
+)
+
+
+class _IdentifierMarkup(HTMLParser):
+    """Add semantic definitions to known opaque IDs in an HTML fragment."""
+
+    _PROTECTED = frozenset({"abbr", "script", "style"})
+
+    def __init__(self, definitions: dict[str, str]):
+        super().__init__(convert_charrefs=False)
+        self.definitions = definitions
+        self.parts: list[str] = []
+        self.protected: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del attrs
+        self.parts.append(self.get_starttag_text())
+        if tag in self._PROTECTED:
+            self.protected.append(tag)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del tag, attrs
+        self.parts.append(self.get_starttag_text())
+
+    def handle_endtag(self, tag: str) -> None:
+        self.parts.append(f"</{tag}>")
+        if tag in self._PROTECTED:
+            for index in range(len(self.protected) - 1, -1, -1):
+                if self.protected[index] == tag:
+                    del self.protected[index]
+                    break
+
+    def handle_data(self, data: str) -> None:
+        if self.protected:
+            self.parts.append(data)
+            return
+
+        def replace(match: re.Match[str]) -> str:
+            identifier = match.group(1)
+            definition = self.definitions.get(identifier)
+            if not definition:
+                return identifier
+            description = f"{identifier} — {definition}"
+            escaped = html.escape(description, quote=True)
+            return (
+                f'<abbr class="identifier-definition" title="{escaped}" '
+                f'aria-label="{escaped}">{html.escape(identifier)}</abbr>'
+            )
+
+        self.parts.append(_IDENTIFIER_PATTERN.sub(replace, data))
+
+    def handle_entityref(self, name: str) -> None:
+        self.parts.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self.parts.append(f"&#{name};")
+
+    def handle_comment(self, data: str) -> None:
+        self.parts.append(f"<!--{data}-->")
+
+    def handle_decl(self, decl: str) -> None:
+        self.parts.append(f"<!{decl}>")
+
+    def handle_pi(self, data: str) -> None:
+        self.parts.append(f"<?{data}>")
+
+
+def _identifier_markup(fragment: str, definitions: dict[str, str]) -> str:
+    if not definitions:
+        return fragment
+    parser = _IdentifierMarkup(definitions)
+    parser.feed(fragment)
+    parser.close()
+    return "".join(parser.parts)
 
 
 def _split_table_row(line: str) -> list[str]:
@@ -1531,7 +1620,15 @@ def _shell(
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
     status_meta = f'<span class="snapshot-item">Survey depth&nbsp; {record_status}</span>' if record_status else ""
-    nav = _nav(pages, page)
+    definitions = {
+        str(identifier): str(definition)
+        for identifier, definition in dict(
+            context.get("identifier_definitions") or {}
+        ).items()
+    }
+    nav = _identifier_markup(_nav(pages, page), definitions)
+    body = _identifier_markup(body, definitions)
+    eyebrow = _identifier_markup(html.escape(_page_eyebrow(page)), definitions)
     return f'''<!doctype html>
 <html lang="en">
 <head>
@@ -1564,7 +1661,7 @@ def _shell(
     <div class="mobile-bar"><span class="mobile-brand">{html.escape(project_name)}</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
-        <p class="eyebrow">{html.escape(_page_eyebrow(page))}</p>
+        <p class="eyebrow">{eyebrow}</p>
         <h1>{html.escape(display_title)}</h1>
         <p class="page-hint">{html.escape(page.hint)}</p>
         <div class="snapshot-strip">

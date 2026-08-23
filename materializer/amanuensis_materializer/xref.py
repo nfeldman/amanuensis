@@ -15,14 +15,14 @@ from pathlib import Path
 
 @dataclass
 class XrefIndex:
-    # id → (display, abs_target_path)
-    entries: dict[str, tuple[str, str]]
+    # id → (display, abs_target_path, human definition)
+    entries: dict[str, tuple[str, str, str]]
 
     def link(self, id_: str, from_page_rel: str) -> str | None:
         hit = self.entries.get(id_)
         if not hit:
             return None
-        display, target = hit
+        display, target, _definition = hit
         # Never self-link: an ID whose canonical page IS the current
         # page should render as bold text, not a link-to-self.
         # We also suppress anchor-only self-links (target starts with
@@ -95,7 +95,11 @@ def resolve_file(abs_path: Path, rel_path: str, index: XrefIndex) -> bool:
     text = ID_PAT.sub(_replace, text)
 
     # Restore placeholders.
-    for i, saved in enumerate(placeholders):
+    # Existing Markdown links can contain protected inline-code placeholders.
+    # Restore outer placeholders first so their nested sentinels are present
+    # when the earlier inline-code placeholders are restored.
+    for i in reversed(range(len(placeholders))):
+        saved = placeholders[i]
         text = text.replace(f"\x00{i}\x00", saved)
 
     if text != original:
