@@ -2,7 +2,16 @@
 
 ## Runtime boundary map
 
-_The runtime boundary map is authored in `onboarding-report.md`. A generated mermaid version will replace this placeholder once structural runtime data is in the schema._
+_Projected from the recorded [onboarding runtime boundary table](onboarding-report.md#runtime-boundary-map); mechanisms and targets are preserved as surveyed._
+
+| Runtime / Process | Language | Communicates with | Mechanism | Notes |
+|---|---|---|---|---|
+| Host agent runtime | external | MCP server | stdio MCP | Starts the server with a workspace path. `.mcp.json@b8b566f`. |
+| `amanuensis-memory` | Node/TypeScript | host, SQLite, git, Python | MCP stdio, native SQLite binding, subprocess | Owns validation and durable records. `mcp-server/src/index.ts:main@b8b566f`. |
+| SQLite `memory.db` | SQL | MCP server and materializer | WAL; one writer API, read-only materializer connection | Schema initializes and migrates on open. `mcp-server/src/db.ts:openDatabase@b8b566f`. |
+| Git storage history | git subprocess | storage directory | synchronous child process | Commits DB/prose state at gates. `mcp-server/src/storage-git.ts:commitStorage@b8b566f`. |
+| Python materializer | Python | SQLite and prose storage | child process and filesystem | Emits docs and `.manifest.json`. `materializer/amanuensis_materializer/core.py:Materializer.materialize@b8b566f`. |
+| Installer CLI | Node/TypeScript | workspace files | filesystem/config merge | Writes agents and VS Code MCP config. `mcp-server/src/cli.ts:plan@b8b566f`. |
 
 ## Subsystem atlas
 

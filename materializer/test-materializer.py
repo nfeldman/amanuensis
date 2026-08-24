@@ -186,7 +186,13 @@ def main() -> None:
         )
         (storage / "onboarding-report.md").write_text(
             "# Onboarding report\n\n**Codebase**: FictionalProject — materializer fixture\n\n"
-            "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n"
+            "## Directory clusters\n\n- scheduler/ — B-01\n- auth/ — B-02\n- web/ — F-01\n\n"
+            "## Runtime boundary map\n\n"
+            "| Runtime / Process | Language | Communicates with | Mechanism | Notes |\n"
+            "|---|---|---|---|---|\n"
+            "| Host agent | external | scheduler service | stdio RPC | Starts the scheduler process. |\n"
+            "| Scheduler service | Python | auth service | HTTPS request | Dispatches authenticated jobs. |\n"
+            "| Auth service | TypeScript | policy database | SQL transaction | Owns authorization decisions. |\n"
         )
         (storage / "concern-checklist.md").write_text(
             "# Concern checklist (calibrated)\n\n"
@@ -272,7 +278,7 @@ def main() -> None:
         assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
         assert 'record-fact-subsystem' not in html_findings
-        assert '.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
+        assert '.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }' in html_findings
         assert '.record-finding { display: block; }' in html_findings
         assert 'grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem' in html_findings
         assert "@container report (max-width: 92ch)" in html_findings
@@ -357,6 +363,16 @@ def main() -> None:
         assert 'class="status status-disposition status-confirmed-bug"' in html_b02
         assert 'class="evidence-label evidence-code-verified"' in html_b02
         html_architecture = (docs / "architecture.html").read_text()
+        markdown_architecture = (docs / "architecture.md").read_text()
+        assert "A generated mermaid version will replace this placeholder" not in markdown_architecture
+        assert "| Runtime / Process | Language | Communicates with | Mechanism | Notes |" in markdown_architecture
+        assert '<svg class="runtime-boundary-svg"' in html_architecture
+        assert 'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description"' in html_architecture
+        assert "3 recorded runtime boundaries" in html_architecture
+        assert "Host agent" in html_architecture and "stdio RPC" in html_architecture
+        assert 'class="runtime-boundary-details"' in html_architecture
+        assert "mermaid.initialize" not in html_architecture
+        assert "mermaid.min.js" not in html_architecture and "@mermaid-js" not in html_architecture
         assert '<div class="topology topology-dependency"' in html_architecture
         assert '<div class="topology topology-seam"' in html_architecture
         assert "jobs_queue" in html_architecture and "Connected area" in html_architecture
@@ -382,6 +398,9 @@ def main() -> None:
         assert 'class="subsystem-atlas"' in atlas_body
         assert "not an inferred dependency graph" in atlas_body
         assert "<table" not in atlas_body and "Diagram source" not in atlas_body
+        assert ".content > section {" in html_architecture
+        assert ".atlas-regions { display: grid;" in html_architecture
+        assert "align-items: start; border-left: 1px solid var(--rule);" in html_architecture
 
         _, github_ledger = MarkdownRenderer(
             {}, "entry-point.html", repository_url="https://github.com/acme/fictional"

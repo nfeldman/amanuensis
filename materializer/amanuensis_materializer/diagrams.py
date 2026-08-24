@@ -1,11 +1,14 @@
-"""Architecture projection generation from database state.
+"""Architecture projection generation from recorded survey state.
 
-Every diagram is a pure function of DB rows — no hand-authored content.
-Surfaces may be portable Markdown tables or Mermaid where a graph exists.
+Every diagram is a pure function of DB rows or registered prose artifacts —
+no relationships are inferred from names. Surfaces may be portable Markdown
+tables or Mermaid where a graph exists.
 """
 from __future__ import annotations
 
+import re
 import sqlite3
+from pathlib import Path
 
 from .db import rows
 from .slugs import subsystem_page
@@ -124,14 +127,67 @@ def staleness_map(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
-def runtime_boundary_placeholder() -> str:
-    # The onboarding-report.md holds the runtime boundary table as prose;
-    # when we have structural data for it we'll generate a mermaid diagram
-    # here. For v0.1 we leave a placeholder the index can reference.
-    return (
-        "_The runtime boundary map is authored in `onboarding-report.md`. "
-        "A generated mermaid version will replace this placeholder once "
-        "structural runtime data is in the schema._"
+_RUNTIME_BOUNDARY_HEADERS = (
+    "runtime / process",
+    "language",
+    "communicates with",
+    "mechanism",
+    "notes",
+)
+
+
+def _table_cells(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _runtime_boundary_table(markdown: str) -> str | None:
+    """Extract the typed runtime table without interpreting its relationships."""
+    lines = markdown.splitlines()
+    heading_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if re.fullmatch(r"#{1,6}\s+Runtime boundary map\s*", line, re.IGNORECASE)
+        ),
+        None,
+    )
+    if heading_index is None:
+        return None
+
+    index = heading_index + 1
+    while index < len(lines) and not lines[index].strip():
+        index += 1
+    if index + 1 >= len(lines):
+        return None
+
+    headers = tuple(cell.lower() for cell in _table_cells(lines[index]))
+    separator = _table_cells(lines[index + 1])
+    if headers != _RUNTIME_BOUNDARY_HEADERS or not separator or not all(
+        re.fullmatch(r":?-{3,}:?", cell.replace(" ", "")) for cell in separator
+    ):
+        return None
+
+    table_lines = [lines[index], lines[index + 1]]
+    index += 2
+    while index < len(lines) and lines[index].lstrip().startswith("|"):
+        table_lines.append(lines[index])
+        index += 1
+    return "\n".join(table_lines) if len(table_lines) > 2 else None
+
+
+def runtime_boundary_map(storage: Path) -> str:
+    """Project the recorded onboarding runtime table into architecture output."""
+    source = storage / "onboarding-report.md"
+    table = _runtime_boundary_table(source.read_text() if source.exists() else "")
+    if not table:
+        return "_No structured runtime boundary map is recorded yet._"
+    return "\n\n".join(
+        [
+            "_Projected from the recorded [onboarding runtime boundary table]"
+            "(onboarding-report.md#runtime-boundary-map); mechanisms and targets "
+            "are preserved as surveyed._",
+            table,
+        ]
     )
 
 

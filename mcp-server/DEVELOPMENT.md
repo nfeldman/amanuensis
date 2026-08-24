@@ -454,8 +454,8 @@ _195 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `materialize_docs` | Render the conspectus and read the finished projection back on independent state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. |
-| `verify_materialized_docs` | Read back an existing projection without rendering or repairing it. Records state, coverage, and content mismatches as an auditable verification run; durable source truth is read-only. |
+| `materialize_docs` | Render synchronized self-contained HTML and Markdown conspectus views, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. |
+| `verify_materialized_docs` | Read back existing HTML and Markdown projections without rendering or repairing them. Records state, coverage, and content mismatches as an auditable verification run and returns the HTML entrypoint; durable source truth is read-only. |
 
 ### `open-questions` (4)
 

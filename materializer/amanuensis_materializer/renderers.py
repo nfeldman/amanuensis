@@ -19,7 +19,7 @@ from typing import Any
 from .db import row, rows
 from .diagrams import (
     concern_coverage_heatmap,
-    runtime_boundary_placeholder,
+    runtime_boundary_map,
     seam_graph,
     staleness_map,
     subsystem_dependency_graph,
@@ -201,7 +201,7 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
         "",
         "## Runtime boundary map",
         "",
-        runtime_boundary_placeholder(),
+        runtime_boundary_map(storage),
         "",
         "## Subsystem dependency graph" if xrefs else "## Subsystem atlas",
         "",

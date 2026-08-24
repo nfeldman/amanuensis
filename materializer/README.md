@@ -44,9 +44,11 @@ them the primary label, supports name/ID/topic filtering, and keeps Markdown
 one click away for audit.
 
 Status, severity, evidence-quality, and survey-depth values render with plain
-language labels and explanatory hints. Generated Mermaid relationship data is
-projected into accessible linked relationship traces and staleness bars, so
-the browser view does not depend on a client-side Mermaid runtime.
+language labels and explanatory hints. Recorded runtime boundaries render as
+embedded SVG with an equivalent readable relationship account. Generated
+Mermaid relationship data is projected into accessible linked relationship
+traces and staleness bars, so the browser view never depends on a client-side
+Mermaid runtime.
 
 ## Diff-aware rendering
 

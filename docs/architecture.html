@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Amanuensis HTML projection 1.11.1">
+<meta name="generator" content="Amanuensis HTML projection 1.12.0">
 <meta name="description" content="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.">
 <title>Architecture at a glance · Amanuensis · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
@@ -229,9 +229,9 @@ h1 {
 .freshness.stale::before { background: var(--source-stale); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
-.content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
-.content section:last-child { border-bottom: 0; }
-.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
+.content > section:last-child { border-bottom: 0; }
+.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
 .content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
 .content-findings .section-high-findings { --enum-color: var(--severity-high); }
 .content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
@@ -487,6 +487,48 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .summary-list dt { color: var(--text-muted); font-weight: 650; }
 .summary-list dd { border-left: 1px solid var(--rule); }
 
+.runtime-boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.runtime-boundary-diagram { margin: 0; }
+.runtime-diagram-caption {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.runtime-diagram-caption strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.runtime-svg-scroll { max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--rule); }
+.runtime-boundary-svg { display: block; width: 100%; min-width: 52rem; height: auto; background: var(--surface); }
+.runtime-svg-lane { fill: color-mix(in srgb, var(--canvas-subtle) 44%, transparent); }
+.runtime-svg-lane-even { fill: color-mix(in srgb, var(--canvas-subtle) 72%, transparent); }
+.runtime-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-target { fill: var(--canvas-subtle); }
+.runtime-svg-edge { stroke: var(--accent); stroke-width: 1.5; }
+.runtime-svg-arrow { fill: var(--accent); }
+.runtime-svg-edge-label { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-column-label {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.runtime-svg-title { fill: var(--text); font: 600 14px/1.3 var(--heading); }
+.runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
+.runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
+.runtime-boundary-details { display: grid; }
+.runtime-detail {
+  display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
+  min-width: 0; border-bottom: 1px solid var(--rule);
+}
+.runtime-detail:last-child { border-bottom: 0; }
+.runtime-detail:focus-within, .runtime-detail:hover { background: color-mix(in srgb, var(--accent-soft) 24%, transparent); }
+.runtime-detail-head { min-width: 0; padding: .72rem .85rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.runtime-detail-head h3 { margin: 0; color: var(--text); font: 600 .88rem/1.35 var(--heading); }
+.runtime-detail-language { display: block; margin-top: .28rem; color: var(--text-muted); font: .64rem/1.35 var(--mono); }
+.runtime-detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.runtime-detail-body p { min-width: 0; margin: 0; padding: .66rem .78rem; border-right: 1px solid var(--rule); }
+.runtime-detail-body p:nth-child(2) { border-right: 0; }
+.runtime-detail-body .runtime-detail-note { grid-column: 1 / -1; border-top: 1px solid var(--rule); border-right: 0; }
+.runtime-detail-label {
+  display: block; margin-bottom: .2rem; color: var(--text-subtle);
+  font: 600 .58rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+
 .subsystem-atlas { margin: 1.2rem 0 1.7rem; }
 .atlas-summary, .topology-summary {
   display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
@@ -494,7 +536,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
   color: var(--text-muted); font-size: .78rem;
 }
 .atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
-.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid var(--rule); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; border-left: 1px solid var(--rule); }
 .atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .atlas-region-head {
   display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
@@ -660,6 +702,12 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @media (max-width: 620px) {
   h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
+  .runtime-detail { grid-template-columns: 1fr; }
+  .runtime-detail-head { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body { grid-template-columns: 1fr; }
+  .runtime-detail-body p { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body p:nth-child(2) { border-bottom: 0; }
+  .runtime-detail-body .runtime-detail-note { grid-column: auto; border-bottom: 0; }
   .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
   .relationship-edge { text-align: left; }
   .relationship-edge b { display: inline; margin-right: .4rem; }
@@ -695,7 +743,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
   .document { margin: 0; }
   .document-inner { width: auto; padding: 0; }
-  .content section, .figure, .table-wrap, .record { break-inside: avoid-page; }
+  .runtime-svg-scroll { overflow: visible; }
+  .runtime-boundary-svg { min-width: 0; }
+  .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
   a { color: inherit; text-decoration: none; }
 }
 </style>
@@ -726,15 +776,16 @@ a .identifier-definition { text-decoration-color: currentColor; }
         <p class="page-hint">Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.</p>
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
-          <span class="snapshot-item"><b>Checked</b>&nbsp; 1094bea66db8</span>
-          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-08-23 20:15:41</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 45a519c44c10</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-08-23 22:47:47</span>
           <span class="snapshot-item"><span class="freshness">No recorded stale entries</span></span>
           
         </div>
       </header>
       <article class="content content-architecture"><section class="section-runtime-boundary-map">
 <h2 id="runtime-boundary-map"><a class="heading-anchor" href="#runtime-boundary-map" aria-label="Link to Runtime boundary map">§</a>Runtime boundary map</h2>
-<p><em>The runtime boundary map is authored in <code>onboarding-report.md</code>. A generated mermaid version will replace this placeholder once structural runtime data is in the schema.</em></p>
+<p><em>Projected from the recorded <a href="onboarding-report.html#runtime-boundary-map">onboarding runtime boundary table</a>; mechanisms and targets are preserved as surveyed.</em></p>
+<div class="runtime-boundary-projection"><figure class="runtime-boundary-diagram" aria-label="runtime boundary map"><figcaption class="runtime-diagram-caption"><strong>6 recorded runtime boundaries</strong><span>Runtime → communication mechanism → recorded target</span></figcaption><div class="runtime-svg-scroll"><svg class="runtime-boundary-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 684" role="img" aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description"><title id="runtime-boundary-svg-title">Runtime boundary map</title><desc id="runtime-boundary-svg-description">6 recorded runtime boundaries; each row connects a runtime or process to its recorded target through the stated mechanism.</desc><text class="runtime-svg-column-label" x="24" y="27">Runtime or process</text><text class="runtime-svg-column-label" x="480" y="27" text-anchor="middle">Mechanism</text><text class="runtime-svg-column-label" x="692" y="27">Communicates with</text><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="48" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="60" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="60" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="101" x2="692" y2="101"/><path class="runtime-svg-arrow" d="M 692 101 L 682 96 L 682 106 Z"/><rect class="runtime-svg-edge-label" x="308" y="82.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="87" text-anchor="start"><tspan x="38" dy="0">Host agent runtime</tspan></text><text class="runtime-svg-language" x="38" y="111" text-anchor="start"><tspan x="38" dy="0">external</tspan></text><text class="runtime-svg-title" x="706" y="91" text-anchor="start"><tspan x="706" dy="0">MCP server</tspan></text><text class="runtime-svg-mechanism" x="480" y="97.5" text-anchor="middle"><tspan x="480" dy="0">stdio MCP</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="154" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="166" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="166" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="207" x2="692" y2="207"/><path class="runtime-svg-arrow" d="M 692 207 L 682 202 L 682 212 Z"/><rect class="runtime-svg-edge-label" x="308" y="181" width="344" height="52"/><text class="runtime-svg-title" x="38" y="193" text-anchor="start"><tspan x="38" dy="0">amanuensis-memory</tspan></text><text class="runtime-svg-language" x="38" y="217" text-anchor="start"><tspan x="38" dy="0">Node/TypeScript</tspan></text><text class="runtime-svg-title" x="706" y="197" text-anchor="start"><tspan x="706" dy="0">host, SQLite, git, Python</tspan></text><text class="runtime-svg-mechanism" x="480" y="196" text-anchor="middle"><tspan x="480" dy="0">MCP stdio, native SQLite binding,</tspan><tspan x="480" dy="15">subprocess</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="260" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="272" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="272" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="313" x2="692" y2="313"/><path class="runtime-svg-arrow" d="M 692 313 L 682 308 L 682 318 Z"/><rect class="runtime-svg-edge-label" x="308" y="287" width="344" height="52"/><text class="runtime-svg-title" x="38" y="299" text-anchor="start"><tspan x="38" dy="0">SQLite memory.db</tspan></text><text class="runtime-svg-language" x="38" y="323" text-anchor="start"><tspan x="38" dy="0">SQL</tspan></text><text class="runtime-svg-title" x="706" y="303" text-anchor="start"><tspan x="706" dy="0">MCP server and materializer</tspan></text><text class="runtime-svg-mechanism" x="480" y="302" text-anchor="middle"><tspan x="480" dy="0">WAL; one writer API, read-only</tspan><tspan x="480" dy="15">materializer connection</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="366" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="378" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="378" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="419" x2="692" y2="419"/><path class="runtime-svg-arrow" d="M 692 419 L 682 414 L 682 424 Z"/><rect class="runtime-svg-edge-label" x="308" y="400.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="405" text-anchor="start"><tspan x="38" dy="0">Git storage history</tspan></text><text class="runtime-svg-language" x="38" y="429" text-anchor="start"><tspan x="38" dy="0">git subprocess</tspan></text><text class="runtime-svg-title" x="706" y="409" text-anchor="start"><tspan x="706" dy="0">storage directory</tspan></text><text class="runtime-svg-mechanism" x="480" y="415.5" text-anchor="middle"><tspan x="480" dy="0">synchronous child process</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="472" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="484" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="484" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="525" x2="692" y2="525"/><path class="runtime-svg-arrow" d="M 692 525 L 682 520 L 682 530 Z"/><rect class="runtime-svg-edge-label" x="308" y="506.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="511" text-anchor="start"><tspan x="38" dy="0">Python materializer</tspan></text><text class="runtime-svg-language" x="38" y="535" text-anchor="start"><tspan x="38" dy="0">Python</tspan></text><text class="runtime-svg-title" x="706" y="515" text-anchor="start"><tspan x="706" dy="0">SQLite and prose storage</tspan></text><text class="runtime-svg-mechanism" x="480" y="521.5" text-anchor="middle"><tspan x="480" dy="0">child process and filesystem</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="578" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="590" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="590" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="631" x2="692" y2="631"/><path class="runtime-svg-arrow" d="M 692 631 L 682 626 L 682 636 Z"/><rect class="runtime-svg-edge-label" x="308" y="612.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="617" text-anchor="start"><tspan x="38" dy="0">Installer CLI</tspan></text><text class="runtime-svg-language" x="38" y="641" text-anchor="start"><tspan x="38" dy="0">Node/TypeScript</tspan></text><text class="runtime-svg-title" x="706" y="621" text-anchor="start"><tspan x="706" dy="0">workspace files</tspan></text><text class="runtime-svg-mechanism" x="480" y="627.5" text-anchor="middle"><tspan x="480" dy="0">filesystem/config merge</tspan></text></g></svg></div></figure><div class="runtime-boundary-details" role="list" aria-label="Complete runtime boundary details"><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Host agent runtime</h3><span class="runtime-detail-language">external</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>MCP server</p><p><span class="runtime-detail-label">Mechanism</span>stdio MCP</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Starts the server with a workspace path. <code>.mcp.json@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3><code>amanuensis-memory</code></h3><span class="runtime-detail-language">Node/TypeScript</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>host, SQLite, git, Python</p><p><span class="runtime-detail-label">Mechanism</span>MCP stdio, native SQLite binding, subprocess</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Owns validation and durable records. <code>mcp-server/src/index.ts:main@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>SQLite <code>memory.db</code></h3><span class="runtime-detail-language">SQL</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>MCP server and materializer</p><p><span class="runtime-detail-label">Mechanism</span>WAL; one writer API, read-only materializer connection</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Schema initializes and migrates on open. <code>mcp-server/src/db.ts:openDatabase@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Git storage history</h3><span class="runtime-detail-language">git subprocess</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>storage directory</p><p><span class="runtime-detail-label">Mechanism</span>synchronous child process</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Commits DB/prose state at gates. <code>mcp-server/src/storage-git.ts:commitStorage@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Python materializer</h3><span class="runtime-detail-language">Python</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>SQLite and prose storage</p><p><span class="runtime-detail-label">Mechanism</span>child process and filesystem</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Emits docs and <code>.manifest.json</code>. <code>materializer/amanuensis_materializer/core.py:Materializer.materialize@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Installer CLI</h3><span class="runtime-detail-language">Node/TypeScript</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>workspace files</p><p><span class="runtime-detail-label">Mechanism</span>filesystem/config merge</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Writes agents and VS Code MCP config. <code>mcp-server/src/cli.ts:plan@b8b566f</code>.</p></div></article></div></div>
 </section>
 <section class="section-subsystem-atlas">
 <h2 id="subsystem-atlas"><a class="heading-anchor" href="#subsystem-atlas" aria-label="Link to Subsystem atlas">§</a>Subsystem atlas</h2>

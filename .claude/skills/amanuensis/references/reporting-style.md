@@ -185,6 +185,11 @@ surfaces so the chromatic marks keep their information value.
 - A topology view must retain a complete readable relation account. Group seams
   into connected areas, name the hub where one exists, keep the shared object
   out of a cramped edge label, and link every subsystem and seam.
+- Project a typed runtime-boundary table as an embedded SVG generated during
+  materialization, with the complete readable relationship account beside it.
+  Preserve each recorded source, mechanism, and target verbatim; do not merge
+  apparent aliases or infer missing edges. The published page must not require
+  Mermaid or another diagram runtime in the browser.
 - Use a compact atlas for place and a separate topology for recorded relations;
   neither should become a decorative heroic graph or the only route to content.
 - When the recorded workspace has a verified `github.com` origin, make file

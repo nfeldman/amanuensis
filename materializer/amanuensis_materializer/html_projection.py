@@ -13,6 +13,7 @@ from __future__ import annotations
 import html
 import posixpath
 import re
+import textwrap
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
@@ -22,7 +23,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from .manifest import sha256_bytes
 from .slugs import slugify
 
-HTML_PROJECTION_VERSION = "1.11.1"
+HTML_PROJECTION_VERSION = "1.12.0"
 
 
 @dataclass(frozen=True)
@@ -110,27 +111,24 @@ DISPLAY_STATUS = {
 }
 
 STATUS_AXIS = {
-    **{
-        key: "survey"
-        for key in (
-            "unmapped", "scoping", "structural", "concerns",
-            "adversarial", "mapped", "deferred",
-        )
-    },
-    **{
-        key: "disposition"
-        for key in (
-            "confirmed-bug", "confirmed-acceptable", "ruled-out",
-            "out-of-scope", "unresolved-competition",
-        )
-    },
-    **{
-        key: "resolution"
-        for key in (
-            "open", "fixed", "resolved", "accepted",
-            "fixed-pending-verification", "verified-fixed",
-        )
-    },
+    **dict.fromkeys(
+        ("unmapped", "scoping", "structural", "concerns", "adversarial", "mapped", "deferred"),
+        "survey",
+    ),
+    **dict.fromkeys(
+        (
+            "confirmed-bug",
+            "confirmed-acceptable",
+            "ruled-out",
+            "out-of-scope",
+            "unresolved-competition",
+        ),
+        "disposition",
+    ),
+    **dict.fromkeys(
+        ("open", "fixed", "resolved", "accepted", "fixed-pending-verification", "verified-fixed"),
+        "resolution",
+    ),
 }
 
 _CSS = r"""
@@ -355,9 +353,9 @@ h1 {
 .freshness.stale::before { background: var(--source-stale); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
-.content section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
-.content section:last-child { border-bottom: 0; }
-.content-findings section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
+.content > section:last-child { border-bottom: 0; }
+.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
 .content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
 .content-findings .section-high-findings { --enum-color: var(--severity-high); }
 .content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
@@ -613,6 +611,48 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .summary-list dt { color: var(--text-muted); font-weight: 650; }
 .summary-list dd { border-left: 1px solid var(--rule); }
 
+.runtime-boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.runtime-boundary-diagram { margin: 0; }
+.runtime-diagram-caption {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.runtime-diagram-caption strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.runtime-svg-scroll { max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--rule); }
+.runtime-boundary-svg { display: block; width: 100%; min-width: 52rem; height: auto; background: var(--surface); }
+.runtime-svg-lane { fill: color-mix(in srgb, var(--canvas-subtle) 44%, transparent); }
+.runtime-svg-lane-even { fill: color-mix(in srgb, var(--canvas-subtle) 72%, transparent); }
+.runtime-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-target { fill: var(--canvas-subtle); }
+.runtime-svg-edge { stroke: var(--accent); stroke-width: 1.5; }
+.runtime-svg-arrow { fill: var(--accent); }
+.runtime-svg-edge-label { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-column-label {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.runtime-svg-title { fill: var(--text); font: 600 14px/1.3 var(--heading); }
+.runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
+.runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
+.runtime-boundary-details { display: grid; }
+.runtime-detail {
+  display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
+  min-width: 0; border-bottom: 1px solid var(--rule);
+}
+.runtime-detail:last-child { border-bottom: 0; }
+.runtime-detail:focus-within, .runtime-detail:hover { background: color-mix(in srgb, var(--accent-soft) 24%, transparent); }
+.runtime-detail-head { min-width: 0; padding: .72rem .85rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.runtime-detail-head h3 { margin: 0; color: var(--text); font: 600 .88rem/1.35 var(--heading); }
+.runtime-detail-language { display: block; margin-top: .28rem; color: var(--text-muted); font: .64rem/1.35 var(--mono); }
+.runtime-detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.runtime-detail-body p { min-width: 0; margin: 0; padding: .66rem .78rem; border-right: 1px solid var(--rule); }
+.runtime-detail-body p:nth-child(2) { border-right: 0; }
+.runtime-detail-body .runtime-detail-note { grid-column: 1 / -1; border-top: 1px solid var(--rule); border-right: 0; }
+.runtime-detail-label {
+  display: block; margin-bottom: .2rem; color: var(--text-subtle);
+  font: 600 .58rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+
 .subsystem-atlas { margin: 1.2rem 0 1.7rem; }
 .atlas-summary, .topology-summary {
   display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
@@ -620,7 +660,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
   color: var(--text-muted); font-size: .78rem;
 }
 .atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
-.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid var(--rule); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; border-left: 1px solid var(--rule); }
 .atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .atlas-region-head {
   display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
@@ -786,6 +826,12 @@ a .identifier-definition { text-decoration-color: currentColor; }
 
 @media (max-width: 620px) {
   h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
+  .runtime-detail { grid-template-columns: 1fr; }
+  .runtime-detail-head { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body { grid-template-columns: 1fr; }
+  .runtime-detail-body p { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body p:nth-child(2) { border-bottom: 0; }
+  .runtime-detail-body .runtime-detail-note { grid-column: auto; border-bottom: 0; }
   .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
   .relationship-edge { text-align: left; }
   .relationship-edge b { display: inline; margin-right: .4rem; }
@@ -821,7 +867,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
   .document { margin: 0; }
   .document-inner { width: auto; padding: 0; }
-  .content section, .figure, .table-wrap, .record { break-inside: avoid-page; }
+  .runtime-svg-scroll { overflow: visible; }
+  .runtime-boundary-svg { min-width: 0; }
+  .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
   a { color: inherit; text-decoration: none; }
 }
 """
@@ -1218,6 +1266,13 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+_RUNTIME_BOUNDARY_PROJECTION = (
+    "runtime / process",
+    "language",
+    "communicates with",
+    "mechanism",
+    "notes",
+)
 _CONCERN_CHECKLIST_PROJECTION = (
     "code",
     "category",
@@ -1589,6 +1644,163 @@ class MarkdownRenderer:
             '</div>'
             f'<div class="atlas-regions">{"".join(region_html)}</div>'
             '</div>'
+        )
+
+    def _runtime_boundary_diagram(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        """Render recorded runtime relations as inline SVG plus readable HTML."""
+
+        def wrapped(value: str, width: int) -> list[str]:
+            plain = _plain(value).strip() or "Not recorded"
+            return textwrap.wrap(
+                plain,
+                width=width,
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or [plain]
+
+        def svg_text(
+            lines: list[str],
+            *,
+            x: float,
+            y: float,
+            css_class: str,
+            line_height: int,
+            anchor: str = "start",
+        ) -> str:
+            tspans = "".join(
+                f'<tspan x="{x:g}" dy="{0 if index == 0 else line_height}">'
+                f'{html.escape(line)}</tspan>'
+                for index, line in enumerate(lines)
+            )
+            return (
+                f'<text class="{css_class}" x="{x:g}" y="{y:g}" '
+                f'text-anchor="{anchor}">{tspans}</text>'
+            )
+
+        width = 960
+        source_x, source_width = 24, 244
+        target_x, target_width = 692, 244
+        mechanism_x, mechanism_width = 308, 344
+        current_y = 48
+        svg_rows: list[str] = []
+        details: list[str] = []
+
+        for index, (values, markers) in enumerate(rows):
+            source, language, target, mechanism, note = values[:5]
+            source_lines = wrapped(source, 26)
+            language_lines = wrapped(language, 32)
+            target_lines = wrapped(target, 27)
+            mechanism_lines = wrapped(mechanism, 42)
+
+            source_height = 42 + 17 * len(source_lines) + 15 * len(language_lines)
+            target_height = 42 + 17 * len(target_lines)
+            mechanism_height = 22 + 15 * len(mechanism_lines)
+            content_height = max(82, source_height, target_height, mechanism_height)
+            lane_height = content_height + 24
+            box_y = current_y + 12
+            center_y = box_y + content_height / 2
+            mechanism_y = center_y - mechanism_height / 2
+            lane_class = "runtime-svg-lane-even" if index % 2 else "runtime-svg-lane"
+
+            svg_rows.append(
+                f'<g class="runtime-svg-row">'
+                f'<rect class="{lane_class}" x="0" y="{current_y:g}" '
+                f'width="{width}" height="{lane_height:g}"/>'
+                f'<rect class="runtime-svg-node" x="{source_x}" y="{box_y:g}" '
+                f'width="{source_width}" height="{content_height:g}"/>'
+                f'<rect class="runtime-svg-node runtime-svg-target" x="{target_x}" y="{box_y:g}" '
+                f'width="{target_width}" height="{content_height:g}"/>'
+                f'<line class="runtime-svg-edge" x1="{source_x + source_width}" y1="{center_y:g}" '
+                f'x2="{target_x}" y2="{center_y:g}"/>'
+                f'<path class="runtime-svg-arrow" d="M {target_x:g} {center_y:g} '
+                f'L {target_x - 10:g} {center_y - 5:g} L {target_x - 10:g} {center_y + 5:g} Z"/>'
+                f'<rect class="runtime-svg-edge-label" x="{mechanism_x}" y="{mechanism_y:g}" '
+                f'width="{mechanism_width}" height="{mechanism_height:g}"/>'
+                + svg_text(
+                    source_lines,
+                    x=source_x + 14,
+                    y=box_y + 27,
+                    css_class="runtime-svg-title",
+                    line_height=17,
+                )
+                + svg_text(
+                    language_lines,
+                    x=source_x + 14,
+                    y=box_y + 34 + 17 * len(source_lines),
+                    css_class="runtime-svg-language",
+                    line_height=15,
+                )
+                + svg_text(
+                    target_lines,
+                    x=target_x + 14,
+                    y=box_y + 31,
+                    css_class="runtime-svg-title",
+                    line_height=17,
+                )
+                + svg_text(
+                    mechanism_lines,
+                    x=mechanism_x + mechanism_width / 2,
+                    y=mechanism_y + 15,
+                    css_class="runtime-svg-mechanism",
+                    line_height=15,
+                    anchor="middle",
+                )
+                + '</g>'
+            )
+
+            note_html = (
+                '<p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>'
+                f'{_inline(note)}</p>'
+                if _plain(note).strip()
+                else ""
+            )
+            details.append(
+                "".join(markers)
+                + '<article class="runtime-detail" role="listitem">'
+                '<header class="runtime-detail-head">'
+                f'<h3>{_inline(source)}</h3>'
+                f'<span class="runtime-detail-language">{_inline(language)}</span></header>'
+                '<div class="runtime-detail-body">'
+                '<p><span class="runtime-detail-label">Communicates with</span>'
+                f'{_inline(target)}</p>'
+                '<p><span class="runtime-detail-label">Mechanism</span>'
+                f'{_inline(mechanism)}</p>{note_html}</div></article>'
+            )
+            current_y += lane_height
+
+        count = len(rows)
+        boundary_word = "boundary" if count == 1 else "boundaries"
+        svg_height = current_y
+        svg = (
+            f'<svg class="runtime-boundary-svg" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {svg_height}" role="img" '
+            'aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description">'
+            '<title id="runtime-boundary-svg-title">Runtime boundary map</title>'
+            f'<desc id="runtime-boundary-svg-description">{count} recorded runtime {boundary_word}; '
+            'each row connects a runtime or process to its recorded target through the stated mechanism.</desc>'
+            '<text class="runtime-svg-column-label" x="24" y="27">Runtime or process</text>'
+            '<text class="runtime-svg-column-label" x="480" y="27" text-anchor="middle">Mechanism</text>'
+            '<text class="runtime-svg-column-label" x="692" y="27">Communicates with</text>'
+            + "".join(svg_rows)
+            + '</svg>'
+        )
+        label = html.escape(caption or "runtime boundary map", quote=True)
+        return (
+            '<div class="runtime-boundary-projection">'
+            f'<figure class="runtime-boundary-diagram" aria-label="{label}">'
+            '<figcaption class="runtime-diagram-caption">'
+            f'<strong>{count} recorded runtime {boundary_word}</strong>'
+            '<span>Runtime → communication mechanism → recorded target</span>'
+            '</figcaption>'
+            f'<div class="runtime-svg-scroll">{svg}</div></figure>'
+            '<div class="runtime-boundary-details" role="list" '
+            'aria-label="Complete runtime boundary details">'
+            + "".join(details)
+            + '</div></div>'
         )
 
     @staticmethod
@@ -1988,6 +2200,8 @@ class MarkdownRenderer:
             return self._connection_topology(rows, caption, kind="dependency")
         if signature == _SEAM_TOPOLOGY_PROJECTION:
             return self._connection_topology(rows, caption, kind="seam")
+        if signature == _RUNTIME_BOUNDARY_PROJECTION:
+            return self._runtime_boundary_diagram(rows, caption)
         if signature == _CONCERN_CHECKLIST_PROJECTION:
             return self._concern_checklist(headers, rows, caption)
         if (
