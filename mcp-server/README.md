@@ -14,7 +14,7 @@ ships:
 
 ## v2 alpha
 
-This source tree packages as `0.2.0-alpha.0`. It is being dogfooded and remains
+This source tree packages as `0.2.0-alpha.1`. It is being dogfooded and remains
 under longitudinal validation. Until `1.0.0`, expect breaking changes between
 releases.
 

@@ -59,7 +59,7 @@ same state, link-coverage, and byte-correspondence read-back before publication 
 
 ## Beta
 
-The v2 implementation is distributed as `0.2.0-alpha.0` and passes
+The v2 implementation is distributed as `0.2.0-alpha.1` and passes
 its full CI suite. The tool is in beta and is being dogfooded now in active development
 work.
 

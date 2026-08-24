@@ -1,6 +1,6 @@
 [project]
 name = "amanuensis-materializer"
-version = "0.2.0a0"
+version = "0.2.0a1"
 description = "Diff-aware renderer for the Amanuensis conspectus."
 requires-python = ">=3.11"
 
