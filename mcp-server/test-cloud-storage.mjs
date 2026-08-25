@@ -29,6 +29,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -102,7 +103,7 @@ t("AMANUENSIS_STORAGE_ROOT redirects storage out of the project", () => {
     process.env.AMANUENSIS_STORAGE_ROOT = join(conspectus, "workspaces");
     const project = resolveProject(target);
     assert(
-      project.storagePath.startsWith(join(conspectus, "workspaces")),
+      project.storagePath.startsWith(join(realpathSync(conspectus), "workspaces")),
       `storagePath should live under conspectus/workspaces, got: ${project.storagePath}`,
     );
     assert(
@@ -236,7 +237,7 @@ t("without AMANUENSIS_STORAGE_ROOT, storage is <project>/.amanuensis", () => {
       encoding: "utf8",
     }).stdout.trim();
     const project = resolveProject(target);
-    assert(project.storagePath === join(target, ".amanuensis"));
+    assert(project.storagePath === join(realpathSync(target), ".amanuensis"));
     assert(existsSync(join(project.storagePath, ".git")), "local storage lacks independent git");
     const excludePath = spawnSync("git", ["rev-parse", "--git-path", "info/exclude"], {
       cwd: target,
@@ -567,7 +568,7 @@ t("a verified preview-era shared key migrates to the host-qualified key", () => 
     writeFileSync(join(legacy, "retained.txt"), "preview-state");
     process.env.AMANUENSIS_STORAGE_ROOT = shared;
     const project = resolveProject(target);
-    assert(project.storagePath === join(shared, "github.com", "acme", "widget"));
+    assert(project.storagePath === join(realpathSync(shared), "github.com", "acme", "widget"));
     assert(!existsSync(legacy), "verified legacy key was not retired");
     assert(readFileSync(join(project.storagePath, "retained.txt"), "utf8") === "preview-state");
   } finally {

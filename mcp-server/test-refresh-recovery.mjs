@@ -2,11 +2,12 @@
 // A5: unattended refresh authority, crash adoption, deterministic runtime route,
 // exact reconciliation, cancellation, and final projection read-back.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
+import { resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { projectTools } from "./dist/tools/project.js";
@@ -34,9 +35,7 @@ function assertThrows(fn, text) {
 function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   const root = mkdtempSync(join(tmpdir(), `amanuensis-refresh-${label}-`));
   const workspace = join(root, "workspace");
-  const storage = join(root, "storage");
   mkdirSync(workspace);
-  mkdirSync(storage);
   mkdirSync(join(workspace, "src"));
   execFileSync("git", ["init", "-q"], { cwd: workspace });
   function commit(value, filePath) {
@@ -69,13 +68,11 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   }
   const baseSha = commit("before", "src/core.ts");
   const headSha = commit("after", changeTrackedFile ? "src/core.ts" : "docs/note.md");
-  const project = {
-    workspacePath: workspace,
-    projectKey: `test/refresh-${label}`,
-    storagePath: storage,
-    dbPath: join(storage, "memory.db"),
-    storageGitReady: false,
-  };
+  const project = resolveProject(workspace, {
+    selectionSource: `test-refresh-${label}`,
+    serverVersion: "test",
+  });
+  const storage = project.storagePath;
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const tools = new Map(
@@ -331,6 +328,7 @@ try {
       ),
       JSON.stringify(symlinkBlocked.blocking_reasons),
     );
+    unlinkSync(join(main.ctx.project.storagePath, "escape"));
     const relative = main.call("plan_refresh_run", {
       ...main.planArgs,
       run_id: "refresh-relative-output",

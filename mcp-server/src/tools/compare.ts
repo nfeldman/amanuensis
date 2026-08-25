@@ -11,9 +11,10 @@
 // rendered both as a JSON result and, on request, as a markdown page
 // under docs/comparison.md.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import { ok, optBool, optString, requireString, type ToolDefinition } from "../helpers.js";
+import { resolveStorageOutputPath } from "../project.js";
 
 type Row = Record<string, unknown>;
 
@@ -485,7 +486,8 @@ export const compareTools: ToolDefinition[] = [
         label_b: { type: "string" },
         write_to: {
           type: "string",
-          description: "Optional: render a markdown report to this path too",
+          description:
+            "Optional: render a markdown report inside the bound project storage directory; relative paths resolve from that storage root",
         },
       },
       required: ["path_a", "path_b"],
@@ -502,8 +504,13 @@ export const compareTools: ToolDefinition[] = [
       const result = compare(pathA, pathB, { a: labelA, b: labelB });
 
       if (writeTo) {
-        mkdirSync(join(writeTo, "..").replace(/\/$/, ""), { recursive: true });
-        writeFileSync(writeTo, renderMarkdown(result), "utf8");
+        const outputPath = resolveStorageOutputPath(
+          _ctx.project,
+          writeTo,
+          "conspectus comparison output",
+        );
+        mkdirSync(dirname(outputPath), { recursive: true });
+        writeFileSync(outputPath, renderMarkdown(result), "utf8");
       }
 
       return ok({

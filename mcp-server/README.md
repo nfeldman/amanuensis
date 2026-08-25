@@ -41,7 +41,17 @@ instructions. Without them, the typed MCP tools and concise server instructions
 remain available, but the complete method is not installed automatically.
 
 Repository binding is not an OS sandbox; host trust, approvals, and filesystem
-permissions remain authoritative. Run `amanuensis doctor --client codex
+permissions remain authoritative. Every process exposes an immutable binding
+receipt through `get_project_info` and revalidates its canonical repository,
+identity, storage, and symlink-free write path before each tool call. Direct
+materialization, review export, refresh output, and comparison reports are
+restricted to the bound storage directory. MCP side-effect annotations are
+host hints, not broader filesystem authority.
+
+Default storage is worktree-local: worktrees share repository identity but
+receive distinct workspace-instance IDs and `.amanuensis` paths. An explicit
+`AMANUENSIS_STORAGE_ROOT` instead selects shared-by-repository-identity custody;
+do not use it when concurrent worktrees need isolation. Run `amanuensis doctor --client codex
 --dir /path/to/project --json` to inspect effective config precedence, launch
 paths, predicted repository/storage identity, skill shadows, and restart state.
 Doctor is read-only and exits non-zero for actionable faults. A safe repair is

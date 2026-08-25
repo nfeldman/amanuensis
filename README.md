@@ -124,7 +124,19 @@ standardizes tool calls, not the project config file each host discovers.
 
 Amanuensis binds each server process to one repository; this is not an OS
 sandbox. Codex trust, approvals, and filesystem permissions remain the host's
-security boundary.
+security boundary. `get_project_info` returns the immutable startup
+`binding_receipt`: binding ID, canonical root, workspace-instance ID,
+repository identity/key, storage root/path and policy, workspace-selection
+source, and server version. The server revalidates that receipt before every
+tool call, and file-producing tools reject paths or symlink traversal outside
+the bound store before mutation.
+
+Each ordinary Git worktree uses its own worktree-local `.amanuensis` store. Two
+worktrees can share the logical repository identity while retaining distinct
+workspace-instance IDs and storage paths. `AMANUENSIS_STORAGE_ROOT` is an
+explicit shared-repository policy: clones or worktrees with the same verified
+repository identity intentionally converge there, so do not use that override
+when concurrent worktrees require isolated state.
 
 Diagnose activation before starting a workflow when configuration may be stale:
 
@@ -155,7 +167,9 @@ Amanuensis user registration, and removes a shadowing project registration and
 skill only when they are installer-managed and the skill is an exact packaged
 copy. Configuration inspection cannot prove what an already-running host
 loaded; after repair, restart Codex and verify a new task with
-`get_project_info`.
+`get_project_info`. MCP side-effect annotations remain host hints rather than
+filesystem authority; containment does not expand or replace Codex's sandbox,
+trust, or approval rules.
 
 The source beta uses the repository-pinned Node.js and Python versions through `mise`. The
 package contract remains Node.js ≥20; the materializer supports Python 3.11+.

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { dirname, relative, resolve, sep } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import {
   optInt,
   optString,
@@ -13,6 +13,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { resolveStorageOutputPath } from "../project.js";
 
 const SECTIONS = [
   "situation",
@@ -676,19 +677,7 @@ function complete(args: Record<string, unknown>, ctx: ServerContext): Record<str
 }
 
 function exportPath(ctx: ServerContext, path: string): string {
-  const root = realpathSync(ctx.project.storagePath);
-  const absolute = resolve(root, path);
-  const rel = relative(root, absolute);
-  if (rel === ".." || rel.startsWith(`..${sep}`) || rel.startsWith(sep)) {
-    throw new ToolError(`review export path escapes project storage: ${path}`);
-  }
-  let existing = absolute;
-  while (!existsSync(existing) && existing !== root) existing = dirname(existing);
-  const realExisting = realpathSync(existing);
-  if (realExisting !== root && !realExisting.startsWith(`${root}${sep}`)) {
-    throw new ToolError(`review export path escapes project storage via symlink: ${path}`);
-  }
-  return absolute;
+  return resolveStorageOutputPath(ctx.project, path, "review export path");
 }
 
 function exportPayload(ctx: ServerContext, reviewSessionId: string): Record<string, unknown> {

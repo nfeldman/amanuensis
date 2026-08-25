@@ -73,6 +73,7 @@ node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schem
 node test-installer.mjs                  # client adapters, migration, and uninstall custody
 node test-activation-contract.mjs        # user-scope cwd binding and wrong-workspace halt
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
+node test-workspace-binding.mjs          # immutable receipt, symlink halt, worktree policy
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current

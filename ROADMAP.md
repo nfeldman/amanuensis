@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 5 | 0 | 0 | 21 |
+| 1 | 4 | 0 | 0 | 22 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 6 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 5 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A21 — Immutable workspace binding and containment.
+**Next implementation initiative:** A22 — Real-host Codex multi-repository harness.
 
 ## Epistemic baseline
 
@@ -290,7 +290,7 @@ Risks:
 
 #### A21 — Immutable workspace binding and containment
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A19<br>
 **Metrics:** M13, M15, M12
@@ -319,11 +319,11 @@ Risks:
 - Containment duplicated across tools can drift unless centralized.
 
 **Practice basis:** GP8, GP11, GP18, GP25, GP28, VP4, VP10, VP12<br>
-**Baseline evidence:** `mcp-server/src/index.ts`, `mcp-server/src/project.ts`, `mcp-server/src/storage-git.ts`, `mcp-server/test-storage-git.mjs`
+**Baseline evidence:** `mcp-server/src/index.ts`, `mcp-server/src/project.ts`, `mcp-server/src/storage-git.ts`, `mcp-server/test-storage-git.mjs`, `mcp-server/src/tools/materialize.ts`, `mcp-server/src/tools/compare.ts`, `mcp-server/src/tools/refresh.ts`, `mcp-server/src/tools/review-session.ts`, `mcp-server/fixtures/activation/storage-symlink-escape.json`, `mcp-server/test-workspace-binding.mjs`, `dev/activation-evidence/a21-immutable-workspace-binding.json`, `.github/workflows/test.yml`
 
 #### A22 — Real-host Codex multi-repository harness
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis + Codex integration<br>
 **Depends on:** A20, A21<br>
 **Metrics:** M13, M15, M17, M11

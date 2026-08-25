@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A21",
+  "pecIndex": "pc-f958",
+  "recordedAt": "2026-08-25T23:36:15Z",
+  "result": "passed",
+  "source": {
+    "baselineCommit": "c357054da1168cd6c516127a2121fd4e53449bd3",
+    "practiceCatalog": {
+      "version": "2.10",
+      "stamp": "f9a5c0c9dbde"
+    },
+    "files": [
+      {
+        "path": "mcp-server/src/project.ts",
+        "sha256": "885818909bcad3063c147ffee3d2b9303877c3649616e4679e21651028f3ddc3"
+      },
+      {
+        "path": "mcp-server/src/index.ts",
+        "sha256": "1cd67c9ce08aaa441dbcba57c00e81e24df8d7435dd3f87e6c05d8f61e2570a0"
+      },
+      {
+        "path": "mcp-server/src/tools/materialize.ts",
+        "sha256": "770a885e286595bd7a8ca518795af7d5cc55b7f1e788a54d3e6db11a1e3f792b"
+      },
+      {
+        "path": "mcp-server/src/tools/compare.ts",
+        "sha256": "0ff6eaa77e8105178537296d26fe6d18a5271133ace76a5be1c6391ade6b530a"
+      },
+      {
+        "path": "mcp-server/src/tools/refresh.ts",
+        "sha256": "86cb200a0e2de6287c323bdd9a48ab3f56d3ea1660218488e55b86b1f7667976"
+      },
+      {
+        "path": "mcp-server/src/tools/review-session.ts",
+        "sha256": "fb23ad70b5eae2d4c26199cccea5d6f52a4ecf795d9cd6e3aba1754f70c98ad0"
+      },
+      {
+        "path": "mcp-server/test-workspace-binding.mjs",
+        "sha256": "b550355d728e5260784e1cc885f2edaebd79062836854ad64e0cb836211a931f"
+      },
+      {
+        "path": "mcp-server/fixtures/activation/storage-symlink-escape.json",
+        "sha256": "20df9cd9e1b414bcb9e339877e0ba94c5f0f991691a886c42ba705f6b9ab7d30"
+      },
+      {
+        "path": ".github/workflows/test.yml",
+        "sha256": "9aaf52c7453c11327b85c0141acdc196bad1f54113f053b5baf6912a48c31558"
+      }
+    ]
+  },
+  "redGate": {
+    "fixture": "storage-root-symlink-escape",
+    "command": "mise exec -- node mcp-server/test-workspace-binding.mjs",
+    "preRepair": {
+      "exitCode": 1,
+      "failure": "configured storage root traversed a symlink into repository B without rejecting the launch"
+    },
+    "postRepair": {
+      "exitCode": 0,
+      "repositoryCount": 3,
+      "worktreeCount": 1,
+      "storageRootEscapeMutations": 0,
+      "gitExcludeEscapeMutations": 0,
+      "directOutputEscapeMutations": 0,
+      "accidentalWorktreeAliases": 0
+    }
+  },
+  "identityWitness": {
+    "client": "amanuensis-memory stdio server",
+    "canonicalRoot": "/Users/nfeldman/repos/amanuensis",
+    "storagePath": "/Users/nfeldman/repos/amanuensis/.amanuensis",
+    "selectionSource": "process-cwd-git-root",
+    "storagePolicy": "worktree-local",
+    "contractVersion": "amanuensis-repository-binding/v1",
+    "serverVersion": "0.2.0-alpha.1"
+  },
+  "greenChecks": [
+    "mise exec -- npm --prefix mcp-server run build",
+    "mise exec -- node mcp-server/test-workspace-binding.mjs",
+    "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "mise exec -- node mcp-server/test-cloud-storage.mjs",
+    "mise exec -- node mcp-server/test-adversarial-security.mjs",
+    "mise exec -- node mcp-server/test-compare.mjs",
+    "mise exec -- node mcp-server/test-refresh-recovery.mjs",
+    "mise exec -- node mcp-server/test-review-session.mjs",
+    "mise exec -- node mcp-server/test-mcp-compatibility.mjs",
+    "mise exec -- node mcp-server/test-package-artifact.mjs"
+  ]
+}

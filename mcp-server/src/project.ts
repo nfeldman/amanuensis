@@ -1,7 +1,7 @@
 import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  appendFileSync,
+  type appendFileSync,
   closeSync,
   constants,
   cpSync,
@@ -23,11 +23,26 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { ensureStorageRepo } from "./storage-git.js";
 
 export interface ProjectContext {
-  workspacePath: string;
+  readonly workspacePath: string;
+  readonly projectKey: string;
+  readonly storagePath: string;
+  readonly dbPath: string;
+  readonly storageGitReady: boolean;
+  readonly bindingReceipt: Readonly<ProjectBindingReceipt>;
+}
+
+export interface ProjectBindingReceipt {
+  contractVersion: "amanuensis-repository-binding/v1";
+  bindingId: string;
+  canonicalRoot: string;
+  workspaceInstanceId: string;
+  projectIdentity: string;
   projectKey: string;
+  storageRoot: string;
   storagePath: string;
-  dbPath: string;
-  storageGitReady: boolean;
+  storagePolicy: "worktree-local" | "shared-repository-identity";
+  selectionSource: string;
+  serverVersion: string;
 }
 
 function safeGitOrigin(workspace: string): string | null {
@@ -167,19 +182,47 @@ function assertNoSymlinkTree(root: string, label: string): void {
   visit(root);
 }
 
-function assertContainedPath(root: string, target: string, label: string): void {
-  const resolvedRoot = resolve(root);
+function normalizeKnownPlatformAlias(path: string): string {
+  for (const alias of ["/var", "/tmp", "/etc"]) {
+    if (
+      (path === alias || path.startsWith(`${alias}${sep}`)) &&
+      existsSync(alias) &&
+      realpathSync(alias) === `/private${alias}`
+    ) {
+      return `/private${path}`;
+    }
+  }
+  return path;
+}
+
+function canonicalManagedRoot(path: string, label: string): string {
+  const lexical = resolve(path);
+  const missing: string[] = [];
+  let existing = lexical;
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    missing.unshift(basename(existing));
+    existing = parent;
+  }
+  if (!existsSync(existing))
+    throw new Error(`${label} has no existing filesystem ancestor: ${path}`);
+  if (lstatSync(existing).isSymbolicLink()) {
+    throw new Error(`${label} traverses a symbolic link: ${existing}`);
+  }
+  const canonicalExisting = realpathSync(existing);
+  if (canonicalExisting !== normalizeKnownPlatformAlias(existing)) {
+    throw new Error(`${label} traverses a symbolic link: ${existing} → ${canonicalExisting}`);
+  }
+  return resolve(canonicalExisting, ...missing);
+}
+
+export function assertContainedPath(root: string, target: string, label: string): string {
+  const resolvedRoot = canonicalManagedRoot(root, `${label} root`);
   const resolvedTarget = resolve(target);
   if (resolvedTarget === resolvedRoot || !isWithin(resolvedRoot, resolvedTarget)) {
     throw new Error(`${label} escapes its configured root: ${target}`);
   }
-  if (!existsSync(resolvedRoot)) mkdirSync(resolvedRoot, { recursive: true });
-  const rootStat = lstatSync(resolvedRoot);
-  if (rootStat.isSymbolicLink()) {
-    throw new Error(`${label} root must not be a symbolic link: ${resolvedRoot}`);
-  }
-  if (!rootStat.isDirectory()) throw new Error(`${label} root is not a directory: ${resolvedRoot}`);
-  const canonicalRoot = realpathSync(resolvedRoot);
   let cursor = resolvedRoot;
   const rel = relative(resolvedRoot, resolvedTarget);
   for (const segment of rel.split(sep).filter(Boolean)) {
@@ -190,16 +233,30 @@ function assertContainedPath(root: string, target: string, label: string): void 
     if (cursor !== resolvedTarget && !stat.isDirectory()) {
       throw new Error(`${label} traverses a non-directory: ${cursor}`);
     }
-    if (!isWithin(canonicalRoot, realpathSync(cursor))) {
+    if (!isWithin(resolvedRoot, realpathSync(cursor))) {
       throw new Error(`${label} escapes its canonical root: ${cursor}`);
     }
   }
+  return resolvedTarget;
 }
 
 function writeTextNoFollow(path: string, value: string): void {
   const fd = openSync(
     path,
     constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    writeFileSync(fd, value, "utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function appendTextNoFollow(path: string, value: string): void {
+  const fd = openSync(
+    path,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW,
     0o600,
   );
   try {
@@ -369,6 +426,16 @@ export function excludeLocalStorageFromWorkspaceGit(
     }).trim();
     if (!rawExclude) return;
     const excludePath = isAbsolute(rawExclude) ? rawExclude : resolve(workspace, rawExclude);
+    const rawCommonRoot = execFileSync("git", ["rev-parse", "--git-common-dir"], {
+      cwd: workspace,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!rawCommonRoot) throw new Error("Git returned no common metadata directory");
+    const commonRoot = realpathSync(
+      isAbsolute(rawCommonRoot) ? rawCommonRoot : resolve(workspace, rawCommonRoot),
+    );
+    assertContainedPath(commonRoot, excludePath, "parent Git exclude");
     const relativeStorage = relative(canonicalGitRoot, canonicalStoragePath).split(sep).join("/");
     const pattern = `/${relativeStorage}`;
     const tracked = spawnSync("git", ["ls-files", "--error-unmatch", "--", relativeStorage], {
@@ -384,10 +451,15 @@ export function excludeLocalStorageFromWorkspaceGit(
     }
     if (operations.preflightOnly) return;
     mkdirSync(dirname(excludePath), { recursive: true });
+    assertContainedPath(commonRoot, excludePath, "parent Git exclude");
     const prior = existsSync(excludePath) ? readFileSync(excludePath, "utf8") : "";
     if (!prior.split(/\r?\n/).includes(pattern)) {
       const separator = prior.length === 0 || prior.endsWith("\n") ? "" : "\n";
-      (operations.append ?? appendFileSync)(excludePath, `${separator}${pattern}\n`, "utf8");
+      if (operations.append) {
+        operations.append(excludePath, `${separator}${pattern}\n`, "utf8");
+      } else {
+        appendTextNoFollow(excludePath, `${separator}${pattern}\n`);
+      }
     }
     const ignored = spawnSync(
       "git",
@@ -499,16 +571,21 @@ function migrateVerifiedStore(
   return migrateLegacyStorage(legacyPath, destination);
 }
 
-export function resolveProject(workspace: string): ProjectContext {
+export function resolveProject(
+  workspace: string,
+  options: { selectionSource?: string; serverVersion?: string } = {},
+): ProjectContext {
   const requestedWorkspace = resolve(workspace);
   if (!existsSync(requestedWorkspace) || !lstatSync(requestedWorkspace).isDirectory()) {
     throw new Error(`workspace is not a directory: ${requestedWorkspace}`);
   }
-  const absWorkspace = requestedWorkspace;
+  const absWorkspace = realpathSync(requestedWorkspace);
   const descriptor = describeProject(absWorkspace);
   const projectKey = descriptor.key;
   const override = process.env.AMANUENSIS_STORAGE_ROOT?.trim();
-  const storageRoot = override ? resolve(override) : absWorkspace;
+  const storageRoot = override
+    ? canonicalManagedRoot(resolve(override), "configured Amanuensis storage root")
+    : absWorkspace;
   const storagePath = override
     ? storagePathUnder(storageRoot, projectKey)
     : join(absWorkspace, ".amanuensis");
@@ -564,11 +641,70 @@ export function resolveProject(workspace: string): ProjectContext {
     process.stderr.write(`[amanuensis-memory] storage git init deferred: ${gitInit.reason}\n`);
   }
 
-  return {
+  const receiptFields = {
+    contractVersion: "amanuensis-repository-binding/v1" as const,
+    canonicalRoot: absWorkspace,
+    workspaceInstanceId: shortHash(absWorkspace),
+    projectIdentity: descriptor.identity,
+    projectKey,
+    storageRoot,
+    storagePath,
+    storagePolicy: override ? ("shared-repository-identity" as const) : ("worktree-local" as const),
+    selectionSource: options.selectionSource ?? "direct-api",
+    serverVersion: options.serverVersion ?? "unknown",
+  };
+  const bindingReceipt = Object.freeze({
+    ...receiptFields,
+    bindingId: createHash("sha256").update(JSON.stringify(receiptFields)).digest("hex"),
+  });
+  return Object.freeze({
     workspacePath: absWorkspace,
     projectKey,
     storagePath,
     dbPath: join(storagePath, "memory.db"),
     storageGitReady: gitInit.ok,
-  };
+    bindingReceipt,
+  });
+}
+
+export function assertProjectBinding(project: ProjectContext): void {
+  const receipt = project.bindingReceipt;
+  if (
+    project.workspacePath !== receipt.canonicalRoot ||
+    project.projectKey !== receipt.projectKey ||
+    project.storagePath !== receipt.storagePath ||
+    project.dbPath !== join(receipt.storagePath, "memory.db")
+  ) {
+    throw new Error("Amanuensis process repository binding was mutated after startup");
+  }
+  if (realpathSync(project.workspacePath) !== receipt.canonicalRoot) {
+    throw new Error(`bound workspace identity changed after startup: ${project.workspacePath}`);
+  }
+  const currentDescriptor = describeProject(receipt.canonicalRoot);
+  if (
+    currentDescriptor.identity !== receipt.projectIdentity ||
+    currentDescriptor.key !== receipt.projectKey
+  ) {
+    throw new Error("bound repository identity changed after startup");
+  }
+  assertContainedPath(receipt.storageRoot, receipt.storagePath, "bound Amanuensis storage");
+  assertNoSymlinkTree(receipt.storagePath, "bound Amanuensis storage");
+  assertStorageIdentity(
+    receipt.storagePath,
+    receipt.canonicalRoot,
+    receipt.projectIdentity,
+    receipt.storagePolicy === "shared-repository-identity",
+  );
+}
+
+export function resolveStorageOutputPath(
+  project: ProjectContext,
+  requestedPath: string,
+  label: string,
+): string {
+  assertProjectBinding(project);
+  const absolute = isAbsolute(requestedPath)
+    ? resolve(requestedPath)
+    : resolve(project.storagePath, requestedPath);
+  return assertContainedPath(project.storagePath, absolute, label);
 }

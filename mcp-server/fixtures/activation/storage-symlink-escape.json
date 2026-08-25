@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "storage-root-symlink-escape",
+  "configuredStorageRoot": "__FIXTURE_ROOT__/redirect/missing-storage-root",
+  "redirectTarget": "__REPOSITORY_B__",
+  "expectedFailure": "containment-before-first-mutation",
+  "forbiddenWrites": ["__REPOSITORY_B__/missing-storage-root"]
+}

@@ -92,6 +92,9 @@ jobs:
       - name: Activation doctor and digest-bound repair red gate
         working-directory: mcp-server
         run: node test-activation-doctor.mjs
+      - name: Immutable repository binding and containment red gate
+        working-directory: mcp-server
+        run: node test-workspace-binding.mjs
       - name: Packed artifact adapters and MCP handshake
         working-directory: mcp-server
         run: node test-package-artifact.mjs

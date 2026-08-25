@@ -2,10 +2,11 @@
 // Correctness probes for compare_conspectuses. Builds two minimal DBs
 // with known structural overlap, runs the compare, asserts on the
 // overlap/divergence counts.
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
+import { resolveProject } from "./dist/project.js";
 import { compareTools } from "./dist/tools/compare.js";
 
 const call = (name, args) => {
@@ -34,9 +35,11 @@ function seedDb(dbPath, spec) {
   const db = openDatabase(dbPath);
   // spec: { subsystems: [ids], findings: [{subsystem, symptom, rootCause, severity}], dispositions: [{ss, code, cls}], evidence: [{file, kind}] }
   for (const id of spec.subsystems) {
-    db.prepare(
-      "INSERT INTO subsystems (id, name, status) VALUES (?, ?, ?)",
-    ).run(id, `Subsystem ${id}`, "concerns");
+    db.prepare("INSERT INTO subsystems (id, name, status) VALUES (?, ?, ?)").run(
+      id,
+      `Subsystem ${id}`,
+      "concerns",
+    );
   }
   for (const code of new Set((spec.dispositions ?? []).map((d) => d.code))) {
     db.prepare(
@@ -56,9 +59,10 @@ function seedDb(dbPath, spec) {
     ).run(`F-${i}`, f.subsystem, f.symptom, f.rootCause, f.severity);
   }
   for (const e of spec.evidence ?? []) {
-    db.prepare(
-      "INSERT INTO evidence (file_path, ref_sha, kind) VALUES (?, 'abc', ?)",
-    ).run(e.file, e.kind);
+    db.prepare("INSERT INTO evidence (file_path, ref_sha, kind) VALUES (?, 'abc', ?)").run(
+      e.file,
+      e.kind,
+    );
   }
   db.close();
 }
@@ -79,9 +83,7 @@ t("identical DBs: 100% Jaccard on subsystems and findings", () => {
         { ss: "B-01", code: "CC-1", cls: "ruled-out" },
         { ss: "B-02", code: "CC-1", cls: "confirmed-bug" },
       ],
-      findings: [
-        { subsystem: "B-02", symptom: "stale", rootCause: "race", severity: "HIGH" },
-      ],
+      findings: [{ subsystem: "B-02", symptom: "stale", rootCause: "race", severity: "HIGH" }],
       evidence: [{ file: "a.ts", kind: "code-verified" }],
     };
     seedDb(a.path, spec);
@@ -201,17 +203,26 @@ t("write_to renders a markdown report to disk", () => {
   const a = freshDb("a");
   const b = freshDb("b");
   const out = mkdtempSync(join(tmpdir(), "cmp-out-"));
-  const outFile = join(out, "comparison.md");
   try {
+    const project = resolveProject(out, {
+      selectionSource: "test-compare",
+      serverVersion: "test",
+    });
+    const outFile = join(project.storagePath, "comparison.md");
     seedDb(a.path, { subsystems: ["B-01"] });
     seedDb(b.path, { subsystems: ["B-01", "B-02"] });
-    call("compare_conspectuses", {
-      path_a: a.path,
-      path_b: b.path,
-      label_a: "local",
-      label_b: "cloud",
-      write_to: outFile,
-    });
+    compareTools
+      .find((candidate) => candidate.name === "compare_conspectuses")
+      .handler(
+        {
+          path_a: a.path,
+          path_b: b.path,
+          label_a: "local",
+          label_b: "cloud",
+          write_to: outFile,
+        },
+        { project },
+      );
     assert(existsSync(outFile), "markdown file not written");
     const md = readFileSync(outFile, "utf8");
     assert(md.includes("# Conspectus comparison"), "missing title");

@@ -6,6 +6,7 @@
   "result": "passed",
   "source": {
     "baselineCommit": "c3aff8a9545751cfc1a6a7cd890360095e5c0a02",
+    "implementationCommit": "c357054da1168cd6c516127a2121fd4e53449bd3",
     "practiceCatalog": {
       "version": "2.10",
       "stamp": "f9a5c0c9dbde"

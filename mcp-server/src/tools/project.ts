@@ -24,6 +24,7 @@ export const projectTools: ToolDefinition[] = [
         db_exists: dbExists,
         onboarding_sha: git?.onboarding_sha ?? null,
         canonical_branch: git?.canonical_branch ?? null,
+        binding_receipt: ctx.project.bindingReceipt,
       };
     },
   },

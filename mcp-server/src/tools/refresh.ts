@@ -1,7 +1,5 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   optBool,
   optInt,
@@ -16,6 +14,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { resolveStorageOutputPath } from "../project.js";
 import { impactTools } from "./impact.js";
 import { materializeTools } from "./materialize.js";
 import { resolutionTools } from "./resolution.js";
@@ -119,22 +118,6 @@ function positive(value: number, name: string): number {
 function nonNegative(value: number, name: string): number {
   if (value < 0) throw new ToolError(`${name} must be non-negative`);
   return value;
-}
-
-function isWithin(root: string, candidate: string): boolean {
-  const path = relative(resolve(root), resolve(candidate));
-  return path === "" || (!isAbsolute(path) && path !== ".." && !path.startsWith("../"));
-}
-
-function isWithinStorage(root: string, candidate: string): boolean {
-  if (!isWithin(root, candidate)) return false;
-  let existing = candidate;
-  while (!existsSync(existing)) {
-    const parent = dirname(existing);
-    if (parent === existing) return false;
-    existing = parent;
-  }
-  return isWithin(realpathSync(root), realpathSync(existing));
 }
 
 function normalizePrefixes(values: string[], name: string, allowEmpty = false): string[] {
@@ -760,12 +743,17 @@ export const refreshTools: ToolDefinition[] = [
         ),
       };
       const requestedOutput = optString(args, "output_dir");
-      const outputDir = requestedOutput
-        ? isAbsolute(requestedOutput)
-          ? resolve(requestedOutput)
-          : resolve(ctx.project.storagePath, requestedOutput)
-        : resolve(ctx.project.storagePath, "docs");
       const blockers: string[] = [];
+      let outputDir = "";
+      try {
+        outputDir = resolveStorageOutputPath(
+          ctx.project,
+          requestedOutput ?? "docs",
+          "refresh output",
+        );
+      } catch {
+        blockers.push("output_dir is outside the project storage boundary");
+      }
       if (headSha !== checkedOutHead) {
         blockers.push("head_sha must match checked-out HEAD for final projection proof");
       }
@@ -797,9 +785,6 @@ export const refreshTools: ToolDefinition[] = [
       }
       if (authorityMode !== "branch-write" && effects.includes("branch-write")) {
         blockers.push(`branch-write is outside ${authorityMode} authority`);
-      }
-      if (!isWithinStorage(ctx.project.storagePath, outputDir)) {
-        blockers.push("output_dir is outside the project storage boundary");
       }
       if (determinismMode === "local-deterministic" && !runtime.startsWith("local")) {
         blockers.push("local-deterministic mode requires a local runtime route");

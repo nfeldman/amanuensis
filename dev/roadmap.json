@@ -597,7 +597,7 @@
         {
           "id": "A21",
           "title": "Immutable workspace binding and containment",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Each server process owns exactly one canonical repository identity and all Amanuensis writes remain inside its validated storage and Git-exclude surfaces.",
           "rationale": "Cwd discovery is useful only when repository identity, worktree semantics, storage custody, and every write target are mechanically bounded.",
@@ -623,13 +623,21 @@
             "mcp-server/src/index.ts",
             "mcp-server/src/project.ts",
             "mcp-server/src/storage-git.ts",
-            "mcp-server/test-storage-git.mjs"
+            "mcp-server/test-storage-git.mjs",
+            "mcp-server/src/tools/materialize.ts",
+            "mcp-server/src/tools/compare.ts",
+            "mcp-server/src/tools/refresh.ts",
+            "mcp-server/src/tools/review-session.ts",
+            "mcp-server/fixtures/activation/storage-symlink-escape.json",
+            "mcp-server/test-workspace-binding.mjs",
+            "dev/activation-evidence/a21-immutable-workspace-binding.json",
+            ".github/workflows/test.yml"
           ]
         },
         {
           "id": "A22",
           "title": "Real-host Codex multi-repository harness",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis + Codex integration",
           "outcome": "Activation is verified through real Codex process launches across independent repositories rather than inferred from configuration syntax.",
           "rationale": "The current installer test proves generated TOML shape, not how Codex resolves cwd, merges global and project configuration, retains running processes, or launches concurrent tasks.",

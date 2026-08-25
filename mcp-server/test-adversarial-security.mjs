@@ -13,7 +13,15 @@
 //   6. Gitignore bypass (committing WAL file by naming trick)
 //   7. Non-UTF8 bytes in commit message
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { resolveProject, resolveProjectKey } from "./dist/project.js";
@@ -160,7 +168,7 @@ t("crafted git origins cannot escape shared or legacy storage roots", () => {
       assert(!key.split("/").includes(".."), `origin produced traversal key: ${origin} → ${key}`);
       process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
       const project = resolveProject(workspace);
-      const rel = relative(storageRoot, project.storagePath);
+      const rel = relative(realpathSync(storageRoot), project.storagePath);
       assert(
         rel !== "" && !rel.startsWith("..") && !isAbsolute(rel),
         `origin escaped shared storage: ${origin} → ${project.storagePath}`,

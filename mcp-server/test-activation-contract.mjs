@@ -189,6 +189,15 @@ try {
       info.structuredContent?.storage_path === join(canonicalRepositoryB, ".amanuensis"),
       "cwd-relative launch selected the wrong storage path",
     );
+    const receipt = info.structuredContent?.binding_receipt;
+    assert(receipt?.canonicalRoot === canonicalRepositoryB, "binding receipt root drifted");
+    assert(
+      receipt?.storagePath === join(canonicalRepositoryB, ".amanuensis"),
+      "binding receipt storage drifted",
+    );
+    assert(receipt?.selectionSource === "process-cwd-git-root", "binding selection source drifted");
+    assert(receipt?.storagePolicy === "worktree-local", "binding storage policy drifted");
+    assert(/^[a-f0-9]{64}$/.test(receipt?.bindingId ?? ""), "binding receipt ID is malformed");
     assert(!existsSync(join(repositoryA, ".amanuensis")), "green launch wrote under repository A");
     console.log(
       `A19 user activation verified: ${info.structuredContent.project_key} -> ${info.structuredContent.workspace_path}`,

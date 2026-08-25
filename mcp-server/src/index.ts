@@ -7,7 +7,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
-import { resolveProject } from "./project.js";
+import { assertProjectBinding, resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
@@ -16,6 +16,7 @@ import { compareTools } from "./tools/compare.js";
 
 const SERVER_INSTRUCTIONS =
   "Build and maintain an evidence-backed codebase conspectus. Start with get_project_info, then get_dashboard and list_subsystems. Read source code for evidence; write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
+const SERVER_VERSION = "0.2.0-alpha.1";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
 // additive updates. Default every mutation to destructive and carve out only
@@ -115,7 +116,7 @@ function assertWorkspaceMatchesLaunch(
   }
 }
 
-function parseArgs(argv: string[]): { workspace: string } {
+function parseArgs(argv: string[]): { workspace: string; selectionSource: string } {
   // An explicit target always wins. Claude Code provides its project root in
   // the server environment; other local clients normally launch in the target
   // repository. For the latter case, normalize a nested cwd to the Git root.
@@ -124,28 +125,34 @@ function parseArgs(argv: string[]): { workspace: string } {
     const value = argv[i + 1];
     if (argv[i] === "--workspace" && value) {
       assertWorkspaceMatchesLaunch(value, "argument", allowWorkspacePin);
-      return { workspace: value };
+      return { workspace: value, selectionSource: "argument" };
     }
   }
-  const fromEnvironment =
-    process.env.AMANUENSIS_WORKSPACE?.trim() || process.env.CLAUDE_PROJECT_DIR?.trim();
+  const amanuensisWorkspace = process.env.AMANUENSIS_WORKSPACE?.trim();
+  const claudeWorkspace = process.env.CLAUDE_PROJECT_DIR?.trim();
+  const fromEnvironment = amanuensisWorkspace || claudeWorkspace;
   if (fromEnvironment) {
     assertWorkspaceMatchesLaunch(
       fromEnvironment,
       "environment",
       allowWorkspacePin || process.env.AMANUENSIS_ALLOW_WORKSPACE_PIN === "1",
     );
-    return { workspace: fromEnvironment };
+    return {
+      workspace: fromEnvironment,
+      selectionSource: amanuensisWorkspace
+        ? "environment:AMANUENSIS_WORKSPACE"
+        : "environment:CLAUDE_PROJECT_DIR",
+    };
   }
   const root = gitRoot(process.cwd());
-  if (root) return { workspace: root };
+  if (root) return { workspace: root, selectionSource: "process-cwd-git-root" };
   // Non-Git workspaces are supported; their current directory is the root.
-  return { workspace: process.cwd() };
+  return { workspace: process.cwd(), selectionSource: "process-cwd-non-git" };
 }
 
 async function main(): Promise<void> {
-  const { workspace } = parseArgs(process.argv.slice(2));
-  const project = resolveProject(workspace);
+  const { workspace, selectionSource } = parseArgs(process.argv.slice(2));
+  const project = resolveProject(workspace, { selectionSource, serverVersion: SERVER_VERSION });
   const db = openDatabase(project.dbPath);
 
   const ctx: ServerContext = {
@@ -206,7 +213,7 @@ async function main(): Promise<void> {
   const server = new Server(
     {
       name: "amanuensis-memory",
-      version: "0.2.0-alpha.1",
+      version: SERVER_VERSION,
     },
     {
       capabilities: {
@@ -242,6 +249,7 @@ async function main(): Promise<void> {
       });
     }
     try {
+      assertProjectBinding(project);
       const data = tool.handler(args, ctx);
       return jsonResult(data);
     } catch (e) {
@@ -254,9 +262,7 @@ async function main(): Promise<void> {
     }
   });
 
-  process.stderr.write(
-    `[amanuensis-memory] project=${project.projectKey} storage=${project.storagePath}\n`,
-  );
+  process.stderr.write(`[amanuensis-memory] binding=${JSON.stringify(project.bindingReceipt)}\n`);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

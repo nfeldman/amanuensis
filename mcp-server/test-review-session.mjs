@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase } from "./dist/db.js";
+import { resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { compositionTools } from "./dist/tools/composition.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
@@ -23,8 +24,8 @@ import { findingTools } from "./dist/tools/findings.js";
 import { impactTools } from "./dist/tools/impact.js";
 import { openQuestionTools } from "./dist/tools/open-questions.js";
 import { projectTools } from "./dist/tools/project.js";
-import { reviewAnalysisTools } from "./dist/tools/review-analysis.js";
 import { reviewTools } from "./dist/tools/review.js";
+import { reviewAnalysisTools } from "./dist/tools/review-analysis.js";
 import { reviewSessionTools } from "./dist/tools/review-session.js";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -188,9 +189,7 @@ function createChallengedReview(fixture, impactRunId) {
 function freshFixture() {
   const root = mkdtempSync(join(tmpdir(), "amanuensis-review-session-"));
   const workspace = join(root, "workspace");
-  const storage = join(root, "storage");
   mkdirSync(join(workspace, "src"), { recursive: true });
-  mkdirSync(storage, { recursive: true });
   git(workspace, "init", "-q");
   git(workspace, "config", "user.email", "test@localhost");
   git(workspace, "config", "user.name", "Review Session Test");
@@ -204,13 +203,11 @@ function freshFixture() {
   git(workspace, "add", "src/producer.ts");
   git(workspace, "commit", "-q", "--no-verify", "-m", "change producer version");
   const head = git(workspace, "rev-parse", "HEAD");
-  const project = {
-    workspacePath: workspace,
-    projectKey: "test/review-session",
-    storagePath: storage,
-    dbPath: join(storage, "memory.db"),
-    storageGitReady: false,
-  };
+  const project = resolveProject(workspace, {
+    selectionSource: "test-review-session",
+    serverVersion: "test",
+  });
+  const storage = project.storagePath;
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const tools = new Map(
@@ -491,7 +488,7 @@ test("export refuses a symlinked parent outside project storage", () => {
     error = caught;
   }
   unlinkSync(join(fixture.storage, "reviews"));
-  assert(error?.message.includes("via symlink"), "symlinked export parent was not rejected");
+  assert(error?.message.includes("symbolic link"), "symlinked export parent was not rejected");
 });
 
 const exported = call(fixture, "export_review_session", {

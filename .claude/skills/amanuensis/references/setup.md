@@ -144,7 +144,11 @@ get_project_info
 ```
 
 A successful result includes `project_key`, `workspace_path`, and `db_exists`.
-Then call `get_autoprogress_mode` and confirm it matches the intended mode. If
+It also includes an immutable `binding_receipt` with the canonical root,
+workspace-instance ID, repository identity, storage path/policy, selection
+source, server version, and binding ID. The server revalidates that binding and
+its symlink-free storage tree before every tool call. Then call
+`get_autoprogress_mode` and confirm it matches the intended mode. If
 the tools are absent, the client did not load the server configuration; if the
 tools are present but the workspace path is wrong, fix the registration before
 writing survey state.
@@ -164,6 +168,14 @@ configuration it changes, migrates only the Amanuensis user entry, and removes
 a project shadow only when it is installer-managed and the skill is an exact
 packaged copy. Restart Codex afterward and read back `get_project_info` in a new
 task; file inspection cannot establish what an already-running host loaded.
+
+Default state is worktree-local: two worktrees of one repository have the same
+logical repository identity but different workspace-instance IDs and storage
+paths. `AMANUENSIS_STORAGE_ROOT` deliberately changes custody to
+shared-by-repository-identity; avoid it for concurrent worktrees that need
+isolated state. File-producing tools accept only destinations inside the bound
+store. These checks are repository binding and write containment, not an OS
+sandbox, and MCP side-effect annotations remain hints to the host.
 
 Persistent state lives at `<project>/.amanuensis/`: the SQLite database,
 materialized prose, projection manifests, and an independent storage Git
