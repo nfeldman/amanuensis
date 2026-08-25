@@ -40,6 +40,7 @@ const STAGE_ORDER = new Map([
   ["later", 2],
 ]);
 const VALID_STATUSES = new Set(["ready", "planned", "in-progress", "blocked", "done"]);
+const VALID_IMPLEMENTATION_STATUSES = new Set(["active", "integrated"]);
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const FULL_BRANCH_REF = /^refs\/heads\/[A-Za-z0-9._/-]+$/;
 const CATALOG_SNAPSHOT = JSON.parse(readFileSync(CATALOG, "utf8"));
@@ -80,8 +81,8 @@ function validateRoadmap(roadmap) {
     );
   }
   assert(
-    roadmap.delivery?.implementation === "integrated",
-    "delivery.implementation must be integrated",
+    VALID_IMPLEMENTATION_STATUSES.has(roadmap.delivery?.implementation),
+    "delivery.implementation must be active or integrated",
     errors,
   );
   assert(
@@ -550,6 +551,11 @@ function validateRoadmap(roadmap) {
     errors,
   );
   assert(
+    roadmap.delivery?.implementation !== "active" || unfinishedItems.length > 0,
+    "delivery.implementation cannot be active without unfinished initiatives",
+    errors,
+  );
+  assert(
     unfinishedItems.length === 0 || readyItems.length > 0 || activeItems.length > 0,
     "at least one initiative must be ready or in-progress",
     errors,
@@ -765,9 +771,20 @@ function render(roadmap) {
   lines.push("");
   const integration = roadmap.delivery.integration;
   const ciUrl = `https://github.com/${integration.repository}/actions/runs/${integration.ci.runId}`;
-  lines.push(
-    `**Implementation:** All ${initiatives.length} roadmap initiatives at implementation tip \`${integration.implementationSha}\` are contained by \`${integration.remote}:${integration.ref}\` (verified ${integration.verifiedAt}).`,
-  );
+  if (roadmap.delivery.implementation === "active") {
+    const unfinishedCount = initiatives.filter((initiative) => initiative.status !== "done").length;
+    lines.push(
+      `**Implementation baseline:** The previously integrated program at \`${integration.implementationSha}\` is contained by \`${integration.remote}:${integration.ref}\` (verified ${integration.verifiedAt}).`,
+    );
+    lines.push("");
+    lines.push(
+      `**Active expansion:** ${unfinishedCount} of ${initiatives.length} initiatives remain unfinished; completed baseline initiatives retain their historical evidence.`,
+    );
+  } else {
+    lines.push(
+      `**Implementation:** All ${initiatives.length} roadmap initiatives at implementation tip \`${integration.implementationSha}\` are contained by \`${integration.remote}:${integration.ref}\` (verified ${integration.verifiedAt}).`,
+    );
+  }
   lines.push("");
   lines.push(`**Product proof:** ${roadmap.delivery.productProof}.`);
   lines.push("");

@@ -169,12 +169,13 @@ try {
   run(
     ["--write", "--source", regressedImplementation, "--output", projection],
     1,
-    "delivery.implementation must be integrated",
+    "delivery.implementation must be active or integrated",
   );
 
   const unfinishedIntegratedImplementation = writeCase(
     "unfinished-integrated-implementation",
     (value) => {
+      value.delivery.implementation = "integrated";
       initiative(value, "A18").status = "ready";
     },
   );
@@ -182,6 +183,18 @@ try {
     ["--write", "--source", unfinishedIntegratedImplementation, "--output", projection],
     1,
     "delivery.implementation cannot be integrated while any initiative is unfinished",
+  );
+
+  const activeWithoutWork = writeCase("active-without-work", (value) => {
+    value.delivery.implementation = "active";
+    for (const stage of value.stages) {
+      for (const item of stage.initiatives) item.status = "done";
+    }
+  });
+  run(
+    ["--write", "--source", activeWithoutWork, "--output", projection],
+    1,
+    "delivery.implementation cannot be active without unfinished initiatives",
   );
 
   const ambiguousIntegrationRef = writeCase("ambiguous-integration-ref", (value) => {

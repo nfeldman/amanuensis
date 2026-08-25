@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "roadmapVersion": "1.3",
-  "updated": "2026-08-23",
+  "roadmapVersion": "1.4",
+  "updated": "2026-08-25",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
-  "scopeDecision": "The ambition is coherent as a program and too broad as a single release. Amanuensis will become the codebase epistemic engine—not a universal orchestration platform, autonomous product manager, or second source of truth for code. The first product proof sought is a living record that becomes stale precisely, repairs itself selectively, and reduces human verification work. Review, architecture, research learning, and Chorusmith extraction are integrated on main, and the v2 alpha is tagged and published. That establishes implementation, repository custody, and package delivery—not product efficacy or a real operating envelope.",
+  "scopeDecision": "The v2 epistemic engine, review, architecture, research-learning, and Chorusmith surfaces are integrated, but direct multi-repository use exposed an activation failure before useful work began: a hard-coded global server remained bound to another repository while the target repository carried a project-local registration that the running task had not loaded. Friction-free Codex activation is therefore the highest-priority product work. New product-surface expansion pauses until one user-level installation can bind each new trusted repository correctly, isolate concurrent repositories, diagnose stale configuration before writes, and start from one natural-language request. The integrated v2 baseline remains established; product efficacy and the friction-free operating claim remain unestablished until measured.",
   "delivery": {
-    "implementation": "integrated",
+    "implementation": "active",
     "productProof": "unestablished",
     "integration": {
       "status": "established",
@@ -109,6 +109,16 @@
         ".github/workflows/test.yml",
         "CONTRIBUTING.md"
       ]
+    },
+    {
+      "kind": "observation",
+      "claim": "The Codex adapter writes repository-local configuration with cwd set to the repository, while the server also accepts an explicit workspace and otherwise derives one Git root from process cwd at process startup; the current tests validate generated configuration but do not launch real concurrent Codex tasks in different repositories.",
+      "evidence": [
+        "mcp-server/src/cli.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/test-installer.mjs",
+        "mcp-server/test-mcp-compatibility.mjs"
+      ]
     }
   ],
   "inferences": [
@@ -129,6 +139,12 @@
       "claim": "Crosswalk-driven research can improve decisions only if questions are admitted and later reconciled against their decision impact.",
       "basis": "Unbounded topic generation creates an attractive research backlog with no obligation to change a design or close a gap.",
       "counterpoint": "Some exploratory research has delayed value; the system must retain bounded speculative questions without pretending they are validated product work."
+    },
+    {
+      "kind": "inference",
+      "claim": "Activation is now the highest-leverage product constraint because a correct epistemic engine produces no value when the host launches it against the wrong repository or requires repository-by-repository configuration ceremony.",
+      "basis": "The observed Codex session stopped safely on workspace mismatch even after repository-local initialization, and source inspection showed that configuration is loaded at task startup while one server process owns one immutable project context.",
+      "counterpoint": "A user-scoped registration broadens where the server is available; the implementation must preserve host trust, explicit workspace containment, and a project-scoped opt-in mode rather than treating global availability as an OS sandbox."
     }
   ],
   "programDecisions": [
@@ -167,6 +183,15 @@
       "status": "resolved",
       "decisionRecord": "dev/adr/0014-decision-bounded-research-custody.md",
       "resolution": "A consumed result must name the exact decision field it changed and be followed by an A12 successor decision revision; otherwise it records an explicit no-change rationale."
+    },
+    {
+      "question": "What activation contract satisfies friction-free use across many Codex repositories without weakening project identity or host trust?",
+      "owner": "Human + Amanuensis",
+      "resolveBefore": "A19 implementation",
+      "resolveBeforeInitiative": "A19",
+      "status": "resolved",
+      "decisionRecord": "dev/adr/0021-friction-free-codex-activation.md",
+      "resolution": "Make one user-scoped Codex installation the default, launch one immutable repository-bound server process per task from the task repository, create project-local survey state lazily, retain repository-scoped registration as an explicit pinning mode, and never describe this binding contract as an OS sandbox."
     }
   ],
   "tensions": [
@@ -480,19 +505,149 @@
   "stages": [
     {
       "id": "now",
-      "label": "Now — make the record alive",
-      "horizon": "First 6–10 engineering weeks; complete before expanding the product surface.",
-      "objective": "Prove that a completed survey can stay trustworthy across repository changes with less work than resurveying it.",
+      "label": "Now — make Codex activation friction-free",
+      "horizon": "Immediate 2–4 engineering weeks; no new product-surface expansion until this stage passes.",
+      "objective": "After one user-scoped installation, start Amanuensis correctly in any new trusted Codex repository with no repository-specific setup or restart.",
       "productEvidenceStatus": "unestablished",
       "exitEvidence": [],
       "exitCriteria": [
-        "The full-survey definition is computed and cannot go green with missing files, seams, dispositions, runs, or read-back mismatches.",
-        "Known claim-invalidating changes are detected and revalidated with target recall while benign changes stay below the false-invalidation guardrail.",
-        "A fixed finding cannot become verified-fixed without new evidence at the repaired revision.",
-        "An unattended refresh completes within configured authority and stops visibly at every hard gate.",
-        "The living-record path beats full resurvey on human verification minutes without worsening known-defect recall."
+        "One user-scoped Codex installation activates ten previously unseen trusted Git repositories without repository-local Amanuensis configuration.",
+        "The hard-coded-global plus repository-local collision is detected before any survey-state write and repaired through a backup-bearing managed migration.",
+        "Every server process binds one canonical repository immutably, and concurrent repositories and worktrees produce zero cross-repository writes.",
+        "A real Codex host test proves fresh start, restart, resume, and wrong-workspace rejection rather than only parsing generated configuration.",
+        "Product documentation distinguishes repository binding and containment from the host OS sandbox and preserves host trust requirements."
       ],
       "initiatives": [
+        {
+          "id": "A19",
+          "title": "User-scoped Codex activation contract",
+          "status": "ready",
+          "owner": "Amanuensis",
+          "outcome": "Amanuensis can be installed once for Codex and launched cwd-relative in each new trusted repository without a hard-coded workspace or repository-local registration.",
+          "rationale": "The current project-scoped adapter and hard-coded global registration can coexist while a running task remains attached to the wrong repository; correct internals are irrelevant when activation fails before useful work begins.",
+          "dependsOn": [],
+          "deliverables": [
+            "A user-scoped Codex install mode that writes one managed global skill and cwd-relative stdio registration.",
+            "A project-scoped pinning mode that remains explicit and cannot silently override the user-scoped contract.",
+            "A dry-run and managed-block migration plan for the existing hard-coded global registration shape.",
+            "A versioned activation contract and red fixtures for wrong-workspace launch."
+          ],
+          "acceptance": [
+            "A generated user-scoped registration contains no target repository path and launches from the task repository.",
+            "A fresh repository needs no `.codex/config.toml`, copied skill, or `amanuensis init` invocation after the global installation.",
+            "The exact global-hard-coded plus project-local collision observed on 2026-08-25 turns red before state mutation.",
+            "Uninstall and migration preserve unrelated Codex configuration byte-for-byte and create timestamped backups before replacement."
+          ],
+          "redGate": "Launch from repository B while a managed registration names repository A; any successful project-info response for A or any write under A fails A19.",
+          "risks": [
+            "Codex may not define relative stdio cwd against the task repository in every host surface.",
+            "A global registration broadens availability and can be mistaken for broader filesystem authority."
+          ],
+          "practices": ["GP8", "GP25", "GP28", "VP4", "VP11", "VP20"],
+          "metrics": ["M13", "M14", "M17"],
+          "baselineEvidence": [
+            "dev/adr/0021-friction-free-codex-activation.md",
+            "mcp-server/src/cli.ts",
+            "mcp-server/test-installer.mjs",
+            ".claude/skills/amanuensis/references/setup.md"
+          ]
+        },
+        {
+          "id": "A20",
+          "title": "Activation doctor and safe configuration migration",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Users can see the effective Amanuensis configuration, process binding, required restart, and exact repair before a workflow starts.",
+          "rationale": "The current preflight reports a workspace mismatch only after the wrong server is already connected; diagnosis must explain configuration precedence and produce a bounded repair path.",
+          "dependsOn": ["A19"],
+          "deliverables": [
+            "An `amanuensis doctor` command reporting config source, executable, arguments, cwd contract, resolved repository, storage, version, and restart state.",
+            "Detection of duplicate global/project registrations, hard-coded workspaces, stale executable paths, and shadowed skills.",
+            "A dry-run-first migration that edits only Amanuensis-managed blocks and verifies the effective configuration after restart."
+          ],
+          "acceptance": [
+            "Every seeded activation fault receives a specific diagnosis, affected path, and non-destructive remediation.",
+            "Doctor exits non-zero when a new task would bind the wrong repository or when effective precedence is ambiguous.",
+            "A repair never overwrites unrelated TOML, JSONC comments, skills, or conspectus storage."
+          ],
+          "redGate": "Present valid-looking global and project registrations that resolve to different workspaces; a green doctor result or an unbacked-up rewrite fails A20.",
+          "risks": [
+            "Host configuration precedence can change across Codex versions.",
+            "A doctor that only inspects files may disagree with the already-running process."
+          ],
+          "practices": ["GP8", "GP20", "GP23", "GP25", "GP28", "VP4", "VP20"],
+          "metrics": ["M13", "M16", "M17"],
+          "baselineEvidence": [
+            "mcp-server/src/cli.ts",
+            "mcp-server/test-installer.mjs",
+            "README.md",
+            ".claude/skills/amanuensis/references/setup.md"
+          ]
+        },
+        {
+          "id": "A21",
+          "title": "Immutable workspace binding and containment",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "Each server process owns exactly one canonical repository identity and all Amanuensis writes remain inside its validated storage and Git-exclude surfaces.",
+          "rationale": "Cwd discovery is useful only when repository identity, worktree semantics, storage custody, and every write target are mechanically bounded.",
+          "dependsOn": ["A19"],
+          "deliverables": [
+            "A single startup binding receipt containing canonical root, repository identity, storage path, source of workspace selection, and server version.",
+            "Central containment checks for every file mutation, including symlink, nested-directory, worktree, and non-Git cases.",
+            "Explicit security documentation and MCP side-effect annotations that do not call repository binding an OS sandbox."
+          ],
+          "acceptance": [
+            "A process cannot switch repositories after initialization or adopt storage whose identity does not match.",
+            "Symlink escapes and out-of-workspace write attempts halt before the first mutation.",
+            "Concurrent worktrees resolve according to a documented storage-identity policy and never alias accidentally."
+          ],
+          "redGate": "Redirect a configured storage or installer path through a symlink into another repository; any external mutation or identity adoption fails A21.",
+          "risks": [
+            "Git worktrees share metadata while users may expect either shared or isolated survey state.",
+            "Containment duplicated across tools can drift unless centralized."
+          ],
+          "practices": ["GP8", "GP11", "GP18", "GP25", "GP28", "VP4", "VP10", "VP12"],
+          "metrics": ["M13", "M15", "M12"],
+          "baselineEvidence": [
+            "mcp-server/src/index.ts",
+            "mcp-server/src/project.ts",
+            "mcp-server/src/storage-git.ts",
+            "mcp-server/test-storage-git.mjs"
+          ]
+        },
+        {
+          "id": "A22",
+          "title": "Real-host Codex multi-repository harness",
+          "status": "planned",
+          "owner": "Amanuensis + Codex integration",
+          "outcome": "Activation is verified through real Codex process launches across independent repositories rather than inferred from configuration syntax.",
+          "rationale": "The current installer test proves generated TOML shape, not how Codex resolves cwd, merges global and project configuration, retains running processes, or launches concurrent tasks.",
+          "dependsOn": ["A20", "A21"],
+          "deliverables": [
+            "A host-level fixture that launches the supported Codex surface against at least two repositories and one worktree.",
+            "Fresh-start, configuration-conflict, restart, resume, concurrent-task, and stale-process scenarios with distinct run identifiers.",
+            "A machine-readable activation receipt and no-pooling report by Codex surface and repository shape."
+          ],
+          "acceptance": [
+            "Each task reports the expected project key, canonical root, and storage path before any survey write.",
+            "Two concurrent repositories remain isolated through initialization, state mutation, materialization, interruption, and resume.",
+            "The harness proves its wrong-workspace, missing-restart, and cross-write detectors red before accepting green runs."
+          ],
+          "redGate": "Swap one task's cwd or reuse one server process across both fixtures; failure to identify the exact contaminated task and halt it fails A22.",
+          "risks": [
+            "Desktop-host automation may be less deterministic than CLI coverage.",
+            "A mock host can reproduce the implementation rather than test the host contract."
+          ],
+          "practices": ["GP21", "GP22", "GP24", "GP25", "GP33", "VP4", "VP5", "VP11", "VP19", "VP20"],
+          "metrics": ["M13", "M15", "M17", "M11"],
+          "baselineEvidence": [
+            "mcp-server/test-installer.mjs",
+            "mcp-server/test-mcp-compatibility.mjs",
+            "mcp-server/src/index.ts",
+            ".github/workflows/test.yml"
+          ]
+        },
         {
           "id": "A0",
           "title": "Dogfood baseline and executable definitions",
@@ -831,19 +986,83 @@
     },
     {
       "id": "next",
-      "label": "Next — earn super review and architecture",
-      "horizon": "Following 8–14 engineering weeks, gated on the living-record exit rather than elapsed time.",
-      "objective": "Turn the current conspectus into high-density review and design instruments without blurring evidence, intent, recommendation, or authority.",
+      "label": "Next — remove first-use and lifecycle ceremony",
+      "horizon": "Following 1–2 engineering weeks, gated on the real-host activation matrix rather than elapsed time.",
+      "objective": "Make first use, upgrade, rollback, and published-package operation preserve the proven activation contract without repository-by-repository intervention.",
       "productEvidenceStatus": "unestablished",
       "exitEvidence": [],
       "exitCriteria": [
-        "A known historical defect, a cross-seam defect, and a benign refactor produce the expected differentiated review behavior.",
-        "Review briefs reduce median human verification time while meeting actionable-precision and missed-contract gates.",
-        "An incoherent design request is returned as underdetermined with the missing desire or evidence named.",
-        "A design session preserves explicit constraints and non-consensus options through decision-record read-back.",
-        "The integral HEAD lane catches a seeded composition failure that all subsystem-local checks miss."
+        "After the one-time user installation, a new repository starts from one natural-language request with zero Amanuensis setup commands and zero per-repository restarts.",
+        "Opening a repository creates no project state until the first stateful Amanuensis operation.",
+        "Install, upgrade, rollback, and uninstall preserve unrelated host configuration and every project conspectus.",
+        "The source checkout and published npm package produce equivalent activation receipts and failure behavior.",
+        "Recovery after an interrupted first-use initialization leaves either a valid identity-bound store or no store."
       ],
       "initiatives": [
+        {
+          "id": "A23",
+          "title": "Zero-touch first use and lifecycle commands",
+          "status": "planned",
+          "owner": "Amanuensis",
+          "outcome": "A new repository creates local survey state only when first used, while install, upgrade, rollback, and uninstall remain managed and reversible.",
+          "rationale": "Global activation removes repository setup only if ordinary first use and later package lifecycle operations do not reintroduce hidden configuration or storage ceremony.",
+          "dependsOn": ["A22"],
+          "deliverables": [
+            "User-scoped install, upgrade, doctor, and uninstall commands with dry-run and managed ownership.",
+            "Lazy project-store creation with interruption-safe initialization and read-back.",
+            "Clear restart reporting: one host restart after user-level installation, zero per repository."
+          ],
+          "acceptance": [
+            "Opening an untouched repository changes no files; the first stateful call creates one identity-bound `.amanuensis/` store.",
+            "An interrupted initialization resumes or rolls back without a partially trusted database.",
+            "Upgrade and uninstall preserve all conspectus storage and unrelated Codex configuration."
+          ],
+          "redGate": "Interrupt first use at every mutating boundary; any half-initialized store accepted as current or any lost conspectus fails A23.",
+          "risks": [
+            "Lazy initialization can move failures from installation into the first user workflow.",
+            "Version skew between global skill, launcher, and stored schema can produce confusing partial compatibility."
+          ],
+          "practices": ["GP8", "GP18", "GP25", "GP28", "VP4", "VP20"],
+          "metrics": ["M13", "M14", "M17"],
+          "baselineEvidence": [
+            "mcp-server/src/cli.ts",
+            "mcp-server/src/project.ts",
+            "mcp-server/src/db.ts",
+            "mcp-server/test-installer.mjs"
+          ]
+        },
+        {
+          "id": "A24",
+          "title": "Published-package activation parity",
+          "status": "planned",
+          "owner": "Amanuensis + release",
+          "outcome": "The npm-installed package and source checkout expose the same friction-free activation, migration, diagnosis, and containment behavior.",
+          "rationale": "A source-only success would not repair the path ordinary users install, and packaging can silently change executable discovery, skill custody, and cwd behavior.",
+          "dependsOn": ["A23"],
+          "deliverables": [
+            "Published-package smoke scenarios for global install, fresh-repository first use, doctor, upgrade, and uninstall.",
+            "A parity manifest comparing source and packaged activation receipts and failure classes.",
+            "Release documentation that names supported Codex surfaces, required restart, host trust boundary, and project-pinning escape hatch."
+          ],
+          "acceptance": [
+            "Source and package runs agree on project identity, storage path, config ownership, restart state, and every seeded failure classification.",
+            "The package test runs from a clean user configuration and at least two repositories, not the source checkout alone.",
+            "Published documentation can be followed without creating repository-local configuration in the default path."
+          ],
+          "redGate": "Package a launcher that passes unit tests but resolves a different cwd or skill version than the source path; parity must turn red before publication.",
+          "risks": [
+            "GUI hosts can retain an older package process after the filesystem upgrade succeeds.",
+            "A clean packaging fixture may omit real user configuration collisions."
+          ],
+          "practices": ["GP8", "GP21", "GP22", "GP28", "VP4", "VP11", "VP20"],
+          "metrics": ["M13", "M14", "M12"],
+          "baselineEvidence": [
+            "mcp-server/package.json",
+            ".github/workflows/published-smoke.yml",
+            "mcp-server/test-package-artifact.mjs",
+            "README.md"
+          ]
+        },
         {
           "id": "A6",
           "title": "Impact-aware review brief",
@@ -1243,19 +1462,83 @@
     },
     {
       "id": "later",
-      "label": "Later — close the research-learning loop and compose with Chorusmith",
-      "horizon": "After review and design modes meet their gates on more than one repository; sequence by evidence, not date.",
-      "objective": "Let Amanuensis ask for, ingest, and learn from external research and completed sessions while retaining strict custody and attribution boundaries.",
+      "label": "Later — earn the friction-free operating claim",
+      "horizon": "After published-package parity; sequence by product evidence, not a calendar promise.",
+      "objective": "Demonstrate zero-ceremony, isolated multi-repository operation under real use and pass a release-ready beta gate without pooling away weak strata.",
       "productEvidenceStatus": "unestablished",
       "exitEvidence": [],
       "exitCriteria": [
-        "Research questions are admitted only when they name a decision, uncertainty, evidence need, and destination.",
-        "Imported research retains Scholiast provenance and cannot become a code fact without repository evidence.",
-        "Candidate method lessons are promoted only after qualification, validation, and read-back.",
-        "Research decision yield is positive without an unbounded backlog or degraded human verification time.",
-        "A Chorusmith adapter demonstrates behavior and evidence parity before any workflow extraction."
+        "At least five repositories and supported repository shapes complete activation and first use with zero per-repository Amanuensis setup actions.",
+        "Concurrent tasks produce zero cross-repository writes or identity adoptions across the full dogfood matrix.",
+        "Every activation failure is diagnosed within the target time and leaves the user with a bounded remediation.",
+        "The friction-free claim is reported by host surface and repository shape with exclusions and failures retained.",
+        "The beta release gate passes source, package, migration, security-boundary, recovery, and documentation read-back checks; publication remains a separate human-authorized action."
       ],
       "initiatives": [
+        {
+          "id": "A25",
+          "title": "Multi-repository activation operating evidence",
+          "status": "planned",
+          "owner": "Amanuensis + evaluation",
+          "outcome": "Real repository use establishes where friction-free activation works, fails, or remains unsupported without pooled claims hiding weak strata.",
+          "rationale": "A syntactic installer suite and synthetic host harness cannot establish usability, diagnosis time, or isolation under diverse existing configurations.",
+          "dependsOn": ["A24"],
+          "deliverables": [
+            "A preregistered matrix spanning at least five repositories, nested launches, worktrees, existing global config, and concurrent tasks.",
+            "Per-run receipts for setup actions, restarts, binding, writes, diagnosis time, recovery, and user intervention.",
+            "An operating-envelope report with unsupported strata, failures, exclusions, and no pooled substitute for repository-level results."
+          ],
+          "acceptance": [
+            "Every new repository records zero Amanuensis setup commands and zero per-repository restarts after the initial user installation.",
+            "Every concurrent condition records zero cross-repository writes and exact project/storage identity agreement.",
+            "Negative results first clear configuration delivery, host launch, and detector operation before lowering the product claim."
+          ],
+          "redGate": "Pool a repository with activation failures into a positive aggregate, omit a user intervention, or reuse a run identifier; the report generator must reject publication.",
+          "risks": [
+            "A convenient repository sample can underrepresent hostile existing configurations.",
+            "Dogfood operators familiar with the implementation can understate diagnosis friction."
+          ],
+          "practices": ["GP2", "GP3", "GP4", "GP21", "GP22", "GP31", "GP33", "VP5", "VP6", "VP10", "VP17", "VP19", "VP21", "VP26"],
+          "metrics": ["M13", "M14", "M15", "M16", "M17", "M11"],
+          "baselineEvidence": [
+            "mcp-server/src/tools/evaluation.ts",
+            "mcp-server/test-operating-envelope.mjs",
+            "dev/adr/0017-stratified-operating-envelope.md",
+            "CONTRIBUTING.md"
+          ]
+        },
+        {
+          "id": "A26",
+          "title": "Friction-free beta release gate",
+          "status": "planned",
+          "owner": "Amanuensis + release",
+          "outcome": "A release candidate is demonstrably install-once, repository-correct, isolated, diagnosable, reversible, and ready for a separately authorized beta publication.",
+          "rationale": "Implementation completion must not be relabeled as product usability; the release claim needs criterion-linked operating evidence and independent read-back.",
+          "dependsOn": ["A25"],
+          "deliverables": [
+            "A release checklist derived from A19–A25 acceptance and red gates with exact evidence links.",
+            "A clean-machine source and package replay plus configuration migration and rollback rehearsal.",
+            "A release-readiness report that keeps publication authorization and product-proof status separate."
+          ],
+          "acceptance": [
+            "Every A19–A25 acceptance item has current evidence and every red gate has been demonstrated to halt.",
+            "The release candidate passes clean install, five-repository activation, concurrency, interruption, upgrade, rollback, uninstall, and documentation read-back.",
+            "No release or product-proof status advances without the exact artifact, host, repository, and run denominators."
+          ],
+          "redGate": "Remove one repository result, migration case, red-gate receipt, or restart observation; release readiness must turn red and name the missing evidence.",
+          "risks": [
+            "Pressure to publish can collapse release readiness into package build success.",
+            "A beta label can be mistaken for an established cross-client operating envelope."
+          ],
+          "practices": ["GP8", "GP20", "GP23", "GP25", "GP28", "VP4", "VP11", "VP20"],
+          "metrics": ["M13", "M14", "M15", "M16", "M17", "M12"],
+          "baselineEvidence": [
+            ".github/workflows/published-smoke.yml",
+            "mcp-server/test-package-artifact.mjs",
+            "dev/adr/0021-friction-free-codex-activation.md",
+            "ROADMAP.md"
+          ]
+        },
         {
           "id": "A13",
           "title": "Research-question broker",
@@ -1824,6 +2107,174 @@
         "Run the complete repository suite and compare refresh versus full-resurvey verification minutes."
       ],
       "rollback": "Disable unattended execution while retaining plan and impact generation; all unfinished obligations remain blocking and visible."
+    },
+    {
+      "sequence": 7,
+      "title": "Freeze the activation contract and prove the wrong-workspace red case",
+      "initiatives": ["A19"],
+      "intent": "Turn the observed multi-repository activation failure into a versioned product contract and a failing executable fixture before changing installation behavior.",
+      "existingFiles": [
+        "mcp-server/src/cli.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/test-installer.mjs",
+        ".claude/skills/amanuensis/references/setup.md"
+      ],
+      "proposedFiles": [
+        "dev/adr/0021-friction-free-codex-activation.md",
+        "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
+        "mcp-server/test-activation-contract.mjs"
+      ],
+      "proves": [
+        "The user-scoped and project-pinned modes have distinct, explicit contracts.",
+        "The observed wrong-repository launch is reproducible and detected before writes.",
+        "The friction-free claim has measurable exclusions and a red gate."
+      ],
+      "requiredChecks": [
+        "Run the wrong-workspace fixture against the current implementation and record the expected red result.",
+        "Validate the roadmap, ADR path, and activation metric definitions.",
+        "Run the existing installer and MCP compatibility suites unchanged."
+      ],
+      "rollback": "Retain the ADR and red fixture as an explicit blocked obligation even if the installer design changes."
+    },
+    {
+      "sequence": 8,
+      "title": "Ship global installation, migration, and diagnosis",
+      "initiatives": ["A19", "A20"],
+      "intent": "Add the one-time user installation path and make existing configuration conflicts inspectable and safely repairable.",
+      "existingFiles": [
+        "mcp-server/src/cli.ts",
+        "mcp-server/test-installer.mjs",
+        "README.md",
+        ".claude/skills/amanuensis/references/setup.md"
+      ],
+      "proposedFiles": [
+        "mcp-server/src/activation.ts",
+        "mcp-server/test-activation-doctor.mjs",
+        "mcp-server/fixtures/activation/config-matrix.json"
+      ],
+      "proves": [
+        "One managed global registration can replace repository-by-repository setup.",
+        "Existing hard-coded and duplicate registrations can be diagnosed and migrated without collateral edits.",
+        "The user is told exactly when the host still needs its one installation restart."
+      ],
+      "requiredChecks": [
+        "Sabotage every supported config collision independently and require a non-zero doctor result.",
+        "Round-trip install, dry-run, migration, repeated install, and uninstall against commented unrelated TOML.",
+        "Verify managed backups and post-restart read-back of the effective registration."
+      ],
+      "rollback": "Restore the timestamped global configuration backup and leave every project conspectus untouched."
+    },
+    {
+      "sequence": 9,
+      "title": "Centralize immutable binding and containment",
+      "initiatives": ["A21"],
+      "intent": "Make repository selection and every Amanuensis mutation share one identity-bound containment substrate.",
+      "existingFiles": [
+        "mcp-server/src/index.ts",
+        "mcp-server/src/project.ts",
+        "mcp-server/src/storage-git.ts",
+        "mcp-server/test-storage-git.mjs"
+      ],
+      "proposedFiles": [
+        "mcp-server/src/activation-binding.ts",
+        "mcp-server/test-workspace-binding.mjs",
+        "mcp-server/fixtures/activation/workspace-matrix.json"
+      ],
+      "proves": [
+        "One process cannot switch or ambiguously inherit repositories.",
+        "All storage and config writes remain within validated destinations.",
+        "Worktree and symlink behavior is explicit and mechanically tested."
+      ],
+      "requiredChecks": [
+        "Run symlink escape, storage-identity collision, nested cwd, worktree, and non-Git controls.",
+        "Verify every mutation path uses the centralized containment check.",
+        "Read back binding receipts independently from process state."
+      ],
+      "rollback": "Keep the existing explicit-workspace launcher as a conservative fallback while leaving the new binding receipt disabled."
+    },
+    {
+      "sequence": 10,
+      "title": "Verify the real Codex host across repositories",
+      "initiatives": ["A22"],
+      "intent": "Test what Codex actually launches and retains, including concurrent tasks and configuration changes that require restart.",
+      "existingFiles": [
+        "mcp-server/test-installer.mjs",
+        "mcp-server/test-mcp-compatibility.mjs",
+        ".github/workflows/test.yml",
+        "CONTRIBUTING.md"
+      ],
+      "proposedFiles": [
+        "mcp-server/test-codex-host-e2e.mjs",
+        "mcp-server/fixtures/activation/codex-host-matrix.json",
+        "mcp-server/contracts/activation-receipt.schema.json"
+      ],
+      "proves": [
+        "Relative cwd semantics hold in the supported Codex host rather than only in a generated string.",
+        "Concurrent repositories and worktrees remain isolated through restart and resume.",
+        "Stale running processes are visible and cannot masquerade as repaired configuration."
+      ],
+      "requiredChecks": [
+        "Run each repository and host condition separately with unique identifiers and no pooled pass.",
+        "Swap cwd and process reuse deliberately to prove the contamination detector red.",
+        "Keep CLI and desktop-host coverage labeled separately when one cannot run in CI."
+      ],
+      "rollback": "Retain project-scoped pinning as the supported path if real-host cwd-relative launch cannot be established."
+    },
+    {
+      "sequence": 11,
+      "title": "Remove first-use and package lifecycle ceremony",
+      "initiatives": ["A23", "A24"],
+      "intent": "Compose lazy project initialization, reversible lifecycle commands, and source/package parity into the ordinary user path.",
+      "existingFiles": [
+        "mcp-server/src/cli.ts",
+        "mcp-server/src/project.ts",
+        "mcp-server/package.json",
+        ".github/workflows/published-smoke.yml"
+      ],
+      "proposedFiles": [
+        "mcp-server/test-first-use-recovery.mjs",
+        "mcp-server/fixtures/activation/package-parity.json",
+        "mcp-server/contracts/activation-parity.schema.json"
+      ],
+      "proves": [
+        "A new repository needs no Amanuensis command before its first natural-language workflow.",
+        "Lifecycle operations preserve config ownership and conspectus custody.",
+        "The package users install behaves like the source implementation."
+      ],
+      "requiredChecks": [
+        "Inject interruption at each first-use mutation and verify atomic recovery.",
+        "Run source and packed-tarball activation scenarios against clean configurations.",
+        "Verify upgrade, rollback, and uninstall preserve all repository stores."
+      ],
+      "rollback": "Disable lazy creation and keep global activation plus explicit first-use initialization, without reverting stored state."
+    },
+    {
+      "sequence": 12,
+      "title": "Earn and package the friction-free beta claim",
+      "initiatives": ["A25", "A26"],
+      "intent": "Measure the complete activation path across real repositories and produce a release-ready report whose missing strata remain red.",
+      "existingFiles": [
+        "mcp-server/src/tools/evaluation.ts",
+        "mcp-server/test-operating-envelope.mjs",
+        ".github/workflows/published-smoke.yml",
+        "ROADMAP.md"
+      ],
+      "proposedFiles": [
+        "mcp-server/fixtures/activation/operating-envelope.json",
+        "mcp-server/test-activation-operating-envelope.mjs",
+        "dev/friction-free-beta-readiness.json"
+      ],
+      "proves": [
+        "Zero per-repository setup and zero cross-repository writes hold in the measured operating envelope.",
+        "Diagnosis and restart burdens meet their explicit targets.",
+        "Release readiness is criterion-linked and remains distinct from publication authority."
+      ],
+      "requiredChecks": [
+        "Run at least five repositories and all required shapes with unique run identifiers.",
+        "Prove missing-repository, omitted-intervention, pooled-result, and stale-receipt gates red.",
+        "Run the full repository suite and clean package replay before generating the readiness report."
+      ],
+      "rollback": "Publish no friction-free claim; retain the measured operating envelope and unsupported strata for the next iteration."
     }
   ],
   "metrics": [
@@ -1910,6 +2361,41 @@
       "definition": "Expected work and durable objects that are dispatched, landed, scored, materialized, and read back consistently divided by all expected work and objects.",
       "target": "100%; any mismatch is blocking.",
       "exclusions": "Canceled work remains present with an authorized cancellation state and is never erased from the denominator."
+    },
+    {
+      "id": "M13",
+      "name": "Activation success rate",
+      "definition": "Fresh task launches that resolve the expected canonical repository, project identity, storage path, and server version before the first stateful operation divided by all launches in the supported host and repository matrix.",
+      "target": "100% in every supported stratum; no pooled aggregate may hide a failing host or repository shape.",
+      "exclusions": "Unsupported hosts and repository shapes are named before execution and reported separately; configuration or detector failures remain in the denominator."
+    },
+    {
+      "id": "M14",
+      "name": "Per-repository setup actions",
+      "definition": "Amanuensis-specific commands, config edits, skill copies, and reloads required after the one-time user-scoped installation and before useful work begins in a new repository.",
+      "target": "Zero actions and zero per-repository reloads for supported trusted Git repositories.",
+      "exclusions": "The one user-level installation restart and host-mandated repository trust approval are reported separately and cannot be relabeled as Amanuensis setup."
+    },
+    {
+      "id": "M15",
+      "name": "Workspace isolation violations",
+      "definition": "Writes, state adoptions, evidence bindings, or materializations whose canonical repository identity differs from the task's activation receipt.",
+      "target": "Zero; any violation is release-blocking regardless of recovery.",
+      "exclusions": "Explicitly configured shared external storage is a separate supported mode and still requires identity agreement; it is never removed from testing."
+    },
+    {
+      "id": "M16",
+      "name": "Activation diagnosis time",
+      "definition": "Active human time from a failed activation request to a correct, bounded remediation that names the effective config source, running-process state, and expected repository.",
+      "target": "Median at or below 60 seconds, with every seeded failure receiving a correct diagnosis.",
+      "exclusions": "Time waiting for a required host restart is reported separately; failures without a correct remediation remain in the denominator."
+    },
+    {
+      "id": "M17",
+      "name": "Restart burden",
+      "definition": "Host restarts required by Amanuensis installation, migration, upgrade, and ordinary repository activation, reported by operation and repository.",
+      "target": "At most one restart after initial user installation; zero per new repository and zero for ordinary first use.",
+      "exclusions": "Host crashes and user-initiated application upgrades are tagged separately but retained in the operational report."
     }
   ],
   "controlLadder": [
@@ -1987,6 +2473,36 @@
         "M1",
         "M12"
       ]
+    },
+    {
+      "level": 8,
+      "fixture": "Hard-coded global registration conflicts with a cwd-relative project registration",
+      "expected": "Activation and doctor identify the effective wrong workspace before writes and offer a backup-bearing managed migration.",
+      "validates": ["M13", "M15", "M16"]
+    },
+    {
+      "level": 9,
+      "fixture": "Fresh trusted repository after one user-scoped installation",
+      "expected": "A new task binds the repository and begins first use with no repository-local config, Amanuensis command, or reload.",
+      "validates": ["M13", "M14", "M17"]
+    },
+    {
+      "level": 10,
+      "fixture": "Concurrent independent repositories plus a linked worktree",
+      "expected": "Every process retains its own immutable binding and storage identity with zero cross-repository writes through interruption and resume.",
+      "validates": ["M13", "M15", "M11", "M12"]
+    },
+    {
+      "level": 11,
+      "fixture": "Interrupted install, migration, lazy first use, upgrade, rollback, and uninstall",
+      "expected": "Each operation recovers to a verified managed configuration and identity-bound store or rolls back without collateral changes.",
+      "validates": ["M13", "M14", "M15", "M17", "M12"]
+    },
+    {
+      "level": 12,
+      "fixture": "Source checkout versus packed npm artifact across the activation matrix",
+      "expected": "Both paths produce equivalent activation receipts, diagnoses, containment behavior, and documented restart requirements.",
+      "validates": ["M13", "M14", "M15", "M16", "M17"]
     }
   ],
   "risks": [
