@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Amanuensis per-project installer.
+// Amanuensis client installer and lifecycle manager.
 //
 // MCP standardizes the server protocol, not project configuration discovery.
 // The installer therefore keeps one portable workflow skill and emits the
@@ -13,9 +13,11 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -38,6 +40,7 @@ const LEGACY_AGENT_FILES = [
 ] as const;
 
 type Client = "claude" | "codex" | "vscode" | "generic";
+type InstallScope = "user" | "project";
 
 type InitFlags = {
   dir: string;
@@ -45,6 +48,7 @@ type InitFlags = {
   dryRun: boolean;
   force: boolean;
   mcpOnly: boolean;
+  scope: InstallScope;
 };
 
 type PlanAction =
@@ -53,7 +57,8 @@ type PlanAction =
   | { kind: "archive"; from: string; to: string }
   | { kind: "skip-file"; path: string; reason: string }
   | { kind: "conflict"; path: string; reason: string }
-  | { kind: "mkdir"; path: string };
+  | { kind: "mkdir"; path: string }
+  | { kind: "remove-tree"; path: string };
 
 type JsonObject = Record<string, unknown>;
 
@@ -64,12 +69,14 @@ function isWithin(parent: string, child: string): boolean {
   return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
 }
 
-function assertSafeWorkspacePath(workspace: string, target: string): void {
-  const root = realpathSync(workspace);
-  const resolvedTarget = resolve(target);
-  if (!isWithin(root, resolvedTarget)) {
-    throw new Error(`installer path escapes target project: ${target}`);
+function assertSafeRootPath(rootPath: string, target: string): void {
+  const lexicalRoot = resolve(rootPath);
+  const lexicalTarget = resolve(target);
+  if (!isWithin(lexicalRoot, lexicalTarget)) {
+    throw new Error(`installer path escapes managed root: ${target}`);
   }
+  const root = realpathSync(rootPath);
+  const resolvedTarget = join(root, relative(lexicalRoot, lexicalTarget));
   let cursor = root;
   for (const segment of relative(root, resolvedTarget).split(sep).filter(Boolean)) {
     cursor = join(cursor, segment);
@@ -102,21 +109,24 @@ function printUsage(): void {
       "",
       "Usage:",
       "  amanuensis init --client <claude|codex|vscode|generic> [options]",
+      "  amanuensis uninstall --client codex [options]",
       "",
       "Options:",
       "  --client <name>  Target agent runtime. Required because MCP clients use",
       "                   different project configuration files.",
       "  --dir <path>     Target project (default: current directory).",
-      "  --force          Replace conflicting Amanuensis-managed files after",
-      "                   writing timestamped backups.",
-      "  --mcp-only       Configure only the project MCP launcher. Intended for",
+      "  --scope <name>   Codex installation scope: user (default) or project.",
+      "  --force          Replace conflicting Amanuensis-managed files; config",
+      "                   migrations receive timestamped backups.",
+      "  --mcp-only       Configure only the MCP launcher. Intended for",
       "                   local development with a live global skill symlink.",
       "  --dry-run        Print the complete plan; write nothing.",
       "  --help           Show this message.",
       "",
       "Client adapters:",
       "  claude   .mcp.json + .claude/skills/amanuensis/",
-      "  codex    .codex/config.toml + .agents/skills/amanuensis/",
+      "  codex    user: $CODEX_HOME/config.toml + skills/amanuensis/",
+      "           project pin: .codex/config.toml + .agents/skills/amanuensis/",
       "  vscode   .vscode/mcp.json + .agents/skills/amanuensis/",
       "  generic  portable skill only; prints the stdio registration command",
       "",
@@ -141,6 +151,21 @@ function parseClient(value: string | undefined): Client {
   );
 }
 
+function parseScope(value: string | undefined, client: Client): InstallScope {
+  if (value == null) return client === "codex" ? "user" : "project";
+  if (value !== "user" && value !== "project") {
+    throw new Error(`unsupported --scope ${JSON.stringify(value)}; expected user or project`);
+  }
+  if (value === "user" && client !== "codex") {
+    throw new Error("--scope user is currently supported only for Codex");
+  }
+  return value;
+}
+
+function codexHome(): string {
+  return resolve(process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"));
+}
+
 function findBundledSkill(): string {
   const pkgRoot = resolve(moduleDir, "..");
   const bundled = join(pkgRoot, "skills", "amanuensis");
@@ -161,7 +186,8 @@ function findBundledSkill(): string {
   );
 }
 
-function skillDestination(workspace: string, client: Client): string {
+function skillDestination(workspace: string, client: Client, scope: InstallScope): string {
+  if (client === "codex" && scope === "user") return join(codexHome(), "skills", "amanuensis");
   if (client === "claude") return join(workspace, ".claude", "skills", "amanuensis");
   return join(workspace, ".agents", "skills", "amanuensis");
 }
@@ -222,7 +248,7 @@ function serverEntry(client: "claude" | "vscode", launch: ServerLaunch): JsonObj
       type: "stdio",
       command: launch.command,
       // biome-ignore lint/suspicious/noTemplateCurlyInString: Claude Code environment expansion syntax
-      args: [...launch.args, "--workspace", "${CLAUDE_PROJECT_DIR:-.}"],
+      args: [...launch.args, "--allow-workspace-pin", "--workspace", "${CLAUDE_PROJECT_DIR:-.}"],
       env: { AMANUENSIS_AUTOPROGRESS: "1" },
     };
   }
@@ -230,23 +256,31 @@ function serverEntry(client: "claude" | "vscode", launch: ServerLaunch): JsonObj
     type: "stdio",
     command: launch.command,
     // biome-ignore lint/suspicious/noTemplateCurlyInString: VS Code workspace variable syntax
-    args: [...launch.args, "--workspace", "${workspaceFolder}"],
+    args: [...launch.args, "--allow-workspace-pin", "--workspace", "${workspaceFolder}"],
     env: { AMANUENSIS_AUTOPROGRESS: "1" },
   };
 }
 
-function codexBlock(launch: ServerLaunch): string {
+function codexBlock(launch: ServerLaunch, scope: InstallScope, workspace: string): string {
+  const args =
+    scope === "project"
+      ? [...launch.args, "--workspace", workspace, "--allow-workspace-pin"]
+      : launch.args;
+  const contract = scope === "user" ? "codex-user-cwd-v1" : "codex-project-pin-v1";
   const lines = [
     CODEX_BLOCK_START,
     `[mcp_servers.${SERVER_NAME}]`,
     `command = ${JSON.stringify(launch.command)}`,
   ];
-  if (launch.args.length > 0) {
-    lines.push(`args = [${launch.args.map((arg) => JSON.stringify(arg)).join(", ")}]`);
+  if (args.length > 0) {
+    lines.push(`args = [${args.map((arg) => JSON.stringify(arg)).join(", ")}]`);
   }
-  return [...lines, 'cwd = "."', 'env = { AMANUENSIS_AUTOPROGRESS = "1" }', CODEX_BLOCK_END].join(
-    "\n",
-  );
+  return [
+    ...lines,
+    'cwd = "."',
+    `env = { AMANUENSIS_AUTOPROGRESS = "1", AMANUENSIS_ACTIVATION_CONTRACT = ${JSON.stringify(contract)} }`,
+    CODEX_BLOCK_END,
+  ].join("\n");
 }
 
 function planSkill(
@@ -256,11 +290,11 @@ function planSkill(
   planMkdir: (dir: string) => void,
 ): void {
   const source = findBundledSkill();
-  const destination = skillDestination(workspace, flags.client);
+  const destination = skillDestination(workspace, flags.client, flags.scope);
   planMkdir(destination);
   for (const { relPath, src } of walkFiles(source)) {
     const dest = join(destination, relPath);
-    assertSafeWorkspacePath(workspace, dest);
+    assertSafeRootPath(flags.scope === "user" ? codexHome() : workspace, dest);
     const content = readFileSync(src, "utf8");
     planMkdir(dirname(dest));
     if (!existsSync(dest)) {
@@ -275,13 +309,45 @@ function planSkill(
       actions.push({
         kind: "conflict",
         path: dest,
-        reason: "existing skill file differs; rerun with --force to replace it with a backup",
+        reason: "existing skill file differs; rerun with --force to replace it",
       });
       continue;
     }
-    actions.push({ kind: "backup", from: dest, to: backupPath(dest) });
     actions.push({ kind: "write-file", path: dest, content, mode: "overwrite" });
   }
+}
+
+function planSkillUninstall(actions: PlanAction[], workspace: string, flags: InitFlags): void {
+  const root = flags.scope === "user" ? codexHome() : workspace;
+  const destination = skillDestination(workspace, flags.client, flags.scope);
+  assertSafeRootPath(root, destination);
+  if (!existsSync(destination)) {
+    actions.push({ kind: "skip-file", path: destination, reason: "skill is not installed" });
+    return;
+  }
+  const source = findBundledSkill();
+  const sourceFiles = walkFiles(source).sort((left, right) =>
+    left.relPath.localeCompare(right.relPath),
+  );
+  const destinationFiles = walkFiles(destination).sort((left, right) =>
+    left.relPath.localeCompare(right.relPath),
+  );
+  const exact =
+    sourceFiles.length === destinationFiles.length &&
+    sourceFiles.every(
+      (file, index) =>
+        file.relPath === destinationFiles[index]?.relPath &&
+        readFileSync(file.src, "utf8") === readFileSync(destinationFiles[index].src, "utf8"),
+    );
+  if (!exact && !flags.force) {
+    actions.push({
+      kind: "conflict",
+      path: destination,
+      reason: "installed skill differs from this package; rerun with --force to remove it",
+    });
+    return;
+  }
+  actions.push({ kind: "remove-tree", path: destination });
 }
 
 function planJsonConfig(
@@ -294,7 +360,7 @@ function planJsonConfig(
   const configPath =
     client === "claude" ? join(workspace, ".mcp.json") : join(workspace, ".vscode", "mcp.json");
   const rootKey = client === "claude" ? "mcpServers" : "servers";
-  assertSafeWorkspacePath(workspace, configPath);
+  assertSafeRootPath(workspace, configPath);
   const desired = serverEntry(client, serverLaunch());
   planMkdir(dirname(configPath));
 
@@ -360,9 +426,11 @@ function planCodexConfig(
   flags: InitFlags,
   planMkdir: (dir: string) => void,
 ): void {
-  const configPath = join(workspace, ".codex", "config.toml");
-  assertSafeWorkspacePath(workspace, configPath);
-  const desiredBlock = codexBlock(serverLaunch());
+  const root = flags.scope === "user" ? codexHome() : workspace;
+  const configPath =
+    flags.scope === "user" ? join(root, "config.toml") : join(root, ".codex", "config.toml");
+  assertSafeRootPath(root, configPath);
+  const desiredBlock = codexBlock(serverLaunch(), flags.scope, workspace);
   planMkdir(dirname(configPath));
   if (!existsSync(configPath)) {
     actions.push({
@@ -420,6 +488,39 @@ function planCodexConfig(
 
   const mcpServers = parsed.mcp_servers;
   if (isJsonObject(mcpServers) && Object.hasOwn(mcpServers, SERVER_NAME)) {
+    if (flags.force) {
+      const lines = existing.match(/.*(?:\r?\n|$)/g)?.filter(Boolean) ?? [];
+      const header =
+        /^\s*\[\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')\s*\]\s*(?:#.*)?(?:\r?\n)?$/;
+      const headerOrDescendant =
+        /^\s*\[\[?\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')(?=\s*(?:\.|\]))/;
+      let offset = 0;
+      let sectionStart = -1;
+      let sectionEnd = -1;
+      for (const line of lines) {
+        if (sectionStart < 0 && header.test(line)) sectionStart = offset;
+        else if (sectionStart >= 0 && /^\s*\[/.test(line) && !headerOrDescendant.test(line)) {
+          sectionEnd = offset;
+          break;
+        }
+        offset += line.length;
+      }
+      if (sectionStart >= 0) {
+        if (sectionEnd < 0) sectionEnd = existing.length;
+        const before = existing.slice(0, sectionStart);
+        const after = existing.slice(sectionEnd);
+        const left = before.length === 0 || before.endsWith("\n") ? before : `${before}\n`;
+        const right = after.length === 0 || after.startsWith("\n") ? after : `\n${after}`;
+        actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
+        actions.push({
+          kind: "write-file",
+          path: configPath,
+          content: `${left}${desiredBlock}\n${right}`,
+          mode: "overwrite",
+        });
+        return;
+      }
+    }
     actions.push({
       kind: "conflict",
       path: configPath,
@@ -443,35 +544,92 @@ function planCodexConfig(
   });
 }
 
+function planCodexUninstall(actions: PlanAction[], workspace: string, flags: InitFlags): void {
+  const root = flags.scope === "user" ? codexHome() : workspace;
+  const configPath =
+    flags.scope === "user" ? join(root, "config.toml") : join(root, ".codex", "config.toml");
+  assertSafeRootPath(root, configPath);
+  if (!existsSync(configPath)) {
+    actions.push({ kind: "skip-file", path: configPath, reason: "Codex config is absent" });
+    return;
+  }
+  const existing = readFileSync(configPath, "utf8");
+  const start = existing.indexOf(CODEX_BLOCK_START);
+  const end = existing.indexOf(CODEX_BLOCK_END);
+  const startCount = existing.split(CODEX_BLOCK_START).length - 1;
+  const endCount = existing.split(CODEX_BLOCK_END).length - 1;
+  if (start < 0 && end < 0) {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = parseToml(existing) as Record<string, unknown>;
+    } catch (error) {
+      throw new Error(`${configPath} is not parseable TOML (${(error as Error).message})`);
+    }
+    const mcpServers = parsed.mcp_servers;
+    if (isJsonObject(mcpServers) && Object.hasOwn(mcpServers, SERVER_NAME)) {
+      actions.push({
+        kind: "conflict",
+        path: configPath,
+        reason: "Amanuensis server entry is unmanaged; migrate it before uninstalling",
+      });
+    } else {
+      actions.push({ kind: "skip-file", path: configPath, reason: "managed server is absent" });
+    }
+    return;
+  }
+  if (start < 0 || end < start || startCount !== 1 || endCount !== 1) {
+    throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
+  }
+  const blockEnd = end + CODEX_BLOCK_END.length;
+  actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
+  actions.push({
+    kind: "write-file",
+    path: configPath,
+    content: existing.slice(0, start) + existing.slice(blockEnd),
+    mode: "overwrite",
+  });
+}
+
 function planLegacyAgents(actions: PlanAction[], workspace: string): void {
   const legacyRoot = join(workspace, ".github", "agents");
   for (const filename of LEGACY_AGENT_FILES) {
     const path = join(legacyRoot, filename);
-    assertSafeWorkspacePath(workspace, path);
+    assertSafeRootPath(workspace, path);
     if (!existsSync(path) || !statSync(path).isFile()) continue;
     actions.push({ kind: "archive", from: path, to: backupPath(path) });
   }
 }
 
-function buildPlan(flags: InitFlags): PlanAction[] {
+function buildPlan(flags: InitFlags, workspace: string): { actions: PlanAction[]; root: string } {
   const actions: PlanAction[] = [];
-  const workspace = realpathSync(resolve(flags.dir));
+  const root = flags.scope === "user" ? codexHome() : workspace;
   const plannedMkdirs = new Set<string>();
   const planMkdir = (dir: string) => {
-    assertSafeWorkspacePath(workspace, dir);
+    assertSafeRootPath(root, dir);
     if (plannedMkdirs.has(dir)) return;
     plannedMkdirs.add(dir);
     if (!existsSync(dir)) actions.push({ kind: "mkdir", path: dir });
   };
 
-  planLegacyAgents(actions, workspace);
+  if (flags.scope === "project") planLegacyAgents(actions, workspace);
   if (!flags.mcpOnly) planSkill(actions, workspace, flags, planMkdir);
   if (flags.client === "claude" || flags.client === "vscode") {
     planJsonConfig(actions, workspace, flags.client, flags, planMkdir);
   } else if (flags.client === "codex") {
     planCodexConfig(actions, workspace, flags, planMkdir);
   }
-  return actions;
+  return { actions, root };
+}
+
+function buildUninstallPlan(
+  flags: InitFlags,
+  workspace: string,
+): { actions: PlanAction[]; root: string } {
+  const actions: PlanAction[] = [];
+  const root = flags.scope === "user" ? codexHome() : workspace;
+  if (!flags.mcpOnly) planSkillUninstall(actions, workspace, flags);
+  planCodexUninstall(actions, workspace, flags);
+  return { actions, root };
 }
 
 function applyPlan(actions: PlanAction[], flags: InitFlags, workspace: string): void {
@@ -488,10 +646,10 @@ function applyPlan(actions: PlanAction[], flags: InitFlags, workspace: string): 
   for (const action of actions) {
     const rel = (path: string) => relative(workspace, path) || ".";
     if (action.kind === "backup" || action.kind === "archive") {
-      assertSafeWorkspacePath(workspace, action.from);
-      assertSafeWorkspacePath(workspace, action.to);
+      assertSafeRootPath(workspace, action.from);
+      assertSafeRootPath(workspace, action.to);
     } else if (action.kind !== "conflict") {
-      assertSafeWorkspacePath(workspace, action.path);
+      assertSafeRootPath(workspace, action.path);
     }
     switch (action.kind) {
       case "mkdir":
@@ -521,19 +679,28 @@ function applyPlan(actions: PlanAction[], flags: InitFlags, workspace: string): 
       case "skip-file":
         console.log(`  · ${rel(action.path)}  (${action.reason})`);
         break;
+      case "remove-tree":
+        if (flags.dryRun) console.log(`[dry-run] remove managed skill ${rel(action.path)}`);
+        else {
+          rmSync(action.path, { recursive: true, force: false });
+          console.log(`  - removed managed skill ${rel(action.path)}`);
+        }
+        break;
       case "conflict":
         break;
     }
   }
 }
 
-function printNextSteps(client: Client, workspace: string): void {
+function printNextSteps(client: Client, workspace: string, scope: InstallScope): void {
   if (client === "generic") {
     const launch = serverLaunch();
     console.log("");
     console.log("Register this local stdio server in your MCP host:");
     console.log(`  command: ${JSON.stringify(launch.command)}`);
-    console.log(`  args: ${JSON.stringify([...launch.args, "--workspace", workspace])}`);
+    console.log(
+      `  args: ${JSON.stringify([...launch.args, "--allow-workspace-pin", "--workspace", workspace])}`,
+    );
     console.log("  environment: AMANUENSIS_AUTOPROGRESS=1");
     console.log("If the host implements Agent Skills, point it at .agents/skills/amanuensis/");
     console.log("and ask it to run Amanuensis onboarding. Otherwise the typed MCP tools and");
@@ -541,6 +708,12 @@ function printNextSteps(client: Client, workspace: string): void {
     return;
   }
   console.log("");
+  if (client === "codex" && scope === "user") {
+    console.log("");
+    console.log("Restart Codex once to load the user-scoped Amanuensis registration.");
+    console.log("New trusted Git repositories then require no Amanuensis setup or restart.");
+    return;
+  }
   console.log("Ready. Start your agent in this project and ask it to run Amanuensis onboarding.");
   if (client === "claude")
     console.log("Claude Code can also invoke the installed /amanuensis skill.");
@@ -553,6 +726,7 @@ function cmdInit(argv: string[]): void {
     args: argv,
     options: {
       client: { type: "string" },
+      scope: { type: "string" },
       dir: { type: "string", default: process.cwd() },
       force: { type: "boolean", default: false },
       "mcp-only": { type: "boolean", default: false },
@@ -566,12 +740,14 @@ function cmdInit(argv: string[]): void {
     printUsage();
     return;
   }
+  const client = parseClient(values.client);
   const flags: InitFlags = {
     dir: values.dir as string,
-    client: parseClient(values.client),
+    client,
     dryRun: values["dry-run"] as boolean,
     force: values.force as boolean,
     mcpOnly: values["mcp-only"] as boolean,
+    scope: parseScope(values.scope, client),
   };
   if (flags.client === "generic" && flags.mcpOnly) {
     throw new Error(
@@ -583,12 +759,66 @@ function cmdInit(argv: string[]): void {
     throw new Error(`target directory does not exist or is not a directory: ${requestedWorkspace}`);
   }
   const workspace = realpathSync(requestedWorkspace);
+  if (flags.scope === "user" && !flags.dryRun && !existsSync(codexHome())) {
+    mkdirSync(codexHome(), { recursive: true });
+  }
+  const installationRoot = flags.scope === "user" ? codexHome() : workspace;
   console.log(
-    `${flags.dryRun ? "[dry-run] " : ""}Installing Amanuensis for ${flags.client} into ${workspace}`,
+    `${flags.dryRun ? "[dry-run] " : ""}Installing Amanuensis for ${flags.client} (${flags.scope}) into ${installationRoot}`,
   );
-  const actions = buildPlan(flags);
-  applyPlan(actions, flags, workspace);
-  if (!flags.dryRun) printNextSteps(flags.client, workspace);
+  const plan = buildPlan(flags, workspace);
+  applyPlan(plan.actions, flags, plan.root);
+  if (!flags.dryRun) printNextSteps(flags.client, workspace, flags.scope);
+}
+
+function cmdUninstall(argv: string[]): void {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      client: { type: "string" },
+      scope: { type: "string" },
+      dir: { type: "string", default: process.cwd() },
+      force: { type: "boolean", default: false },
+      "mcp-only": { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      help: { type: "boolean", default: false },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+  if (values.help) {
+    printUsage();
+    return;
+  }
+  const client = parseClient(values.client);
+  if (client !== "codex") throw new Error("uninstall currently supports only Codex");
+  const flags: InitFlags = {
+    dir: values.dir as string,
+    client,
+    dryRun: values["dry-run"] as boolean,
+    force: values.force as boolean,
+    mcpOnly: values["mcp-only"] as boolean,
+    scope: parseScope(values.scope, client),
+  };
+  const requestedWorkspace = resolve(flags.dir);
+  if (!existsSync(requestedWorkspace) || !statSync(requestedWorkspace).isDirectory()) {
+    throw new Error(`target directory does not exist or is not a directory: ${requestedWorkspace}`);
+  }
+  const workspace = realpathSync(requestedWorkspace);
+  const root = flags.scope === "user" ? codexHome() : workspace;
+  if (!existsSync(root)) {
+    console.log(`${flags.dryRun ? "[dry-run] " : ""}Amanuensis is not installed at ${root}`);
+    return;
+  }
+  console.log(
+    `${flags.dryRun ? "[dry-run] " : ""}Uninstalling Amanuensis for Codex (${flags.scope}) from ${root}`,
+  );
+  const plan = buildUninstallPlan(flags, workspace);
+  applyPlan(plan.actions, flags, plan.root);
+  if (!flags.dryRun) {
+    console.log("Restart Codex once to stop using the removed registration.");
+    console.log("Repository conspectus storage was not changed.");
+  }
 }
 
 function main(): void {
@@ -600,6 +830,7 @@ function main(): void {
   const subcommand = argv[0];
   try {
     if (subcommand === "init") cmdInit(argv.slice(1));
+    else if (subcommand === "uninstall") cmdUninstall(argv.slice(1));
     else {
       process.stderr.write(`unknown subcommand: ${subcommand}\n\n`);
       printUsage();

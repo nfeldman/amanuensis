@@ -521,7 +521,7 @@
         {
           "id": "A19",
           "title": "User-scoped Codex activation contract",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Amanuensis can be installed once for Codex and launched cwd-relative in each new trusted repository without a hard-coded workspace or repository-local registration.",
           "rationale": "The current project-scoped adapter and hard-coded global registration can coexist while a running task remains attached to the wrong repository; correct internals are irrelevant when activation fails before useful work begins.",
@@ -549,13 +549,19 @@
             "dev/adr/0021-friction-free-codex-activation.md",
             "mcp-server/src/cli.ts",
             "mcp-server/test-installer.mjs",
-            ".claude/skills/amanuensis/references/setup.md"
+            ".claude/skills/amanuensis/references/setup.md",
+            "mcp-server/src/index.ts",
+            "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
+            "mcp-server/test-activation-contract.mjs",
+            "mcp-server/test-package-artifact.mjs",
+            "dev/activation-evidence/a19-user-scoped-contract.json",
+            "dev/test-activation-evidence.mjs"
           ]
         },
         {
           "id": "A20",
           "title": "Activation doctor and safe configuration migration",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis",
           "outcome": "Users can see the effective Amanuensis configuration, process binding, required restart, and exact repair before a workflow starts.",
           "rationale": "The current preflight reports a workspace mismatch only after the wrong server is already connected; diagnosis must explain configuration precedence and produce a bounded repair path.",
@@ -587,7 +593,7 @@
         {
           "id": "A21",
           "title": "Immutable workspace binding and containment",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis",
           "outcome": "Each server process owns exactly one canonical repository identity and all Amanuensis writes remain inside its validated storage and Git-exclude surfaces.",
           "rationale": "Cwd discovery is useful only when repository identity, worktree semantics, storage custody, and every write target are mechanically bounded.",

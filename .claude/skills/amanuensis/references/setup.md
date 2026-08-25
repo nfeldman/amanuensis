@@ -12,15 +12,16 @@ runtime that will operate on the target project:
 
 ```bash
 amanuensis init --client claude   # Claude Code
-amanuensis init --client codex    # Codex CLI, app, or IDE extension
+amanuensis init --client codex --scope user  # Codex CLI, app, or IDE extension
 amanuensis init --client vscode   # VS Code / GitHub Copilot
 amanuensis init --client generic  # any other local MCP host
 ```
 
-Run `--dry-run` first when installing into a project with existing agent or MCP
+Run `--dry-run` first when installing with existing agent or MCP
 configuration. The installer preserves unrelated configuration and JSONC
-comments, refuses conflicts, and writes timestamped backups before `--force`
-replacements. It also archives obsolete Amanuensis `.agent.md` files left by
+comments, refuses conflicts, and writes timestamped backups before configuration
+replacements. It does not archive superseded skill copies. It also archives
+obsolete Amanuensis `.agent.md` files left by
 the pre-portable VS Code installer so they cannot compete with the skill.
 
 ## What each adapter writes
@@ -28,7 +29,8 @@ the pre-portable VS Code installer so they cannot compete with the skill.
 | Client | MCP configuration | Skill location |
 |---|---|---|
 | Claude Code | `.mcp.json` (`mcpServers`) | `.claude/skills/amanuensis/` |
-| Codex | `.codex/config.toml` (`mcp_servers`) | `.agents/skills/amanuensis/` |
+| Codex user (default) | `$CODEX_HOME/config.toml` (`mcp_servers`) | `$CODEX_HOME/skills/amanuensis/` |
+| Codex project pin | `.codex/config.toml` (`mcp_servers`) | `.agents/skills/amanuensis/` |
 | VS Code | `.vscode/mcp.json` (`servers`) | `.agents/skills/amanuensis/` |
 | Generic | host-specific | `.agents/skills/amanuensis/` |
 
@@ -41,8 +43,22 @@ does not automatically receive the full method.
 
 Client-native activation still applies: Claude Code may ask you to approve a
 project-scoped MCP server, and Codex reads project `.codex/config.toml` only
-for trusted projects. Reload the client after changing its configuration.
+for trusted projects. Restart Codex once after changing its user-scoped
+registration. New repositories require no Amanuensis-specific restart.
 These are host security/discovery rules, not Amanuensis workflow review gates.
+
+The default Codex registration contains no target repository path. It launches
+the stdio server with `cwd = "."`; the server resolves and binds the Git root
+containing that process cwd. A deliberate project pin is explicit:
+
+```bash
+amanuensis init --client codex --scope project --dir /path/to/project
+```
+
+The pin carries an explicit workspace and activation-contract marker. A stale,
+unmarked cross-repository `--workspace` launch halts before project state is
+opened. This is repository binding and write containment, not an OS sandbox;
+Codex trust, approvals, and filesystem permissions remain authoritative.
 
 ## Direct server registration
 
@@ -55,12 +71,13 @@ env: {"AMANUENSIS_AUTOPROGRESS": "1"}
 transport: stdio
 ```
 
-The server also accepts `AMANUENSIS_WORKSPACE`; Claude Code supplies
+When that explicit workspace may differ from the launcher process cwd, add
+`--allow-workspace-pin`; this opt-in is what distinguishes a deliberate direct
+pin from a stale hard-coded registration. The server also accepts
+`AMANUENSIS_WORKSPACE`; Claude Code supplies
 `CLAUDE_PROJECT_DIR`, and an explicit `--workspace` takes precedence over both.
-The Codex adapter sets `cwd = "."`; the server resolves the Git root containing
-that working directory, which also keeps nested Codex launches on the project
-root. For a non-Git workspace, start Codex at the intended project root or add
-an explicit `--workspace` path to its server `args`.
+For a non-Git workspace, use an explicit project pin; zero-touch user-scoped
+activation currently covers trusted Git repositories.
 
 `AMANUENSIS_AUTOPROGRESS=1` enables unattended progress and durable open
 questions. Set it to `0` only when deliberately testing strict-interactive
@@ -77,7 +94,10 @@ different compatible Python interpreter.
 mise install
 mise exec -- npm --prefix mcp-server ci
 mise exec -- npm --prefix mcp-server run build
-mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/project
+mise exec -- node mcp-server/dist/cli.js init \
+  --client codex --scope user --mcp-only --dry-run
+mise exec -- node mcp-server/dist/cli.js init \
+  --client codex --scope user --mcp-only
 ```
 
 Use the appropriate `--client` value. In a source checkout the installer writes
@@ -96,20 +116,24 @@ global loader to the whole skill directory:
 - Claude Code and Copilot: `~/.claude/skills/amanuensis` → the same canonical
   directory.
 
-Do not leave a copied project skill at `.agents/skills/amanuensis` or
-`.claude/skills/amanuensis` in a development project: it shadows the global
-link and freezes that project on the copied version. Configure only the live
-source MCP launcher with:
+Do not leave a copied project skill at `.agents/skills/amanuensis` in a Codex
+development project: it shadows the global link and freezes that project on
+the copied version. Configure Codex's live source MCP launcher once at user
+scope with the preceding `--mcp-only` commands. Claude Code and VS Code remain
+project adapters:
 
 ```bash
 mise exec -- node mcp-server/dist/cli.js init \
-  --client <codex|claude|vscode> --dir /path/to/project --mcp-only
+  --client <claude|vscode> --dir /path/to/project --mcp-only
+mise exec -- node mcp-server/dist/cli.js init \
+  --client codex --scope project --dir /path/to/project --mcp-only
 ```
 
-Reload the client after changing its MCP configuration. A task that already
-loaded a skill retains that task's instructions; new tasks read through the
-global link. Published package installation continues to use ordinary `init`,
-which deliberately copies the versioned bundled skill into the project.
+The second Codex command is only for a deliberate repository pin. Restart
+Codex once after changing its user MCP registration. A task that already loaded
+a skill retains that task's instructions; new tasks read through the global
+link. Published package installation continues to use ordinary `init`, which
+copies the versioned bundled skill into the selected user or project scope.
 
 ## Verifying the connection
 

@@ -19,8 +19,8 @@ mkdirSync(storage, { recursive: true });
 const serverEntry = process.env.AMANUENSIS_SERVER_ENTRY ?? "dist/index.js";
 const serverCommand = process.env.AMANUENSIS_SERVER_COMMAND ?? process.execPath;
 const serverArgs = process.env.AMANUENSIS_SERVER_COMMAND
-  ? ["--workspace", workspace]
-  : [serverEntry, "--workspace", workspace];
+  ? ["--workspace", workspace, "--allow-workspace-pin"]
+  : [serverEntry, "--workspace", workspace, "--allow-workspace-pin"];
 const server = spawn(serverCommand, serverArgs, {
   env: { ...process.env, AMANUENSIS_STORAGE_ROOT: storage, AMANUENSIS_AUTOPROGRESS: "1" },
   stdio: ["pipe", "pipe", "pipe"],

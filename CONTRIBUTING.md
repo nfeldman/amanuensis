@@ -27,11 +27,12 @@ of the published package. See
 [`references/setup.md`](.claude/skills/amanuensis/references/setup.md) for the
 Claude Code, Codex, VS Code, and generic registration shapes.
 
-Local development uses directory-level global skill links plus `init
---mcp-only` for each target project's source launcher. This keeps the working
-checkout live without changing the versioned-copy behavior of published npm
-installs; see “Live global skill, versioned published skill” in the setup
-reference.
+Local Codex development uses a directory-level global skill link plus one
+user-scoped `init --mcp-only` source launcher. This keeps the working checkout
+live without creating project-local registrations or changing the
+versioned-copy behavior of published npm installs. Claude and VS Code retain
+their project-scoped development adapters; see “Live global skill, versioned
+published skill” in the setup reference.
 
 ## Running the test suite
 

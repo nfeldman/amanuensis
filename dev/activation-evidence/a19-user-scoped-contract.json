@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A19",
+  "pecIndex": "pc-2ae4",
+  "recordedAt": "2026-08-25T22:58:17Z",
+  "result": "passed",
+  "source": {
+    "baselineCommit": "07a1e6539a41fb279af81a53e573fddb9445ac53",
+    "practiceCatalog": {
+      "version": "2.10",
+      "stamp": "f9a5c0c9dbde"
+    },
+    "files": [
+      {
+        "path": "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
+        "sha256": "29f4c2c2e131ea5bed12c72738ab4eb312ac96aa3661a71eb375de598f294c17"
+      },
+      {
+        "path": "mcp-server/test-activation-contract.mjs",
+        "sha256": "aac61d340cbcf4171f9566d132c57657bc9abea1285058b9449c0bd022483d46"
+      },
+      {
+        "path": "mcp-server/src/cli.ts",
+        "sha256": "a1dd1c6b212ad00d7422b75b3a5c981930d4415a14243627188c3b39d238c651"
+      },
+      {
+        "path": "mcp-server/src/index.ts",
+        "sha256": "a22bd27f15d3b94413b95c8d78ec32b66a0cd9422902b0abfee730504e5687a2"
+      },
+      {
+        "path": "mcp-server/test-package-artifact.mjs",
+        "sha256": "f1c6d26b3117ac93f00ab1073ccac96186d28582e3df577f45916ee591ddcb2a"
+      }
+    ]
+  },
+  "redGate": {
+    "fixture": "hard-coded-global-project-local",
+    "command": "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "preRepair": {
+      "exitCode": 1,
+      "failure": "wrong-workspace server initialized successfully for repository A"
+    },
+    "postRepair": {
+      "exitCode": 0,
+      "halt": "workspace mismatch before MCP initialization and before either repository received .amanuensis state",
+      "forbiddenWriteCount": 0
+    }
+  },
+  "identityWitness": {
+    "client": "amanuensis-a19-green",
+    "projectKey": "local/repository-b-d5c3a21e1354",
+    "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a19-red-7xkpW6/repository-b",
+    "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a19-red-7xkpW6/repository-b/.amanuensis",
+    "selectionSource": "process-cwd-git-root",
+    "repositoryAWriteCount": 0
+  },
+  "liveUserConfigMigration": {
+    "scope": "user",
+    "dryRunObserved": true,
+    "configPath": "/Users/nfeldman/.codex/config.toml",
+    "configSha256": "9a26db1aaada8cdb17baae3b00a13e1f886188cfa7245920d6e1329311013592",
+    "backupPath": "/Users/nfeldman/.codex/config.toml.bak.2026-08-25T22-52-41-032Z",
+    "backupSha256": "0c40d10298e07098805bdceecc8a7bb8e735d8625e7a758b565163cc18443824",
+    "readBack": {
+      "tomlParsed": true,
+      "managedMarkers": true,
+      "unrelatedPrefixBytePreserved": true,
+      "unrelatedSuffixBytePreserved": true,
+      "cwd": ".",
+      "workspaceArgumentPresent": false,
+      "activationContract": "codex-user-cwd-v1"
+    },
+    "hostRestartObserved": false,
+    "hostEvidenceDestination": "A22"
+  },
+  "greenChecks": [
+    "mise exec -- npm --prefix mcp-server run build",
+    "mise exec -- node mcp-server/test-installer.mjs",
+    "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "mise exec -- node mcp-server/test-mcp-compatibility.mjs",
+    "mise exec -- node mcp-server/test-storage-git.mjs",
+    "mise exec -- node mcp-server/test-adversarial-security.mjs",
+    "mise exec -- node mcp-server/test-package-artifact.mjs"
+  ]
+}

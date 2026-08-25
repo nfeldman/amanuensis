@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -84,29 +85,61 @@ import { subsystemTools } from "./tools/subsystems.js";
 import { vocabularyTools } from "./tools/vocabulary.js";
 import { xrefTools } from "./tools/xrefs.js";
 
+function gitRoot(cwd: string): string | null {
+  try {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return root ? realpathSync(root) : null;
+  } catch {
+    return null;
+  }
+}
+
+function assertWorkspaceMatchesLaunch(
+  selectedWorkspace: string,
+  source: "argument" | "environment",
+  allowWorkspacePin: boolean,
+): void {
+  if (allowWorkspacePin) return;
+  const launchRoot = gitRoot(process.cwd());
+  const selectedRoot = gitRoot(selectedWorkspace);
+  if (launchRoot && selectedRoot && launchRoot !== selectedRoot) {
+    throw new Error(
+      `workspace mismatch before state initialization: ${source} selected ${selectedRoot}, ` +
+        `but the server process was launched from ${launchRoot}. ` +
+        "Remove the stale hard-coded workspace or use a deliberately project-scoped registration.",
+    );
+  }
+}
+
 function parseArgs(argv: string[]): { workspace: string } {
   // An explicit target always wins. Claude Code provides its project root in
   // the server environment; other local clients normally launch in the target
   // repository. For the latter case, normalize a nested cwd to the Git root.
+  const allowWorkspacePin = argv.includes("--allow-workspace-pin");
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1];
     if (argv[i] === "--workspace" && value) {
+      assertWorkspaceMatchesLaunch(value, "argument", allowWorkspacePin);
       return { workspace: value };
     }
   }
   const fromEnvironment =
     process.env.AMANUENSIS_WORKSPACE?.trim() || process.env.CLAUDE_PROJECT_DIR?.trim();
-  if (fromEnvironment) return { workspace: fromEnvironment };
-  try {
-    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    if (root) return { workspace: root };
-  } catch {
-    // Non-Git workspaces are supported; their current directory is the root.
+  if (fromEnvironment) {
+    assertWorkspaceMatchesLaunch(
+      fromEnvironment,
+      "environment",
+      allowWorkspacePin || process.env.AMANUENSIS_ALLOW_WORKSPACE_PIN === "1",
+    );
+    return { workspace: fromEnvironment };
   }
+  const root = gitRoot(process.cwd());
+  if (root) return { workspace: root };
+  // Non-Git workspaces are supported; their current directory is the root.
   return { workspace: process.cwd() };
 }
 

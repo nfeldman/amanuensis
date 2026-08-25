@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 7 | 0 | 0 | 19 |
+| 2 | 5 | 0 | 0 | 20 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 8 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 7 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A19 — User-scoped Codex activation contract.
+**Next implementation initiative:** A20 — Activation doctor and safe configuration migration.
 
 ## Epistemic baseline
 
@@ -222,7 +222,7 @@ Hard stops enforced by the system:
 
 #### A19 — User-scoped Codex activation contract
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** none<br>
 **Metrics:** M13, M14, M17
@@ -253,11 +253,11 @@ Risks:
 - A global registration broadens availability and can be mistaken for broader filesystem authority.
 
 **Practice basis:** GP8, GP25, GP28, VP4, VP11, VP20<br>
-**Baseline evidence:** `dev/adr/0021-friction-free-codex-activation.md`, `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `.claude/skills/amanuensis/references/setup.md`
+**Baseline evidence:** `dev/adr/0021-friction-free-codex-activation.md`, `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `.claude/skills/amanuensis/references/setup.md`, `mcp-server/src/index.ts`, `mcp-server/fixtures/activation/hard-coded-global-project-local.json`, `mcp-server/test-activation-contract.mjs`, `mcp-server/test-package-artifact.mjs`, `dev/activation-evidence/a19-user-scoped-contract.json`, `dev/test-activation-evidence.mjs`
 
 #### A20 — Activation doctor and safe configuration migration
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A19<br>
 **Metrics:** M13, M16, M17
@@ -290,7 +290,7 @@ Risks:
 
 #### A21 — Immutable workspace binding and containment
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A19<br>
 **Metrics:** M13, M15, M12

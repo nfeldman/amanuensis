@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "contractVersion": "codex-activation/v1",
+  "fixtureId": "hard-coded-global-project-local",
+  "observedAt": "2026-08-25",
+  "taskRepository": "__REPOSITORY_B__",
+  "effectiveRegistration": {
+    "scope": "user",
+    "command": "__NODE__",
+    "args": ["__SERVER__", "--workspace", "__REPOSITORY_A__"]
+  },
+  "shadowedProjectRegistration": {
+    "scope": "project",
+    "cwd": ".",
+    "args": ["__SERVER__"]
+  },
+  "expectedFailure": "workspace-mismatch-before-state",
+  "forbiddenWrites": ["__REPOSITORY_A__/.amanuensis", "__REPOSITORY_B__/.amanuensis"]
+}

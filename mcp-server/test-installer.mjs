@@ -47,7 +47,13 @@ function assert(condition, message) {
 }
 
 function runCli(args, options = {}) {
-  return spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8", ...options });
+  const effectiveArgs =
+    args[0] === "init" &&
+    args[args.indexOf("--client") + 1] === "codex" &&
+    !args.includes("--scope")
+      ? [...args, "--scope", "project"]
+      : args;
+  return spawnSync(process.execPath, [CLI, ...effectiveArgs], { encoding: "utf8", ...options });
 }
 
 function fresh() {
@@ -110,6 +116,7 @@ test("Claude adapter installs the skill and Claude project MCP config", () => {
     const entry = config.mcpServers?.["amanuensis-memory"];
     assert(entry?.command === process.execPath, "Claude source launcher is not durable");
     assert(entry.args?.[0] === SOURCE_SERVER, "Claude source server entry missing");
+    assert(entry.args?.includes("--allow-workspace-pin"), "Claude workspace pin is not explicit");
     assert(entry.args?.at(-1) === CLAUDE_PROJECT_VAR, "Claude project root is not portable");
     assert(!existsSync(join(workspace, ".vscode")), "Claude adapter created VS Code state");
   } finally {
@@ -117,7 +124,7 @@ test("Claude adapter installs the skill and Claude project MCP config", () => {
   }
 });
 
-test("Codex adapter installs the shared skill and project config", () => {
+test("Codex project scope is an explicit repository pin", () => {
   const workspace = fresh();
   try {
     const result = runCli(["init", "--client", "codex", "--dir", workspace]);
@@ -132,11 +139,153 @@ test("Codex adapter installs the shared skill and project config", () => {
     );
     assert(config.includes(JSON.stringify(SOURCE_SERVER)), "Codex source server entry missing");
     assert(config.includes('cwd = "."'), "Codex working root is not explicit");
-    assert(!config.includes(workspace), "Codex config hard-coded the local checkout path");
+    assert(config.includes(workspace), "Codex project pin omitted its explicit workspace");
+    assert(config.includes("--allow-workspace-pin"), "Codex project pin lacks its opt-in marker");
+    assert(
+      config.includes('AMANUENSIS_ACTIVATION_CONTRACT = "codex-project-pin-v1"'),
+      "Codex project activation contract missing",
+    );
     const parsed = parseToml(config);
     assert(parsed.mcp_servers?.["amanuensis-memory"]?.cwd === ".", "Codex config is invalid");
   } finally {
     rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test("Codex user scope installs once without repository-local state", () => {
+  const workspace = fresh();
+  const userHome = fresh();
+  try {
+    const result = runCli(["init", "--client", "codex", "--scope", "user", "--dir", workspace], {
+      env: { ...process.env, CODEX_HOME: userHome },
+    });
+    assert(result.status === 0, result.stderr);
+    assert(existsSync(join(userHome, "skills/amanuensis/SKILL.md")), "global skill missing");
+    const path = join(userHome, "config.toml");
+    const config = readFileSync(path, "utf8");
+    const entry = parseToml(config).mcp_servers?.["amanuensis-memory"];
+    assert(entry?.cwd === ".", "user-scoped Codex cwd is not relative");
+    assert(!entry?.args?.includes("--workspace"), "user registration contains --workspace");
+    assert(!config.includes(workspace), "user registration contains the target repository");
+    assert(
+      entry?.env?.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1",
+      "user activation contract missing",
+    );
+    assert(readdirSync(workspace).length === 0, "user install changed the repository");
+    assert(result.stdout.includes("Restart Codex once"), "one installation restart not reported");
+    assert(
+      result.stdout.includes("no Amanuensis setup or restart"),
+      "zero per-repository restart contract not reported",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(userHome, { recursive: true, force: true });
+  }
+});
+
+test("Codex user migration and uninstall preserve unrelated TOML with backups", () => {
+  const workspace = fresh();
+  const userHome = fresh();
+  try {
+    const path = join(userHome, "config.toml");
+    const before =
+      "# unrelated prefix comment\n[features]\nkeep = true\n\n" +
+      '[mcp_servers.amanuensis-memory]\ncommand = "node"\n' +
+      `args = ["server.js", "--workspace", ${JSON.stringify(workspace)}]\n\n` +
+      '[mcp_servers.amanuensis-memory.env]\nAMANUENSIS_AUTOPROGRESS = "1"\n\n' +
+      '[mcp_servers.other]\ncommand = "keep-server"\n';
+    writeFileSync(path, before);
+    const migrated = runCli(
+      ["init", "--client", "codex", "--scope", "user", "--dir", workspace, "--mcp-only", "--force"],
+      { env: { ...process.env, CODEX_HOME: userHome } },
+    );
+    assert(migrated.status === 0, migrated.stderr);
+    const afterMigration = readFileSync(path, "utf8");
+    assert(afterMigration.includes("# unrelated prefix comment"), "prefix comment changed");
+    assert(afterMigration.includes("[features]\nkeep = true"), "unrelated feature changed");
+    assert(
+      afterMigration.includes('[mcp_servers.other]\ncommand = "keep-server"'),
+      "other server changed",
+    );
+    assert(!afterMigration.includes(workspace), "hard-coded workspace survived migration");
+    assert(afterMigration.includes("# >>> amanuensis init (managed)"), "managed block missing");
+    const migratedEntry = parseToml(afterMigration).mcp_servers?.["amanuensis-memory"];
+    assert(
+      migratedEntry?.env?.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1",
+      "nested legacy table was not replaced by the managed activation contract",
+    );
+    const migrationBackups = backupsFor(path);
+    assert(migrationBackups.length === 1, "migration backup missing");
+    assert(
+      readFileSync(join(userHome, migrationBackups[0]), "utf8") === before,
+      "migration backup does not match the original",
+    );
+
+    const uninstalled = runCli(
+      ["uninstall", "--client", "codex", "--scope", "user", "--dir", workspace, "--mcp-only"],
+      { env: { ...process.env, CODEX_HOME: userHome } },
+    );
+    assert(uninstalled.status === 0, uninstalled.stderr);
+    const afterUninstall = readFileSync(path, "utf8");
+    assert(
+      !afterUninstall.includes("amanuensis init (managed)"),
+      "managed block survived uninstall",
+    );
+    assert(
+      afterUninstall.includes("# unrelated prefix comment"),
+      "uninstall changed prefix comment",
+    );
+    assert(afterUninstall.includes("[features]\nkeep = true"), "uninstall changed feature config");
+    assert(
+      afterUninstall.includes('[mcp_servers.other]\ncommand = "keep-server"'),
+      "uninstall changed other server",
+    );
+    assert(backupsFor(path).length === 2, "uninstall backup missing");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(userHome, { recursive: true, force: true });
+  }
+});
+
+test("Codex user uninstall removes only the managed skill and preserves conspectus state", () => {
+  const workspace = fresh();
+  const userHome = fresh();
+  try {
+    const install = runCli(["init", "--client", "codex", "--scope", "user", "--dir", workspace], {
+      env: { ...process.env, CODEX_HOME: userHome },
+    });
+    assert(install.status === 0, install.stderr);
+    const store = join(workspace, ".amanuensis");
+    mkdirSync(store);
+    writeFileSync(join(store, "preserve.txt"), "conspectus\n");
+    const skill = join(userHome, "skills/amanuensis");
+    const configBefore = readFileSync(join(userHome, "config.toml"), "utf8");
+
+    const dryRun = runCli(
+      ["uninstall", "--client", "codex", "--scope", "user", "--dir", workspace, "--dry-run"],
+      { env: { ...process.env, CODEX_HOME: userHome } },
+    );
+    assert(dryRun.status === 0, dryRun.stderr);
+    assert(existsSync(skill), "dry-run removed the skill");
+    assert(
+      readFileSync(join(userHome, "config.toml"), "utf8") === configBefore,
+      "dry-run changed config",
+    );
+
+    const uninstall = runCli(
+      ["uninstall", "--client", "codex", "--scope", "user", "--dir", workspace],
+      { env: { ...process.env, CODEX_HOME: userHome } },
+    );
+    assert(uninstall.status === 0, uninstall.stderr);
+    assert(!existsSync(skill), "managed skill remains discoverable");
+    assert(backupsFor(skill).length === 0, "managed skill was unexpectedly archived");
+    assert(
+      readFileSync(join(store, "preserve.txt"), "utf8") === "conspectus\n",
+      "conspectus changed",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(userHome, { recursive: true, force: true });
   }
 });
 
@@ -150,6 +299,7 @@ test("VS Code adapter installs a portable skill, not the custom-agent bundle", (
     const entry = config.servers?.["amanuensis-memory"];
     assert(entry?.command === process.execPath, "VS Code source launcher is not durable");
     assert(entry?.args?.[0] === SOURCE_SERVER, "VS Code source server entry missing");
+    assert(entry?.args?.includes("--allow-workspace-pin"), "VS Code workspace pin is not explicit");
     assert(entry?.args?.at(-1) === VSCODE_WORKSPACE_VAR, "VS Code workspace binding missing");
     assert(!existsSync(join(workspace, ".github/agents")), "legacy custom agents were installed");
   } finally {
@@ -248,7 +398,7 @@ test("JSON entry equality ignores object key order", () => {
         mcpServers: {
           "amanuensis-memory": {
             env: { AMANUENSIS_AUTOPROGRESS: "1" },
-            args: [SOURCE_SERVER, "--workspace", CLAUDE_PROJECT_VAR],
+            args: [SOURCE_SERVER, "--allow-workspace-pin", "--workspace", CLAUDE_PROJECT_VAR],
             command: process.execPath,
             type: "stdio",
           },
@@ -342,7 +492,7 @@ test("--force backs up and replaces a conflicting JSON server entry", () => {
   }
 });
 
-test("--force backs up and replaces a conflicting skill file", () => {
+test("--force replaces a conflicting skill file without archiving the old skill", () => {
   const workspace = fresh();
   try {
     const target = join(skillRoot(workspace, "generic"), "SKILL.md");
@@ -351,12 +501,7 @@ test("--force backs up and replaces a conflicting skill file", () => {
     const result = runCli(["init", "--client", "generic", "--dir", workspace, "--force"]);
     assert(result.status === 0, result.stderr);
     assert(readFileSync(target, "utf8").includes("name: amanuensis"), "skill not replaced");
-    const backups = backupsFor(target);
-    assert(backups.length === 1, "skill backup missing");
-    assert(
-      readFileSync(join(dirname(target), backups[0]), "utf8") === "user content\n",
-      "skill backup does not preserve prior content",
-    );
+    assert(backupsFor(target).length === 0, "old skill was unexpectedly archived");
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }

@@ -25,17 +25,23 @@ mise install
 mise exec -- npm --prefix mcp-server ci
 mise exec -- npm --prefix mcp-server run build
 
-mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/your-project
+mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --dry-run
+mise exec -- node mcp-server/dist/cli.js init --client codex --scope user
 ```
 
-Use `--client codex` or `--client vscode` for those runtimes. Use
+Codex user scope is the default: it installs one global skill and a cwd-relative
+stdio registration under `$CODEX_HOME`, then requires one Codex restart. New
+trusted Git repositories require no Amanuensis setup or restart. Use
+`--scope project` only for a deliberate repository pin. Use `--client claude`
+or `--client vscode` for those project-scoped runtimes. Use
 `--client generic` for another local MCP host; it installs the portable skill
 and prints the stdio registration command and environment. Ask the agent to run
 onboarding only when that host loads Agent Skills or equivalent workflow
 instructions. Without them, the typed MCP tools and concise server instructions
 remain available, but the complete method is not installed automatically.
 
-The server requires Node.js 20 or newer. Materialization also requires Python
+Repository binding is not an OS sandbox; host trust, approvals, and filesystem
+permissions remain authoritative. The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
 interpreter. Survey state defaults to `<project>/.amanuensis/`.
 

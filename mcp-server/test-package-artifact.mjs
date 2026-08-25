@@ -65,7 +65,9 @@ try {
   for (const client of ["claude", "codex", "vscode", "generic"]) {
     const workspace = join(scratch, `workspace-${client}`);
     mkdirSync(workspace, { recursive: true });
-    const installed = run(cli, ["init", "--client", client, "--dir", workspace], {
+    const initArgs = ["init", "--client", client, "--dir", workspace];
+    if (client === "codex") initArgs.push("--scope", "project");
+    const installed = run(cli, initArgs, {
       cwd: moduleDir,
     });
     const skillRoot =

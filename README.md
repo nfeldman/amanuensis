@@ -91,11 +91,26 @@ mise install
 mise exec -- npm --prefix mcp-server ci
 mise exec -- npm --prefix mcp-server run build
 
-mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/your/project --dry-run
-mise exec -- node mcp-server/dist/cli.js init --client claude --dir /path/to/your/project
+mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --mcp-only --dry-run
+mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --mcp-only
 ```
 
-Use `--client codex` or `--client vscode` instead when that is where the project will run.
+The Codex user-scoped path writes one managed MCP registration under
+`$CODEX_HOME` (normally `~/.codex`) with `cwd = "."` and no repository
+`--workspace` argument. Restart Codex once after that installation. New trusted
+Git repositories then need no Amanuensis command, repository-local config,
+skill copy, or restart. Omit `--mcp-only` for a packaged installation that
+should also install the global skill; source development commonly keeps the
+global skill as a directory-level link to this checkout.
+
+Use `--scope project` only when deliberately pinning Codex to one repository:
+
+```bash
+mise exec -- node mcp-server/dist/cli.js init \
+  --client codex --scope project --dir /path/to/your/project
+```
+
+Use `--client claude` or `--client vscode` for their project-scoped adapters.
 For another local MCP-capable agent, use `--client generic`; the installer adds the
 portable Agent Skill and prints the stdio registration command and environment. If that
 host loads Agent Skills (or equivalent workflow instructions), ask the agent to **run
@@ -106,6 +121,10 @@ Each client-specific adapter writes the documented discovery shape for the same 
 server and workflow. Direct stdio compatibility is tested independently; host discovery
 still follows each client's own trust and activation rules. The adapters exist because MCP
 standardizes tool calls, not the project config file each host discovers.
+
+Amanuensis binds each server process to one repository; this is not an OS
+sandbox. Codex trust, approvals, and filesystem permissions remain the host's
+security boundary.
 
 The source beta uses the repository-pinned Node.js and Python versions through `mise`. The
 package contract remains Node.js ≥20; the materializer supports Python 3.11+.
