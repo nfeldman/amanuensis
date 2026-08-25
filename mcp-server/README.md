@@ -41,7 +41,15 @@ instructions. Without them, the typed MCP tools and concise server instructions
 remain available, but the complete method is not installed automatically.
 
 Repository binding is not an OS sandbox; host trust, approvals, and filesystem
-permissions remain authoritative. The server requires Node.js 20 or newer. Materialization also requires Python
+permissions remain authoritative. Run `amanuensis doctor --client codex
+--dir /path/to/project --json` to inspect effective config precedence, launch
+paths, predicted repository/storage identity, skill shadows, and restart state.
+Doctor is read-only and exits non-zero for actionable faults. A safe repair is
+two-step: `doctor --repair --dry-run --json` returns a digest-bound plan ID;
+`doctor --repair --apply-plan <PLAN_ID> --json` applies it with timestamped
+configuration backups and refuses changed inputs.
+
+The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
 interpreter. Survey state defaults to `<project>/.amanuensis/`.
 

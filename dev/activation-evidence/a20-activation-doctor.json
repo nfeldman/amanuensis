@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A20",
+  "pecIndex": "pc-5c41",
+  "recordedAt": "2026-08-25T23:15:59Z",
+  "result": "passed",
+  "source": {
+    "baselineCommit": "c3aff8a9545751cfc1a6a7cd890360095e5c0a02",
+    "practiceCatalog": {
+      "version": "2.10",
+      "stamp": "f9a5c0c9dbde"
+    },
+    "files": [
+      {
+        "path": "mcp-server/src/cli.ts",
+        "sha256": "d27bfa48dd1be8f9caa97c0a8c0f7bc79f6bfb8af62a6a3a848c913779ed3e41"
+      },
+      {
+        "path": "mcp-server/test-activation-doctor.mjs",
+        "sha256": "1ec0131a4fda966e815cc1ea129883c9aa178ab4715e2c3829df26b263231d4f"
+      },
+      {
+        "path": "mcp-server/fixtures/activation/conflicting-user-project.json",
+        "sha256": "bb85fbad091f677fd108478e6854ad30eefc6cb13baca8c9783482a57d7d6db0"
+      },
+      {
+        "path": ".github/workflows/test.yml",
+        "sha256": "ffcb726ba37a8f9af31cca30222d6f16441ae46a86d904c071ca8d5c269574ee"
+      }
+    ]
+  },
+  "redGate": {
+    "fixture": "conflicting-user-project",
+    "command": "mise exec -- node mcp-server/test-activation-doctor.mjs",
+    "preRepair": {
+      "exitCode": 1,
+      "failure": "doctor command absent; conflict fixture could not obtain a machine-readable diagnosis"
+    },
+    "postRepair": {
+      "exitCode": 0,
+      "faultDiagnosisExitCode": 1,
+      "diagnosedFaultCount": 4,
+      "stalePlanExitCode": 1,
+      "configurationBackupCount": 2,
+      "unrelatedMutationCount": 0
+    }
+  },
+  "identityWitness": {
+    "client": "amanuensis doctor",
+    "canonicalRoot": "/Users/nfeldman/repos/amanuensis",
+    "storagePath": "/Users/nfeldman/repos/amanuensis/.amanuensis",
+    "selectionSource": "user-config-plus-process-cwd-git-root",
+    "effectiveConfigurationSource": "user",
+    "serverVersion": "0.2.0-alpha.1"
+  },
+  "liveDoctor": {
+    "command": "mise exec -- node mcp-server/dist/cli.js doctor --client codex --dir /Users/nfeldman/repos/amanuensis --json",
+    "exitCode": 0,
+    "diagnosisCount": 0,
+    "configSha256Before": "9a26db1aaada8cdb17baae3b00a13e1f886188cfa7245920d6e1329311013592",
+    "configSha256After": "9a26db1aaada8cdb17baae3b00a13e1f886188cfa7245920d6e1329311013592",
+    "restartState": "required",
+    "runningHostBindingObserved": false,
+    "runningHostEvidenceDestination": "A22"
+  },
+  "greenChecks": [
+    "mise exec -- npm --prefix mcp-server run build",
+    "mise exec -- node mcp-server/test-activation-doctor.mjs",
+    "mise exec -- node mcp-server/test-installer.mjs",
+    "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "mise exec -- node mcp-server/test-mcp-compatibility.mjs",
+    "mise exec -- node mcp-server/test-package-artifact.mjs"
+  ]
+}

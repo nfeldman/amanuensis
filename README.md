@@ -126,6 +126,37 @@ Amanuensis binds each server process to one repository; this is not an OS
 sandbox. Codex trust, approvals, and filesystem permissions remain the host's
 security boundary.
 
+Diagnose activation before starting a workflow when configuration may be stale:
+
+```bash
+mise exec -- node mcp-server/dist/cli.js doctor \
+  --client codex --dir /path/to/your/project --json
+```
+
+Doctor reports the user and trusted-project config sources, effective
+precedence, executable and arguments, cwd contract, predicted canonical root
+and storage, server version, skill shadowing, and restart state. It exits
+non-zero for duplicate or conflicting registrations, hard-coded user
+workspaces, stale launchers, unsafe project shadows, invalid TOML, or a
+wrong-repository effective binding. Diagnosis is read-only.
+
+For repair, first request a dry-run plan. Apply only the returned digest, which
+becomes invalid if any relevant config or skill input changes:
+
+```bash
+mise exec -- node mcp-server/dist/cli.js doctor \
+  --client codex --dir /path/to/your/project --repair --dry-run --json
+mise exec -- node mcp-server/dist/cli.js doctor \
+  --client codex --dir /path/to/your/project --repair --apply-plan <PLAN_ID> --json
+```
+
+Repair creates timestamped configuration backups, migrates only the
+Amanuensis user registration, and removes a shadowing project registration and
+skill only when they are installer-managed and the skill is an exact packaged
+copy. Configuration inspection cannot prove what an already-running host
+loaded; after repair, restart Codex and verify a new task with
+`get_project_info`.
+
 The source beta uses the repository-pinned Node.js and Python versions through `mise`. The
 package contract remains Node.js ≥20; the materializer supports Python 3.11+.
 Survey state lives with the target at `<project>/.amanuensis/`, is excluded from the

@@ -561,7 +561,7 @@
         {
           "id": "A20",
           "title": "Activation doctor and safe configuration migration",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Users can see the effective Amanuensis configuration, process binding, required restart, and exact repair before a workflow starts.",
           "rationale": "The current preflight reports a workspace mismatch only after the wrong server is already connected; diagnosis must explain configuration precedence and produce a bounded repair path.",
@@ -587,7 +587,11 @@
             "mcp-server/src/cli.ts",
             "mcp-server/test-installer.mjs",
             "README.md",
-            ".claude/skills/amanuensis/references/setup.md"
+            ".claude/skills/amanuensis/references/setup.md",
+            "mcp-server/fixtures/activation/conflicting-user-project.json",
+            "mcp-server/test-activation-doctor.mjs",
+            "dev/activation-evidence/a20-activation-doctor.json",
+            ".github/workflows/test.yml"
           ]
         },
         {

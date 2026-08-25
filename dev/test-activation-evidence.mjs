@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -24,6 +25,18 @@ for (const name of receipts) {
   initiatives.add(receipt.initiative);
   assert.equal(receipt.result, "passed", `${name}: receipt is not passing`);
   assert.match(receipt.source?.baselineCommit ?? "", /^[a-f0-9]{40}$/, `${name}: source baseline is absent`);
+  const implementationCommit = receipt.source?.implementationCommit;
+  if (implementationCommit !== undefined) {
+    assert.match(
+      implementationCommit,
+      /^[a-f0-9]{40}$/,
+      `${name}: implementation commit is malformed`,
+    );
+    execFileSync("git", ["cat-file", "-e", `${implementationCommit}^{commit}`], {
+      cwd: root,
+      stdio: "ignore",
+    });
+  }
 
   const sourceFiles = receipt.source?.files ?? [];
   assert(sourceFiles.length > 0, `${name}: source file denominator is zero`);
@@ -35,7 +48,13 @@ for (const name of receipts) {
       `${name}: source path escapes the repository`,
     );
     assert(statSync(sourcePath).isFile(), `${name}: source file is absent: ${source.path}`);
-    const digest = createHash("sha256").update(readFileSync(sourcePath)).digest("hex");
+    const bytes = implementationCommit
+      ? execFileSync("git", ["show", `${implementationCommit}:${source.path}`], {
+          cwd: root,
+          maxBuffer: 16 * 1024 * 1024,
+        })
+      : readFileSync(sourcePath);
+    const digest = createHash("sha256").update(bytes).digest("hex");
     assert.equal(digest, source.sha256, `${name}: source digest drifted: ${source.path}`);
   }
 

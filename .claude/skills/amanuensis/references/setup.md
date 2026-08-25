@@ -149,6 +149,22 @@ the tools are absent, the client did not load the server configuration; if the
 tools are present but the workspace path is wrong, fix the registration before
 writing survey state.
 
+Before restarting a stale or conflicted Codex setup, inspect it without writes:
+
+```bash
+amanuensis doctor --client codex --dir /path/to/project --json
+amanuensis doctor --client codex --dir /path/to/project \
+  --repair --dry-run --json
+```
+
+The second command exits non-zero while faults remain but returns a
+`repairPlanId`. Apply that exact digest with `--repair --apply-plan <PLAN_ID>
+--json`. A changed config or skill invalidates the plan. Repair backs up each
+configuration it changes, migrates only the Amanuensis user entry, and removes
+a project shadow only when it is installer-managed and the skill is an exact
+packaged copy. Restart Codex afterward and read back `get_project_info` in a new
+task; file inspection cannot establish what an already-running host loaded.
+
 Persistent state lives at `<project>/.amanuensis/`: the SQLite database,
 materialized prose, projection manifests, and an independent storage Git
 history. Amanuensis adds this path to the source repository's local

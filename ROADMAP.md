@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 2 | 5 | 0 | 0 | 20 |
+| 1 | 5 | 0 | 0 | 21 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 7 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 6 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A20 — Activation doctor and safe configuration migration.
+**Next implementation initiative:** A21 — Immutable workspace binding and containment.
 
 ## Epistemic baseline
 
@@ -257,7 +257,7 @@ Risks:
 
 #### A20 — Activation doctor and safe configuration migration
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A19<br>
 **Metrics:** M13, M16, M17
@@ -286,7 +286,7 @@ Risks:
 - A doctor that only inspects files may disagree with the already-running process.
 
 **Practice basis:** GP8, GP20, GP23, GP25, GP28, VP4, VP20<br>
-**Baseline evidence:** `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `README.md`, `.claude/skills/amanuensis/references/setup.md`
+**Baseline evidence:** `mcp-server/src/cli.ts`, `mcp-server/test-installer.mjs`, `README.md`, `.claude/skills/amanuensis/references/setup.md`, `mcp-server/fixtures/activation/conflicting-user-project.json`, `mcp-server/test-activation-doctor.mjs`, `dev/activation-evidence/a20-activation-doctor.json`, `.github/workflows/test.yml`
 
 #### A21 — Immutable workspace binding and containment
 

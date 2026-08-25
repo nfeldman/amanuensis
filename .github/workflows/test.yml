@@ -86,6 +86,12 @@ jobs:
       - name: Installer CLI
         working-directory: mcp-server
         run: node test-installer.mjs
+      - name: Codex user activation and wrong-workspace red gate
+        working-directory: mcp-server
+        run: node test-activation-contract.mjs
+      - name: Activation doctor and digest-bound repair red gate
+        working-directory: mcp-server
+        run: node test-activation-doctor.mjs
       - name: Packed artifact adapters and MCP handshake
         working-directory: mcp-server
         run: node test-package-artifact.mjs

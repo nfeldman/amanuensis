@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "conflicting-user-project",
+  "repositoryUnderTest": "__REPOSITORY_B__",
+  "userRegistration": {
+    "managed": false,
+    "workspace": "__REPOSITORY_A__"
+  },
+  "projectRegistration": {
+    "managed": true,
+    "workspace": "__REPOSITORY_B__"
+  },
+  "expectedEffectiveSource": "project",
+  "expectedDiagnoses": [
+    "conflicting-registrations",
+    "hard-coded-user-workspace",
+    "shadowed-user-skill",
+    "unmanaged-user-registration"
+  ]
+}

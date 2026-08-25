@@ -70,6 +70,9 @@ node test-historical-evaluation.mjs     # clean historical packets, hidden kill 
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
+node test-installer.mjs                  # client adapters, migration, and uninstall custody
+node test-activation-contract.mjs        # user-scope cwd binding and wrong-workspace halt
+node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current

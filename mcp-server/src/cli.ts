@@ -4,6 +4,8 @@
 // MCP standardizes the server protocol, not project configuration discovery.
 // The installer therefore keeps one portable workflow skill and emits the
 // small adapter required by the selected client.
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
@@ -25,6 +27,11 @@ import { applyEdits, modify, type ParseError, parse, printParseErrorCode } from 
 import { parse as parseToml } from "smol-toml";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
+const packageVersion = (
+  JSON.parse(readFileSync(resolve(moduleDir, "..", "package.json"), "utf8")) as {
+    version: string;
+  }
+).version;
 const SERVER_NAME = "amanuensis-memory";
 const CODEX_BLOCK_START = "# >>> amanuensis init (managed)";
 const CODEX_BLOCK_END = "# <<< amanuensis init (managed)";
@@ -63,6 +70,22 @@ type PlanAction =
 type JsonObject = Record<string, unknown>;
 
 type ServerLaunch = { command: string; args: string[] };
+
+type CodexRegistration = {
+  path: string;
+  present: boolean;
+  managed: boolean;
+  parseError?: string;
+  entry?: JsonObject;
+  workspace?: string;
+};
+
+type DoctorDiagnosis = {
+  code: string;
+  path: string;
+  message: string;
+  remediation: string;
+};
 
 function isWithin(parent: string, child: string): boolean {
   const rel = relative(parent, child);
@@ -109,6 +132,7 @@ function printUsage(): void {
       "",
       "Usage:",
       "  amanuensis init --client <claude|codex|vscode|generic> [options]",
+      "  amanuensis doctor --client codex [options]",
       "  amanuensis uninstall --client codex [options]",
       "",
       "Options:",
@@ -121,6 +145,9 @@ function printUsage(): void {
       "  --mcp-only       Configure only the MCP launcher. Intended for",
       "                   local development with a live global skill symlink.",
       "  --dry-run        Print the complete plan; write nothing.",
+      "  --repair         With doctor, prepare a bounded user/project migration.",
+      "  --apply-plan ID  Apply only the exact repair plan ID returned by dry-run.",
+      "  --json           Emit the doctor report as machine-readable JSON.",
       "  --help           Show this message.",
       "",
       "Client adapters:",
@@ -281,6 +308,252 @@ function codexBlock(launch: ServerLaunch, scope: InstallScope, workspace: string
     `env = { AMANUENSIS_AUTOPROGRESS = "1", AMANUENSIS_ACTIVATION_CONTRACT = ${JSON.stringify(contract)} }`,
     CODEX_BLOCK_END,
   ].join("\n");
+}
+
+function canonicalGitRoot(path: string): string {
+  try {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: path,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (root) return realpathSync(root);
+  } catch {
+    // Doctor also supports reporting non-Git project pins.
+  }
+  return realpathSync(path);
+}
+
+function registrationWorkspace(
+  entry: JsonObject | undefined,
+  fallback: string,
+): string | undefined {
+  if (!entry) return undefined;
+  const args = Array.isArray(entry.args) ? entry.args : [];
+  const workspaceIndex = args.indexOf("--workspace");
+  const selected = workspaceIndex >= 0 ? args[workspaceIndex + 1] : undefined;
+  if (typeof selected !== "string") return fallback;
+  if (selected.includes("${")) return undefined;
+  const candidate = isAbsolute(selected) ? selected : resolve(fallback, selected);
+  return existsSync(candidate) ? canonicalGitRoot(candidate) : resolve(candidate);
+}
+
+function inspectCodexRegistration(
+  path: string,
+  root: string,
+  workspace: string,
+): CodexRegistration {
+  assertSafeRootPath(root, path);
+  if (!existsSync(path)) return { path, present: false, managed: false };
+  const raw = readFileSync(path, "utf8");
+  const managed = raw.includes(CODEX_BLOCK_START) && raw.includes(CODEX_BLOCK_END);
+  try {
+    const parsed = parseToml(raw) as Record<string, unknown>;
+    const servers = parsed.mcp_servers;
+    const entry = isJsonObject(servers) ? servers[SERVER_NAME] : undefined;
+    if (!isJsonObject(entry)) return { path, present: true, managed };
+    return {
+      path,
+      present: true,
+      managed,
+      entry,
+      workspace: registrationWorkspace(entry, workspace),
+    };
+  } catch (error) {
+    return { path, present: true, managed, parseError: (error as Error).message };
+  }
+}
+
+function commandExists(command: unknown): boolean {
+  if (typeof command !== "string" || command.length === 0) return false;
+  if (isAbsolute(command) || command.includes(sep)) return existsSync(resolve(command));
+  try {
+    execFileSync("sh", ["-c", 'command -v "$1"', "amanuensis-doctor", command], {
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function publicRegistration(registration: CodexRegistration): JsonObject {
+  const entry = registration.entry;
+  const env = isJsonObject(entry?.env) ? entry.env : {};
+  return {
+    path: registration.path,
+    present: registration.present,
+    managed: registration.managed,
+    parseError: registration.parseError,
+    command: entry?.command,
+    args: Array.isArray(entry?.args) ? entry.args : [],
+    cwd: entry?.cwd,
+    workspace: registration.workspace,
+    activationContract: env.AMANUENSIS_ACTIVATION_CONTRACT,
+  };
+}
+
+function doctorReport(workspace: string): JsonObject & { diagnoses: DoctorDiagnosis[] } {
+  const repositoryRoot = canonicalGitRoot(workspace);
+  const userRoot = codexHome();
+  const userConfig = inspectCodexRegistration(
+    join(userRoot, "config.toml"),
+    userRoot,
+    repositoryRoot,
+  );
+  const projectConfig = inspectCodexRegistration(
+    join(repositoryRoot, ".codex", "config.toml"),
+    repositoryRoot,
+    repositoryRoot,
+  );
+  const userHasEntry = userConfig.entry !== undefined;
+  const projectHasEntry = projectConfig.entry !== undefined;
+  const effectiveSource = projectHasEntry ? "project" : userHasEntry ? "user" : "none";
+  const effective = projectHasEntry ? projectConfig : userConfig;
+  const diagnoses: DoctorDiagnosis[] = [];
+  const diagnose = (diagnosis: DoctorDiagnosis) => diagnoses.push(diagnosis);
+
+  for (const registration of [userConfig, projectConfig]) {
+    if (registration.parseError) {
+      diagnose({
+        code: "invalid-codex-config",
+        path: registration.path,
+        message: `Codex configuration is not parseable TOML: ${registration.parseError}`,
+        remediation: "Repair the TOML syntax before running Amanuensis migration.",
+      });
+    }
+  }
+  if (!userHasEntry && !projectHasEntry && diagnoses.length === 0) {
+    diagnose({
+      code: "missing-registration",
+      path: join(userRoot, "config.toml"),
+      message: "No Amanuensis Codex MCP registration is configured.",
+      remediation:
+        "Run `amanuensis init --client codex --scope user --dry-run`, then apply the same command without `--dry-run`.",
+    });
+  }
+  if (userHasEntry && !userConfig.managed) {
+    diagnose({
+      code: "unmanaged-user-registration",
+      path: userConfig.path,
+      message: "The user-scoped Amanuensis registration is not installer-managed.",
+      remediation: "Run doctor with `--repair --dry-run` to obtain a digest-bound migration plan.",
+    });
+  }
+  if (projectHasEntry && !projectConfig.managed) {
+    diagnose({
+      code: "unmanaged-project-registration",
+      path: projectConfig.path,
+      message: "The project-scoped Amanuensis registration is not installer-managed.",
+      remediation: "Remove or migrate that project entry explicitly; doctor will not rewrite it.",
+    });
+  }
+  if (userHasEntry && userConfig.workspace !== repositoryRoot) {
+    diagnose({
+      code: "hard-coded-user-workspace",
+      path: userConfig.path,
+      message: `The user registration selects ${userConfig.workspace ?? "an unresolved workspace"} instead of resolving the task cwd.`,
+      remediation: "Migrate the user entry to the cwd-relative `codex-user-cwd-v1` contract.",
+    });
+  }
+  if (userHasEntry && projectHasEntry) {
+    const sameWorkspace =
+      userConfig.workspace !== undefined && userConfig.workspace === projectConfig.workspace;
+    diagnose({
+      code: sameWorkspace ? "duplicate-registration" : "conflicting-registrations",
+      path: projectConfig.path,
+      message: sameWorkspace
+        ? "Both user and project configuration register Amanuensis; the project entry shadows the user entry."
+        : `User and project registrations select different repositories (${userConfig.workspace ?? "unresolved"} vs ${projectConfig.workspace ?? "unresolved"}).`,
+      remediation: projectConfig.managed
+        ? "Use the digest-bound doctor repair to remove the managed project pin."
+        : "Remove the project entry manually after making a backup; doctor will not rewrite unmanaged project configuration.",
+    });
+  }
+
+  for (const registration of [userConfig, projectConfig]) {
+    if (!registration.entry) continue;
+    const args = Array.isArray(registration.entry.args) ? registration.entry.args : [];
+    const staleArgument = args.find(
+      (argument) =>
+        typeof argument === "string" &&
+        isAbsolute(argument) &&
+        argument.endsWith(".js") &&
+        !existsSync(argument),
+    );
+    if (!commandExists(registration.entry.command) || staleArgument) {
+      diagnose({
+        code: "stale-executable",
+        path: registration.path,
+        message: staleArgument
+          ? `The configured server entry does not exist: ${staleArgument}`
+          : `The configured command is unavailable: ${String(registration.entry.command)}`,
+        remediation:
+          "Re-run user-scoped installation from the intended source checkout or installed package.",
+      });
+    }
+  }
+
+  if (effective.entry && effective.workspace && effective.workspace !== repositoryRoot) {
+    diagnose({
+      code: "wrong-repository-binding",
+      path: effective.path,
+      message: `Codex precedence selects ${effective.workspace}, not the task repository ${repositoryRoot}.`,
+      remediation: "Do not start the workflow; repair the effective registration first.",
+    });
+  }
+
+  const userSkill = join(userRoot, "skills", "amanuensis");
+  const projectSkill = join(repositoryRoot, ".agents", "skills", "amanuensis");
+  if (existsSync(userSkill) && existsSync(projectSkill)) {
+    diagnose({
+      code: "shadowed-user-skill",
+      path: projectSkill,
+      message: "A project skill shadows the user-scoped Amanuensis skill.",
+      remediation:
+        "Doctor repair removes the project copy only when it exactly matches the packaged skill.",
+    });
+  }
+
+  const status = diagnoses.length === 0 ? "ok" : "error";
+  return {
+    schemaVersion: 1,
+    fixtureContract: "codex-activation/v1",
+    status,
+    repository: {
+      requestedPath: workspace,
+      canonicalRoot: repositoryRoot,
+      storagePath: join(repositoryRoot, ".amanuensis"),
+    },
+    configuration: {
+      precedence: "trusted-project-over-user",
+      effectiveSource,
+      user: publicRegistration(userConfig),
+      project: publicRegistration(projectConfig),
+    },
+    process: {
+      serverVersion: packageVersion,
+      configuredCommand: effective.entry?.command,
+      configuredArguments: Array.isArray(effective.entry?.args) ? effective.entry.args : [],
+      cwdContract: effective.entry?.cwd,
+      bindingState: "not-observable-from-config-process",
+      verification: "Start a new Codex task and compare its get_project_info response.",
+    },
+    restart: {
+      state: status === "ok" ? "required" : "blocked-by-diagnosis",
+      reason:
+        status === "ok"
+          ? "A new Codex task must read the repaired user registration before host binding is verified."
+          : "Repair configuration faults before restarting Codex.",
+    },
+    skills: {
+      userPath: userSkill,
+      userPresent: existsSync(userSkill),
+      projectPath: projectSkill,
+      projectPresent: existsSync(projectSkill),
+    },
+    diagnoses,
+  };
 }
 
 function planSkill(
@@ -632,7 +905,95 @@ function buildUninstallPlan(
   return { actions, root };
 }
 
-function applyPlan(actions: PlanAction[], flags: InitFlags, workspace: string): void {
+function hashRepairInput(hash: ReturnType<typeof createHash>, path: string): void {
+  hash.update(path);
+  if (!existsSync(path)) {
+    hash.update("\0missing\0");
+    return;
+  }
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink()) {
+    hash.update("\0symlink\0");
+    return;
+  }
+  if (stat.isFile()) {
+    hash.update("\0file\0");
+    hash.update(readFileSync(path));
+    return;
+  }
+  hash.update("\0directory\0");
+  for (const file of walkFiles(path).sort((left, right) =>
+    left.relPath.localeCompare(right.relPath),
+  )) {
+    hash.update(file.relPath);
+    hash.update(readFileSync(file.src));
+  }
+}
+
+function repairPlanId(workspace: string): string {
+  const hash = createHash("sha256");
+  hash.update("amanuensis-doctor-repair/v1\0");
+  hash.update(codexBlock(serverLaunch(), "user", workspace));
+  hashRepairInput(hash, join(codexHome(), "config.toml"));
+  hashRepairInput(hash, join(workspace, ".codex", "config.toml"));
+  hashRepairInput(hash, join(workspace, ".agents", "skills", "amanuensis"));
+  return hash.digest("hex");
+}
+
+function doctorRepairPlans(workspace: string): Array<{
+  flags: InitFlags;
+  actions: PlanAction[];
+  root: string;
+}> {
+  const shared = {
+    dir: workspace,
+    client: "codex" as const,
+    dryRun: false,
+  };
+  const userFlags: InitFlags = {
+    ...shared,
+    force: true,
+    mcpOnly: true,
+    scope: "user",
+  };
+  const projectFlags: InitFlags = {
+    ...shared,
+    force: false,
+    mcpOnly: false,
+    scope: "project",
+  };
+  const user = buildPlan(userFlags, workspace);
+  const project = buildUninstallPlan(projectFlags, workspace);
+  return [
+    { flags: userFlags, ...user },
+    { flags: projectFlags, ...project },
+  ];
+}
+
+function publicRepairAction(action: PlanAction): JsonObject {
+  if (action.kind === "backup" || action.kind === "archive") {
+    return { kind: action.kind, from: action.from, to: action.to };
+  }
+  if (action.kind === "write-file") {
+    return {
+      kind: action.kind,
+      path: action.path,
+      mode: action.mode,
+      contentSha256: createHash("sha256").update(action.content).digest("hex"),
+    };
+  }
+  if (action.kind === "skip-file" || action.kind === "conflict") {
+    return { kind: action.kind, path: action.path, reason: action.reason };
+  }
+  return { kind: action.kind, path: action.path };
+}
+
+function applyPlan(
+  actions: PlanAction[],
+  flags: InitFlags,
+  workspace: string,
+  quiet = false,
+): void {
   const conflicts = actions.filter((action) => action.kind === "conflict");
   if (conflicts.length > 0) {
     const detail = conflicts
@@ -653,37 +1014,43 @@ function applyPlan(actions: PlanAction[], flags: InitFlags, workspace: string): 
     }
     switch (action.kind) {
       case "mkdir":
-        if (flags.dryRun) console.log(`[dry-run] mkdir ${rel(action.path)}`);
-        else mkdirSync(action.path, { recursive: true });
+        if (flags.dryRun) {
+          if (!quiet) console.log(`[dry-run] mkdir ${rel(action.path)}`);
+        } else mkdirSync(action.path, { recursive: true });
         break;
       case "backup":
-        if (flags.dryRun) console.log(`[dry-run] backup ${rel(action.from)} → ${rel(action.to)}`);
-        else copyFileSync(action.from, action.to);
+        if (flags.dryRun) {
+          if (!quiet) console.log(`[dry-run] backup ${rel(action.from)} → ${rel(action.to)}`);
+        } else copyFileSync(action.from, action.to);
         break;
       case "archive":
-        if (flags.dryRun)
-          console.log(`[dry-run] archive obsolete agent ${rel(action.from)} → ${rel(action.to)}`);
-        else {
+        if (flags.dryRun) {
+          if (!quiet)
+            console.log(`[dry-run] archive obsolete agent ${rel(action.from)} → ${rel(action.to)}`);
+        } else {
           renameSync(action.from, action.to);
-          console.log(`  ~ archived obsolete agent ${rel(action.from)} → ${rel(action.to)}`);
+          if (!quiet)
+            console.log(`  ~ archived obsolete agent ${rel(action.from)} → ${rel(action.to)}`);
         }
         break;
       case "write-file":
-        if (flags.dryRun) console.log(`[dry-run] ${action.mode} ${rel(action.path)}`);
-        else {
+        if (flags.dryRun) {
+          if (!quiet) console.log(`[dry-run] ${action.mode} ${rel(action.path)}`);
+        } else {
           mkdirSync(dirname(action.path), { recursive: true });
           writeFileSync(action.path, action.content, "utf8");
-          console.log(`  ${action.mode === "create" ? "+" : "~"} ${rel(action.path)}`);
+          if (!quiet) console.log(`  ${action.mode === "create" ? "+" : "~"} ${rel(action.path)}`);
         }
         break;
       case "skip-file":
-        console.log(`  · ${rel(action.path)}  (${action.reason})`);
+        if (!quiet) console.log(`  · ${rel(action.path)}  (${action.reason})`);
         break;
       case "remove-tree":
-        if (flags.dryRun) console.log(`[dry-run] remove managed skill ${rel(action.path)}`);
-        else {
+        if (flags.dryRun) {
+          if (!quiet) console.log(`[dry-run] remove managed skill ${rel(action.path)}`);
+        } else {
           rmSync(action.path, { recursive: true, force: false });
-          console.log(`  - removed managed skill ${rel(action.path)}`);
+          if (!quiet) console.log(`  - removed managed skill ${rel(action.path)}`);
         }
         break;
       case "conflict":
@@ -719,6 +1086,108 @@ function printNextSteps(client: Client, workspace: string, scope: InstallScope):
     console.log("Claude Code can also invoke the installed /amanuensis skill.");
   if (client === "codex") console.log("Codex can also invoke the installed $amanuensis skill.");
   if (client === "vscode") console.log("The installed Agent Skill is available to VS Code agents.");
+}
+
+function emitDoctorReport(
+  report: JsonObject & { diagnoses: DoctorDiagnosis[] },
+  json: boolean,
+): void {
+  if (json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+  const repository = report.repository as JsonObject;
+  const configuration = report.configuration as JsonObject;
+  console.log(`Amanuensis doctor: ${report.status}`);
+  console.log(`  repository: ${repository.canonicalRoot}`);
+  console.log(`  storage: ${repository.storagePath}`);
+  console.log(`  effective config: ${configuration.effectiveSource}`);
+  for (const diagnosis of report.diagnoses) {
+    console.log(`  [${diagnosis.code}] ${diagnosis.message}`);
+    console.log(`    path: ${diagnosis.path}`);
+    console.log(`    repair: ${diagnosis.remediation}`);
+  }
+  if (report.repairPlanId) console.log(`  repair plan: ${report.repairPlanId}`);
+}
+
+function cmdDoctor(argv: string[]): void {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      client: { type: "string", default: "codex" },
+      dir: { type: "string", default: process.cwd() },
+      repair: { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      "apply-plan": { type: "string" },
+      json: { type: "boolean", default: false },
+      help: { type: "boolean", default: false },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+  if (values.help) {
+    printUsage();
+    return;
+  }
+  if (parseClient(values.client) !== "codex") {
+    throw new Error("doctor currently supports only Codex");
+  }
+  if (values["dry-run"] && !values.repair) {
+    throw new Error("doctor --dry-run requires --repair");
+  }
+  if (values["apply-plan"] && !values.repair) {
+    throw new Error("doctor --apply-plan requires --repair");
+  }
+  if (values.repair && !values["dry-run"] && !values["apply-plan"]) {
+    throw new Error("doctor --repair requires --dry-run or --apply-plan <ID>");
+  }
+  if (values["dry-run"] && values["apply-plan"]) {
+    throw new Error("doctor accepts either --dry-run or --apply-plan, not both");
+  }
+
+  const requestedWorkspace = resolve(values.dir as string);
+  if (!existsSync(requestedWorkspace) || !statSync(requestedWorkspace).isDirectory()) {
+    throw new Error(`target directory does not exist or is not a directory: ${requestedWorkspace}`);
+  }
+  const workspace = canonicalGitRoot(requestedWorkspace);
+  let report = doctorReport(workspace);
+
+  if (values.repair) {
+    const planId = repairPlanId(workspace);
+    const plans = doctorRepairPlans(workspace);
+    const actions = plans.flatMap((plan) => plan.actions);
+    report.repairPlanId = planId;
+    report.repairActions = actions.map(publicRepairAction);
+    const conflicts = actions.filter((action) => action.kind === "conflict");
+    const firstConflict = conflicts[0];
+    if (firstConflict) {
+      report.diagnoses.push({
+        code: "repair-conflict",
+        path: firstConflict.path,
+        message: conflicts.map((conflict) => conflict.reason).join("; "),
+        remediation: "Resolve the named conflict manually, then request a new dry-run plan.",
+      });
+      report.status = "error";
+    } else if (values["apply-plan"] && values["apply-plan"] !== planId) {
+      report.diagnoses.push({
+        code: "stale-repair-plan",
+        path: join(codexHome(), "config.toml"),
+        message:
+          "The supplied repair plan does not match the current configuration and skill inputs.",
+        remediation: "Run doctor --repair --dry-run again and apply the newly returned plan ID.",
+      });
+      report.status = "error";
+    } else if (values["apply-plan"] === planId) {
+      for (const plan of plans) applyPlan(plan.actions, plan.flags, plan.root, true);
+      const postRepair = doctorReport(workspace);
+      postRepair.appliedPlanId = planId;
+      postRepair.repairActions = actions.map(publicRepairAction);
+      report = postRepair;
+    }
+  }
+
+  emitDoctorReport(report, values.json as boolean);
+  if (report.status !== "ok") process.exitCode = 1;
 }
 
 function cmdInit(argv: string[]): void {
@@ -830,6 +1299,7 @@ function main(): void {
   const subcommand = argv[0];
   try {
     if (subcommand === "init") cmdInit(argv.slice(1));
+    else if (subcommand === "doctor") cmdDoctor(argv.slice(1));
     else if (subcommand === "uninstall") cmdUninstall(argv.slice(1));
     else {
       process.stderr.write(`unknown subcommand: ${subcommand}\n\n`);
