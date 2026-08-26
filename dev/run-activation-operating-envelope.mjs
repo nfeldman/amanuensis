@@ -27,10 +27,6 @@ const approvalOverride = [
   'mcp_servers.amanuensis-memory.default_tools_approval_mode="approve"',
 ];
 
-function projectTrustOverride(path) {
-  return ["--config", `projects.${JSON.stringify(path)}.trust_level="trusted"`];
-}
-
 function parseArgs(argv) {
   let execute = false;
   let outputDir = defaultOutput;
@@ -424,11 +420,7 @@ try {
     launchCodex({
       cwd: expected.launchCwd,
       prompt: promptFor(expected.runId),
-      extraArgs: [
-        ...(expected.targetCwd ? ["--cd", expected.targetCwd] : []),
-        ...projectTrustOverride(expected.canonicalRoot),
-        ...approvalOverride,
-      ],
+      extraArgs: [...(expected.targetCwd ? ["--cd", expected.targetCwd] : []), ...approvalOverride],
     });
 
   const concurrentIds = new Set([ids["repo-a-root"], ids["repo-b-root"], ids["repo-d-worktree"]]);
@@ -501,7 +493,6 @@ try {
     prompt:
       "Call Amanuensis get_project_info exactly once. If it is unavailable, report that startup failed. Do not call another tool.",
     extraArgs: [
-      ...projectTrustOverride(realpathSync(repositories["repo-b"])),
       "--config",
       `mcp_servers.amanuensis-memory.command=${JSON.stringify(process.execPath)}`,
       "--config",
@@ -594,8 +585,6 @@ try {
       perRepositoryRestartCount: 0,
       sourceCheckoutServer: serverEntry,
       approvalOverride: "approve (harness process only; user configuration unchanged)",
-      projectTrustOverride:
-        "trusted (harness process only; live user configuration unchanged)",
     },
     runMatrix: {
       preregisteredBeforeExecution: true,
