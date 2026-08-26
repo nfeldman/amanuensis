@@ -27,6 +27,10 @@ const approvalOverride = [
   'mcp_servers.amanuensis-memory.default_tools_approval_mode="approve"',
 ];
 
+function projectTrustOverride(path) {
+  return ["--config", `projects.${JSON.stringify(path)}.trust_level="trusted"`];
+}
+
 function parseArgs(argv) {
   let execute = false;
   let outputDir = defaultOutput;
@@ -420,7 +424,11 @@ try {
     launchCodex({
       cwd: expected.launchCwd,
       prompt: promptFor(expected.runId),
-      extraArgs: [...(expected.targetCwd ? ["--cd", expected.targetCwd] : []), ...approvalOverride],
+      extraArgs: [
+        ...(expected.targetCwd ? ["--cd", expected.targetCwd] : []),
+        ...projectTrustOverride(expected.canonicalRoot),
+        ...approvalOverride,
+      ],
     });
 
   const concurrentIds = new Set([ids["repo-a-root"], ids["repo-b-root"], ids["repo-d-worktree"]]);
@@ -493,6 +501,7 @@ try {
     prompt:
       "Call Amanuensis get_project_info exactly once. If it is unavailable, report that startup failed. Do not call another tool.",
     extraArgs: [
+      ...projectTrustOverride(realpathSync(repositories["repo-b"])),
       "--config",
       `mcp_servers.amanuensis-memory.command=${JSON.stringify(process.execPath)}`,
       "--config",
@@ -558,6 +567,7 @@ try {
     evidenceMode: "real-host",
     source: {
       baselineCommit: "5732b678ededd40eaa2a0e0ada633f43d0bb789c",
+      implementationCommit: run("git", ["rev-parse", "HEAD"], { cwd: root }),
       practiceCatalog: { version: "2.10", stamp: "f9a5c0c9dbde" },
       files: [
         sourceFile("mcp-server/src/index.ts"),
@@ -567,6 +577,8 @@ try {
         sourceFile("dev/test-activation-operating-envelope-red-gates.mjs"),
         sourceFile("dev/run-activation-operating-envelope.mjs"),
         sourceFile("dev/capture-activation-launch.mjs"),
+        sourceFile("dev/cleanup-activation-operating-trust.mjs"),
+        sourceFile("dev/test-activation-operating-trust-cleanup.mjs"),
         sourceFile("mcp-server/fixtures/activation/operating-envelope-red-matrix.json"),
       ],
     },
@@ -582,6 +594,8 @@ try {
       perRepositoryRestartCount: 0,
       sourceCheckoutServer: serverEntry,
       approvalOverride: "approve (harness process only; user configuration unchanged)",
+      projectTrustOverride:
+        "trusted (harness process only; live user configuration unchanged)",
     },
     runMatrix: {
       preregisteredBeforeExecution: true,
