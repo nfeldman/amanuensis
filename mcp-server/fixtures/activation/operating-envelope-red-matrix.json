@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "a25-activation-operating-envelope-red-matrix",
+  "baseReceipt": {
+    "schemaVersion": 1,
+    "initiative": "A25",
+    "result": "passed",
+    "evidenceMode": "fixture-red",
+    "host": {
+      "surface": "codex-cli-exec",
+      "configSha256Before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "configSha256After": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "configBytesChanged": 0,
+      "managedInstallationCount": 1
+    },
+    "runMatrix": {
+      "logicalRepositoryCount": 5,
+      "workspaceCount": 5,
+      "requiredShapes": ["repository-root", "nested-launch", "worktree", "parent-cd"],
+      "expectedRuns": [
+        { "runId": "run-a", "logicalRepositoryId": "repo-a", "shape": "repository-root", "canonicalRoot": "/tmp/a", "storagePath": "/tmp/a/.amanuensis", "concurrentWave": "wave-1" },
+        { "runId": "run-b", "logicalRepositoryId": "repo-b", "shape": "repository-root", "canonicalRoot": "/tmp/b", "storagePath": "/tmp/b/.amanuensis", "concurrentWave": "wave-1" },
+        { "runId": "run-c", "logicalRepositoryId": "repo-c", "shape": "nested-launch", "canonicalRoot": "/tmp/c", "storagePath": "/tmp/c/.amanuensis", "concurrentWave": null },
+        { "runId": "run-d", "logicalRepositoryId": "repo-d", "shape": "worktree", "canonicalRoot": "/tmp/d", "storagePath": "/tmp/d/.amanuensis", "concurrentWave": "wave-1" },
+        { "runId": "run-e", "logicalRepositoryId": "repo-e", "shape": "parent-cd", "canonicalRoot": "/tmp/e", "storagePath": "/tmp/e/.amanuensis", "concurrentWave": null }
+      ]
+    },
+    "runs": [
+      { "runId": "run-a", "status": "passed", "threadId": "thread-a", "serverInstanceId": "instance-a", "startedAt": "2026-08-25T00:00:00Z", "endedAt": "2026-08-25T00:01:00Z", "amanuensisSetupCommandCount": 0, "perRepositoryRestartCount": 0, "userInterventionCount": 0, "diagnosisDurationMs": 0, "recovery": "not-required", "bindingReceipt": { "canonicalRoot": "/tmp/a", "storagePath": "/tmp/a/.amanuensis", "projectIdentity": "remote:example/repo-a", "workspaceInstanceId": "a" }, "writes": [{ "path": "/tmp/a/.amanuensis/memory.db" }], "observedSessionIntents": ["A25_RUN_run-a"] },
+      { "runId": "run-b", "status": "passed", "threadId": "thread-b", "serverInstanceId": "instance-b", "startedAt": "2026-08-25T00:00:10Z", "endedAt": "2026-08-25T00:01:10Z", "amanuensisSetupCommandCount": 0, "perRepositoryRestartCount": 0, "userInterventionCount": 0, "diagnosisDurationMs": 0, "recovery": "not-required", "bindingReceipt": { "canonicalRoot": "/tmp/b", "storagePath": "/tmp/b/.amanuensis", "projectIdentity": "remote:example/repo-b", "workspaceInstanceId": "b" }, "writes": [{ "path": "/tmp/b/.amanuensis/memory.db" }], "observedSessionIntents": ["A25_RUN_run-b"] },
+      { "runId": "run-c", "status": "passed", "threadId": "thread-c", "serverInstanceId": "instance-c", "startedAt": "2026-08-25T00:02:00Z", "endedAt": "2026-08-25T00:03:00Z", "amanuensisSetupCommandCount": 0, "perRepositoryRestartCount": 0, "userInterventionCount": 0, "diagnosisDurationMs": 0, "recovery": "not-required", "bindingReceipt": { "canonicalRoot": "/tmp/c", "storagePath": "/tmp/c/.amanuensis", "projectIdentity": "remote:example/repo-c", "workspaceInstanceId": "c" }, "writes": [{ "path": "/tmp/c/.amanuensis/memory.db" }], "observedSessionIntents": ["A25_RUN_run-c"] },
+      { "runId": "run-d", "status": "passed", "threadId": "thread-d", "serverInstanceId": "instance-d", "startedAt": "2026-08-25T00:00:20Z", "endedAt": "2026-08-25T00:01:20Z", "amanuensisSetupCommandCount": 0, "perRepositoryRestartCount": 0, "userInterventionCount": 0, "diagnosisDurationMs": 0, "recovery": "not-required", "bindingReceipt": { "canonicalRoot": "/tmp/d", "storagePath": "/tmp/d/.amanuensis", "projectIdentity": "remote:example/repo-d", "workspaceInstanceId": "d" }, "writes": [{ "path": "/tmp/d/.amanuensis/memory.db" }], "observedSessionIntents": ["A25_RUN_run-d"] },
+      { "runId": "run-e", "status": "passed", "threadId": "thread-e", "serverInstanceId": "instance-e", "startedAt": "2026-08-25T00:04:00Z", "endedAt": "2026-08-25T00:05:00Z", "amanuensisSetupCommandCount": 0, "perRepositoryRestartCount": 0, "userInterventionCount": 0, "diagnosisDurationMs": 0, "recovery": "not-required", "bindingReceipt": { "canonicalRoot": "/tmp/e", "storagePath": "/tmp/e/.amanuensis", "projectIdentity": "remote:example/repo-e", "workspaceInstanceId": "e" }, "writes": [{ "path": "/tmp/e/.amanuensis/memory.db" }], "observedSessionIntents": ["A25_RUN_run-e"] }
+    ],
+    "negativeRuns": [
+      { "runId": "negative-config", "status": "passed", "configurationDeliveryCleared": true, "hostLaunchCleared": true, "detectorOperationCleared": true, "diagnosisDurationMs": 1000, "diagnosisTargetMs": 30000, "userInterventionCount": 0, "boundedRemediation": "Run doctor repair dry run." }
+    ],
+    "report": {
+      "status": "passed",
+      "aggregation": "none",
+      "crossRepositoryWriteCount": 0,
+      "byRun": [
+        { "runId": "run-a", "status": "passed" },
+        { "runId": "run-b", "status": "passed" },
+        { "runId": "run-c", "status": "passed" },
+        { "runId": "run-d", "status": "passed" },
+        { "runId": "run-e", "status": "passed" }
+      ],
+      "unsupportedStrata": []
+    }
+  },
+  "cases": [
+    {
+      "caseId": "pooled-failure",
+      "mutations": [{ "pointer": "/runs/1/status", "value": "failed" }],
+      "expectedError": "failed run cannot be pooled into a passed report"
+    },
+    {
+      "caseId": "omitted-intervention",
+      "mutations": [{ "pointer": "/runs/2/userInterventionCount", "value": null }],
+      "expectedError": "user intervention count is absent"
+    },
+    {
+      "caseId": "reused-run-id",
+      "mutations": [{ "pointer": "/runs/4/runId", "value": "run-a" }],
+      "expectedError": "run ID was reused"
+    }
+  ]
+}

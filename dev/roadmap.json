@@ -1512,7 +1512,7 @@
         {
           "id": "A25",
           "title": "Multi-repository activation operating evidence",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis + evaluation",
           "outcome": "Real repository use establishes where friction-free activation works, fails, or remains unsupported without pooled claims hiding weak strata.",
           "rationale": "A syntactic installer suite and synthetic host harness cannot establish usability, diagnosis time, or isolation under diverse existing configurations.",
@@ -1538,13 +1538,18 @@
             "mcp-server/src/tools/evaluation.ts",
             "mcp-server/test-operating-envelope.mjs",
             "dev/adr/0017-stratified-operating-envelope.md",
+            "mcp-server/test-nested-activation-binding.mjs",
+            "mcp-server/fixtures/activation/operating-envelope-red-matrix.json",
+            "dev/check-activation-operating-envelope.mjs",
+            "dev/test-activation-operating-envelope-red-gates.mjs",
+            "dev/activation-evidence/a25-activation-operating-envelope.json",
             "CONTRIBUTING.md"
           ]
         },
         {
           "id": "A26",
           "title": "Friction-free beta release gate",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis + release",
           "outcome": "A release candidate is demonstrably install-once, repository-correct, isolated, diagnosable, reversible, and ready for a separately authorized beta publication.",
           "rationale": "Implementation completion must not be relabeled as product usability; the release claim needs criterion-linked operating evidence and independent read-back.",

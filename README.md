@@ -144,6 +144,23 @@ user configuration remains Codex's user-scoped MCP registration, with one
 restart after installation and Codex trust for each repository. Explicit
 project scope remains the conservative pinning escape hatch.
 
+The preregistered A25 operating campaign keeps six Codex runs separate across
+five logical repositories: two ordinary roots, a nested launch, one repository
+plus its linked worktree, and a parent-`--cd` launch. Three runs overlap in one
+concurrent wave. Raw Codex JSONL, distinct thread/server identities, binding
+receipts, and DB-backed store custody prove zero Amanuensis setup commands,
+zero per-repository restarts or user interventions, exact session identity,
+and zero cross-repository writes for every run. The independent checker and
+its pooled-failure, missing-intervention, and reused-run-ID red cases live in
+`dev/activation-evidence/a25-activation-operating-envelope.json` and
+`dev/test-activation-operating-envelope-red-gates.mjs`.
+
+That measured stratum begins after Codex trusts the repositories. An initial
+untrusted control was excluded when Codex itself persisted temporary project
+trust records; it is a host trust ceremony, not an Amanuensis setup action, and
+is not pooled into the positive result. The campaign does not establish the
+Codex desktop UI, non-Codex clients, Windows, or a published registry install.
+
 Use `--scope project` only when deliberately pinning Codex to one repository:
 
 ```bash

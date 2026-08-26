@@ -90,6 +90,17 @@ real-host evidence covers `codex-cli-exec`; a distinct desktop-host result is
 not inferred from it. Codex trust remains a host prerequisite, and project
 scope remains the explicit pinning escape hatch.
 
+The committed A25 real-host envelope contains six independent Codex runs over
+five logical repositories, including nested cwd, linked-worktree,
+parent-`--cd`, and three-process concurrent conditions. Raw host events and
+DB-backed store custody bind every run ID to one thread, server instance,
+repository receipt, and exact session intent. Each run records zero Amanuensis
+setup commands, per-repository restarts, user interventions, and
+cross-repository writes. The result applies only after Codex trust; an
+untrusted control that caused Codex itself to persist project trust was kept
+outside the positive denominator. Desktop UI, other MCP clients, Windows, and
+published-registry operation remain unsupported or unmeasured strata.
+
 The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
 interpreter. Survey state defaults to `<project>/.amanuensis/`.

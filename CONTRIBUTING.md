@@ -75,6 +75,7 @@ node test-activation-contract.mjs        # user-scope cwd binding and wrong-work
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
 node test-workspace-binding.mjs          # immutable receipt, symlink halt, worktree policy
 node test-codex-parent-workspace.mjs     # recover Codex CLI --cd workspace without a fixed path
+node test-nested-activation-binding.mjs  # nested cwd binds the Git root and initializes lazily
 node test-first-use-laziness.mjs         # prove startup is read-only and first DB use creates one store
 node test-first-use-recovery.mjs         # interrupt and recover every first-use mutation boundary
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
@@ -96,6 +97,21 @@ bad candidates independently and requires both the hard-coded packed cwd and
 packed skill-version mismatch to exit nonzero with the causal field named. The
 unsabotaged parity test requires registry access for a clean dependency install;
 run it under `mise exec --` from the pinned toolchain.
+
+`node dev/check-activation-operating-envelope.mjs --receipt
+dev/activation-evidence/a25-activation-operating-envelope.json` verifies each
+committed A25 Codex run against raw host events and DB-backed store custody.
+`node dev/test-activation-operating-envelope-red-gates.mjs` proves that pooled
+failure, omitted intervention accounting, and reused run identity each halt.
+The authenticated launcher is
+`node dev/run-activation-operating-envelope.mjs --execute`; use its dry run
+first, run it only against Codex-trusted temporary repositories, and do not
+replace the committed-log checker in CI with a live host call. Codex-created
+trust state is a host-side effect outside Amanuensis's managed configuration
+surface and must be reported separately rather than counted as product setup.
+`node dev/test-activation-operating-trust-cleanup.mjs` verifies that the
+separate cleanup helper is dry-run-first, backup-bearing, and removes only the
+exact temporary A25 trust entries while preserving unrelated bytes.
 
 The adversarial suites are first-class. After any schema change,
 new tool, or handler edit, run them — and extend them when the

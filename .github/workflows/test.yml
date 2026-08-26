@@ -98,6 +98,9 @@ jobs:
       - name: Codex parent-process workspace selection
         working-directory: mcp-server
         run: node test-codex-parent-workspace.mjs
+      - name: Nested Codex activation selects the Git root lazily
+        working-directory: mcp-server
+        run: node test-nested-activation-binding.mjs
       - name: Lazy first use leaves an untouched repository unchanged
         working-directory: mcp-server
         run: node test-first-use-laziness.mjs
@@ -114,6 +117,8 @@ jobs:
         run: node test-package-activation-parity.mjs
       - name: Prove packed cwd and skill-version parity red gates
         run: node dev/test-package-activation-parity-red-gates.mjs
+      - name: Committed multi-repository operating evidence and no-pooling red gates
+        run: node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json && node dev/test-activation-operating-envelope-red-gates.mjs && node dev/test-activation-operating-trust-cleanup.mjs
       - name: Adversarial — correctness
         working-directory: mcp-server
         run: node test-adversarial-correctness.mjs

@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 1 | 0 | 0 | 25 |
+| 1 | 0 | 0 | 0 | 26 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 2 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 1 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A25 — Multi-repository activation operating evidence.
+**Next implementation initiative:** A26 — Friction-free beta release gate.
 
 ## Epistemic baseline
 
@@ -909,7 +909,7 @@ Risks:
 
 #### A25 — Multi-repository activation operating evidence
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis + evaluation<br>
 **Depends on:** A24<br>
 **Metrics:** M13, M14, M15, M16, M17, M11
@@ -938,11 +938,11 @@ Risks:
 - Dogfood operators familiar with the implementation can understate diagnosis friction.
 
 **Practice basis:** GP2, GP3, GP4, GP21, GP22, GP31, GP33, VP5, VP6, VP10, VP17, VP19, VP21, VP26<br>
-**Baseline evidence:** `mcp-server/src/tools/evaluation.ts`, `mcp-server/test-operating-envelope.mjs`, `dev/adr/0017-stratified-operating-envelope.md`, `CONTRIBUTING.md`
+**Baseline evidence:** `mcp-server/src/tools/evaluation.ts`, `mcp-server/test-operating-envelope.mjs`, `dev/adr/0017-stratified-operating-envelope.md`, `mcp-server/test-nested-activation-binding.mjs`, `mcp-server/fixtures/activation/operating-envelope-red-matrix.json`, `dev/check-activation-operating-envelope.mjs`, `dev/test-activation-operating-envelope-red-gates.mjs`, `dev/activation-evidence/a25-activation-operating-envelope.json`, `CONTRIBUTING.md`
 
 #### A26 — Friction-free beta release gate
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis + release<br>
 **Depends on:** A25<br>
 **Metrics:** M13, M14, M15, M16, M17, M12
