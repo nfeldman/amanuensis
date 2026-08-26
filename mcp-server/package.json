@@ -1,6 +1,6 @@
 {
   "name": "@gruetech/amanuensis",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-beta.1",
   "description": "Evidence-backed codebase memory for MCP-capable coding agents. Ships a portable workflow skill, an MCP server, client adapters, and a diff-aware materializer.",
   "license": "MIT",
   "author": {

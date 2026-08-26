@@ -13,9 +13,9 @@ ships:
 - the **materializer** that renders the conspectus into a
   navigable human-readable site.
 
-## v2 alpha
+## v2 beta
 
-This source tree packages as `0.2.0-alpha.1`. It is being dogfooded and remains
+This source tree packages as `0.2.0-beta.1`. It is being dogfooded and remains
 under longitudinal validation. Until `1.0.0`, expect breaking changes between
 releases.
 
@@ -106,7 +106,8 @@ The server requires Node.js 20 or newer. Materialization also requires Python
 interpreter. Survey state defaults to `<project>/.amanuensis/`.
 
 Install the current prerelease with
-`npm install -g @gruetech/amanuensis`. The alpha is the current `latest` tag.
+`npm install -g @gruetech/amanuensis` after publication. To select this release
+explicitly, use `npm install -g @gruetech/amanuensis@0.2.0-beta.1`.
 
 ## Documentation
 

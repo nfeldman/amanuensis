@@ -17,7 +17,7 @@ import { compareTools } from "./tools/compare.js";
 
 const SERVER_INSTRUCTIONS =
   "Build and maintain an evidence-backed codebase conspectus. Start with get_project_info, then get_dashboard and list_subsystems. Read source code for evidence; write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
-const SERVER_VERSION = "0.2.0-alpha.1";
+const SERVER_VERSION = "0.2.0-beta.1";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
 // additive updates. Default every mutation to destructive and carve out only

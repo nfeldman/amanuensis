@@ -59,9 +59,8 @@ same state, link-coverage, and byte-correspondence read-back before publication 
 
 ## Beta
 
-The v2 implementation is distributed as `0.2.0-alpha.1` and passes
-its full CI suite. The tool is in beta and is being dogfooded now in active development
-work.
+The v2 implementation is versioned as `0.2.0-beta.1` and passes its full release-candidate
+suite. The tool is in beta and is being dogfooded now in active development work.
 
 Its internal contracts and failure gates are extensively tested. What is still being
 learned is the practical part: whether the conspectus stays useful as a real project
@@ -71,7 +70,7 @@ creates friction. Longitudinal results are not yet available.
 Until `1.0.0`, expect breaking changes between releases.
 
 The [roadmap](ROADMAP.md) carries the exact implementation evidence and current claim
-boundaries.
+boundaries. [HISTORY.md](HISTORY.md) summarizes user-visible releases.
 
 ## Try the current beta
 
@@ -259,6 +258,7 @@ a collaboration.
 
 ## Go deeper
 
+- [Release history](HISTORY.md)
 - [Roadmap and current evidence status](ROADMAP.md)
 - [Contributor setup and test commands](CONTRIBUTING.md)
 - [MCP server protocols and generated tool inventory](mcp-server/DEVELOPMENT.md)
