@@ -119,6 +119,11 @@ jobs:
         run: node dev/test-package-activation-parity-red-gates.mjs
       - name: Committed multi-repository operating evidence and no-pooling red gates
         run: node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json && node dev/test-activation-operating-envelope-red-gates.mjs && node dev/test-activation-operating-trust-cleanup.mjs
+      - name: Exact-package rollback preserves five repository stores
+        working-directory: mcp-server
+        run: node test-release-rollback.mjs
+      - name: Friction-free release readiness, projection, and missing-evidence red gates
+        run: node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json && node dev/test-friction-free-release-readiness-red-gates.mjs && node dev/render-friction-free-release-readiness.mjs --check
       - name: Adversarial — correctness
         working-directory: mcp-server
         run: node test-adversarial-correctness.mjs

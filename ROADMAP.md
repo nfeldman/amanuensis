@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 0 | 0 | 0 | 26 |
+| 0 | 0 | 0 | 0 | 27 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,9 +22,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Make first use, upgrade, rollback, and published-package operation preserve the proven activation contract without repository-by-repository intervention. | unestablished | A23, A24, A6, A7, A8, A9, A10, A11, A12 |
 | Later | Demonstrate zero-ceremony, isolated multi-repository operation under real use and pass a release-ready beta gate without pooling away weak strata. | unestablished | A25, A26, A13, A14, A15, A16, A17, A18 |
 
-**Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
-
-**Active expansion:** 1 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Implementation:** All 27 roadmap initiatives have local criterion-linked evidence. The last remotely integrated baseline remains `0e2dafb81d08ebfd3bce718aed376a588095a3a8` at `origin:refs/heads/main` (verified 2026-08-19); the current local expansion is not claimed at that remote or CI run.
 
 **Product proof:** unestablished.
 
@@ -39,8 +37,6 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 **Publication evidence:** [publish.yml run 32676535069](https://github.com/nfeldman/amanuensis/actions/runs/32676535069) concluded success at tag commit `a725369b8cd1715ae544f93dcbd238ac37971c0a`; registry shasum `8e475bd11675a7703b6cb6b460d989587f86b536`.
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
-
-**Next implementation initiative:** A26 — Friction-free beta release gate.
 
 ## Epistemic baseline
 
@@ -942,7 +938,7 @@ Risks:
 
 #### A26 — Friction-free beta release gate
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis + release<br>
 **Depends on:** A25<br>
 **Metrics:** M13, M14, M15, M16, M17, M12
@@ -971,7 +967,7 @@ Risks:
 - A beta label can be mistaken for an established cross-client operating envelope.
 
 **Practice basis:** GP8, GP20, GP23, GP25, GP28, VP4, VP11, VP20<br>
-**Baseline evidence:** `.github/workflows/published-smoke.yml`, `mcp-server/test-package-artifact.mjs`, `dev/adr/0021-friction-free-codex-activation.md`, `ROADMAP.md`
+**Baseline evidence:** `.github/workflows/test.yml`, `.github/workflows/published-smoke.yml`, `mcp-server/test-package-artifact.mjs`, `mcp-server/test-release-rollback.mjs`, `mcp-server/fixtures/activation/release-readiness-red-matrix.json`, `dev/run-friction-free-release-replay.mjs`, `dev/run-friction-free-candidate-suite.mjs`, `dev/check-friction-free-release-readiness.mjs`, `dev/test-friction-free-release-readiness-red-gates.mjs`, `dev/render-friction-free-release-readiness.mjs`, `dev/activation-evidence/a26-clean-replay.json`, `dev/activation-evidence/a26-candidate-suite.json`, `dev/activation-evidence/a26-release-readiness-red-gates.json`, `dev/activation-evidence/a26-release-readiness.json`, `dev/friction-free-release-checklist.md`, `dev/adr/0021-friction-free-codex-activation.md`, `CONTRIBUTING.md`, `ROADMAP.md`
 
 #### A13 — Research-question broker
 

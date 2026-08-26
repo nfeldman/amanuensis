@@ -6,7 +6,7 @@
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The v2 epistemic engine, review, architecture, research-learning, and Chorusmith surfaces are integrated, but direct multi-repository use exposed an activation failure before useful work began: a hard-coded global server remained bound to another repository while the target repository carried a project-local registration that the running task had not loaded. Friction-free Codex activation is therefore the highest-priority product work. New product-surface expansion pauses until one user-level installation can bind each new trusted repository correctly, isolate concurrent repositories, diagnose stale configuration before writes, and start from one natural-language request. The integrated v2 baseline remains established; product efficacy and the friction-free operating claim remain unestablished until measured.",
   "delivery": {
-    "implementation": "active",
+    "implementation": "local-complete",
     "productProof": "unestablished",
     "integration": {
       "status": "established",
@@ -1549,7 +1549,7 @@
         {
           "id": "A26",
           "title": "Friction-free beta release gate",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis + release",
           "outcome": "A release candidate is demonstrably install-once, repository-correct, isolated, diagnosable, reversible, and ready for a separately authorized beta publication.",
           "rationale": "Implementation completion must not be relabeled as product usability; the release claim needs criterion-linked operating evidence and independent read-back.",
@@ -1572,9 +1572,23 @@
           "practices": ["GP8", "GP20", "GP23", "GP25", "GP28", "VP4", "VP11", "VP20"],
           "metrics": ["M13", "M14", "M15", "M16", "M17", "M12"],
           "baselineEvidence": [
+            ".github/workflows/test.yml",
             ".github/workflows/published-smoke.yml",
             "mcp-server/test-package-artifact.mjs",
+            "mcp-server/test-release-rollback.mjs",
+            "mcp-server/fixtures/activation/release-readiness-red-matrix.json",
+            "dev/run-friction-free-release-replay.mjs",
+            "dev/run-friction-free-candidate-suite.mjs",
+            "dev/check-friction-free-release-readiness.mjs",
+            "dev/test-friction-free-release-readiness-red-gates.mjs",
+            "dev/render-friction-free-release-readiness.mjs",
+            "dev/activation-evidence/a26-clean-replay.json",
+            "dev/activation-evidence/a26-candidate-suite.json",
+            "dev/activation-evidence/a26-release-readiness-red-gates.json",
+            "dev/activation-evidence/a26-release-readiness.json",
+            "dev/friction-free-release-checklist.md",
             "dev/adr/0021-friction-free-codex-activation.md",
+            "CONTRIBUTING.md",
             "ROADMAP.md"
           ]
         },

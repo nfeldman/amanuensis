@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "a26-friction-free-release-readiness-red-matrix",
+  "baseReport": {
+    "schemaVersion": 1,
+    "contractVersion": "amanuensis-friction-free-release-readiness/v1",
+    "initiative": "A26",
+    "result": "passed",
+    "evidenceMode": "fixture-red",
+    "candidate": {
+      "packageVersion": "0.2.0-alpha.1",
+      "publicationAuthorized": false,
+      "publicationStatus": "not-published",
+      "productProofStatus": "unestablished"
+    },
+    "checklist": [
+      { "initiativeId": "A19", "status": "passed", "acceptanceEvidenceCount": 4, "redGateReceipt": "fixture:A19" },
+      { "initiativeId": "A20", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A20" },
+      { "initiativeId": "A21", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A21" },
+      { "initiativeId": "A22", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A22" },
+      { "initiativeId": "A23", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A23" },
+      { "initiativeId": "A24", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A24" },
+      { "initiativeId": "A25", "status": "passed", "acceptanceEvidenceCount": 3, "redGateReceipt": "fixture:A25" }
+    ],
+    "repositoryResults": [
+      { "runId": "run-a", "logicalRepositoryId": "repo-a", "status": "passed" },
+      { "runId": "run-b", "logicalRepositoryId": "repo-b", "status": "passed" },
+      { "runId": "run-c", "logicalRepositoryId": "repo-c", "status": "passed" },
+      { "runId": "run-d-main", "logicalRepositoryId": "repo-d", "status": "passed" },
+      { "runId": "run-d-worktree", "logicalRepositoryId": "repo-d", "status": "passed" },
+      { "runId": "run-e", "logicalRepositoryId": "repo-e", "status": "passed" }
+    ],
+    "migrationCases": [
+      { "caseId": "hard-coded-global", "status": "passed" },
+      { "caseId": "conflicting-user-project", "status": "passed" },
+      { "caseId": "upgrade", "status": "passed" },
+      { "caseId": "rollback", "status": "passed" },
+      { "caseId": "uninstall", "status": "passed" }
+    ],
+    "restartObservations": [
+      { "observationId": "initial-installation", "count": 1, "status": "passed" },
+      { "observationId": "per-repository", "count": 0, "status": "passed" },
+      { "observationId": "ordinary-first-use", "count": 0, "status": "passed" },
+      { "observationId": "upgrade", "count": 1, "status": "passed" },
+      { "observationId": "rollback", "count": 1, "status": "passed" },
+      { "observationId": "uninstall", "count": 1, "status": "passed" }
+    ],
+    "cleanReplay": {
+      "status": "passed",
+      "sourceCheckout": "passed",
+      "packedPackage": "passed",
+      "configurationMigration": "passed",
+      "rollback": "passed",
+      "documentationReadBack": "passed"
+    },
+    "decision": {
+      "releaseReady": true,
+      "publicationAuthorized": false,
+      "publicationStatus": "not-published",
+      "productProofStatus": "unestablished",
+      "aggregation": "none",
+      "unsupportedStrata": ["fixture unsupported stratum"]
+    }
+  },
+  "cases": [
+    {
+      "caseId": "missing-repository-result",
+      "operations": [{ "operation": "remove", "pointer": "/repositoryResults/5" }],
+      "expectedError": "[repository:run-e] repository result is missing"
+    },
+    {
+      "caseId": "missing-migration-case",
+      "operations": [{ "operation": "remove", "pointer": "/migrationCases/3" }],
+      "expectedError": "[migration:rollback] migration case is missing"
+    },
+    {
+      "caseId": "missing-red-gate-receipt",
+      "operations": [{ "operation": "remove", "pointer": "/checklist/3/redGateReceipt" }],
+      "expectedError": "[A22] red-gate receipt is missing"
+    },
+    {
+      "caseId": "missing-restart-observation",
+      "operations": [{ "operation": "remove", "pointer": "/restartObservations/0" }],
+      "expectedError": "[restart:initial-installation] restart observation is missing"
+    }
+  ]
+}

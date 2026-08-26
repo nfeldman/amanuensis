@@ -169,7 +169,7 @@ try {
   run(
     ["--write", "--source", regressedImplementation, "--output", projection],
     1,
-    "delivery.implementation must be active or integrated",
+    "delivery.implementation must be active, local-complete, or integrated",
   );
 
   const unfinishedIntegratedImplementation = writeCase(
@@ -183,6 +183,19 @@ try {
     ["--write", "--source", unfinishedIntegratedImplementation, "--output", projection],
     1,
     "delivery.implementation cannot be integrated while any initiative is unfinished",
+  );
+
+  const unfinishedLocalCompleteImplementation = writeCase(
+    "unfinished-local-complete-implementation",
+    (value) => {
+      value.delivery.implementation = "local-complete";
+      initiative(value, "A18").status = "ready";
+    },
+  );
+  run(
+    ["--write", "--source", unfinishedLocalCompleteImplementation, "--output", projection],
+    1,
+    "delivery.implementation cannot be local-complete while any initiative is unfinished",
   );
 
   const activeWithoutWork = writeCase("active-without-work", (value) => {

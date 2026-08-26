@@ -40,7 +40,7 @@ const STAGE_ORDER = new Map([
   ["later", 2],
 ]);
 const VALID_STATUSES = new Set(["ready", "planned", "in-progress", "blocked", "done"]);
-const VALID_IMPLEMENTATION_STATUSES = new Set(["active", "integrated"]);
+const VALID_IMPLEMENTATION_STATUSES = new Set(["active", "local-complete", "integrated"]);
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const FULL_BRANCH_REF = /^refs\/heads\/[A-Za-z0-9._/-]+$/;
 const CATALOG_SNAPSHOT = JSON.parse(readFileSync(CATALOG, "utf8"));
@@ -82,7 +82,7 @@ function validateRoadmap(roadmap) {
   }
   assert(
     VALID_IMPLEMENTATION_STATUSES.has(roadmap.delivery?.implementation),
-    "delivery.implementation must be active or integrated",
+    "delivery.implementation must be active, local-complete, or integrated",
     errors,
   );
   assert(
@@ -551,6 +551,11 @@ function validateRoadmap(roadmap) {
     errors,
   );
   assert(
+    roadmap.delivery?.implementation !== "local-complete" || unfinishedItems.length === 0,
+    "delivery.implementation cannot be local-complete while any initiative is unfinished",
+    errors,
+  );
+  assert(
     roadmap.delivery?.implementation !== "active" || unfinishedItems.length > 0,
     "delivery.implementation cannot be active without unfinished initiatives",
     errors,
@@ -779,6 +784,10 @@ function render(roadmap) {
     lines.push("");
     lines.push(
       `**Active expansion:** ${unfinishedCount} of ${initiatives.length} initiatives remain unfinished; completed baseline initiatives retain their historical evidence.`,
+    );
+  } else if (roadmap.delivery.implementation === "local-complete") {
+    lines.push(
+      `**Implementation:** All ${initiatives.length} roadmap initiatives have local criterion-linked evidence. The last remotely integrated baseline remains \`${integration.implementationSha}\` at \`${integration.remote}:${integration.ref}\` (verified ${integration.verifiedAt}); the current local expansion is not claimed at that remote or CI run.`,
     );
   } else {
     lines.push(

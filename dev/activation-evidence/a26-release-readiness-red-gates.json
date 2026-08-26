@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A26",
+  "fixtureId": "a26-friction-free-release-readiness-red-matrix",
+  "result": "passed",
+  "command": "mise exec -- node dev/test-friction-free-release-readiness-red-gates.mjs",
+  "controlExitCode": 0,
+  "sabotageCaseCount": 4,
+  "haltedCaseCount": 4,
+  "cases": [
+    {
+      "caseId": "missing-repository-result",
+      "exitCode": 1,
+      "expectedError": "[repository:run-e] repository result is missing",
+      "observedError": "[repository:run-e] repository result is missing",
+      "halted": true
+    },
+    {
+      "caseId": "missing-migration-case",
+      "exitCode": 1,
+      "expectedError": "[migration:rollback] migration case is missing",
+      "observedError": "[migration:rollback] migration case is missing",
+      "halted": true
+    },
+    {
+      "caseId": "missing-red-gate-receipt",
+      "exitCode": 1,
+      "expectedError": "[A22] red-gate receipt is missing",
+      "observedError": "[A22] red-gate receipt is missing",
+      "halted": true
+    },
+    {
+      "caseId": "missing-restart-observation",
+      "exitCode": 1,
+      "expectedError": "[restart:initial-installation] restart observation is missing",
+      "observedError": "[restart:initial-installation] restart observation is missing",
+      "halted": true
+    }
+  ]
+}

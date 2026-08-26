@@ -81,6 +81,7 @@ node test-first-use-recovery.mjs         # interrupt and recover every first-use
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
 node test-package-activation-parity.mjs  # source/clean-package lifecycle parity in two repositories
+node test-release-rollback.mjs           # exact-tarball rollback and five-store lifecycle custody
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current
 ```
 
@@ -112,6 +113,21 @@ surface and must be reported separately rather than counted as product setup.
 `node dev/test-activation-operating-trust-cleanup.mjs` verifies that the
 separate cleanup helper is dry-run-first, backup-bearing, and removes only the
 exact temporary A25 trust entries while preserving unrelated bytes.
+
+The A26 pre-publication gate keeps execution and projection separate. Run
+`mise exec -- node dev/run-friction-free-release-replay.mjs` to regenerate the
+isolated source/package, interruption, migration, rollback, uninstall, and
+documentation receipt. Run `mise exec -- node
+dev/run-friction-free-candidate-suite.mjs` only when the candidate inputs or
+gate bytes change; its 19 results remain independent. Then regenerate the
+criterion-linked report with `node
+dev/render-friction-free-release-readiness.mjs` and verify it with `node
+dev/check-friction-free-release-readiness.mjs --report
+dev/activation-evidence/a26-release-readiness.json`, `node
+dev/test-friction-free-release-readiness-red-gates.mjs`, and `node
+dev/render-friction-free-release-readiness.mjs --check`. These commands prove
+readiness only; they neither authorize nor perform publication and do not
+establish product proof outside the named operating envelope.
 
 The adversarial suites are first-class. After any schema change,
 new tool, or handler edit, run them — and extend them when the
