@@ -1030,7 +1030,7 @@
         {
           "id": "A23",
           "title": "Zero-touch first use and lifecycle commands",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "A new repository creates local survey state only when first used, while install, upgrade, rollback, and uninstall remain managed and reversible.",
           "rationale": "Global activation removes repository setup only if ordinary first use and later package lifecycle operations do not reintroduce hidden configuration or storage ceremony.",
@@ -1056,13 +1056,16 @@
             "mcp-server/src/cli.ts",
             "mcp-server/src/project.ts",
             "mcp-server/src/db.ts",
-            "mcp-server/test-installer.mjs"
+            "mcp-server/test-installer.mjs",
+            "mcp-server/test-first-use-laziness.mjs",
+            "mcp-server/test-first-use-recovery.mjs",
+            "dev/activation-evidence/a23-zero-touch-lifecycle.json"
           ]
         },
         {
           "id": "A24",
           "title": "Published-package activation parity",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis + release",
           "outcome": "The npm-installed package and source checkout expose the same friction-free activation, migration, diagnosis, and containment behavior.",
           "rationale": "A source-only success would not repair the path ordinary users install, and packaging can silently change executable discovery, skill custody, and cwd behavior.",

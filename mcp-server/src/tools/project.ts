@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { checkpointDatabaseForStorageCommit } from "../db.js";
 import { newSessionId, ok, optString, requireString, type ToolDefinition } from "../helpers.js";
 import { getSession, startSession } from "../session.js";
@@ -10,13 +11,17 @@ export const projectTools: ToolDefinition[] = [
       "Return metadata about the current project: key, workspace, storage directory, whether the DB is initialized, and stored git baseline.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: (_args, ctx) => {
-      const db = ctx.db;
-      const git = db
-        .prepare("SELECT canonical_branch, onboarding_sha FROM git_state WHERE repo_id='default'")
-        .get() as { canonical_branch?: string; onboarding_sha?: string } | undefined;
-      const dbExists = !!db
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
-        .get();
+      let git: { canonical_branch?: string; onboarding_sha?: string } | undefined;
+      let dbExists = false;
+      if (existsSync(ctx.project.dbPath)) {
+        const db = ctx.db;
+        git = db
+          .prepare("SELECT canonical_branch, onboarding_sha FROM git_state WHERE repo_id='default'")
+          .get() as { canonical_branch?: string; onboarding_sha?: string } | undefined;
+        dbExists = !!db
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
+          .get();
+      }
       return {
         project_key: ctx.project.projectKey,
         workspace_path: ctx.project.workspacePath,

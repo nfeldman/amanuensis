@@ -7,7 +7,8 @@ ships:
   conspectus storage and exposes the typed tool surface the agents
   depend on,
 - the portable **Amanuensis Agent Skill**, which defines the workflow,
-- the **installer CLI** (`amanuensis init`) that wires the selected client's
+- the **installer CLI** (`amanuensis install`, with `init` retained for
+  explicit project adapters) that wires the selected client's
   project discovery files, and
 - the **materializer** that renders the conspectus into a
   navigable human-readable site.
@@ -25,8 +26,8 @@ mise install
 mise exec -- npm --prefix mcp-server ci
 mise exec -- npm --prefix mcp-server run build
 
-mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --dry-run
-mise exec -- node mcp-server/dist/cli.js init --client codex --scope user
+mise exec -- node mcp-server/dist/cli.js install --dry-run
+mise exec -- node mcp-server/dist/cli.js install
 ```
 
 Codex user scope is the default: it installs one global skill and a cwd-relative
@@ -65,6 +66,18 @@ two-step: `doctor --repair --dry-run --json` returns a digest-bound plan ID;
 `doctor --repair --apply-plan <PLAN_ID> --json` applies it with timestamped
 configuration backups and refuses changed inputs.
 
+Startup, MCP negotiation, tool discovery, and `get_project_info` are read-only
+in a fresh repository. The first DB-backed tool call initializes one
+identity-bound `.amanuensis/` store by staging a complete schema and marker and
+publishing it atomically. Dead identity-matching stages are recoverable;
+unknown or nonempty incomplete stores halt for diagnosis. Use
+`amanuensis upgrade --dry-run` before `amanuensis upgrade`, and dry-run
+`amanuensis uninstall --client codex --scope user` before applying it. Both
+lifecycle commands preserve every repository store and unrelated Codex config.
+Configuration rewrites receive timestamped backups; managed skills are
+replaced or removed without creating skill archives. A deliberate package
+rollback installs the intended version and runs that version's upgrade path.
+
 The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
 interpreter. Survey state defaults to `<project>/.amanuensis/`.
@@ -76,7 +89,7 @@ Install the current prerelease with
 
 See the [source repository](https://github.com/nfeldman/amanuensis)
 for the full README, methodology overview, and current limitations.
-`amanuensis init --help` prints the installer surface; the server itself is a
+`amanuensis --help` prints the installer surface; the server itself is a
 stdio process launched by the selected MCP client.
 
 ## License

@@ -28,7 +28,7 @@ of the published package. See
 Claude Code, Codex, VS Code, and generic registration shapes.
 
 Local Codex development uses a directory-level global skill link plus one
-user-scoped `init --mcp-only` source launcher. This keeps the working checkout
+user-scoped `install --mcp-only` source launcher. This keeps the working checkout
 live without creating project-local registrations or changing the
 versioned-copy behavior of published npm installs. Claude and VS Code retain
 their project-scoped development adapters; see “Live global skill, versioned
@@ -75,6 +75,8 @@ node test-activation-contract.mjs        # user-scope cwd binding and wrong-work
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
 node test-workspace-binding.mjs          # immutable receipt, symlink halt, worktree policy
 node test-codex-parent-workspace.mjs     # recover Codex CLI --cd workspace without a fixed path
+node test-first-use-laziness.mjs         # prove startup is read-only and first DB use creates one store
+node test-first-use-recovery.mjs         # interrupt and recover every first-use mutation boundary
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current

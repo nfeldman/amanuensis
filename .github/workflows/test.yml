@@ -98,6 +98,12 @@ jobs:
       - name: Codex parent-process workspace selection
         working-directory: mcp-server
         run: node test-codex-parent-workspace.mjs
+      - name: Lazy first use leaves an untouched repository unchanged
+        working-directory: mcp-server
+        run: node test-first-use-laziness.mjs
+      - name: First-use initialization recovers at every mutation boundary
+        working-directory: mcp-server
+        run: node test-first-use-recovery.mjs
       - name: Committed real-host Codex evidence and independent red gates
         run: node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json && node dev/test-codex-host-evidence-red-gates.mjs
       - name: Packed artifact adapters and MCP handshake

@@ -11,12 +11,22 @@
 // env-var signalling, and checks the resulting storage structure,
 // commit layout, and comparison output.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import {
+  ensureProjectStorage,
+  resolveProject as resolveProjectBinding,
+} from "./dist/project.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 import { concernTools } from "./dist/tools/concerns.js";
@@ -62,6 +72,15 @@ function t(label, fn) {
 }
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
+}
+
+function resolveProject(workspace) {
+  const project = resolveProjectBinding(workspace);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
+  return project;
 }
 
 function makeConspectusRepo() {
@@ -183,7 +202,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     //           └── .gitignore
     const storagePath = project.storagePath;
     assert(
-      storagePath.startsWith(join(conspectus, "workspaces")),
+      storagePath.startsWith(join(realpathSync(conspectus), "workspaces")),
       `storagePath under conspectus: ${storagePath}`,
     );
     assert(existsSync(join(storagePath, "memory.db")), "memory.db not written");

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { projectTools } from "./dist/tools/project.js";
@@ -71,6 +71,10 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   const project = resolveProject(workspace, {
     selectionSource: `test-refresh-${label}`,
     serverVersion: "test",
+  });
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
   });
   const storage = project.storagePath;
   const db = openDatabase(project.dbPath);

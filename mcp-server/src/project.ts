@@ -20,7 +20,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { ensureStorageRepo } from "./storage-git.js";
+import { ensureStorageRepo, isGitRepo } from "./storage-git.js";
 
 export interface ProjectContext {
   readonly workspacePath: string;
@@ -45,6 +45,37 @@ export interface ProjectBindingReceipt {
   selectionSource: string;
   serverVersion: string;
 }
+
+export const PROJECT_INITIALIZATION_BOUNDARIES = [
+  "parent-git-exclude",
+  "storage-parent",
+  "abandoned-stage-cleanup",
+  "incomplete-store-rollback",
+  "staging-directory",
+  "project-identity",
+  "workspace-path",
+  "database-schema",
+  "storage-git",
+  "completion-marker",
+  "atomic-publish",
+  "initializer-owner-retirement",
+] as const;
+
+export type ProjectInitializationBoundary = (typeof PROJECT_INITIALIZATION_BOUNDARIES)[number];
+
+export interface ProjectInitializationOptions {
+  afterMutation?: (boundary: ProjectInitializationBoundary, path: string) => void;
+}
+
+export interface ProjectInitializationResult {
+  created: boolean;
+  recoveredStages: number;
+  storageGitReady: boolean;
+}
+
+const STORAGE_INITIALIZATION_CONTRACT = "amanuensis-storage-initialization/v1";
+const STORAGE_INITIALIZATION_MARKER = "initialization.json";
+const STAGING_OWNER_FILE = ".amanuensis-initializer.json";
 
 function safeGitOrigin(workspace: string): string | null {
   try {
@@ -544,23 +575,6 @@ function assertStorageIdentity(
   }
 }
 
-function establishStorageIdentity(
-  storagePath: string,
-  workspace: string,
-  identity: string,
-  shared: boolean,
-): void {
-  assertStorageIdentity(storagePath, workspace, identity, shared);
-  const identityPath = join(storagePath, "project_identity");
-  const workspacePath = join(storagePath, "workspace_path");
-  // Revalidate immediately before both writes, then open the record itself with
-  // O_NOFOLLOW so a raced leaf symlink cannot redirect either control record.
-  assertNoSymlinkTree(storagePath, "Amanuensis storage");
-  writeTextNoFollow(identityPath, identity);
-  assertNoSymlinkTree(storagePath, "Amanuensis storage");
-  writeTextNoFollow(workspacePath, workspace);
-}
-
 function migrateVerifiedStore(
   legacyPath: string,
   destination: string,
@@ -597,50 +611,6 @@ export function resolveProject(
     excludeLocalStorageFromWorkspaceGit(absWorkspace, storagePath, { preflightOnly: true });
   }
   assertStorageIdentity(storagePath, absWorkspace, descriptor.identity, Boolean(override));
-  if (independentStorage) excludeLocalStorageFromWorkspaceGit(absWorkspace, storagePath);
-  // A collision-resistant shared key can add namespace levels that the legacy
-  // key did not have. Create only its validated parent so rename/copy staging
-  // has a same-filesystem landing directory.
-  mkdirSync(dirname(storagePath), { recursive: true });
-  assertContainedPath(storageRoot, storagePath, "Amanuensis storage");
-
-  const legacyRoot = override ? storageRoot : join(homedir(), ".amanuensis", "workspaces");
-  const legacyPath = storagePathUnder(legacyRoot, descriptor.legacyKey);
-  if (legacyPath !== storagePath && existsSync(legacyPath)) {
-    assertContainedPath(legacyRoot, legacyPath, "legacy Amanuensis storage");
-    const migration = migrateVerifiedStore(
-      legacyPath,
-      storagePath,
-      absWorkspace,
-      descriptor.identity,
-    );
-    if (migration === "moved") {
-      process.stderr.write(
-        `[amanuensis-memory] migrated legacy storage ${legacyPath} → ${storagePath}\n`,
-      );
-    } else if (migration === "conflict") {
-      process.stderr.write(
-        `[amanuensis-memory] warning: both ${legacyPath} and ${storagePath} contain different storage; preserving both and using the configured destination\n`,
-      );
-    } else if (migration === "unverified") {
-      process.stderr.write(
-        `[amanuensis-memory] warning: legacy storage ${legacyPath} does not prove identity ${descriptor.identity}; preserving it without migration\n`,
-      );
-    }
-  }
-  assertContainedPath(storageRoot, storagePath, "Amanuensis storage");
-  assertNoSymlinkTree(storagePath, "Amanuensis storage");
-  mkdirSync(storagePath, { recursive: true });
-  assertContainedPath(storageRoot, storagePath, "Amanuensis storage");
-  establishStorageIdentity(storagePath, absWorkspace, descriptor.identity, Boolean(override));
-
-  // Initialize the storage dir as a git repo on first open. Failures are
-  // logged to stderr but do not prevent the server from starting — git
-  // is a nice-to-have for history, not load-bearing for DB operations.
-  const gitInit = ensureStorageRepo(storagePath, { independent: independentStorage });
-  if (!gitInit.ok) {
-    process.stderr.write(`[amanuensis-memory] storage git init deferred: ${gitInit.reason}\n`);
-  }
 
   const receiptFields = {
     contractVersion: "amanuensis-repository-binding/v1" as const,
@@ -664,9 +634,324 @@ export function resolveProject(
     projectKey,
     storagePath,
     dbPath: join(storagePath, "memory.db"),
-    storageGitReady: gitInit.ok,
+    storageGitReady: existsSync(storagePath) && isGitRepo(storagePath),
     bindingReceipt,
   });
+}
+
+type InitializeDatabase = (dbPath: string) => void;
+
+type StorageInitializationMarker = {
+  contractVersion: typeof STORAGE_INITIALIZATION_CONTRACT;
+  projectIdentity: string;
+  projectKey: string;
+  storagePolicy: ProjectBindingReceipt["storagePolicy"];
+  canonicalRoot: string | null;
+  workspaceInstanceId: string | null;
+  database: "memory.db";
+};
+
+function expectedStorageMarker(project: ProjectContext): StorageInitializationMarker {
+  const local = project.bindingReceipt.storagePolicy === "worktree-local";
+  return {
+    contractVersion: STORAGE_INITIALIZATION_CONTRACT,
+    projectIdentity: project.bindingReceipt.projectIdentity,
+    projectKey: project.projectKey,
+    storagePolicy: project.bindingReceipt.storagePolicy,
+    canonicalRoot: local ? project.workspacePath : null,
+    workspaceInstanceId: local ? project.bindingReceipt.workspaceInstanceId : null,
+    database: "memory.db",
+  };
+}
+
+function readJsonRecord(path: string, label: string): Record<string, unknown> {
+  if (!existsSync(path)) throw new Error(`${label} is absent: ${path}`);
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink() || !stat.isFile()) {
+    throw new Error(`${label} must be a regular file: ${path}`);
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("top level is not an object");
+    }
+    return parsed as Record<string, unknown>;
+  } catch (error) {
+    throw new Error(`${label} is not valid JSON: ${(error as Error).message}`);
+  }
+}
+
+function initializationMarkerPath(storagePath: string): string {
+  return join(storagePath, STORAGE_INITIALIZATION_MARKER);
+}
+
+function validateStorageMarker(project: ProjectContext, storagePath = project.storagePath): void {
+  const marker = readJsonRecord(
+    initializationMarkerPath(storagePath),
+    "Amanuensis storage completion marker",
+  );
+  const expected = expectedStorageMarker(project);
+  const expectedKeys = Object.keys(expected).sort();
+  const markerKeys = Object.keys(marker).sort();
+  const matches =
+    markerKeys.length === expectedKeys.length &&
+    markerKeys.every((key, index) => key === expectedKeys[index]) &&
+    expectedKeys.every((key) => marker[key] === expected[key as keyof StorageInitializationMarker]);
+  if (!matches) {
+    throw new Error(
+      `Amanuensis storage completion marker does not match the immutable repository binding: ${storagePath}`,
+    );
+  }
+  const databasePath = join(storagePath, expected.database);
+  if (!existsSync(databasePath) || !lstatSync(databasePath).isFile()) {
+    throw new Error(
+      `Amanuensis storage completion marker names a missing database: ${databasePath}`,
+    );
+  }
+}
+
+function writeJsonAtomic(path: string, value: unknown): void {
+  const temporary = `${path}.tmp-${randomUUID()}`;
+  try {
+    writeTextNoFollow(temporary, `${JSON.stringify(value)}\n`);
+    renameSync(temporary, path);
+  } finally {
+    if (existsSync(temporary)) rmSync(temporary, { force: true });
+  }
+}
+
+function processIsAlive(pid: number): boolean {
+  if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function cleanupAbandonedStages(
+  project: ProjectContext,
+  afterMutation?: ProjectInitializationOptions["afterMutation"],
+): number {
+  const parent = dirname(project.storagePath);
+  if (!existsSync(parent)) return 0;
+  const prefix = `${basename(project.storagePath)}.initializing-`;
+  let recovered = 0;
+  for (const name of readdirSync(parent)
+    .filter((entry) => entry.startsWith(prefix))
+    .sort()) {
+    const stagePath = join(parent, name);
+    const ownerPath = join(stagePath, STAGING_OWNER_FILE);
+    let owner: Record<string, unknown>;
+    try {
+      assertContainedPath(project.bindingReceipt.storageRoot, stagePath, "initialization staging");
+      assertNoSymlinkTree(stagePath, "Amanuensis initialization staging");
+      owner = readJsonRecord(ownerPath, "Amanuensis initialization owner");
+    } catch {
+      // Unknown or attacker-controlled siblings are never adopted or deleted.
+      continue;
+    }
+    if (
+      owner.contractVersion !== STORAGE_INITIALIZATION_CONTRACT ||
+      owner.targetStoragePath !== project.storagePath ||
+      owner.projectIdentity !== project.bindingReceipt.projectIdentity ||
+      typeof owner.pid !== "number" ||
+      processIsAlive(owner.pid)
+    ) {
+      continue;
+    }
+    rmSync(stagePath, { recursive: true, force: true });
+    recovered++;
+    afterMutation?.("abandoned-stage-cleanup", stagePath);
+  }
+  return recovered;
+}
+
+function incompleteStoreCanRollBack(project: ProjectContext): boolean {
+  if (!existsSync(project.storagePath)) return false;
+  const allowed = new Set(["project_identity", "workspace_path"]);
+  return readdirSync(project.storagePath).every((name) => allowed.has(name));
+}
+
+function ensureExistingProjectStorage(
+  project: ProjectContext,
+  initializeDatabase: InitializeDatabase,
+  recoveredStages: number,
+  afterMutation?: ProjectInitializationOptions["afterMutation"],
+): ProjectInitializationResult | null {
+  if (!existsSync(project.storagePath)) return null;
+  assertStorageIdentity(
+    project.storagePath,
+    project.workspacePath,
+    project.bindingReceipt.projectIdentity,
+    project.bindingReceipt.storagePolicy === "shared-repository-identity",
+  );
+  const markerPath = initializationMarkerPath(project.storagePath);
+  if (existsSync(markerPath)) {
+    validateStorageMarker(project);
+    const initializerOwner = join(project.storagePath, STAGING_OWNER_FILE);
+    if (existsSync(initializerOwner)) {
+      rmSync(initializerOwner);
+      afterMutation?.("initializer-owner-retirement", initializerOwner);
+    }
+  } else if (!existsSync(project.dbPath)) {
+    if (!incompleteStoreCanRollBack(project)) {
+      throw new Error(
+        `incomplete Amanuensis storage has no database; preserving it for diagnosis: ${project.storagePath}`,
+      );
+    }
+    rmSync(project.storagePath, { recursive: true, force: true });
+    afterMutation?.("incomplete-store-rollback", project.storagePath);
+    return null;
+  }
+
+  if (existsSync(project.storagePath)) {
+    // Existing v2 stores predate the completion marker. Run the idempotent
+    // schema initializer and publish the marker only after read-back succeeds.
+    initializeDatabase(project.dbPath);
+    if (!existsSync(markerPath)) {
+      writeJsonAtomic(markerPath, expectedStorageMarker(project));
+      afterMutation?.("completion-marker", markerPath);
+    }
+    validateStorageMarker(project);
+    const gitInit = ensureStorageRepo(project.storagePath, {
+      independent: project.bindingReceipt.storagePolicy === "worktree-local",
+    });
+    if (!gitInit.ok) {
+      process.stderr.write(`[amanuensis-memory] storage git init deferred: ${gitInit.reason}\n`);
+    }
+    return { created: false, recoveredStages, storageGitReady: gitInit.ok };
+  }
+  return null;
+}
+
+export function isProjectStorageInitialized(project: ProjectContext): boolean {
+  assertProjectBinding(project);
+  if (!existsSync(project.storagePath) || !existsSync(project.dbPath)) return false;
+  const marker = initializationMarkerPath(project.storagePath);
+  if (existsSync(marker)) validateStorageMarker(project);
+  return true;
+}
+
+export function ensureProjectStorage(
+  project: ProjectContext,
+  initializeDatabase: InitializeDatabase,
+  options: ProjectInitializationOptions = {},
+): ProjectInitializationResult {
+  assertProjectBinding(project);
+  const { afterMutation } = options;
+  const independent = project.bindingReceipt.storagePolicy === "worktree-local";
+  if (independent) {
+    excludeLocalStorageFromWorkspaceGit(project.workspacePath, project.storagePath);
+    afterMutation?.("parent-git-exclude", project.storagePath);
+  }
+
+  const storageParent = dirname(project.storagePath);
+  if (!existsSync(storageParent)) {
+    mkdirSync(storageParent, { recursive: true });
+    afterMutation?.("storage-parent", storageParent);
+  }
+  const recoveredStages = cleanupAbandonedStages(project, afterMutation);
+
+  const descriptor = describeProject(project.workspacePath);
+  const legacyRoot =
+    project.bindingReceipt.storagePolicy === "shared-repository-identity"
+      ? project.bindingReceipt.storageRoot
+      : join(homedir(), ".amanuensis", "workspaces");
+  const legacyPath = storagePathUnder(legacyRoot, descriptor.legacyKey);
+  if (legacyPath !== project.storagePath && existsSync(legacyPath)) {
+    assertContainedPath(legacyRoot, legacyPath, "legacy Amanuensis storage");
+    const migration = migrateVerifiedStore(
+      legacyPath,
+      project.storagePath,
+      project.workspacePath,
+      project.bindingReceipt.projectIdentity,
+    );
+    if (migration === "moved") {
+      process.stderr.write(
+        `[amanuensis-memory] migrated legacy storage ${legacyPath} → ${project.storagePath}\n`,
+      );
+    } else if (migration === "conflict") {
+      process.stderr.write(
+        `[amanuensis-memory] warning: both ${legacyPath} and ${project.storagePath} contain different storage; preserving both and using the configured destination\n`,
+      );
+    } else if (migration === "unverified") {
+      process.stderr.write(
+        `[amanuensis-memory] warning: legacy storage ${legacyPath} does not prove identity ${project.bindingReceipt.projectIdentity}; preserving it without migration\n`,
+      );
+    }
+  }
+
+  const existing = ensureExistingProjectStorage(
+    project,
+    initializeDatabase,
+    recoveredStages,
+    afterMutation,
+  );
+  if (existing) return existing;
+
+  const stagePath = join(
+    storageParent,
+    `${basename(project.storagePath)}.initializing-${process.pid}-${randomUUID()}`,
+  );
+  assertContainedPath(project.bindingReceipt.storageRoot, stagePath, "initialization staging");
+  let published = false;
+  try {
+    mkdirSync(stagePath);
+    writeTextNoFollow(
+      join(stagePath, STAGING_OWNER_FILE),
+      `${JSON.stringify({
+        contractVersion: STORAGE_INITIALIZATION_CONTRACT,
+        pid: process.pid,
+        targetStoragePath: project.storagePath,
+        projectIdentity: project.bindingReceipt.projectIdentity,
+      })}\n`,
+    );
+    afterMutation?.("staging-directory", stagePath);
+
+    writeTextNoFollow(join(stagePath, "project_identity"), project.bindingReceipt.projectIdentity);
+    afterMutation?.("project-identity", join(stagePath, "project_identity"));
+    writeTextNoFollow(join(stagePath, "workspace_path"), project.workspacePath);
+    afterMutation?.("workspace-path", join(stagePath, "workspace_path"));
+
+    initializeDatabase(join(stagePath, "memory.db"));
+    afterMutation?.("database-schema", join(stagePath, "memory.db"));
+
+    const gitInit = ensureStorageRepo(stagePath, { independent });
+    if (!gitInit.ok) {
+      process.stderr.write(`[amanuensis-memory] storage git init deferred: ${gitInit.reason}\n`);
+    }
+    afterMutation?.("storage-git", stagePath);
+
+    writeJsonAtomic(initializationMarkerPath(stagePath), expectedStorageMarker(project));
+    afterMutation?.("completion-marker", initializationMarkerPath(stagePath));
+
+    try {
+      renameSync(stagePath, project.storagePath);
+      published = true;
+    } catch (error) {
+      if (!existsSync(project.storagePath)) throw error;
+      const concurrent = ensureExistingProjectStorage(
+        project,
+        initializeDatabase,
+        recoveredStages,
+        afterMutation,
+      );
+      if (!concurrent) throw error;
+      return concurrent;
+    }
+    afterMutation?.("atomic-publish", project.storagePath);
+    validateStorageMarker(project);
+    const initializerOwner = join(project.storagePath, STAGING_OWNER_FILE);
+    rmSync(initializerOwner);
+    afterMutation?.("initializer-owner-retirement", initializerOwner);
+    return { created: true, recoveredStages, storageGitReady: gitInit.ok };
+  } finally {
+    if (!published && existsSync(stagePath)) {
+      rmSync(stagePath, { recursive: true, force: true });
+    }
+  }
 }
 
 export function assertProjectBinding(project: ProjectContext): void {
@@ -697,6 +982,9 @@ export function assertProjectBinding(project: ProjectContext): void {
     receipt.projectIdentity,
     receipt.storagePolicy === "shared-repository-identity",
   );
+  if (existsSync(initializationMarkerPath(receipt.storagePath))) {
+    validateStorageMarker(project);
+  }
 }
 
 export function resolveStorageOutputPath(

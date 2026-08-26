@@ -10,12 +10,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureStorageRepo, commitStorage, getStorageLog } from "./dist/storage-git.js";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 
 function freshProject() {
   const ws = mkdtempSync(join(tmpdir(), "agit-perf-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
-  return { ws, project: resolveProject(ws) };
+  const project = resolveProject(ws);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
+  return { ws, project };
 }
 
 function measure(label, fn, iters = 10) {

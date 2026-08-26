@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import {
   ensureStorageRepo,
@@ -30,6 +30,10 @@ function freshProject() {
   const ws = mkdtempSync(join(tmpdir(), "agit-ws-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
   const project = resolveProject(ws);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
   return { ws, project };
 }
 

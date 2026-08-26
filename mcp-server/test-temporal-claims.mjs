@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
@@ -95,6 +95,10 @@ function freshContext() {
 
   process.env.AMANUENSIS_STORAGE_ROOT = storage;
   const project = resolveProject(workspace);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const session = call("start_session", { intent: "temporal-claims-test" }, ctx);

@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 import { compareTools } from "./dist/tools/compare.js";
 
@@ -42,10 +42,18 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function initializeProject(project) {
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
+}
+
 function freshCtx() {
   const ws = mkdtempSync(join(tmpdir(), "prio-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
   const project = resolveProject(ws);
+  initializeProject(project);
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   return {
@@ -63,6 +71,7 @@ t("migration adds priority column to a pre-priority DB without data loss", () =>
   const ws = mkdtempSync(join(tmpdir(), "prio-mig-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
   const project = resolveProject(ws);
+  initializeProject(project);
   // Simulate a pre-migration DB by explicitly dropping the column (via
   // a raw connection, bypassing openDatabase's migrations).
   //

@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { compareTools } from "./dist/tools/compare.js";
 import { materializeTools } from "./dist/tools/materialize.js";
 
@@ -53,6 +53,13 @@ function tool(tools, name) {
   const found = tools.find((candidate) => candidate.name === name);
   assert(found, `missing tool ${name}`);
   return found;
+}
+
+function initializeStorage(project) {
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
 }
 
 const moduleDir = fileURLToPath(new URL(".", import.meta.url));
@@ -108,7 +115,8 @@ try {
   const excludePath = join(repositoryC, ".git", "info", "exclude");
   unlinkSync(excludePath);
   symlinkSync(outsideExclude, excludePath);
-  assert.throws(() => resolveProject(repositoryC), /symbolic link/);
+  const unsafeExcludeProject = resolveProject(repositoryC);
+  assert.throws(() => initializeStorage(unsafeExcludeProject), /symbolic link/);
   assert.equal(readFileSync(outsideExclude, "utf8"), "preserve\n");
   assert(!existsSync(join(repositoryC, ".amanuensis")), "Git-exclude escape created storage");
 
@@ -123,6 +131,7 @@ try {
   assert.equal(project.bindingReceipt.projectKey, project.projectKey);
   assert.equal(project.bindingReceipt.selectionSource, "process-cwd-git-root");
 
+  initializeStorage(project);
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const outsideMaterialization = join(repositoryB, "materialized");

@@ -87,13 +87,23 @@ function makeTargetRepo() {
 }
 
 const {
+  ensureProjectStorage,
   excludeLocalStorageFromWorkspaceGit,
   migrateLegacyStorage,
-  resolveProject,
+  resolveProject: resolveProjectBinding,
   resolveProjectKey,
 } = await loadModules();
 const { openDatabase } = await import("./dist/db.js");
 const { commitStorage, isGitRepo, getStorageLog } = await import("./dist/storage-git.js");
+
+function resolveProject(workspace) {
+  const project = resolveProjectBinding(workspace);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
+  return project;
+}
 
 // ---- 1. Storage-root override ----
 t("AMANUENSIS_STORAGE_ROOT redirects storage out of the project", () => {
@@ -566,6 +576,8 @@ t("a verified preview-era shared key migrates to the host-qualified key", () => 
     mkdirSync(legacy, { recursive: true });
     writeFileSync(join(legacy, "workspace_path"), target);
     writeFileSync(join(legacy, "retained.txt"), "preview-state");
+    const legacyDatabase = openDatabase(join(legacy, "memory.db"));
+    legacyDatabase.close();
     process.env.AMANUENSIS_STORAGE_ROOT = shared;
     const project = resolveProject(target);
     assert(project.storagePath === join(realpathSync(shared), "github.com", "acme", "widget"));

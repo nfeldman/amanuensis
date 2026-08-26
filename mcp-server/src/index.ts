@@ -6,9 +6,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { discoverCodexParentWorkspace } from "./codex-host.js";
-import { openDatabase } from "./db.js";
+import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
-import { assertProjectBinding, resolveProject } from "./project.js";
+import { assertProjectBinding, ensureProjectStorage, resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
@@ -168,11 +168,22 @@ function parseArgs(argv: string[]): { workspace: string; selectionSource: string
 async function main(): Promise<void> {
   const { workspace, selectionSource } = parseArgs(process.argv.slice(2));
   const project = resolveProject(workspace, { selectionSource, serverVersion: SERVER_VERSION });
-  const db = openDatabase(project.dbPath);
+  let db: DB | null = null;
+  const ensureDatabase = (): DB => {
+    if (db) return db;
+    ensureProjectStorage(project, (candidatePath) => {
+      const candidate = openDatabase(candidatePath);
+      candidate.close();
+    });
+    db = openDatabase(project.dbPath);
+    return db;
+  };
 
   const ctx: ServerContext = {
     project,
-    db,
+    get db() {
+      return ensureDatabase();
+    },
     sessionId: null,
   };
 
@@ -265,6 +276,7 @@ async function main(): Promise<void> {
     }
     try {
       assertProjectBinding(project);
+      if (name !== "get_project_info") ensureDatabase();
       const data = tool.handler(args, ctx);
       return jsonResult(data);
     } catch (e) {

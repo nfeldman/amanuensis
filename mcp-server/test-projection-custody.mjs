@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { materializeTools } from "./dist/tools/materialize.js";
 
 function assert(value, message) {
@@ -13,9 +14,7 @@ function assert(value, message) {
 
 const root = mkdtempSync(join(tmpdir(), "amanuensis-projection-custody-"));
 const workspace = join(root, "workspace");
-const storage = join(root, "storage");
 mkdirSync(workspace);
-mkdirSync(storage);
 execFileSync("git", ["init", "-q"], { cwd: workspace });
 writeFileSync(join(workspace, "fixture.ts"), "export const fixture = true;\n");
 execFileSync("git", ["add", "fixture.ts"], { cwd: workspace });
@@ -37,13 +36,9 @@ execFileSync(
   { cwd: workspace },
 );
 const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspace, encoding: "utf8" }).trim();
-const project = {
-  workspacePath: workspace,
-  projectKey: "test/projection-custody",
-  storagePath: storage,
-  dbPath: join(storage, "memory.db"),
-  storageGitReady: false,
-};
+const project = resolveProject(workspace, { selectionSource: "projection-custody-test" });
+ensureProjectStorage(project, (dbPath) => openDatabase(dbPath).close());
+const storage = project.storagePath;
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: "projection-session" };
 const tools = new Map(materializeTools.map((tool) => [tool.name, tool]));

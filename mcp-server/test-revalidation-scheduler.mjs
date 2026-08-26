@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { impactTools } from "./dist/tools/impact.js";
@@ -95,6 +95,10 @@ function freshContext(claimCount = 1) {
 
   process.env.AMANUENSIS_STORAGE_ROOT = storage;
   const project = resolveProject(workspace);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
   const ctx = { project, db: openDatabase(project.dbPath), sessionId: null };
   const session = call("start_session", { intent: "revalidation-test" }, ctx);
   ctx.sessionId = session.session_id;

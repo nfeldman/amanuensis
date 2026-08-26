@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { compositionTools } from "./dist/tools/composition.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
@@ -206,6 +206,10 @@ function freshFixture() {
   const project = resolveProject(workspace, {
     selectionSource: "test-review-session",
     serverVersion: "test",
+  });
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
   });
   const storage = project.storagePath;
   const db = openDatabase(project.dbPath);

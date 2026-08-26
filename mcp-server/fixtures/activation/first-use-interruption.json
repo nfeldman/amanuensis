@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "a23-lazy-first-use-interruption",
+  "preState": "fresh-trusted-git-repository",
+  "preStatefulOperations": [
+    "server-start",
+    "mcp-initialize",
+    "tools-list",
+    "get_project_info"
+  ],
+  "initializationMutationBoundaries": [
+    "parent-git-exclude",
+    "storage-parent",
+    "abandoned-stage-cleanup",
+    "incomplete-store-rollback",
+    "staging-directory",
+    "project-identity",
+    "workspace-path",
+    "database-schema",
+    "storage-git",
+    "completion-marker",
+    "atomic-publish",
+    "initializer-owner-retirement"
+  ],
+  "requiredRecovery": "valid-identity-bound-store-or-no-store",
+  "forbidden": [
+    "project-state-before-first-stateful-operation",
+    "accepted-store-without-completion-marker",
+    "lost-preexisting-conspectus"
+  ]
+}

@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 3 | 0 | 0 | 23 |
+| 1 | 2 | 0 | 0 | 24 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 4 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 3 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A23 — Zero-touch first use and lifecycle commands.
+**Next implementation initiative:** A24 — Published-package activation parity.
 
 ## Epistemic baseline
 
@@ -582,7 +582,7 @@ Risks:
 
 #### A23 — Zero-touch first use and lifecycle commands
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A22<br>
 **Metrics:** M13, M14, M17
@@ -611,11 +611,11 @@ Risks:
 - Version skew between global skill, launcher, and stored schema can produce confusing partial compatibility.
 
 **Practice basis:** GP8, GP18, GP25, GP28, VP4, VP20<br>
-**Baseline evidence:** `mcp-server/src/cli.ts`, `mcp-server/src/project.ts`, `mcp-server/src/db.ts`, `mcp-server/test-installer.mjs`
+**Baseline evidence:** `mcp-server/src/cli.ts`, `mcp-server/src/project.ts`, `mcp-server/src/db.ts`, `mcp-server/test-installer.mjs`, `mcp-server/test-first-use-laziness.mjs`, `mcp-server/test-first-use-recovery.mjs`, `dev/activation-evidence/a23-zero-touch-lifecycle.json`
 
 #### A24 — Published-package activation parity
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis + release<br>
 **Depends on:** A23<br>
 **Metrics:** M13, M14, M12

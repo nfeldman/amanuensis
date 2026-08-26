@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A23",
+  "pecIndex": "pc-3556",
+  "recordedAt": "2026-08-26T02:38:00Z",
+  "result": "passed",
+  "source": {
+    "baselineCommit": "1112f780210ac5467b37d9e79b5f3c08f423ddaf",
+    "practiceCatalog": {
+      "version": "2.10",
+      "stamp": "f9a5c0c9dbde"
+    },
+    "files": [
+      {
+        "path": "mcp-server/src/project.ts",
+        "sha256": "943f70e790bfda4cc0e2586af2f197ea55801a41e16e4b84e6a94e4958882e72"
+      },
+      {
+        "path": "mcp-server/src/index.ts",
+        "sha256": "aa622c7602e0891341fe2f2fca1e86df6e4bf486427bfa7932cfdc8f64374e4a"
+      },
+      {
+        "path": "mcp-server/src/tools/project.ts",
+        "sha256": "339b7024673497d8634bb8e901390cad9935c0198c1d79e8a106d6bc068cc9c6"
+      },
+      {
+        "path": "mcp-server/src/cli.ts",
+        "sha256": "134d92ef4806caff77d576b3edcb5f3d7a13badda1a795a78d48e26469187745"
+      },
+      {
+        "path": "mcp-server/test-first-use-laziness.mjs",
+        "sha256": "8e23df9c43f4bb996dfe5cdd13d748b7a751f5ba01977e3ed750b46fd9108d87"
+      },
+      {
+        "path": "mcp-server/test-first-use-recovery.mjs",
+        "sha256": "47bfaac4bf27ca3203e12d72fb3f5fec49e3085d6f027d786c370a18940bff10"
+      },
+      {
+        "path": "mcp-server/fixtures/activation/first-use-worker.mjs",
+        "sha256": "ec285219cd26f11dec6702fdb50b3e20b6ddee287d3076652194e52611c5e73a"
+      },
+      {
+        "path": "mcp-server/fixtures/activation/first-use-interruption.json",
+        "sha256": "6a7042ad5b16564a4c5a31571774427b8c99ef90723b4034f0de6972a18f1c51"
+      },
+      {
+        "path": "mcp-server/test-installer.mjs",
+        "sha256": "8f7fde580b87b81d70a459a73727139c485f61744b0315715794b819aa2d72f8"
+      },
+      {
+        "path": ".github/workflows/test.yml",
+        "sha256": "b63529e394b5ed8d246a1984b58191d9cb92b2958815d58b6e2c11e8c6ae93f0"
+      }
+    ]
+  },
+  "redGate": {
+    "fixture": "a23-lazy-first-use-interruption",
+    "command": "mise exec -- node mcp-server/test-first-use-laziness.mjs",
+    "preRepair": {
+      "exitCode": 1,
+      "failure": "server startup or tools/list created the repository .amanuensis store before first use"
+    },
+    "postRepair": {
+      "exitCode": 0,
+      "untouchedRepositoryMutationCount": 0,
+      "storesAfterFirstStatefulCall": 1,
+      "initializationBoundaryCount": 12,
+      "interruptedBoundaryCount": 12,
+      "recoveredBoundaryCount": 12,
+      "acceptedPartialStoreCount": 0,
+      "lostConspectusCount": 0
+    }
+  },
+  "identityWitness": {
+    "client": "amanuensis-memory stdio server",
+    "canonicalRoot": "/Users/nfeldman/repos/amanuensis",
+    "storagePath": "/Users/nfeldman/repos/amanuensis/.amanuensis",
+    "selectionSource": "process-cwd-git-root",
+    "storagePolicy": "worktree-local",
+    "bindingContractVersion": "amanuensis-repository-binding/v1",
+    "initializationContractVersion": "amanuensis-storage-initialization/v1",
+    "serverVersion": "0.2.0-alpha.1"
+  },
+  "lifecycleWitness": {
+    "installerCaseCount": 29,
+    "installationRestartCount": 1,
+    "perRepositorySetupCommandCount": 0,
+    "perRepositoryRestartCount": 0,
+    "upgradeConfigBackupCount": 1,
+    "skillArchiveCount": 0,
+    "unrelatedConfigMutationCount": 0,
+    "lostConspectusCount": 0,
+    "rollback": "Install the intended package version, inspect its upgrade dry run, and run that version's managed upgrade; configuration backups remain independently restorable."
+  },
+  "greenChecks": [
+    "mise exec -- npm --prefix mcp-server run build",
+    "mise exec -- node mcp-server/test-first-use-laziness.mjs",
+    "mise exec -- node mcp-server/test-first-use-recovery.mjs",
+    "mise exec -- node mcp-server/test-installer.mjs",
+    "mise exec -- node mcp-server/test-workspace-binding.mjs",
+    "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "mise exec -- node mcp-server/test-activation-doctor.mjs",
+    "mise exec -- node mcp-server/test-mcp-compatibility.mjs",
+    "mise exec -- node mcp-server/test-package-artifact.mjs"
+  ]
+}

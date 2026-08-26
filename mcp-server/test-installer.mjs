@@ -183,6 +183,67 @@ test("Codex user scope installs once without repository-local state", () => {
   }
 });
 
+test("Codex install and upgrade are dry-run-first lifecycle commands that preserve storage", () => {
+  const workspace = fresh();
+  const userHome = fresh();
+  try {
+    const configPath = join(userHome, "config.toml");
+    const unrelated = "# preserve byte-for-byte\n[features]\nkeep = true\n";
+    writeFileSync(configPath, unrelated);
+    const installed = runCli(["install", "--dir", workspace], {
+      env: { ...process.env, CODEX_HOME: userHome },
+    });
+    assert(installed.status === 0, installed.stderr);
+    assert(installed.stdout.includes("Restart Codex once"), "install restart is unclear");
+    assert(readdirSync(workspace).length === 0, "install created repository-local state");
+
+    const store = join(workspace, ".amanuensis");
+    mkdirSync(store);
+    writeFileSync(join(store, "preserve.txt"), "conspectus\n");
+    const skillPath = join(userHome, "skills/amanuensis/SKILL.md");
+    writeFileSync(skillPath, "stale managed skill\n");
+    const desiredCommand = `command = ${JSON.stringify(process.execPath)}`;
+    const staleConfig = readFileSync(configPath, "utf8").replace(
+      desiredCommand,
+      'command = "/stale/amanuensis-memory"',
+    );
+    assert(staleConfig !== readFileSync(configPath, "utf8"), "fixture did not stale config");
+    writeFileSync(configPath, staleConfig);
+    const backupsBefore = backupsFor(configPath).length;
+
+    const dryRun = runCli(["upgrade", "--dir", workspace, "--dry-run"], {
+      env: { ...process.env, CODEX_HOME: userHome },
+    });
+    assert(dryRun.status === 0, dryRun.stderr);
+    assert(dryRun.stdout.includes("[dry-run] Upgrading"), "upgrade plan is not explicit");
+    assert(readFileSync(configPath, "utf8") === staleConfig, "upgrade dry run changed config");
+    assert(readFileSync(skillPath, "utf8") === "stale managed skill\n", "dry run changed skill");
+
+    const upgraded = runCli(["upgrade", "--dir", workspace], {
+      env: { ...process.env, CODEX_HOME: userHome },
+    });
+    assert(upgraded.status === 0, upgraded.stderr);
+    const upgradedConfig = readFileSync(configPath, "utf8");
+    assert(upgradedConfig.startsWith(unrelated), "upgrade changed unrelated Codex config bytes");
+    assert(upgradedConfig.includes(desiredCommand), "upgrade did not restore current launcher");
+    assert(backupsFor(configPath).length === backupsBefore + 1, "upgrade backup missing");
+    assert(readFileSync(skillPath, "utf8").includes("name: amanuensis"), "skill not upgraded");
+    assert(backupsFor(skillPath).length === 0, "old skill was unexpectedly archived");
+    assert(
+      readFileSync(join(store, "preserve.txt"), "utf8") === "conspectus\n",
+      "upgrade changed conspectus storage",
+    );
+    assert(upgraded.stdout.includes("Restart Codex once"), "upgrade restart is unclear");
+    assert(
+      upgraded.stdout.includes("no Amanuensis setup or restart"),
+      "upgrade reintroduced per-repository ceremony",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(userHome, { recursive: true, force: true });
+  }
+});
+
 test("Codex user migration and uninstall preserve unrelated TOML with backups", () => {
   const workspace = fresh();
   const userHome = fresh();

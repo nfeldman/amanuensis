@@ -128,10 +128,12 @@ function serverLaunch(): ServerLaunch {
 function printUsage(): void {
   process.stdout.write(
     [
-      "amanuensis — install the Amanuensis MCP server and workflow skill into a project.",
+      "amanuensis — manage the Amanuensis MCP server and workflow skill.",
       "",
       "Usage:",
+      "  amanuensis install [--client codex] [options]",
       "  amanuensis init --client <claude|codex|vscode|generic> [options]",
+      "  amanuensis upgrade [--client codex] [options]",
       "  amanuensis doctor --client codex [options]",
       "  amanuensis uninstall --client codex [options]",
       "",
@@ -1059,7 +1061,12 @@ function applyPlan(
   }
 }
 
-function printNextSteps(client: Client, workspace: string, scope: InstallScope): void {
+function printNextSteps(
+  client: Client,
+  workspace: string,
+  scope: InstallScope,
+  operation: "install" | "upgrade" = "install",
+): void {
   if (client === "generic") {
     const launch = serverLaunch();
     console.log("");
@@ -1077,7 +1084,11 @@ function printNextSteps(client: Client, workspace: string, scope: InstallScope):
   console.log("");
   if (client === "codex" && scope === "user") {
     console.log("");
-    console.log("Restart Codex once to load the user-scoped Amanuensis registration.");
+    console.log(
+      operation === "upgrade"
+        ? "Restart Codex once to load the upgraded user-scoped Amanuensis installation."
+        : "Restart Codex once to load the user-scoped Amanuensis registration.",
+    );
     console.log("New trusted Git repositories then require no Amanuensis setup or restart.");
     return;
   }
@@ -1190,7 +1201,38 @@ function cmdDoctor(argv: string[]): void {
   if (report.status !== "ok") process.exitCode = 1;
 }
 
-function cmdInit(argv: string[]): void {
+function assertUpgradeableCodexInstallation(workspace: string, flags: InitFlags): void {
+  if (flags.client !== "codex" || flags.scope !== "user") {
+    throw new Error("upgrade currently supports only the user-scoped Codex installation");
+  }
+  const configPath = join(codexHome(), "config.toml");
+  if (!existsSync(configPath)) {
+    throw new Error("no user-scoped Codex installation found; run `amanuensis install` first");
+  }
+  assertSafeRootPath(codexHome(), configPath);
+  const existing = readFileSync(configPath, "utf8");
+  const startCount = existing.split(CODEX_BLOCK_START).length - 1;
+  const endCount = existing.split(CODEX_BLOCK_END).length - 1;
+  if (
+    startCount !== 1 ||
+    endCount !== 1 ||
+    existing.indexOf(CODEX_BLOCK_END) < existing.indexOf(CODEX_BLOCK_START)
+  ) {
+    throw new Error(
+      "the user-scoped Codex registration is absent, unmanaged, or incomplete; run doctor before upgrade",
+    );
+  }
+  if (!flags.mcpOnly) {
+    const skill = skillDestination(workspace, "codex", "user");
+    if (!existsSync(skill) || lstatSync(skill).isSymbolicLink() || !statSync(skill).isDirectory()) {
+      throw new Error(
+        "the user-scoped Amanuensis skill is absent or unsafe; run doctor before upgrade",
+      );
+    }
+  }
+}
+
+function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = "init"): void {
   const { values } = parseArgs({
     args: argv,
     options: {
@@ -1209,12 +1251,12 @@ function cmdInit(argv: string[]): void {
     printUsage();
     return;
   }
-  const client = parseClient(values.client);
+  const client = parseClient(values.client ?? (operation === "init" ? undefined : "codex"));
   const flags: InitFlags = {
     dir: values.dir as string,
     client,
     dryRun: values["dry-run"] as boolean,
-    force: values.force as boolean,
+    force: operation === "upgrade" ? true : (values.force as boolean),
     mcpOnly: values["mcp-only"] as boolean,
     scope: parseScope(values.scope, client),
   };
@@ -1228,16 +1270,24 @@ function cmdInit(argv: string[]): void {
     throw new Error(`target directory does not exist or is not a directory: ${requestedWorkspace}`);
   }
   const workspace = realpathSync(requestedWorkspace);
+  if (operation === "upgrade") assertUpgradeableCodexInstallation(workspace, flags);
   if (flags.scope === "user" && !flags.dryRun && !existsSync(codexHome())) {
     mkdirSync(codexHome(), { recursive: true });
   }
   const installationRoot = flags.scope === "user" ? codexHome() : workspace;
   console.log(
-    `${flags.dryRun ? "[dry-run] " : ""}Installing Amanuensis for ${flags.client} (${flags.scope}) into ${installationRoot}`,
+    `${flags.dryRun ? "[dry-run] " : ""}${operation === "upgrade" ? "Upgrading" : "Installing"} Amanuensis for ${flags.client} (${flags.scope}) into ${installationRoot}`,
   );
   const plan = buildPlan(flags, workspace);
   applyPlan(plan.actions, flags, plan.root);
-  if (!flags.dryRun) printNextSteps(flags.client, workspace, flags.scope);
+  if (!flags.dryRun) {
+    printNextSteps(
+      flags.client,
+      workspace,
+      flags.scope,
+      operation === "upgrade" ? "upgrade" : "install",
+    );
+  }
 }
 
 function cmdUninstall(argv: string[]): void {
@@ -1298,7 +1348,9 @@ function main(): void {
   }
   const subcommand = argv[0];
   try {
-    if (subcommand === "init") cmdInit(argv.slice(1));
+    if (subcommand === "init") cmdInstall(argv.slice(1), "init");
+    else if (subcommand === "install") cmdInstall(argv.slice(1), "install");
+    else if (subcommand === "upgrade") cmdInstall(argv.slice(1), "upgrade");
     else if (subcommand === "doctor") cmdDoctor(argv.slice(1));
     else if (subcommand === "uninstall") cmdUninstall(argv.slice(1));
     else {

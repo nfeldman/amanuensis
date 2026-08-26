@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 import { concernTools } from "./dist/tools/concerns.js";
@@ -51,6 +51,10 @@ function measure(label, fn, iters = 1000) {
 const ws = mkdtempSync(join(tmpdir(), "perf-t2-"));
 spawnSync("git", ["init", "-q"], { cwd: ws });
 const project = resolveProject(ws);
+ensureProjectStorage(project, (databasePath) => {
+  const database = openDatabase(databasePath);
+  database.close();
+});
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: null };
 

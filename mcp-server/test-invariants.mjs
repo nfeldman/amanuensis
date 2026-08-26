@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
-import { resolveProject } from "./dist/project.js";
+import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { dispositionTools } from "./dist/tools/dispositions.js";
@@ -74,6 +74,10 @@ function freshCtx() {
   const ws = mkdtempSync(join(tmpdir(), "inv-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
   const project = resolveProject(ws);
+  ensureProjectStorage(project, (databasePath) => {
+    const database = openDatabase(databasePath);
+    database.close();
+  });
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   return {

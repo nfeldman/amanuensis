@@ -91,8 +91,8 @@ mise install
 mise exec -- npm --prefix mcp-server ci
 mise exec -- npm --prefix mcp-server run build
 
-mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --mcp-only --dry-run
-mise exec -- node mcp-server/dist/cli.js init --client codex --scope user --mcp-only
+mise exec -- node mcp-server/dist/cli.js install --mcp-only --dry-run
+mise exec -- node mcp-server/dist/cli.js install --mcp-only
 ```
 
 The Codex user-scoped path writes one managed MCP registration under
@@ -102,6 +102,30 @@ Git repositories then need no Amanuensis command, repository-local config,
 skill copy, or restart. Omit `--mcp-only` for a packaged installation that
 should also install the global skill; source development commonly keeps the
 global skill as a directory-level link to this checkout.
+
+Merely opening a repository, negotiating MCP, listing tools, or calling
+`get_project_info` does not write repository state. The first DB-backed tool
+call creates exactly one identity-bound `.amanuensis/` store through a sibling
+staging directory and atomic publish. A later process removes a dead,
+identity-matching stage and resumes initialization; it preserves any unknown or
+nonempty incomplete store for diagnosis instead of trusting or deleting it.
+
+Lifecycle changes are dry-run first:
+
+```bash
+amanuensis upgrade --dry-run
+amanuensis upgrade
+amanuensis uninstall --client codex --scope user --dry-run
+amanuensis uninstall --client codex --scope user
+```
+
+Upgrade and uninstall touch only Amanuensis-managed configuration and the
+managed skill, make timestamped configuration backups before rewrites, and
+leave every repository conspectus untouched. Skills are replaced or removed in
+place rather than archived. To roll back a package version, install the desired
+version and run that version's `amanuensis upgrade`; inspect its dry run first.
+Restore a timestamped `config.toml` backup only when deliberately reversing a
+configuration migration.
 
 Use `--scope project` only when deliberately pinning Codex to one repository:
 
