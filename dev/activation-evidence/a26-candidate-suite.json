@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "contractVersion": "amanuensis-friction-free-candidate-suite/v1",
   "initiative": "A26",
-  "recordedAt": "2026-08-26T05:38:17.706Z",
+  "recordedAt": "2026-08-26T17:26:42.243Z",
   "result": "passed",
   "candidate": {
-    "baselineCommit": "48a77350451fb19fbe27af7092091148a2f5f9f9",
+    "baselineCommit": "9a20a68d2f57e117ab48f78cb2fa5ecef68f7937",
     "packageVersion": "0.2.0-beta.1",
     "publicationAttempted": false
   },
@@ -21,8 +21,8 @@
       "id": "build",
       "command": "npm run build",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:51.891Z",
-      "durationMs": 1300,
+      "startedAt": "2026-08-26T17:24:20.235Z",
+      "durationMs": 1278,
       "stdoutSha256": "1f5f9b184dfc93b272fbd5c6a5ecdf8fe5e166c80aa15823d55ff54ac90f43ae",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "> tsc"
@@ -31,8 +31,8 @@
       "id": "installer",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-installer.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:53.192Z",
-      "durationMs": 2071,
+      "startedAt": "2026-08-26T17:24:21.514Z",
+      "durationMs": 1983,
       "stdoutSha256": "2c41af1f97e89cda444d409d893dae46af02cfc0a6ca4e6fb7f8ef16700c3346",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "29 passed, 0 failed"
@@ -41,18 +41,18 @@
       "id": "activation-contract",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-activation-contract.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:55.263Z",
-      "durationMs": 444,
-      "stdoutSha256": "33ce0eb05777c3863bed983296ccf7a1289c0417ff2da373b1f37a35a3f49d4b",
+      "startedAt": "2026-08-26T17:24:23.498Z",
+      "durationMs": 423,
+      "stdoutSha256": "862085020283c0cc78e3923d99c8b203e985610618aeefa2d0d4296c9087df65",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "summary": "A19 user activation verified: local/repository-b-d9b867845261 -> /private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a19-red-2uKuee/repository-b"
+      "summary": "A19 user activation verified: local/repository-b-cd0603c04040 -> /private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a19-red-6v7CVy/repository-b"
     },
     {
       "id": "activation-doctor",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-activation-doctor.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:55.707Z",
-      "durationMs": 509,
+      "startedAt": "2026-08-26T17:24:23.921Z",
+      "durationMs": 479,
       "stdoutSha256": "17274ded0bbd37af09798c6c1a8722e228b0d73bcd0b2e7cbac31477b28282c8",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A20 red gate verified: conflicting user/project registration halted, planned, repaired, and read back"
@@ -61,8 +61,8 @@
       "id": "workspace-binding",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-workspace-binding.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:56.216Z",
-      "durationMs": 530,
+      "startedAt": "2026-08-26T17:24:24.400Z",
+      "durationMs": 498,
       "stdoutSha256": "6513117aaf4317d3adf3cac77992357787a971bcce65125d1bf5a3822b6a4fe5",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A21 red gate verified: symlink escape halted before mutation and repository/worktree bindings stayed isolated"
@@ -71,8 +71,8 @@
       "id": "codex-parent-workspace",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-codex-parent-workspace.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:56.745Z",
-      "durationMs": 30,
+      "startedAt": "2026-08-26T17:24:24.899Z",
+      "durationMs": 27,
       "stdoutSha256": "d7f5577104cb885a8425dfaf2d054f50289e837b32761b2c44a3c2485c7aaaf1",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "Codex parent workspace detection: 6 passed, 0 failed"
@@ -81,8 +81,8 @@
       "id": "nested-activation-binding",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-nested-activation-binding.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:56.775Z",
-      "durationMs": 438,
+      "startedAt": "2026-08-26T17:24:24.925Z",
+      "durationMs": 415,
       "stdoutSha256": "2f46c809547490ecb2fc4a7e577f79c8bd6da043f893ba08fb5637194862f666",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A25 nested activation binding passed: Git root selected lazily from nested cwd"
@@ -91,8 +91,8 @@
       "id": "first-use-laziness",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-first-use-laziness.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:57.213Z",
-      "durationMs": 446,
+      "startedAt": "2026-08-26T17:24:25.340Z",
+      "durationMs": 420,
       "stdoutSha256": "188f5c90a374baefc8c0230ff0403da3044afce590ff66baf58b962071e4191a",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A23 lazy first-use gate passed: startup and binding inspection wrote no state"
@@ -101,8 +101,8 @@
       "id": "first-use-recovery",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-first-use-recovery.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:35:57.659Z",
-      "durationMs": 4439,
+      "startedAt": "2026-08-26T17:24:25.760Z",
+      "durationMs": 4086,
       "stdoutSha256": "2d320f8153a4c6b0f1e5295581f2ee13965d787fb31c12c0856d2f50c625f087",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A23 first-use recovery: 12/12 boundaries interrupted and recovered"
@@ -111,8 +111,8 @@
       "id": "a22-real-host-evidence",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/check-codex-host-evidence.mjs --receipt /Users/nfeldman/repos/amanuensis/dev/activation-evidence/a22-codex-host.json",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:36:02.098Z",
-      "durationMs": 41,
+      "startedAt": "2026-08-26T17:24:29.846Z",
+      "durationMs": 34,
       "stdoutSha256": "d5ed9fe079635ce22899800293577ab24b31e34ebbb1b4614d518481323f6f4b",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "Codex host evidence valid; 4/4 runs"
@@ -121,8 +121,8 @@
       "id": "a22-red-gates",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/test-codex-host-evidence-red-gates.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:36:02.140Z",
-      "durationMs": 160,
+      "startedAt": "2026-08-26T17:24:29.880Z",
+      "durationMs": 140,
       "stdoutSha256": "2639b48a5fb6d5834c90b57ba351bd1720405f23327a49406aac7465536bfe97",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "Codex host evidence red gates: 4/4 exited nonzero"
@@ -131,8 +131,8 @@
       "id": "package-artifact",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-package-artifact.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:36:02.299Z",
-      "durationMs": 19082,
+      "startedAt": "2026-08-26T17:24:30.021Z",
+      "durationMs": 18384,
       "stdoutSha256": "a2d651fea0a7a8f5fdcbec35c0f3595274c80e7d42ca00c6e16ebcb18722f98d",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "OK — clean-installed artifact exposes both bins, installs every adapter, and completes an MCP handshake."
@@ -141,8 +141,8 @@
       "id": "package-activation-parity",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-package-activation-parity.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:36:21.382Z",
-      "durationMs": 21991,
+      "startedAt": "2026-08-26T17:24:48.405Z",
+      "durationMs": 22080,
       "stdoutSha256": "f7533c62483e36417a6d784f8049d1fc09e1c85902e031dbfb3f1dde70aed380",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A24 package activation parity passed: 2/2 repositories, 6/6 parity fields, 2/2 failure classes"
@@ -151,8 +151,8 @@
       "id": "package-parity-red-gates",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/test-package-activation-parity-red-gates.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:36:43.373Z",
-      "durationMs": 42851,
+      "startedAt": "2026-08-26T17:25:10.485Z",
+      "durationMs": 41140,
       "stdoutSha256": "760715f0986d84fc057ce576a3dde3422e2414b2f26f4fb874426f3c5a25baa1",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A24 package parity red gates passed: packed cwd and skill-version drift both halted"
@@ -161,8 +161,8 @@
       "id": "a25-real-host-envelope",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/check-activation-operating-envelope.mjs --receipt /Users/nfeldman/repos/amanuensis/dev/activation-evidence/a25-activation-operating-envelope.json",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:37:26.224Z",
-      "durationMs": 39,
+      "startedAt": "2026-08-26T17:25:51.626Z",
+      "durationMs": 35,
       "stdoutSha256": "2ad37adfdd78fb0351c75614e3cdf6aa98d0954f9df2ad989a9d6a694c50afe6",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A25 activation operating envelope valid: 6/6 independent runs"
@@ -171,8 +171,8 @@
       "id": "a25-red-gates",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/test-activation-operating-envelope-red-gates.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:37:26.264Z",
-      "durationMs": 117,
+      "startedAt": "2026-08-26T17:25:51.661Z",
+      "durationMs": 112,
       "stdoutSha256": "2f18ba447728fe4679db4e36dca920f9bb653874c44afb6411cffac3019758ba",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A25 activation operating-envelope red gates: 3/3 exited nonzero"
@@ -181,8 +181,8 @@
       "id": "a25-trust-cleanup",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/test-activation-operating-trust-cleanup.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:37:26.381Z",
-      "durationMs": 92,
+      "startedAt": "2026-08-26T17:25:51.772Z",
+      "durationMs": 87,
       "stdoutSha256": "7f36831f0bd149f1df940f2215bc8e1b3a0ed992efee52c9c5fd3be9d891b33e",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A25 host-trust cleanup passed: dry run, timestamped backup, and exact bounded removal"
@@ -191,8 +191,8 @@
       "id": "release-rollback",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/mcp-server/test-release-rollback.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:37:26.473Z",
-      "durationMs": 51035,
+      "startedAt": "2026-08-26T17:25:51.859Z",
+      "durationMs": 50202,
       "stdoutSha256": "4a3fe31181f416326f3f69d493ae67c399a83440ee61bec30cf372a6de35c279",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A26 rollback rehearsal passed: exact 0.2.0-beta.1 tarball restored, 5/5 stores preserved, 0 skill archives"
@@ -201,8 +201,8 @@
       "id": "a26-red-gates",
       "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node /Users/nfeldman/repos/amanuensis/dev/test-friction-free-release-readiness-red-gates.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T05:38:17.508Z",
-      "durationMs": 187,
+      "startedAt": "2026-08-26T17:26:42.062Z",
+      "durationMs": 170,
       "stdoutSha256": "9cc5b417c0965ebd718a8bddf63ae1e4178b2e93055aa0aa78837441f2c3302f",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": "A26 release-readiness red gates: control green; 4/4 sabotages exited nonzero"
@@ -255,7 +255,7 @@
     },
     {
       "path": "dev/run-friction-free-release-replay.mjs",
-      "sha256": "522766bd8eff3007d795c43d22ee8ce0fadd7e3816f3ed64e8e692e512e5d05c"
+      "sha256": "8293617e6965767c7ba367606041793d96598efcdc517622ef47204600925ce7"
     },
     {
       "path": "dev/check-friction-free-release-readiness.mjs",
@@ -271,15 +271,27 @@
     },
     {
       "path": "dev/activation-evidence/a26-clean-replay.json",
-      "sha256": "b22201c902a2bf70998bcd98679228fc5a2e0127c5e846fb4bc7e10de1b57b4e"
+      "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
     },
     {
       "path": "dev/activation-evidence/a26-release-readiness-red-gates.json",
       "sha256": "4e9237d25f8a8b89667c9129e745d0dc8e8241682c1d2b0da0eda244c5aac6d7"
     },
     {
+      "path": ".github/workflows/publish.yml",
+      "sha256": "4d27cc242a7c3f858edb6efbc54b512fea988a3f5093826582464b3795712e77"
+    },
+    {
+      "path": ".github/workflows/published-smoke.yml",
+      "sha256": "5606df9ac20533106442d38776e777b6aab37b78d0ea5af7b53cbe429089cfd0"
+    },
+    {
       "path": "README.md",
-      "sha256": "28815c85959c0c2e725fe2f456f3e97c10116fef7366653844fb6e4bc0503ea6"
+      "sha256": "8ce874991e5917a1391733972e47ae76536048330b6bd63fb4d5f1bb16dd0c8b"
+    },
+    {
+      "path": "INSTALLATION.md",
+      "sha256": "a63b6437cf1a989c879b22e1539a9065748052a1fbe1b76d1cbf8dd189311b8b"
     },
     {
       "path": "mcp-server/README.md",

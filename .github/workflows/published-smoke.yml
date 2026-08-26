@@ -28,8 +28,6 @@ jobs:
   smoke:
     name: install + smoke (node ${{ matrix.node }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    env:
-      CODEX_HOME: ${{ runner.temp }}/a24-codex-home
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +37,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
+
+      - name: Configure isolated Codex home
+        shell: bash
+        run: echo "CODEX_HOME=$RUNNER_TEMP/a24-codex-home" >> "$GITHUB_ENV"
 
       - name: Install @gruetech/amanuensis from npm
         run: npm install -g "@gruetech/amanuensis@${{ inputs.version }}"

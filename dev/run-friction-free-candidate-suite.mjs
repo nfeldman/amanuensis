@@ -171,6 +171,8 @@ const candidateFiles = [
   "mcp-server/fixtures/activation/release-readiness-red-matrix.json",
   "dev/activation-evidence/a26-clean-replay.json",
   "dev/activation-evidence/a26-release-readiness-red-gates.json",
+  ".github/workflows/publish.yml",
+  ".github/workflows/published-smoke.yml",
   "README.md",
   "INSTALLATION.md",
   "mcp-server/README.md",
