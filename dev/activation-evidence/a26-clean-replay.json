@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "contractVersion": "amanuensis-friction-free-clean-replay/v1",
   "initiative": "A26",
-  "recordedAt": "2026-08-26T04:18:59.807Z",
+  "recordedAt": "2026-08-26T05:35:44.036Z",
   "result": "passed",
   "source": {
     "repositoryRoot": "/Users/nfeldman/repos/amanuensis",
-    "baselineCommit": "e4331c945b6222ffcc03bb8f7af08ee59ba1c508",
-    "packageVersion": "0.2.0-alpha.1",
+    "baselineCommit": "48a77350451fb19fbe27af7092091148a2f5f9f9",
+    "packageVersion": "0.2.0-beta.1",
     "packageJson": {
       "path": "mcp-server/package.json",
-      "sha256": "64b1ba2d8d6403e55cef2595bbc10f44525cd0064123f09d9d70436448c21ccb"
+      "sha256": "16c0067a84e98fd4b20d2267cf8361df1d0c5def8c4e18c8c4b2e0be902c9c1a"
     },
     "practiceCatalog": {
       "version": "2.10",
@@ -34,8 +34,8 @@
       "id": "package-artifact",
       "command": "mise exec -- node mcp-server/test-package-artifact.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T04:17:25.904Z",
-      "durationMs": 18728,
+      "startedAt": "2026-08-26T05:34:08.369Z",
+      "durationMs": 19386,
       "stdout": "OK — clean-installed artifact exposes both bins, installs every adapter, and completes an MCP handshake.",
       "stdoutSha256": "a2d651fea0a7a8f5fdcbec35c0f3595274c80e7d42ca00c6e16ebcb18722f98d",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -44,18 +44,18 @@
       "id": "source-packed-parity",
       "command": "mise exec -- node mcp-server/test-package-activation-parity.mjs --json",
       "exitCode": 0,
-      "startedAt": "2026-08-26T04:17:44.634Z",
-      "durationMs": 21353,
-      "stdout": "{\n  \"schemaVersion\": 1,\n  \"fixtureId\": \"a24-source-packed-activation-parity\",\n  \"result\": \"passed\",\n  \"parityPaths\": [\n    \"packageVersion\",\n    \"config\",\n    \"skillDigest\",\n    \"repositories\",\n    \"doctor\",\n    \"lifecycle\"\n  ],\n  \"source\": {\n    \"mode\": \"source\",\n    \"packageVersion\": \"0.2.0-alpha.1\",\n    \"launcher\": {\n      \"command\": \"/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node\",\n      \"arguments\": [\n        \"/Users/nfeldman/repos/amanuensis/mcp-server/dist/index.js\"\n      ],\n      \"installRoot\": \"<source-checkout>\"\n    },\n    \"config\": {\n      \"managedBlockCount\": 1,\n      \"cwdContract\": \".\",\n      \"hardCodedRepositoryPathCount\": 0,\n      \"unrelatedPrefixPreserved\": true,\n      \"installationRestartCount\": 1,\n      \"perRepositoryRestartCount\": 0\n    },\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n    \"repositories\": [\n      {\n        \"label\": \"repository-a\",\n        \"canonicalRoot\": \"<repository-a>\",\n        \"projectIdentity\": \"local:<repository-a>\",\n        \"storagePath\": \"<repository-a>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      },\n      {\n        \"label\": \"repository-b\",\n        \"canonicalRoot\": \"<repository-b>\",\n        \"projectIdentity\": \"local:<repository-b>\",\n        \"storagePath\": \"<repository-b>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      }\n    ],\n    \"doctor\": {\n      \"cleanRepositoryCount\": 2,\n      \"seededFailureCodes\": {\n        \"stale-executable\": [\n          \"stale-executable\"\n        ],\n        \"hard-coded-user-cwd\": [\n          \"hard-coded-user-cwd\",\n          \"wrong-repository-binding\"\n        ]\n      },\n      \"repairDryRunExitCode\": 1,\n      \"repairExitCode\": 0,\n      \"repairBackupCount\": 3\n    },\n    \"lifecycle\": {\n      \"upgradeDryRunExitCode\": 0,\n      \"upgradeExitCode\": 0,\n      \"uninstallDryRunExitCode\": 0,\n      \"uninstallExitCode\": 0,\n      \"preservedStoreCount\": 2,\n      \"lostConspectusCount\": 0,\n      \"unrelatedConfigMutationCount\": 0,\n      \"skillArchiveCount\": 0\n    }\n  },\n  \"packed\": {\n    \"mode\": \"packed\",\n    \"packageVersion\": \"0.2.0-alpha.1\",\n    \"launcher\": {\n      \"command\": \"amanuensis-memory\",\n      \"arguments\": [],\n      \"installRoot\": \"<clean-package-prefix>\"\n    },\n    \"config\": {\n      \"managedBlockCount\": 1,\n      \"cwdContract\": \".\",\n      \"hardCodedRepositoryPathCount\": 0,\n      \"unrelatedPrefixPreserved\": true,\n      \"installationRestartCount\": 1,\n      \"perRepositoryRestartCount\": 0\n    },\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n    \"repositories\": [\n      {\n        \"label\": \"repository-a\",\n        \"canonicalRoot\": \"<repository-a>\",\n        \"projectIdentity\": \"local:<repository-a>\",\n        \"storagePath\": \"<repository-a>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      },\n      {\n        \"label\": \"repository-b\",\n        \"canonicalRoot\": \"<repository-b>\",\n        \"projectIdentity\": \"local:<repository-b>\",\n        \"storagePath\": \"<repository-b>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      }\n    ],\n    \"doctor\": {\n      \"cleanRepositoryCount\": 2,\n      \"seededFailureCodes\": {\n        \"stale-executable\": [\n          \"stale-executable\"\n        ],\n        \"hard-coded-user-cwd\": [\n          \"hard-coded-user-cwd\",\n          \"wrong-repository-binding\"\n        ]\n      },\n      \"repairDryRunExitCode\": 1,\n      \"repairExitCode\": 0,\n      \"repairBackupCount\": 3\n    },\n    \"lifecycle\": {\n      \"upgradeDryRunExitCode\": 0,\n      \"upgradeExitCode\": 0,\n      \"uninstallDryRunExitCode\": 0,\n      \"uninstallExitCode\": 0,\n      \"preservedStoreCount\": 2,\n      \"lostConspectusCount\": 0,\n      \"unrelatedConfigMutationCount\": 0,\n      \"skillArchiveCount\": 0\n    }\n  }\n}",
-      "stdoutSha256": "eb28ef7676ec826339164e057b21d5ae4623bb679a1e1c04cf6cd4ecfe98a8d1",
+      "startedAt": "2026-08-26T05:34:27.756Z",
+      "durationMs": 21685,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"fixtureId\": \"a24-source-packed-activation-parity\",\n  \"result\": \"passed\",\n  \"parityPaths\": [\n    \"packageVersion\",\n    \"config\",\n    \"skillDigest\",\n    \"repositories\",\n    \"doctor\",\n    \"lifecycle\"\n  ],\n  \"source\": {\n    \"mode\": \"source\",\n    \"packageVersion\": \"0.2.0-beta.1\",\n    \"launcher\": {\n      \"command\": \"/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node\",\n      \"arguments\": [\n        \"/Users/nfeldman/repos/amanuensis/mcp-server/dist/index.js\"\n      ],\n      \"installRoot\": \"<source-checkout>\"\n    },\n    \"config\": {\n      \"managedBlockCount\": 1,\n      \"cwdContract\": \".\",\n      \"hardCodedRepositoryPathCount\": 0,\n      \"unrelatedPrefixPreserved\": true,\n      \"installationRestartCount\": 1,\n      \"perRepositoryRestartCount\": 0\n    },\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n    \"repositories\": [\n      {\n        \"label\": \"repository-a\",\n        \"canonicalRoot\": \"<repository-a>\",\n        \"projectIdentity\": \"local:<repository-a>\",\n        \"storagePath\": \"<repository-a>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      },\n      {\n        \"label\": \"repository-b\",\n        \"canonicalRoot\": \"<repository-b>\",\n        \"projectIdentity\": \"local:<repository-b>\",\n        \"storagePath\": \"<repository-b>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      }\n    ],\n    \"doctor\": {\n      \"cleanRepositoryCount\": 2,\n      \"seededFailureCodes\": {\n        \"stale-executable\": [\n          \"stale-executable\"\n        ],\n        \"hard-coded-user-cwd\": [\n          \"hard-coded-user-cwd\",\n          \"wrong-repository-binding\"\n        ]\n      },\n      \"repairDryRunExitCode\": 1,\n      \"repairExitCode\": 0,\n      \"repairBackupCount\": 3\n    },\n    \"lifecycle\": {\n      \"upgradeDryRunExitCode\": 0,\n      \"upgradeExitCode\": 0,\n      \"uninstallDryRunExitCode\": 0,\n      \"uninstallExitCode\": 0,\n      \"preservedStoreCount\": 2,\n      \"lostConspectusCount\": 0,\n      \"unrelatedConfigMutationCount\": 0,\n      \"skillArchiveCount\": 0\n    }\n  },\n  \"packed\": {\n    \"mode\": \"packed\",\n    \"packageVersion\": \"0.2.0-beta.1\",\n    \"launcher\": {\n      \"command\": \"amanuensis-memory\",\n      \"arguments\": [],\n      \"installRoot\": \"<clean-package-prefix>\"\n    },\n    \"config\": {\n      \"managedBlockCount\": 1,\n      \"cwdContract\": \".\",\n      \"hardCodedRepositoryPathCount\": 0,\n      \"unrelatedPrefixPreserved\": true,\n      \"installationRestartCount\": 1,\n      \"perRepositoryRestartCount\": 0\n    },\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n    \"repositories\": [\n      {\n        \"label\": \"repository-a\",\n        \"canonicalRoot\": \"<repository-a>\",\n        \"projectIdentity\": \"local:<repository-a>\",\n        \"storagePath\": \"<repository-a>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      },\n      {\n        \"label\": \"repository-b\",\n        \"canonicalRoot\": \"<repository-b>\",\n        \"projectIdentity\": \"local:<repository-b>\",\n        \"storagePath\": \"<repository-b>/.amanuensis\",\n        \"selectionSource\": \"process-cwd-git-root\",\n        \"storagePolicy\": \"worktree-local\",\n        \"dbBeforeFirstUse\": false,\n        \"dbAfterFirstUse\": true,\n        \"storeCount\": 1\n      }\n    ],\n    \"doctor\": {\n      \"cleanRepositoryCount\": 2,\n      \"seededFailureCodes\": {\n        \"stale-executable\": [\n          \"stale-executable\"\n        ],\n        \"hard-coded-user-cwd\": [\n          \"hard-coded-user-cwd\",\n          \"wrong-repository-binding\"\n        ]\n      },\n      \"repairDryRunExitCode\": 1,\n      \"repairExitCode\": 0,\n      \"repairBackupCount\": 3\n    },\n    \"lifecycle\": {\n      \"upgradeDryRunExitCode\": 0,\n      \"upgradeExitCode\": 0,\n      \"uninstallDryRunExitCode\": 0,\n      \"uninstallExitCode\": 0,\n      \"preservedStoreCount\": 2,\n      \"lostConspectusCount\": 0,\n      \"unrelatedConfigMutationCount\": 0,\n      \"skillArchiveCount\": 0\n    }\n  }\n}",
+      "stdoutSha256": "77d0852c16ea8d70a056b696b650fd0958eed7f13f041c5a5f5a8736d805845d",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "first-use-interruption",
       "command": "mise exec -- node mcp-server/test-first-use-recovery.mjs",
       "exitCode": 0,
-      "startedAt": "2026-08-26T04:18:05.987Z",
-      "durationMs": 4387,
+      "startedAt": "2026-08-26T05:34:49.441Z",
+      "durationMs": 4329,
       "stdout": "A23 first-use recovery: 12/12 boundaries interrupted and recovered",
       "stdoutSha256": "2d320f8153a4c6b0f1e5295581f2ee13965d787fb31c12c0856d2f50c625f087",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -64,18 +64,18 @@
       "id": "rollback-rehearsal",
       "command": "mise exec -- node mcp-server/test-release-rollback.mjs --json",
       "exitCode": 0,
-      "startedAt": "2026-08-26T04:18:10.374Z",
-      "durationMs": 49384,
-      "stdout": "{\n  \"schemaVersion\": 1,\n  \"fixtureId\": \"a26-clean-prefix-rollback-rehearsal\",\n  \"result\": \"passed\",\n  \"isolation\": {\n    \"liveUserConfigurationRead\": false,\n    \"liveUserConfigurationWritten\": false,\n    \"cleanPrefix\": true,\n    \"cleanCodexHome\": true,\n    \"logicalRepositoryCount\": 5\n  },\n  \"candidate\": {\n    \"packageVersion\": \"0.2.0-alpha.1\",\n    \"tarballSha256\": \"6a6a5beef247591422a226de799b860015f3a4c196c8d06aea69b1f92cab5a21\",\n    \"installedVersionAfterRollback\": \"0.2.0-alpha.1\",\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\"\n  },\n  \"syntheticSuccessor\": {\n    \"packageVersion\": \"0.2.0-a26successor.0\",\n    \"published\": false,\n    \"skillDigest\": \"d518d45e8f68574ec5c67b23b98eccc4b070c50abe4f5f2f5d93afc767001b1c\"\n  },\n  \"migration\": {\n    \"dryRunExitCode\": 0,\n    \"dryRunMutationCount\": 0,\n    \"applyExitCode\": 0,\n    \"timestampedBackupCountAfterMigration\": 1,\n    \"backupReadBackExact\": true,\n    \"hardCodedRepositoryPathCount\": 0,\n    \"cwdContract\": \".\",\n    \"unrelatedPrefixBytePreserved\": true,\n    \"unrelatedSuffixBytePreserved\": true\n  },\n  \"lifecycle\": {\n    \"upgrade\": {\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"installedVersion\": \"0.2.0-a26successor.0\"\n    },\n    \"rollback\": {\n      \"exactCandidateTarballReinstalled\": true,\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"restoredVersion\": \"0.2.0-alpha.1\",\n      \"restoredSkillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n      \"configurationBackupRestoredByteExact\": true,\n      \"remigrationDryRunExitCode\": 0\n    },\n    \"uninstall\": {\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"managedConfigPresentAfter\": false,\n      \"managedSkillPresentAfter\": false\n    }\n  },\n  \"restartObservations\": {\n    \"initialInstallation\": 1,\n    \"perRepository\": 0,\n    \"ordinaryFirstUse\": 0,\n    \"upgrade\": 1,\n    \"rollback\": 1,\n    \"uninstall\": 1\n  },\n  \"storeCustody\": [\n    {\n      \"repositoryId\": \"repository-1\",\n      \"digestBefore\": \"dcef283b6a8ee7204c8f06ed167e9427ad71b42443a9fcafb6caf31cdf1156b7\",\n      \"digestAfter\": \"dcef283b6a8ee7204c8f06ed167e9427ad71b42443a9fcafb6caf31cdf1156b7\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-2\",\n      \"digestBefore\": \"f7478459f3aead2536b0c86e02f394835521bbaf42db8bda33b6f440e933199e\",\n      \"digestAfter\": \"f7478459f3aead2536b0c86e02f394835521bbaf42db8bda33b6f440e933199e\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-3\",\n      \"digestBefore\": \"3627ecd732b1cbc1474d35b4a4f92a9bccc0e02ff6d831b731fea1492834dddf\",\n      \"digestAfter\": \"3627ecd732b1cbc1474d35b4a4f92a9bccc0e02ff6d831b731fea1492834dddf\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-4\",\n      \"digestBefore\": \"7086fd9c03c08f61b61351927d759e70e6e7cec44ba6efaa3063546c6ee2e9b7\",\n      \"digestAfter\": \"7086fd9c03c08f61b61351927d759e70e6e7cec44ba6efaa3063546c6ee2e9b7\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-5\",\n      \"digestBefore\": \"710e7f2d7bb2bb91a89cf5da14016ba3565e3eb199d913c2b27ab2fe84722a26\",\n      \"digestAfter\": \"710e7f2d7bb2bb91a89cf5da14016ba3565e3eb199d913c2b27ab2fe84722a26\",\n      \"preserved\": true\n    }\n  ],\n  \"lostConspectusCount\": 0,\n  \"skillArchiveCount\": 0\n}",
-      "stdoutSha256": "2099486e680a8df312d2b20f02b1bde9915727434e3b82fd490b75287791d7e2",
+      "startedAt": "2026-08-26T05:34:53.770Z",
+      "durationMs": 50218,
+      "stdout": "{\n  \"schemaVersion\": 1,\n  \"fixtureId\": \"a26-clean-prefix-rollback-rehearsal\",\n  \"result\": \"passed\",\n  \"isolation\": {\n    \"liveUserConfigurationRead\": false,\n    \"liveUserConfigurationWritten\": false,\n    \"cleanPrefix\": true,\n    \"cleanCodexHome\": true,\n    \"logicalRepositoryCount\": 5\n  },\n  \"candidate\": {\n    \"packageVersion\": \"0.2.0-beta.1\",\n    \"tarballSha256\": \"3aa7fc3d8a24e09e2e4a7b4823fb9603a983ef25555667430ab337cfb4263860\",\n    \"installedVersionAfterRollback\": \"0.2.0-beta.1\",\n    \"skillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\"\n  },\n  \"syntheticSuccessor\": {\n    \"packageVersion\": \"0.2.0-a26successor.0\",\n    \"published\": false,\n    \"skillDigest\": \"d518d45e8f68574ec5c67b23b98eccc4b070c50abe4f5f2f5d93afc767001b1c\"\n  },\n  \"migration\": {\n    \"dryRunExitCode\": 0,\n    \"dryRunMutationCount\": 0,\n    \"applyExitCode\": 0,\n    \"timestampedBackupCountAfterMigration\": 1,\n    \"backupReadBackExact\": true,\n    \"hardCodedRepositoryPathCount\": 0,\n    \"cwdContract\": \".\",\n    \"unrelatedPrefixBytePreserved\": true,\n    \"unrelatedSuffixBytePreserved\": true\n  },\n  \"lifecycle\": {\n    \"upgrade\": {\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"installedVersion\": \"0.2.0-a26successor.0\"\n    },\n    \"rollback\": {\n      \"exactCandidateTarballReinstalled\": true,\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"restoredVersion\": \"0.2.0-beta.1\",\n      \"restoredSkillDigest\": \"19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9\",\n      \"configurationBackupRestoredByteExact\": true,\n      \"remigrationDryRunExitCode\": 0\n    },\n    \"uninstall\": {\n      \"dryRunExitCode\": 0,\n      \"applyExitCode\": 0,\n      \"managedConfigPresentAfter\": false,\n      \"managedSkillPresentAfter\": false\n    }\n  },\n  \"restartObservations\": {\n    \"initialInstallation\": 1,\n    \"perRepository\": 0,\n    \"ordinaryFirstUse\": 0,\n    \"upgrade\": 1,\n    \"rollback\": 1,\n    \"uninstall\": 1\n  },\n  \"storeCustody\": [\n    {\n      \"repositoryId\": \"repository-1\",\n      \"digestBefore\": \"dcef283b6a8ee7204c8f06ed167e9427ad71b42443a9fcafb6caf31cdf1156b7\",\n      \"digestAfter\": \"dcef283b6a8ee7204c8f06ed167e9427ad71b42443a9fcafb6caf31cdf1156b7\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-2\",\n      \"digestBefore\": \"f7478459f3aead2536b0c86e02f394835521bbaf42db8bda33b6f440e933199e\",\n      \"digestAfter\": \"f7478459f3aead2536b0c86e02f394835521bbaf42db8bda33b6f440e933199e\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-3\",\n      \"digestBefore\": \"3627ecd732b1cbc1474d35b4a4f92a9bccc0e02ff6d831b731fea1492834dddf\",\n      \"digestAfter\": \"3627ecd732b1cbc1474d35b4a4f92a9bccc0e02ff6d831b731fea1492834dddf\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-4\",\n      \"digestBefore\": \"7086fd9c03c08f61b61351927d759e70e6e7cec44ba6efaa3063546c6ee2e9b7\",\n      \"digestAfter\": \"7086fd9c03c08f61b61351927d759e70e6e7cec44ba6efaa3063546c6ee2e9b7\",\n      \"preserved\": true\n    },\n    {\n      \"repositoryId\": \"repository-5\",\n      \"digestBefore\": \"710e7f2d7bb2bb91a89cf5da14016ba3565e3eb199d913c2b27ab2fe84722a26\",\n      \"digestAfter\": \"710e7f2d7bb2bb91a89cf5da14016ba3565e3eb199d913c2b27ab2fe84722a26\",\n      \"preserved\": true\n    }\n  ],\n  \"lostConspectusCount\": 0,\n  \"skillArchiveCount\": 0\n}",
+      "stdoutSha256": "5778dea956504c997da48753fd3c4f04f8a20aa03f15bc97fa7d33e4f38df016",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "real-host-envelope-check",
       "command": "mise exec -- node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json",
       "exitCode": 0,
-      "startedAt": "2026-08-26T04:18:59.758Z",
-      "durationMs": 37,
+      "startedAt": "2026-08-26T05:35:43.989Z",
+      "durationMs": 36,
       "stdout": "A25 activation operating envelope valid: 6/6 independent runs",
       "stdoutSha256": "2ad37adfdd78fb0351c75614e3cdf6aa98d0954f9df2ad989a9d6a694c50afe6",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -101,7 +101,7 @@
     "matchingParityFieldCount": 6,
     "source": {
       "mode": "source",
-      "packageVersion": "0.2.0-alpha.1",
+      "packageVersion": "0.2.0-beta.1",
       "launcher": {
         "command": "/Users/nfeldman/.local/share/mise/installs/node/24.18.0/bin/node",
         "arguments": [
@@ -170,7 +170,7 @@
     },
     "packed": {
       "mode": "packed",
-      "packageVersion": "0.2.0-alpha.1",
+      "packageVersion": "0.2.0-beta.1",
       "launcher": {
         "command": "amanuensis-memory",
         "arguments": [],
@@ -248,9 +248,9 @@
       "logicalRepositoryCount": 5
     },
     "candidate": {
-      "packageVersion": "0.2.0-alpha.1",
-      "tarballSha256": "6a6a5beef247591422a226de799b860015f3a4c196c8d06aea69b1f92cab5a21",
-      "installedVersionAfterRollback": "0.2.0-alpha.1",
+      "packageVersion": "0.2.0-beta.1",
+      "tarballSha256": "3aa7fc3d8a24e09e2e4a7b4823fb9603a983ef25555667430ab337cfb4263860",
+      "installedVersionAfterRollback": "0.2.0-beta.1",
       "skillDigest": "19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9"
     },
     "syntheticSuccessor": {
@@ -279,7 +279,7 @@
         "exactCandidateTarballReinstalled": true,
         "dryRunExitCode": 0,
         "applyExitCode": 0,
-        "restoredVersion": "0.2.0-alpha.1",
+        "restoredVersion": "0.2.0-beta.1",
         "restoredSkillDigest": "19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9",
         "configurationBackupRestoredByteExact": true,
         "remigrationDryRunExitCode": 0
@@ -336,8 +336,8 @@
   },
   "realHostEvidence": {
     "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-    "sha256": "cf017fce532bc1ef077972fa6629e8914f75f0db0598df1dc802663958841ae0",
-    "campaignId": "a25-2026-08-26T03-29-21-514Z-e5b88e6c",
+    "sha256": "ddc94f8e7fd6916f2e9161817cca82b4818d057dc13d9b477803dd6a5b0df58c",
+    "campaignId": "a25-2026-08-26T05-21-42-677Z-d0e426ed",
     "surface": "codex-cli-exec",
     "logicalRepositoryCount": 5,
     "workspaceCount": 6,
@@ -353,11 +353,11 @@
     "documents": [
       {
         "path": "README.md",
-        "sha256": "f4bfd88217a88b1cb893d6392e1486e805c6624ab9037adb6e9fef3d7d74239e"
+        "sha256": "28815c85959c0c2e725fe2f456f3e97c10116fef7366653844fb6e4bc0503ea6"
       },
       {
         "path": "mcp-server/README.md",
-        "sha256": "4d1dccd5b89dfb51a6a6af55d2bbca34482afcd2927499f01e2f544acb6c7a3f"
+        "sha256": "2e05398190ffaa14bf34e22d94dbd2f02dbda2cc413c83812e025ec27040c685"
       },
       {
         "path": "dev/adr/0021-friction-free-codex-activation.md",
