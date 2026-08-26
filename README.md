@@ -127,6 +127,23 @@ version and run that version's `amanuensis upgrade`; inspect its dry run first.
 Restore a timestamped `config.toml` backup only when deliberately reversing a
 configuration migration.
 
+Before publication, the repository packs the exact npm tarball, installs it
+into a clean prefix, and compares it with the source checkout across two fresh
+Git repositories. The differential receipt requires equal repository identity,
+storage, config ownership, restart state, installed skill digest, seeded doctor
+classifications and repair, upgrade, and uninstall custody. Absolute install
+paths and the source-versus-bin launcher spelling are the only declared
+representation differences. The separate manually dispatched published smoke
+runs the installed version across Node 20/22 on Linux and macOS; configuring
+that workflow is release preparation, not evidence that a new version has been
+published.
+
+The real-host evidence currently names `codex-cli-exec`; it does not silently
+generalize that run to a separately unmeasured desktop surface. The supported
+user configuration remains Codex's user-scoped MCP registration, with one
+restart after installation and Codex trust for each repository. Explicit
+project scope remains the conservative pinning escape hatch.
+
 Use `--scope project` only when deliberately pinning Codex to one repository:
 
 ```bash
@@ -179,8 +196,8 @@ mise exec -- node mcp-server/dist/cli.js doctor \
 Doctor reports the user and trusted-project config sources, effective
 precedence, executable and arguments, cwd contract, predicted canonical root
 and storage, server version, skill shadowing, and restart state. It exits
-non-zero for duplicate or conflicting registrations, hard-coded user
-workspaces, stale launchers, unsafe project shadows, invalid TOML, or a
+non-zero for duplicate or conflicting registrations, hard-coded user cwd or
+workspace arguments, stale launchers, unsafe project shadows, invalid TOML, or a
 wrong-repository effective binding. Diagnosis is read-only.
 
 For repair, first request a dry-run plan. Apply only the returned digest, which

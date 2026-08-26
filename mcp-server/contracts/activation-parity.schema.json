@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/activation-parity.schema.json",
+  "title": "Amanuensis source and packed activation parity receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "fixtureId", "result", "parityPaths", "source", "packed"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "fixtureId": { "type": "string", "minLength": 1 },
+    "result": { "const": "passed" },
+    "parityPaths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "source": { "$ref": "#/$defs/scenario" },
+    "packed": { "$ref": "#/$defs/scenario" }
+  },
+  "$defs": {
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "canonicalRoot",
+        "projectIdentity",
+        "storagePath",
+        "selectionSource",
+        "storagePolicy",
+        "dbBeforeFirstUse",
+        "dbAfterFirstUse",
+        "storeCount"
+      ],
+      "properties": {
+        "label": { "type": "string" },
+        "canonicalRoot": { "type": "string" },
+        "projectIdentity": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "selectionSource": { "type": "string" },
+        "storagePolicy": { "type": "string" },
+        "dbBeforeFirstUse": { "type": "boolean" },
+        "dbAfterFirstUse": { "type": "boolean" },
+        "storeCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "packageVersion",
+        "launcher",
+        "config",
+        "skillDigest",
+        "repositories",
+        "doctor",
+        "lifecycle"
+      ],
+      "properties": {
+        "mode": { "enum": ["source", "packed"] },
+        "packageVersion": { "type": "string" },
+        "launcher": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["command", "arguments", "installRoot"],
+          "properties": {
+            "command": { "type": "string" },
+            "arguments": { "type": "array", "items": { "type": "string" } },
+            "installRoot": { "type": "string" }
+          }
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "managedBlockCount",
+            "cwdContract",
+            "hardCodedRepositoryPathCount",
+            "unrelatedPrefixPreserved",
+            "installationRestartCount",
+            "perRepositoryRestartCount"
+          ],
+          "properties": {
+            "managedBlockCount": { "type": "integer", "minimum": 0 },
+            "cwdContract": { "type": "string" },
+            "hardCodedRepositoryPathCount": { "type": "integer", "minimum": 0 },
+            "unrelatedPrefixPreserved": { "type": "boolean" },
+            "installationRestartCount": { "type": "integer", "minimum": 0 },
+            "perRepositoryRestartCount": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "skillDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "repositories": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/repository" }
+        },
+        "doctor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cleanRepositoryCount",
+            "seededFailureCodes",
+            "repairDryRunExitCode",
+            "repairExitCode",
+            "repairBackupCount"
+          ],
+          "properties": {
+            "cleanRepositoryCount": { "type": "integer", "minimum": 0 },
+            "seededFailureCodes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" },
+                "uniqueItems": true
+              }
+            },
+            "repairDryRunExitCode": { "type": "integer" },
+            "repairExitCode": { "type": "integer" },
+            "repairBackupCount": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "upgradeDryRunExitCode",
+            "upgradeExitCode",
+            "uninstallDryRunExitCode",
+            "uninstallExitCode",
+            "preservedStoreCount",
+            "lostConspectusCount",
+            "unrelatedConfigMutationCount",
+            "skillArchiveCount"
+          ],
+          "properties": {
+            "upgradeDryRunExitCode": { "type": "integer" },
+            "upgradeExitCode": { "type": "integer" },
+            "uninstallDryRunExitCode": { "type": "integer" },
+            "uninstallExitCode": { "type": "integer" },
+            "preservedStoreCount": { "type": "integer", "minimum": 0 },
+            "lostConspectusCount": { "type": "integer", "minimum": 0 },
+            "unrelatedConfigMutationCount": { "type": "integer", "minimum": 0 },
+            "skillArchiveCount": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

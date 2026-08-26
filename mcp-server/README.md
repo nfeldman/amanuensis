@@ -61,7 +61,8 @@ receive distinct workspace-instance IDs and `.amanuensis` paths. An explicit
 do not use it when concurrent worktrees need isolation. Run `amanuensis doctor --client codex
 --dir /path/to/project --json` to inspect effective config precedence, launch
 paths, predicted repository/storage identity, skill shadows, and restart state.
-Doctor is read-only and exits non-zero for actionable faults. A safe repair is
+Doctor is read-only and exits non-zero for actionable faults, including an
+absolute user-scoped cwd or workspace argument. A safe repair is
 two-step: `doctor --repair --dry-run --json` returns a digest-bound plan ID;
 `doctor --repair --apply-plan <PLAN_ID> --json` applies it with timestamped
 configuration backups and refuses changed inputs.
@@ -77,6 +78,17 @@ lifecycle commands preserve every repository store and unrelated Codex config.
 Configuration rewrites receive timestamped backups; managed skills are
 replaced or removed without creating skill archives. A deliberate package
 rollback installs the intended version and runs that version's upgrade path.
+
+The pre-publication parity gate compares this source checkout with a clean
+installation of its exact packed tarball across two repositories. It holds
+identity, storage, config ownership, restart state, skill digest, diagnosis and
+repair, upgrade, and uninstall results equal; only absolute install paths and
+launcher representation may differ. The manual published smoke repeats the
+user-scoped lifecycle on Node 20/22 and Linux/macOS after an authorized publish.
+Its presence does not claim that the current source has been published. Current
+real-host evidence covers `codex-cli-exec`; a distinct desktop-host result is
+not inferred from it. Codex trust remains a host prerequisite, and project
+scope remains the explicit pinning escape hatch.
 
 The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired

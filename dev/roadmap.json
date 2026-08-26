@@ -1065,7 +1065,7 @@
         {
           "id": "A24",
           "title": "Published-package activation parity",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis + release",
           "outcome": "The npm-installed package and source checkout expose the same friction-free activation, migration, diagnosis, and containment behavior.",
           "rationale": "A source-only success would not repair the path ordinary users install, and packaging can silently change executable discovery, skill custody, and cwd behavior.",
@@ -1091,6 +1091,9 @@
             "mcp-server/package.json",
             ".github/workflows/published-smoke.yml",
             "mcp-server/test-package-artifact.mjs",
+            "mcp-server/test-package-activation-parity.mjs",
+            "mcp-server/contracts/activation-parity.schema.json",
+            "dev/activation-evidence/a24-package-parity.json",
             "README.md"
           ]
         },
@@ -1509,7 +1512,7 @@
         {
           "id": "A25",
           "title": "Multi-repository activation operating evidence",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis + evaluation",
           "outcome": "Real repository use establishes where friction-free activation works, fails, or remains unsupported without pooled claims hiding weak strata.",
           "rationale": "A syntactic installer suite and synthetic host harness cannot establish usability, diagnosis time, or isolation under diverse existing configurations.",

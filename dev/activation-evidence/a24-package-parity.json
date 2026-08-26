@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "initiative": "A24",
+  "pecIndex": "pc-ac58",
+  "recordedAt": "2026-08-26T03:04:33Z",
+  "result": "passed",
+  "source": {
+    "baselineCommit": "9be435c6e83c996e9d592baebe267bbc6553e141",
+    "practiceCatalog": {
+      "version": "2.10",
+      "stamp": "f9a5c0c9dbde"
+    },
+    "files": [
+      {
+        "path": "mcp-server/src/cli.ts",
+        "sha256": "0a798db6eeedd2598b49a24695f230e4f906b2e718b78b81a5e94cee26328ebb"
+      },
+      {
+        "path": "mcp-server/test-package-activation-parity.mjs",
+        "sha256": "98dd4138ff9e0ff591dd0e0799418c366ff37ead3726a71e3cc7d02a3a5f61c6"
+      },
+      {
+        "path": "mcp-server/fixtures/activation/package-parity.json",
+        "sha256": "8db90fb5735fbf5ba9c284bb1f5384b7ed8549bfdc291f64e2a6ab745efad16f"
+      },
+      {
+        "path": "mcp-server/contracts/activation-parity.schema.json",
+        "sha256": "155a3956a5f526ff217cd0ce16f17f47bacb387f1f9852e393f659f3a4d66813"
+      },
+      {
+        "path": "dev/test-package-activation-parity-red-gates.mjs",
+        "sha256": "895a24e8b90cae1bd674b827e90368b96ad5e2826851ea9cf865a63cd3bdbe71"
+      },
+      {
+        "path": ".github/workflows/test.yml",
+        "sha256": "8935c6567cb14476cc6a45aab7f70919214816b1b2c6f1861b07cc098761d738"
+      },
+      {
+        "path": ".github/workflows/published-smoke.yml",
+        "sha256": "40ea83a4c9d003fb281669a1bc0121ebcbf8dbd7346765f10b092fcc87f4b563"
+      }
+    ]
+  },
+  "redGate": {
+    "fixture": "a24-source-packed-activation-parity",
+    "command": "mise exec -- node mcp-server/test-package-activation-parity.mjs --case <case>",
+    "preRepair": {
+      "exitCode": 1,
+      "cases": [
+        {
+          "id": "packed-cwd",
+          "exitCode": 1,
+          "failure": "repository-b canonicalRoot differed after the packed launcher fixed cwd to repository-a"
+        },
+        {
+          "id": "packed-skill-version",
+          "exitCode": 1,
+          "failure": "source and packed skillDigest differed while the structural package floor remained intact"
+        }
+      ]
+    },
+    "postRepair": {
+      "exitCode": 0,
+      "repositoryCount": 2,
+      "parityFieldCount": 6,
+      "matchingParityFieldCount": 6,
+      "seededFailureClassCount": 2,
+      "matchingFailureClassCount": 2,
+      "lostConspectusCount": 0,
+      "skillArchiveCount": 0
+    }
+  },
+  "identityWitness": {
+    "client": "source and clean-installed amanuensis-memory stdio servers",
+    "canonicalRoot": "/Users/nfeldman/repos/amanuensis",
+    "storagePath": "/Users/nfeldman/repos/amanuensis/.amanuensis",
+    "selectionSource": "process-cwd-git-root",
+    "storagePolicy": "worktree-local",
+    "contractVersion": "amanuensis-repository-binding/v1",
+    "serverVersion": "0.2.0-alpha.1"
+  },
+  "parityManifest": {
+    "contract": "mcp-server/contracts/activation-parity.schema.json",
+    "fixture": "mcp-server/fixtures/activation/package-parity.json",
+    "packageVersion": "0.2.0-alpha.1",
+    "declaredRepresentationDifferences": [
+      "launcher.command",
+      "launcher.arguments",
+      "launcher.installRoot"
+    ],
+    "comparedFields": [
+      "packageVersion",
+      "config",
+      "skillDigest",
+      "repositories",
+      "doctor",
+      "lifecycle"
+    ],
+    "source": {
+      "launcherRepresentation": "pinned Node executable plus source dist/index.js",
+      "repositoryCount": 2,
+      "skillDigest": "19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9",
+      "cwdContract": ".",
+      "installationRestartCount": 1,
+      "perRepositoryRestartCount": 0,
+      "preservedStoreCount": 2,
+      "lostConspectusCount": 0
+    },
+    "packed": {
+      "launcherRepresentation": "clean-prefix amanuensis-memory bin",
+      "repositoryCount": 2,
+      "skillDigest": "19ab757422bee4b29e3f38ac94c025ffa8e900180f9a95b0a5233a332951d4c9",
+      "cwdContract": ".",
+      "installationRestartCount": 1,
+      "perRepositoryRestartCount": 0,
+      "preservedStoreCount": 2,
+      "lostConspectusCount": 0
+    },
+    "repositories": [
+      {
+        "label": "repository-a",
+        "canonicalRoot": "<repository-a>",
+        "projectIdentity": "local:<repository-a>",
+        "storagePath": "<repository-a>/.amanuensis",
+        "dbBeforeFirstUse": false,
+        "dbAfterFirstUse": true,
+        "storeCount": 1
+      },
+      {
+        "label": "repository-b",
+        "canonicalRoot": "<repository-b>",
+        "projectIdentity": "local:<repository-b>",
+        "storagePath": "<repository-b>/.amanuensis",
+        "dbBeforeFirstUse": false,
+        "dbAfterFirstUse": true,
+        "storeCount": 1
+      }
+    ],
+    "diagnosis": {
+      "cleanRepositoryCount": 2,
+      "staleExecutable": ["stale-executable"],
+      "hardCodedUserCwd": ["hard-coded-user-cwd", "wrong-repository-binding"],
+      "repairDryRunExitCode": 1,
+      "repairExitCode": 0,
+      "configurationBackupCountPerScenario": 3
+    },
+    "configOwnership": {
+      "managedBlockCount": 1,
+      "hardCodedRepositoryPathCount": 0,
+      "unrelatedConfigMutationCount": 0
+    }
+  },
+  "publicationState": {
+    "publishedByThisInitiative": false,
+    "publishedSmokeConfigured": true,
+    "publishedSmokeExecutedForThisCommit": false,
+    "reason": "Publication and release execution require separate authorization."
+  },
+  "greenChecks": [
+    "mise exec -- npm --prefix mcp-server run build",
+    "mise exec -- node mcp-server/test-package-activation-parity.mjs",
+    "mise exec -- node dev/test-package-activation-parity-red-gates.mjs",
+    "mise exec -- node mcp-server/test-package-artifact.mjs",
+    "mise exec -- node mcp-server/test-activation-doctor.mjs",
+    "mise exec -- node mcp-server/test-installer.mjs",
+    "mise exec -- node mcp-server/test-activation-contract.mjs",
+    "mise exec -- node mcp-server/test-first-use-laziness.mjs",
+    "mise exec -- node mcp-server/test-first-use-recovery.mjs"
+  ]
+}

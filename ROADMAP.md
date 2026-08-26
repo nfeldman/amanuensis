@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 2 | 0 | 0 | 24 |
+| 1 | 1 | 0 | 0 | 25 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 3 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 2 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A24 — Published-package activation parity.
+**Next implementation initiative:** A25 — Multi-repository activation operating evidence.
 
 ## Epistemic baseline
 
@@ -615,7 +615,7 @@ Risks:
 
 #### A24 — Published-package activation parity
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis + release<br>
 **Depends on:** A23<br>
 **Metrics:** M13, M14, M12
@@ -644,7 +644,7 @@ Risks:
 - A clean packaging fixture may omit real user configuration collisions.
 
 **Practice basis:** GP8, GP21, GP22, GP28, VP4, VP11, VP20<br>
-**Baseline evidence:** `mcp-server/package.json`, `.github/workflows/published-smoke.yml`, `mcp-server/test-package-artifact.mjs`, `README.md`
+**Baseline evidence:** `mcp-server/package.json`, `.github/workflows/published-smoke.yml`, `mcp-server/test-package-artifact.mjs`, `mcp-server/test-package-activation-parity.mjs`, `mcp-server/contracts/activation-parity.schema.json`, `dev/activation-evidence/a24-package-parity.json`, `README.md`
 
 #### A6 — Impact-aware review brief
 
@@ -909,7 +909,7 @@ Risks:
 
 #### A25 — Multi-repository activation operating evidence
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis + evaluation<br>
 **Depends on:** A24<br>
 **Metrics:** M13, M14, M15, M16, M17, M11

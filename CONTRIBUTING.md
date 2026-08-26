@@ -79,6 +79,7 @@ node test-first-use-laziness.mjs         # prove startup is read-only and first 
 node test-first-use-recovery.mjs         # interrupt and recover every first-use mutation boundary
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
+node test-package-activation-parity.mjs  # source/clean-package lifecycle parity in two repositories
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current
 ```
 
@@ -89,6 +90,12 @@ proves the wrong-cwd, reused-server, cross-write, and missing-restart controls
 exit nonzero. The authenticated launcher itself is
 `node dev/run-codex-host-harness.mjs --execute`; it uses temporary repositories
 and must not be substituted for the committed-log verifier in CI.
+
+`node dev/test-package-activation-parity-red-gates.mjs` packs two deliberately
+bad candidates independently and requires both the hard-coded packed cwd and
+packed skill-version mismatch to exit nonzero with the causal field named. The
+unsabotaged parity test requires registry access for a clean dependency install;
+run it under `mise exec --` from the pinned toolchain.
 
 The adversarial suites are first-class. After any schema change,
 new tool, or handler edit, run them — and extend them when the

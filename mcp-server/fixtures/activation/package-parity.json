@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "a24-source-packed-activation-parity",
+  "repositoryLabels": ["repository-a", "repository-b"],
+  "seededFailureCodes": ["stale-executable", "hard-coded-user-cwd"],
+  "parityPaths": [
+    "packageVersion",
+    "config",
+    "skillDigest",
+    "repositories",
+    "doctor",
+    "lifecycle"
+  ],
+  "allowedRepresentationDifferences": [
+    "launcher.command",
+    "launcher.arguments",
+    "launcher.installRoot"
+  ],
+  "redCases": {
+    "packed-cwd": "canonicalRoot",
+    "packed-skill-version": "skillDigest"
+  }
+}

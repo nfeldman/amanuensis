@@ -28,6 +28,8 @@ jobs:
   smoke:
     name: install + smoke (node ${{ matrix.node }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      CODEX_HOME: ${{ runner.temp }}/a24-codex-home
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +53,24 @@ jobs:
       - name: amanuensis --help
         run: amanuensis --help
 
+      - name: User-scoped Codex install is repository-independent
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$CODEX_HOME" "$RUNNER_TEMP/a24-repository-a" "$RUNNER_TEMP/a24-repository-b"
+          git -C "$RUNNER_TEMP/a24-repository-a" init --quiet
+          git -C "$RUNNER_TEMP/a24-repository-b" init --quiet
+          printf '# unrelated published-smoke bytes\n[features]\nkeep = true\n' > "$CODEX_HOME/config.toml"
+          amanuensis install --dir "$RUNNER_TEMP/a24-repository-a"
+          test ! -e "$RUNNER_TEMP/a24-repository-a/.codex"
+          test ! -e "$RUNNER_TEMP/a24-repository-a/.amanuensis"
+          test ! -e "$RUNNER_TEMP/a24-repository-b/.codex"
+          test ! -e "$RUNNER_TEMP/a24-repository-b/.amanuensis"
+          amanuensis doctor --client codex --dir "$RUNNER_TEMP/a24-repository-a" --json
+          amanuensis doctor --client codex --dir "$RUNNER_TEMP/a24-repository-b" --json
+          amanuensis upgrade --dir "$RUNNER_TEMP/a24-repository-a" --dry-run
+          amanuensis upgrade --dir "$RUNNER_TEMP/a24-repository-a"
+
       - name: amanuensis init writes every client adapter
         shell: bash
         run: |
@@ -58,7 +78,11 @@ jobs:
           for client in claude codex vscode generic; do
             ws="$RUNNER_TEMP/smoke-$client"
             mkdir -p "$ws"
-            amanuensis init --client "$client" --dir "$ws"
+            if [[ "$client" == codex ]]; then
+              amanuensis init --client codex --scope project --dir "$ws"
+            else
+              amanuensis init --client "$client" --dir "$ws"
+            fi
           done
           test -f "$RUNNER_TEMP/smoke-claude/.claude/skills/amanuensis/SKILL.md"
           test -f "$RUNNER_TEMP/smoke-claude/.mcp.json"
@@ -75,35 +99,23 @@ jobs:
           set -euo pipefail
           amanuensis init --client claude --dir "$RUNNER_TEMP/smoke-claude" --dry-run
 
-      - name: MCP server starts and responds to tools/list over stdio
+      - name: Two fresh repositories bind lazily and independently
         shell: bash
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/handshake.mjs" <<'EOF'
-          // Minimal MCP client: spawn amanuensis-memory, do the
-          // initialize handshake, ask for tools/list, fail if no tools
-          // are returned. Validates that the server starts, the SQLite
-          // schema applies, and the tool registry is intact in the
-          // published artifact.
+          // Minimal MCP client for the published artifact: startup and
+          // get_project_info must be read-only, then one DB-backed query must
+          // create exactly the cwd-bound repository store.
           import { spawn } from "node:child_process";
-          import { mkdtempSync } from "node:fs";
-          import { tmpdir } from "node:os";
+          import { existsSync, realpathSync } from "node:fs";
           import { join } from "node:path";
 
-          const ws = mkdtempSync(join(tmpdir(), "amanuensis-smoke-"));
-          const proc = spawn("amanuensis-memory", ["--workspace", ws], {
-            stdio: ["pipe", "pipe", "inherit"],
-          });
-
-          let buf = "";
-          let settled = false;
-          const result = new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              if (settled) return;
-              settled = true;
-              proc.kill("SIGTERM");
-              reject(new Error("timed out waiting for tools/list response (15s)"));
-            }, 15_000);
+          async function probe(ws) {
+            const proc = spawn("amanuensis-memory", [], { cwd: ws, stdio: ["pipe", "pipe", "inherit"] });
+            let buf = "";
+            let nextId = 1;
+            const pending = new Map();
             proc.stdout.on("data", (chunk) => {
               buf += chunk.toString("utf8");
               let nl;
@@ -111,50 +123,73 @@ jobs:
                 const line = buf.slice(0, nl).trim();
                 buf = buf.slice(nl + 1);
                 if (!line) continue;
-                let msg;
-                try { msg = JSON.parse(line); } catch { continue; }
-                if (msg.id === 1) {
-                  settled = true;
-                  clearTimeout(timeout);
-                  if (msg.error) {
-                    reject(new Error("tools/list errored: " + JSON.stringify(msg.error)));
-                  } else {
-                    const tools = (msg.result && msg.result.tools) || [];
-                    if (tools.length === 0) reject(new Error("tools/list returned empty list"));
-                    else resolve(tools.length);
-                  }
+                const msg = JSON.parse(line);
+                const waiter = pending.get(msg.id);
+                if (waiter) {
+                  pending.delete(msg.id);
+                  if (msg.error) waiter.reject(new Error(JSON.stringify(msg.error)));
+                  else waiter.resolve(msg.result);
                 }
               }
             });
-            proc.on("error", (e) => { if (!settled) { settled = true; reject(e); } });
-            proc.on("exit", (code) => {
-              if (!settled) {
-                settled = true;
-                reject(new Error("server exited before responding (code " + code + ")"));
+            const request = (method, params = {}) => {
+              const id = nextId++;
+              const result = new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error("timeout: " + method)), 15000);
+                pending.set(id, {
+                  resolve(value) { clearTimeout(timer); resolve(value); },
+                  reject(error) { clearTimeout(timer); reject(error); },
+                });
+              });
+              proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
+              return result;
+            };
+            try {
+              await request("initialize", {
+                protocolVersion: "2025-06-18",
+                capabilities: {},
+                clientInfo: { name: "published-smoke", version: "1" },
+              });
+              proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }) + "\n");
+              await request("tools/list");
+              const before = await request("tools/call", { name: "get_project_info", arguments: {} });
+              if (before.structuredContent.db_exists || existsSync(join(ws, ".amanuensis"))) {
+                throw new Error("published server wrote before first DB-backed use");
               }
-            });
-          });
+              await request("tools/call", { name: "get_session", arguments: {} });
+              const after = await request("tools/call", { name: "get_project_info", arguments: {} });
+              if (after.structuredContent.binding_receipt.canonicalRoot !== realpathSync(ws)) {
+                throw new Error("published server bound the wrong repository");
+              }
+              if (after.structuredContent.storage_path !== join(realpathSync(ws), ".amanuensis")) {
+                throw new Error("published server selected the wrong storage");
+              }
+              if (!after.structuredContent.db_exists) throw new Error("first use did not initialize DB");
+            } finally {
+              proc.kill("SIGTERM");
+            }
+          }
 
-          const send = (m) => proc.stdin.write(JSON.stringify(m) + "\n");
-          send({
-            jsonrpc: "2.0", id: 0, method: "initialize",
-            params: {
-              protocolVersion: "2024-11-05",
-              capabilities: {},
-              clientInfo: { name: "published-smoke", version: "0" },
-            },
-          });
-          send({ jsonrpc: "2.0", id: 1, method: "tools/list" });
-
+          const repositories = process.argv.slice(2);
           try {
-            const n = await result;
-            console.log("tools/list returned " + n + " tools");
-            proc.kill("SIGTERM");
-            process.exit(0);
-          } catch (e) {
-            console.error("smoke failed:", e.message);
-            proc.kill("SIGTERM");
-            process.exit(1);
+            for (const repository of repositories) await probe(repository);
+            console.log("published activation bound " + repositories.length + "/" + repositories.length + " repositories");
+          } catch (error) {
+            console.error("smoke failed:", error.message);
+            process.exitCode = 1;
           }
           EOF
-          node "$RUNNER_TEMP/handshake.mjs"
+          node "$RUNNER_TEMP/handshake.mjs" "$RUNNER_TEMP/a24-repository-a" "$RUNNER_TEMP/a24-repository-b"
+
+      - name: Uninstall preserves both repository stores and unrelated config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$RUNNER_TEMP/a24-repository-a/.amanuensis/memory.db"
+          test -f "$RUNNER_TEMP/a24-repository-b/.amanuensis/memory.db"
+          amanuensis uninstall --client codex --scope user --dir "$RUNNER_TEMP/a24-repository-a" --dry-run
+          amanuensis uninstall --client codex --scope user --dir "$RUNNER_TEMP/a24-repository-a"
+          grep -F '# unrelated published-smoke bytes' "$CODEX_HOME/config.toml"
+          test -f "$RUNNER_TEMP/a24-repository-a/.amanuensis/memory.db"
+          test -f "$RUNNER_TEMP/a24-repository-b/.amanuensis/memory.db"
+          test ! -e "$CODEX_HOME/skills/amanuensis"

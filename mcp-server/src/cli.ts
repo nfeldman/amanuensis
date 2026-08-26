@@ -334,10 +334,16 @@ function registrationWorkspace(
   const args = Array.isArray(entry.args) ? entry.args : [];
   const workspaceIndex = args.indexOf("--workspace");
   const selected = workspaceIndex >= 0 ? args[workspaceIndex + 1] : undefined;
-  if (typeof selected !== "string") return fallback;
-  if (selected.includes("${")) return undefined;
-  const candidate = isAbsolute(selected) ? selected : resolve(fallback, selected);
+  const cwd = entry.cwd;
+  const configured = typeof selected === "string" ? selected : cwd;
+  if (typeof configured !== "string" || configured === ".") return fallback;
+  if (configured.includes("${")) return undefined;
+  const candidate = isAbsolute(configured) ? configured : resolve(fallback, configured);
   return existsSync(candidate) ? canonicalGitRoot(candidate) : resolve(candidate);
+}
+
+function hasExplicitWorkspaceArgument(entry: JsonObject | undefined): boolean {
+  return Array.isArray(entry?.args) && entry.args.includes("--workspace");
 }
 
 function inspectCodexRegistration(
@@ -450,12 +456,30 @@ function doctorReport(workspace: string): JsonObject & { diagnoses: DoctorDiagno
       remediation: "Remove or migrate that project entry explicitly; doctor will not rewrite it.",
     });
   }
-  if (userHasEntry && userConfig.workspace !== repositoryRoot) {
+  if (
+    userHasEntry &&
+    hasExplicitWorkspaceArgument(userConfig.entry) &&
+    userConfig.workspace !== repositoryRoot
+  ) {
     diagnose({
       code: "hard-coded-user-workspace",
       path: userConfig.path,
       message: `The user registration selects ${userConfig.workspace ?? "an unresolved workspace"} instead of resolving the task cwd.`,
       remediation: "Migrate the user entry to the cwd-relative `codex-user-cwd-v1` contract.",
+    });
+  }
+  if (userHasEntry && userConfig.entry?.cwd !== ".") {
+    diagnose({
+      code:
+        typeof userConfig.entry?.cwd === "string"
+          ? "hard-coded-user-cwd"
+          : "missing-user-cwd-contract",
+      path: userConfig.path,
+      message:
+        typeof userConfig.entry?.cwd === "string"
+          ? `The user registration fixes the MCP process cwd at ${userConfig.entry.cwd}; it must resolve each task cwd dynamically.`
+          : "The user registration has no cwd-relative launch contract.",
+      remediation: 'Migrate the user entry to `cwd = "."` with the `codex-user-cwd-v1` contract.',
     });
   }
   if (userHasEntry && projectHasEntry) {

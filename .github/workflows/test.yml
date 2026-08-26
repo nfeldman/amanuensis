@@ -109,6 +109,11 @@ jobs:
       - name: Packed artifact adapters and MCP handshake
         working-directory: mcp-server
         run: node test-package-artifact.mjs
+      - name: Source and clean-packed activation parity
+        working-directory: mcp-server
+        run: node test-package-activation-parity.mjs
+      - name: Prove packed cwd and skill-version parity red gates
+        run: node dev/test-package-activation-parity-red-gates.mjs
       - name: Adversarial — correctness
         working-directory: mcp-server
         run: node test-adversarial-correctness.mjs
