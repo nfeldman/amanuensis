@@ -179,7 +179,7 @@ const report = {
   evidenceMode: "candidate-release-gate",
   source: {
     baselineCommit: "e4331c945b6222ffcc03bb8f7af08ee59ba1c508",
-    implementationCommit: null,
+    implementationCommit: "db00515c2ef69faea3eb6807ade986866a63c21b",
     files: [
       fileReference("dev/check-friction-free-release-readiness.mjs"),
       fileReference("dev/test-friction-free-release-readiness-red-gates.mjs"),

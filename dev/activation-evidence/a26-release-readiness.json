@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "contractVersion": "amanuensis-friction-free-release-readiness/v1",
   "initiative": "A26",
-  "recordedAt": "2026-08-26T04:43:24.026Z",
+  "recordedAt": "2026-08-26T04:43:57.776Z",
   "result": "passed",
   "evidenceMode": "candidate-release-gate",
   "source": {
     "baselineCommit": "e4331c945b6222ffcc03bb8f7af08ee59ba1c508",
-    "implementationCommit": null,
+    "implementationCommit": "db00515c2ef69faea3eb6807ade986866a63c21b",
     "files": [
       {
         "path": "dev/check-friction-free-release-readiness.mjs",
@@ -27,7 +27,7 @@
       },
       {
         "path": "dev/render-friction-free-release-readiness.mjs",
-        "sha256": "4b299eb1f89ec4dd6b075c5b76895da6b531de5b6b1ccc7eabd18fe61192bf8c"
+        "sha256": "e06ced753b2b8527eba1abe8b61448522a2ec9a7d39173f3ee764ee576e1317c"
       },
       {
         "path": "mcp-server/test-release-rollback.mjs",
