@@ -35,29 +35,40 @@
       }
     },
     "release": {
-      "status": "established",
-      "tag": "v0.2.0-alpha.1",
-      "tagCommit": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
+      "status": "candidate",
+      "tag": "v0.2.0-beta.1",
       "registry": "npmjs",
       "package": "@gruetech/amanuensis",
-      "version": "0.2.0-alpha.1",
+      "version": "0.2.0-beta.1",
       "distTag": "latest",
-      "publishedAt": "2026-08-24T00:26:59.015Z",
-      "shasum": "8e475bd11675a7703b6cb6b460d989587f86b536",
-      "integrity": "sha512-vWczSVfThYl+wPTeRrUmLc2SrdWWZZWNjZ6Vtm3LLADP+/RZB/UfMCSCuLudCqIUDHd8mvmPW6q2vFwmWzDzQQ==",
-      "publish": {
-        "provider": "github-actions",
-        "workflow": "publish.yml",
-        "runId": 32676535069,
-        "headSha": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
-        "conclusion": "success"
-      },
-      "publishedSmoke": {
-        "provider": "github-actions",
-        "workflow": "published-smoke.yml",
-        "runId": 32676740951,
+      "publicationAuthorized": true,
+      "publicationStatus": "not-published",
+      "releaseReadyReceipt": "dev/activation-evidence/a26-release-readiness.json",
+      "previousEstablished": {
+        "status": "established",
+        "tag": "v0.2.0-alpha.1",
+        "tagCommit": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
+        "registry": "npmjs",
+        "package": "@gruetech/amanuensis",
         "version": "0.2.0-alpha.1",
-        "conclusion": "success"
+        "distTag": "latest",
+        "publishedAt": "2026-08-24T00:26:59.015Z",
+        "shasum": "8e475bd11675a7703b6cb6b460d989587f86b536",
+        "integrity": "sha512-vWczSVfThYl+wPTeRrUmLc2SrdWWZZWNjZ6Vtm3LLADP+/RZB/UfMCSCuLudCqIUDHd8mvmPW6q2vFwmWzDzQQ==",
+        "publish": {
+          "provider": "github-actions",
+          "workflow": "publish.yml",
+          "runId": 32676535069,
+          "headSha": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
+          "conclusion": "success"
+        },
+        "publishedSmoke": {
+          "provider": "github-actions",
+          "workflow": "published-smoke.yml",
+          "runId": 32676740951,
+          "version": "0.2.0-alpha.1",
+          "conclusion": "success"
+        }
       }
     }
   },

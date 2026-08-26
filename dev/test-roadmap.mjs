@@ -266,16 +266,34 @@ try {
   run(
     ["--write", "--source", regressedReleaseStatus, "--output", projection],
     1,
-    "delivery.release.status must be established",
+    "delivery.release.status must be candidate or established",
   );
 
   const failedPublishedSmoke = writeCase("failed-published-smoke", (value) => {
-    value.delivery.release.publishedSmoke.conclusion = "failure";
+    value.delivery.release.previousEstablished.publishedSmoke.conclusion = "failure";
   });
   run(
     ["--write", "--source", failedPublishedSmoke, "--output", projection],
     1,
-    "delivery.release.publishedSmoke.conclusion must be success",
+    "delivery.release.previousEstablished.publishedSmoke.conclusion must be success",
+  );
+
+  const prematurePublicationClaim = writeCase("premature-publication-claim", (value) => {
+    value.delivery.release.publicationStatus = "published";
+  });
+  run(
+    ["--write", "--source", prematurePublicationClaim, "--output", projection],
+    1,
+    "delivery.release candidate must be authorized and not-published",
+  );
+
+  const fabricatedCandidateArtifact = writeCase("fabricated-candidate-artifact", (value) => {
+    value.delivery.release.shasum = "1".repeat(40);
+  });
+  run(
+    ["--write", "--source", fabricatedCandidateArtifact, "--output", projection],
+    1,
+    "delivery.release candidate must not claim shasum before publication",
   );
 
   const unevidencedStageExit = writeCase("unevidenced-stage-exit", (value) => {
