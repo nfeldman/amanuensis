@@ -10,8 +10,8 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 
 let apply = false;
 let scratchRoot;
@@ -25,10 +25,10 @@ if (!scratchRoot)
   throw new Error("usage: cleanup-activation-operating-trust.mjs --scratch-root PATH [--apply]");
 
 const canonicalScratch = realpathSync(resolve(scratchRoot));
+const canonicalTemporaryRoot = realpathSync(tmpdir());
 if (
-  !/^\/private\/var\/folders\/[^/]+\/[^/]+\/T\/amanuensis-a25-operating-[^/]+$/.test(
-    canonicalScratch,
-  )
+  dirname(canonicalScratch) !== canonicalTemporaryRoot ||
+  !/^amanuensis-a25-operating-[A-Za-z0-9_-]+$/.test(basename(canonicalScratch))
 ) {
   throw new Error(`refusing non-A25 scratch root: ${canonicalScratch}`);
 }
