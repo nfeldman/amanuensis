@@ -74,10 +74,19 @@ node test-installer.mjs                  # client adapters, migration, and unins
 node test-activation-contract.mjs        # user-scope cwd binding and wrong-workspace halt
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
 node test-workspace-binding.mjs          # immutable receipt, symlink halt, worktree policy
+node test-codex-parent-workspace.mjs     # recover Codex CLI --cd workspace without a fixed path
 node test-mcp-compatibility.mjs          # initialization, annotations, results, errors
 node test-package-artifact.mjs           # packed adapters, assets, and MCP handshake
 node scripts/gen-tool-inventory.mjs --check  # DEVELOPMENT.md inventory is current
 ```
+
+From the repository root, `node dev/check-codex-host-evidence.mjs --receipt
+dev/activation-evidence/a22-codex-host.json` verifies every committed Codex
+host run independently. `node dev/test-codex-host-evidence-red-gates.mjs`
+proves the wrong-cwd, reused-server, cross-write, and missing-restart controls
+exit nonzero. The authenticated launcher itself is
+`node dev/run-codex-host-harness.mjs --execute`; it uses temporary repositories
+and must not be substituted for the committed-log verifier in CI.
 
 The adversarial suites are first-class. After any schema change,
 new tool, or handler edit, run them — and extend them when the

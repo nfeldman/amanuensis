@@ -95,6 +95,11 @@ jobs:
       - name: Immutable repository binding and containment red gate
         working-directory: mcp-server
         run: node test-workspace-binding.mjs
+      - name: Codex parent-process workspace selection
+        working-directory: mcp-server
+        run: node test-codex-parent-workspace.mjs
+      - name: Committed real-host Codex evidence and independent red gates
+        run: node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json && node dev/test-codex-host-evidence-red-gates.mjs
       - name: Packed artifact adapters and MCP handshake
         working-directory: mcp-server
         run: node test-package-artifact.mjs

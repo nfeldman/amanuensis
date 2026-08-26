@@ -127,9 +127,16 @@ sandbox. Codex trust, approvals, and filesystem permissions remain the host's
 security boundary. `get_project_info` returns the immutable startup
 `binding_receipt`: binding ID, canonical root, workspace-instance ID,
 repository identity/key, storage root/path and policy, workspace-selection
-source, and server version. The server revalidates that receipt before every
+source, server-instance ID, and server version. The server revalidates that receipt before every
 tool call, and file-producing tools reject paths or symlink traversal outside
 the bound store before mutation.
+
+For the Codex CLI, launch from the repository directory as usual. If Codex is
+started elsewhere with `codex exec --cd <repository>` (or `-C`), the user-scope
+adapter recovers that exact task root from its direct Codex parent process and
+records `parent-codex-cli-cd-git-root` in the receipt. This preserves a
+cwd-relative global registration without embedding a repository path. An
+unreadable `--cd` value halts before storage initialization.
 
 Each ordinary Git worktree uses its own worktree-local `.amanuensis` store. Two
 worktrees can share the logical repository identity while retaining distinct

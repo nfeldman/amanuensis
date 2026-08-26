@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "codex-host-red-matrix",
+  "baseReceipt": {
+    "schemaVersion": 1,
+    "initiative": "A22",
+    "evidenceMode": "detector-fixture",
+    "host": {
+      "surface": "codex-cli-exec",
+      "codexVersion": "codex-cli 0.146.0"
+    },
+    "lifecycle": {
+      "configChangedAt": "2026-08-25T20:00:00Z",
+      "processStartedAt": "2026-08-25T20:01:00Z",
+      "restartObserved": true
+    },
+    "expectedRuns": [
+      {
+        "runId": "repository-a",
+        "canonicalRoot": "/fixtures/repository-a",
+        "storagePath": "/fixtures/repository-a/.amanuensis"
+      },
+      {
+        "runId": "repository-b",
+        "canonicalRoot": "/fixtures/repository-b",
+        "storagePath": "/fixtures/repository-b/.amanuensis"
+      },
+      {
+        "runId": "worktree-a",
+        "canonicalRoot": "/fixtures/repository-a-worktree",
+        "storagePath": "/fixtures/repository-a-worktree/.amanuensis"
+      }
+    ],
+    "runs": [
+      {
+        "runId": "repository-a",
+        "status": "passed",
+        "mcpCallObserved": true,
+        "serverInstanceId": "instance-a",
+        "bindingReceipt": {
+          "canonicalRoot": "/fixtures/repository-a",
+          "storagePath": "/fixtures/repository-a/.amanuensis"
+        },
+        "writes": [
+          { "path": "/fixtures/repository-a/.amanuensis/docs/index.html" }
+        ]
+      },
+      {
+        "runId": "repository-b",
+        "status": "passed",
+        "mcpCallObserved": true,
+        "serverInstanceId": "instance-b",
+        "bindingReceipt": {
+          "canonicalRoot": "/fixtures/repository-b",
+          "storagePath": "/fixtures/repository-b/.amanuensis"
+        },
+        "writes": [
+          { "path": "/fixtures/repository-b/.amanuensis/docs/index.html" }
+        ]
+      },
+      {
+        "runId": "worktree-a",
+        "status": "passed",
+        "mcpCallObserved": true,
+        "serverInstanceId": "instance-worktree-a",
+        "bindingReceipt": {
+          "canonicalRoot": "/fixtures/repository-a-worktree",
+          "storagePath": "/fixtures/repository-a-worktree/.amanuensis"
+        },
+        "writes": [
+          { "path": "/fixtures/repository-a-worktree/.amanuensis/docs/index.html" }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "wrong-cwd",
+      "mutations": [
+        {
+          "pointer": "/runs/1/bindingReceipt/canonicalRoot",
+          "value": "/fixtures/repository-a"
+        }
+      ],
+      "expectedError": "[repository-b] canonical root"
+    },
+    {
+      "caseId": "reused-server",
+      "mutations": [
+        { "pointer": "/runs/1/serverInstanceId", "value": "instance-a" }
+      ],
+      "expectedError": "server instance instance-a crossed repository roots"
+    },
+    {
+      "caseId": "cross-write",
+      "mutations": [
+        {
+          "pointer": "/runs/0/writes/0/path",
+          "value": "/fixtures/repository-b/.amanuensis/contaminated.md"
+        }
+      ],
+      "expectedError": "[repository-a] cross-repository write"
+    },
+    {
+      "caseId": "missing-restart",
+      "mutations": [
+        { "pointer": "/lifecycle/processStartedAt", "value": "2026-08-25T19:59:00Z" },
+        { "pointer": "/lifecycle/restartObserved", "value": false }
+      ],
+      "expectedError": "running Codex process predates managed configuration"
+    }
+  ]
+}

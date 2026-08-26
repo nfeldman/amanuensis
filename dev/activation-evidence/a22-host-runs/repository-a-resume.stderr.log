@@ -1,0 +1,8 @@
+2026-08-26T00:01:47.432231Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-08-26T00:01:47.432247Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-08-26T00:01:47.751845Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-08-26T00:01:47.751869Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-08-26T00:01:49.350260Z ERROR codex_core::util: Custom tool call output is missing for call id: call_IeXVXuqFvQEs5pj8gxyjnFBt
+2026-08-26T00:01:52.617001Z ERROR codex_core::util: Custom tool call output is missing for call id: call_IeXVXuqFvQEs5pj8gxyjnFBt
+2026-08-26T00:01:55.680210Z ERROR codex_core::util: Custom tool call output is missing for call id: call_IeXVXuqFvQEs5pj8gxyjnFBt
+2026-08-26T00:01:59.720915Z ERROR codex_core::util: Custom tool call output is missing for call id: call_IeXVXuqFvQEs5pj8gxyjnFBt

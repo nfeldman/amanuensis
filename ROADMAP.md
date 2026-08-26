@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 1 | 4 | 0 | 0 | 22 |
+| 1 | 3 | 0 | 0 | 23 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -24,7 +24,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
 
-**Active expansion:** 5 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
+**Active expansion:** 4 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -40,7 +40,7 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Published-package smoke:** [published-smoke.yml run 32676740951](https://github.com/nfeldman/amanuensis/actions/runs/32676740951) concluded success for `0.2.0-alpha.1`.
 
-**Next implementation initiative:** A22 — Real-host Codex multi-repository harness.
+**Next implementation initiative:** A23 — Zero-touch first use and lifecycle commands.
 
 ## Epistemic baseline
 
@@ -323,7 +323,7 @@ Risks:
 
 #### A22 — Real-host Codex multi-repository harness
 
-**Implementation status:** ready<br>
+**Implementation status:** done<br>
 **Owner:** Amanuensis + Codex integration<br>
 **Depends on:** A20, A21<br>
 **Metrics:** M13, M15, M17, M11
@@ -352,7 +352,7 @@ Risks:
 - A mock host can reproduce the implementation rather than test the host contract.
 
 **Practice basis:** GP21, GP22, GP24, GP25, GP33, VP4, VP5, VP11, VP19, VP20<br>
-**Baseline evidence:** `mcp-server/test-installer.mjs`, `mcp-server/test-mcp-compatibility.mjs`, `mcp-server/src/index.ts`, `.github/workflows/test.yml`
+**Baseline evidence:** `mcp-server/test-installer.mjs`, `mcp-server/test-mcp-compatibility.mjs`, `mcp-server/src/index.ts`, `.github/workflows/test.yml`, `mcp-server/src/codex-host.ts`, `mcp-server/test-codex-parent-workspace.mjs`, `mcp-server/fixtures/activation/codex-context-probe.mjs`, `mcp-server/fixtures/activation/codex-host-red-matrix.json`, `dev/run-codex-host-harness.mjs`, `dev/run-codex-parent-cd-evidence.mjs`, `dev/check-codex-host-evidence.mjs`, `dev/test-codex-host-evidence-red-gates.mjs`, `dev/activation-evidence/a22-codex-host.json`, `dev/activation-evidence/a22-host-runs/storage-readback.json`
 
 #### A0 — Dogfood baseline and executable definitions
 
@@ -582,7 +582,7 @@ Risks:
 
 #### A23 — Zero-touch first use and lifecycle commands
 
-**Implementation status:** planned<br>
+**Implementation status:** ready<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A22<br>
 **Metrics:** M13, M14, M17

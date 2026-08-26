@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "policy": "retain-thread-lifecycle-and-get-project-info-events-only",
+  "originalSha256": "5c216a20798a009167fb8c817465f2fcf21c73a9f6e547139639c61028f850c2",
+  "removedEventCount": 7,
+  "retainedEventCount": 5
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "storageReadback": [
+    {
+      "repository": "repository-a",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-codex-host-fpYxse/repository-a/.amanuensis",
+      "intents": [
+        "A22_RUN_interrupted-a",
+        "A22_RUN_repository-a"
+      ]
+    },
+    {
+      "repository": "repository-b",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-codex-host-fpYxse/repository-b/.amanuensis",
+      "intents": [
+        "A22_RUN_repository-b"
+      ]
+    },
+    {
+      "repository": "worktree-a",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-codex-host-fpYxse/worktree-a/.amanuensis",
+      "intents": [
+        "A22_RUN_worktree-a"
+      ]
+    }
+  ]
+}

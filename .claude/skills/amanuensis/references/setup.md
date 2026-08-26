@@ -146,7 +146,7 @@ get_project_info
 A successful result includes `project_key`, `workspace_path`, and `db_exists`.
 It also includes an immutable `binding_receipt` with the canonical root,
 workspace-instance ID, repository identity, storage path/policy, selection
-source, server version, and binding ID. The server revalidates that binding and
+source, server-instance ID, server version, and binding ID. The server revalidates that binding and
 its symlink-free storage tree before every tool call. Then call
 `get_autoprogress_mode` and confirm it matches the intended mode. If
 the tools are absent, the client did not load the server configuration; if the
@@ -176,6 +176,11 @@ shared-by-repository-identity; avoid it for concurrent worktrees that need
 isolated state. File-producing tools accept only destinations inside the bound
 store. These checks are repository binding and write containment, not an OS
 sandbox, and MCP side-effect annotations remain hints to the host.
+
+When using `codex exec --cd <repository>` or `-C`, Codex leaves the MCP child
+at the launcher cwd. The user-scope adapter recovers the exact `--cd` argument
+from its direct Codex parent and the receipt reports
+`parent-codex-cli-cd-git-root`; no per-project registration is required.
 
 Persistent state lives at `<project>/.amanuensis/`: the SQLite database,
 materialized prose, projection manifests, and an independent storage Git

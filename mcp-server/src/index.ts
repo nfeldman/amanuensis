@@ -5,6 +5,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
+import { discoverCodexParentWorkspace } from "./codex-host.js";
 import { openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import { assertProjectBinding, resolveProject } from "./project.js";
@@ -103,9 +104,10 @@ function assertWorkspaceMatchesLaunch(
   selectedWorkspace: string,
   source: "argument" | "environment",
   allowWorkspacePin: boolean,
+  launchWorkspace: string,
 ): void {
   if (allowWorkspacePin) return;
-  const launchRoot = gitRoot(process.cwd());
+  const launchRoot = gitRoot(launchWorkspace);
   const selectedRoot = gitRoot(selectedWorkspace);
   if (launchRoot && selectedRoot && launchRoot !== selectedRoot) {
     throw new Error(
@@ -121,10 +123,15 @@ function parseArgs(argv: string[]): { workspace: string; selectionSource: string
   // the server environment; other local clients normally launch in the target
   // repository. For the latter case, normalize a nested cwd to the Git root.
   const allowWorkspacePin = argv.includes("--allow-workspace-pin");
+  const codexParentWorkspace =
+    process.env.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1"
+      ? discoverCodexParentWorkspace()
+      : null;
+  const launchWorkspace = codexParentWorkspace ?? process.cwd();
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1];
     if (argv[i] === "--workspace" && value) {
-      assertWorkspaceMatchesLaunch(value, "argument", allowWorkspacePin);
+      assertWorkspaceMatchesLaunch(value, "argument", allowWorkspacePin, launchWorkspace);
       return { workspace: value, selectionSource: "argument" };
     }
   }
@@ -136,12 +143,20 @@ function parseArgs(argv: string[]): { workspace: string; selectionSource: string
       fromEnvironment,
       "environment",
       allowWorkspacePin || process.env.AMANUENSIS_ALLOW_WORKSPACE_PIN === "1",
+      launchWorkspace,
     );
     return {
       workspace: fromEnvironment,
       selectionSource: amanuensisWorkspace
         ? "environment:AMANUENSIS_WORKSPACE"
         : "environment:CLAUDE_PROJECT_DIR",
+    };
+  }
+  if (codexParentWorkspace) {
+    const parentRoot = gitRoot(codexParentWorkspace);
+    return {
+      workspace: parentRoot ?? codexParentWorkspace,
+      selectionSource: parentRoot ? "parent-codex-cli-cd-git-root" : "parent-codex-cli-cd",
     };
   }
   const root = gitRoot(process.cwd());

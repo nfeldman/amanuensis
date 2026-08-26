@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runId": "parent-cd-recovery",
+  "status": "passed",
+  "launcherCwd": "/Users/nfeldman/repos/amanuensis",
+  "requestedTarget": "/Users/nfeldman/repos/scholiast",
+  "bindingReceipt": {
+    "contractVersion": "amanuensis-repository-binding/v1",
+    "canonicalRoot": "/Users/nfeldman/repos/scholiast",
+    "workspaceInstanceId": "28942f6072b2",
+    "projectIdentity": "remote:github.com/nfeldman/scholiast",
+    "projectKey": "github.com/nfeldman/scholiast",
+    "storageRoot": "/Users/nfeldman/repos/scholiast",
+    "storagePath": "/Users/nfeldman/repos/scholiast/.amanuensis",
+    "storagePolicy": "worktree-local",
+    "selectionSource": "parent-codex-cli-cd-git-root",
+    "serverVersion": "0.2.0-alpha.1",
+    "bindingId": "77ec37c8ba6d40cbd09e797ce8fe3ee3741f76fd92781a3196a4ed27b4ed2d66",
+    "serverInstanceId": "b3a83d46-ff32-4aae-88e0-7e843fbf1aca"
+  },
+  "rawEventLog": {
+    "path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.jsonl",
+    "sha256": "6f299904fd6cf0b048b56fe1ef7a0257cfd5beba7021b4434b2803bf89c9df4f"
+  },
+  "stderrLog": {
+    "path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.stderr.log",
+    "sha256": "de8ae0a805f3e580fc0757ea59a8dfe55fce216cdf29f41cc0e473b13fe4613a"
+  },
+  "configSha256Before": "9a26db1aaada8cdb17baae3b00a13e1f886188cfa7245920d6e1329311013592",
+  "configSha256After": "9a26db1aaada8cdb17baae3b00a13e1f886188cfa7245920d6e1329311013592",
+  "configBytesChanged": 0,
+  "codexVersion": "codex-cli 0.146.0"
+}

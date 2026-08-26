@@ -1,0 +1,8 @@
+{"type":"thread.started","thread_id":"01a03b5f-b6fe-79b1-b888-1762451296db"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation."}}
+{"type":"item.completed","item":{"id":"item_1","type":"error","message":"`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_2","type":"error","message":"Skill descriptions were shortened to fit the 2% skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest."}}
+{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"I’ll make the single requested Amanuensis MCP call; I won’t invoke any fallback tool if it isn’t available."}}
+{"type":"item.completed","item":{"id":"item_4","type":"agent_message","text":"Startup error: Amanuensis `get_project_info` MCP tool is unavailable."}}
+{"type":"turn.completed","usage":{"input_tokens":36532,"cached_input_tokens":19968,"cache_write_input_tokens":0,"output_tokens":538,"reasoning_output_tokens":294}}

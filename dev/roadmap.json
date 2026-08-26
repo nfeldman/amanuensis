@@ -637,7 +637,7 @@
         {
           "id": "A22",
           "title": "Real-host Codex multi-repository harness",
-          "status": "ready",
+          "status": "done",
           "owner": "Amanuensis + Codex integration",
           "outcome": "Activation is verified through real Codex process launches across independent repositories rather than inferred from configuration syntax.",
           "rationale": "The current installer test proves generated TOML shape, not how Codex resolves cwd, merges global and project configuration, retains running processes, or launches concurrent tasks.",
@@ -663,7 +663,17 @@
             "mcp-server/test-installer.mjs",
             "mcp-server/test-mcp-compatibility.mjs",
             "mcp-server/src/index.ts",
-            ".github/workflows/test.yml"
+            ".github/workflows/test.yml",
+            "mcp-server/src/codex-host.ts",
+            "mcp-server/test-codex-parent-workspace.mjs",
+            "mcp-server/fixtures/activation/codex-context-probe.mjs",
+            "mcp-server/fixtures/activation/codex-host-red-matrix.json",
+            "dev/run-codex-host-harness.mjs",
+            "dev/run-codex-parent-cd-evidence.mjs",
+            "dev/check-codex-host-evidence.mjs",
+            "dev/test-codex-host-evidence-red-gates.mjs",
+            "dev/activation-evidence/a22-codex-host.json",
+            "dev/activation-evidence/a22-host-runs/storage-readback.json"
           ]
         },
         {
@@ -1020,7 +1030,7 @@
         {
           "id": "A23",
           "title": "Zero-touch first use and lifecycle commands",
-          "status": "planned",
+          "status": "ready",
           "owner": "Amanuensis",
           "outcome": "A new repository creates local survey state only when first used, while install, upgrade, rollback, and uninstall remain managed and reversible.",
           "rationale": "Global activation removes repository setup only if ordinary first use and later package lifecycle operations do not reintroduce hidden configuration or storage ceremony.",

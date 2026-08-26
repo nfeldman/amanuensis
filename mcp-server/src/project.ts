@@ -1,5 +1,5 @@
 import { execFileSync, execSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   type appendFileSync,
   closeSync,
@@ -34,6 +34,7 @@ export interface ProjectContext {
 export interface ProjectBindingReceipt {
   contractVersion: "amanuensis-repository-binding/v1";
   bindingId: string;
+  serverInstanceId: string;
   canonicalRoot: string;
   workspaceInstanceId: string;
   projectIdentity: string;
@@ -656,6 +657,7 @@ export function resolveProject(
   const bindingReceipt = Object.freeze({
     ...receiptFields,
     bindingId: createHash("sha256").update(JSON.stringify(receiptFields)).digest("hex"),
+    serverInstanceId: randomUUID(),
   });
   return Object.freeze({
     workspacePath: absWorkspace,

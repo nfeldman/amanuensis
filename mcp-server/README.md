@@ -48,6 +48,12 @@ materialization, review export, refresh output, and comparison reports are
 restricted to the bound storage directory. MCP side-effect annotations are
 host hints, not broader filesystem authority.
 
+The Codex user-scope adapter normally binds the MCP child's cwd. For
+`codex exec --cd <repository>` / `-C`, where Codex retains the launcher cwd for
+the MCP child, Amanuensis reads the exact task-root argument from its direct
+`codex` parent and records `parent-codex-cli-cd-git-root`. It does not inspect
+prompt text or use a hard-coded repository path.
+
 Default storage is worktree-local: worktrees share repository identity but
 receive distinct workspace-instance IDs and `.amanuensis` paths. An explicit
 `AMANUENSIS_STORAGE_ROOT` instead selects shared-by-repository-identity custody;

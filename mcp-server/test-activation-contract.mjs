@@ -198,6 +198,10 @@ try {
     assert(receipt?.selectionSource === "process-cwd-git-root", "binding selection source drifted");
     assert(receipt?.storagePolicy === "worktree-local", "binding storage policy drifted");
     assert(/^[a-f0-9]{64}$/.test(receipt?.bindingId ?? ""), "binding receipt ID is malformed");
+    assert(
+      /^[a-f0-9-]{36}$/.test(receipt?.serverInstanceId ?? ""),
+      "server instance ID is malformed",
+    );
     assert(!existsSync(join(repositoryA, ".amanuensis")), "green launch wrote under repository A");
     console.log(
       `A19 user activation verified: ${info.structuredContent.project_key} -> ${info.structuredContent.workspace_path}`,
