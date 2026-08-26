@@ -69,6 +69,10 @@ function execute(id, displayCommand, args, options = {}) {
 function documentReadBack() {
   const documents = {
     root: { path: "README.md", text: readFileSync(resolve(root, "README.md"), "utf8") },
+    operations: {
+      path: "INSTALLATION.md",
+      text: readFileSync(resolve(root, "INSTALLATION.md"), "utf8"),
+    },
     server: {
       path: "mcp-server/README.md",
       text: readFileSync(resolve(root, "mcp-server/README.md"), "utf8"),
@@ -80,20 +84,25 @@ function documentReadBack() {
   };
   const checks = [
     {
-      checkId: "one-user-installation",
+      checkId: "operations-reference",
       document: "root",
-      pattern: /one managed MCP registration under/,
+      pattern: /\[Installation and operations\]\(INSTALLATION\.md\)/,
+    },
+    {
+      checkId: "one-user-installation",
+      document: "operations",
+      pattern: /one managed,\s+cwd-relative MCP registration under/,
     },
     {
       checkId: "one-installation-restart",
-      document: "root",
-      pattern: /Restart Codex once after that installation/,
+      document: "operations",
+      pattern: /Restart Codex once\s+after installation/,
     },
     {
       checkId: "zero-new-repository-ceremony",
-      document: "root",
+      document: "operations",
       pattern:
-        /New trusted\s+Git repositories then need no Amanuensis command, repository-local config,\s+skill copy, or restart/,
+        /repository needs no Amanuensis command, local configuration, skill copy,\s+or additional restart/,
     },
     {
       checkId: "cwd-relative-launch",
@@ -107,9 +116,9 @@ function documentReadBack() {
     },
     {
       checkId: "rollback-procedure",
-      document: "root",
+      document: "operations",
       pattern:
-        /To roll back a package version, install the desired\s+version and run that version's `amanuensis upgrade`/,
+        /To roll back, install the desired package version and run that version's `amanuensis\s+upgrade`/,
     },
     {
       checkId: "source-packed-parity",

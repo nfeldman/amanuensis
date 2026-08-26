@@ -8,261 +8,92 @@ rely on.
 It is for developers using agents on systems that are too large, consequential, or
 long-lived to reconstruct safely from scratch in every session.
 
-Instead, an agent (AI or human) can begin with a durable account of what the code does, why that
-account is believed, what changed, what is now stale, which findings survived challenge, and which
-questions are still open.
+A capable model can produce twenty plausible concerns in a minute. The expensive part is
+deciding which ones are real. If you still have to verify every claim yourself, the
+bottleneck has only moved downstream and filled up with confident-sounding noise.
 
-That changes the job. Review becomes less about generating plausible concerns and more
-about resolving the ones that survive scrutiny. Design starts from the real constraints of
-the system. Work can continue across sessions without turning yesterday's understanding
-into today's folklore.
+Amanuensis changes the starting point. An agent begins with a durable account of what the
+code does, why that account is believed, what changed, what is now stale, which findings
+survived challenge, and which questions are still open.
 
-## What Amanuensis makes possible
+## What that changes
 
-- **Build a codebase memory.** Survey structure, behavior, seams, risks, intent, and
-  uncertainty into a durable conspectus rather than a disposable chat transcript.
-- **Keep that memory alive.** Bind knowledge to Git history, detect relevant changes,
-  withdraw stale authority, and schedule focused revalidation instead of starting over.
-- **Review with context.** Combine the diff with prior findings, affected seams, open
-  obligations, and independent attempts to generate, refute, and verify concerns.
-- **Prove repairs.** Keep “fixed” separate from “verified-fixed” until new evidence exists
-  at the repaired revision.
-- **Think in productive tension.** Run design work through independent immanent,
-  adversarial, and speculative lenses without collapsing disagreement into false
-  consensus.
-- **Carry decisions forward.** Preserve alternatives, premises, consequences, falsifiers,
-  research inputs, and the authority behind an accepted choice.
-- **Work unattended without losing the plot.** Bound authority up front, recover from
-  interruption, reconcile every dispatched result, and verify published output against
-  durable state before calling the run complete.
-
-## Trust is part of the architecture
-
-Amanuensis does not depend on a prompt asking the model to be careful. Its MCP server owns
-the record and enforces the rules:
-
-- claims need evidence and a repository revision;
-- claim supersession and invalidation remain revision-bound and historical;
-- independent review cannot aggregate before its generator, refuter, and verifier fan-in lands;
-- repairs need post-fix proof;
-- partial fan-in cannot masquerade as completion; and
-- generated documentation must pass state, coverage, and content read-back.
+- **Stop reconstructing the system every session.** Architecture, intent, uncertainty,
+  decisions, and ruled-out concerns carry forward as a codebase memory rather than a chat
+  transcript.
+- **Review changes in context.** The diff arrives with affected seams, prior findings,
+  unresolved obligations, and the evidence behind them.
+- **Act on findings without redoing the review.** Concerns are independently challenged;
+  repairs remain unverified until new evidence proves them at the repaired revision.
+- **Design from the system that actually exists.** Compare alternatives against recorded
+  constraints, then carry the decision, its premises, consequences, and falsifiers forward.
+- **Give people the same map.** The conspectus is published as a searchable, hyperlinked
+  architectural atlas, with Markdown companions for portability and audit.
 
 The result is a reusable situation model for code: compact enough to work from, detailed
 enough to inspect, and explicit about the edge of what is known.
 
-For people, that model is published as a self-contained HTML conspectus: a searchable,
-hyperlinked architectural atlas with plain-language names, reading hints, survey-depth and
-evidence cues, and responsive subsystem and finding pages. Markdown companions remain
-available for portability and audit. Both forms are regenerated together and must pass the
-same state, link-coverage, and byte-correspondence read-back before publication succeeds.
+## Trust is part of the architecture
 
-## Beta
+Amanuensis does not rely on a prompt asking the model to be careful. Its MCP server owns
+the record and makes the model earn authority:
 
-The v2 implementation is versioned as `0.2.0-beta.1` and passes its full release-candidate
-suite. The tool is in beta and is being dogfooded now in active development work.
+1. **Read before judging.** A name or file path is not evidence of behavior.
+2. **Prove it or qualify it.** Claims cite what supports them and the repository revision
+   where that evidence was checked.
+3. **Attack the finding.** Independent passes generate, refute, and verify concerns before
+   an aggregate review can land.
+4. **Remember the result.** Confirmed, uncertain, stale, repaired, and ruled-out knowledge
+   remain distinct instead of being rediscovered as fresh speculation.
 
-Its internal contracts and failure gates are extensively tested. What is still being
-learned is the practical part: whether the conspectus stays useful as a real project
-changes, how much repeated explanation and verification it saves, and where the workflow
-creates friction. Longitudinal results are not yet available.
+Those rules are enforced when records are written. A claim cannot outrun its evidence,
+partial work cannot masquerade as completion, and “fixed” cannot silently become
+“verified-fixed.”
 
-Until `1.0.0`, expect breaking changes between releases.
+## See it work
 
-The [roadmap](ROADMAP.md) carries the exact implementation evidence and current claim
-boundaries. [HISTORY.md](HISTORY.md) summarizes user-visible releases.
+[Browse the conspectus Amanuensis built for itself](https://nfeldman.github.io/amanuensis/):
+a human-readable map of the architecture, evidence, findings, seams, contradictions, and
+open questions behind this repository.
 
-## Try the current beta
+## Try the beta
 
-Install the current prerelease from npm:
+The default installation is for Codex:
 
 ```bash
 npm install -g @gruetech/amanuensis
-amanuensis init --client claude --dir /path/to/your/project
+amanuensis install
 ```
 
-To work from source instead:
+Restart Codex once, open a trusted Git repository, and ask it to **run Amanuensis
+onboarding**. After that one user-scoped installation, each new trusted repository binds
+to its own Amanuensis store without repository-local setup or another restart.
 
-```bash
-git clone https://github.com/nfeldman/amanuensis
-cd amanuensis
-mise install
-mise exec -- npm --prefix mcp-server ci
-mise exec -- npm --prefix mcp-server run build
+Requires Node.js 20 or newer and Python 3.11 or newer. For Claude Code, VS Code, another
+MCP host, source installs, upgrades, rollback, diagnosis, storage policy, or uninstalling,
+see [Installation and operations](INSTALLATION.md).
 
-mise exec -- node mcp-server/dist/cli.js install --mcp-only --dry-run
-mise exec -- node mcp-server/dist/cli.js install --mcp-only
-```
+## Beta means beta
 
-The Codex user-scoped path writes one managed MCP registration under
-`$CODEX_HOME` (normally `~/.codex`) with `cwd = "."` and no repository
-`--workspace` argument. Restart Codex once after that installation. New trusted
-Git repositories then need no Amanuensis command, repository-local config,
-skill copy, or restart. Omit `--mcp-only` for a packaged installation that
-should also install the global skill; source development commonly keeps the
-global skill as a directory-level link to this checkout.
+The current source is versioned as `0.2.0-beta.1`. Its internal contracts and failure
+gates are extensively tested, and the tool is being dogfooded in active development.
 
-Merely opening a repository, negotiating MCP, listing tools, or calling
-`get_project_info` does not write repository state. The first DB-backed tool
-call creates exactly one identity-bound `.amanuensis/` store through a sibling
-staging directory and atomic publish. A later process removes a dead,
-identity-matching stage and resumes initialization; it preserves any unknown or
-nonempty incomplete store for diagnosis instead of trusting or deleting it.
-
-Lifecycle changes are dry-run first:
-
-```bash
-amanuensis upgrade --dry-run
-amanuensis upgrade
-amanuensis uninstall --client codex --scope user --dry-run
-amanuensis uninstall --client codex --scope user
-```
-
-Upgrade and uninstall touch only Amanuensis-managed configuration and the
-managed skill, make timestamped configuration backups before rewrites, and
-leave every repository conspectus untouched. Skills are replaced or removed in
-place rather than archived. To roll back a package version, install the desired
-version and run that version's `amanuensis upgrade`; inspect its dry run first.
-Restore a timestamped `config.toml` backup only when deliberately reversing a
-configuration migration.
-
-Before publication, the repository packs the exact npm tarball, installs it
-into a clean prefix, and compares it with the source checkout across two fresh
-Git repositories. The differential receipt requires equal repository identity,
-storage, config ownership, restart state, installed skill digest, seeded doctor
-classifications and repair, upgrade, and uninstall custody. Absolute install
-paths and the source-versus-bin launcher spelling are the only declared
-representation differences. The separate manually dispatched published smoke
-runs the installed version across Node 20/22 on Linux and macOS; configuring
-that workflow is release preparation, not evidence that a new version has been
-published.
-
-The real-host evidence currently names `codex-cli-exec`; it does not silently
-generalize that run to a separately unmeasured desktop surface. The supported
-user configuration remains Codex's user-scoped MCP registration, with one
-restart after installation and Codex trust for each repository. Explicit
-project scope remains the conservative pinning escape hatch.
-
-The preregistered A25 operating campaign keeps six Codex runs separate across
-five logical repositories: two ordinary roots, a nested launch, one repository
-plus its linked worktree, and a parent-`--cd` launch. Three runs overlap in one
-concurrent wave. Raw Codex JSONL, distinct thread/server identities, binding
-receipts, and DB-backed store custody prove zero Amanuensis setup commands,
-zero per-repository restarts or user interventions, exact session identity,
-and zero cross-repository writes for every run. The independent checker and
-its pooled-failure, missing-intervention, and reused-run-ID red cases live in
-`dev/activation-evidence/a25-activation-operating-envelope.json` and
-`dev/test-activation-operating-envelope-red-gates.mjs`.
-
-That measured stratum begins after Codex trusts the repositories. An initial
-untrusted control was excluded when Codex itself persisted temporary project
-trust records; it is a host trust ceremony, not an Amanuensis setup action, and
-is not pooled into the positive result. The campaign does not establish the
-Codex desktop UI, non-Codex clients, Windows, or a published registry install.
-
-Use `--scope project` only when deliberately pinning Codex to one repository:
-
-```bash
-mise exec -- node mcp-server/dist/cli.js init \
-  --client codex --scope project --dir /path/to/your/project
-```
-
-Use `--client claude` or `--client vscode` for their project-scoped adapters.
-For another local MCP-capable agent, use `--client generic`; the installer adds the
-portable Agent Skill and prints the stdio registration command and environment. If that
-host loads Agent Skills (or equivalent workflow instructions), ask the agent to **run
-onboarding**; otherwise the MCP tools and concise server instructions remain available,
-but the complete workflow is not installed automatically.
-
-Each client-specific adapter writes the documented discovery shape for the same local MCP
-server and workflow. Direct stdio compatibility is tested independently; host discovery
-still follows each client's own trust and activation rules. The adapters exist because MCP
-standardizes tool calls, not the project config file each host discovers.
-
-Amanuensis binds each server process to one repository; this is not an OS
-sandbox. Codex trust, approvals, and filesystem permissions remain the host's
-security boundary. `get_project_info` returns the immutable startup
-`binding_receipt`: binding ID, canonical root, workspace-instance ID,
-repository identity/key, storage root/path and policy, workspace-selection
-source, server-instance ID, and server version. The server revalidates that receipt before every
-tool call, and file-producing tools reject paths or symlink traversal outside
-the bound store before mutation.
-
-For the Codex CLI, launch from the repository directory as usual. If Codex is
-started elsewhere with `codex exec --cd <repository>` (or `-C`), the user-scope
-adapter recovers that exact task root from its direct Codex parent process and
-records `parent-codex-cli-cd-git-root` in the receipt. This preserves a
-cwd-relative global registration without embedding a repository path. An
-unreadable `--cd` value halts before storage initialization.
-
-Each ordinary Git worktree uses its own worktree-local `.amanuensis` store. Two
-worktrees can share the logical repository identity while retaining distinct
-workspace-instance IDs and storage paths. `AMANUENSIS_STORAGE_ROOT` is an
-explicit shared-repository policy: clones or worktrees with the same verified
-repository identity intentionally converge there, so do not use that override
-when concurrent worktrees require isolated state.
-
-Diagnose activation before starting a workflow when configuration may be stale:
-
-```bash
-mise exec -- node mcp-server/dist/cli.js doctor \
-  --client codex --dir /path/to/your/project --json
-```
-
-Doctor reports the user and trusted-project config sources, effective
-precedence, executable and arguments, cwd contract, predicted canonical root
-and storage, server version, skill shadowing, and restart state. It exits
-non-zero for duplicate or conflicting registrations, hard-coded user cwd or
-workspace arguments, stale launchers, unsafe project shadows, invalid TOML, or a
-wrong-repository effective binding. Diagnosis is read-only.
-
-For repair, first request a dry-run plan. Apply only the returned digest, which
-becomes invalid if any relevant config or skill input changes:
-
-```bash
-mise exec -- node mcp-server/dist/cli.js doctor \
-  --client codex --dir /path/to/your/project --repair --dry-run --json
-mise exec -- node mcp-server/dist/cli.js doctor \
-  --client codex --dir /path/to/your/project --repair --apply-plan <PLAN_ID> --json
-```
-
-Repair creates timestamped configuration backups, migrates only the
-Amanuensis user registration, and removes a shadowing project registration and
-skill only when they are installer-managed and the skill is an exact packaged
-copy. Configuration inspection cannot prove what an already-running host
-loaded; after repair, restart Codex and verify a new task with
-`get_project_info`. MCP side-effect annotations remain host hints rather than
-filesystem authority; containment does not expand or replace Codex's sandbox,
-trust, or approval rules.
-
-The source beta uses the repository-pinned Node.js and Python versions through `mise`. The
-package contract remains Node.js ≥20; the materializer supports Python 3.11+.
-Survey state lives with the target at `<project>/.amanuensis/`, is excluded from the
-project's source history, and retains its own checkpoint history.
-
-## Help shape it
-
-Amanuensis is early enough that careful use and specific criticism can materially improve
-the product. If you work with coding agents on a substantial codebase, try the beta and
-tell us:
-
-- where durable context saved you from repeating work;
-- where the record became noisy, stale, or difficult to trust;
-- which review or design surfaces changed a decision;
-- where the safeguards created useful discipline or needless friction; and
-- what would make Amanuensis worth keeping in the loop every day.
-
-Bug reports, workflow reports, failed experiments, and concrete examples are all useful.
-[Open an issue](https://github.com/nfeldman/amanuensis/issues) to share feedback or propose
-a collaboration.
+What has not been established yet is the longitudinal product claim: how useful the
+conspectus remains as a real project changes, how much repeated explanation and
+verification it saves, and where the workflow creates friction. Expect breaking changes
+before `1.0.0`.
 
 ## Go deeper
 
+- [Installation, client setup, lifecycle, and troubleshooting](INSTALLATION.md)
 - [Release history](HISTORY.md)
-- [Roadmap and current evidence status](ROADMAP.md)
+- [Roadmap, implementation evidence, and current claim boundaries](ROADMAP.md)
 - [Contributor setup and test commands](CONTRIBUTING.md)
-- [MCP server protocols and generated tool inventory](mcp-server/DEVELOPMENT.md)
-- [Practice-catalog v2.10 reconciliation](dev/adr/0020-practice-catalog-v2.10-reconciliation.md)
+- [MCP protocols and generated tool inventory](mcp-server/DEVELOPMENT.md)
+
+If you try Amanuensis, reports of where the memory saved work—or became noisy, stale, or
+hard to trust—are especially valuable. [Open an issue](https://github.com/nfeldman/amanuensis/issues)
+with a bug, workflow report, failed experiment, or concrete example.
 
 ## License
 

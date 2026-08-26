@@ -172,6 +172,7 @@ const candidateFiles = [
   "dev/activation-evidence/a26-clean-replay.json",
   "dev/activation-evidence/a26-release-readiness-red-gates.json",
   "README.md",
+  "INSTALLATION.md",
   "mcp-server/README.md",
   "dev/adr/0021-friction-free-codex-activation.md",
 ];
