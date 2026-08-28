@@ -164,10 +164,33 @@ CREATE TABLE IF NOT EXISTS file_ledger (
                               'vendor-ignore','irrelevant','deferred-with-reason')),
     ref_sha         TEXT,               -- commit SHA when file was examined
     examined_at     TEXT,               -- when classification moved to 'examined'
+    -- Staleness lives here rather than on `entries` because the survey always
+    -- populates this table: a subsystem cannot leave scoping without rows in it
+    -- (see enforcePhasePrerequisites), so the denominator behind every staleness
+    -- signal is non-empty by construction. `entries` carried these columns for
+    -- v1 but no code path ever wrote a row, which made every derived signal a
+    -- zero-denominator green (finding B03-2).
+    stale           INTEGER NOT NULL DEFAULT 0,   -- 1 = file changed since ref_sha
+    stale_since     TEXT,               -- when drift was detected
+    stale_reason    TEXT,               -- 'git-drift' | 'absent'
     PRIMARY KEY (subsystem_id, file_path)
 );
 
 CREATE INDEX IF NOT EXISTS idx_file_ledger_path ON file_ledger(file_path);
+CREATE INDEX IF NOT EXISTS idx_file_ledger_stale ON file_ledger(stale) WHERE stale = 1;
+
+-- Paths the repository tracks that no subsystem has classified. Recorded so the
+-- gap is durable and countable rather than visible only to whoever last ran a
+-- reconciliation by hand (finding B03-1). Assignment to a subsystem stays a
+-- coordinator judgement, so subsystem_id is null for unledgered paths.
+CREATE TABLE IF NOT EXISTS scope_gaps (
+    file_path       TEXT    NOT NULL,
+    kind            TEXT    NOT NULL CHECK (kind IN ('unledgered','absent')),
+    subsystem_id    TEXT,               -- set for 'absent'; null for 'unledgered'
+    detected_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    detected_sha    TEXT,
+    PRIMARY KEY (file_path, kind)
+);
 
 ----------------------------------------------------------------------
 -- DISPOSITIONS: concern × subsystem classification

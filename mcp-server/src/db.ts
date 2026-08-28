@@ -85,8 +85,22 @@ function runMigrations(db: DB): void {
       "ALTER TABLE revalidation_attempts ADD COLUMN consulted_sources TEXT CHECK (consulted_sources IS NULL OR json_valid(consulted_sources))",
     );
   }
-  // The CREATE INDEX ... IF NOT EXISTS in schema.sql handles the index
-  // for us on the next initializeSchema pass — no explicit add here.
+  // 3. file_ledger staleness — A1 moved staleness off the never-written
+  // `entries` table onto the ledger, which the survey always populates.
+  if (hasTable(db, "file_ledger")) {
+    if (!hasColumn(db, "file_ledger", "stale")) {
+      db.exec("ALTER TABLE file_ledger ADD COLUMN stale INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!hasColumn(db, "file_ledger", "stale_since")) {
+      db.exec("ALTER TABLE file_ledger ADD COLUMN stale_since TEXT");
+    }
+    if (!hasColumn(db, "file_ledger", "stale_reason")) {
+      db.exec("ALTER TABLE file_ledger ADD COLUMN stale_reason TEXT");
+    }
+  }
+  // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
+  // schema.sql handle the new index and scope_gaps on the next
+  // initializeSchema pass — no explicit add here.
 }
 
 function hasTable(db: DB, table: string): boolean {

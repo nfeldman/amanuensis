@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "roadmapVersion": "1.4",
-  "updated": "2026-08-25",
+  "updated": "2026-08-28",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The v2 epistemic engine, review, architecture, research-learning, and Chorusmith surfaces are integrated, but direct multi-repository use exposed an activation failure before useful work began: a hard-coded global server remained bound to another repository while the target repository carried a project-local registration that the running task had not loaded. Friction-free Codex activation is therefore the highest-priority product work. New product-surface expansion pauses until one user-level installation can bind each new trusted repository correctly, isolate concurrent repositories, diagnose stale configuration before writes, and start from one natural-language request. The integrated v2 baseline remains established; product efficacy and the friction-free operating claim remain unestablished until measured.",
   "delivery": {
-    "implementation": "active",
+    "implementation": "local-complete",
     "productProof": "unestablished",
     "integration": {
       "status": "established",
@@ -823,7 +823,7 @@
         {
           "id": "A1",
           "title": "Temporal claim and supersession model",
-          "status": "in-progress",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Recorded authority is temporal in practice, not only in schema: the survey workflow writes claims, and no surface reports freshness it did not measure.",
           "rationale": "A1 delivered the substrate and its unit tests, but nothing required the survey workflow to use it. The legacy entries staleness surface was never retired and never populated, so the dashboard, the stale backlog, and the published projection all report freshness from an empty table. Findings B03-2 and B04-1.",
@@ -878,7 +878,7 @@
         {
           "id": "A2",
           "title": "Change impact and invalidation engine",
-          "status": "planned",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Change impact is computed over a scope that is reconciled against the working tree, so impact is not silently sound-looking over an incomplete ledger.",
           "rationale": "A2 computes impact from file-ledger rows, but nothing reconciles that ledger against the repository. detect_changes inner-joins the commit diff against existing rows, so files added since the baseline are invisible and rows for deleted files stay authoritative. Impact over an unreconciled ledger understates itself in exactly the cases that matter. Finding B03-1.",
@@ -937,7 +937,7 @@
         {
           "id": "A3",
           "title": "Obligation-driven revalidation scheduler",
-          "status": "planned",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Revalidation obligations are produced by real drift, and a refresh that observes drift without owning it cannot report success.",
           "rationale": "A3 proved that dropped and duplicated obligations halt completion, but never that obligations are created at all. In this repository’s own conspectus the obligation tables are empty while the code has drifted 23 commits, so the scheduler’s controls have never had a denominator.",

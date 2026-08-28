@@ -36,7 +36,10 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
                   (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
                   (SELECT COUNT(*) FILTER (WHERE status='confirmed-bug') FROM findings)        AS open_bugs,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1)                FROM entries)         AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1)                FROM file_ledger)     AS stale_entries,
+                  (SELECT COUNT(*)                                       FROM file_ledger)     AS scoped_files,
+                  (SELECT COUNT(*) FILTER (WHERE kind='unledgered')      FROM scope_gaps)      AS unclassified_paths,
+                  (SELECT COUNT(*) FILTER (WHERE kind='absent')          FROM scope_gaps)      AS absent_files,
                   (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
                   (SELECT COUNT(*) FILTER (WHERE resolution='unresolved') FROM contradictions) AS unresolved_contradictions,
                   (SELECT open FROM revalidation_dashboard) AS open_revalidation_obligations,
@@ -52,13 +55,23 @@ export const dashboardTools: ToolDefinition[] = [
         total_findings: number;
         open_bugs: number;
         stale_entries: number;
+        scoped_files: number;
+        unclassified_paths: number;
+        absent_files: number;
         open_field_notes: number;
         unresolved_contradictions: number;
         open_revalidation_obligations: number;
         blocked_revalidation_obligations: number;
         failed_revalidation_runs: number;
       };
-      return { project_key: ctx.project.projectKey, ...row };
+      // stale_entries = 0 is only a health claim when something was actually
+      // measured. staleness_measured carries the denominator so a caller cannot
+      // read an empty ledger as a fresh conspectus (finding B03-2).
+      return {
+        project_key: ctx.project.projectKey,
+        ...row,
+        staleness_measured: row.scoped_files > 0,
+      };
     },
   },
 ];

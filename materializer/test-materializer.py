@@ -597,17 +597,20 @@ def main() -> None:
             assert "no staleness data" in unmeasured.lower(), unmeasured
 
             staleness_db.execute(
-                "INSERT INTO entries (id, tier, subsystem_id, stale, stale_reason) "
-                "VALUES ('e-1', 0, 'B-01', 1, 'git-drift')"
+                "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, "
+                "stale, stale_reason) VALUES ('B-01', 'src/core.ts', 'examined', 'abc1234', 1, "
+                "'git-drift')"
             )
             staleness_db.commit()
             measured = dmod.staleness_map(staleness_db)
             assert "B-01" in measured, measured
 
-            staleness_db.execute("UPDATE entries SET stale = 0 WHERE id = 'e-1'")
+            staleness_db.execute("UPDATE file_ledger SET stale = 0 WHERE file_path = 'src/core.ts'")
             staleness_db.commit()
             measured_clean = dmod.staleness_map(staleness_db)
-            assert "no stale entries" in measured_clean.lower(), measured_clean
+            # A clean result must still carry the denominator it was measured
+            # against, so "nothing stale" cannot be read as "nothing checked".
+            assert "no stale files across 1 scoped file" in measured_clean.lower(), measured_clean
             assert "no staleness data" not in measured_clean.lower(), measured_clean
         finally:
             staleness_db.close()
