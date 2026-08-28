@@ -113,12 +113,25 @@ def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
 
 
 def staleness_map(conn: sqlite3.Connection) -> str:
-    """Bar chart of stale entries per subsystem."""
+    """Bar chart of stale entries per subsystem.
+
+    An empty result is reported as absent measurement, not as health. The
+    staleness columns live on `entries`, and a projection cannot tell a
+    conspectus with nothing stale from one where nothing ever recorded
+    staleness — so it must not assert the stronger of the two.
+    """
     rs = rows(
         conn,
         "SELECT subsystem_id, COUNT(*) AS n FROM entries WHERE stale = 1 AND subsystem_id IS NOT NULL GROUP BY subsystem_id ORDER BY n DESC",
     )
     if not rs:
+        measured = rows(conn, "SELECT COUNT(*) AS n FROM entries")
+        if not measured or not measured[0]["n"]:
+            return (
+                "_No staleness data recorded. Nothing has written a staleness "
+                "observation for this conspectus, so this view reports absence "
+                "of measurement rather than freshness._"
+            )
         return "_No stale entries — the conspectus is fresh._"
     lines = ["```mermaid", "pie showData", '    title Stale entries by subsystem']
     for r in rs:

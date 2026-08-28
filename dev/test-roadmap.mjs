@@ -41,6 +41,30 @@ function initiative(value, id) {
   return value.stages.flatMap((stage) => stage.initiatives).find((item) => item.id === id);
 }
 
+// Candidate-branch gates must not depend on whether the live roadmap currently
+// carries a candidate. When an established release lands, mutating the canonical
+// record produces a no-op sabotage and the gate silently stops testing anything.
+// Rebuild an explicit candidate shape instead, so these cases stay red across
+// every release state.
+function asCandidate(value) {
+  const release = value.delivery.release;
+  const previous =
+    release.previousEstablished ?? structuredClone({ ...release, previousEstablished: undefined });
+  value.delivery.release = {
+    status: "candidate",
+    tag: release.tag,
+    registry: "npmjs",
+    package: release.package,
+    version: release.version,
+    distTag: "latest",
+    publicationAuthorized: true,
+    publicationStatus: "not-published",
+    releaseReadyReceipt: "dev/activation-evidence/a26-release-readiness.json",
+    previousEstablished: previous,
+  };
+  return value.delivery.release;
+}
+
 try {
   const valid = writeCase("valid");
   const projection = resolve(SCRATCH, "ROADMAP.md");
@@ -279,7 +303,7 @@ try {
   );
 
   const prematurePublicationClaim = writeCase("premature-publication-claim", (value) => {
-    value.delivery.release.publicationStatus = "published";
+    asCandidate(value).publicationStatus = "published";
   });
   run(
     ["--write", "--source", prematurePublicationClaim, "--output", projection],
@@ -287,8 +311,31 @@ try {
     "delivery.release candidate must be authorized and not-published",
   );
 
+  // B05-1: the release gate validated delivery.release only against itself and
+  // the A26 receipt, so a version that had actually been tagged and published
+  // could keep asserting candidate/not-published indefinitely. These two cases
+  // reconcile the declared release against the repository's own tags.
+  const publishedTagClaimedAsCandidate = writeCase("published-tag-claimed-as-candidate", (value) => {
+    asCandidate(value);
+  });
+  run(
+    ["--write", "--source", publishedTagClaimedAsCandidate, "--output", projection],
+    1,
+    "delivery.release candidate must not name a tag that already exists",
+  );
+
+  const tagCommitMismatch = writeCase("tag-commit-mismatch", (value) => {
+    value.delivery.release.tagCommit = "0".repeat(40);
+    value.delivery.release.publish.headSha = "0".repeat(40);
+  });
+  run(
+    ["--write", "--source", tagCommitMismatch, "--output", projection],
+    1,
+    "delivery.release.tagCommit must equal the commit its tag resolves to",
+  );
+
   const fabricatedCandidateArtifact = writeCase("fabricated-candidate-artifact", (value) => {
-    value.delivery.release.shasum = "1".repeat(40);
+    asCandidate(value).shasum = "1".repeat(40);
   });
   run(
     ["--write", "--source", fabricatedCandidateArtifact, "--output", projection],
@@ -316,9 +363,15 @@ try {
   );
 
   const overdueDecision = writeCase("overdue-decision", (value) => {
-    value.programDecisions[0].status = "open";
-    delete value.programDecisions[0].decisionRecord;
-    delete value.programDecisions[0].resolution;
+    // The gate fires only once the deadline initiative is terminal, so the case
+    // establishes that precondition itself rather than assuming the canonical
+    // roadmap currently has it. Reopening an initiative must not quietly retire
+    // this sabotage.
+    const decision = value.programDecisions[0];
+    initiative(value, decision.resolveBeforeInitiative).status = "done";
+    decision.status = "open";
+    delete decision.decisionRecord;
+    delete decision.resolution;
   });
   run(
     ["--write", "--source", overdueDecision, "--output", projection],

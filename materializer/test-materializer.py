@@ -581,6 +581,38 @@ def main() -> None:
         # cascade.
         assert fault_summary["pages_total"] > 1, fault_summary
 
+        # B04-1: the staleness map must not convert an unmeasured state into an
+        # affirmative freshness claim. `entries` carries the only staleness
+        # columns in the schema and no server path writes to it, so the empty
+        # branch is the only branch that ever renders in a real project. An
+        # empty result means "nothing was measured", not "nothing is stale".
+        from amanuensis_materializer import diagrams as dmod  # noqa: E402
+
+        staleness_db = sqlite3.connect(storage / "memory.db")
+        try:
+            unmeasured = dmod.staleness_map(staleness_db)
+            assert "is fresh" not in unmeasured, (
+                "staleness map claims freshness from an empty source: " + unmeasured
+            )
+            assert "no staleness data" in unmeasured.lower(), unmeasured
+
+            staleness_db.execute(
+                "INSERT INTO entries (id, tier, subsystem_id, stale, stale_reason) "
+                "VALUES ('e-1', 0, 'B-01', 1, 'git-drift')"
+            )
+            staleness_db.commit()
+            measured = dmod.staleness_map(staleness_db)
+            assert "B-01" in measured, measured
+
+            staleness_db.execute("UPDATE entries SET stale = 0 WHERE id = 'e-1'")
+            staleness_db.commit()
+            measured_clean = dmod.staleness_map(staleness_db)
+            assert "no stale entries" in measured_clean.lower(), measured_clean
+            assert "no staleness data" not in measured_clean.lower(), measured_clean
+        finally:
+            staleness_db.close()
+        print("staleness map: unmeasured, stale, and measured-clean states distinguished")
+
         print("\nOK — all diff-aware behaviors verified.")
 
 

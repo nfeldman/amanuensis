@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "projectionDetectorVersion": "1.0.0",
-  "timelineHead": "7389cfdbc1b8f01a3d24279af0ae021d1c87b657ef97e4de16bfb30dbdfc6da8",
-  "workProjectionSha256": "3860a805d9d2df0a1d42ce8637162a14256fbc8232819478c49410242c97940d",
-  "exportedAt": "2026-08-26",
+  "timelineHead": "5a8e0f7470e26b2a0f696197b436925cda5a9c395be5f8d593ff36f7572be208",
+  "workProjectionSha256": "85226de0a26b2eb7c68345da9dc2c56a0ded225c08d780f55ee9cabe729e2a62",
+  "exportedAt": "2026-08-28",
   "authority": "projection-only",
   "limitation": "The machine-local Pecia timeline is not committed. This manifest proves the committed projection and its claimed timeline identity, not remote timeline custody or synchronization."
 }
