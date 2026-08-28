@@ -64,7 +64,7 @@ _Business context_: Phase-gate history is advertised as recoverable state; resto
 - `mcp-server/src/db.ts:openDatabase@b8b566f`
 - `mcp-server/src/storage-git.ts:commitStorage@b8b566f`
 
-### [B02-2](../findings.md#b02-2) · 🟡 MEDIUM · confirmed-bug
+### [B02-2](../findings.md#b02-2) · 🟡 MEDIUM · fixed
 
 **Symptom**: A stalled ps or git subprocess during server startup hangs the MCP server indefinitely with no timeout, no diagnosis, and no usable state.  
 **Root cause**: Every subprocess on the startup and project-binding path is synchronous and unbounded: discoverCodexParentWorkspace runs ps via execFileSync, and project binding runs six git invocations via execSync, execFileSync, and spawnSync. None passes a timeout option, and execFileSync blocks the Node event loop for the call's full duration. The error handler in codex-host.ts returns null only for errors carrying an errno code, so a hang — which raises nothing — is not covered.

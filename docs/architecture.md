@@ -36,4 +36,4 @@ _Projected from the recorded [onboarding runtime boundary table](onboarding-repo
 
 ## Staleness map
 
-_No staleness data recorded. Nothing has written a staleness observation for this conspectus, so this view reports absence of measurement rather than freshness._
+_No staleness data recorded. This conspectus predates ledger-derived staleness, so this view reports absence of measurement rather than freshness; the next reconciliation will populate it._
