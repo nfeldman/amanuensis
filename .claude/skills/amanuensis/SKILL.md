@@ -147,9 +147,10 @@ The MCP server enforces the data model — don't fight it.
 
 - **Evidence is recorded first.** Every claim cites a row in the
   `evidence` table (`file_path`, `symbol`, `line_range`, `ref_sha`,
-  `kind`). The kind ladder (`code-verified` > `contract-stated` >
-  `test-observed` > `config-asserted` > `doc-asserted` > `comment-asserted`
-  > `name-inferred` > `pattern-matched`) is the evidence-quality scale.
+  `kind`). The kind ladder (`code-verified` > `runtime-observed` >
+  `contract-stated` > `test-observed` > `config-asserted` > `doc-asserted` >
+  `comment-asserted` > `name-inferred` > `pattern-matched`) is the
+  evidence-quality scale.
   Use the strongest kind your evidence actually supports. Overstating
   quality is the #1 way the methodology fails.
 - **Dispositions are per-concern verdicts.** `set_disposition` writes

@@ -16,12 +16,22 @@ const CLASSIFICATIONS = [
   "out-of-scope",
   "unresolved-competition",
 ] as const;
+// A disposition's evidence_quality names the strongest evidence row attached to
+// it, so this vocabulary must be exactly what add_evidence accepts. It was once
+// a shorter list, which left an agent whose best evidence was `test-observed`
+// no way to say so — it had to overstate as code-verified or understate as
+// contract-stated, and code-verified is the nearer value (finding B03-3).
+// scripts/check-evidence-vocabulary.mjs holds these lists together.
 const EVIDENCE_QUALITY = [
   "code-verified",
   "contract-stated",
   "comment-asserted",
   "name-inferred",
   "pattern-matched",
+  "test-observed",
+  "config-asserted",
+  "doc-asserted",
+  "runtime-observed",
 ] as const;
 const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
 

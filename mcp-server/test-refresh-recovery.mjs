@@ -590,6 +590,58 @@ test("a zero-impact refresh completes from projection read-back without invented
   }
 });
 
+// A3: zero obligations is only a valid outcome when nothing scoped drifted.
+// When the commit range moves a file the ledger records as examined and the run
+// still owns nothing, completion would be a zero-denominator green: the refresh
+// looked at real drift and reported success without claiming any of it. That is
+// the state this repository's own conspectus sat in for 23 commits.
+test("drift over scoped files with zero obligations halts instead of completing", () => {
+  const fx = fixture("a3-unowned", "seeded");
+  try {
+    // The ledger records src/core.ts as examined at the base commit, and the
+    // range moves it — but no claim covers it, so impact yields nothing.
+    fx.db
+      .prepare(
+        "INSERT INTO subsystems (id, name, status) VALUES ('B-01', 'Core', 'mapped') " +
+          "ON CONFLICT(id) DO UPDATE SET status='mapped'",
+      )
+      .run();
+    fx.db
+      .prepare(
+        "INSERT OR REPLACE INTO file_ledger (subsystem_id, file_path, classification, ref_sha) " +
+          "VALUES ('B-01', 'src/core.ts', 'examined', ?)",
+      )
+      .run(fx.baseSha);
+    fx.db.prepare("DELETE FROM claim_evidence").run();
+    fx.db.prepare("DELETE FROM claims").run();
+
+    fx.call("plan_refresh_run", fx.planArgs);
+    const result = fx.call("execute_refresh_run", { run_id: fx.runId });
+    assert(
+      result.status !== "completed",
+      `refresh completed while owning none of the observed drift: ${JSON.stringify(result.status)}`,
+    );
+    assert(result.status === "blocked", `expected blocked, got ${result.status}`);
+    assert(
+      String(result.error).includes("src/core.ts"),
+      `halt did not name the unowned drifted file: ${result.error}`,
+    );
+    // The halt must be legible as a denominator problem, not a generic failure.
+    const stage = fx.db
+      .prepare(
+        "SELECT detail_json FROM refresh_stage_events WHERE run_id=? AND event_type='blocked' ORDER BY id DESC LIMIT 1",
+      )
+      .get(fx.runId);
+    const detail = JSON.parse(stage.detail_json);
+    assert(
+      detail.scoped_files_drifted === 1 && detail.applied_invalidations === 0,
+      `blocked stage did not record the denominators: ${stage.detail_json}`,
+    );
+  } finally {
+    fx.cleanup();
+  }
+});
+
 test("provider read-boundary violations land as telemetry and cannot be accepted", () => {
   const fx = fixture("read-boundary", "seeded");
   try {

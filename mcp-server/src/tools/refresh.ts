@@ -406,6 +406,42 @@ function drive(
       "SELECT COUNT(*) AS n FROM change_impact_invalidations WHERE run_id=? AND state='applied'",
     )
     .get(run.impact_run_id) as { n: number };
+
+  // A3: zero obligations is a valid outcome only when nothing scoped drifted.
+  // If the range moved a file the ledger records as examined and the run owns
+  // none of it, completing would report success against an empty denominator —
+  // the refresh looked at real drift and claimed nothing. Halt and name the
+  // files, so the gap is actionable rather than silent.
+  if (invalidations.n === 0) {
+    const diff = git(ctx, ["diff", "--name-only", `${run.base_sha}..${run.head_sha}`]);
+    const rangeChanged =
+      diff.status === 0 ? String(diff.stdout).split("\n").filter(Boolean) : ([] as string[]);
+    if (rangeChanged.length) {
+      const placeholders = rangeChanged.map(() => "?").join(",");
+      const unowned = ctx.db
+        .prepare(
+          `SELECT subsystem_id, file_path FROM file_ledger
+             WHERE file_path IN (${placeholders})
+             ORDER BY subsystem_id, file_path`,
+        )
+        .all(...rangeChanged) as { subsystem_id: string; file_path: string }[];
+      if (unowned.length) {
+        const named = unowned.map((r) => `${r.subsystem_id}:${r.file_path}`);
+        recordStage(ctx, runId, "revalidation-plan", "blocked", "unowned-drift", {
+          scoped_files_drifted: unowned.length,
+          applied_invalidations: 0,
+          unowned: named,
+        });
+        setStatus(ctx, runId, "blocked", {
+          error:
+            `refresh observed drift over ${unowned.length} scoped file(s) but produced no ` +
+            `revalidation obligation; nothing owns the change to ${named.join(", ")}`,
+        });
+        return readRun(ctx, runId);
+      }
+    }
+  }
+
   if (invalidations.n > 0) {
     const revalidationRunId = run.revalidation_run_id ?? `${runId}:revalidation`;
     const existingRevalidation = ctx.db

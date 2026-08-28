@@ -62,20 +62,37 @@ don't resolve themselves; candidate concerns left open for months
 usually mean the concern should be added to the checklist and
 dispositioned across subsystems.
 
-### 4. Stale entries weighted by heat
+### 4. Scope reconciliation and stale files
 
 ```
+detect_changes(current_sha=<HEAD>)
 get_stale_backlog(limit=10)
 ```
 
-Ranked by access heat. High-heat stale items are the ones people keep
-looking at despite the staleness flag; those get refresh priority.
+`detect_changes` reconciles the file ledger against the working tree.
+Read all of what it returns, not just the stale subsystems:
 
-For each high-heat stale entry:
+- `unledgered_paths` — tracked files no subsystem has classified. These
+  are scope the survey never saw; assign them with `add_files_to_scope`
+  before trusting any coverage claim.
+- `absent_ledger_paths` — ledger rows whose file the repository no
+  longer tracks. Retire each with `retire_ledger_file`, which removes
+  the row without discarding the subsystem's dispositions, findings,
+  artifacts, or cross-references.
+- `reconciled_tracked_paths` / `reconciled_ledger_rows` — the
+  denominators. A zero result means something only alongside these; a
+  clean reconciliation over an empty ledger is not a clean conspectus.
 
-- If the entry is a subsystem (`tier=1`), recommend a full re-survey.
-- If the entry is a fine-grained fact (`tier=2`), recommend
-  `detect_changes` to see what drifted.
+`get_stale_backlog` then ranks stale files by their subsystem's access
+heat. High-heat stale files are the ones people keep reading despite the
+drift, so they get refresh priority. Re-examine the file, then call
+`clear_staleness(subsystem_id, file_path, ref_sha)` — clearing is per
+file, so re-reading one file never vouches for the rest of its
+subsystem.
+
+Check `get_dashboard().staleness_measured` before repeating any
+freshness claim. When it is false, nothing has been scoped and the
+absence of stale files is absence of measurement, not health.
 
 ### 5. Diagnosticity matrices left open
 

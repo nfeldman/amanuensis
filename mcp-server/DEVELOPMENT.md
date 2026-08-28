@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_195 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
+_196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -562,12 +562,13 @@ _195 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `list_seams` | List seams. Filter by a subsystem (returns seams where the subsystem is party_a or party_b). |
 | `get_seam_assessability` | Return every seam with the status of both parties and whether it is currently assessable (both parties 'mapped'). Lets the adversarial agent triage which seam concerns can be evaluated now vs. which must wait. |
 
-### `stale` (2)
+### `stale` (3)
 
 | Tool | Description |
 |---|---|
-| `get_stale_backlog` | Return stale entries prioritized by access heat (hottest stale items first). limit defaults to 10. Read from the stale_backlog view. |
-| `clear_staleness` | Mark an entry fresh after re-examination. Updates ref_sha to the sha at which the entry was reverified. |
+| `get_stale_backlog` | Return stale scoped files prioritized by their subsystem's access heat (hottest first). limit defaults to 10. Each row names the subsystem, the file, the commit it was examined at, and why it is stale ('git-drift' or 'absent'). |
+| `clear_staleness` | Mark a scoped file fresh after re-examination, setting its ref_sha to the commit it was reverified at. Clearing is per file so re-reading one file does not silently vouch for the rest of its subsystem. |
+| `retire_ledger_file` | Remove a file ledger row whose file no longer exists in the repository, without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked, so this cannot be used to quietly narrow a subsystem's scope. |
 
 ### `storage-history` (2)
 

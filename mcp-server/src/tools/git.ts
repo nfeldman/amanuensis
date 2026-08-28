@@ -189,22 +189,69 @@ export const gitTools: ToolDefinition[] = [
         commitCount = 0;
       }
 
-      // Mark affected entries stale.
-      const staleTx = ctx.db.transaction(() => {
-        for (const subsystemId of bySubsystem.keys()) {
-          ctx.db
-            .prepare(
-              `UPDATE entries SET stale=1, stale_since=datetime('now'), stale_reason='git-drift' WHERE subsystem_id=? AND stale=0`,
-            )
-            .run(subsystemId);
-        }
+      // Reconcile the ledger against the working tree. Intersecting the commit
+      // diff with existing rows (above) can only ever see files someone already
+      // classified: additions match no row and drop out, and rows whose file was
+      // deleted keep asserting they were examined. Both halves of that gap are
+      // finding B03-1, so the tree itself is the reference here, not the diff.
+      let trackedPaths: string[] = [];
+      try {
+        trackedPaths = runGit(ctx.project.workspacePath, ["ls-files"]).split("\n").filter(Boolean);
+      } catch (e) {
+        return {
+          ok: false,
+          error: `git ls-files failed: ${(e as Error).message}. Is the workspace a git repo?`,
+        };
+      }
+      const trackedSet = new Set(trackedPaths);
+      const ledgerRows = ctx.db
+        .prepare("SELECT subsystem_id, file_path, ref_sha FROM file_ledger")
+        .all() as { subsystem_id: string; file_path: string; ref_sha: string | null }[];
+      const ledgerPaths = new Set(ledgerRows.map((r) => r.file_path));
+
+      const unledgered = trackedPaths.filter((p) => !ledgerPaths.has(p));
+      const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
+
+      // A ledger row is stale when its file moved on since the commit at which
+      // it was examined. Asking git per row keeps the judgement per-file rather
+      // than per-subsystem, so re-examining one file clears only that file.
+      const changedSet = new Set(changedFiles);
+      const drifted = ledgerRows.filter(
+        (r) => trackedSet.has(r.file_path) && r.ref_sha && changedSet.has(r.file_path),
+      );
+
+      const reconcileTx = ctx.db.transaction(() => {
+        const markStale = ctx.db.prepare(
+          `UPDATE file_ledger SET stale=1, stale_since=datetime('now'), stale_reason=?
+             WHERE subsystem_id=? AND file_path=? AND stale=0`,
+        );
+        for (const row of drifted) markStale.run("git-drift", row.subsystem_id, row.file_path);
+        for (const row of absent) markStale.run("absent", row.subsystem_id, row.file_path);
+
+        // scope_gaps is rebuilt each run: it describes the tree as it is now,
+        // not an accumulating log. A path that was classified since the last
+        // reconciliation must stop being reported.
+        ctx.db.prepare("DELETE FROM scope_gaps").run();
+        const gap = ctx.db.prepare(
+          `INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha) VALUES (?, ?, ?, ?)`,
+        );
+        for (const path of unledgered) gap.run(path, "unledgered", null, currentSha);
+        for (const row of absent) gap.run(row.file_path, "absent", row.subsystem_id, currentSha);
+
         ctx.db
           .prepare(
             `UPDATE git_state SET last_checked_sha=?, last_checked_at=datetime('now') WHERE repo_id='default'`,
           )
           .run(currentSha);
       });
-      staleTx();
+      reconcileTx();
+
+      for (const row of absent) {
+        if (!bySubsystem.has(row.subsystem_id)) {
+          bySubsystem.set(row.subsystem_id, { files: new Set(), commits: 0 });
+        }
+        bySubsystem.get(row.subsystem_id)?.files.add(row.file_path);
+      }
 
       const stale_subsystems = Array.from(bySubsystem.entries()).map(([subsystem_id, v]) => ({
         subsystem_id,
@@ -215,6 +262,17 @@ export const gitTools: ToolDefinition[] = [
         stale_subsystems,
         stale_count: stale_subsystems.length,
         total_changed_files: changedFiles.length,
+        // Reconciliation denominators travel with the result so a zero finding
+        // is readable as "nothing drifted out of this much" rather than as an
+        // unqualified all-clear.
+        reconciled_tracked_paths: trackedPaths.length,
+        reconciled_ledger_rows: ledgerRows.length,
+        unledgered_paths: unledgered,
+        absent_ledger_paths: absent.map((r) => ({
+          subsystem_id: r.subsystem_id,
+          file_path: r.file_path,
+        })),
+        stale_files: drifted.length + absent.length,
       };
     },
   },
