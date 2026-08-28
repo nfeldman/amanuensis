@@ -120,6 +120,18 @@ def staleness_map(conn: sqlite3.Connection) -> str:
     conspectus with nothing stale from one where nothing ever recorded
     staleness — so it must not assert the stronger of the two.
     """
+    # The materializer reads databases it does not own and may run against a
+    # store written before staleness moved onto the ledger. A missing column is
+    # an unmeasured conspectus, not a broken projection — turning the whole
+    # publish red here would be a worse failure than reporting absence.
+    if not any(
+        column["name"] == "stale" for column in rows(conn, "PRAGMA table_info(file_ledger)")
+    ):
+        return (
+            "_No staleness data recorded. This conspectus predates ledger-derived "
+            "staleness, so this view reports absence of measurement rather than "
+            "freshness; the next reconciliation will populate it._"
+        )
     rs = rows(
         conn,
         "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger WHERE stale = 1 GROUP BY subsystem_id ORDER BY n DESC",
