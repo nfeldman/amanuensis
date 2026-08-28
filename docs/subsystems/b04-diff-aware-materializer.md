@@ -5,20 +5,24 @@
 
 ## Scope
 
-materializer/**; read-only DB access, page planning/rendering, manifest dependency hashes, xref resolution, and clean documentation output.
+materializer/**; read-only DB access, page planning and rendering, the typed HTML projection and its independent read-back, manifest dependency hashes, xref resolution, and clean documentation output.
 
 ## Start here
 
-materializer/amanuensis_materializer/core.py; materializer/amanuensis_materializer/renderers.py; materializer/test-materializer.py
+materializer/amanuensis_materializer/core.py; materializer/amanuensis_materializer/html_projection.py; materializer/amanuensis_materializer/diagrams.py
 
 ## Notes
 
-Derived-artifact correctness boundary.
+Derived-artifact correctness boundary and the primary human reading surface. Gained html_projection.py and readback.py since onboarding, and diagrams.py replaced the runtime-boundary placeholder with extraction from registered prose. Finding [B04-1](../findings.md#b04-1) recorded in the 2026-08-27 refresh: staleness_map renders an empty result as an affirmative freshness claim, so the published HTML asserts the conspectus is fresh regardless of drift.
 
 ## File ledger
 
 | Path | Classification | Why in scope | Ref SHA |
 |---|---|---|---|
+| `materializer/amanuensis_materializer/html_projection.py` | candidate | HTML projection renderer; the primary human reading surface per the reporting contract. | `5694080` |
+| `materializer/amanuensis_materializer/readback.py` | candidate | Independent read-back verification of published HTML and Markdown views. | `5694080` |
+| `materializer/test-readback.py` | candidate | Test covering independent HTML and Markdown read-back verification. | `5694080` |
+| `materializer/uv.lock` | candidate | Pinned Python dependency set for the materializer. | `5694080` |
 | `materializer/.gitignore` | examined | Pinned A0 inventory assigns this file to **B-04**. | `b8b566f` |
 | `materializer/README.md` | examined | Pinned A0 inventory assigns this file to **B-04**. | `b8b566f` |
 | `materializer/amanuensis_materializer/__init__.py` | examined | Pinned A0 inventory assigns this file to **B-04**. | `b8b566f` |
@@ -54,6 +58,25 @@ Derived-artifact correctness boundary.
 | **[TB-1](../concerns.md#tb-1)** | out-of-scope | code-verified |  | The structural and behavioral read supports out-of-scope for [TB-1](../concerns.md#tb-1) in **B-04**. |
 | **[TR-1](../concerns.md#tr-1)** | confirmed-acceptable | code-verified |  | The structural and behavioral read supports confirmed-acceptable for [TR-1](../concerns.md#tr-1) in **B-04**. |
 | **[TR-2](../concerns.md#tr-2)** | out-of-scope | code-verified |  | The structural and behavioral read supports out-of-scope for [TR-2](../concerns.md#tr-2) in **B-04**. |
+| **[VG-1](../concerns.md#vg-1)** | confirmed-bug | code-verified |  | The materializer converts an empty query result into an affirmative claim. staleness_map reads the entries table, which no server code path populates, and its empty branch emits 'No stale entries — the conspectus is fresh.' rather than reporting that no staleness data exists. The published HTML and Markdown at this SHA both carry that sentence while the conspectus was 23 commits behind HEAD. This is a projection-layer defect independent of [B03-2](../findings.md#b03-2)'s root cause: even once staleness is wired to a populated source, rendering absence-of-data as positive health is unsound. |
+
+## Findings
+
+### [B04-1](../findings.md#b04-1) · 🟡 MEDIUM · fixed
+
+**Symptom**: The published conspectus states 'No stale entries — the conspectus is fresh.' in both the HTML reading surface and its Markdown companion, regardless of how far behind HEAD the survey actually is.  
+**Root cause**: diagrams.py:staleness_map renders an empty query result as an affirmative freshness claim. Its source, the entries table, is never populated by the server (see [B03-2](../findings.md#b03-2)), so the empty branch is the only branch that ever executes — but the deeper defect is that the empty case is reported as positive health rather than as absent data.
+
+_Business context_: The HTML projection is the primary human reading surface and the product's main deliverable. A reader opening it to judge whether the conspectus can be trusted is told, in the document's own voice, that it is fresh. At 5694080 that sentence was published while the survey sat 23 commits behind HEAD with 47% of tracked files unclassified. Because the claim is generated rather than authored, it carries the authority of the derived-artifact pipeline while resting on no measurement at all. This is the reader-facing endpoint of [B03-2](../findings.md#b03-2) and the reason that defect matters beyond an internal metric.
+
+**Primary files**:
+- `materializer/amanuensis_materializer/diagrams.py:staleness_map@5694080`
+
+## Related subsystems
+
+| From | → | To | Relationship | Strength | Context |
+|---|---|---|---|---|---|
+| **[B-03](b03-knowledge-tools-and-workflow-api.md)** | → | **B-04** | data-flow | confirmed | Staleness flows from [B-03](b03-knowledge-tools-and-workflow-api.md)'s detect_changes into **B-04**'s staleness_map projection via the entries table (seam [SM-09](../seams.md#sm-09)). Because no writer inserts rows, the defect propagates from an inert internal metric ([B03-2](../findings.md#b03-2)) into a published freshness claim in the primary reading surface ([B04-1](../findings.md#b04-1)). |
 
 ## Seams
 
@@ -62,6 +85,7 @@ Derived-artifact correctness boundary.
 | **[SM-03](../seams.md#sm-03)** | materialize_docs subprocess and storage/docs projection | **[B-03](b03-knowledge-tools-and-workflow-api.md)** |
 | **[SM-05](../seams.md#sm-05)** | packaged Python materializer mirror | **[B-05](b05-packaging-installer-validation-and-product-docs.md)** |
 | **[SM-06](../seams.md#sm-06)** | report projection design/component contract | **[B-06](b06-report-interface-design-and-validation-studies.md)** |
+| **[SM-09](../seams.md#sm-09)** | entries table (staleness columns: stale, stale_since, stale_reason) | **[B-03](b03-knowledge-tools-and-workflow-api.md)** |
 
 ## Survey notes
 

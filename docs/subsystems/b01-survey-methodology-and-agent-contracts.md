@@ -5,15 +5,15 @@
 
 ## Scope
 
-.claude/skills/amanuensis/** and agents/**; phase instructions, concern calibration, artifact templates, and role handoffs.
+.claude/skills/amanuensis/** — SKILL.md plus the phase instructions, concern calibration, artifact templates, reporting-style contract, and setup reference. The former agents/** directory was removed in 3f3065d; role handoffs now live entirely in the skill references.
 
 ## Start here
 
-.claude/skills/amanuensis/SKILL.md; agents/amanuensis.agent.md; .claude/skills/amanuensis/references/subsystem-survey.md
+.claude/skills/amanuensis/SKILL.md; .claude/skills/amanuensis/references/subsystem-survey.md; .claude/skills/amanuensis/references/reporting-style.md
 
 ## Notes
 
-Prompt/contract layer. Claims about runtime enforcement must cross to [B-02](b02-mcp-core-persistence-and-lifecycle.md)/[B-03](b03-knowledge-tools-and-workflow-api.md).
+Prompt/contract layer. Claims about runtime enforcement must cross to [B-02](b02-mcp-core-persistence-and-lifecycle.md)/[B-03](b03-knowledge-tools-and-workflow-api.md). Ledger caveat: 11 rows for agents/** name files deleted in 3f3065d and cannot be retired without a destructive **B-01** reset — see finding [B03-1](../findings.md#b03-1) and open question 7.
 
 ## File ledger
 
@@ -31,6 +31,7 @@ Prompt/contract layer. Claims about runtime enforcement must cross to [B-02](b02
 | `.claude/skills/amanuensis/references/phase-3-concerns.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 | `.claude/skills/amanuensis/references/phase-4-adversarial.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 | `.claude/skills/amanuensis/references/phase-5-packaging.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
+| `.claude/skills/amanuensis/references/reporting-style.md` | examined | Reporting-style contract governing human-facing labels, IA/UI boundary, and register; modified in this refresh range. | `5694080` |
 | `.claude/skills/amanuensis/references/setup.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 | `.claude/skills/amanuensis/references/subsystem-survey.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 | `agents/README.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
@@ -74,6 +75,7 @@ Prompt/contract layer. Claims about runtime enforcement must cross to [B-02](b02
 | **[SM-01](../seams.md#sm-01)** | MCP tool protocol and survey phase contract | **[B-03](b03-knowledge-tools-and-workflow-api.md)** |
 | **[SM-04](../seams.md#sm-04)** | packaged agent and reference mirrors | **[B-05](b05-packaging-installer-validation-and-product-docs.md)** |
 | **[SM-07](../seams.md#sm-07)** | reporting terminology and information-architecture contract | **[B-06](b06-report-interface-design-and-validation-studies.md)** |
+| **[SM-10](../seams.md#sm-10)** | activation contract (installation scope, skill destination, config markers) | **[B-05](b05-packaging-installer-validation-and-product-docs.md)** |
 
 ## Survey notes
 

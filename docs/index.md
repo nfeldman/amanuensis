@@ -2,7 +2,7 @@
 
 **Canonical branch**: `main`  
 **Onboarding SHA**: `b8b566f`  
-**Last checked SHA**: `45a519c44c10`
+**Last checked SHA**: `f848fc77823c`
 
 ## Quick orientation
 
@@ -12,11 +12,11 @@
 
 | Metric | Value |
 |---|---|
-| Subsystems mapped | 7 / 7 |
-| Confirmed findings | 2 (0 critical, 1 high) |
-| Open bugs | 1 |
+| Subsystems mapped | 8 / 8 |
+| Confirmed findings | 8 (0 critical, 4 high) |
+| Open bugs | 5 |
 | Stale entries | 0 |
-| Open field notes | 0 |
+| Open field notes | 6 |
 | Unresolved contradictions | 0 |
 
 
@@ -37,4 +37,4 @@ New here? Start with [How to read this conspectus](how-to-read.md).
 
 ## Latest session
 
-`survey B-07 embedded research surveys and platform trials` — started 2026-08-23 06:06 UTC · ended 2026-08-23 06:32 UTC
+`record B04-1 and B05-1 repairs; complete refresh and republish` — started 2026-08-28 04:53 UTC · **active**

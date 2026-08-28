@@ -3,15 +3,15 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "d7aebdfd0b87e19761754a37abc494a8fb859e149339a7460f67161e24fc766a"
+      "content_hash": "11ce9e88bfe542299b87340600e863dee8d7ee13ded85ad99521b73d765d1494"
     },
     {
       "path": "architecture.md",
-      "content_hash": "76aa3c9c756874f71d9c5b976860f9971e400342d7bb45345b22c4ea3ad2d282"
+      "content_hash": "dbae8bf54c77e2ef63133338a172c290fe42451da6a2812d7deeeea217592f23"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "52fdec01ba4f96b539376d7769d5566cb11ed0b41a8dc22a0ed150f47a974bd3"
+      "content_hash": "0431b727c2d45cbc0ebe474a7c71bbd35f2bc3fefa5d52d6384453b6e09c3c87"
     },
     {
       "path": "concern-checklist.md",
@@ -19,15 +19,15 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "48c198407cfc251dced9eaa73288517fd016475c7c73d5572290b2edd9cb47bc"
+      "content_hash": "220841c93327dea5cbb8858e2cc6e6a788b9a122d4208d834c472879bde48ddf"
     },
     {
       "path": "concerns.md",
-      "content_hash": "eb3fba13e47292e306dd26407154a397aeec235a5af17cc75e4260f7bf05eec8"
+      "content_hash": "071a2e2ccdfbfb34df2d7cd3545df36c798c257ef534f31fe5dab1e0b554d6d3"
     },
     {
       "path": "contradictions.html",
-      "content_hash": "207323e749572d925664836a909c50320c3fce8f284e3dbab5448236abe7edb8"
+      "content_hash": "bd0cf8ad3ed7c4da799ecb4bc1ffeeb22bf67a15a877efff05ec6c0573924c23"
     },
     {
       "path": "contradictions.md",
@@ -35,7 +35,7 @@
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "2bc0dbd3b5447ba7f7421bfba4e42e7612ac8c667ae4c88b227aa88ade363a19"
+      "content_hash": "116ea838cf82f16871f278a85116812e54b6494d7db7e6c0f62985aab2895ad4"
     },
     {
       "path": "diagnosticity.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "entry-point.html",
-      "content_hash": "16407124e5fbf76ec48e27223de40a5a3899e82245f1638701084dd32452c249"
+      "content_hash": "fcda251442990cfcf0413ed63326ff863bbcba975966fc7a3ac3d163c5672117"
     },
     {
       "path": "entry-point.md",
@@ -51,23 +51,23 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "a1fa932394edbcfc9e0036eb47f49687a7910ad9868c70571f1c34bae437ae7f"
+      "content_hash": "a42dbd1d69347d5279614cf2cfa599092b1691094b86dd5ad539c4b27afa079e"
     },
     {
       "path": "field-notes.md",
-      "content_hash": "5a60f660f184f1680dcff1a65932b68079f8f92c482725cc54ad8c6217ebb3e9"
+      "content_hash": "22f4c44bf01d5581279608177710f44dab0d62abb1db32989f737e481a971d48"
     },
     {
       "path": "findings.html",
-      "content_hash": "7878dfbc064b71c48dd458e1e80ba21d041184f1446e7edfeecfab71b194d219"
+      "content_hash": "718db95b79309edf79ade25749acf6357d9789eb1aa36f8f0b6650dbb20f3ce9"
     },
     {
       "path": "findings.md",
-      "content_hash": "35cb594f421af99619eef768fcfdca92fa13739097ab90d3d16aec0dad5505ad"
+      "content_hash": "85fba98966e489c8f82631aab782f97d0212fddcfeafb57ec5cae9a73843f5a4"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "11576a682b253f5fbc65a90f24c683ad044478909ffa405722ace9c0ea8db86d"
+      "content_hash": "e143e4fb01d7f1cd28b8c0862b557da8ef9c51b441d06c827e909bbdd2508538"
     },
     {
       "path": "how-to-read.md",
@@ -75,23 +75,23 @@
     },
     {
       "path": "index.html",
-      "content_hash": "5042b0b00714fffc0bb0cbfdf9b9ba274d175bd7f3a7f1eac0a00cf626f23a85"
+      "content_hash": "7d426f7fe52cb28d427dedfa8ece18089c7d1eeec51e5856cd429768758c5df5"
     },
     {
       "path": "index.md",
-      "content_hash": "65809484de7543303b6ca3f7a85590838a69baabb887e66e0104c006473e1198"
+      "content_hash": "2762bc20a3fdf6427daf619fcc753dc5470e7509096ac123fb3e37c10a919d6e"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "6dd4acc7ff168a936cfc0860c6ffa1ba3ee33754de234a9284355676b4791740"
+      "content_hash": "1120d89021a0528695c00c4f985d9a2c54b4dba93cbf37e65602153a13653949"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "9b9c8e267d51c24bd7e2b26572313ecebda35f984e242b876a6b9fb7c2439c49"
+      "content_hash": "c5f79f3c583cb4ccd9a2070f0e364284d9d2f96789da2e7d5543460ff4e56a6f"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "b6a82392223f16ef414db0b4559169183e3c85d6605acf7bd4e39c9d034cb529"
+      "content_hash": "7bef636cdafb11bab7c3ec732fea4ce70b7bb736737a5e968296e7991e05b1e0"
     },
     {
       "path": "onboarding-report.md",
@@ -99,63 +99,63 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "571e03ca8c6f412dacb152d34ba0e168eefc4d9619a9b9f75e5bb7ee6880b8d2"
+      "content_hash": "fb7053a418f2de907987162f44b7e6bfdaa20769c9ae2dd622e7a62e32f2360d"
     },
     {
       "path": "open-questions.md",
-      "content_hash": "4c48788535903f9c6b865a66cf76edee60cc9bcea864f1b8a990d50efff344c7"
+      "content_hash": "d6b58a0276f48f55d3b4a0df5ae2210f0e72bbef4c8f45c530806eb7ac4d0d87"
     },
     {
       "path": "seams.html",
-      "content_hash": "98eeda0fef41082240096c160f4c6b5b0d60b29766e5a71b62513d16f5e6140c"
+      "content_hash": "ab230d5be6bf70e1d41516fe9cd00f21b6cd46a1ed6206986cee0fcd04c9a1da"
     },
     {
       "path": "seams.md",
-      "content_hash": "4b235b0c61778b037cf3e9a8bf4f4425fc39b01175714645182a4933ff0aaa91"
+      "content_hash": "ccbae40efba0ab023e94e5d63a03619293e029ece968478897bd814b15da48ea"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "20a9afb10a5a706e20ff05d68af387f7ed4ab22e1e952cd73f1637db6e2be676"
+      "content_hash": "cfd1ab9949e038f9e11b82a32896d0251d12a4a445aa281128ffd96e0ba51b23"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
-      "content_hash": "b2b507dcf537de800718895746d595a05d2843cc99dec072a168e1709aba26b0"
+      "content_hash": "1543b5ba28b12311f1cbe82108a0548cdb363d65165c447689a0c4399a6b6ef4"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "439d7c113ca783f2563614aa5bbd662540759139224bc58817d9d42a1edbed5e"
+      "content_hash": "f1d1dd0ce7229207f5ea385da684a5c5f3f2c518d99cc7ed98b591dc2c5e2cbb"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
-      "content_hash": "403190740f7d097bf16860788dbee84b19c9e625d4d40e58f11fc6e8aa7b8316"
+      "content_hash": "3fb167b1e6053a1c10f26791b3212cf6a0a494dfd9a975b906e5d481a89b47cc"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "3dc6a159d7fec2bfc280114995db30502da398338a09eafae04b229529919992"
+      "content_hash": "31efcf9d5e5b9fba50986ab1a57e3a7719a8b66b9b34ccf6587a0b645eaf3f4e"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
-      "content_hash": "da2d51fdcf14a799f7a1051d74698c3ffa72657361ccbd1e5b5ec6fc130fe6ae"
+      "content_hash": "0dc9fd7e3408aed1c5156918556c3b98e90fee42144018addba2e79db24e19b6"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "048ad8dff79d1fcda469bac232d0b8f8eb61344bdc5f6fd9b8bbcb1ed7731750"
+      "content_hash": "99b7167a4652550b7f63dc841041bcef8bbed6a775c4a820f9049288676dd559"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
-      "content_hash": "c0046b100f08f667aabe51105e119b71c2e1bf32f08513e666230444ce39f9b2"
+      "content_hash": "b5747830e531f99d569a4ea7cb184d95eb7398921c076b96868db64703fecb36"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "15431bcecc7d997317cf348d430a9e13d207d64d17b9df90123ea69f97348371"
+      "content_hash": "b7f97dd0a205bc7d0c889476a88a4964a6f1b7bdd24cf8dd57e5b0e25e52f651"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
-      "content_hash": "cb20334819a8516b482dae3fcef212aa6a3bb863e25996b1088d18767b4e34cd"
+      "content_hash": "307b488463fe1cbbcee6741e2a3b23b57f121c0c201bbfd2a494926b48758fd9"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "038fcd930f6bdf4dee2924f34fb248ed065313ee24e3d7b8c33d6fb581e6847f"
+      "content_hash": "e540af691e40c341d697a823a44e0684801f3c77eab19b5ae113ac83257d3d2a"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -163,15 +163,23 @@
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "cad2687f3b8fa1a3ab70ef4f8c28a7b3daaea211e7693cb203e2c6a5306ca749"
+      "content_hash": "0c2fa9dbd2d3cb308c6287e405617cc04cc97494e8fb5bf2d3cda87d0840b6b5"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
       "content_hash": "9c7a2fcb4b64186b3eeee6f97276309015958300638f4b4541de593ecb09af97"
     },
     {
+      "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "content_hash": "144211bb5e9a631dd7c20785447f969d1178a9bc90e8b46c39a9a5701dcadce1"
+    },
+    {
+      "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "content_hash": "3702f5e6ff7bb8c03a127de734033d9daf0c152e64351a050747132dd25c348b"
+    },
+    {
       "path": "vocabulary.html",
-      "content_hash": "cc99c106a59df739c0c2167b1c4ca86442bd73f0dbef39feb73637b362f86c7b"
+      "content_hash": "43096d8d5fedb6ed1fdeb61d61deb177a0a5899c10db4853f71726f51178dd00"
     },
     {
       "path": "vocabulary.md",
@@ -218,6 +226,14 @@
     {
       "source": "architecture.html",
       "target": "findings.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "architecture.html",
+      "target": "findings.html#b04-1"
     },
     {
       "source": "architecture.html",
@@ -285,7 +301,15 @@
     },
     {
       "source": "architecture.html",
-      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+      "target": "seams.html#sm-09"
+    },
+    {
+      "source": "architecture.html",
+      "target": "seams.html#sm-09"
+    },
+    {
+      "source": "architecture.html",
+      "target": "seams.html#sm-10"
     },
     {
       "source": "architecture.html",
@@ -305,10 +329,6 @@
     },
     {
       "source": "architecture.html",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
-    },
-    {
-      "source": "architecture.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
     },
     {
@@ -326,6 +346,22 @@
     {
       "source": "architecture.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
     },
     {
       "source": "architecture.html",
@@ -362,10 +398,6 @@
     {
       "source": "architecture.html",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
-    },
-    {
-      "source": "architecture.html",
-      "target": "subsystems/b06-report-interface-design-and-validation-studies.html"
     },
     {
       "source": "architecture.html",
@@ -393,11 +425,19 @@
     },
     {
       "source": "architecture.html",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "architecture.html",
       "target": "vocabulary.html"
+    },
+    {
+      "source": "architecture.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "architecture.md",
+      "target": "findings.md#b04-1"
     },
     {
       "source": "architecture.md",
@@ -437,6 +477,18 @@
     },
     {
       "source": "architecture.md",
+      "target": "seams.md#sm-09"
+    },
+    {
+      "source": "architecture.md",
+      "target": "seams.md#sm-09"
+    },
+    {
+      "source": "architecture.md",
+      "target": "seams.md#sm-10"
+    },
+    {
+      "source": "architecture.md",
       "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
     },
     {
@@ -457,10 +509,6 @@
     },
     {
       "source": "architecture.md",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
-    },
-    {
-      "source": "architecture.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
     },
     {
@@ -474,6 +522,22 @@
     {
       "source": "architecture.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "architecture.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "architecture.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "architecture.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "architecture.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
     },
     {
       "source": "architecture.md",
@@ -514,14 +578,6 @@
     {
       "source": "architecture.md",
       "target": "subsystems/b06-report-interface-design-and-validation-studies.md"
-    },
-    {
-      "source": "architecture.md",
-      "target": "subsystems/b06-report-interface-design-and-validation-studies.md"
-    },
-    {
-      "source": "architecture.md",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
       "source": "architecture.md",
@@ -705,6 +761,10 @@
     },
     {
       "source": "concern-checklist.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "concern-checklist.html",
       "target": "vocabulary.html"
     },
     {
@@ -885,6 +945,10 @@
     },
     {
       "source": "concerns.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "concerns.html",
       "target": "subsystems/b01-survey-methodology-and-agent-contracts.html#concern-disposition-at-1"
     },
     {
@@ -1173,6 +1237,22 @@
     },
     {
       "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "concerns.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-at-1"
     },
     {
@@ -1261,6 +1341,22 @@
     },
     {
       "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-sc-6"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-sc-6"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-sd-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-sd-1"
+    },
+    {
+      "source": "concerns.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-si-1"
     },
     {
@@ -1298,6 +1394,14 @@
     {
       "source": "concerns.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-tr-2"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-vg-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html#concern-disposition-vg-1"
     },
     {
       "source": "concerns.html",
@@ -1453,6 +1557,14 @@
     },
     {
       "source": "concerns.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#concern-disposition-vg-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#concern-disposition-vg-1"
+    },
+    {
+      "source": "concerns.html",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
@@ -1590,6 +1702,14 @@
     {
       "source": "concerns.html",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html#concern-disposition-tr-2"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html#concern-disposition-vg-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html#concern-disposition-vg-1"
     },
     {
       "source": "concerns.html",
@@ -1934,6 +2054,42 @@
     {
       "source": "concerns.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html#concern-disposition-tr-2"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-si-2"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-si-2"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-tb-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-tb-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-vg-1"
+    },
+    {
+      "source": "concerns.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html#concern-disposition-vg-1"
     },
     {
       "source": "concerns.html",
@@ -1961,7 +2117,27 @@
     },
     {
       "source": "concerns.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "concerns.md",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "concerns.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "concerns.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "concerns.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "concerns.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
     },
     {
       "source": "concerns.md",
@@ -2004,6 +2180,10 @@
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
+      "source": "concerns.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
       "source": "contradictions.html",
       "target": "architecture.html"
     },
@@ -2098,6 +2278,10 @@
     {
       "source": "contradictions.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "contradictions.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "contradictions.html",
@@ -2198,6 +2382,10 @@
     {
       "source": "diagnosticity.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "diagnosticity.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "diagnosticity.html",
@@ -2353,6 +2541,10 @@
     },
     {
       "source": "entry-point.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "entry-point.html",
       "target": "vocabulary.html"
     },
     {
@@ -2461,6 +2653,22 @@
     },
     {
       "source": "field-notes.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "findings.html#b04-1"
+    },
+    {
+      "source": "field-notes.html",
       "target": "findings.html#b07-1"
     },
     {
@@ -2505,6 +2713,10 @@
     },
     {
       "source": "field-notes.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "field-notes.html",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
     },
     {
@@ -2517,6 +2729,14 @@
     },
     {
       "source": "field-notes.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "field-notes.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
     },
     {
@@ -2546,6 +2766,14 @@
     {
       "source": "field-notes.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "field-notes.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "field-notes.html",
@@ -2565,6 +2793,22 @@
     },
     {
       "source": "field-notes.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "findings.md#b04-1"
+    },
+    {
+      "source": "field-notes.md",
       "target": "findings.md#b07-1"
     },
     {
@@ -2577,7 +2821,19 @@
     },
     {
       "source": "field-notes.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "field-notes.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
     },
     {
       "source": "field-notes.md",
@@ -2596,6 +2852,10 @@
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
+      "source": "field-notes.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
       "source": "findings.html",
       "target": "architecture.html"
     },
@@ -2669,6 +2929,14 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "findings.html",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
     },
     {
@@ -2681,7 +2949,23 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "findings.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "findings.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "findings.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "findings.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
       "source": "findings.html",
@@ -2701,11 +2985,39 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "findings.html",
       "target": "vocabulary.html"
     },
     {
       "source": "findings.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "findings.md",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
     },
     {
       "source": "findings.md",
@@ -2842,6 +3154,10 @@
     {
       "source": "how-to-read.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "how-to-read.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "how-to-read.html",
@@ -3018,6 +3334,10 @@
     {
       "source": "index.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "index.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "index.html",
@@ -3225,6 +3545,18 @@
     },
     {
       "source": "master-plan.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "master-plan.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "master-plan.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "master-plan.html",
       "target": "vocabulary.html"
     },
     {
@@ -3254,6 +3586,10 @@
     {
       "source": "master-plan.md",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
+    },
+    {
+      "source": "master-plan.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
     },
     {
       "source": "onboarding-report.html",
@@ -3465,6 +3801,10 @@
     },
     {
       "source": "onboarding-report.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "onboarding-report.html",
       "target": "vocabulary.html"
     },
     {
@@ -3593,6 +3933,82 @@
     },
     {
       "source": "open-questions.html",
+      "target": "concerns.html#at-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#at-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#cc-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#cr-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#cr-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#ep-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#ep-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#if-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#rl-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#rl-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#rl-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#sc-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#sc-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#si-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#si-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#si-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#tb-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#tr-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "concerns.html#tr-2"
+    },
+    {
+      "source": "open-questions.html",
       "target": "contradictions.html"
     },
     {
@@ -3614,6 +4030,18 @@
     {
       "source": "open-questions.html",
       "target": "findings.html#b02-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "findings.html#b03-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "findings.html#b03-2"
     },
     {
       "source": "open-questions.html",
@@ -3657,7 +4085,51 @@
     },
     {
       "source": "open-questions.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "open-questions.html",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
     },
     {
       "source": "open-questions.html",
@@ -3673,6 +4145,18 @@
     },
     {
       "source": "open-questions.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "open-questions.html",
       "target": "subsystems/b06-report-interface-design-and-validation-studies.html"
     },
     {
@@ -3681,11 +4165,175 @@
     },
     {
       "source": "open-questions.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "open-questions.html",
       "target": "vocabulary.html"
     },
     {
       "source": "open-questions.md",
+      "target": "concerns.md#at-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#at-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#cc-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#cr-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#cr-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#ep-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#ep-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#if-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#rl-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#rl-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#rl-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#sc-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#sc-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#si-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#si-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#si-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#tb-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#tr-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "concerns.md#tr-2"
+    },
+    {
+      "source": "open-questions.md",
       "target": "findings.md#b02-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "findings.md#b03-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
     },
     {
       "source": "seams.html",
@@ -3713,6 +4361,10 @@
     },
     {
       "source": "seams.html",
+      "target": "concerns.html#vg-1"
+    },
+    {
+      "source": "seams.html",
       "target": "contradictions.html"
     },
     {
@@ -3734,6 +4386,14 @@
     {
       "source": "seams.html",
       "target": "findings.html#b02-1"
+    },
+    {
+      "source": "seams.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "seams.html",
+      "target": "findings.html#b04-1"
     },
     {
       "source": "seams.html",
@@ -3797,7 +4457,11 @@
     },
     {
       "source": "seams.html",
-      "target": "seams.md"
+      "target": "seams.html#sm-09"
+    },
+    {
+      "source": "seams.html",
+      "target": "seams.html#sm-10"
     },
     {
       "source": "seams.html",
@@ -3805,6 +4469,14 @@
     },
     {
       "source": "seams.html",
+      "target": "seams.md"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "seams.html",
       "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
     },
     {
@@ -3837,6 +4509,22 @@
     },
     {
       "source": "seams.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "seams.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
     },
     {
@@ -3890,6 +4578,26 @@
     {
       "source": "seams.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
       "source": "seams.html",
@@ -3958,6 +4666,10 @@
     {
       "source": "seams.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "seams.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "seams.html",
@@ -3977,7 +4689,19 @@
     },
     {
       "source": "seams.md",
+      "target": "concerns.md#vg-1"
+    },
+    {
+      "source": "seams.md",
       "target": "findings.md#b02-1"
+    },
+    {
+      "source": "seams.md",
+      "target": "findings.md#b03-2"
+    },
+    {
+      "source": "seams.md",
+      "target": "findings.md#b04-1"
     },
     {
       "source": "seams.md",
@@ -4013,6 +4737,22 @@
     },
     {
       "source": "seams.md",
+      "target": "seams.md#sm-09"
+    },
+    {
+      "source": "seams.md",
+      "target": "seams.md#sm-10"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "seams.md",
       "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
     },
     {
@@ -4045,6 +4785,22 @@
     },
     {
       "source": "seams.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "seams.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
     },
     {
@@ -4090,6 +4846,26 @@
     {
       "source": "seams.md",
       "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "seams.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
     },
     {
       "source": "seams.md",
@@ -4305,6 +5081,10 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "../findings.html#b03-1"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
       "target": "../how-to-read.html"
     },
     {
@@ -4358,6 +5138,10 @@
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
       "target": "../seams.html#sm-07"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "../seams.html#sm-10"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
@@ -4425,6 +5209,10 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
       "target": "b06-report-interface-design-and-validation-studies.html"
     },
     {
@@ -4438,6 +5226,10 @@
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -4565,6 +5357,10 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
+      "target": "../findings.md#b03-1"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
       "target": "../seams.md#sm-01"
     },
     {
@@ -4593,7 +5389,7 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
-      "target": "b02-mcp-core-persistence-and-lifecycle.md"
+      "target": "../seams.md#sm-10"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -4601,7 +5397,7 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
-      "target": "b03-knowledge-tools-and-workflow-api.md"
+      "target": "b02-mcp-core-persistence-and-lifecycle.md"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -4614,6 +5410,14 @@
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
       "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
+      "target": "b05-packaging-installer-validation-and-product-docs.md"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -4677,6 +5481,10 @@
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../concerns.html#ep-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
       "target": "../concerns.html#if-1"
     },
     {
@@ -4701,7 +5509,15 @@
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../concerns.html#si-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
       "target": "../concerns.html#si-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../concerns.html#tb-1"
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
@@ -4742,6 +5558,18 @@
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
       "target": "../findings.html#b02-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../findings.html#b02-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../findings.html#b02-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../findings.html#b07-1"
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
@@ -4844,6 +5672,10 @@
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
     },
     {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "target": "../concerns.md#at-1"
     },
@@ -4877,6 +5709,10 @@
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../concerns.md#ep-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "target": "../concerns.md#if-1"
     },
     {
@@ -4901,7 +5737,15 @@
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../concerns.md#si-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "target": "../concerns.md#si-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../concerns.md#tb-1"
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
@@ -4922,6 +5766,18 @@
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "target": "../findings.md#b02-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../findings.md#b02-1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../findings.md#b02-2"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../findings.md#b07-1"
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
@@ -5057,6 +5913,14 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../concerns.html#sc-6"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../concerns.html#sd-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../concerns.html#si-1"
     },
     {
@@ -5098,6 +5962,10 @@
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../concerns.html#tr-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../concerns.html#vg-1"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -5118,6 +5986,42 @@
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b04-1"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -5177,7 +6081,23 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../seams.html#sm-09"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../seams.html#sm-09"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../vocabulary.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b01-survey-methodology-and-agent-contracts.html"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -5245,6 +6165,18 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "b05-packaging-installer-validation-and-product-docs.html"
     },
     {
@@ -5256,6 +6188,18 @@
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
     },
     {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../concerns.md#at-1"
     },
@@ -5345,6 +6289,14 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../concerns.md#sc-6"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../concerns.md#sd-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../concerns.md#si-1"
     },
     {
@@ -5389,6 +6341,46 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../concerns.md#vg-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../seams.md#sm-01"
     },
     {
@@ -5414,6 +6406,22 @@
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../seams.md#sm-03"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../seams.md#sm-09"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../seams.md#sm-09"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b01-survey-methodology-and-agent-contracts.md"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
@@ -5454,6 +6462,26 @@
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "b08-activation-evidence-and-release-readiness-harness.md"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
@@ -5593,6 +6621,10 @@
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../concerns.html#vg-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "../contradictions.html"
     },
     {
@@ -5610,6 +6642,34 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-1"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
@@ -5669,6 +6729,14 @@
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../seams.html#sm-09"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../seams.html#sm-09"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "../vocabulary.html"
     },
     {
@@ -5678,6 +6746,18 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
@@ -5734,6 +6814,10 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
@@ -5861,6 +6945,38 @@
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../concerns.md#vg-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
       "target": "../seams.md#sm-03"
     },
     {
@@ -5886,6 +7002,26 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
       "target": "../seams.md#sm-06"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../seams.md#sm-09"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../seams.md#sm-09"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
@@ -6053,6 +7189,10 @@
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../concerns.html#vg-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
       "target": "../contradictions.html"
     },
     {
@@ -6070,6 +7210,34 @@
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
       "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b02-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b03-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b04-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../findings.html#b05-1"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
@@ -6121,7 +7289,23 @@
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../seams.html#sm-10"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "../seams.html#sm-10"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
       "target": "../vocabulary.html"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "b01-survey-methodology-and-agent-contracts.html"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
@@ -6174,6 +7358,10 @@
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -6301,7 +7489,35 @@
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
-      "target": "../seams.md#sm-04"
+      "target": "../concerns.md#vg-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b02-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b03-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../findings.md#b05-1"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -6309,7 +7525,7 @@
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
-      "target": "../seams.md#sm-05"
+      "target": "../seams.md#sm-04"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -6318,6 +7534,26 @@
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
       "target": "../seams.md#sm-05"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../seams.md#sm-05"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../seams.md#sm-10"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "../seams.md#sm-10"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
+      "target": "b01-survey-methodology-and-agent-contracts.md"
     },
     {
       "source": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -6622,6 +7858,10 @@
     {
       "source": "subsystems/b06-report-interface-design-and-validation-studies.html",
       "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b06-report-interface-design-and-validation-studies.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -7192,6 +8432,10 @@
       "target": "b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
+      "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
       "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
       "target": "../concerns.md#at-1"
     },
@@ -7470,6 +8714,286 @@
     {
       "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
       "target": "b06-report-interface-design-and-validation-studies.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../architecture.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concern-checklist.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concerns.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concerns.html#si-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concerns.html#tb-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concerns.html#tb-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../concerns.html#vg-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../contradictions.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../diagnosticity.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../entry-point.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../field-notes.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b04-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../how-to-read.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../index.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../index.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../master-plan.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../onboarding-report.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../open-questions.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../seams.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../vocabulary.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b06-report-interface-design-and-validation-studies.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b06-report-interface-design-and-validation-studies.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "b08-activation-evidence-and-release-readiness-harness.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../concerns.md#si-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../concerns.md#tb-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../concerns.md#tb-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../concerns.md#vg-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b06-report-interface-design-and-validation-studies.md"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
       "source": "vocabulary.html",
@@ -7566,6 +9090,10 @@
     {
       "source": "vocabulary.html",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "vocabulary.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
     },
     {
       "source": "vocabulary.html",
