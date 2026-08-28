@@ -50,6 +50,7 @@ cd mcp-server
 node test-smoke.mjs                     # exercises every tool against a fresh DB
 node test-invariants.mjs                # knowledge-depth gates, monotonic transitions
 node test-derived-staleness.mjs         # ledger-derived staleness and scope reconciliation
+node test-startup-bounds.mjs            # activation-path probes are time-bounded
 node test-adversarial-correctness.mjs   # tries to violate the data contracts
 node test-adversarial-security.mjs      # input handling, SQL safety, path traversal
 node test-resolution-proof.mjs          # repair proof and append-only resolution history
@@ -71,6 +72,7 @@ node test-historical-evaluation.mjs     # clean historical packets, hidden kill 
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
+node scripts/check-evidence-vocabulary.mjs # evidence vocabulary agrees across tools and skill
 node test-installer.mjs                  # client adapters, migration, and uninstall custody
 node test-activation-contract.mjs        # user-scope cwd binding and wrong-workspace halt
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate

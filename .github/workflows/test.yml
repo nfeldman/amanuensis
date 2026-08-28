@@ -133,6 +133,12 @@ jobs:
       - name: Derived staleness — ledger drift and scope reconciliation
         working-directory: mcp-server
         run: node test-derived-staleness.mjs
+      - name: Startup bounds — no unbounded probe on the activation path
+        working-directory: mcp-server
+        run: node test-startup-bounds.mjs
+      - name: Evidence vocabulary — add_evidence, set_disposition, and SKILL.md agree
+        working-directory: mcp-server
+        run: node scripts/check-evidence-vocabulary.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs
