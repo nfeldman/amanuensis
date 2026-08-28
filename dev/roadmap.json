@@ -6,7 +6,7 @@
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The v2 epistemic engine, review, architecture, research-learning, and Chorusmith surfaces are integrated, but direct multi-repository use exposed an activation failure before useful work began: a hard-coded global server remained bound to another repository while the target repository carried a project-local registration that the running task had not loaded. Friction-free Codex activation is therefore the highest-priority product work. New product-surface expansion pauses until one user-level installation can bind each new trusted repository correctly, isolate concurrent repositories, diagnose stale configuration before writes, and start from one natural-language request. The integrated v2 baseline remains established; product efficacy and the friction-free operating claim remain unestablished until measured.",
   "delivery": {
-    "implementation": "local-complete",
+    "implementation": "active",
     "productProof": "unestablished",
     "integration": {
       "status": "established",
@@ -35,15 +35,30 @@
       }
     },
     "release": {
-      "status": "candidate",
+      "status": "established",
       "tag": "v0.2.0-beta.1",
+      "tagCommit": "56940800af7a4c99980a4e09a41559bb65891153",
       "registry": "npmjs",
       "package": "@gruetech/amanuensis",
       "version": "0.2.0-beta.1",
       "distTag": "latest",
-      "publicationAuthorized": true,
-      "publicationStatus": "not-published",
-      "releaseReadyReceipt": "dev/activation-evidence/a26-release-readiness.json",
+      "publishedAt": "2026-08-26T18:21:27.270Z",
+      "shasum": "83abf7279073f562bd47dbf1874ff762cbe4a97c",
+      "integrity": "sha512-QxcD55cgw6VawLDB/fU2Ia8yWmmBdjCi/bqJmvE4qU50LLZXITIKRZM22fRhIwS4jYOpsWhrGuJdO6369btKXQ==",
+      "publish": {
+        "provider": "github-actions",
+        "workflow": "publish.yml",
+        "runId": 32998936471,
+        "headSha": "56940800af7a4c99980a4e09a41559bb65891153",
+        "conclusion": "success"
+      },
+      "publishedSmoke": {
+        "provider": "github-actions",
+        "workflow": "published-smoke.yml",
+        "runId": 32999327584,
+        "version": "0.2.0-beta.1",
+        "conclusion": "success"
+      },
       "previousEstablished": {
         "status": "established",
         "tag": "v0.2.0-alpha.1",
@@ -554,8 +569,19 @@
             "Codex may not define relative stdio cwd against the task repository in every host surface.",
             "A global registration broadens availability and can be mistaken for broader filesystem authority."
           ],
-          "practices": ["GP8", "GP25", "GP28", "VP4", "VP11", "VP20"],
-          "metrics": ["M13", "M14", "M17"],
+          "practices": [
+            "GP8",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP11",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M14",
+            "M17"
+          ],
           "baselineEvidence": [
             "dev/adr/0021-friction-free-codex-activation.md",
             "mcp-server/src/cli.ts",
@@ -576,7 +602,9 @@
           "owner": "Amanuensis",
           "outcome": "Users can see the effective Amanuensis configuration, process binding, required restart, and exact repair before a workflow starts.",
           "rationale": "The current preflight reports a workspace mismatch only after the wrong server is already connected; diagnosis must explain configuration precedence and produce a bounded repair path.",
-          "dependsOn": ["A19"],
+          "dependsOn": [
+            "A19"
+          ],
           "deliverables": [
             "An `amanuensis doctor` command reporting config source, executable, arguments, cwd contract, resolved repository, storage, version, and restart state.",
             "Detection of duplicate global/project registrations, hard-coded workspaces, stale executable paths, and shadowed skills.",
@@ -592,8 +620,20 @@
             "Host configuration precedence can change across Codex versions.",
             "A doctor that only inspects files may disagree with the already-running process."
           ],
-          "practices": ["GP8", "GP20", "GP23", "GP25", "GP28", "VP4", "VP20"],
-          "metrics": ["M13", "M16", "M17"],
+          "practices": [
+            "GP8",
+            "GP20",
+            "GP23",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M16",
+            "M17"
+          ],
           "baselineEvidence": [
             "mcp-server/src/cli.ts",
             "mcp-server/test-installer.mjs",
@@ -612,7 +652,9 @@
           "owner": "Amanuensis",
           "outcome": "Each server process owns exactly one canonical repository identity and all Amanuensis writes remain inside its validated storage and Git-exclude surfaces.",
           "rationale": "Cwd discovery is useful only when repository identity, worktree semantics, storage custody, and every write target are mechanically bounded.",
-          "dependsOn": ["A19"],
+          "dependsOn": [
+            "A19"
+          ],
           "deliverables": [
             "A single startup binding receipt containing canonical root, repository identity, storage path, source of workspace selection, and server version.",
             "Central containment checks for every file mutation, including symlink, nested-directory, worktree, and non-Git cases.",
@@ -628,8 +670,21 @@
             "Git worktrees share metadata while users may expect either shared or isolated survey state.",
             "Containment duplicated across tools can drift unless centralized."
           ],
-          "practices": ["GP8", "GP11", "GP18", "GP25", "GP28", "VP4", "VP10", "VP12"],
-          "metrics": ["M13", "M15", "M12"],
+          "practices": [
+            "GP8",
+            "GP11",
+            "GP18",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP10",
+            "VP12"
+          ],
+          "metrics": [
+            "M13",
+            "M15",
+            "M12"
+          ],
           "baselineEvidence": [
             "mcp-server/src/index.ts",
             "mcp-server/src/project.ts",
@@ -652,7 +707,10 @@
           "owner": "Amanuensis + Codex integration",
           "outcome": "Activation is verified through real Codex process launches across independent repositories rather than inferred from configuration syntax.",
           "rationale": "The current installer test proves generated TOML shape, not how Codex resolves cwd, merges global and project configuration, retains running processes, or launches concurrent tasks.",
-          "dependsOn": ["A20", "A21"],
+          "dependsOn": [
+            "A20",
+            "A21"
+          ],
           "deliverables": [
             "A host-level fixture that launches the supported Codex surface against at least two repositories and one worktree.",
             "Fresh-start, configuration-conflict, restart, resume, concurrent-task, and stale-process scenarios with distinct run identifiers.",
@@ -668,8 +726,24 @@
             "Desktop-host automation may be less deterministic than CLI coverage.",
             "A mock host can reproduce the implementation rather than test the host contract."
           ],
-          "practices": ["GP21", "GP22", "GP24", "GP25", "GP33", "VP4", "VP5", "VP11", "VP19", "VP20"],
-          "metrics": ["M13", "M15", "M17", "M11"],
+          "practices": [
+            "GP21",
+            "GP22",
+            "GP24",
+            "GP25",
+            "GP33",
+            "VP4",
+            "VP5",
+            "VP11",
+            "VP19",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M15",
+            "M17",
+            "M11"
+          ],
           "baselineEvidence": [
             "mcp-server/test-installer.mjs",
             "mcp-server/test-mcp-compatibility.mjs",
@@ -749,10 +823,10 @@
         {
           "id": "A1",
           "title": "Temporal claim and supersession model",
-          "status": "done",
+          "status": "in-progress",
           "owner": "Amanuensis",
-          "outcome": "Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.",
-          "rationale": "A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.",
+          "outcome": "Recorded authority is temporal in practice, not only in schema: the survey workflow writes claims, and no surface reports freshness it did not measure.",
+          "rationale": "A1 delivered the substrate and its unit tests, but nothing required the survey workflow to use it. The legacy entries staleness surface was never retired and never populated, so the dashboard, the stale backlog, and the published projection all report freshness from an empty table. Findings B03-2 and B04-1.",
           "dependsOn": [
             "A0"
           ],
@@ -766,12 +840,15 @@
             "Existing databases migrate forward and retain byte-for-byte accessible legacy artifacts; rollback can ignore new tables without losing old data.",
             "Observation, inference, hypothesis, open question, direct intent, inferred intent, and decision cannot be stored interchangeably.",
             "A claim invalidated at commit B is not returned as current at B or later, remains queryable historically, and can be superseded only with new evidence.",
-            "Bounded exhaustive tests cover interval edges, supersession cycles, evidence reachability, and contradictory current-authority states."
+            "Bounded exhaustive tests cover interval edges, supersession cycles, evidence reachability, and contradictory current-authority states.",
+            "The survey workflow writes temporal claims for the authoritative records it creates; a completed survey that leaves the claim tables empty fails rather than reporting success.",
+            "Every staleness signal is derived from a source a writer on the survey path populates. Any signal that cannot be — dashboard stale_entries, get_stale_backlog, clear_staleness, and the projection staleness map — is retired together with the surface it reads.",
+            "No surface renders absence of measurement as health: a projection distinguishes no drift recorded from no drift measured, and never emits an affirmative freshness sentence it cannot substantiate."
           ],
-          "redGate": "Attempt to create current authority without evidence, with an unknown commit, with a validity gap, or through a supersession cycle; every write must be rejected transactionally.",
+          "redGate": "Survey a subsystem, then advance HEAD past its anchoring commit. The dashboard, the stale backlog, and the published projection must each report the drift and name the affected subsystem. A run in which no writer populated the authority source must halt as a zero-denominator green rather than report freshness.",
           "risks": [
-            "Over-normalization could make ordinary reads expensive and agent usage cumbersome.",
-            "Backfilling legacy prose may imply claim precision the original records never had."
+            "Populating the legacy entries table is cheaper than retiring it and would preserve two competing authority models.",
+            "A freshness signal wired to a populated table can still be vacuous if nothing on the survey path writes to it; adoption must be proven by the workflow, not by a fixture."
           ],
           "practices": [
             "GP1",
@@ -801,10 +878,10 @@
         {
           "id": "A2",
           "title": "Change impact and invalidation engine",
-          "status": "done",
+          "status": "planned",
           "owner": "Amanuensis",
-          "outcome": "A commit range produces an explainable set of directly and transitively affected claims, seams, findings, and obligations without invalidating unrelated knowledge.",
-          "rationale": "Precise impact is the economic hinge: too little recall makes the record unsafe, while excessive invalidation destroys the promised time savings.",
+          "outcome": "Change impact is computed over a scope that is reconciled against the working tree, so impact is not silently sound-looking over an incomplete ledger.",
+          "rationale": "A2 computes impact from file-ledger rows, but nothing reconciles that ledger against the repository. detect_changes inner-joins the commit diff against existing rows, so files added since the baseline are invisible and rows for deleted files stay authoritative. Impact over an unreconciled ledger understates itself in exactly the cases that matter. Finding B03-1.",
           "dependsOn": [
             "A1"
           ],
@@ -818,9 +895,12 @@
             "The known-invalidation fixture reaches the expected claim and downstream obligation with no hidden manual expansion.",
             "The benign-refactor fixture stays within the false-invalidation guardrail and explains every invalidated object.",
             "Two-sided sensitivity checks show that adding and removing each relation class changes impact output in the predicted direction.",
-            "The explicit-relation implementation is measured before any model or embedding fallback is admitted."
+            "The explicit-relation implementation is measured before any model or embedding fallback is admitted.",
+            "Change detection reports, per subsystem, paths present in the tree but absent from the ledger and paths present in the ledger but absent from the tree.",
+            "A ledger row whose file no longer exists can be retired without discarding the subsystem’s dispositions, findings, artifacts, or cross-references.",
+            "A subsystem whose declared scope contains unclassified paths cannot be published as fully covered; the gap is reported with its count and paths."
           ],
-          "redGate": "Remove a required cross-reference or seam edge from the fixture; the predicted impact must lose the corresponding downstream claim and the coverage gate must turn red.",
+          "redGate": "Add one file to a surveyed subsystem’s declared scope and delete another the ledger records as examined. Reconciliation must report both, name each path, and refuse to describe the subsystem as fully covered. A reconciliation returning zero added and zero missing must demonstrate non-vacuity in the same run.",
           "risks": [
             "Static relations can miss runtime coupling and generated-code dependencies.",
             "Model-assisted impact can create nondeterministic invalidation noise."
@@ -857,10 +937,10 @@
         {
           "id": "A3",
           "title": "Obligation-driven revalidation scheduler",
-          "status": "done",
+          "status": "planned",
           "owner": "Amanuensis",
-          "outcome": "Invalidated knowledge becomes a bounded, prioritized queue whose completed work lands back into the conspectus and whose omissions remain visibly red.",
-          "rationale": "Detection without custody only creates a better stale list. Full automation requires a closed loop from change to assigned work to verified landing.",
+          "outcome": "Revalidation obligations are produced by real drift, and a refresh that observes drift without owning it cannot report success.",
+          "rationale": "A3 proved that dropped and duplicated obligations halt completion, but never that obligations are created at all. In this repository’s own conspectus the obligation tables are empty while the code has drifted 23 commits, so the scheduler’s controls have never had a denominator.",
           "dependsOn": [
             "A2"
           ],
@@ -874,9 +954,11 @@
             "Every invalidated authoritative claim creates at least one owned destination or a hard failure explaining why none can be formed.",
             "A dropped, duplicated, timed-out, or unscored worker result prevents run completion and remains queryable.",
             "Retries use unique attempt and replicate identifiers; a retry cannot overwrite earlier evidence.",
-            "The scheduler stays within configured source, budget, concurrency, and authority boundaries during an unattended fixture run."
+            "The scheduler stays within configured source, budget, concurrency, and authority boundaries during an unattended fixture run.",
+            "A refresh over a non-empty invalidation set that creates no obligation halts rather than completing.",
+            "Every obligation traces to the claim and the commit range that produced it."
           ],
-          "redGate": "Silently drop one dispatched obligation and duplicate another; completion must remain red with separate missing and duplicate diagnoses.",
+          "redGate": "Run the refresh path across a commit range that invalidates at least one authoritative claim while producing zero revalidation obligations; completion must halt and name the unowned claim. A refresh reporting success on a zero-obligation denominator fails.",
           "risks": [
             "Queue throughput can become a proxy target that rewards shallow closures.",
             "Aggressive retries can amplify provider cost or repeat correlated errors."
@@ -1045,7 +1127,9 @@
           "owner": "Amanuensis",
           "outcome": "A new repository creates local survey state only when first used, while install, upgrade, rollback, and uninstall remain managed and reversible.",
           "rationale": "Global activation removes repository setup only if ordinary first use and later package lifecycle operations do not reintroduce hidden configuration or storage ceremony.",
-          "dependsOn": ["A22"],
+          "dependsOn": [
+            "A22"
+          ],
           "deliverables": [
             "User-scoped install, upgrade, doctor, and uninstall commands with dry-run and managed ownership.",
             "Lazy project-store creation with interruption-safe initialization and read-back.",
@@ -1061,8 +1145,19 @@
             "Lazy initialization can move failures from installation into the first user workflow.",
             "Version skew between global skill, launcher, and stored schema can produce confusing partial compatibility."
           ],
-          "practices": ["GP8", "GP18", "GP25", "GP28", "VP4", "VP20"],
-          "metrics": ["M13", "M14", "M17"],
+          "practices": [
+            "GP8",
+            "GP18",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M14",
+            "M17"
+          ],
           "baselineEvidence": [
             "mcp-server/src/cli.ts",
             "mcp-server/src/project.ts",
@@ -1080,7 +1175,9 @@
           "owner": "Amanuensis + release",
           "outcome": "The npm-installed package and source checkout expose the same friction-free activation, migration, diagnosis, and containment behavior.",
           "rationale": "A source-only success would not repair the path ordinary users install, and packaging can silently change executable discovery, skill custody, and cwd behavior.",
-          "dependsOn": ["A23"],
+          "dependsOn": [
+            "A23"
+          ],
           "deliverables": [
             "Published-package smoke scenarios for global install, fresh-repository first use, doctor, upgrade, and uninstall.",
             "A parity manifest comparing source and packaged activation receipts and failure classes.",
@@ -1096,8 +1193,20 @@
             "GUI hosts can retain an older package process after the filesystem upgrade succeeds.",
             "A clean packaging fixture may omit real user configuration collisions."
           ],
-          "practices": ["GP8", "GP21", "GP22", "GP28", "VP4", "VP11", "VP20"],
-          "metrics": ["M13", "M14", "M12"],
+          "practices": [
+            "GP8",
+            "GP21",
+            "GP22",
+            "GP28",
+            "VP4",
+            "VP11",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M14",
+            "M12"
+          ],
           "baselineEvidence": [
             "mcp-server/package.json",
             ".github/workflows/published-smoke.yml",
@@ -1163,9 +1272,9 @@
           ]
         },
         {
-      "id": "A7",
-      "title": "Independent review generation and refutation",
-      "status": "done",
+          "id": "A7",
+          "title": "Independent review generation and refutation",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "Candidate review findings are generated and attacked by role-separated passes with controlled context differences, then aggregated without contaminating independent judgments.",
           "rationale": "A large context and a self-critique prompt do not create independent scrutiny. Consequential findings need a refutation path designed around correlated failure.",
@@ -1217,20 +1326,20 @@
           "baselineEvidence": [
             ".claude/skills/amanuensis/references/phase-4-adversarial.md",
             ".claude/skills/amanuensis/references/phase-3-concerns.md",
-        "mcp-server/src/invariants.ts",
-        "mcp-server/src/tools/review.ts",
-        "mcp-server/test-adversarial-correctness.mjs",
-        "mcp-server/test-review-brief.mjs",
-        "mcp-server/src/tools/review-analysis.ts",
-        "mcp-server/fixtures/review-analysis/manifest.json",
-        "mcp-server/test-review-analysis.mjs",
-        "dev/adr/0008-independent-review-custody-and-blinding.md"
+            "mcp-server/src/invariants.ts",
+            "mcp-server/src/tools/review.ts",
+            "mcp-server/test-adversarial-correctness.mjs",
+            "mcp-server/test-review-brief.mjs",
+            "mcp-server/src/tools/review-analysis.ts",
+            "mcp-server/fixtures/review-analysis/manifest.json",
+            "mcp-server/test-review-analysis.mjs",
+            "dev/adr/0008-independent-review-custody-and-blinding.md"
           ]
         },
         {
-      "id": "A8",
-      "title": "Composition and integral HEAD verification",
-      "status": "done",
+          "id": "A8",
+          "title": "Composition and integral HEAD verification",
+          "status": "done",
           "owner": "Amanuensis",
           "outcome": "The review system proves that expected parts landed, fans in results, and evaluates the assembled repository state rather than inferring integration from local successes.",
           "rationale": "Many consequential failures live at seams or appear only after individually correct patches compose.",
@@ -1527,7 +1636,9 @@
           "owner": "Amanuensis + evaluation",
           "outcome": "Real repository use establishes where friction-free activation works, fails, or remains unsupported without pooled claims hiding weak strata.",
           "rationale": "A syntactic installer suite and synthetic host harness cannot establish usability, diagnosis time, or isolation under diverse existing configurations.",
-          "dependsOn": ["A24"],
+          "dependsOn": [
+            "A24"
+          ],
           "deliverables": [
             "A preregistered matrix spanning at least five repositories, nested launches, worktrees, existing global config, and concurrent tasks.",
             "Per-run receipts for setup actions, restarts, binding, writes, diagnosis time, recovery, and user intervention.",
@@ -1543,8 +1654,30 @@
             "A convenient repository sample can underrepresent hostile existing configurations.",
             "Dogfood operators familiar with the implementation can understate diagnosis friction."
           ],
-          "practices": ["GP2", "GP3", "GP4", "GP21", "GP22", "GP31", "GP33", "VP5", "VP6", "VP10", "VP17", "VP19", "VP21", "VP26"],
-          "metrics": ["M13", "M14", "M15", "M16", "M17", "M11"],
+          "practices": [
+            "GP2",
+            "GP3",
+            "GP4",
+            "GP21",
+            "GP22",
+            "GP31",
+            "GP33",
+            "VP5",
+            "VP6",
+            "VP10",
+            "VP17",
+            "VP19",
+            "VP21",
+            "VP26"
+          ],
+          "metrics": [
+            "M13",
+            "M14",
+            "M15",
+            "M16",
+            "M17",
+            "M11"
+          ],
           "baselineEvidence": [
             "mcp-server/src/tools/evaluation.ts",
             "mcp-server/test-operating-envelope.mjs",
@@ -1564,7 +1697,9 @@
           "owner": "Amanuensis + release",
           "outcome": "A release candidate is demonstrably install-once, repository-correct, isolated, diagnosable, reversible, and ready for a separately authorized beta publication.",
           "rationale": "Implementation completion must not be relabeled as product usability; the release claim needs criterion-linked operating evidence and independent read-back.",
-          "dependsOn": ["A25"],
+          "dependsOn": [
+            "A25"
+          ],
           "deliverables": [
             "A release checklist derived from A19–A25 acceptance and red gates with exact evidence links.",
             "A clean-machine source and package replay plus configuration migration and rollback rehearsal.",
@@ -1580,8 +1715,24 @@
             "Pressure to publish can collapse release readiness into package build success.",
             "A beta label can be mistaken for an established cross-client operating envelope."
           ],
-          "practices": ["GP8", "GP20", "GP23", "GP25", "GP28", "VP4", "VP11", "VP20"],
-          "metrics": ["M13", "M14", "M15", "M16", "M17", "M12"],
+          "practices": [
+            "GP8",
+            "GP20",
+            "GP23",
+            "GP25",
+            "GP28",
+            "VP4",
+            "VP11",
+            "VP20"
+          ],
+          "metrics": [
+            "M13",
+            "M14",
+            "M15",
+            "M16",
+            "M17",
+            "M12"
+          ],
           "baselineEvidence": [
             ".github/workflows/test.yml",
             ".github/workflows/published-smoke.yml",
@@ -2175,7 +2326,9 @@
     {
       "sequence": 7,
       "title": "Freeze the activation contract and prove the wrong-workspace red case",
-      "initiatives": ["A19"],
+      "initiatives": [
+        "A19"
+      ],
       "intent": "Turn the observed multi-repository activation failure into a versioned product contract and a failing executable fixture before changing installation behavior.",
       "existingFiles": [
         "mcp-server/src/cli.ts",
@@ -2203,7 +2356,10 @@
     {
       "sequence": 8,
       "title": "Ship global installation, migration, and diagnosis",
-      "initiatives": ["A19", "A20"],
+      "initiatives": [
+        "A19",
+        "A20"
+      ],
       "intent": "Add the one-time user installation path and make existing configuration conflicts inspectable and safely repairable.",
       "existingFiles": [
         "mcp-server/src/cli.ts",
@@ -2231,7 +2387,9 @@
     {
       "sequence": 9,
       "title": "Centralize immutable binding and containment",
-      "initiatives": ["A21"],
+      "initiatives": [
+        "A21"
+      ],
       "intent": "Make repository selection and every Amanuensis mutation share one identity-bound containment substrate.",
       "existingFiles": [
         "mcp-server/src/index.ts",
@@ -2259,7 +2417,9 @@
     {
       "sequence": 10,
       "title": "Verify the real Codex host across repositories",
-      "initiatives": ["A22"],
+      "initiatives": [
+        "A22"
+      ],
       "intent": "Test what Codex actually launches and retains, including concurrent tasks and configuration changes that require restart.",
       "existingFiles": [
         "mcp-server/test-installer.mjs",
@@ -2287,7 +2447,10 @@
     {
       "sequence": 11,
       "title": "Remove first-use and package lifecycle ceremony",
-      "initiatives": ["A23", "A24"],
+      "initiatives": [
+        "A23",
+        "A24"
+      ],
       "intent": "Compose lazy project initialization, reversible lifecycle commands, and source/package parity into the ordinary user path.",
       "existingFiles": [
         "mcp-server/src/cli.ts",
@@ -2315,7 +2478,10 @@
     {
       "sequence": 12,
       "title": "Earn and package the friction-free beta claim",
-      "initiatives": ["A25", "A26"],
+      "initiatives": [
+        "A25",
+        "A26"
+      ],
       "intent": "Measure the complete activation path across real repositories and produce a release-ready report whose missing strata remain red.",
       "existingFiles": [
         "mcp-server/src/tools/evaluation.ts",
@@ -2542,31 +2708,56 @@
       "level": 8,
       "fixture": "Hard-coded global registration conflicts with a cwd-relative project registration",
       "expected": "Activation and doctor identify the effective wrong workspace before writes and offer a backup-bearing managed migration.",
-      "validates": ["M13", "M15", "M16"]
+      "validates": [
+        "M13",
+        "M15",
+        "M16"
+      ]
     },
     {
       "level": 9,
       "fixture": "Fresh trusted repository after one user-scoped installation",
       "expected": "A new task binds the repository and begins first use with no repository-local config, Amanuensis command, or reload.",
-      "validates": ["M13", "M14", "M17"]
+      "validates": [
+        "M13",
+        "M14",
+        "M17"
+      ]
     },
     {
       "level": 10,
       "fixture": "Concurrent independent repositories plus a linked worktree",
       "expected": "Every process retains its own immutable binding and storage identity with zero cross-repository writes through interruption and resume.",
-      "validates": ["M13", "M15", "M11", "M12"]
+      "validates": [
+        "M13",
+        "M15",
+        "M11",
+        "M12"
+      ]
     },
     {
       "level": 11,
       "fixture": "Interrupted install, migration, lazy first use, upgrade, rollback, and uninstall",
       "expected": "Each operation recovers to a verified managed configuration and identity-bound store or rolls back without collateral changes.",
-      "validates": ["M13", "M14", "M15", "M17", "M12"]
+      "validates": [
+        "M13",
+        "M14",
+        "M15",
+        "M17",
+        "M12"
+      ]
     },
     {
       "level": 12,
       "fixture": "Source checkout versus packed npm artifact across the activation matrix",
       "expected": "Both paths produce equivalent activation receipts, diagnoses, containment behavior, and documented restart requirements.",
-      "validates": ["M13", "M14", "M15", "M16", "M17"]
+      "validates": [
+        "M13",
+        "M14",
+        "M15",
+        "M16",
+        "M17"
+      ]
     }
   ],
   "risks": [
@@ -2758,8 +2949,7 @@
       "A18 qualifies two private natural-history cases as evaluation instruments. Their red/green witnesses prove transport and oracle sensitivity, not Amanuensis efficacy, construction-method efficacy, representativeness, or causality.",
       "Numeric gates for recall, invalidation, and precision are initial operating hypotheses, not established effect estimates; A0 and A16 may revise them with recorded rationale.",
       "The roadmap validator proves structure, dependency integrity, required fields, practice-accounting coverage, evidence-path existence, and projection correspondence. It does not prove that roadmap claims are true or that the plan will work.",
-      "External Chorusmith, Scholiast, Collatio, and distillation contracts were used as planning context but are not vendored or enforced by this repository yet."
-      ,
+      "External Chorusmith, Scholiast, Collatio, and distillation contracts were used as planning context but are not vendored or enforced by this repository yet.",
       "Practice-catalog v2.9 changed handles only and did not invalidate IDs or results. Catalog v2.10 adds VP26; historical measurements without a separate detector version remain historical-only and cannot support longitudinal regression claims until explicitly rebaselined.",
       "Repository-wide VP21 diagnostic coverage is unmeasured because the blocking-gate population and gate-to-red-proof registry have not yet been typed. A0's eight control classes and individual initiative red gates must not be generalized to 100% repository-gate coverage."
     ]

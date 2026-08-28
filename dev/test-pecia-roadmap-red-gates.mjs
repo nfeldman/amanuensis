@@ -51,10 +51,20 @@ function run(fixture, expectedStatus, expectedText) {
   }
 }
 
+// Resolve a label the same way the checker does: to the tail of its supersession
+// chain. `rev` is per-record and not comparable across records, so sorting by it
+// silently returns a superseded record once an initiative has been reopened —
+// which makes every sabotage built on it a no-op.
 function headForLabel(state, label) {
-  return state.records
-    .filter((record) => record.labels?.includes(label))
-    .sort((left, right) => right.rev - left.rev)[0];
+  const heads = new Map();
+  for (const record of state.records) {
+    if (!record.labels?.includes(label)) continue;
+    const current = heads.get(record.id);
+    if (!current || record.rev > current.rev) heads.set(record.id, record);
+  }
+  const matches = [...heads.values()];
+  const superseded = new Set(matches.map((record) => record.edges?.discovered_from).filter(Boolean));
+  return matches.find((record) => !superseded.has(record.id)) ?? matches[0];
 }
 
 try {
@@ -65,7 +75,41 @@ try {
       state.records = state.records.filter((record) => !record.labels?.includes("roadmap:A1"));
     }),
     1,
-    "roadmap:A1 must identify exactly one Pecia head",
+    "roadmap:A1 must identify at least one Pecia head",
+  );
+
+  // A label may cover a supersession chain, but only one tail. Two records that
+  // independently claim the same initiative must still halt — this is the error
+  // class the previous exactly-one-head rule existed to catch, and relaxing that
+  // rule for reopening must not have surrendered it.
+  run(
+    writeCase("rival-claims", (state) => {
+      const current = headForLabel(state, "roadmap:A1");
+      state.records.push({
+        ...structuredClone(current),
+        id: "pc-rival",
+        rev: 1,
+        edges: { ...structuredClone(current.edges), discovered_from: null },
+      });
+    }),
+    1,
+    "must resolve to exactly one current record",
+  );
+
+  // A successor whose predecessor does not carry the label is not a chain; it is
+  // an unrelated record hiding behind discovered_from.
+  run(
+    writeCase("broken-chain", (state) => {
+      // Leave exactly one tail, but sever a superseded link so the chain no
+      // longer terminates inside the label's own record set.
+      for (const record of state.records) {
+        if (record.labels?.includes("roadmap:A1") && record.edges?.discovered_from === null) {
+          record.edges = { ...record.edges, discovered_from: "pc-outside" };
+        }
+      }
+    }),
+    1,
+    "chain is broken",
   );
 
   run(

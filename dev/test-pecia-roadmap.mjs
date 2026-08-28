@@ -27,10 +27,41 @@ function recordsWithLabel(label) {
   return [...heads.values()].filter((record) => record.labels?.includes(label));
 }
 
+// Pecia treats closure as final: reopening work creates a successor record
+// carrying edges.discovered_from rather than un-closing the original, so one
+// roadmap initiative legitimately accumulates a chain of heads under the same
+// label. Resolve the label to that chain's tail — the head no other head was
+// discovered from — instead of demanding a single record forever.
+//
+// This keeps the error class the previous exactly-one rule existed to catch:
+// two records that independently claim the same initiative are two tails, and
+// still fail. Only genuine supersession is admitted. A forked or broken chain
+// fails closed.
 function exactlyOne(label) {
   const matches = recordsWithLabel(label);
-  assert.equal(matches.length, 1, `${label} must identify exactly one Pecia head`);
-  return matches[0];
+  assert.notEqual(matches.length, 0, `${label} must identify at least one Pecia head`);
+  const supersededIds = new Set(
+    matches.map((record) => record.edges?.discovered_from).filter(Boolean),
+  );
+  const tails = matches.filter((record) => !supersededIds.has(record.id));
+  assert.equal(
+    tails.length,
+    1,
+    `${label} must resolve to exactly one current record; found ${tails.length} ` +
+      `chain tails among ${matches.length} heads (${matches.map((r) => r.id).join(", ")})`,
+  );
+  // Every non-tail must actually be part of this label's chain, so an unrelated
+  // record cannot hide behind a discovered_from pointing outside the set.
+  const known = new Set(matches.map((record) => record.id));
+  for (const record of matches) {
+    const parent = record.edges?.discovered_from;
+    if (record.id === tails[0].id) continue;
+    assert.ok(
+      parent === null || parent === undefined || known.has(parent),
+      `${label} chain is broken: ${record.id} was discovered from ${parent}, which does not carry ${label}`,
+    );
+  }
+  return tails[0];
 }
 
 const initiatives = roadmap.stages.flatMap((stage) =>

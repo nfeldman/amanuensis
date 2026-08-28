@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,6 +69,52 @@ function nonEmptyStrings(value, field, errors, minimum = 1) {
       errors,
     );
   });
+}
+
+// Resolve an annotated or lightweight tag to its commit. Returns null when the
+// tag is absent or the working tree is not a Git repository, so the roadmap
+// still renders outside a checkout; callers distinguish absent from mismatched.
+function resolveTagCommit(tag) {
+  try {
+    return execFileSync("git", ["rev-parse", "--verify", "--quiet", `refs/tags/${tag}^{commit}`], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 10_000,
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+// B05-1: delivery.release was previously checked only against itself and the
+// A26 receipt, so a version that had already been tagged and published could
+// keep asserting candidate/not-published forever. Reconcile the declared state
+// against the repository's own tags — offline, deterministic, and independent
+// of the roadmap's own prose.
+function reconcileReleaseWithRepository(release, errors) {
+  if (!release?.tag) return;
+  const tagCommit = resolveTagCommit(release.tag);
+  if (release.status === "candidate") {
+    assert(
+      tagCommit === null,
+      `delivery.release candidate must not name a tag that already exists: ${release.tag} resolves to ${tagCommit}`,
+      errors,
+    );
+    return;
+  }
+  if (release.status === "established") {
+    if (tagCommit === null) {
+      // Absent tag is not provable drift: shallow clones and fresh CI checkouts
+      // legitimately lack tags. Reported as an unverified axis, not a failure.
+      return;
+    }
+    assert(
+      release.tagCommit === tagCommit,
+      `delivery.release.tagCommit must equal the commit its tag resolves to (${release.tag} -> ${tagCommit})`,
+      errors,
+    );
+  }
 }
 
 function validateEstablishedRelease(release, prefix, errors) {
@@ -242,8 +289,25 @@ function validateRoadmap(roadmap) {
   assert(release?.tag === `v${release?.version}`, "delivery.release.tag must equal v<release.version>", errors);
   assert(release?.registry === "npmjs", "delivery.release.registry must be npmjs", errors);
   assert(release?.distTag === "latest", "delivery.release.distTag must be latest", errors);
+  reconcileReleaseWithRepository(release, errors);
   if (release?.status === "established") {
     validateEstablishedRelease(release, "delivery.release", errors);
+    // An established release may still carry its predecessor for the public
+    // history line. It is optional, but when present it is held to the same
+    // evidence bar as any established release; an unvalidated history entry
+    // would let a failed publish or smoke run persist unnoticed.
+    if (release?.previousEstablished !== undefined) {
+      validateEstablishedRelease(
+        release.previousEstablished,
+        "delivery.release.previousEstablished",
+        errors,
+      );
+      assert(
+        release?.previousEstablished?.version !== release?.version,
+        "delivery.release.previousEstablished must identify an earlier version",
+        errors,
+      );
+    }
   } else if (release?.status === "candidate") {
     assert(
       release?.publicationAuthorized === true && release?.publicationStatus === "not-published",

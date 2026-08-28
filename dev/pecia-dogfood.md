@@ -9,9 +9,17 @@ version to the claimed local-v2 `.pecia/snapshot.head` timeline identity.
 ## Operating contract
 
 - Each roadmap stage has one Pecia milestone labeled `roadmap:stage-<id>`.
-- Each initiative has one Pecia task labeled `roadmap:<initiative-id>`.
+- Each initiative resolves to one *current* Pecia task labeled
+  `roadmap:<initiative-id>`. Because Pecia treats closure as final, reopening an
+  initiative appends a successor task carrying `discovered_from` rather than
+  un-closing the original, so a label may legitimately cover a chain of records.
+  The validator resolves the label to that chain's tail — the head no other head
+  was discovered from. Two records that independently claim one initiative are
+  two tails and still fail; a forked or broken chain fails closed.
 - A roadmap dependency `B dependsOn A` is represented by Pecia's directed
-  `A blocks B` edge.
+  `A blocks B` edge. When an initiative is reopened, its predecessors' `blocks`
+  edges are repointed at the successor so the graph describes current work; the
+  superseded record keeps its own disposition and evidence unchanged.
 - `node dev/test-pecia-roadmap.mjs` rejects missing, duplicate, extra, or
   status/dependency-divergent custody records.
 - Completion still requires the roadmap's tests and red gate. Pecia's clean

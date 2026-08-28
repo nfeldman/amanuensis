@@ -12,7 +12,7 @@ The v2 epistemic engine, review, architecture, research-learning, and Chorusmith
 
 | Ready | Planned | In progress | Blocked | Implemented |
 |---:|---:|---:|---:|---:|
-| 0 | 0 | 0 | 0 | 27 |
+| 0 | 2 | 1 | 0 | 24 |
 
 The horizons are dependency bands, not calendar promises. An initiative advances only when its acceptance checks pass and its red gate has first been demonstrated to fail.
 
@@ -22,7 +22,9 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 | Next | Make first use, upgrade, rollback, and published-package operation preserve the proven activation contract without repository-by-repository intervention. | unestablished | A23, A24, A6, A7, A8, A9, A10, A11, A12 |
 | Later | Demonstrate zero-ceremony, isolated multi-repository operation under real use and pass a release-ready beta gate without pooling away weak strata. | unestablished | A25, A26, A13, A14, A15, A16, A17, A18 |
 
-**Implementation:** All 27 roadmap initiatives have local criterion-linked evidence. The last remotely integrated baseline remains `0e2dafb81d08ebfd3bce718aed376a588095a3a8` at `origin:refs/heads/main` (verified 2026-08-19); the current local expansion is not claimed at that remote or CI run.
+**Implementation baseline:** The previously integrated program at `0e2dafb81d08ebfd3bce718aed376a588095a3a8` is contained by `origin:refs/heads/main` (verified 2026-08-19).
+
+**Active expansion:** 3 of 27 initiatives remain unfinished; completed baseline initiatives retain their historical evidence.
 
 **Product proof:** unestablished.
 
@@ -32,11 +34,13 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Conspectus read-back:** `v2-integration-0e2dafb-terminal` passed state, coverage, and content with 0 mismatches at source `0e2dafb81d08ebfd3bce718aed376a588095a3a8`; durable storage commit `533962b5d55edfe112caf6fff7fb82d0588bed63`.
 
-**Release:** candidate; `v0.2.0-beta.1` / `@gruetech/amanuensis@0.2.0-beta.1` is authorized but not-published.
+**Release:** established; [v0.2.0-beta.1](https://github.com/nfeldman/amanuensis/tree/v0.2.0-beta.1) published [@gruetech/amanuensis@0.2.0-beta.1](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-beta.1) as `latest` on npmjs.
 
-**Pre-publication evidence:** [A26 release-readiness receipt](dev/activation-evidence/a26-release-readiness.json) proves this candidate ready without claiming a tag, registry artifact, or published-package smoke result.
+**Publication evidence:** [publish.yml run 32998936471](https://github.com/nfeldman/amanuensis/actions/runs/32998936471) concluded success at tag commit `56940800af7a4c99980a4e09a41559bb65891153`; registry shasum `83abf7279073f562bd47dbf1874ff762cbe4a97c`.
 
-**Previous established release:** [v0.2.0-alpha.1](https://github.com/nfeldman/amanuensis/tree/v0.2.0-alpha.1) published [@gruetech/amanuensis@0.2.0-alpha.1](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-alpha.1) as `latest` on npmjs.
+**Published-package smoke:** [published-smoke.yml run 32999327584](https://github.com/nfeldman/amanuensis/actions/runs/32999327584) concluded success for `0.2.0-beta.1`.
+
+**Next implementation initiative:** A1 — Temporal claim and supersession model.
 
 ## Epistemic baseline
 
@@ -387,14 +391,14 @@ Risks:
 
 #### A1 — Temporal claim and supersession model
 
-**Implementation status:** done<br>
+**Implementation status:** in-progress<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A0<br>
 **Metrics:** M1, M2, M3
 
-**Outcome:** Every authoritative statement is typed, provenance-bearing, and explicitly valid for a repository state; invalidation and supersession preserve history.
+**Outcome:** Recorded authority is temporal in practice, not only in schema: the survey workflow writes claims, and no surface reports freshness it did not measure.
 
-**Why:** A living record cannot be built by attaching a stale bit to whole subsystem prose. Review and design both require knowing exactly which claims lost authority and why.
+**Why:** A1 delivered the substrate and its unit tests, but nothing required the survey workflow to use it. The legacy entries staleness surface was never retired and never populated, so the dashboard, the stale backlog, and the published projection all report freshness from an empty table. Findings B03-2 and B04-1.
 
 Deliverables:
 
@@ -409,27 +413,30 @@ Acceptance:
 - Observation, inference, hypothesis, open question, direct intent, inferred intent, and decision cannot be stored interchangeably.
 - A claim invalidated at commit B is not returned as current at B or later, remains queryable historically, and can be superseded only with new evidence.
 - Bounded exhaustive tests cover interval edges, supersession cycles, evidence reachability, and contradictory current-authority states.
+- The survey workflow writes temporal claims for the authoritative records it creates; a completed survey that leaves the claim tables empty fails rather than reporting success.
+- Every staleness signal is derived from a source a writer on the survey path populates. Any signal that cannot be — dashboard stale_entries, get_stale_backlog, clear_staleness, and the projection staleness map — is retired together with the surface it reads.
+- No surface renders absence of measurement as health: a projection distinguishes no drift recorded from no drift measured, and never emits an affirmative freshness sentence it cannot substantiate.
 
-**Red gate:** Attempt to create current authority without evidence, with an unknown commit, with a validity gap, or through a supersession cycle; every write must be rejected transactionally.
+**Red gate:** Survey a subsystem, then advance HEAD past its anchoring commit. The dashboard, the stale backlog, and the published projection must each report the drift and name the affected subsystem. A run in which no writer populated the authority source must halt as a zero-denominator green rather than report freshness.
 
 Risks:
 
-- Over-normalization could make ordinary reads expensive and agent usage cumbersome.
-- Backfilling legacy prose may imply claim precision the original records never had.
+- Populating the legacy entries table is cheaper than retiring it and would preserve two competing authority models.
+- A freshness signal wired to a populated table can still be vacuous if nothing on the survey path writes to it; adoption must be proven by the workflow, not by a fixture.
 
 **Practice basis:** GP1, GP6, GP9, GP11, GP12, GP18, GP27, GP35, VP24<br>
 **Baseline evidence:** `mcp-server/src/schema.sql`, `mcp-server/src/tools/evidence.ts`, `mcp-server/src/tools/contradictions.ts`, `dev/adr/0002-temporal-claim-model.md`, `mcp-server/src/tools/claims.ts`, `mcp-server/test-temporal-claims.mjs`
 
 #### A2 — Change impact and invalidation engine
 
-**Implementation status:** done<br>
+**Implementation status:** planned<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A1<br>
 **Metrics:** M2, M3, M4
 
-**Outcome:** A commit range produces an explainable set of directly and transitively affected claims, seams, findings, and obligations without invalidating unrelated knowledge.
+**Outcome:** Change impact is computed over a scope that is reconciled against the working tree, so impact is not silently sound-looking over an incomplete ledger.
 
-**Why:** Precise impact is the economic hinge: too little recall makes the record unsafe, while excessive invalidation destroys the promised time savings.
+**Why:** A2 computes impact from file-ledger rows, but nothing reconciles that ledger against the repository. detect_changes inner-joins the commit diff against existing rows, so files added since the baseline are invisible and rows for deleted files stay authoritative. Impact over an unreconciled ledger understates itself in exactly the cases that matter. Finding B03-1.
 
 Deliverables:
 
@@ -444,8 +451,11 @@ Acceptance:
 - The benign-refactor fixture stays within the false-invalidation guardrail and explains every invalidated object.
 - Two-sided sensitivity checks show that adding and removing each relation class changes impact output in the predicted direction.
 - The explicit-relation implementation is measured before any model or embedding fallback is admitted.
+- Change detection reports, per subsystem, paths present in the tree but absent from the ledger and paths present in the ledger but absent from the tree.
+- A ledger row whose file no longer exists can be retired without discarding the subsystem’s dispositions, findings, artifacts, or cross-references.
+- A subsystem whose declared scope contains unclassified paths cannot be published as fully covered; the gap is reported with its count and paths.
 
-**Red gate:** Remove a required cross-reference or seam edge from the fixture; the predicted impact must lose the corresponding downstream claim and the coverage gate must turn red.
+**Red gate:** Add one file to a surveyed subsystem’s declared scope and delete another the ledger records as examined. Reconciliation must report both, name each path, and refuse to describe the subsystem as fully covered. A reconciliation returning zero added and zero missing must demonstrate non-vacuity in the same run.
 
 Risks:
 
@@ -457,14 +467,14 @@ Risks:
 
 #### A3 — Obligation-driven revalidation scheduler
 
-**Implementation status:** done<br>
+**Implementation status:** planned<br>
 **Owner:** Amanuensis<br>
 **Depends on:** A2<br>
 **Metrics:** M4, M11, M12
 
-**Outcome:** Invalidated knowledge becomes a bounded, prioritized queue whose completed work lands back into the conspectus and whose omissions remain visibly red.
+**Outcome:** Revalidation obligations are produced by real drift, and a refresh that observes drift without owning it cannot report success.
 
-**Why:** Detection without custody only creates a better stale list. Full automation requires a closed loop from change to assigned work to verified landing.
+**Why:** A3 proved that dropped and duplicated obligations halt completion, but never that obligations are created at all. In this repository’s own conspectus the obligation tables are empty while the code has drifted 23 commits, so the scheduler’s controls have never had a denominator.
 
 Deliverables:
 
@@ -479,8 +489,10 @@ Acceptance:
 - A dropped, duplicated, timed-out, or unscored worker result prevents run completion and remains queryable.
 - Retries use unique attempt and replicate identifiers; a retry cannot overwrite earlier evidence.
 - The scheduler stays within configured source, budget, concurrency, and authority boundaries during an unattended fixture run.
+- A refresh over a non-empty invalidation set that creates no obligation halts rather than completing.
+- Every obligation traces to the claim and the commit range that produced it.
 
-**Red gate:** Silently drop one dispatched obligation and duplicate another; completion must remain red with separate missing and duplicate diagnoses.
+**Red gate:** Run the refresh path across a commit range that invalidates at least one authoritative claim while producing zero revalidation obligations; completion must halt and name the unowned claim. A refresh reporting success on a zero-obligation denominator fails.
 
 Risks:
 
