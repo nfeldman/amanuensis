@@ -2,7 +2,7 @@
 
 **Canonical branch**: `main`  
 **Onboarding SHA**: `b8b566f`  
-**Last checked SHA**: `aba6d049e77c`
+**Last checked SHA**: `411821f61852`
 
 ## Quick orientation
 
@@ -16,7 +16,7 @@
 | Confirmed findings | 9 (0 critical, 4 high) |
 | Open bugs | 1 |
 | Stale entries | 0 |
-| Open field notes | 8 |
+| Open field notes | 10 |
 | Unresolved contradictions | 0 |
 
 
@@ -37,4 +37,4 @@ New here? Start with [How to read this conspectus](how-to-read.md).
 
 ## Latest session
 
-`dogfood: first conspectus pass by the repaired engine at aba6d04` — started 2026-08-29 02:53 UTC · **active**
+`Change detection against HEAD 411821f and staleness-signal observation` — started 2026-08-29 04:34 UTC · ended 2026-08-29 04:34 UTC

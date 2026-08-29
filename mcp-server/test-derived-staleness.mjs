@@ -269,5 +269,61 @@ t("A2: a clean reconciliation proves it measured something", () => {
   }
 });
 
+
+// ---------------------------------------------------------- exemption ----
+
+// A staleness count is an obligation count. Rows whose classification already
+// exempts them from survey — generated output, vendored code, files ruled
+// irrelevant — carry no obligation, so counting their drift dilutes the very
+// signal B03-2 and B04-1 repaired. The checked-in docs/ projection is the acute
+// case: it changes on every publish, so republishing the report would make the
+// conspectus report itself as staler.
+t("stale generated output does not move the obligation count", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    writeAndCommit(ws, "docs/report.html", "<p>1</p>\n", "publish");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      {
+        subsystem_id: "B-01",
+        ref_sha: base,
+        files: [
+          { file_path: "src/core.ts", classification: "examined" },
+          { file_path: "docs/report.html", classification: "generated-ignore" },
+        ],
+      },
+      ctx,
+    );
+
+    // Drift both in one commit: one is survey subject matter, one is not.
+    writeAndCommit(ws, "src/core.ts", "2\n", "source drift");
+    const head = writeAndCommit(ws, "docs/report.html", "<p>2</p>\n", "republish");
+    call("detect_changes", { current_sha: head }, ctx);
+
+    const dash = call("get_dashboard", {}, ctx);
+    assert(
+      dash.stale_entries === 1,
+      `obligation count must exclude exempt classifications, got ${dash.stale_entries}`,
+    );
+    // Non-vacuity: the exempt row really did drift, so a count of 1 is a
+    // filter working rather than nothing having changed.
+    assert(
+      dash.stale_exempt === 1,
+      `exempt drift must still be visible separately, got ${dash.stale_exempt}`,
+    );
+
+    const backlog = call("get_stale_backlog", {}, ctx);
+    assert(
+      backlog.length === 1 && backlog[0].source_path === "src/core.ts",
+      `backlog must offer only files carrying an obligation: ${JSON.stringify(backlog.map((r) => r.source_path))}`,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

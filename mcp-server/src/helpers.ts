@@ -1,6 +1,24 @@
 import type { DB } from "./db.js";
 import type { ProjectContext } from "./project.js";
 
+/**
+ * Classifications that exempt a scoped file from survey obligation: generated
+ * output, vendored third-party code, and files ruled irrelevant. Staleness over
+ * these is real drift but carries no work, so counting it in an obligation
+ * metric dilutes the signal — most sharply for a checked-in projection, which
+ * changes on every publish and would otherwise make republishing the report
+ * read as the conspectus going stale.
+ */
+export const OBLIGATION_EXEMPT_CLASSIFICATIONS = [
+  "generated-ignore",
+  "vendor-ignore",
+  "irrelevant",
+] as const;
+
+/** SQL predicate selecting ledger rows that do carry a survey obligation. */
+export const OBLIGATION_BEARING_SQL =
+  "COALESCE(classification, 'candidate') NOT IN ('generated-ignore', 'vendor-ignore', 'irrelevant')";
+
 export interface ServerContext {
   project: ProjectContext;
   db: DB;

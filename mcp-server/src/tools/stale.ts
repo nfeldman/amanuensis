@@ -1,4 +1,5 @@
 import {
+  OBLIGATION_BEARING_SQL,
   ok,
   optInt,
   optString,
@@ -34,7 +35,7 @@ export const staleTools: ToolDefinition[] = [
                   COALESCE(h.access_count,0) AS access_count
              FROM file_ledger fl
              LEFT JOIN hot_subsystems h ON h.entry_id = fl.subsystem_id
-            WHERE fl.stale = 1
+            WHERE fl.stale = 1 AND ${OBLIGATION_BEARING_SQL}
             ORDER BY heat DESC, fl.subsystem_id, fl.file_path
             LIMIT ?`,
         )

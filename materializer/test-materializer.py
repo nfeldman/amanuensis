@@ -605,6 +605,17 @@ def main() -> None:
             measured = dmod.staleness_map(staleness_db)
             assert "B-01" in measured, measured
 
+            # An exempt row that has drifted must not appear as an obligation.
+            staleness_db.execute(
+                "INSERT INTO file_ledger (subsystem_id, file_path, classification, ref_sha, "
+                "stale, stale_reason) VALUES ('B-04', 'docs/report.html', 'generated-ignore', "
+                "'abc1234', 1, 'git-drift')"
+            )
+            staleness_db.commit()
+            mixed = dmod.staleness_map(staleness_db)
+            assert "B-04" not in mixed, mixed
+            assert "B-01" in mixed, mixed
+
             staleness_db.execute("UPDATE file_ledger SET stale = 0 WHERE file_path = 'src/core.ts'")
             staleness_db.commit()
             measured_clean = dmod.staleness_map(staleness_db)

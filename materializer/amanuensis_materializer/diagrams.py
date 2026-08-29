@@ -112,6 +112,16 @@ def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
     return "\n".join([header, sep, *body]) + legend
 
 
+# Generated output, vendored code, and files ruled irrelevant are scoped but
+# carry no survey obligation. Counting their drift would let a republished
+# projection — which changes on every publish — read as the conspectus going
+# stale, diluting the signal this view exists to give.
+_OBLIGATION_BEARING = (
+    "COALESCE(classification, 'candidate') NOT IN"
+    " ('generated-ignore', 'vendor-ignore', 'irrelevant')"
+)
+
+
 def staleness_map(conn: sqlite3.Connection) -> str:
     """Bar chart of stale entries per subsystem.
 
@@ -134,10 +144,14 @@ def staleness_map(conn: sqlite3.Connection) -> str:
         )
     rs = rows(
         conn,
-        "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger WHERE stale = 1 GROUP BY subsystem_id ORDER BY n DESC",
+        "SELECT subsystem_id, COUNT(*) AS n FROM file_ledger"
+        " WHERE stale = 1 AND " + _OBLIGATION_BEARING + " GROUP BY subsystem_id ORDER BY n DESC",
     )
     if not rs:
-        measured = rows(conn, "SELECT COUNT(*) AS n FROM file_ledger")
+        measured = rows(
+            conn,
+            "SELECT COUNT(*) AS n FROM file_ledger WHERE " + _OBLIGATION_BEARING,
+        )
         scoped = measured[0]["n"] if measured else 0
         if not scoped:
             return (
@@ -146,7 +160,8 @@ def staleness_map(conn: sqlite3.Connection) -> str:
             )
         return (
             f"_No stale files across {scoped} scoped file"
-            f"{'' if scoped == 1 else 's'} at the last reconciliation._"
+            f"{'' if scoped == 1 else 's'} carrying a survey obligation, at the last"
+            " reconciliation._"
         )
     lines = ["```mermaid", "pie showData", '    title Stale entries by subsystem']
     for r in rs:

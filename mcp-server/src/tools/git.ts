@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import type { ServerContext } from "../helpers.js";
 import {
   nowIso,
+  OBLIGATION_EXEMPT_CLASSIFICATIONS,
   ok,
   optString,
   optStringArray,
@@ -32,6 +33,12 @@ function getGit(ctx: ServerContext): {
       }
     | undefined;
   return row ?? null;
+}
+
+function carriesObligation(row: { classification: string | null }): boolean {
+  const value = (row.classification ??
+    "candidate") as (typeof OBLIGATION_EXEMPT_CLASSIFICATIONS)[number];
+  return !OBLIGATION_EXEMPT_CLASSIFICATIONS.includes(value);
 }
 
 function runGit(cwd: string, args: string[]): string {
@@ -205,8 +212,13 @@ export const gitTools: ToolDefinition[] = [
       }
       const trackedSet = new Set(trackedPaths);
       const ledgerRows = ctx.db
-        .prepare("SELECT subsystem_id, file_path, ref_sha FROM file_ledger")
-        .all() as { subsystem_id: string; file_path: string; ref_sha: string | null }[];
+        .prepare("SELECT subsystem_id, file_path, ref_sha, classification FROM file_ledger")
+        .all() as {
+        subsystem_id: string;
+        file_path: string;
+        ref_sha: string | null;
+        classification: string | null;
+      }[];
       const ledgerPaths = new Set(ledgerRows.map((r) => r.file_path));
 
       const unledgered = trackedPaths.filter((p) => !ledgerPaths.has(p));
@@ -253,6 +265,7 @@ export const gitTools: ToolDefinition[] = [
         bySubsystem.get(row.subsystem_id)?.files.add(row.file_path);
       }
 
+      const staleRows = [...drifted, ...absent];
       const stale_subsystems = Array.from(bySubsystem.entries()).map(([subsystem_id, v]) => ({
         subsystem_id,
         changed_files: Array.from(v.files),
@@ -272,7 +285,11 @@ export const gitTools: ToolDefinition[] = [
           subsystem_id: r.subsystem_id,
           file_path: r.file_path,
         })),
-        stale_files: drifted.length + absent.length,
+        // Split by obligation: drift over generated or vendored files is real
+        // but carries no survey work, and folding it into one number would let
+        // a republished projection read as the conspectus going stale.
+        stale_files: staleRows.filter(carriesObligation).length,
+        stale_exempt_files: staleRows.filter((row) => !carriesObligation(row)).length,
       };
     },
   },

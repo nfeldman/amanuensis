@@ -1,4 +1,4 @@
-import { optInt, type ToolDefinition } from "../helpers.js";
+import { OBLIGATION_BEARING_SQL, optInt, type ToolDefinition } from "../helpers.js";
 
 export const dashboardTools: ToolDefinition[] = [
   {
@@ -36,7 +36,8 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
                   (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
                   (SELECT COUNT(*) FILTER (WHERE status='confirmed-bug') FROM findings)        AS open_bugs,
-                  (SELECT COUNT(*) FILTER (WHERE stale=1)                FROM file_ledger)     AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS stale_entries,
+                  (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger) AS stale_exempt,
                   (SELECT COUNT(*)                                       FROM file_ledger)     AS scoped_files,
                   (SELECT COUNT(*) FILTER (WHERE kind='unledgered')      FROM scope_gaps)      AS unclassified_paths,
                   (SELECT COUNT(*) FILTER (WHERE kind='absent')          FROM scope_gaps)      AS absent_files,
@@ -55,6 +56,7 @@ export const dashboardTools: ToolDefinition[] = [
         total_findings: number;
         open_bugs: number;
         stale_entries: number;
+        stale_exempt: number;
         scoped_files: number;
         unclassified_paths: number;
         absent_files: number;
