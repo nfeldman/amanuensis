@@ -2,7 +2,7 @@
 
 _Items the autoprogress coordinator could not decide without human input. Each entry records the question, what the agent could not do because of it, and what assumption (if any) the agent proceeded with. Close out via `resolve_open_question` once answered; the reviewer's answers can feed back into a `reset_subsystem` + re-survey if the assumption turned out wrong._
 
-## Open (7)
+## Open (8)
 
 ### Domain Knowledge (2)
 
@@ -58,7 +58,15 @@ _Items the autoprogress coordinator could not decide without human input. Each e
 - **Assumption the agent proceeded with:** Treat these as explicit pre-production obligations; do not infer accessibility or reader-performance conformance from the current structural and visual checks.
 - _recorded 2026-08-23 05:55 UTC_
 
-### Tooling Limit (1)
+### Tooling Limit (2)
+
+#### #11 · subsystem `B-08` · phase `Release prep 2026-08-28`
+
+> Who runs the A25 real-host campaign needed to land the [B02-2](findings.md#b02-2) timeouts and cut v0.2.0-beta.2?
+
+- **What this blocked:** [B02-2](findings.md#b02-2)'s repair edits mcp-server/src/project.ts, which is one of the ten files the A25 operating-envelope receipt binds by sha256 and one of the twenty-three in the A26 candidate manifest. Both checkers correctly report 'source custody digest drifted' and turn red, and both run in CI. Re-measuring requires dev/run-activation-operating-envelope.mjs --execute against Codex-trusted temporary repositories, which needs host trust this session cannot grant, followed by dev/cleanup-activation-operating-trust.mjs to remove the trust records Codex persists.
+- **Assumption the agent proceeded with:** Did not bypass either gate or revert the fix. The [B02-2](findings.md#b02-2) work is verified and preserved on branch codex/b02-2-startup-bounds at 8c779e1, where both red gates pass; the branch heading to main carries A1-A3 and [B03-3](findings.md#b03-3) only, and its custody gates are green. The codex-host.ts ps timeout travels with the project.ts change rather than landing alone, so [B02-2](findings.md#b02-2) stays one atomic repair. v0.2.0-beta.2 cannot be cut until A25 and A26 are re-measured, because the roadmap release gate requires an A26 receipt naming the candidate version.
+- _recorded 2026-08-28 20:05 UTC_
 
 #### #7 · subsystem `B-01` · phase `Refresh 2026-08-27`
 

@@ -20,7 +20,6 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { ensureStorageRepo, isGitRepo } from "./storage-git.js";
 
 export interface ProjectContext {
@@ -83,8 +82,6 @@ function safeGitOrigin(workspace: string): string | null {
     const out = execSync("git remote get-url origin", {
       cwd: workspace,
       stdio: ["ignore", "pipe", "ignore"],
-      timeout: STARTUP_PROBE_TIMEOUT_MS,
-      killSignal: "SIGKILL",
     })
       .toString()
       .trim();
@@ -437,8 +434,6 @@ export function excludeLocalStorageFromWorkspaceGit(
       cwd: workspace,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-      timeout: STARTUP_PROBE_TIMEOUT_MS,
-      killSignal: "SIGKILL",
     }).trim();
   } catch {
     // A non-Git project has no parent index to protect.
@@ -460,8 +455,6 @@ export function excludeLocalStorageFromWorkspaceGit(
       cwd: workspace,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-      timeout: STARTUP_PROBE_TIMEOUT_MS,
-      killSignal: "SIGKILL",
     }).trim();
     if (!rawExclude) return;
     const excludePath = isAbsolute(rawExclude) ? rawExclude : resolve(workspace, rawExclude);
@@ -469,8 +462,6 @@ export function excludeLocalStorageFromWorkspaceGit(
       cwd: workspace,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-      timeout: STARTUP_PROBE_TIMEOUT_MS,
-      killSignal: "SIGKILL",
     }).trim();
     if (!rawCommonRoot) throw new Error("Git returned no common metadata directory");
     const commonRoot = realpathSync(
@@ -483,8 +474,6 @@ export function excludeLocalStorageFromWorkspaceGit(
       cwd: canonicalGitRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: STARTUP_PROBE_TIMEOUT_MS,
-      killSignal: "SIGKILL",
     });
     if (tracked.status === 0) {
       throw new Error(`${relativeStorage} is already tracked by the surveyed repository`);
@@ -511,8 +500,6 @@ export function excludeLocalStorageFromWorkspaceGit(
         cwd: canonicalGitRoot,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
-        timeout: STARTUP_PROBE_TIMEOUT_MS,
-        killSignal: "SIGKILL",
       },
     );
     if (ignored.status !== 0) {

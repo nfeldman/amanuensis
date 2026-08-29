@@ -97,7 +97,7 @@ Large mutation and validation surface coupled to [B-02](b02-mcp-core-persistence
 
 ## Findings
 
-### [B03-1](../findings.md#b03-1) · 🟠 HIGH · confirmed-bug
+### [B03-1](../findings.md#b03-1) · 🟠 HIGH · fixed
 
 **Symptom**: A subsystem can report status 'mapped' with zero stale entries while an arbitrary fraction of its declared scope has never been classified, and while ledger rows continue to assert that deleted files were examined.  
 **Root cause**: The refresh path never reconciles the file ledger against the working tree. detect_changes inner-joins the commit-range diff against file_ledger, so paths added since the baseline match no row and are silently dropped; no ledger writer enumerates the tree; the scoping-to-structural invariant checks only that at least one ledger row exists; and no classification value or non-destructive tool can retire a row whose file was deleted.
@@ -110,7 +110,7 @@ _Business context_: Coverage completeness is the core product claim: the conspec
 - `mcp-server/src/invariants.ts:enforcePhasePrerequisites@5694080`
 - `mcp-server/src/tools/subsystems.ts:reset_subsystem@5694080`
 
-### [B03-2](../findings.md#b03-2) · 🟠 HIGH · confirmed-bug
+### [B03-2](../findings.md#b03-2) · 🟠 HIGH · fixed
 
 **Symptom**: The entire staleness surface is inert. detect_changes reports drift to its caller but persists none of it, get_stale_backlog always returns empty, clear_staleness has nothing to clear, and the dashboard's stale_entries is permanently 0 regardless of how far the conspectus has drifted from HEAD.  
 **Root cause**: All staleness state lives in the entries table, and no server code path ever inserts a row into it. The only INSERT INTO entries in the repository is in materializer/test-readback.py, a test fixture. Every read and update of staleness therefore operates on a permanently empty table.
@@ -123,7 +123,7 @@ _Business context_: Staleness is the mechanism by which a living conspectus is s
 - `mcp-server/src/tools/dashboard.ts:get_dashboard@5694080`
 - `mcp-server/src/tools/stale.ts:clear_staleness@5694080`
 
-### [B03-3](../findings.md#b03-3) · 🟡 MEDIUM · confirmed-bug
+### [B03-3](../findings.md#b03-3) · 🟡 MEDIUM · fixed
 
 **Symptom**: A disposition whose strongest supporting evidence is test-observed, config-asserted, or doc-asserted cannot record that quality; set_disposition rejects the value, forcing the agent to overstate it as code-verified or understate it as contract-stated.  
 **Root cause**: The EVIDENCE_QUALITY enum in tools/dispositions.ts lists five values while the KINDS enum in tools/evidence.ts lists nine, and the [B-01](b01-survey-methodology-and-agent-contracts.md) methodology contract publishes an eight-rung ladder as the authoritative evidence-quality scale. The two vocabularies were allowed to diverge, and nothing checks them against each other or against the published contract.

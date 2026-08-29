@@ -104,6 +104,7 @@ Owns install/config merge, generated package mirrors, CI gates, and the public p
 | `mcp-server/biome.json` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/package-lock.json` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/package.json` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
+| `mcp-server/scripts/check-evidence-vocabulary.mjs` | examined | CI guard holding the evidence-quality vocabulary together across add_evidence, set_disposition, and SKILL.md; the substrate fix for [B03-3](../findings.md#b03-3). | `9c53be1` |
 | `mcp-server/scripts/check-sql-identifiers.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/scripts/check-tool-schemas.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/scripts/gen-tool-inventory.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
@@ -116,6 +117,7 @@ Owns install/config merge, generated package mirrors, CI gates, and the public p
 | `mcp-server/test-cloud-e2e.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/test-cloud-storage.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/test-compare.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
+| `mcp-server/test-derived-staleness.mjs` | examined | Red-gate suite for ledger-derived staleness and scope reconciliation; the A1/A2 gates behind [B03-1](../findings.md#b03-1) and [B03-2](../findings.md#b03-2). | `9c53be1` |
 | `mcp-server/test-installer.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/test-invariants.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/test-perf-ceilings.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |

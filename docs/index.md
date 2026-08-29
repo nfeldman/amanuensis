@@ -2,7 +2,7 @@
 
 **Canonical branch**: `main`  
 **Onboarding SHA**: `b8b566f`  
-**Last checked SHA**: `f848fc77823c`
+**Last checked SHA**: `9c53be1efa76`
 
 ## Quick orientation
 
@@ -14,9 +14,9 @@
 |---|---|
 | Subsystems mapped | 8 / 8 |
 | Confirmed findings | 8 (0 critical, 4 high) |
-| Open bugs | 5 |
+| Open bugs | 1 |
 | Stale entries | 0 |
-| Open field notes | 6 |
+| Open field notes | 8 |
 | Unresolved contradictions | 0 |
 
 
@@ -37,4 +37,4 @@ New here? Start with [How to read this conspectus](how-to-read.md).
 
 ## Latest session
 
-`record B04-1 and B05-1 repairs; complete refresh and republish` — started 2026-08-28 04:53 UTC · **active**
+`rebaseline conspectus to main after A1-A3 and B03-3 landed` — started 2026-08-28 22:41 UTC · **active**
