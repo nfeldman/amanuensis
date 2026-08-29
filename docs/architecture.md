@@ -36,4 +36,10 @@ _Projected from the recorded [onboarding runtime boundary table](onboarding-repo
 
 ## Staleness map
 
-_No staleness data recorded. This conspectus predates ledger-derived staleness, so this view reports absence of measurement rather than freshness; the next reconciliation will populate it._
+```mermaid
+pie showData
+    title Stale entries by subsystem
+    "B-08" : 9
+    "B-05" : 7
+    "B-02" : 2
+```

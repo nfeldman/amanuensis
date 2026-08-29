@@ -3,15 +3,15 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "fcb475f916707860259370bb105c488434d6e0dd6e7710e81368bfa18cf121cf"
+      "content_hash": "04a2ced67b3e13517be74bd2b1db2626600d5687b60e8315c72da24b7ef0cac7"
     },
     {
       "path": "architecture.md",
-      "content_hash": "46490acba2c2d093d2c2f0848117cbb3ede360001d28045c01689f14904adc56"
+      "content_hash": "da72ecf6d9bdbe4ae55da3d9ee32a0ff18e0729a58bbb375ccc66eddb51bbb18"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "806d698c273ec266e0ddb3d1db82f2367d0dbc8d7d68339dc827f31f99de9378"
+      "content_hash": "ec436f0c6bff91952e941627fda33e66d42b4ea6321b2b711d8bf0b76a6d032d"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "52c97b91b0d3a59b483cef8e1073db1a580b6cb44f67ec1a47ef5d40662347b9"
+      "content_hash": "ce789e6c4df30b6d023756feca7cb52f1656b6195b949d30eb0c70cf4a79d37a"
     },
     {
       "path": "concerns.md",
@@ -27,7 +27,7 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "95ae7383f5a181afcb42646b7b8e0ab8f58657285b8f4a01ef73390b27fc7bb5"
+      "content_hash": "4ba9fbd2bfa939fe7b8b10b409b9fe9a3717808a96d7cdbe49e924a79359e7cb"
     },
     {
       "path": "contradictions.md",
@@ -35,7 +35,7 @@
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "7d80d42331b2e9d9377c6c51ff246032f93ef02bbb8a221b9f457aef5b718f8b"
+      "content_hash": "150ea0e0fd00edf62dd46c87fe7d943b22a43c5b13fb5c6f9321d9fa7b573f30"
     },
     {
       "path": "diagnosticity.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "entry-point.html",
-      "content_hash": "2af72772e45931a93891404aafa3098db4d1fb900e22c558327607e0d7b71c9e"
+      "content_hash": "ebd87a0d1a6edcc5f67a3bf7f14e5eaf92ed1f2abf2a0a79a444bca0462a6dc8"
     },
     {
       "path": "entry-point.md",
@@ -51,7 +51,7 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "1dbdfa07c25be3cf205ee041d87bda091292c83e0ebec038e813279ef45445c4"
+      "content_hash": "0b857abe47e1e820005fc87fead4f9b916429c8cd9522e54b92376c8dd6f032b"
     },
     {
       "path": "field-notes.md",
@@ -59,15 +59,15 @@
     },
     {
       "path": "findings.html",
-      "content_hash": "214a6c0f207f8e83b3ac6aa1ea1a221e21781b0370186445c24ea04760900d8d"
+      "content_hash": "df89d096ce043e8592ff84697d5d70baeea4a9b8d899ac2ef724d12f6d2bb96b"
     },
     {
       "path": "findings.md",
-      "content_hash": "c7649ddf1f87c4b5d1c26ab5c405be91389126646ef6b84a28029459015ed9ad"
+      "content_hash": "0cd1d0be71be73c77fc2ae1c010e8b2227681ef66d029a6280c34e451984c941"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "55df3660423cc2b67f7518238f900f4ac7a2ab240f0ffe5023cffaec988a53f6"
+      "content_hash": "f253d27f7307c428fd9472e7409229da8779ab80646fa9809ffec208ba916fe8"
     },
     {
       "path": "how-to-read.md",
@@ -75,23 +75,23 @@
     },
     {
       "path": "index.html",
-      "content_hash": "5d9b97cd51315bdcc518d08270d9c844240c7580802274ccd4fd166ada7c6768"
+      "content_hash": "2a3192268a8c4016284dab498f45290d8cbd5b858c72ac92c79498c2b4c07bc2"
     },
     {
       "path": "index.md",
-      "content_hash": "50fe3f389d39df35f2aa35b1676ba6e92b715ee5222ed33de64213f482807f88"
+      "content_hash": "c2b194968aff209dcfed82c51d6560ae544d560745f89e24305af92e5f2c7a06"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "3f664140eb548ceef004eed089bdbd587c3236af8a816bf6c17692a78e63857f"
+      "content_hash": "2a4051d7416ce7ec0d2c77097925a34186a61945018bb7175be70a4a6572d570"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "bdf07cbbb53147f1d8d5318895893f4a32443b8abeb56d4f0f5beec274d18327"
+      "content_hash": "1240c183f419df1c9ad34fdde1bf3cd56fe51d35065f85c3da237acecee02de6"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "4763fb220374472b071d35cd4dbbda563413c554fcd492e909dc473fd6199305"
+      "content_hash": "f9bfaabc25ce78785e397cc7f7c3f35b6bc9f364b8e148a9905212f838bef673"
     },
     {
       "path": "onboarding-report.md",
@@ -99,15 +99,15 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "977877097e1471c9391339536bcb9e37da77ff71369261cfa1c8a75dedab5db1"
+      "content_hash": "cbc270ddf040d8bef42a5e467253182fa404873acfa8ddcd7611c97421026f8c"
     },
     {
       "path": "open-questions.md",
-      "content_hash": "e466cf4bada6d3ff48686bb4f71999e424d9518c209e06bc1787203230f2ffd7"
+      "content_hash": "017bb892e511ce75494bf16c5b8f815823a8cf8b017101d2ed0462f4d4baf91e"
     },
     {
       "path": "seams.html",
-      "content_hash": "8cef5f1f4fb840009cf44272f73888e1f792f1cb25b06dd287adb912a95d9321"
+      "content_hash": "8a436eaa72ed6f5990ec1d01c4fee80def4e992a6bce3978f45d426e3ca6a1b1"
     },
     {
       "path": "seams.md",
@@ -115,15 +115,15 @@
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "9e6394269251e81d762307bc3362669d7ef3724e13f87c3a20f8a041af424231"
+      "content_hash": "8c8667e3a8e2f012726b4210164efbbcdf0a1dd0f30f684b0ad11b8c483259e5"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
-      "content_hash": "1543b5ba28b12311f1cbe82108a0548cdb363d65165c447689a0c4399a6b6ef4"
+      "content_hash": "d4772bda0023dc558b15f50cd5903ca1085c0107a657c8475bdad232c915d9ab"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "8f3df3b1d1e6b05a452df6d19477be6d38c72c6d196c8e1c7ebd836370af38a5"
+      "content_hash": "21dd7277a5b2971249002592d79a589c6cb99c634557ca0206fdef022162c355"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
@@ -131,7 +131,7 @@
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "26e682e5b9fc5d85114d6b3af2c1e8c9414a09ef610bc32c7761af6d1b68893f"
+      "content_hash": "16844834ab1b656ef73c57b25b14bd90b5769e12a25b3ea92e4767cddeeb9ece"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
@@ -139,23 +139,23 @@
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "4dc170fcce0fc6ffff4bc6248c321023c17e9fd922dd4037d69308d10551a486"
+      "content_hash": "0c9baa151a79d9224b25264f27a7a65cf9fd2bfbf99e73dd3bf795065378e850"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
-      "content_hash": "b5747830e531f99d569a4ea7cb184d95eb7398921c076b96868db64703fecb36"
+      "content_hash": "edb78b8cf34d24323f13a10a3f247089a32a85bd3cbb204ecf0f9861e87e8ca7"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "d6889db23d7e444fa5f508e39440386b10884adf6519fed904a881022d3eab1a"
+      "content_hash": "aed55a3e476c76053e359a282f5530e8bb583cdff894d976d3c40456e8a87f1b"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
-      "content_hash": "8b31198b6133925fc65556b907ae33d8119e05faabcdf5feb6d92fda0cdbbac9"
+      "content_hash": "6e0f8d5eeeb5fb2dba5c582b06234e9598f5a0091afe4d40d449e654bcfc880e"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "cabb4f7a761ede7171247fc1238897fd6a3c1931af72af18d37827b7596ecebd"
+      "content_hash": "894789c5352d4694c7382643e685b55860ab7d4600e12f246650b5e0460f6f23"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -163,7 +163,7 @@
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "adb1c663742f757b453502e3f88120bdd22b0c8b5cf184590e63267fe4b65dd1"
+      "content_hash": "6679c7b266b17026f7fb0aff7f997c6405476671f1f6a7a681ff38e46be1670e"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
@@ -171,15 +171,15 @@
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
-      "content_hash": "25194ca81a92e529082fc5d9371377ef791a385db3f5a38dff59ba2c12f4fa97"
+      "content_hash": "af4f2a8913a83e90ab54640ebcac2281187aad2fe0b72d319cc1ec2432dce4a6"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
-      "content_hash": "3702f5e6ff7bb8c03a127de734033d9daf0c152e64351a050747132dd25c348b"
+      "content_hash": "d245b9552ae1092f84d12c4cfbbc2970d4459828f1206df34e2d3802b1d6dbaa"
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "08b05f0f9c363d8f2680dfcdec3ee0bf3a3e38607f43a1d19991eaf8d2419a95"
+      "content_hash": "c46cd6911a6b61ce61eba3f0900ed180775ebf1e5e1fb1d5e6403ec8f09f4b22"
     },
     {
       "path": "vocabulary.md",
@@ -2989,6 +2989,10 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.html"
+    },
+    {
+      "source": "findings.html",
       "target": "vocabulary.html"
     },
     {
@@ -3022,6 +3026,10 @@
     {
       "source": "findings.md",
       "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b08-activation-evidence-and-release-readiness-harness.md"
     },
     {
       "source": "how-to-read.html",
@@ -4065,6 +4073,14 @@
     },
     {
       "source": "open-questions.html",
+      "target": "findings.html#b08-1"
+    },
+    {
+      "source": "open-questions.html",
+      "target": "findings.html#b08-1"
+    },
+    {
+      "source": "open-questions.html",
       "target": "how-to-read.html"
     },
     {
@@ -4310,6 +4326,14 @@
     {
       "source": "open-questions.md",
       "target": "findings.md#b03-3"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "findings.md#b08-1"
+    },
+    {
+      "source": "open-questions.md",
+      "target": "findings.md#b08-1"
     },
     {
       "source": "open-questions.md",
@@ -8837,6 +8861,10 @@
     },
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
       "target": "../findings.html#b03-2"
     },
     {
@@ -8850,6 +8878,10 @@
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
       "target": "../findings.html#b04-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
+      "target": "../findings.html#b08-1"
     },
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
@@ -8997,6 +9029,10 @@
     },
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b02-2"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
       "target": "../findings.md#b03-2"
     },
     {
@@ -9010,6 +9046,10 @@
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
       "target": "../findings.md#b04-1"
+    },
+    {
+      "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
+      "target": "../findings.md#b08-1"
     },
     {
       "source": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",

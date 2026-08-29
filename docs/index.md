@@ -2,7 +2,7 @@
 
 **Canonical branch**: `main`  
 **Onboarding SHA**: `b8b566f`  
-**Last checked SHA**: `9c53be1efa76`
+**Last checked SHA**: `aba6d049e77c`
 
 ## Quick orientation
 
@@ -13,7 +13,7 @@
 | Metric | Value |
 |---|---|
 | Subsystems mapped | 8 / 8 |
-| Confirmed findings | 8 (0 critical, 4 high) |
+| Confirmed findings | 9 (0 critical, 4 high) |
 | Open bugs | 1 |
 | Stale entries | 0 |
 | Open field notes | 8 |
@@ -37,4 +37,4 @@ New here? Start with [How to read this conspectus](how-to-read.md).
 
 ## Latest session
 
-`rebaseline conspectus to main after A1-A3 and B03-3 landed` — started 2026-08-28 22:41 UTC · **active**
+`dogfood: first conspectus pass by the repaired engine at aba6d04` — started 2026-08-29 02:53 UTC · **active**

@@ -2,7 +2,7 @@
 
 _Items the autoprogress coordinator could not decide without human input. Each entry records the question, what the agent could not do because of it, and what assumption (if any) the agent proceeded with. Close out via `resolve_open_question` once answered; the reviewer's answers can feed back into a `reset_subsystem` + re-survey if the assumption turned out wrong._
 
-## Open (8)
+## Open (9)
 
 ### Domain Knowledge (2)
 
@@ -22,7 +22,15 @@ _Items the autoprogress coordinator could not decide without human input. Each e
 - **Assumption the agent proceeded with:** Keep trail pinning optional, explicitly device-local, clearable, and outside required route recovery until a product policy is accepted.
 - _recorded 2026-08-23 05:55 UTC_
 
-### Scope Judgment (1)
+### Scope Judgment (2)
+
+#### #12 · subsystem `B-08` · phase `Release prep 2026-08-28`
+
+> Should the A22 live-configuration pin be replaced with property checks, or re-baselined by another real-host campaign, before v0.2.0-beta.2 is cut?
+
+- **What this blocked:** A25 was successfully re-measured against the repaired startup path — 6/6 real-host runs, all digests matching, configuration byte-identical — but the A26 candidate suite then failed on the A22 checker, which pins the developer's whole live ~/.codex/config.toml by sha256. That file has drifted since 2026-08-26 for reasons beyond harness residue, and no backup on the machine still holds the pinned value.
+- **Assumption the agent proceeded with:** Stopped rather than running a sixth real-host campaign, since re-baselining A22 by that route would pin the configuration again and reproduce the same fragility at the next unrelated change. Recorded the coupling as finding [B08-1](findings.md#b08-1) and left the branch carrying the genuine progress — the re-measured A25 receipt and its captures, plus refreshed A22 source digests — with the version reverted to 0.2.0-beta.1 so the tree stays internally consistent. Treat [B08-1](findings.md#b08-1) as the gate on beta.2 rather than anything about the activation claim itself, which the re-measurement supports.
+- _recorded 2026-08-28 23:00 UTC_
 
 #### #10 · subsystem `B-08` · phase `Refresh 2026-08-27 Phase 1`
 

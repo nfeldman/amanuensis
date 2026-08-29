@@ -34,17 +34,6 @@ Prompt/contract layer. Claims about runtime enforcement must cross to [B-02](b02
 | `.claude/skills/amanuensis/references/reporting-style.md` | examined | Reporting-style contract governing human-facing labels, IA/UI boundary, and register; modified in this refresh range. | `5694080` |
 | `.claude/skills/amanuensis/references/setup.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 | `.claude/skills/amanuensis/references/subsystem-survey.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/README.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-adversarial.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-auto.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-concerns.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-memory-auditor.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-notes.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-scoper.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis-structural.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/amanuensis.agent.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/references/artifact-templates.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
-| `agents/references/concern-territories.md` | examined | Pinned A0 inventory assigns this file to **B-01**. | `b8b566f` |
 
 ## Concern review
 

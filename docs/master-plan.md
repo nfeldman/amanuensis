@@ -16,7 +16,7 @@
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 2 | **[B-08](subsystems/b08-activation-evidence-and-release-readiness-harness.md)** | Activation evidence and release-readiness harness | 🟢 mapped | dev/activation-evidence/**, the dev/ activation and friction-free release harness scripts (run-/check-/test-/capture-/cleanup-/adopt-/render-), mcp-server/fixtures/activation/**, the mcp-server activation and binding tests, dev/adr/0021, dev/friction-free-release-checklist.md, and dev/release-notes-v0.2.0-beta.1.md; the A19-A26 program that produced and gates the v0.2.0-beta.1 activation claim. | dev/adr/0021-friction-free-codex-activation.md; dev/check-friction-free-release-readiness.mjs; dev/activation-evidence/a26-release-readiness.json | 0 (0 open) |
+| 2 | **[B-08](subsystems/b08-activation-evidence-and-release-readiness-harness.md)** | Activation evidence and release-readiness harness | 🟢 mapped | dev/activation-evidence/**, the dev/ activation and friction-free release harness scripts (run-/check-/test-/capture-/cleanup-/adopt-/render-), mcp-server/fixtures/activation/**, the mcp-server activation and binding tests, dev/adr/0021, dev/friction-free-release-checklist.md, and dev/release-notes-v0.2.0-beta.1.md; the A19-A26 program that produced and gates the v0.2.0-beta.1 activation claim. | dev/adr/0021-friction-free-codex-activation.md; dev/check-friction-free-release-readiness.mjs; dev/activation-evidence/a26-release-readiness.json | 1 (0 open) |
 
 ## design evidence
 

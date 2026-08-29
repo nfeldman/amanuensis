@@ -127,6 +127,10 @@ Owns install/config merge, generated package mirrors, CI gates, and the public p
 | `mcp-server/test-smoke.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/test-storage-git.mjs` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
 | `mcp-server/tsconfig.json` | examined | Pinned A0 inventory assigns this file to **B-05**. | `b8b566f` |
+| `.pecia/config.yaml` | generated-ignore | Pecia execution-custody projection and its snapshot manifest; tool state regenerated from the local timeline. | `aba6d04` |
+| `.pecia/snapshot.head` | generated-ignore | Pecia execution-custody projection and its snapshot manifest; tool state regenerated from the local timeline. | `aba6d04` |
+| `.pecia/snapshot.json` | generated-ignore | Pecia execution-custody projection and its snapshot manifest; tool state regenerated from the local timeline. | `aba6d04` |
+| `.pecia/work.jsonl` | generated-ignore | Pecia execution-custody projection and its snapshot manifest; tool state regenerated from the local timeline. | `aba6d04` |
 | `.github/FUNDING.yml` | irrelevant | Sponsorship metadata does not participate in runtime or survey behavior; retained as a satisfied explicit exclusion. Owner: repository-maintainer. | `b8b566f` |
 | `LICENSE` | irrelevant | License text governs distribution but has no executable survey contract; retained as a satisfied explicit exclusion. Owner: repository-maintainer. | `b8b566f` |
 

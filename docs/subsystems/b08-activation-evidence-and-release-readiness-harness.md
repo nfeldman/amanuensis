@@ -82,6 +82,11 @@ Created during the 2026-08-27 full refresh. Distinct evidence corpus in the patt
 | `dev/check-codex-host-evidence.mjs` | examined | Authored checker validating A22 host receipts. | `5694080` |
 | `dev/check-friction-free-release-readiness.mjs` | examined | Authored checker gating the v0.2.0-beta.1 release-readiness claim. | `5694080` |
 | `dev/run-codex-host-harness.mjs` | examined | Authored harness that drives real Codex hosts and emits the A22 transcripts. | `5694080` |
+| `mcp-server/fixtures/activation/codex-config-healthy.toml` | examined | Control fixture: a healthy live Codex configuration that also carries an unrelated MCP server and an ordinary project trust entry, proving both are tolerated. | `aba6d04` |
+| `mcp-server/fixtures/activation/codex-config-residual-trust.toml` | examined | Negative fixture: harness trust surviving cleanup. | `aba6d04` |
+| `mcp-server/fixtures/activation/codex-config-shadowed.toml` | examined | Negative fixture: duplicate Amanuensis registration. | `aba6d04` |
+| `mcp-server/fixtures/activation/codex-config-workspace-pinned.toml` | examined | Negative fixture: registration pinning a repository via --workspace. | `aba6d04` |
+| `mcp-server/test-startup-bounds.mjs` | examined | Red gates proving no probe on the activation path runs unbounded; the [B02-2](../findings.md#b02-2) repair. | `aba6d04` |
 | `dev/activation-evidence/a22-host-runs/configuration-conflict.jsonl` | generated-ignore | Captured Codex host transcript emitted by dev/run-codex-host-harness.mjs. | `5694080` |
 | `dev/activation-evidence/a22-host-runs/configuration-conflict.stderr.log` | generated-ignore | Captured host stderr stream. | `5694080` |
 | `dev/activation-evidence/a22-host-runs/interrupted-a.jsonl` | generated-ignore | Captured Codex host transcript. | `5694080` |
@@ -113,6 +118,27 @@ Created during the 2026-08-27 full refresh. Distinct evidence corpus in the patt
 | `dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.stderr.log` | generated-ignore | A25 captured host stderr stream. | `5694080` |
 | `dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.jsonl` | generated-ignore | A25 captured host transcript for the parent --cd case. | `5694080` |
 | `dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.stderr.log` | generated-ignore | A25 captured host stderr stream. | `5694080` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.launch-audit.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.jsonl` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.stderr.log` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
+| `dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.store-custody.json` | generated-ignore | Captured Codex host transcript from the 2026-08-28 A25 re-measurement. | `aba6d04` |
 
 ## Concern review
 
@@ -121,6 +147,20 @@ Created during the 2026-08-27 full refresh. Distinct evidence corpus in the patt
 | **[SI-2](../concerns.md#si-2)** | confirmed-acceptable | code-verified |  | Receipts bind to an explicit baselineCommit and implementationCommit and carry sha256 digests for their declared source files, and the checker re-hashes those files off the working tree rather than trusting the recorded digest. Independently recomputed during this refresh: all six digests match at 5694080 and implementationCommit db00515 is an ancestor of HEAD. A receipt cannot silently be reused as current evidence after its sources change. Recording note: partly test-observed, recorded at the nearest permitted rung per finding [B03-3](../findings.md#b03-3). |
 | **[TB-1](../concerns.md#tb-1)** | confirmed-acceptable | code-verified |  | Both host-driving harnesses wrap their child processes in an explicit timer that is cleared on completion, so a stalled Codex host terminates with a recorded outcome rather than hanging the evidence run. This is the discipline [TB-1](../concerns.md#tb-1) asks for. It also sharpens finding [B02-2](../findings.md#b02-2): the evidence apparatus bounds its subprocesses while the production activation path it certifies does not. |
 | **[VG-1](../concerns.md#vg-1)** | ruled-out | code-verified |  | Every gate in this subsystem was executed during the refresh and each showed a green control alongside a complete set of nonzero sabotage exits: A26 readiness 4/4, A22 Codex host evidence 4/4, A25 operating envelope 3/3, and A24 package parity halting on both packed-cwd and skill-version drift. The gates have non-zero denominators and turn red on demand — the direct contrast to [B-03](b03-knowledge-tools-and-workflow-api.md) and [B-04](b04-diff-aware-materializer.md), where this concern is a confirmed bug. Recording note: the attached evidence is test-observed, but set_disposition does not accept that value (finding [B03-3](../findings.md#b03-3)), so it is recorded here at the nearest permitted rung. |
+
+## Findings
+
+### [B08-1](../findings.md#b08-1) · 🟡 MEDIUM · fixed
+
+**Symptom**: Release readiness depends on the byte state of the user's live ~/.codex/config.toml. Once that file changes for any reason, the A22 checker reports drift permanently, the A26 candidate suite fails, and no release can be cut until another real-host A22 campaign rebaselines the pin.  
+**Root cause**: The A22 receipt records host.configSha256Before/After and configurationCustody.restoredConfigSha256 for the developer's own Codex configuration, and check-codex-host-evidence compares the live file against them. That file is user-level and mutable independently of this repository, so the pin is a snapshot of something the project does not own and cannot hold still. dev/refresh-a22-evidence.mjs rebaselines the fourteen source digests but not the config pin, leaving no cheap recovery.
+
+_Business context_: This is what blocked v0.2.0-beta.2 after A25 had been successfully re-measured. The A25 campaign landed 6/6 real-host runs against the repaired startup path and left the configuration byte-identical, so the activation claim itself is sound; the release still could not proceed because an unrelated pin on a user-level file had drifted since 2026-08-26. The coupling also makes the gate weaker than it looks: it turns red for ordinary local activity while telling the reader that host evidence drifted, which is a different and more alarming claim. A developer on another machine could never satisfy it at all.
+
+**Primary files**:
+- `dev/activation-evidence/a22-codex-host.json:host.configSha256Before@8c779e1`
+- `dev/check-codex-host-evidence.mjs:live configuration check@8c779e1`
+- `dev/run-friction-free-candidate-suite.mjs:A22 gate@8c779e1`
 
 ## Survey notes
 
