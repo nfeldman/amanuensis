@@ -35,15 +35,30 @@
       }
     },
     "release": {
-      "status": "candidate",
+      "status": "established",
       "tag": "v0.2.0-beta.2",
+      "tagCommit": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
       "registry": "npmjs",
       "package": "@gruetech/amanuensis",
       "version": "0.2.0-beta.2",
       "distTag": "latest",
-      "publicationAuthorized": true,
-      "publicationStatus": "not-published",
-      "releaseReadyReceipt": "dev/activation-evidence/a26-release-readiness.json",
+      "publishedAt": "2026-08-29T05:20:25.614Z",
+      "shasum": "e5aeab7e7429487c5cd94f3eb78c4eeede553767",
+      "integrity": "sha512-VByQofetGfbrKGRUX2NibrZOn3ErWW1BjR8KVNgqEhV7YmxlnBvdPVee24u/9ql6lwJajsY8/XuAeGH4W8ptQQ==",
+      "publish": {
+        "provider": "github-actions",
+        "workflow": "publish.yml",
+        "runId": 33235810585,
+        "headSha": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
+        "conclusion": "success"
+      },
+      "publishedSmoke": {
+        "provider": "github-actions",
+        "workflow": "published-smoke.yml",
+        "runId": 33236376907,
+        "version": "0.2.0-beta.2",
+        "conclusion": "success"
+      },
       "previousEstablished": {
         "status": "established",
         "tag": "v0.2.0-beta.1",

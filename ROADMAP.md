@@ -32,11 +32,11 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Conspectus read-back:** `v2-integration-0e2dafb-terminal` passed state, coverage, and content with 0 mismatches at source `0e2dafb81d08ebfd3bce718aed376a588095a3a8`; durable storage commit `533962b5d55edfe112caf6fff7fb82d0588bed63`.
 
-**Release:** candidate; `v0.2.0-beta.2` / `@gruetech/amanuensis@0.2.0-beta.2` is authorized but not-published.
+**Release:** established; [v0.2.0-beta.2](https://github.com/nfeldman/amanuensis/tree/v0.2.0-beta.2) published [@gruetech/amanuensis@0.2.0-beta.2](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-beta.2) as `latest` on npmjs.
 
-**Pre-publication evidence:** [A26 release-readiness receipt](dev/activation-evidence/a26-release-readiness.json) proves this candidate ready without claiming a tag, registry artifact, or published-package smoke result.
+**Publication evidence:** [publish.yml run 33235810585](https://github.com/nfeldman/amanuensis/actions/runs/33235810585) concluded success at tag commit `7a010cdb1aef07a4af2915e9cb850548273dbfef`; registry shasum `e5aeab7e7429487c5cd94f3eb78c4eeede553767`.
 
-**Previous established release:** [v0.2.0-beta.1](https://github.com/nfeldman/amanuensis/tree/v0.2.0-beta.1) published [@gruetech/amanuensis@0.2.0-beta.1](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-beta.1) as `latest` on npmjs.
+**Published-package smoke:** [published-smoke.yml run 33236376907](https://github.com/nfeldman/amanuensis/actions/runs/33236376907) concluded success for `0.2.0-beta.2`.
 
 ## Epistemic baseline
 
