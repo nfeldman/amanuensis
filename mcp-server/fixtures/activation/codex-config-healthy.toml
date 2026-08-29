@@ -1,0 +1,17 @@
+# Healthy live configuration: one cwd-relative managed registration, no pinned
+# workspace, no harness trust residue. Deliberately also carries an unrelated
+# MCP server and an ordinary project trust entry, because a developer's config
+# legitimately holds both and neither may fail the gate.
+model = "gpt-5-codex"
+
+[mcp_servers.amanuensis-memory]
+command = "npx"
+args = ["-y", "@gruetech/amanuensis", "serve"]
+cwd = "."
+
+[mcp_servers.some-other-tool]
+command = "node"
+args = ["/Users/someone/other-tool/server.js"]
+
+[projects."/Users/someone/repos/unrelated-project"]
+trust_level = "trusted"

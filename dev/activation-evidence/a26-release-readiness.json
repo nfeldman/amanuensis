@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "contractVersion": "amanuensis-friction-free-release-readiness/v1",
   "initiative": "A26",
-  "recordedAt": "2026-08-26T17:26:55.955Z",
+  "recordedAt": "2026-08-29T00:54:53.017Z",
   "result": "passed",
   "evidenceMode": "candidate-release-gate",
   "source": {
@@ -41,9 +41,9 @@
   },
   "candidate": {
     "packageName": "@gruetech/amanuensis",
-    "packageVersion": "0.2.0-beta.1",
-    "sourceCommit": "9a20a68d2f57e117ab48f78cb2fa5ecef68f7937",
-    "exactTarballSha256": "3aa7fc3d8a24e09e2e4a7b4823fb9603a983ef25555667430ab337cfb4263860",
+    "packageVersion": "0.2.0-beta.2",
+    "sourceCommit": "8c779e1c9bf4144117ceababf7c73031054de081",
+    "exactTarballSha256": "ae5291d9a87225eca8d34d2fcb18b932516bb845a58c6a1d0462c9ba8bd084d2",
     "publicationAuthorized": false,
     "publicationStatus": "not-published",
     "productProofStatus": "unestablished"
@@ -64,11 +64,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -81,11 +81,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -98,11 +98,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -115,11 +115,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         }
@@ -145,11 +145,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -162,11 +162,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -179,11 +179,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         }
@@ -209,11 +209,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -226,11 +226,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -243,11 +243,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         }
@@ -269,15 +269,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             }
           ]
         },
@@ -286,15 +286,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             }
           ]
         },
@@ -303,15 +303,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a22-codex-host.json",
-              "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+              "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
             }
           ]
         }
@@ -319,7 +319,7 @@
       "redGate": "Swap one task's cwd or reuse one server process across both fixtures; failure to identify the exact contaminated task and halt it fails A22.",
       "redGateReceipt": {
         "path": "dev/activation-evidence/a22-codex-host.json",
-        "sha256": "210f6cb721dbfbf0473036ac2e3edcf929427d8582f9bd6edba3befec5ef0d2e"
+        "sha256": "5cdacb82a45ce35f8231ec41486d6abddbab5c64440761e4660ccaabc5a9898d"
       }
     },
     {
@@ -337,11 +337,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -354,11 +354,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -371,11 +371,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         }
@@ -401,11 +401,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -418,11 +418,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         },
@@ -435,11 +435,11 @@
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a26-clean-replay.json",
-              "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+              "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
             }
           ]
         }
@@ -461,15 +461,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             }
           ]
         },
@@ -478,15 +478,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             }
           ]
         },
@@ -495,15 +495,15 @@
           "evidence": [
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             },
             {
               "path": "dev/activation-evidence/a26-candidate-suite.json",
-              "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+              "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
             },
             {
               "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-              "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+              "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
             }
           ]
         }
@@ -511,7 +511,7 @@
       "redGate": "Pool a repository with activation failures into a positive aggregate, omit a user intervention, or reuse a run identifier; the report generator must reject publication.",
       "redGateReceipt": {
         "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-        "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+        "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
       }
     }
   ],
@@ -522,103 +522,103 @@
     "aggregation": "none",
     "evidence": {
       "path": "dev/activation-evidence/a26-candidate-suite.json",
-      "sha256": "0fbd1a339242680619e4b979d56e6e10ed29670890aef02c10563b433a31e810"
+      "sha256": "97486ea1f826e6300378204fe0e9934b520633bfb0a774ec356c6b281ecec7a3"
     }
   },
   "expectedRepositoryRunIds": [
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root",
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root",
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested",
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root",
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree",
-    "a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd"
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root",
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root",
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested",
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root",
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree",
+    "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd"
   ],
   "repositoryResults": [
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root",
       "logicalRepositoryId": "repo-a",
       "shape": "repository-root",
       "status": "passed",
-      "threadId": "01a03f12-5ff7-7ef1-a49d-abfe9bd2339b",
-      "serverInstanceId": "e7613ad4-477a-414d-8a87-f43448eef45a",
-      "bindingId": "b1a5b01622d2e81dacfbf6b2bfef0616cfc7d8c611f751ebed32d899aaeffaf1",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis",
-      "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1",
+      "threadId": "01a04a93-5188-77d1-9f7c-b5d1fc3c90f4",
+      "serverInstanceId": "3c42b0ff-1c75-478c-82f6-7bc4db996609",
+      "bindingId": "a85543b02b2bcb4cd0ae070855f3db27a872b2d0f89ef7e80ff1afac1b74f2dd",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis",
+      "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1",
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root",
       "logicalRepositoryId": "repo-b",
       "shape": "repository-root",
       "status": "passed",
-      "threadId": "01a03f12-5fa8-79f3-925b-bd57244e2200",
-      "serverInstanceId": "47e7b511-325d-49ae-b33e-068c64cfa1bd",
-      "bindingId": "537e9200b4db2679271f623aa71dd8ca62f53a139b77fabb1fe43f5dd1c0362f",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis",
-      "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1",
+      "threadId": "01a04a93-5184-7ba3-b602-4bde9dacd5c8",
+      "serverInstanceId": "cf4e818c-77dc-4e95-a643-64de2c3a3a89",
+      "bindingId": "4f476c6c3d0ff8a22cdfe0f5f1462d2e2a71635b791f7bb4da5c85b4f36ad296",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis",
+      "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1",
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested",
       "logicalRepositoryId": "repo-c",
       "shape": "nested-launch",
       "status": "passed",
-      "threadId": "01a03f13-026c-7af1-b012-1ed98f61486a",
-      "serverInstanceId": "4613a24e-3a25-4b87-9e42-1164a6848bd5",
-      "bindingId": "74f2d47387f4ed20d89031ed54b6216ddc59b44bc6e4f0b49416b1be9ad2e571",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis",
+      "threadId": "01a04a93-ba31-7163-acc2-10f226019493",
+      "serverInstanceId": "4f5654c8-8431-4441-bba9-cfe23526a7f4",
+      "bindingId": "2df819ce4b558672fe8d8b0aa139c6d7ce7f2fab8770a905231dbe599c81ea2b",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis",
       "concurrentWave": null,
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root",
       "logicalRepositoryId": "repo-d",
       "shape": "repository-root",
       "status": "passed",
-      "threadId": "01a03f13-ca93-7931-8c0d-7fc934221ead",
-      "serverInstanceId": "6a1bf83c-d8b5-421c-b6a0-1d68ad87571a",
-      "bindingId": "d68aa4d20e7ffaf6dbc4eff3e5408e45bce0ba2ad27309bcbfd3b1690349ff74",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis",
+      "threadId": "01a04a94-41fc-7da1-9ddd-f930dcbe5d2e",
+      "serverInstanceId": "b6db591f-976d-434d-9b2b-d24b0b77cbc7",
+      "bindingId": "6912c8abce541dd96417dc42cee482513b9f58b3feaf10f537c9d623da834faf",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis",
       "concurrentWave": null,
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree",
       "logicalRepositoryId": "repo-d",
       "shape": "worktree",
       "status": "passed",
-      "threadId": "01a03f12-5fbf-7033-a886-5e1fc970de0a",
-      "serverInstanceId": "50549e0a-c11b-442b-9385-4e1b0787e874",
-      "bindingId": "b0969d8bcdf04d0695da1a7010e60061ea9a0f205c7f0ec674b2c3f7307a5d38",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis",
-      "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1",
+      "threadId": "01a04a93-5185-7fb3-809b-cd723914b222",
+      "serverInstanceId": "372dfa46-5ec8-4e71-92b5-9b88844a6038",
+      "bindingId": "edbef52d69741a54022831fa114bdef94d55379870014cf0be8c4ea79e0baac9",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis",
+      "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1",
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd",
       "logicalRepositoryId": "repo-e",
       "shape": "parent-cd",
       "status": "passed",
-      "threadId": "01a03f14-1d0c-7600-a5da-fc756bd26ae1",
-      "serverInstanceId": "88280aca-c306-45cd-b4e9-4dcd5c88d309",
-      "bindingId": "41d1af1db9dbdd58f44579e0e525aa62ab2dfba2b7c64dc6795d77b3d414c670",
-      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e",
-      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis",
+      "threadId": "01a04a94-9704-7bd2-bcde-ffd6d5bda751",
+      "serverInstanceId": "5842520a-131f-4e55-8e10-df038bc6f0fa",
+      "bindingId": "4744d9e3f0c339e0ca3e20174ce6a212f72a91f0ecb21a16f5ffbf313b4deadc",
+      "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e",
+      "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis",
       "concurrentWave": null,
       "setupCommandCount": 0,
       "perRepositoryRestartCount": 0,
@@ -627,7 +627,7 @@
   ],
   "repositoryEvidence": {
     "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-    "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+    "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
   },
   "migrationCases": [
     {
@@ -651,7 +651,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -659,7 +659,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -667,7 +667,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     }
   ],
@@ -678,7 +678,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -687,7 +687,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-        "sha256": "5022137cf5dd4968b1e225d5a15b2534e1d19cb6eecb9b6173be3adefb8d5c65"
+        "sha256": "b823ba631ad06da95a1056eaac6d5e4b957c382f6f22479ffe70b58f914a0630"
       }
     },
     {
@@ -696,7 +696,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -705,7 +705,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -714,7 +714,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     },
     {
@@ -723,7 +723,7 @@
       "status": "passed",
       "evidence": {
         "path": "dev/activation-evidence/a26-clean-replay.json",
-        "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+        "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
       }
     }
   ],
@@ -739,7 +739,7 @@
     "documentationReadBack": "passed",
     "evidence": {
       "path": "dev/activation-evidence/a26-clean-replay.json",
-      "sha256": "7d1e2f8a0cf77e11879b07aca7e6e9c06db6d709be88b083c654543eb7043020"
+      "sha256": "b84c298df936d997d90ab7128c6af7477c2df3a265a95eb2ba76bce56234f9fd"
     }
   },
   "redGate": {

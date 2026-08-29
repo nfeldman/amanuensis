@@ -1,0 +1,9 @@
+model = "gpt-5-codex"
+
+[mcp_servers.amanuensis-memory]
+command = "npx"
+args = ["-y", "@gruetech/amanuensis", "serve"]
+cwd = "."
+
+[projects."/private/var/folders/t7/xxxx/T/amanuensis-a25-operating-LEFTOVER/repo-b"]
+trust_level = "trusted"
