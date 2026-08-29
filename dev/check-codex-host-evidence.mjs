@@ -372,14 +372,6 @@ function validate(receipt) {
     ) {
       errors.push("live Codex configuration was not restored byte-for-byte");
     }
-    if (existsSync(receipt.host?.configPath ?? "")) {
-      const currentConfigHash = createHash("sha256")
-        .update(readFileSync(receipt.host.configPath))
-        .digest("hex");
-      if (currentConfigHash !== receipt.host.configSha256After) {
-        errors.push("live Codex configuration drifted after host evidence");
-      }
-    }
     if (existsSync(receipt.configurationCustody?.cleanupBackup ?? "")) {
       const backupHash = createHash("sha256")
         .update(readFileSync(receipt.configurationCustody.cleanupBackup))
@@ -387,6 +379,47 @@ function validate(receipt) {
       if (backupHash !== receipt.configurationCustody.cleanupBackupSha256) {
         errors.push("host trust cleanup backup digest drifted");
       }
+    }
+  }
+
+  // The live configuration is checked by property, not by digest. It was
+  // previously pinned to the sha256 recorded during the campaign, which made
+  // release readiness depend on a user-level file this repository does not own
+  // and cannot hold still: installing an unrelated MCP server or trusting
+  // another project turned the gate red and reported it as host-evidence
+  // drift. Worse, it could never be satisfied on a second machine. What the
+  // host evidence actually rests on is that the registration is still the
+  // managed cwd-relative one, unpinned and unshadowed, and that no harness
+  // trust survived cleanup (finding B08-1).
+  if (existsSync(receipt.host?.configPath ?? "")) {
+    const configText = readFileSync(receipt.host.configPath, "utf8");
+    const registrationHeader = /^\[mcp_servers\.amanuensis-memory\]$/gm;
+    const registrationCount = (configText.match(registrationHeader) ?? []).length;
+    if (registrationCount !== 1) {
+      errors.push(
+        `live Codex configuration must hold exactly one managed Amanuensis registration, found ${registrationCount}`,
+      );
+    } else {
+      // Read only the registration's own block, so an unrelated server's
+      // settings can neither satisfy nor fail these checks.
+      const start = configText.search(registrationHeader);
+      const rest = configText.slice(start + 1);
+      const nextHeader = rest.search(/^\[/m);
+      const block = nextHeader === -1 ? rest : rest.slice(0, nextHeader);
+      if (!/^cwd\s*=\s*"\."\s*$/m.test(block)) {
+        errors.push("live Amanuensis registration is not cwd-relative");
+      }
+      if (/^args\s*=.*--workspace/m.test(block)) {
+        errors.push("live Amanuensis registration pins a repository");
+      }
+    }
+    const residualTrust = [
+      ...configText.matchAll(/^\[projects\."([^"]*amanuensis-a\d+-[^"]*)"\]$/gm),
+    ].map((match) => match[1]);
+    if (residualTrust.length) {
+      errors.push(
+        `live Codex configuration retains harness trust entries: ${residualTrust.join(", ")}`,
+      );
     }
   }
 

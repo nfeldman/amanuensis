@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "initiative": "A25",
   "pecIndex": "pc-15a4",
-  "campaignId": "a25-2026-08-26T17-16-03-446Z-c435874d",
-  "recordedAt": "2026-08-26T17:18:41.730Z",
+  "campaignId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d",
+  "recordedAt": "2026-08-28T22:54:44.001Z",
   "result": "passed",
   "evidenceMode": "real-host",
   "source": {
     "baselineCommit": "5732b678ededd40eaa2a0e0ada633f43d0bb789c",
-    "implementationCommit": "9a20a68d2f57e117ab48f78cb2fa5ecef68f7937",
+    "implementationCommit": "8c779e1c9bf4144117ceababf7c73031054de081",
     "practiceCatalog": {
       "version": "2.10",
       "stamp": "f9a5c0c9dbde"
@@ -20,7 +20,7 @@
       },
       {
         "path": "mcp-server/src/project.ts",
-        "sha256": "943f70e790bfda4cc0e2586af2f197ea55801a41e16e4b84e6a94e4958882e72"
+        "sha256": "924ab668fdcf5b74a1f88a10059e16c47f3fa2fbe0f69dd28aebfcb0717377eb"
       },
       {
         "path": "mcp-server/test-nested-activation-binding.mjs",
@@ -60,8 +60,8 @@
     "surface": "codex-cli-exec",
     "codexVersion": "codex-cli 0.146.0",
     "configPath": "/Users/nfeldman/.codex/config.toml",
-    "configSha256Before": "46bd80cd49caee06687938190623374907509e807b7b19f7a9cd93d72cf2206e",
-    "configSha256After": "46bd80cd49caee06687938190623374907509e807b7b19f7a9cd93d72cf2206e",
+    "configSha256Before": "697961fd6ad71d54896c5e0c990385e4bb6b32670b3c97cbf7ead1f6311a14fa",
+    "configSha256After": "697961fd6ad71d54896c5e0c990385e4bb6b32670b3c97cbf7ead1f6311a14fa",
     "configBytesChanged": 0,
     "managedInstallationCount": 1,
     "installationRestartCount": 0,
@@ -81,63 +81,63 @@
     ],
     "expectedRuns": [
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root",
         "logicalRepositoryId": "repo-a",
         "shape": "repository-root",
-        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis",
+        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis",
         "selectionSource": "process-cwd-git-root",
-        "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1"
+        "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root",
         "logicalRepositoryId": "repo-b",
         "shape": "repository-root",
-        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis",
+        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis",
         "selectionSource": "process-cwd-git-root",
-        "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1"
+        "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested",
         "logicalRepositoryId": "repo-c",
         "shape": "nested-launch",
-        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/packages/service",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis",
+        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/packages/service",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis",
         "selectionSource": "process-cwd-git-root",
         "concurrentWave": null
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root",
         "logicalRepositoryId": "repo-d",
         "shape": "repository-root",
-        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis",
+        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis",
         "selectionSource": "process-cwd-git-root",
         "concurrentWave": null
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree",
         "logicalRepositoryId": "repo-d",
         "shape": "worktree",
-        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis",
+        "launchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis",
         "selectionSource": "process-cwd-git-root",
-        "concurrentWave": "a25-2026-08-26T17-16-03-446Z-c435874d-wave-1"
+        "concurrentWave": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-wave-1"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd",
         "logicalRepositoryId": "repo-e",
         "shape": "parent-cd",
         "launchCwd": "/Users/nfeldman/repos/amanuensis",
-        "targetCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis",
+        "targetCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis",
         "selectionSource": "parent-codex-cli-cd-git-root",
         "concurrentWave": null
       }
@@ -145,12 +145,12 @@
   },
   "runs": [
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root",
       "status": "passed",
-      "threadId": "01a03f12-5ff7-7ef1-a49d-abfe9bd2339b",
-      "serverInstanceId": "e7613ad4-477a-414d-8a87-f43448eef45a",
-      "startedAt": "2026-08-26T17:16:03.468Z",
-      "endedAt": "2026-08-26T17:16:22.368Z",
+      "threadId": "01a04a93-5188-77d1-9f7c-b5d1fc3c90f4",
+      "serverInstanceId": "3c42b0ff-1c75-478c-82f6-7bc4db996609",
+      "startedAt": "2026-08-28T22:52:43.728Z",
+      "endedAt": "2026-08-28T22:53:03.592Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -158,142 +158,142 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-        "workspaceInstanceId": "fa6ed54296a1",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+        "workspaceInstanceId": "5e34d0a8dca9",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-a",
         "projectKey": "github.com/amanuensis-a25/repo-a",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "process-cwd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "b1a5b01622d2e81dacfbf6b2bfef0616cfc7d8c611f751ebed32d899aaeffaf1",
-        "serverInstanceId": "e7613ad4-477a-414d-8a87-f43448eef45a"
+        "bindingId": "a85543b02b2bcb4cd0ae070855f3db27a872b2d0f89ef7e80ff1afac1b74f2dd",
+        "serverInstanceId": "3c42b0ff-1c75-478c-82f6-7bc4db996609"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/objects/0f/05df3c483f50ea5e563deeffb771ff52c5d19f"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/objects/08/314ee9d46d6b7af559a523c67a44a6567241ef"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.store-custody.json",
-        "sha256": "8356706b075e7f2799ab32e8f3c200422c6a6592e0ca5ef963873b54104284fc"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.store-custody.json",
+        "sha256": "1f62eaeabaa67739267b77da4c64bcfc0a3befd1597320800345c3ce46e38c3e"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.jsonl",
-        "sha256": "5ada2f78da644b5f2a7f9e1d7dfdfbaad4657775e971710558e15f5f4a073bf0"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.jsonl",
+        "sha256": "3234475b0385727ca8fbb03bf6051a9826b6b1945227d01e812b974349e55b73"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.stderr.log",
-        "sha256": "97b4fb64547d23ca7d678b4062e04f6baaf6574bd9d4db79f3519ccb5eaee9fb"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.stderr.log",
+        "sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
       }
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root",
       "status": "passed",
-      "threadId": "01a03f12-5fa8-79f3-925b-bd57244e2200",
-      "serverInstanceId": "47e7b511-325d-49ae-b33e-068c64cfa1bd",
-      "startedAt": "2026-08-26T17:16:03.472Z",
-      "endedAt": "2026-08-26T17:16:26.395Z",
+      "threadId": "01a04a93-5184-7ba3-b602-4bde9dacd5c8",
+      "serverInstanceId": "cf4e818c-77dc-4e95-a643-64de2c3a3a89",
+      "startedAt": "2026-08-28T22:52:43.731Z",
+      "endedAt": "2026-08-28T22:53:10.142Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -301,142 +301,142 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
-        "workspaceInstanceId": "28478065395d",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
+        "workspaceInstanceId": "35ff41581f60",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-b",
         "projectKey": "github.com/amanuensis-a25/repo-b",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "process-cwd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "537e9200b4db2679271f623aa71dd8ca62f53a139b77fabb1fe43f5dd1c0362f",
-        "serverInstanceId": "47e7b511-325d-49ae-b33e-068c64cfa1bd"
+        "bindingId": "4f476c6c3d0ff8a22cdfe0f5f1462d2e2a71635b791f7bb4da5c85b4f36ad296",
+        "serverInstanceId": "cf4e818c-77dc-4e95-a643-64de2c3a3a89"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/objects/2b/11b4edd984b17ff6409ba719bb917ccde20fc5"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/objects/a5/b26bd228a98c8a00764f73320e24b0349da14e"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.store-custody.json",
-        "sha256": "52517fcf13a314c9b704670998bee1e56d1f30c7e9c3ded2976d3d703d9c5959"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.store-custody.json",
+        "sha256": "b582238f31c516771b38d5c4d0379314fce7d3cc9428893cbe7ce53b267201e9"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.jsonl",
-        "sha256": "e9108709a998aca07859be1a39c3bed9e99da525aff63b90c6c93bfc6695fd18"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.jsonl",
+        "sha256": "b443c3eb84cb01f8cba1e549a148489fc1dca85a182d9a614fa2b3e6f0fdd8a1"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.stderr.log",
-        "sha256": "10227d8f086a27db3ab270ec16b0e30ec4a3eb62309a877c988f6d0d905ed48b"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.stderr.log",
+        "sha256": "f284a93577194cab0dbd59fbfed36ce12ffca047dc304e4bc50222d63fe07087"
       }
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested",
       "status": "passed",
-      "threadId": "01a03f13-026c-7af1-b012-1ed98f61486a",
-      "serverInstanceId": "4613a24e-3a25-4b87-9e42-1164a6848bd5",
-      "startedAt": "2026-08-26T17:16:45.102Z",
-      "endedAt": "2026-08-26T17:17:36.725Z",
+      "threadId": "01a04a93-ba31-7163-acc2-10f226019493",
+      "serverInstanceId": "4f5654c8-8431-4441-bba9-cfe23526a7f4",
+      "startedAt": "2026-08-28T22:53:10.142Z",
+      "endedAt": "2026-08-28T22:53:44.772Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -444,142 +444,142 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c",
-        "workspaceInstanceId": "1f235daf29e5",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c",
+        "workspaceInstanceId": "049d40056118",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-c",
         "projectKey": "github.com/amanuensis-a25/repo-c",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "process-cwd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "74f2d47387f4ed20d89031ed54b6216ddc59b44bc6e4f0b49416b1be9ad2e571",
-        "serverInstanceId": "4613a24e-3a25-4b87-9e42-1164a6848bd5"
+        "bindingId": "2df819ce4b558672fe8d8b0aa139c6d7ce7f2fab8770a905231dbe599c81ea2b",
+        "serverInstanceId": "4f5654c8-8431-4441-bba9-cfe23526a7f4"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/objects/32/d91f19d07db519136588236fe647928fae101a"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/objects/bc/d1acaee2e4dd93a93b5a98b5ea5ea833cc1c04"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-c/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-c/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.store-custody.json",
-        "sha256": "5b3e3d3a05cf478b4799d1a57a447c3a6839e6f555ff7309ad0f7d1996577a44"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.store-custody.json",
+        "sha256": "3a366d90eb62981f597c9b2c58e05046139cd8f60a858dc42d87d47fa63f09eb"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.jsonl",
-        "sha256": "934b36e2ebd0b5c577b6cae498e26fe17079150058405d91a154ea6488d9823d"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.jsonl",
+        "sha256": "67f68bcec48a81b5d4a9a2ff235b7a15562fb1a6af38bc2c62ece0d34c432847"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.stderr.log",
-        "sha256": "3f9abb1529cbe9bc6d4d44b376c7514df02afa795e710bdf67d82f041ec6c77a"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.stderr.log",
+        "sha256": "bef363cf7780f8910560a5bd8ef16b8c6681203590363b150a5fb4b773af5c0e"
       }
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root",
       "status": "passed",
-      "threadId": "01a03f13-ca93-7931-8c0d-7fc934221ead",
-      "serverInstanceId": "6a1bf83c-d8b5-421c-b6a0-1d68ad87571a",
-      "startedAt": "2026-08-26T17:17:36.725Z",
-      "endedAt": "2026-08-26T17:17:57.843Z",
+      "threadId": "01a04a94-41fc-7da1-9ddd-f930dcbe5d2e",
+      "serverInstanceId": "b6db591f-976d-434d-9b2b-d24b0b77cbc7",
+      "startedAt": "2026-08-28T22:53:44.773Z",
+      "endedAt": "2026-08-28T22:54:07.044Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -587,142 +587,142 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d",
-        "workspaceInstanceId": "88813c14c1f5",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d",
+        "workspaceInstanceId": "4fd49c21dc0b",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-d",
         "projectKey": "github.com/amanuensis-a25/repo-d",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "process-cwd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "d68aa4d20e7ffaf6dbc4eff3e5408e45bce0ba2ad27309bcbfd3b1690349ff74",
-        "serverInstanceId": "6a1bf83c-d8b5-421c-b6a0-1d68ad87571a"
+        "bindingId": "6912c8abce541dd96417dc42cee482513b9f58b3feaf10f537c9d623da834faf",
+        "serverInstanceId": "b6db591f-976d-434d-9b2b-d24b0b77cbc7"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/objects/4d/52b372555976f1db417bf6d57f4d78aaf21d6b"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/objects/62/2240dff4f6a854dee06360bd80b8fa613611f2"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.store-custody.json",
-        "sha256": "6f805f56158ec507a1012c2de08743e52e2ff3747ede72057af16483d4c65a1f"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.store-custody.json",
+        "sha256": "773252a20752557db9d22e72b3de46807e9b83d3d2b78a06c4e81be2be8d7a49"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.jsonl",
-        "sha256": "2ebe362ed31c36dfc7eb2c9ca5a1357551766b8747dfc8352925e9f7f62ae236"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.jsonl",
+        "sha256": "2d61feb0da4dccbcd0e65e2b3f9c68b9f4fbb787640774636845eb5e2d7d60c0"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.stderr.log",
-        "sha256": "1a4bb0b691663a6933798c60e721b99140d6666a36c58861609f74855adf76a4"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.stderr.log",
+        "sha256": "5648fd2179835cbd181988b5cf6eb60b6dd29bfc2bc689254ee03100c8932095"
       }
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree",
       "status": "passed",
-      "threadId": "01a03f12-5fbf-7033-a886-5e1fc970de0a",
-      "serverInstanceId": "50549e0a-c11b-442b-9385-4e1b0787e874",
-      "startedAt": "2026-08-26T17:16:03.473Z",
-      "endedAt": "2026-08-26T17:16:45.102Z",
+      "threadId": "01a04a93-5185-7fb3-809b-cd723914b222",
+      "serverInstanceId": "372dfa46-5ec8-4e71-92b5-9b88844a6038",
+      "startedAt": "2026-08-28T22:52:43.732Z",
+      "endedAt": "2026-08-28T22:53:10.074Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -730,142 +730,142 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree",
-        "workspaceInstanceId": "9b3705f03893",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree",
+        "workspaceInstanceId": "e487abb67f71",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-d",
         "projectKey": "github.com/amanuensis-a25/repo-d",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "process-cwd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "b0969d8bcdf04d0695da1a7010e60061ea9a0f205c7f0ec674b2c3f7307a5d38",
-        "serverInstanceId": "50549e0a-c11b-442b-9385-4e1b0787e874"
+        "bindingId": "edbef52d69741a54022831fa114bdef94d55379870014cf0be8c4ea79e0baac9",
+        "serverInstanceId": "372dfa46-5ec8-4e71-92b5-9b88844a6038"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/objects/47/c3011f63e896b893b9b659155bd107a570ae22"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/objects/59/e5158678365cfcfc46a79b95810973524d59c1"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-d-worktree/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-d-worktree/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.store-custody.json",
-        "sha256": "3a25a0247e7a44919b115745781697ab43ffc9816f78805943e3219271d9ee63"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.store-custody.json",
+        "sha256": "a385377589423a3c658c5ffe5e4c128ac6d4745501630a9f295e69d8ef5e4e2c"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.jsonl",
-        "sha256": "8e232736cdb443ae59ccd67228b568760d262ce094ccd937e031c3a3805eb1f2"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.jsonl",
+        "sha256": "ecc6d5be5172969f7631d5e9160d079ae926db6e00f83a2aaf406b7a4f94c1fc"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.stderr.log",
-        "sha256": "ff1c1c7f71d8f3fc598cb7f809997ea0a49a4ba6d71bebdfd3bc4b343aa4fee6"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.stderr.log",
+        "sha256": "a449a77a5c4ec32f6f5d529ffa6f51645d36e24af9338a533408f769b4e491eb"
       }
     },
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd",
       "status": "passed",
-      "threadId": "01a03f14-1d0c-7600-a5da-fc756bd26ae1",
-      "serverInstanceId": "88280aca-c306-45cd-b4e9-4dcd5c88d309",
-      "startedAt": "2026-08-26T17:17:57.843Z",
-      "endedAt": "2026-08-26T17:18:27.710Z",
+      "threadId": "01a04a94-9704-7bd2-bcde-ffd6d5bda751",
+      "serverInstanceId": "5842520a-131f-4e55-8e10-df038bc6f0fa",
+      "startedAt": "2026-08-28T22:54:07.045Z",
+      "endedAt": "2026-08-28T22:54:28.446Z",
       "amanuensisSetupCommandCount": 0,
       "perRepositoryRestartCount": 0,
       "userInterventionCount": 0,
@@ -873,162 +873,162 @@
       "recovery": "not-required",
       "bindingReceipt": {
         "contractVersion": "amanuensis-repository-binding/v1",
-        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e",
-        "workspaceInstanceId": "4ff991f83308",
+        "canonicalRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e",
+        "workspaceInstanceId": "4ef400938f39",
         "projectIdentity": "remote:github.com/amanuensis-a25/repo-e",
         "projectKey": "github.com/amanuensis-a25/repo-e",
-        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e",
-        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis",
+        "storageRoot": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e",
+        "storagePath": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis",
         "storagePolicy": "worktree-local",
         "selectionSource": "parent-codex-cli-cd-git-root",
         "serverVersion": "0.2.0-beta.1",
-        "bindingId": "41d1af1db9dbdd58f44579e0e525aa62ab2dfba2b7c64dc6795d77b3d414c670",
-        "serverInstanceId": "88280aca-c306-45cd-b4e9-4dcd5c88d309"
+        "bindingId": "4744d9e3f0c339e0ca3e20174ce6a212f72a91f0ecb21a16f5ffbf313b4deadc",
+        "serverInstanceId": "5842520a-131f-4e55-8e10-df038bc6f0fa"
       },
       "writes": [
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/COMMIT_EDITMSG"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/COMMIT_EDITMSG"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/config"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/config"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/description"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/description"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/applypatch-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/applypatch-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/fsmonitor-watchman.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/post-update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/post-update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-applypatch.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-applypatch.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-merge-commit.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-merge-commit.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-push.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-push.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-rebase.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-rebase.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/pre-receive.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/pre-receive.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/prepare-commit-msg.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/prepare-commit-msg.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/push-to-checkout.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/push-to-checkout.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/hooks/update.sample"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/hooks/update.sample"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/index"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/index"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/info/exclude"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/info/exclude"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/logs/HEAD"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/logs/HEAD"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/logs/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/logs/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/MERGE_RR"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/MERGE_RR"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/objects/2a/e10fad799071dc29002156040211649a139b83"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/objects/6c/7aac4d7ba845d644ce378f87d30dd58cff8f92"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/objects/a3/81a0c443053daa4e9896dd35e84565c66a5eac"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/objects/c3/e874372a32ef0e1361d312248d5e9cd02836a8"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/objects/e4/019c3584c06753c0bdfaadf80c605598c8233c"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.git/refs/heads/main"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.git/refs/heads/main"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.gitignore"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.gitignore"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/.storage-mode"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/.storage-mode"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/initialization.json"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/initialization.json"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/memory.db"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/memory.db"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/project_identity"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/project_identity"
         },
         {
-          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-e/.amanuensis/workspace_path"
+          "path": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-e/.amanuensis/workspace_path"
         }
       ],
       "observedSessionIntents": [
-        "A25_RUN_a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd"
+        "A25_RUN_a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd"
       ],
       "storeCustody": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.store-custody.json",
-        "sha256": "0825510cafa383fc52424b4f3d11c7757da428c77e25d151e86840468bf3bdf0"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.store-custody.json",
+        "sha256": "158a620ee4e30b827f45bff5f5db3a88ba50cec23d7000f0289a9947e4d988f2"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.jsonl",
-        "sha256": "9732400eb1bac684dee753c58cf636e5426739a5d12355588801ab486cce5c51"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.jsonl",
+        "sha256": "99e8f94b4ab0f8637147f40d4a4d897c8e65a9b55353d23c621b600cc468c085"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.stderr.log",
-        "sha256": "f60348a64a9d548bbcbaaeaf2c769cc2773505d2ee7979daff71840d1cf1bfcc"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.stderr.log",
+        "sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
       }
     }
   ],
   "negativeRuns": [
     {
-      "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-negative-config",
+      "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config",
       "status": "passed",
-      "threadId": "01a03f14-91fa-78c0-887f-6e5e2ef274f7",
+      "threadId": "01a04a94-eadf-7df1-af13-77b45ee158d1",
       "configurationDeliveryCleared": true,
       "hostLaunchCleared": true,
       "detectorOperationCleared": true,
-      "diagnosisDurationMs": 13944,
+      "diagnosisDurationMs": 15469,
       "diagnosisTargetMs": 30000,
       "userInterventionCount": 0,
       "boundedRemediation": "Remove the per-run hard-coded args override; the unchanged managed user registration then resumes cwd-relative launch.",
-      "expectedSelectedWorkspace": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-a",
-      "observedLaunchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-7unmsM/repo-b",
+      "expectedSelectedWorkspace": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-a",
+      "observedLaunchCwd": "/private/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-a25-operating-D8VdHJ/repo-b",
       "detectorWitness": "workspace mismatch before state initialization",
       "launchAuditLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.launch-audit.jsonl",
-        "sha256": "226aea90b281676b22b73790dcd06fe74bfd5a6490af0af091adc214863b31de"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.launch-audit.jsonl",
+        "sha256": "da50a8b27730a12d68039e55a5df44ccea8ebe71c39536b18f17518b895a10eb"
       },
       "rawEventLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.jsonl",
-        "sha256": "abb84fab9e4023c88737f0b44196e5b3c8d6d7406774ed1e271af0a5df3a0085"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.jsonl",
+        "sha256": "d0b9430d02b54cec684777de6a82ad2782de3ee72945d8a7bbd566913d377ec8"
       },
       "stderrLog": {
-        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.stderr.log",
-        "sha256": "35ac872d857bc9c55981e1788caa4c798a65353bcbf7095dc1a0231dd41fbbc4"
+        "path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.stderr.log",
+        "sha256": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721"
       }
     }
   ],
@@ -1041,27 +1041,27 @@
     "crossRepositoryWriteCount": 0,
     "byRun": [
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root",
         "status": "passed"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root",
         "status": "passed"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested",
         "status": "passed"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root",
         "status": "passed"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree",
         "status": "passed"
       },
       {
-        "runId": "a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd",
+        "runId": "a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd",
         "status": "passed"
       }
     ],

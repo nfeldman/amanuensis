@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "roadmapVersion": "1.4",
-  "updated": "2026-08-28",
+  "updated": "2026-08-29",
   "title": "Amanuensis roadmap: from surveyed codebase to living conspectus",
   "northStar": "Once a repository has been fully surveyed, Amanuensis maintains a revision-aware conspectus and can furnish any consequential review, design decision, or generative exploration with a bounded situation model: current facts, traced intent, applicable constraints, known contradictions, invalidated knowledge, plausible options, and explicit unknowns.",
   "scopeDecision": "The v2 epistemic engine, review, architecture, research-learning, and Chorusmith surfaces are integrated, but direct multi-repository use exposed an activation failure before useful work began: a hard-coded global server remained bound to another repository while the target repository carried a project-local registration that the running task had not loaded. Friction-free Codex activation is therefore the highest-priority product work. New product-surface expansion pauses until one user-level installation can bind each new trusted repository correctly, isolate concurrent repositories, diagnose stale configuration before writes, and start from one natural-language request. The integrated v2 baseline remains established; product efficacy and the friction-free operating claim remain unestablished until measured.",
@@ -35,53 +35,38 @@
       }
     },
     "release": {
-      "status": "established",
-      "tag": "v0.2.0-beta.1",
-      "tagCommit": "56940800af7a4c99980a4e09a41559bb65891153",
+      "status": "candidate",
+      "tag": "v0.2.0-beta.2",
       "registry": "npmjs",
       "package": "@gruetech/amanuensis",
-      "version": "0.2.0-beta.1",
+      "version": "0.2.0-beta.2",
       "distTag": "latest",
-      "publishedAt": "2026-08-26T18:21:27.270Z",
-      "shasum": "83abf7279073f562bd47dbf1874ff762cbe4a97c",
-      "integrity": "sha512-QxcD55cgw6VawLDB/fU2Ia8yWmmBdjCi/bqJmvE4qU50LLZXITIKRZM22fRhIwS4jYOpsWhrGuJdO6369btKXQ==",
-      "publish": {
-        "provider": "github-actions",
-        "workflow": "publish.yml",
-        "runId": 32998936471,
-        "headSha": "56940800af7a4c99980a4e09a41559bb65891153",
-        "conclusion": "success"
-      },
-      "publishedSmoke": {
-        "provider": "github-actions",
-        "workflow": "published-smoke.yml",
-        "runId": 32999327584,
-        "version": "0.2.0-beta.1",
-        "conclusion": "success"
-      },
+      "publicationAuthorized": true,
+      "publicationStatus": "not-published",
+      "releaseReadyReceipt": "dev/activation-evidence/a26-release-readiness.json",
       "previousEstablished": {
         "status": "established",
-        "tag": "v0.2.0-alpha.1",
-        "tagCommit": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
+        "tag": "v0.2.0-beta.1",
+        "tagCommit": "56940800af7a4c99980a4e09a41559bb65891153",
         "registry": "npmjs",
         "package": "@gruetech/amanuensis",
-        "version": "0.2.0-alpha.1",
+        "version": "0.2.0-beta.1",
         "distTag": "latest",
-        "publishedAt": "2026-08-24T00:26:59.015Z",
-        "shasum": "8e475bd11675a7703b6cb6b460d989587f86b536",
-        "integrity": "sha512-vWczSVfThYl+wPTeRrUmLc2SrdWWZZWNjZ6Vtm3LLADP+/RZB/UfMCSCuLudCqIUDHd8mvmPW6q2vFwmWzDzQQ==",
+        "publishedAt": "2026-08-26T18:21:27.270Z",
+        "shasum": "83abf7279073f562bd47dbf1874ff762cbe4a97c",
+        "integrity": "sha512-QxcD55cgw6VawLDB/fU2Ia8yWmmBdjCi/bqJmvE4qU50LLZXITIKRZM22fRhIwS4jYOpsWhrGuJdO6369btKXQ==",
         "publish": {
           "provider": "github-actions",
           "workflow": "publish.yml",
-          "runId": 32676535069,
-          "headSha": "a725369b8cd1715ae544f93dcbd238ac37971c0a",
+          "runId": 32998936471,
+          "headSha": "56940800af7a4c99980a4e09a41559bb65891153",
           "conclusion": "success"
         },
         "publishedSmoke": {
           "provider": "github-actions",
           "workflow": "published-smoke.yml",
-          "runId": 32676740951,
-          "version": "0.2.0-alpha.1",
+          "runId": 32999327584,
+          "version": "0.2.0-beta.1",
           "conclusion": "success"
         }
       }

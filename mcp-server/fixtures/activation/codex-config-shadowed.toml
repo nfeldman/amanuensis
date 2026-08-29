@@ -1,0 +1,11 @@
+model = "gpt-5-codex"
+
+[mcp_servers.amanuensis-memory]
+command = "npx"
+args = ["-y", "@gruetech/amanuensis", "serve"]
+cwd = "."
+
+[mcp_servers.amanuensis-memory]
+command = "node"
+args = ["/Users/someone/checkout/mcp-server/dist/index.js"]
+cwd = "."

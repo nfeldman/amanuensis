@@ -7,7 +7,8 @@
     "evidenceMode": "detector-fixture",
     "host": {
       "surface": "codex-cli-exec",
-      "codexVersion": "codex-cli 0.146.0"
+      "codexVersion": "codex-cli 0.146.0",
+      "configPath": "mcp-server/fixtures/activation/codex-config-healthy.toml"
     },
     "lifecycle": {
       "configChangedAt": "2026-08-25T20:00:00Z",
@@ -42,7 +43,9 @@
           "storagePath": "/fixtures/repository-a/.amanuensis"
         },
         "writes": [
-          { "path": "/fixtures/repository-a/.amanuensis/docs/index.html" }
+          {
+            "path": "/fixtures/repository-a/.amanuensis/docs/index.html"
+          }
         ]
       },
       {
@@ -55,7 +58,9 @@
           "storagePath": "/fixtures/repository-b/.amanuensis"
         },
         "writes": [
-          { "path": "/fixtures/repository-b/.amanuensis/docs/index.html" }
+          {
+            "path": "/fixtures/repository-b/.amanuensis/docs/index.html"
+          }
         ]
       },
       {
@@ -68,7 +73,9 @@
           "storagePath": "/fixtures/repository-a-worktree/.amanuensis"
         },
         "writes": [
-          { "path": "/fixtures/repository-a-worktree/.amanuensis/docs/index.html" }
+          {
+            "path": "/fixtures/repository-a-worktree/.amanuensis/docs/index.html"
+          }
         ]
       }
     ]
@@ -87,7 +94,10 @@
     {
       "caseId": "reused-server",
       "mutations": [
-        { "pointer": "/runs/1/serverInstanceId", "value": "instance-a" }
+        {
+          "pointer": "/runs/1/serverInstanceId",
+          "value": "instance-a"
+        }
       ],
       "expectedError": "server instance instance-a crossed repository roots"
     },
@@ -104,10 +114,51 @@
     {
       "caseId": "missing-restart",
       "mutations": [
-        { "pointer": "/lifecycle/processStartedAt", "value": "2026-08-25T19:59:00Z" },
-        { "pointer": "/lifecycle/restartObserved", "value": false }
+        {
+          "pointer": "/lifecycle/processStartedAt",
+          "value": "2026-08-25T19:59:00Z"
+        },
+        {
+          "pointer": "/lifecycle/restartObserved",
+          "value": false
+        }
       ],
       "expectedError": "running Codex process predates managed configuration"
+    },
+    {
+      "caseId": "config-shadowed-registration",
+      "mutations": [
+        {
+          "pointer": "/host/configPath",
+          "value": "mcp-server/fixtures/activation/codex-config-shadowed.toml"
+        }
+      ],
+      "expectedError": "exactly one managed Amanuensis registration"
+    },
+    {
+      "caseId": "config-workspace-pinned",
+      "mutations": [
+        {
+          "pointer": "/host/configPath",
+          "value": "mcp-server/fixtures/activation/codex-config-workspace-pinned.toml"
+        }
+      ],
+      "expectedError": "pins a repository"
+    },
+    {
+      "caseId": "config-residual-harness-trust",
+      "mutations": [
+        {
+          "pointer": "/host/configPath",
+          "value": "mcp-server/fixtures/activation/codex-config-residual-trust.toml"
+        }
+      ],
+      "expectedError": "harness trust"
+    },
+    {
+      "caseId": "control-healthy-config",
+      "mutations": [],
+      "expectedError": null
     }
   ]
 }

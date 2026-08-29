@@ -1,0 +1,8 @@
+{"type":"thread.started","thread_id":"01a04a94-eadf-7df1-af13-77b45ee158d1"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation."}}
+{"type":"item.completed","item":{"id":"item_1","type":"error","message":"`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_2","type":"error","message":"Skill descriptions were shortened to fit the 2% skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest."}}
+{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"I’ll make the single requested Amanuensis startup call and nothing else."}}
+{"type":"item.completed","item":{"id":"item_4","type":"agent_message","text":"Startup failed: Amanuensis `get_project_info` is unavailable."}}
+{"type":"turn.completed","usage":{"input_tokens":36493,"cached_input_tokens":27136,"cache_write_input_tokens":0,"output_tokens":419,"reasoning_output_tokens":222}}

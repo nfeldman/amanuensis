@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "initiative": "A22",
   "pecIndex": "pc-a986",
-  "recordedAt": "2026-08-26T00:21:03.738Z",
+  "recordedAt": "2026-08-28T22:59:00.996Z",
   "result": "passed",
   "evidenceMode": "real-host",
   "source": {
@@ -15,15 +15,15 @@
     "files": [
       {
         "path": "mcp-server/src/project.ts",
-        "sha256": "5894d272e2f6b58d861333b4533af38cc290d1946a15f21f9107b711a7e77033"
+        "sha256": "924ab668fdcf5b74a1f88a10059e16c47f3fa2fbe0f69dd28aebfcb0717377eb"
       },
       {
         "path": "mcp-server/src/index.ts",
-        "sha256": "98c6e153aa1cf85607e190c10188a39c0974685b3e163415159ef73d375ea251"
+        "sha256": "62f9914b95f303864d0f7da36ca2f83ba51c69f66ef09cf65a0cda2e674d8b3f"
       },
       {
         "path": "mcp-server/src/codex-host.ts",
-        "sha256": "95b75e21d3d6742b7e96a8cc742180b64bc9fbc0846a1f03d5155187e47d4da2"
+        "sha256": "cd4b32f2d09becff867dd819b3c704034f06abf16723f8e1242475ef2b4f61de"
       },
       {
         "path": "mcp-server/test-codex-parent-workspace.mjs",
@@ -67,7 +67,7 @@
       },
       {
         "path": ".github/workflows/test.yml",
-        "sha256": "25030c5028e5ad9ca88dccc4be16209f4ba59ac0f69f875aa176ac2046160985"
+        "sha256": "2ac4c36d004c2a1698faf8800ee5312497b056b61d0aefa9a8ea6a4431ca9163"
       }
     ]
   },

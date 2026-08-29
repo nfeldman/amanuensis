@@ -316,7 +316,13 @@ try {
   // could keep asserting candidate/not-published indefinitely. These two cases
   // reconcile the declared release against the repository's own tags.
   const publishedTagClaimedAsCandidate = writeCase("published-tag-claimed-as-candidate", (value) => {
-    asCandidate(value);
+    // Name a tag that genuinely exists in the repository. Reusing whatever the
+    // live release happens to name would go vacuous the moment the roadmap
+    // carries a candidate whose tag has not been cut yet — which is exactly the
+    // normal pre-release state.
+    const candidate = asCandidate(value);
+    candidate.tag = candidate.previousEstablished.tag;
+    candidate.version = candidate.previousEstablished.version;
   });
   run(
     ["--write", "--source", publishedTagClaimedAsCandidate, "--output", projection],
@@ -325,8 +331,17 @@ try {
   );
 
   const tagCommitMismatch = writeCase("tag-commit-mismatch", (value) => {
-    value.delivery.release.tagCommit = "0".repeat(40);
-    value.delivery.release.publish.headSha = "0".repeat(40);
+    // Promote the previously established release so the case always has an
+    // established shape to corrupt, whether or not the live roadmap currently
+    // carries one.
+    const established = structuredClone(
+      value.delivery.release.status === "established"
+        ? value.delivery.release
+        : value.delivery.release.previousEstablished,
+    );
+    established.tagCommit = "0".repeat(40);
+    established.publish.headSha = "0".repeat(40);
+    value.delivery.release = established;
   });
   run(
     ["--write", "--source", tagCommitMismatch, "--output", projection],
