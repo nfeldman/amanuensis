@@ -2,6 +2,8 @@
 
 When the human says "audit", "memory audit", or "what's stale", run
 this sweep. Your output is a **prioritized worklist**, not new findings.
+The worklist is the deliverable here; when the human wants it worked rather
+than listed, that is `references/refresh.md`.
 
 Unlike the phase work, you do not read source code here. You read the
 DB and the conspectus itself.

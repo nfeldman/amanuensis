@@ -52,8 +52,10 @@ ceremony before useful work begins.
 4. **Infer scope without a menu.** An explicit focused question or named
    subsystem controls. Otherwise, a cold start means onboarding followed by
    every subsystem in priority order; a warm start means resume active work,
-   then complete every remaining `unmapped` subsystem. Emit the estimate as a
-   status update and begin.
+   then complete every remaining `unmapped` subsystem. When every subsystem is
+   already `mapped` but the ledger carries stale rows, the remaining work is the
+   stale backlog — run `references/refresh.md` rather than concluding the scope
+   is empty. Emit the estimate as a status update and begin.
 5. **If `last_checked_sha != HEAD`** on the canonical branch, fold
    `detect_changes` into the selected scope.
 
@@ -93,6 +95,7 @@ is read for evidence only — never modified.
 | "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase. |
 | "what have you noticed" / "browse" | See `references/notes.md` — answer conversationally from field notes, vocabulary, and findings. No surveys. |
 | "audit" / "what's stale" | See `references/memory-audit.md` — sweep contradictions, linchpin findings, open notes, stale entries. Produce a worklist. |
+| "refresh" / "refresh the survey" / "bring the conspectus up to date" | See `references/refresh.md` — reconcile the ledger, then work the stale backlog by re-examining each file and clearing it. This route discharges drift; the audit route only lists it. |
 | "reinit survey" | The request authorizes this destructive operation. Snapshot, report the exact target, then clear it. |
 | "stop" / "pause" / "wait" | Stop autonomous execution at the next phase boundary; checkpoint state; ask what to do. |
 
@@ -280,6 +283,8 @@ everything.
   updates, materialization, session close).
 - `references/notes.md` — conversational observer mode.
 - `references/memory-audit.md` — hygiene sweep.
+- `references/refresh.md` — discharge drift: reconcile scope, then
+  re-examine and clear the stale backlog.
 - `references/open-questions.md` — categories, when to use which,
   and the headless preflight.
 - `references/concern-territories.md` — the 11-territory catalog
