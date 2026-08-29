@@ -224,13 +224,45 @@ export const gitTools: ToolDefinition[] = [
       const unledgered = trackedPaths.filter((p) => !ledgerPaths.has(p));
       const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
 
-      // A ledger row is stale when its file moved on since the commit at which
-      // it was examined. Asking git per row keeps the judgement per-file rather
-      // than per-subsystem, so re-examining one file clears only that file.
-      const changedSet = new Set(changedFiles);
-      const drifted = ledgerRows.filter(
-        (r) => trackedSet.has(r.file_path) && r.ref_sha && changedSet.has(r.file_path),
-      );
+      // A ledger row is stale when its content differs from the commit at which
+      // it was examined — a claim about content, not about which paths happen to
+      // appear in the range being inspected. Deciding it from the moving
+      // lastSha..currentSha window cannot self-correct: a file marked stale in
+      // one window and restored in the next stays flagged forever, because
+      // nothing lowers the flag except clear_staleness (finding B03-4).
+      //
+      // Rows are grouped by their examination commit so this costs one git call
+      // per distinct ref_sha rather than one per file.
+      const byRefSha = new Map<string, typeof ledgerRows>();
+      for (const row of ledgerRows) {
+        if (!trackedSet.has(row.file_path) || !row.ref_sha) continue;
+        const group = byRefSha.get(row.ref_sha);
+        if (group) group.push(row);
+        else byRefSha.set(row.ref_sha, [row]);
+      }
+      const drifted: typeof ledgerRows = [];
+      const unverifiable: typeof ledgerRows = [];
+      const fresh: typeof ledgerRows = [];
+      for (const [refSha, rows] of byRefSha) {
+        let changedSinceExamination: Set<string>;
+        try {
+          changedSinceExamination = new Set(
+            runGit(ctx.project.workspacePath, ["diff", "--name-only", refSha, currentSha])
+              .split("\n")
+              .filter(Boolean),
+          );
+        } catch {
+          // An examination commit that is no longer reachable cannot be
+          // compared against. Treat those rows as unverified rather than
+          // silently fresh, and say so in the reason.
+          unverifiable.push(...rows);
+          continue;
+        }
+        for (const row of rows) {
+          if (changedSinceExamination.has(row.file_path)) drifted.push(row);
+          else fresh.push(row);
+        }
+      }
 
       const reconcileTx = ctx.db.transaction(() => {
         const markStale = ctx.db.prepare(
@@ -239,6 +271,16 @@ export const gitTools: ToolDefinition[] = [
         );
         for (const row of drifted) markStale.run("git-drift", row.subsystem_id, row.file_path);
         for (const row of absent) markStale.run("absent", row.subsystem_id, row.file_path);
+        for (const row of unverifiable)
+          markStale.run("unverifiable-ref", row.subsystem_id, row.file_path);
+        // Staleness is re-derived in both directions. A row whose content
+        // matches its examination commit again is fresh by the same rule that
+        // made it stale, so leaving it flagged would be churn, not obligation.
+        const markFresh = ctx.db.prepare(
+          `UPDATE file_ledger SET stale=0, stale_since=NULL, stale_reason=NULL
+             WHERE subsystem_id=? AND file_path=? AND stale=1 AND stale_reason IS NOT 'absent'`,
+        );
+        for (const row of fresh) markFresh.run(row.subsystem_id, row.file_path);
 
         // scope_gaps is rebuilt each run: it describes the tree as it is now,
         // not an accumulating log. A path that was classified since the last
@@ -265,7 +307,7 @@ export const gitTools: ToolDefinition[] = [
         bySubsystem.get(row.subsystem_id)?.files.add(row.file_path);
       }
 
-      const staleRows = [...drifted, ...absent];
+      const staleRows = [...drifted, ...absent, ...unverifiable];
       const stale_subsystems = Array.from(bySubsystem.entries()).map(([subsystem_id, v]) => ({
         subsystem_id,
         changed_files: Array.from(v.files),
@@ -289,6 +331,7 @@ export const gitTools: ToolDefinition[] = [
         // but carries no survey work, and folding it into one number would let
         // a republished projection read as the conspectus going stale.
         stale_files: staleRows.filter(carriesObligation).length,
+        unverifiable_ref_rows: unverifiable.length,
         stale_exempt_files: staleRows.filter((row) => !carriesObligation(row)).length,
       };
     },

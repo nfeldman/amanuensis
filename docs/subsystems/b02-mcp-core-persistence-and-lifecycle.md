@@ -24,7 +24,7 @@ Highest fan-in and durable-state authority. Substantially reworked between b8b56
 | `mcp-server/src/db.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
 | `mcp-server/src/helpers.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
 | `mcp-server/src/index.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
-| `mcp-server/src/invariants.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
+| `mcp-server/src/invariants.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `71d55fa3` |
 | `mcp-server/src/project.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
 | `mcp-server/src/schema.sql` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |
 | `mcp-server/src/session.ts` | examined | MCP process, project identity, SQLite persistence, lifecycle, or server invariants. | `b8b566f` |

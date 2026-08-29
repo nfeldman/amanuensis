@@ -39,7 +39,11 @@ _Projected from the recorded [onboarding runtime boundary table](onboarding-repo
 ```mermaid
 pie showData
     title Stale entries by subsystem
+    "B-05" : 35
+    "B-03" : 13
     "B-08" : 9
-    "B-05" : 7
-    "B-02" : 2
+    "B-04" : 9
+    "B-02" : 8
+    "B-01" : 8
+    "B-06" : 2
 ```

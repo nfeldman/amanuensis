@@ -2,7 +2,7 @@
 
 **Canonical branch**: `main`  
 **Onboarding SHA**: `b8b566f`  
-**Last checked SHA**: `411821f61852`
+**Last checked SHA**: `adc4ce04aa57`
 
 ## Quick orientation
 
@@ -13,8 +13,8 @@
 | Metric | Value |
 |---|---|
 | Subsystems mapped | 8 / 8 |
-| Confirmed findings | 9 (0 critical, 4 high) |
-| Open bugs | 1 |
+| Confirmed findings | 10 (0 critical, 4 high) |
+| Open bugs | 2 |
 | Stale entries | 0 |
 | Open field notes | 10 |
 | Unresolved contradictions | 0 |
@@ -37,4 +37,4 @@ New here? Start with [How to read this conspectus](how-to-read.md).
 
 ## Latest session
 
-`Change detection against HEAD 411821f and staleness-signal observation` — started 2026-08-29 04:34 UTC · ended 2026-08-29 04:34 UTC
+`record path-churn staleness defect found by the dogfood pass` — started 2026-08-29 04:51 UTC · ended 2026-08-29 04:51 UTC

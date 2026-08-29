@@ -3,15 +3,15 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "cf1edcce306b2d786708a0445d7fcdd8bf0819338a4513075fc668b590362517"
+      "content_hash": "f56e316a5cde266771f8d726cccc47fb8a4f742e73999db90729bcbe48a7dc0d"
     },
     {
       "path": "architecture.md",
-      "content_hash": "da72ecf6d9bdbe4ae55da3d9ee32a0ff18e0729a58bbb375ccc66eddb51bbb18"
+      "content_hash": "d3cb2b1a6cd998813e906b4fd50bdbba56fc3b080a6ce7b508e43dd2cc3f0772"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "5a79437915562b78c34e73ffe1ab9f9ba5229bd9d7bcdf1a1bbd7d83afacb590"
+      "content_hash": "2ccfb6d95e2b7c72909bbe78a00010e6c4f833f921c15ee12ba024df3027021b"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "ba3d09936da8231b194fd658bf3201a70676c1f1783ab1c5fc9cb9ca39e30476"
+      "content_hash": "725e6bf7a463ee35ed76cfe963efcebfe2631d91928d5eb9087929c0513d5ee3"
     },
     {
       "path": "concerns.md",
@@ -27,7 +27,7 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "6deddc8e976afe12ccf9f2420253bd73cf771845bac6796621a48566503d8b12"
+      "content_hash": "49e2fa0a4faff56dfa27e42ef5ff8ded3efe7737633140562c1e40c889b49a70"
     },
     {
       "path": "contradictions.md",
@@ -35,7 +35,7 @@
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "f1eeb29657c35d9ac9b57fd38fba77771aa7de2ef1dc875ec6aa201348f62b16"
+      "content_hash": "5f889c2dc1aa404264ef7db0db483f48eb9056c2ee4eae9212531d1b1d2e11bf"
     },
     {
       "path": "diagnosticity.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "entry-point.html",
-      "content_hash": "1b0435ef253ebd223481dd0862118e7b72db57c3beb4b173d26dbb7d49cd516b"
+      "content_hash": "d75189dbf0963a171235371dbc2db2c8794b85424f58fac371c12c0e40393af4"
     },
     {
       "path": "entry-point.md",
@@ -51,23 +51,23 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "35a59c79c32da0d815c0a98a385106fe627a5e7a92eab2dbd4a4c5bd3be138c5"
+      "content_hash": "bb362a10cab7dc665b60e8d0bec13fee1c13e990706c8ba30ed8a57c28b77f68"
     },
     {
       "path": "field-notes.md",
-      "content_hash": "8abb5cb73e127d423486c6f7dbf7188bc10546c55ed47b0e9d1432c32c38b9b9"
+      "content_hash": "298f228639c550b5cc50e8ce28910a17017f01ad011a9a2e777ecc8153a9cb4a"
     },
     {
       "path": "findings.html",
-      "content_hash": "01beba3001f355727e4098881152b2f386864772c33a51809372318fbe29ef21"
+      "content_hash": "aefc0a2cd7d0b0d6379bf0c14b740dbec012260c62952084e74bb9b5a8817431"
     },
     {
       "path": "findings.md",
-      "content_hash": "0cd1d0be71be73c77fc2ae1c010e8b2227681ef66d029a6280c34e451984c941"
+      "content_hash": "2d3c5a6459e97196060599e5dd3281a139aac14d2ba05c5c7e7afcff841e2352"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "29578acfd36adc1594033731a1ca66820ed26f60a7510907f5a4b3a879dfce6d"
+      "content_hash": "1b17ecd73b609ecfcd762d07fa1977a9fb95029ed18ce50c4ae0fbbfe7350f0d"
     },
     {
       "path": "how-to-read.md",
@@ -75,23 +75,23 @@
     },
     {
       "path": "index.html",
-      "content_hash": "c82dbf55da77cbc266a1657ffe04db04a25b55999d61a8d74d13f74466d6294b"
+      "content_hash": "8ed2436595b7c197ed6663dc1344b929dcffc282fcc648fe025220a116ee1171"
     },
     {
       "path": "index.md",
-      "content_hash": "2c31463a8620f15eaaf11e21e5dae8cb7d1d654d846efcf98bdf50874a1f5322"
+      "content_hash": "1688b607684ac78e291e993c05f27ae71f84646a477b3fe247e25e2d9bbb770c"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "e0349260501438322bfe7a73dc06a835c473156831a35c618614feb67de649e7"
+      "content_hash": "b248cf38c7b8548176e32764f82e174cef2c7c39687636267f811b38acd5b1a7"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "1240c183f419df1c9ad34fdde1bf3cd56fe51d35065f85c3da237acecee02de6"
+      "content_hash": "7ebf41fb5bc9013e669d7ddba6f976f42bd33b33d6b3209a536051aaf568f1cc"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "01289c2bbe42d8bc953753c10b8f1c25e7dbc92174c2e69e12cff4a777139032"
+      "content_hash": "b1c979f51ba587c8069ee52274657f07868ffe6f37bec905326e17d57d4005f5"
     },
     {
       "path": "onboarding-report.md",
@@ -99,7 +99,7 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "f15273d2b0af64854f9675c72f73955dbc3378d19981af1bca157086c16f5f51"
+      "content_hash": "ff6be4ce2cd2c2bc8792514406e7da1685378032badd0f87cdbc14b940309d3f"
     },
     {
       "path": "open-questions.md",
@@ -107,7 +107,7 @@
     },
     {
       "path": "seams.html",
-      "content_hash": "1e1fd921a2c2eed5a375787cdf1622bb244b18317845a83d3c9421e784d1ec69"
+      "content_hash": "d5a2248593b72d2ee526da7b9168fa8c02b30f74680538cbb6c52738678833ad"
     },
     {
       "path": "seams.md",
@@ -115,7 +115,7 @@
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "49000534e24b8e5eff6aec7ac869161578999275650dacbd7d4e1818d24e1d89"
+      "content_hash": "5574aaf082703318401b986514c7cf6763a0a9bf25ff9322806f0717f1970f93"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -123,23 +123,23 @@
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "dcd208a685795b3402f491ddba5c1ea83b67ceffe0e3fbef45c215674fafed17"
+      "content_hash": "3eb96dbae974359fc503fb9487bc8dfc4ff787ad196eff074c0f448d17d79ecf"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
-      "content_hash": "a99a66845389ec40b2196e002a2a3be95757e24df2bf3ab22238c127b525dc36"
+      "content_hash": "33344220dee7ec87665f8e11acfddf8add42da23325f016aaf79e77326991be7"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "2a2fafc67593771d753e2bd4151594b9d8127fece12d7cc1b4ea730004194219"
+      "content_hash": "ac08fe0d78b884582e5828daf52645e8e34335e23937537e96bf51bbc9c436fd"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
-      "content_hash": "bd810acc1ba7d6a5a3da9cb1394af3003f2b2190552cf1962734505dbe9c715c"
+      "content_hash": "5831ce9ae0df79935dc82cb2d834bc030dc4fa9e66644110295a986e19777442"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "c4fac32645db0a45e3f5c4e194404d43413260f7f7b2ef0f54bc0dd60311cebc"
+      "content_hash": "fba0c9db826a306290add21f3e6e1e014fa47ddda798ec963ad088fe585ff238"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
@@ -147,7 +147,7 @@
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "b9bcc682dfe97df22293109341a6650c3ac70451bc25e644a956fe61cb49c173"
+      "content_hash": "7fed8d84e88468cfd4e285e8033f9035c8f90fa562b2478593a0b6fc5f7b1ee1"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -155,7 +155,7 @@
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "cbd178297a1cc773344dfb66662daa990aaaf923bf4c3d4fbcb9505e23ec67ad"
+      "content_hash": "ecc9dbf6c5d3a86ebc961b9c5cbaabee6cee76624bc4f48cb7c2d5726f245285"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -163,7 +163,7 @@
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "a88b7e757a3b9a133a7dbb2c86e1c535ff11f63bd8e849fe3bbf5a1476af8366"
+      "content_hash": "572d1b57d84273a585b466e41a95d196575c516fcccbe4d0c2fa60d9caec8362"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
@@ -171,7 +171,7 @@
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.html",
-      "content_hash": "cf3424bae18776dbcee9230862cba1a685236e29791d06fd75a65f4f74afd3fb"
+      "content_hash": "25b9ad6aa2dd4049ee2ae27b9a951852cfb3389675c3bcd4f92a9c121f833af9"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness-harness.md",
@@ -179,7 +179,7 @@
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "b6c0086a9fe35d1fb14dfa59dd9fdbbe5166746877c48424b10b9f92a8cf9dce"
+      "content_hash": "f8639370d1a465ba11245c7305a6b5f665ab9ca0ab0f2dbc0a0c590974cbd6d1"
     },
     {
       "path": "vocabulary.md",
@@ -2673,6 +2673,10 @@
     },
     {
       "source": "field-notes.html",
+      "target": "findings.html#b03-2"
+    },
+    {
+      "source": "field-notes.html",
       "target": "findings.html#b04-1"
     },
     {
@@ -2818,6 +2822,10 @@
     {
       "source": "field-notes.md",
       "target": "findings.md#b02-1"
+    },
+    {
+      "source": "field-notes.md",
+      "target": "findings.md#b03-2"
     },
     {
       "source": "field-notes.md",
@@ -3013,6 +3021,10 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "findings.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
     },
     {
@@ -3062,6 +3074,10 @@
     {
       "source": "findings.md",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
     },
     {
       "source": "findings.md",
@@ -6133,11 +6149,19 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../findings.html#b03-3"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../findings.html#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-4"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -6489,11 +6513,19 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-2"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../findings.md#b03-3"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "../findings.md#b03-3"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-4"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",

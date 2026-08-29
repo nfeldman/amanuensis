@@ -325,5 +325,100 @@ t("stale generated output does not move the obligation count", () => {
   }
 });
 
+
+// ------------------------------------------------------- content drift ----
+
+// Staleness is a claim about content, not about paths. A file touched and
+// reverted is byte-identical to what was examined, so the examination still
+// holds; flagging it inflates the obligation count with churn, and nothing
+// un-marks a row except clear_staleness, so the inflation is permanent.
+t("a file touched and reverted is not stale", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      {
+        subsystem_id: "B-01",
+        ref_sha: base,
+        files: [{ file_path: "src/core.ts", classification: "examined" }],
+      },
+      ctx,
+    );
+    writeAndCommit(ws, "src/core.ts", "2\n", "churn");
+    const head = writeAndCommit(ws, "src/core.ts", "1\n", "revert");
+
+    const detected = call("detect_changes", { current_sha: head }, ctx);
+    // Non-vacuity: the path really is in the range diff, so a count of zero
+    // means the predicate compared content rather than skipping the file.
+    assert(
+      detected.reconciled_ledger_rows === 1,
+      "precondition: the file is scoped",
+    );
+    assert(
+      call("get_dashboard", {}, ctx).stale_entries === 0,
+      `content identical to ref_sha must not be stale, got ${call("get_dashboard", {}, ctx).stale_entries}`,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+t("a genuine content change is still stale", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      {
+        subsystem_id: "B-01",
+        ref_sha: base,
+        files: [{ file_path: "src/core.ts", classification: "examined" }],
+      },
+      ctx,
+    );
+    const head = writeAndCommit(ws, "src/core.ts", "2\n", "real drift");
+    call("detect_changes", { current_sha: head }, ctx);
+    assert(call("get_dashboard", {}, ctx).stale_entries === 1, "genuine drift must stale");
+  } finally {
+    cleanup();
+  }
+});
+
+t("a row that becomes provably fresh again is un-marked", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      {
+        subsystem_id: "B-01",
+        ref_sha: base,
+        files: [{ file_path: "src/core.ts", classification: "examined" }],
+      },
+      ctx,
+    );
+    const drifted = writeAndCommit(ws, "src/core.ts", "2\n", "drift");
+    call("detect_changes", { current_sha: drifted }, ctx);
+    assert(call("get_dashboard", {}, ctx).stale_entries === 1, "precondition: stale");
+
+    // Restoring the examined content makes the original examination valid again.
+    const restored = writeAndCommit(ws, "src/core.ts", "1\n", "restore");
+    call("detect_changes", { current_sha: restored }, ctx);
+    assert(
+      call("get_dashboard", {}, ctx).stale_entries === 0,
+      "a row whose content matches its ref_sha again must not stay stale",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

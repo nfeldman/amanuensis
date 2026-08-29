@@ -57,6 +57,13 @@
 
 ## Low findings
 
+### [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md)
+
+| ID | Status | Symptom | Root cause | Ref SHA |
+|---|---|---|---|---|
+<!-- amanuensis:finding:dd9a532ba428c06720c816c26ff40c038b456426167ecaa1b4d1786dcf297631 -->
+| <a id="b03-4"></a>**B03-4** | open | A scoped file whose content is identical to what was examined can be reported stale indefinitely, because staleness is decided by whether its path appeared in a commit range rather than by whether its content changed. | The drift predicate in detect_changes tests path membership in the lastSha..currentSha diff and only null-checks the row's ref_sha, never comparing content at that commit against the current one. Nothing clears stale except an explicit clear_staleness, so a path touched and reverted — or touched on a branch later deleted — remains flagged against unchanged content. | `adc4ce0` |
+
 ### [Embedded research surveys and platform trials](subsystems/b07-embedded-research-surveys-and-platform-trials.md)
 
 | ID | Status | Symptom | Root cause | Ref SHA |

@@ -135,6 +135,16 @@ _Business context_: The methodology names overstating evidence quality as the si
 - `mcp-server/src/tools/evidence.ts:KINDS@5694080`
 - `.claude/skills/amanuensis/SKILL.md:evidence kind ladder@5694080`
 
+### [B03-4](../findings.md#b03-4) · 🔵 LOW · confirmed-bug
+
+**Symptom**: A scoped file whose content is identical to what was examined can be reported stale indefinitely, because staleness is decided by whether its path appeared in a commit range rather than by whether its content changed.  
+**Root cause**: The drift predicate in detect_changes tests path membership in the lastSha..currentSha diff and only null-checks the row's ref_sha, never comparing content at that commit against the current one. Nothing clears stale except an explicit clear_staleness, so a path touched and reverted — or touched on a branch later deleted — remains flagged against unchanged content.
+
+_Business context_: The failure is conservative — it over-reports obligation and never under-reports, so unlike [B03-2](../findings.md#b03-2) it cannot manufacture false confidence, and a reader acting on it re-examines a file that did not need it. It matters because the metric it inflates is the headline repair of this release: the commit that introduced the exemption filter is titled 'Count staleness as obligation, not as churn', and the count is still partly churn. Two such rows exist on this repository at adc4ce0 from a probe branch that no longer exists. Making ref_sha load-bearing also needs a reachability fallback, since clear_staleness can store a sha that later becomes unreachable.
+
+**Primary files**:
+- `mcp-server/src/tools/git.ts:detect_changes@adc4ce0`
+
 ## Related subsystems
 
 | From | → | To | Relationship | Strength | Context |
