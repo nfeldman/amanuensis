@@ -28,6 +28,65 @@ jobs:
       - name: Prove living-conspectus gates and clean-export read-back
         run: node dev/test-living-conspectus.mjs
 
+  # The Amanuensis→Pecia defect projection. Pecia is a uv PEP-723 script in a
+  # separate PRIVATE repository, so this gate cannot run from a bare checkout.
+  # It is opt-in rather than skip-by-default-inside-a-passing-job: a gate that
+  # goes green without its subject present is the zero-denominator failure this
+  # repository has already recorded three times (B03-2, B04-1, B04-3). A skipped
+  # job reads as not-run; a passing step that silently did nothing does not.
+  #
+  # To enable: set repository variable PECIA_GATE_ENABLED=true and provide
+  # secret PECIA_REPO_TOKEN with read access to nfeldman/pecia. Once enabled the
+  # job is load-bearing — a failure to obtain pecia turns it red rather than
+  # quietly passing.
+  pecia-defects:
+    name: Amanuensis → Pecia defect projection
+    if: vars.PECIA_GATE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.18.0"
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Obtain the pecia CLI
+        env:
+          PECIA_REPO_TOKEN: ${{ secrets.PECIA_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$PECIA_REPO_TOKEN" || {
+            echo "PECIA_GATE_ENABLED is true but PECIA_REPO_TOKEN is unset." >&2
+            echo "Provide the token or unset the variable; this gate does not skip silently." >&2
+            exit 1
+          }
+          git clone --depth 1 \
+            "https://x-access-token:${PECIA_REPO_TOKEN}@github.com/nfeldman/pecia.git" "$RUNNER_TEMP/pecia"
+          chmod +x "$RUNNER_TEMP/pecia/pecia_cli.py"
+          mkdir -p "$RUNNER_TEMP/bin"
+          ln -s "$RUNNER_TEMP/pecia/pecia_cli.py" "$RUNNER_TEMP/bin/pecia"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: pecia is runnable
+        run: pecia --help > /dev/null
+      - name: Defect projection red gates
+        run: node dev/test-amanuensis-pecia-defects.mjs
+      - name: The committed ledger is well-formed and every reference resolves
+        run: |
+          set -euo pipefail
+          pecia check
+          pecia audit > audit.json
+          node -e '
+            const a = JSON.parse(require("fs").readFileSync("audit.json", "utf8"));
+            const findings = Array.isArray(a) ? a : (a.findings ?? []);
+            const bad = findings.filter((f) => f.kind === "unresolvable-reference");
+            if (bad.length) {
+              console.error("amanuensis references that no longer resolve:", JSON.stringify(bad, null, 2));
+              process.exit(1);
+            }
+            console.log("every amanuensis: reference in the committed ledger resolves");
+          '
+
   mcp-server:
     name: MCP server (TypeScript)
     runs-on: ubuntu-latest

@@ -4,3 +4,8 @@
 # planned: []
 stale_days: 7
 rot_days: 14
+# Amanuensis owns finding state; defect records here refer to it rather than
+# copying it. `check` verifies only that this scheme is declared (E011); `audit`
+# runs the verifier and reports references that no longer resolve — which is how
+# a finding reopened in the conspectus surfaces against a closed defect here.
+resolvers: [amanuensis=dev/pecia-resolve-finding.mjs]

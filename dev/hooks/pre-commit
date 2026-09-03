@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# A pecia write gate for this project, from pecia's templates/pre-commit.
+#
+# Enable per-clone with:
+#   git config core.hooksPath dev/hooks
+#   pecia doctor          # confirms the gate is ACTIVE in THIS clone (clears D010)
+#
+# Bypass any refusal with:  git commit --no-verify
+#
+# WHY THIS EXISTS. Without it `pecia check` is something a person remembers to
+# run, not something the repository enforces — which is what D010 names: "a
+# ledger exists and NO write gate is active in this clone, so nothing checks a
+# record before it is committed. Exit 0 from `check` is something you ran, not
+# something the repo enforces."
+#
+# ONE DEVIATION FROM THE TEMPLATE, AND THE REASON. The template resolves the
+# checker as "$top/pecia_cli.py", i.e. it assumes the adopting repository
+# vendors a copy at its own root. Amanuensis does not, and should not: pecia is
+# a separate private tool, and copying its CLI into this public tree would
+# create a second copy to drift. This is the remaining half of the limitation
+# recorded in dev/pecia-dogfood.md finding 2 — the template dropped its
+# claims.yaml assumption but kept the repository-local CLI one. So the
+# resolution order below is PECIA_CLI, then the CLI on PATH, then the
+# template's own assumption for repos that do vendor it. Everything after the
+# resolution block is the template verbatim: the gate reads the INDEX, extracts
+# the ledger and config as a pair, and refuses a staged deletion of either.
+set -euo pipefail
+
+top="$(git rev-parse --show-toplevel)"
+
+# Resolve the checker without assuming it lives in this repository.
+if [ -n "${PECIA_CLI:-}" ] && [ -f "${PECIA_CLI}" ]; then
+  cli="${PECIA_CLI}"
+elif on_path="$(command -v pecia 2>/dev/null)" && [ -n "$on_path" ]; then
+  cli="$on_path"
+elif [ -f "$top/pecia_cli.py" ]; then
+  cli="$top/pecia_cli.py"
+else
+  echo "✋ pre-commit: the pecia checker was not found — the gate cannot run." >&2
+  echo "   Install pecia on PATH, or set PECIA_CLI=/path/to/pecia_cli.py." >&2
+  echo "   This is a refusal, not a skip: a gate that passes without its" >&2
+  echo "   checker present is worse than none. Deliberate bypass:" >&2
+  echo "     git commit --no-verify" >&2
+  exit 1
+fi
+
+staged="$(mktemp -d)"
+trap 'rm -rf "$staged"' EXIT
+
+in_index() { git ls-files --cached --error-unmatch "$1" >/dev/null 2>&1; }
+in_head()  { git cat-file -e "HEAD:$1" 2>/dev/null; }
+
+# 1) THE LEDGER IS BEING DELETED. Refuse. `git rm --cached .pecia/work.jsonl`
+#    leaves the working copy in place, so nothing looks missing — and it also
+#    removes the file this gate reads, which would silently disable the gate
+#    rather than fail it. De-adopting pecia is a deliberate act; do it with
+#    --no-verify.
+for f in .pecia/work.jsonl .pecia/config.yaml; do
+  if in_head "$f" && ! in_index "$f"; then
+    echo "✋ pre-commit: refusing staged deletion of $f." >&2
+    echo "   The ledger is custody. Removing it is deliberate: git commit --no-verify" >&2
+    exit 1
+  fi
+done
+
+# 2) No ledger in this commit and none in history: the repo has not adopted
+#    pecia (or has finished de-adopting it). Nothing to check.
+in_index .pecia/work.jsonl || exit 0
+
+# 3) CHECK THE INDEX, NEVER THE WORKING TREE. git commits the index, so a gate
+#    that reads the working tree passes a staged defect that an unstaged repair
+#    is hiding — and blocks a clean staged commit over unstaged edits. The
+#    ledger and config are extracted as a PAIR: a working-tree-only config
+#    entry must not vouch for a staged edge.
+mkdir -p "$staged/.pecia"
+git show :.pecia/work.jsonl > "$staged/.pecia/work.jsonl"
+git show :.pecia/config.yaml > "$staged/.pecia/config.yaml" 2>/dev/null || : > "$staged/.pecia/config.yaml"
+
+# The CLI is stdlib-only, so `python3` is enough and `uv` is not required.
+# Invoked through python3 rather than the shebang precisely so a machine
+# without uv still gets a working gate.
+if ! python3 "$cli" check \
+      --ledger "$staged/.pecia/work.jsonl" \
+      --config "$staged/.pecia/config.yaml" >/dev/null; then
+  echo "✋ pre-commit: pecia check failed on the STAGED ledger." >&2
+  echo "   See the findings with:" >&2
+  echo "     pecia check --ledger <(git show :.pecia/work.jsonl) \\" >&2
+  echo "                 --config <(git show :.pecia/config.yaml)" >&2
+  echo "   Exit 0 would mean WELL-FORMED, never true. Bypass: git commit --no-verify" >&2
+  exit 1
+fi

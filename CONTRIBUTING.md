@@ -44,6 +44,8 @@ node dev/render-roadmap.mjs --check     # roadmap structure and generated projec
 node dev/test-roadmap.mjs               # prove roadmap gates fail under sabotage
 node dev/check-living-conspectus.mjs    # verify the pinned self-survey and derived report
 node dev/test-living-conspectus.mjs     # prove every A0 gate red + clean-export read-back
+node dev/test-amanuensis-pecia-defects.mjs  # Amanuensis→Pecia defect projection red gates
+                                            # (needs the pecia CLI; see below)
 
 cd mcp-server
 
@@ -188,6 +190,47 @@ coverage, and content back. A detector change requires an explicit successor
 report identity. Retargeting the baseline requires a new fixture ID,
 revision/tree inventory, and report; do not edit the existing fixture to follow
 HEAD.
+
+## Confirmed defects reach the Pecia ledger
+
+Amanuensis decides what is a defect and whether a repair is proven; Pecia
+schedules the work. [`dev/amanuensis-defects-to-pecia.mjs`](dev/amanuensis-defects-to-pecia.mjs)
+carries the first into the second without creating a second authority for one
+fact: a finding becomes a Pecia `defect` whose evidence is the foreign reference
+`amanuensis:<finding_id>`, resolved by
+[`dev/pecia-resolve-finding.mjs`](dev/pecia-resolve-finding.mjs) and declared in
+`.pecia/config.yaml`. The symptom and root cause travel as body prose so the
+record is schedulable; everything else — evidence rows, dispositions,
+contradictions, the resolution chain — stays in the conspectus and is declared
+absent in the record.
+
+```bash
+node dev/amanuensis-defects-to-pecia.mjs           # plan; writes nothing
+node dev/amanuensis-defects-to-pecia.mjs --apply   # reconcile through the pecia CLI
+```
+
+It is a reconciler, not an importer: re-running writes nothing, and a finding
+whose state moved appends one revision. Two mappings are load-bearing.
+`fixed-pending-verification` becomes `in-progress`, never `done` — both systems
+refuse to let "fixed" mean "verified", and the resolver licenses a closure only
+for `verified-fixed` or `ruled-out`. And because Pecia treats closure as final,
+a finding that returns after its defect closed gets a successor carrying
+`discovered_from` (E005), so a label resolves to its chain's tail exactly as
+[`dev/pecia-dogfood.md`](dev/pecia-dogfood.md) describes for the roadmap.
+
+The payoff is that `pecia audit` runs the resolver: reopen a finding in the
+conspectus and its closed defect is reported as an unresolvable reference. Run
+`pecia check` and `pecia audit` after applying. Freshly projected defects draw
+`untriaged` findings until they are triaged or declared — that pressure is
+intended.
+
+`dev/test-amanuensis-pecia-defects.mjs` proves the seven controls on a synthetic
+fixture. It drives the real `pecia` CLI and **exits 2 rather than passing** when
+that CLI is absent, because a gate that quietly goes green without its subject is
+the failure mode this repository keeps finding. Pecia is a `uv` PEP-723 script in
+a separate private repository, so this gate is local-only until CI is given a way
+to obtain it — see the commented job in
+[`.github/workflows/test.yml`](.github/workflows/test.yml).
 
 ## Auto-generated tool inventory
 
