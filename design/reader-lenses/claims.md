@@ -87,7 +87,7 @@ Each standing state names what it authorizes and what it cannot justify; `unledg
 
 Evidence:
 - `dev/adr/0001-living-conspectus-terms.md` § Fully surveyed, closing sentence.
-- `.claude/skills/amanuensis/SKILL.md:120-133` — the authorized-claims ladder.
+- `.claude/skills/amanuensis/SKILL.md:119-126` — the authorized-claims ladder.
 - `materializer/amanuensis_materializer/html_projection.py:56-76` — `STATUS_HINTS` already state authorization per status.
 - Catalog VP12.
 
@@ -109,7 +109,7 @@ Evidence:
 
 Evidence:
 - `mcp-server/src/schema.sql:626-630` — `subsystems.status` enum.
-- `.claude/skills/amanuensis/SKILL.md:126-129` — `adversarial` and `mapped` rows of the authorized-claims table.
+- `.claude/skills/amanuensis/SKILL.md:125-126` — `adversarial` and `mapped` rows of the authorized-claims table.
 - `SELECT status, COUNT(*) FROM subsystems GROUP BY 1;` → `mapped|35`.
 - `dev/adr/0001-living-conspectus-terms.md` § Alternatives considered, "Treat mapped as complete".
 
@@ -123,7 +123,7 @@ Evidence:
 - `mcp-server/src/schema.sql:63-77` — `git_state` columns.
 - `SELECT canonical_branch, substr(last_checked_sha,1,10), last_checked_at FROM git_state;` → `main|d395c4d534|2026-09-11 01:30:50`.
 - `materializer/amanuensis_materializer/html_projection.py:2473-2490` — the snapshot strip's branch/checked/as-of items.
-- `.claude/skills/amanuensis/SKILL.md:54-56` — `last_checked_sha != HEAD` folds `detect_changes` into scope.
+- `.claude/skills/amanuensis/SKILL.md:59-60` — `last_checked_sha != HEAD` folds `detect_changes` into scope.
 
 ### C11
 
@@ -384,7 +384,7 @@ Evidence:
 - `materializer/amanuensis_materializer/renderers.py:142-151` — "Confirmed findings … (n critical, n high)" counts all findings regardless of resolution, beside "Open bugs".
 - `mcp-server/src/schema.sql:902-925` — `projection_verification_runs`, `projection_mismatches`.
 - `mcp-server/src/schema.sql:798-806` — the five `finding_resolution_state` values.
-- `design/delightful-output-panel/revision-2026-08-23.md` — four separate status dimensions; project-first identity.
+- `design/delightful-output-panel/revision-2026-08-23.md` — four separate status dimensions; project-first identity; consequential findings before inventory.
 - Catalog BP26.
 
 ### C33
@@ -452,9 +452,9 @@ label, operational meaning, and what it cannot justify.
 
 Evidence:
 - `materializer/amanuensis_materializer/renderers.py:792-812` — the reader's guide is a static string constant.
-- `materializer/amanuensis_materializer/renderers.py:857-866` — its evidence-quality table lists five kinds.
+- `materializer/amanuensis_materializer/renderers.py:858-870` — its evidence-quality table lists five kinds.
 - `mcp-server/src/schema.sql:757-762` — `evidence.kind` accepts nine.
-- `materializer/amanuensis_materializer/renderers.py:890-900` — its finding-status table lists `confirmed-bug`, `confirmed-acceptable`, `ruled-out`, `fixed`, and carries neither `fixed-pending-verification` nor `verified-fixed`.
+- `materializer/amanuensis_materializer/renderers.py:890-899` — its finding-status table lists `confirmed-bug`, `confirmed-acceptable`, `ruled-out`, `fixed`, and carries neither `fixed-pending-verification` nor `verified-fixed`.
 - Catalog VP12.
 
 ### C39
@@ -466,7 +466,7 @@ Evidence:
 - `materializer/amanuensis_materializer/html_projection.py:932-955` — the existing `⌘K` handler filters nav items only.
 - `materializer/amanuensis_materializer/html_projection.py:2442-2462` — `data-search` carries label, record id, hint, status.
 - `design/reader-lenses/decisions.md:12-17` — simple JavaScript enhancement, tasteful, accessibility required.
-- `.claude/skills/amanuensis/references/reporting-style.md:150-154` — ruled registers, not dashboard tiles.
+- `.claude/skills/amanuensis/references/reporting-style.md:151-153` — ruled registers, not dashboard tiles.
 
 ### C40
 
@@ -512,7 +512,7 @@ begins `<sid>/`; no larger count is required, and claim truth remains the advers
 obligation.
 
 Evidence:
-- `.claude/skills/amanuensis/SKILL.md:120-126` — `structural` authorizes types, state containers, flows, and the concurrency model.
+- `.claude/skills/amanuensis/SKILL.md:123` — `structural` authorizes types, state containers, flows, and the concurrency model.
 - `mcp-server/src/schema.sql:165-172` — `enforcePhasePrerequisites` named as the reason the ledger denominator is non-empty by construction.
 - `dev/adr/0001-living-conspectus-terms.md` § Executable obligations, closing paragraph — the checker enforces existence, terminality, grounding, and reconciliation, not truth.
 - Catalog BP4; GP8 v2 scope note.
@@ -524,8 +524,8 @@ literal "Structural inventory not recorded as claims" with the narrative labelle
 individually revision-bound.
 
 Evidence:
-- `materializer/amanuensis_materializer/renderers.py:319-330` — the survey artifact is concatenated as "Survey notes".
-- `materializer/amanuensis_materializer/renderers.py:417-419` — it is appended last.
+- `materializer/amanuensis_materializer/renderers.py:320-332` — the survey artifact is read and concatenated into `survey_prose`.
+- `materializer/amanuensis_materializer/renderers.py:420-421` — it is appended last, under "Survey notes".
 - `mcp-server/src/schema.sql:662-678` — `artifacts.content_hash`, `artifacts.ref_sha`.
 - `dev/adr/0011-codebase-brief-contract.md` § Alternatives rejected, "Token truncation without an omission ledger".
 
@@ -538,7 +538,7 @@ Evidence:
 - `mcp-server/src/tools/xrefs.ts:5-38` — `add_xref` input schema with `context` optional.
 - `mcp-server/src/schema.sql:78-90` — `xrefs.relationship` values including `data-flow` and `dependency`.
 - `materializer/amanuensis_materializer/renderers.py:196-204` — the heading switches between "Subsystem dependency graph" and "Subsystem atlas" on `xrefs`.
-- `.claude/skills/amanuensis/references/reporting-style.md:170-176` — never infer edges from names, prefixes, or nearby seams.
+- `.claude/skills/amanuensis/references/reporting-style.md:182-184` — never infer edges from names, prefixes, or nearby seams.
 - `SELECT COUNT(*) FROM xrefs;` → `0`.
 
 ### C46
@@ -547,7 +547,7 @@ Evidence:
 change X" / "is there a finding on this file" to `describe_locus` first.
 
 Evidence:
-- `.claude/skills/amanuensis/SKILL.md:88-105` — the routing table; every row is an operator verb.
+- `.claude/skills/amanuensis/SKILL.md:90-101` — the routing table; every row is an operator verb.
 - `.claude/skills/amanuensis/SKILL.md:12-16` — the description already names those adjacent asks as triggers.
 - `mcp-server/scripts/check-evidence-vocabulary.mjs:44-50` — `SKILL.md` is already parsed by a mechanical check.
 
@@ -616,8 +616,8 @@ claims-backed Phase 2 and recorded edges.
 
 Evidence:
 - `design/reader-lenses/decisions.md:18-23`.
-- `.claude/skills/amanuensis/SKILL.md:66-72` — snapshot with `commit_phase_gate` before a destructive operation.
-- `.claude/skills/amanuensis/SKILL.md:104` — "reinit survey" authorizes the destructive operation.
+- `.claude/skills/amanuensis/SKILL.md:65-70` — snapshot with `commit_phase_gate` before a destructive operation.
+- `.claude/skills/amanuensis/SKILL.md:99` — "reinit survey" authorizes the destructive operation.
 - `git check-ignore -v .amanuensis` → `.git/info/exclude:8:/.amanuensis`; `git ls-files .amanuensis | wc -l` → `0`.
 
 ### C53
