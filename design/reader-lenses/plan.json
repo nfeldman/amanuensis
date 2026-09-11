@@ -1,0 +1,1045 @@
+{
+  "version": 1,
+  "branch": "reader-lenses",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Truthful partition",
+      "packets": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Standing",
+      "packets": [
+        "P5",
+        "P6",
+        "P7",
+        "P8",
+        "P9",
+        "P10"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S3",
+      "title": "Documentation from claims",
+      "packets": [
+        "P11",
+        "P12"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Connective view",
+      "packets": [
+        "P13"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Consumer routing",
+      "packets": [
+        "P14",
+        "P15"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S6",
+      "title": "Dogfood rebuild",
+      "packets": [
+        "P16"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    }
+  ],
+  "packets": [
+    {
+      "id": "P1",
+      "slice": "S1",
+      "title": "Single enum source for every vocabulary surface",
+      "claims": [
+        "C1",
+        "C3",
+        "C7",
+        "C48"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/files.ts",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "mcp-server/scripts/check-evidence-vocabulary.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-vocabulary-source.mjs",
+        "command": "cd mcp-server && node test-vocabulary-source.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "node mcp-server/scripts/gen-vocabulary.mjs --check exits 0 on a clean tree and non-zero after editing either generated file by hand",
+        "Every enum value in conspectus-vocabulary.json carries value, label, meaning, and cannot_justify",
+        "A value added to the JSON and not regenerated turns the check red",
+        "check-evidence-vocabulary.mjs still turns red when SKILL.md's ladder diverges from add_evidence"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P2",
+      "slice": "S1",
+      "title": "Partition findings by resolution state",
+      "claims": [
+        "C2",
+        "C27",
+        "C28",
+        "C29"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/readback.py"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-finding-partition.mjs",
+        "command": "cd mcp-server && node test-finding-partition.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "finding_state_current returns one row per findings row and agrees with finding_resolution_current wherever an event exists",
+        "A fixture with one verified-fixed CRITICAL and one open LOW renders the CRITICAL only on resolved-findings.md",
+        "Each finding's opaque marker appears exactly once across the Markdown corpus and exactly once across the HTML corpus",
+        "findings.md renders only open and fixed-pending-verification records"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P3",
+      "slice": "S1",
+      "title": "Overview thesis by heading and the orientation lint",
+      "claims": [
+        "C32",
+        "C49"
+      ],
+      "depends_on": [
+        "P1",
+        "P2"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/lint.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-overview-truthfulness.py",
+        "command": "cd materializer && python3 test-overview-truthfulness.py"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs"
+      ],
+      "acceptance": [
+        "The thesis is taken from the entry-point.md section headed 'What is this codebase?' and from nowhere else",
+        "An entry-point.md with no such section publishes a named instruction instead of a fallback paragraph",
+        "Orientation prose containing '34/34 mapped' sets summary.ok false and does not publish",
+        "The overview carries four separately named status dimensions and one linked count per finding_resolution_state value, with no composite score"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P4",
+      "slice": "S1",
+      "title": "Ledger-derived freshness and a stale axis with a denominator",
+      "claims": [
+        "C50",
+        "C51"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/html_projection.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-ledger-freshness.py",
+        "command": "cd materializer && python3 test-ledger-freshness.py"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs"
+      ],
+      "acceptance": [
+        "The snapshot strip and the overview count equal get_dashboard's stale_entries, stale_exempt, scoped_files, and staleness_measured on the same store",
+        "An empty file_ledger renders 'Freshness not measured by this projection'",
+        "Every obligation-bearing stale ledger row has exactly one record on stale.md in each format",
+        "Deleting one stale record turns the state read-back axis red",
+        "The entries-derived stale marker check is still present and still red-capable"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P5",
+      "slice": "S2",
+      "title": "Standing views and deterministic locus resolution",
+      "claims": [
+        "C4",
+        "C5",
+        "C6",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "depends_on": [
+        "P1",
+        "P2"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/standing.ts",
+        "mcp-server/src/db.ts"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-index-view.mjs",
+        "command": "cd mcp-server && node test-locus-index-view.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "file_standing returns one row per file_ledger row with the seven-state CASE applied",
+        "A hand-written reference query over the seeded store agrees with the view on every row",
+        "Locus kind inference resolves a subsystem id, a path, a path:symbol pair, and a term in the documented order",
+        "An examined row whose ref_sha is unreachable is downgraded to examined-stale with stale_reason unverifiable-ref",
+        "The five unknown[] sources return exactly the rows their SQL selects on the seeded store"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P6",
+      "slice": "S2",
+      "title": "describe_locus, its contract, and read-only annotations",
+      "claims": [
+        "C7",
+        "C15",
+        "C16",
+        "C17",
+        "C21",
+        "C22",
+        "C26"
+      ],
+      "depends_on": [
+        "P5"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/locus-account.schema.json",
+        "mcp-server/DEVELOPMENT.md"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-standing.mjs",
+        "command": "cd mcp-server && node test-locus-standing.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "describe_locus on an unledgered path returns state unledgered and an empty account, not an error",
+        "describe_locus on a candidate row returns an empty structure section and never a content claim",
+        "describe_locus on a multi-owner file with disagreeing owners returns state mixed and lists every owner",
+        "The response validates against contracts/locus-account.schema.json and reports model_calls 0",
+        "tools/list advertises describe_locus with readOnlyHint true and destructiveHint false",
+        "gen-tool-inventory.mjs --check passes with the locus group present"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P7",
+      "slice": "S2",
+      "title": "Response budgets and the omission ledger",
+      "claims": [
+        "C14",
+        "C18",
+        "C19",
+        "C20"
+      ],
+      "depends_on": [
+        "P6"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/contracts/locus-account.schema.json"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-compactness.mjs",
+        "command": "cd mcp-server && node test-locus-compactness.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs"
+      ],
+      "acceptance": [
+        "The default describe_locus response on the pathological fixture is at most 8192 bytes",
+        "selected + omitted equals census for every section, with distinct omitted ids",
+        "Every omission carries exactly one of policy, budget, not-recorded",
+        "The same fixture measured before truncation exceeds the budget, proving the gate can fail",
+        "owners[] is never truncated, whatever the budget"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P8",
+      "slice": "S2",
+      "title": "Page plan, navigation groups, Files, and Not yet surveyed",
+      "claims": [
+        "C30",
+        "C31",
+        "C33",
+        "C34",
+        "C35"
+      ],
+      "depends_on": [
+        "P2",
+        "P4"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/html_projection.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-lens-pages.py",
+        "command": "cd materializer && python3 test-lens-pages.py"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "Navigation renders the five groups in NAV_GROUPS order and a page outside them is a render error",
+        "Subsystem pages render under the Subsystems subgroup of Codebase",
+        "files.md carries one row per distinct ledger path with every owner and a stable anchor",
+        "not-yet-surveyed.md carries five sections, each with its denominator",
+        "Subsystem pages open with purpose, start here, and structure, with the survey record last",
+        "No previously planned page path is retired"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P9",
+      "slice": "S2",
+      "title": "Unresolved and History pages; reader's guide from the enum source",
+      "claims": [
+        "C28",
+        "C36",
+        "C37",
+        "C38"
+      ],
+      "depends_on": [
+        "P8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-history-and-contested.py",
+        "command": "cd materializer && python3 test-history-and-contested.py"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "contested.md carries unresolved contradictions, open matrices, and unresolved-competition dispositions and nothing resolved",
+        "hot-spots.md sorts by open critical+high, then medium+low, then unread fraction, then id, with no composite column",
+        "The access heat column is absent when no subsystem has an access_log row",
+        "resolution-history.md is newest-first and links every event to its record",
+        "sessions.md carries sessions, refresh runs, and projection verification runs",
+        "Every empty lens page states scope, basis, and checked revision",
+        "how-to-read.md tables are generated from conspectus-vocabulary.json and list every enum value the server enforces"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P10",
+      "slice": "S2",
+      "title": "Locus search index and accessible interface enhancement",
+      "claims": [
+        "C39",
+        "C40",
+        "C41"
+      ],
+      "depends_on": [
+        "P5",
+        "P8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/core.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-search-index.py",
+        "command": "cd materializer && python3 test-search-index.py"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "search-index.js carries every obligation-bearing ledger path exactly once and every cited symbol at least once",
+        "search-index.js appears in .projection-contract.json and in manifest.projection_files",
+        "Removing one path from the index turns the state read-back axis red",
+        "Every file's anchor is reachable from files.md with scripts disabled",
+        "The search combobox exposes role, aria-expanded, aria-controls, aria-activedescendant, and a polite live region",
+        "The projection references no external host in any script, style, link, or image"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P11",
+      "slice": "S3",
+      "title": "Structure from claims with a labelled narrative fallback",
+      "claims": [
+        "C42",
+        "C44"
+      ],
+      "depends_on": [
+        "P6",
+        "P8"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "materializer/amanuensis_materializer/renderers.py"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-structural-claims.mjs",
+        "command": "cd mcp-server && node test-structural-claims.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "A claim closed by apply_change_impact no longer appears as current in describe_locus or on the subsystem page",
+        "A subsystem with zero claims renders 'Structural inventory not recorded as claims' and the labelled narrative",
+        "Narrative attaches only with revision_bound false and the artifact's content_hash",
+        "The structure section is empty for a scoped-unread locus regardless of subsystem claims"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P12",
+      "slice": "S3",
+      "title": "Phase 2 writes structural claims, and the status gate that requires one",
+      "claims": [
+        "C42",
+        "C43"
+      ],
+      "depends_on": [
+        "P11"
+      ],
+      "deliverables": [
+        "mcp-server/src/invariants.ts",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        "mcp-server/test-invariants.mjs",
+        "mcp-server/test-smoke.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-phase2-claims-gate.mjs",
+        "command": "cd mcp-server && node test-phase2-claims-gate.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs",
+        "cd mcp-server && node test-cloud-e2e.mjs",
+        "cd mcp-server && node test-autoprogress.mjs"
+      ],
+      "acceptance": [
+        "Advancing a subsystem to structural with no current <sid>/ claim is refused with a named missing deliverable",
+        "One claim is sufficient; no per-category quota is enforced",
+        "An explicit negative claim satisfies the gate",
+        "phase-2-structural.md documents the five claim kinds, their claim_key shapes, and their evidence requirements",
+        "Every existing test that advances a subsystem to structural still passes"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P13",
+      "slice": "S4",
+      "title": "Cited edges and topology from recorded rows only",
+      "claims": [
+        "C45"
+      ],
+      "depends_on": [
+        "P6",
+        "P8"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/xrefs.ts",
+        "mcp-server/src/tools/locus.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        ".claude/skills/amanuensis/references/phase-2-structural.md"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-edge-contract.mjs",
+        "command": "cd mcp-server && node test-edge-contract.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "add_xref refuses an absent, empty, or uncited context",
+        "add_xref accepts a context containing a file:symbol@sha citation",
+        "A store with zero xrefs renders the layer atlas and says so",
+        "Every rendered edge corresponds to an xrefs row; none is inferred from names or seams",
+        "describe_locus boundaries carries recorded edges for the owning subsystems"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P14",
+      "slice": "S5",
+      "title": "get_attention and get_history",
+      "claims": [
+        "C23",
+        "C24"
+      ],
+      "depends_on": [
+        "P7",
+        "P9"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/contracts/attention.schema.json",
+        "mcp-server/contracts/locus-history.schema.json",
+        "mcp-server/DEVELOPMENT.md"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-attention-history.mjs",
+        "command": "cd mcp-server && node test-attention-history.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "get_attention item labels equal ADR-0010's definitions for regression, latent-defect, unverified-suspicion, unknown, and stale-knowledge",
+        "stale-knowledge items carry source claim or source ledger and are never summed together",
+        "get_attention's open and awaiting-verification id sets equal the finding_state_current query exactly on the seeded store",
+        "get_history returns resolution events, supersessions, contradiction resolutions, closed questions, and sessions, newest first",
+        "Both responses honour their byte budgets and carry an omission ledger"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P15",
+      "slice": "S5",
+      "title": "Consumer routing: server instructions, skill route, installer opt-in",
+      "claims": [
+        "C25",
+        "C46",
+        "C47"
+      ],
+      "depends_on": [
+        "P14"
+      ],
+      "deliverables": [
+        "mcp-server/src/index.ts",
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/notes.md",
+        "mcp-server/src/installer.ts"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-consumer-route.mjs",
+        "command": "cd mcp-server && node test-consumer-route.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-installer.mjs",
+        "cd mcp-server && node test-activation-contract.mjs"
+      ],
+      "acceptance": [
+        "SERVER_INSTRUCTIONS names describe_locus in its first sentence and still names get_project_info for producers",
+        "A harness given only the server instructions reaches describe_locus for a file question in one call",
+        "SKILL.md carries the consumer routing row and notes.md states the standing-first answer shape",
+        "The installer offers the agent-instructions paragraph as opt-in and writes nothing when declined",
+        "check-evidence-vocabulary.mjs still parses SKILL.md's ladder"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P16",
+      "slice": "S6",
+      "title": "Discard and rebuild the self-conspectus; dogfood gate",
+      "claims": [
+        "C52",
+        "C53",
+        "C54",
+        "C55"
+      ],
+      "depends_on": [
+        "P10",
+        "P12",
+        "P13",
+        "P15"
+      ],
+      "deliverables": [
+        "docs/",
+        "dev/test-reader-lenses-dogfood.mjs",
+        "design/reader-lenses/dogfood-receipt.md"
+      ],
+      "gate": {
+        "test_path": "dev/test-reader-lenses-dogfood.mjs",
+        "command": "node dev/test-reader-lenses-dogfood.mjs"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "describe_locus returns examined standing with at least one structural claim for mcp-server/src/index.ts, mcp-server/src/tools/findings.ts, and materializer/amanuensis_materializer/core.py",
+        "get_attention's open and awaiting-verification id sets equal finding_state_current exactly on the rebuilt store",
+        "A clean publish read-back is green on state, coverage, and content, and docs/ byte-matches the receipt",
+        "dev/conspectus/ fixture files are unchanged by the rebuild",
+        "docs/ is committed with its .manifest.json and .projection-contract.json"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/render-roadmap.mjs --check",
+      "node dev/test-roadmap.mjs",
+      "node dev/test-pecia-roadmap.mjs",
+      "node dev/test-pecia-roadmap-red-gates.mjs",
+      "node dev/check-living-conspectus.mjs",
+      "node dev/test-living-conspectus.mjs",
+      "cd mcp-server && npm audit --audit-level=critical",
+      "cd mcp-server && npx biome check src/",
+      "cd mcp-server && npm run build",
+      "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+      "cd mcp-server && node scripts/check-tool-schemas.mjs",
+      "cd mcp-server && node test-mcp-compatibility.mjs",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd mcp-server && node test-storage-git.mjs",
+      "cd mcp-server && node test-cloud-storage.mjs",
+      "cd mcp-server && node test-autoprogress.mjs",
+      "cd mcp-server && node test-compare.mjs",
+      "cd mcp-server && node test-priority.mjs",
+      "cd mcp-server && node test-cloud-e2e.mjs",
+      "cd mcp-server && node test-installer.mjs",
+      "cd mcp-server && node test-activation-contract.mjs",
+      "cd mcp-server && node test-activation-doctor.mjs",
+      "cd mcp-server && node test-workspace-binding.mjs",
+      "cd mcp-server && node test-codex-parent-workspace.mjs",
+      "cd mcp-server && node test-nested-activation-binding.mjs",
+      "cd mcp-server && node test-first-use-laziness.mjs",
+      "cd mcp-server && node test-first-use-recovery.mjs",
+      "node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json",
+      "node dev/test-codex-host-evidence-red-gates.mjs",
+      "cd mcp-server && node test-package-artifact.mjs",
+      "cd mcp-server && node test-package-activation-parity.mjs",
+      "node dev/test-package-activation-parity-red-gates.mjs",
+      "node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json",
+      "node dev/test-activation-operating-envelope-red-gates.mjs",
+      "node dev/test-activation-operating-trust-cleanup.mjs",
+      "cd mcp-server && node test-release-rollback.mjs",
+      "node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json",
+      "node dev/test-friction-free-release-readiness-red-gates.mjs",
+      "node dev/render-friction-free-release-readiness.mjs --check",
+      "cd mcp-server && node test-adversarial-correctness.mjs",
+      "cd mcp-server && node test-invariants.mjs",
+      "cd mcp-server && node test-derived-staleness.mjs",
+      "cd mcp-server && node test-startup-bounds.mjs",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node test-temporal-claims.mjs",
+      "cd mcp-server && node test-change-impact.mjs",
+      "cd mcp-server && node test-revalidation-scheduler.mjs",
+      "cd mcp-server && node test-resolution-proof.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-refresh-recovery.mjs",
+      "cd mcp-server && node test-review-brief.mjs",
+      "cd mcp-server && node test-review-analysis.mjs",
+      "cd mcp-server && node test-composition.mjs",
+      "cd mcp-server && node test-review-session.mjs",
+      "cd mcp-server && node test-codebase-brief.mjs",
+      "cd mcp-server && node test-design-session.mjs",
+      "cd mcp-server && node test-decisions.mjs",
+      "cd mcp-server && node test-research-broker.mjs",
+      "cd mcp-server && node test-crosswalk-qualification.mjs",
+      "cd mcp-server && node test-learning-ledger.mjs",
+      "cd mcp-server && node test-operating-envelope.mjs",
+      "cd mcp-server && node test-chorusmith-adapter.mjs",
+      "cd mcp-server && node test-historical-evaluation.mjs",
+      "cd mcp-server && node test-adversarial-security.mjs",
+      "cd mcp-server && node test-perf-ceilings.mjs",
+      "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+      "ruff check materializer/",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-readback.py",
+      "cd mcp-server && node test-vocabulary-source.mjs",
+      "cd mcp-server && node test-finding-partition.mjs",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd mcp-server && node test-locus-index-view.mjs",
+      "cd mcp-server && node test-locus-standing.mjs",
+      "cd mcp-server && node test-locus-compactness.mjs",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-history-and-contested.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd mcp-server && node test-structural-claims.mjs",
+      "cd mcp-server && node test-phase2-claims-gate.mjs",
+      "cd mcp-server && node test-edge-contract.mjs",
+      "cd mcp-server && node test-attention-history.mjs",
+      "cd mcp-server && node test-consumer-route.mjs",
+      "node dev/test-reader-lenses-dogfood.mjs"
+    ]
+  },
+  "final_review": {
+    "status": "pending",
+    "reviewed_sha": "",
+    "findings": 0
+  }
+}
