@@ -1595,8 +1595,14 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
   // because the record still supports the answer; a response past the ceiling
   // is refused, because no host should be handed it.
   if (wire > WIRE_CEILING) {
+    // C8 makes this refusal actionable rather than merely correct: it names
+    // the locus and how many owners it has, because the caller's next move is
+    // `list_scope(subsystem_id)` and a byte count does not tell them which
+    // locus to go and read (F6/codex).
+    const ownerCount = standingUnknown(standing, locus.kind) === null ? null : scope.owners.length;
+    const owners = ownerCount === null ? "" : `, which has ${ownerCount} owning subsystem(s)`;
     throw new ToolError(
-      `this locus cannot be served inside the ${WIRE_CEILING}-byte ceiling: the untruncatable part of the response measures ${wire} bytes`,
+      `${locus.value} cannot be served inside the ${WIRE_CEILING}-byte ceiling: the untruncatable part of the response measures ${wire} bytes${owners}. Read the owners from list_scope instead.`,
     );
   }
   if (wire > budgetBytes) {
