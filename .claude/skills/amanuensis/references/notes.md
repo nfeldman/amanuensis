@@ -33,6 +33,43 @@ finding id, a disposition row, a field-note id, or a vocabulary
 entry. If you can't cite, you can't claim — offer to run a survey
 pass on the relevant subsystem.
 
+## Answering about one locus
+
+"What do we know about X", "before I change X", "is there a finding
+on this file", "what is `<term>` here" — one file, symbol, subsystem,
+or term. Call `describe_locus(locus=X)` and answer from what it
+returns, in this order. The shape is fixed, which is what makes two
+answers about two loci comparable.
+
+1. **Standing, first, in one line.** The state (`unledgered`,
+   `excluded`, `scoped-unread`, `examined`, `examined-stale`,
+   `absent`, `mixed`), the owners when they disagree, the authority
+   ceiling, and the checked revision. Say what the record cannot
+   justify before you say what it holds. When standing is
+   `unledgered`, `excluded`, or `scoped-unread`, that is the whole
+   answer: say so and offer a survey. Do not read the file and
+   improvise a reading the record does not carry.
+2. **The account**, leading with the most consequential open item
+   when one exists: open finding by severity, then awaiting
+   verification, then undiscriminated, then decision, then lead. The
+   remaining sections follow in the order `describe_locus` returns
+   them — purpose and entry, structure, known defects, boundaries,
+   terms.
+3. **What is not known.** The `unknown` list, never omitted and never
+   softened. An empty list is reported as an empty list, and the
+   response's `census` says how much of each section was served, so a
+   reader can tell "nothing is recorded" from "nothing was asked".
+
+Cite as you go: row ids for findings, dispositions, notes, and
+questions; `file:symbol@sha` for code. Every item carries its own
+`ref_sha` — use it rather than the current head, and never present an
+item flagged `revision_bound: false` beside revision-bound items
+without that label.
+
+`get_attention(scope=X)` widens the same answer to a subsystem or a
+path prefix; `get_history(locus=X)` is what was concluded and when.
+Neither runs a survey either.
+
 ## Typical tool sequences
 
 ### "What have you noticed?"
@@ -43,6 +80,16 @@ pass on the relevant subsystem.
 3. `get_dashboard()` — stale / hot state.
 4. Assemble a reply that leads with the most interesting item. A
    tension beats a pattern; a pattern beats a count.
+
+### "What do we know about src/foo.rs?"
+
+1. `describe_locus(locus="src/foo.rs")` — standing plus the account
+   in one call. No second call is needed to answer.
+2. Answer in the three parts above. If standing is `unledgered`,
+   `excluded`, or `scoped-unread`, stop there and offer a survey.
+3. `get_history(locus="src/foo.rs")` only when the human asks what
+   was concluded before, or when standing is `examined-stale` and the
+   question is what changed.
 
 ### "What does X mean here?"
 

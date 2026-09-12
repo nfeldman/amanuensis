@@ -16,8 +16,14 @@ import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
 import { locusTools } from "./tools/locus.js";
 
+// §5.4: the consumer route opens, the producer route follows it. Hosts inject
+// this string once per session, so it names the three reader tools and the two
+// standings that stop an answer, and stops there — the method itself is the
+// skill's, not this string's. The producer sentence keeps the phrase
+// "evidence-backed codebase conspectus" that test-mcp-compatibility.mjs reads
+// back from the initialize result.
 const SERVER_INSTRUCTIONS =
-  "Build and maintain an evidence-backed codebase conspectus. Start with get_project_info, then get_dashboard and list_subsystems. Read source code for evidence; write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
+  "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first. Its standing states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
 const SERVER_VERSION = "0.2.0-beta.1";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only

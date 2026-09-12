@@ -569,13 +569,18 @@ await check("mutating SKILL.md's kind ladder still turns the vocabulary check re
 // §9.4 — the answer shape in references/notes.md
 // ---------------------------------------------------------------------------
 const notesText = readText(join(REPO, NOTES_REL));
+// notes.md is hard-wrapped at sixty columns, so every phrase below is matched
+// against a whitespace-collapsed reading of it. Collapsing changes which line a
+// phrase sits on and nothing else: the words, and the order they appear in, are
+// still what is asserted.
+const notesFlat = notesText === null ? null : notesText.replace(/\s+/g, " ");
 
 await check("notes.md fixes the standing-first answer shape", () => {
-  if (notesText === null) return `${NOTES_REL} is absent`;
-  if (!notesText.includes("describe_locus")) return "notes.md never names describe_locus";
-  const standing = notesText.search(/standing[^\n]*one line/i);
+  if (notesFlat === null) return `${NOTES_REL} is absent`;
+  if (!notesFlat.includes("describe_locus")) return "notes.md never names describe_locus";
+  const standing = notesFlat.search(/standing[^.]{0,40}one line/i);
   if (standing < 0) return "notes.md does not put standing first, in one line";
-  const head = notesText.slice(standing, standing + 600);
+  const head = notesFlat.slice(standing, standing + 600);
   const missing = [
     [/authority ceiling/i, "the authority ceiling"],
     [/owners?/i, "the owners when they disagree"],
@@ -588,27 +593,27 @@ await check("notes.md fixes the standing-first answer shape", () => {
 });
 
 await check("notes.md leads the account with the most consequential open item", () => {
-  if (notesText === null) return `${NOTES_REL} is absent`;
+  if (notesFlat === null) return `${NOTES_REL} is absent`;
   const precedence =
     /open finding[^.]*severity[^.]*awaiting[ -]verification[^.]*undiscriminated[^.]*decision[^.]*lead/is;
-  if (!precedence.test(notesText))
+  if (!precedence.test(notesFlat))
     return "notes.md does not record the open-finding → awaiting-verification → undiscriminated → decision → lead precedence";
   return null;
 });
 
 await check("notes.md keeps what is not known, never omitted, and runs no survey", () => {
-  if (notesText === null) return `${NOTES_REL} is absent`;
-  const notKnown = notesText.search(/not known/i);
+  if (notesFlat === null) return `${NOTES_REL} is absent`;
+  const notKnown = notesFlat.search(/not known/i);
   if (notKnown < 0) return "notes.md does not carry a 'what is not known' step";
-  if (!/never omitted/i.test(notesText.slice(notKnown, notKnown + 500)))
+  if (!/never omitted/i.test(notesFlat.slice(notKnown, notKnown + 500)))
     return "notes.md does not say the unknown list is never omitted";
-  if (!/`?unknown`?/i.test(notesText.slice(notKnown, notKnown + 500)))
+  if (!/`?unknown`?/i.test(notesFlat.slice(notKnown, notKnown + 500)))
     return "notes.md does not name the unknown list as the source";
-  const standing = notesText.search(/standing[^\n]*one line/i);
-  const account = notesText.search(/the account/i);
+  const standing = notesFlat.search(/standing[^.]{0,40}one line/i);
+  const account = notesFlat.search(/the account/i);
   if (standing < 0 || account < 0 || !(standing < account && account < notKnown))
     return "notes.md does not order standing, then the account, then what is not known";
-  if (!notesText.includes("You do not run survey passes here"))
+  if (!notesFlat.includes("You do not run survey passes here"))
     return "notes.md dropped the limit that it runs no survey passes";
   return null;
 });
