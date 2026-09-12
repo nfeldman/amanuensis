@@ -118,6 +118,35 @@
         },
         "kind": {
           "type": "string"
+        },
+        "answer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "How a question was resolved. Present on every question item; a string only when the resolution is `answered`, because a dismissed or superseded question records no answer."
+        }
+      },
+      "if": {
+        "type": "object",
+        "properties": {
+          "resolution": {
+            "const": "answered"
+          }
+        },
+        "required": [
+          "resolution"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "answer"
+        ],
+        "properties": {
+          "answer": {
+            "type": "string"
+          }
         }
       }
     },

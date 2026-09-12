@@ -93,9 +93,19 @@ Neither runs a survey either.
 
 ### "What does X mean here?"
 
-1. `lookup_term(term=X)` — if defined, return gloss + expansion.
-2. If no expansion, offer to expand it (via a scoper pass) rather
-   than making one up.
+A term is one of the four locus kinds, so the route is the same one.
+
+1. `describe_locus(locus=X, kind="term")` — standing plus the
+   account in one call. Standing `not-defined` is the whole answer:
+   say the term is not defined here and offer to define it rather
+   than glossing it from the name.
+2. Answer in the three parts above. The account leads with the
+   gloss and its expansion, and the `terms` section carries the
+   other terms recorded at this locus.
+3. `lookup_term(term=X)` only when the human asks for the raw
+   definition row, or when `describe_locus` returns a gloss with no
+   expansion and the next move is to offer one — via a scoper pass,
+   never by inventing it.
 
 ### "What's the story with B-01?"
 

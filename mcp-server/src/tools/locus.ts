@@ -1177,6 +1177,34 @@ function buildHistoryPointer(
  * repeats it — except the two that §4.1 states over the compact payload's own
  * values, which are named for what they bound.
  */
+/**
+ * §4.1's budgets are measured on the bytes the host receives, and the locus a
+ * caller names is echoed into the parts of a response that are never
+ * truncatable: the subject or scope block, and each section's empty-state
+ * statement. An unbounded subject therefore buys unbounded untruncatable
+ * bytes, which is how a schema-valid call was made to serve four times its
+ * budget (F1/codex).
+ *
+ * The bound is read off the arithmetic rather than chosen: the wire envelope
+ * repeats the payload, so each byte of subject costs four — two echoes,
+ * doubled — and `get_history`'s floor over an empty subject measures about
+ * 3800 bytes against an 8192-byte budget. 512 bytes leaves roughly 2400 for
+ * served rows, and is some five times the longest path this repository holds.
+ * It is enforced here, in code, and advertised as `maxLength`; a host that
+ * validates its calls and one that does not are refused alike.
+ */
+const MAX_SUBJECT_LENGTH = 512;
+
+function boundedSubject(name: string, value: string): string {
+  const length = Buffer.byteLength(value, "utf8");
+  if (length > MAX_SUBJECT_LENGTH) {
+    throw new ToolError(
+      `${name} is ${length} bytes, over the ${MAX_SUBJECT_LENGTH}-byte limit: a locus is a file path, a symbol, a subsystem id, or a term.`,
+    );
+  }
+  return value;
+}
+
 const WIRE_BUDGET = 8192;
 const WIRE_BUDGET_PER_OPTIONAL_SECTION = 4096;
 const WIRE_CEILING = 32768;
@@ -1407,10 +1435,11 @@ const OVER_BUDGET_REASON =
 // ---------------------------------------------------------------------------
 
 function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext) {
-  const value = requireString(args, "locus");
+  const value = boundedSubject("locus", requireString(args, "locus"));
   const kind = (optString(args, "kind") as LocusKind | null) ?? null;
   const requestedSections = optStringArray(args, "sections");
   const asOfArgument = optString(args, "as_of_sha");
+  if (asOfArgument !== null) boundedSubject("as_of_sha", asOfArgument);
   if (requestedSections) {
     for (const name of requestedSections) {
       if (!(ACCOUNT_SECTIONS as readonly string[]).includes(name)) {
@@ -1829,7 +1858,19 @@ const ROUND_ROBIN_TRUNCATION_ORDER = "round-robin-sections-then-ledger-ids-v1";
  * and the scope block are never truncated, so a response can be over budget
  * with nothing left to drop. It says so rather than refusing an answer the
  * record supports.
+ *
+ * What it may not do is drift arbitrarily far past the number the trace
+ * advertises. §4.1 gives these two tools one budget each; the 32768-byte
+ * ceiling is `describe_locus`'s expanded budget and means nothing here
+ * (F1/codex), so the residue is bounded by a ceiling derived from the tool's
+ * own budget. The multiplier is stated rather than inferred: the untruncatable
+ * floor is the subject or scope block, the section views and their statements,
+ * the census, the ledger counts, and the trace, and on the largest store this
+ * repository holds it measures well under half the smaller budget. Doubling is
+ * the room the record gets; past it the call is refused with the remedy named,
+ * because no host should be handed three times what it was told to expect.
  */
+const ROUND_ROBIN_CEILING_FACTOR = 2;
 const ROUND_ROBIN_OVER_BUDGET_REASON =
   "This response is over its byte budget with every truncatable item already dropped: each section's census and each omission count are never truncated.";
 
@@ -2062,9 +2103,10 @@ function serveWithinBudget(
   }
 
   const wire = settle();
-  if (wire > WIRE_CEILING) {
+  const ceiling = budgetBytes * ROUND_ROBIN_CEILING_FACTOR;
+  if (wire > ceiling) {
     throw new ToolError(
-      `this response cannot be served inside the ${WIRE_CEILING}-byte ceiling: the untruncatable part measures ${wire} bytes. Narrow the call with scope or sections.`,
+      `this response cannot be served inside the ${ceiling}-byte ceiling on a ${budgetBytes}-byte budget: the untruncatable part measures ${wire} bytes. Narrow the call with scope, sections, or a shorter subject.`,
     );
   }
   if (wire > budgetBytes) {
@@ -2176,14 +2218,39 @@ function pathInScope(scope: AttentionScope, path: string | null): boolean {
 }
 
 /**
+ * The repository paths the scope's subsystems own, read from `file_ledger`.
+ * A subsystem scope names a set of files as much as it names an id, so this is
+ * what lets a record that cites a path be reached by the scope that owns it.
+ * Read once per response rather than per row.
+ */
+function scopeOwnedPaths(db: DB, scope: AttentionScope): ReadonlySet<string> {
+  if (scope.subsystems.length === 0) return new Set();
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT file_path FROM file_ledger
+        WHERE subsystem_id IN (${placeholders(scope.subsystems)})`,
+    )
+    .all(...scope.subsystems) as { file_path: string }[];
+  return new Set(rows.map((row) => row.file_path));
+}
+
+/**
  * Whether a `field_notes.location` names something in scope. The column is a
  * comma-separated free-text list of paths, symbols, and subsystem ids
- * (`schema.sql:344`), so each token is tested against both the path prefix and
- * the owning subsystems. This is scope membership, not §2.4.6's per-locus
- * binding, which is why it is a separate predicate rather than a second copy
- * of `standing.ts`'s `locationMatch`.
+ * (`schema.sql:344`), so each token is tested three ways: against the scope's
+ * subsystem ids, against its path prefix, and against the paths its subsystems
+ * own in `file_ledger`. The third is what makes a subsystem scope reach a note
+ * that cites one of its files rather than its id — a note names where the
+ * observation was made, and nothing obliges it to name the owner (F2/codex).
+ * This is scope membership, not §2.4.6's per-locus binding, which is why it is
+ * a separate predicate rather than a second copy of `standing.ts`'s
+ * `locationMatch`.
  */
-function locationInScope(scope: AttentionScope, location: string | null): boolean {
+function locationInScope(
+  scope: AttentionScope,
+  location: string | null,
+  ownedPaths: ReadonlySet<string>,
+): boolean {
   if (scope.kind === "project") return true;
   if (!location) return false;
   const tokens = location
@@ -2194,6 +2261,7 @@ function locationInScope(scope: AttentionScope, location: string | null): boolea
     if (scope.subsystems.includes(token)) return true;
     const path = token.split("@")[0]?.split(":")[0] ?? token;
     if (scope.path_prefix && path.startsWith(scope.path_prefix)) return true;
+    if (ownedPaths.has(path)) return true;
   }
   return false;
 }
@@ -2215,17 +2283,33 @@ interface AttentionFinding {
  * would otherwise answer for every finding it holds.
  */
 function attentionFindings(db: DB, scope: AttentionScope): AttentionFinding[] {
+  return findingsInScope(db, scope, ["open", "fixed-pending-verification"]);
+}
+
+/**
+ * Every finding the scope reaches, at the resolution states asked for, or at
+ * every state when `states` is null. The two callers want different sets and
+ * the *scoping* is the same for both, which is why it lives here once: what
+ * scope a finding lies in is a question about where it was recorded, never
+ * about what state it has since reached (F9/codex).
+ */
+function findingsInScope(
+  db: DB,
+  scope: AttentionScope,
+  states: readonly string[] | null,
+): AttentionFinding[] {
   if (scope.subsystems.length === 0) return [];
+  const stateFilter = states === null ? "" : `AND s.resolution_state IN (${placeholders(states)}) `;
   const rows = db
     .prepare(
       `SELECT s.finding_id, s.subsystem_id, s.severity, s.resolution_state,
               f.ref_sha, f.primary_files
          FROM finding_state_current s JOIN findings f ON f.finding_id = s.finding_id
-        WHERE s.resolution_state IN ('open','fixed-pending-verification')
-          AND s.subsystem_id IN (${placeholders(scope.subsystems)})
+        WHERE s.subsystem_id IN (${placeholders(scope.subsystems)})
+          ${stateFilter}
         ORDER BY s.finding_id`,
     )
-    .all(...scope.subsystems) as AttentionFinding[];
+    .all(...scope.subsystems, ...(states ?? [])) as AttentionFinding[];
   if (!scope.path_prefix) return rows;
   const cited = new Set(
     (
@@ -2310,10 +2394,18 @@ function buildAttentionFindingSection(
 }
 
 /** §5.2's `undiscriminated`: the three sources that share the one property. */
+/**
+ * §5.2's `undiscriminated`: the records where two credible accounts still
+ * stand. `scopedFindingIds` is every finding the scope reaches at any
+ * resolution state, not the unresolved ones: whether two accounts still stand
+ * is a question about the contradiction, and a contradiction between two
+ * findings that have each reached a terminal state is exactly the case where
+ * nobody has picked between them (F9/codex).
+ */
 function buildUndiscriminated(
   db: DB,
   scope: AttentionScope,
-  findingIds: ReadonlySet<string>,
+  scopedFindingIds: ReadonlySet<string>,
 ): BudgetedSection {
   const items: Item[] = [];
   const ids: string[] = [];
@@ -2327,7 +2419,7 @@ function buildUndiscriminated(
     scope.kind === "project"
       ? contradictions
       : contradictions.filter(
-          (row) => findingIds.has(row.finding_a) || findingIds.has(row.finding_b),
+          (row) => scopedFindingIds.has(row.finding_a) || scopedFindingIds.has(row.finding_b),
         );
   for (const row of scopedContradictions) {
     items.push({
@@ -2489,7 +2581,8 @@ function buildAttentionLeads(db: DB, scope: AttentionScope): BudgetedSection {
     location: string | null;
     ref_sha: string | null;
   }[];
-  const inScope = rows.filter((row) => locationInScope(scope, row.location));
+  const ownedPaths = scopeOwnedPaths(db, scope);
+  const inScope = rows.filter((row) => locationInScope(scope, row.location, ownedPaths));
   const suspicions = inScope.filter((row) => row.category === "candidate-concern");
   const others = inScope.filter((row) => row.category !== "candidate-concern");
   const byCategory: Record<string, number> = {};
@@ -2721,23 +2814,38 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
       WHERE classification = 'confirmed-bug' AND subsystem_id IN (${holder})`,
     ...ids,
   );
-  const seamRows = counted<{ seam_id: string; party_a: string; party_b: string }>(
-    "SELECT seam_id, party_a, party_b FROM seam_assessability",
-  );
+  // §2.4.6 counts a side unassessed on either of two grounds, so both are
+  // read: `assessable` is 0 unless *both* parties are `mapped`, and a party
+  // may hold no `SC-%` disposition. Reading only the disposition calls an
+  // unassessable seam assessed (F8/codex).
+  const seamRows = counted<{
+    seam_id: string;
+    party_a: string;
+    party_b: string;
+    assessable: number;
+  }>("SELECT seam_id, party_a, party_b, assessable FROM seam_assessability");
   const assessed = new Set(
     counted<{ subsystem_id: string }>(
       "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
     ).map((row) => row.subsystem_id),
   );
   // §7.6 column 10: the column is omitted entirely when nothing was recorded,
-  // rather than printing a column of zeros over an empty table (VP4).
-  const accessRecorded =
-    (db.prepare("SELECT COUNT(*) AS n FROM access_log").get() as { n: number } | undefined)?.n ?? 0;
-  const accessRows = accessRecorded
-    ? counted<{ entry_id: string; n: number }>(
-        "SELECT entry_id, COUNT(*) AS n FROM access_log GROUP BY entry_id",
-      )
-    : [];
+  // rather than printing a column of zeros over an empty table (VP4). An
+  // `access_log` row names an *entry*, not a subsystem — `entry_id` and
+  // `entry_tier` are `entries`'s composite key (`schema.sql:96-103`) — so the
+  // measure exists only where the join reaches one, and a row that names an
+  // entry no longer recorded, or an entry belonging to no subsystem, reaches
+  // nothing. The gate is the joined result, not `access_log`'s own row count:
+  // counting rows that reach no subsystem is how a column of zeros is printed
+  // over a table that looks non-empty (F3/codex).
+  const accessRows = counted<{ subsystem_id: string; n: number }>(
+    `SELECT e.subsystem_id AS subsystem_id, COUNT(*) AS n
+       FROM access_log a
+       JOIN entries e ON e.id = a.entry_id AND e.tier = a.entry_tier
+      WHERE e.subsystem_id IS NOT NULL
+      GROUP BY e.subsystem_id`,
+  );
+  const accessRecorded = accessRows.length;
 
   const sum = (rows: { subsystem_id: string; n: number }[], id: string): number =>
     rows.filter((row) => row.subsystem_id === id).reduce((total, row) => total + row.n, 0);
@@ -2773,7 +2881,7 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
     let unassessedSides = 0;
     for (const seam of seams) {
       for (const party of [seam.party_a, seam.party_b]) {
-        if (!assessed.has(party)) unassessedSides += 1;
+        if (Number(seam.assessable) === 0 || !assessed.has(party)) unassessedSides += 1;
       }
     }
     const item: Item = {
@@ -2791,9 +2899,7 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
       authored: "code",
     };
     if (accessRecorded) {
-      item.access_heat = accessRows
-        .filter((row) => row.entry_id === id)
-        .reduce((total, row) => total + row.n, 0);
+      item.access_heat = sum(accessRows, id);
     }
     return item;
   });
@@ -2822,12 +2928,16 @@ function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
     // side, not an assessment of the seam. §7.6 column 10 is omitted entirely
     // rather than printed as zeros over an empty table (VP4).
     seam_binding: "per-party-proxy",
-    statement: accessRecorded ? undefined : "Access heat is not measured: access_log holds no row.",
+    statement: accessRecorded
+      ? undefined
+      : "Access heat is not measured: no access_log row reaches a subsystem through entries.",
   };
 }
 
 function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) {
-  const requestedScope = optString(args, "scope");
+  const requestedScopeArgument = optString(args, "scope");
+  const requestedScope =
+    requestedScopeArgument === null ? null : boundedSubject("scope", requestedScopeArgument);
   const requestedSections = optStringArray(args, "sections");
   const limitArgument = args.limit;
   let limit: number | null = null;
@@ -2853,7 +2963,9 @@ function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) 
   const scope = resolveAttentionScope(db, requestedScope);
   const head = checkedSha(db, probe);
   const findings = attentionFindings(db, scope);
-  const findingIds = new Set(findings.map((row) => row.finding_id));
+  // Scope membership for the undiscriminated section is read over every
+  // finding the scope reaches, not only the unresolved ones (F9/codex).
+  const scopedFindingIds = new Set(findingsInScope(db, scope, null).map((row) => row.finding_id));
   const priorVerified = new Set(
     (
       db
@@ -2883,7 +2995,7 @@ function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) 
       priorVerified,
       "No repair is awaiting verification in scope.",
     ),
-    buildUndiscriminated(db, scope, findingIds),
+    buildUndiscriminated(db, scope, scopedFindingIds),
     buildDecisions(db, scope),
     buildAttentionLeads(db, scope),
     buildStale(db, scope, probe, head),
@@ -2952,8 +3064,10 @@ interface HistorySubject {
 }
 
 function resolveHistorySubject(ctx: ServerContext, args: Record<string, unknown>): HistorySubject {
-  const locusArgument = optString(args, "locus");
-  const findingArgument = optString(args, "finding_id");
+  const locusRaw = optString(args, "locus");
+  const findingRaw = optString(args, "finding_id");
+  const locusArgument = locusRaw === null ? null : boundedSubject("locus", locusRaw);
+  const findingArgument = findingRaw === null ? null : boundedSubject("finding_id", findingRaw);
   if ((locusArgument === null) === (findingArgument === null)) {
     throw new ToolError("exactly one of locus or finding_id is required");
   }
@@ -3171,6 +3285,24 @@ function buildContradictionHistory(db: DB, subject: HistorySubject): BudgetedSec
 }
 
 function buildQuestionHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  // `open_questions` carries a nullable `subsystem_id` and nothing else that
+  // reaches a record: no column, and no link table, binds a question to a
+  // finding (`schema.sql:4617-4640`). A finding subject therefore inherits its
+  // subsystem's questions or none, and inheriting them asserts an attribution
+  // the store does not hold — the same over-reach `buildLeadHistory` avoids by
+  // binding a finding subject through `follow_up` (F4/codex).
+  if (subject.kind === "finding") {
+    return {
+      name: "questions",
+      source_rows: 0,
+      items: [],
+      ids: [],
+      policy_ids: [],
+      ordering_basis: "resolved_at-descending-then-id",
+      statement:
+        "No question is bound to a finding: the record binds a question to a subsystem, never to one finding. Ask by locus to read the subsystem's closed questions.",
+    };
+  }
   const owners = subject.owners;
   const rows = owners.length
     ? (db
@@ -3201,6 +3333,11 @@ function buildQuestionHistory(db: DB, subject: HistorySubject): BudgetedSection 
       category: row.category,
       subsystem_id: row.subsystem_id,
       question: row.question,
+      // §5.3 serves answered questions; an answered question without its
+      // answer serves the fact of a resolution and withholds the resolution
+      // (F5/codex). `null` is carried rather than elided so that "dismissed,
+      // with nothing recorded" reads differently from "answered".
+      answer: row.resolution === "answered" ? row.answer : null,
       resolved_at: row.resolved_at,
       ref_sha: row.ref_sha,
       revision_bound: row.ref_sha !== null,
@@ -3388,13 +3525,13 @@ export const locusTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        locus: { type: "string", minLength: 1 },
+        locus: { type: "string", minLength: 1, maxLength: MAX_SUBJECT_LENGTH },
         kind: { type: "string", enum: ["file", "symbol", "subsystem", "term"] },
         sections: {
           type: "array",
           items: { type: "string", enum: [...ACCOUNT_SECTIONS] },
         },
-        as_of_sha: { type: "string" },
+        as_of_sha: { type: "string", maxLength: MAX_SUBJECT_LENGTH },
       },
       required: ["locus"],
       additionalProperties: false,
@@ -3411,7 +3548,7 @@ export const locusTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        scope: { type: "string", minLength: 1 },
+        scope: { type: "string", minLength: 1, maxLength: MAX_SUBJECT_LENGTH },
         sections: {
           type: "array",
           items: { type: "string", enum: [...ATTENTION_SECTIONS] },
@@ -3430,10 +3567,27 @@ export const locusTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        locus: { type: "string", minLength: 1 },
-        finding_id: { type: "string", minLength: 1 },
+        locus: { type: "string", minLength: 1, maxLength: MAX_SUBJECT_LENGTH },
+        finding_id: { type: "string", minLength: 1, maxLength: MAX_SUBJECT_LENGTH },
         limit: { type: "integer", minimum: 1 },
       },
+      // §5.3 requires exactly one subject. The handler has always refused the
+      // other two shapes; advertising the requirement is what lets a host that
+      // validates its calls tell a malformed call from a server fault
+      // (F6/codex). `not: {}` is how draft 2020-12 spells "this property may
+      // not appear" inside a branch.
+      oneOf: [
+        {
+          type: "object",
+          required: ["locus"],
+          properties: { locus: { type: "string" }, finding_id: { not: {} } },
+        },
+        {
+          type: "object",
+          required: ["finding_id"],
+          properties: { finding_id: { type: "string" }, locus: { not: {} } },
+        },
+      ],
       additionalProperties: false,
     },
     compact: true,
