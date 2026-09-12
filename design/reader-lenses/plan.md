@@ -48,7 +48,7 @@
 |---|---|---|---|---|---|
 | P16 | Snapshot, discard, and reinitialize the self-conspectus store | done (1 attempt) | P10, P12, P13, P15 | `dev/test-rebuild-readback.mjs` | C52, C55, C63 |
 | P17 | Rebuild the conspectus through the skill with claims-backed Phase 2 | done (1 attempt) | P16 | `dev/test-rebuild-coverage.mjs` | C52, C42, C43, C45, C55, C63 |
-| P19 | Survey every subsystem through concerns, adversarial review, and packaging to mapped | ready (1 attempt) | P17 | `dev/test-rebuild-depth.mjs` | C52, C42, C43, C55, C63 |
+| P19 | Survey every subsystem through concerns, adversarial review, and packaging to mapped | done (1 attempt) | P17 | `dev/test-rebuild-depth.mjs` | C52, C42, C43, C55, C63 |
 | P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | ready | P17, P19 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
 
 ## Completion

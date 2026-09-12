@@ -1223,8 +1223,8 @@
       "attempts": 1,
       "start_sha": "9f6019581856adff67c9cee862476f0b7f6a3063",
       "red_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-      "green_sha": "f006afcb37c8ae59a5f732f6bf236870ee47de0e",
-      "verified_by_launcher": false,
+      "green_sha": "5b83e7ece2eca97ea88c471fb9c0c64b60114bb2",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Phases 3-5 through the skill over B-01..B-11 in four batches behind their own storage checkpoints, then seam assessment and packaging. 66 checklist dispositions (6 concerns x 11 subsystems), all terminal, none deferred to a gap; 10 confirmed bugs with attached evidence (5 MEDIUM, 5 LOW), 9 upheld and 1 scope-restricted by the adversarial pass; 53 claim targets challenged with 52 survived and 1 overturned and re-asserted (B-01-C01's ToolDefinition shape was wrong on the handler order and omitted the compact flag); all 9 seams assessed with SC-1..SC-9 on both sides. Two files beyond the deliverables: dev/record-rebuild-depth.mjs and the receipt it writes. Three choices the spec left open, recorded here: SC dispositions live only under seams[] in the receipt, because an SC code names two parties and counting it into an eleven-subsystem denominator would read as a missing disposition everywhere it does not apply; the seam pass and Phase 5 are not a fifth batch, because they survey no subsystem, and are named in the receipt's seam_assessment block against the session-close storage commit; and finding ids start at B03-4 and B04-4 because schema.sql cites B03-1..B03-3 and B04-1/B04-3 by name for earlier defects. Open question 5 records that B11-2 is filed under ZD-1 by analogy rather than by its recorded wording. docs/ was not promoted: that is P18's deliverable."
     },
