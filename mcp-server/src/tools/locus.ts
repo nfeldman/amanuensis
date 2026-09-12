@@ -25,7 +25,6 @@
 import { spawnSync } from "node:child_process";
 import type { DB } from "../db.js";
 import {
-  citationRevision,
   citationTokensIn,
   optString,
   optStringArray,
@@ -898,15 +897,20 @@ function buildBoundaries(db: DB, scope: AccountScope): SectionBuild {
       authored: "model",
     })),
     ...xrefs.map((row) => {
-      // §9.2 binds every recorded edge to a citation carried inside its prose
-      // `context`, so the revision an edge was read at is on the row even
-      // though `xrefs` has no `ref_sha` column. Reading the token back is
-      // lexical — the write path already resolved it against the workspace,
-      // and a read must not shell out to git once per edge. An edge recorded
-      // before the citation contract carries none and stays unbound (§3.2).
+      // §9.2 requires every recorded edge to cite a resolvable revision inside
+      // its prose `context`, and those tokens are served here: reading them
+      // back is lexical, since the write path already resolved each against
+      // the workspace and a read must not shell out to git once per edge.
+      //
+      // They do not bind the item. `xrefs` has no `ref_sha` column, so §3.2
+      // holds the row unbound: a citation is the revision one *reading* was
+      // taken at, not a revision the edge is valid at, and an edge whose prose
+      // cites several has no single one to promote. Electing the first token
+      // would present the relation as pinned to whichever revision the writer
+      // happened to mention first, and would contradict P6's gate on this same
+      // section. A reader wanting the revisions reads `citations[]`, where the
+      // count is visible (slice-S4 F5/codex).
       const citations = citationTokensIn(row.context);
-      const first = citations[0];
-      const refSha = first === undefined ? null : citationRevision(first);
       return {
         kind: "xref",
         from_id: row.from_id,
@@ -915,8 +919,8 @@ function buildBoundaries(db: DB, scope: AccountScope): SectionBuild {
         strength: row.strength,
         context: row.context,
         citations,
-        ref_sha: refSha,
-        revision_bound: refSha !== null,
+        ref_sha: null,
+        revision_bound: false,
         authored: "model",
       };
     }),
