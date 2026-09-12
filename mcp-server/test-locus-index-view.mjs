@@ -434,6 +434,12 @@ function buildFixture() {
     `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note)
      VALUES (?, ?, ?, ?, ?, 'standing fixture')`,
   ).run(4, "src/ledger.ts", "compact (bounded retry)", base, "comment-asserted");
+  // Evidence on another path, so `measured.evidence_rows` has a denominator
+  // it can get wrong: a count taken over the whole table reads 5 here.
+  db.prepare(
+    `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note)
+     VALUES (?, ?, ?, ?, ?, 'standing fixture')`,
+  ).run(5, "src/only.ts", "readRow", base, "code-verified");
 
   // One current claim and one superseded claim, both bound to the locus
   // through the same evidence row. `measured.claims_recorded` counts the
