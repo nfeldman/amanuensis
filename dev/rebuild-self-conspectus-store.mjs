@@ -192,6 +192,58 @@ function client() {
   };
 }
 
+/**
+ * Every live process with a file under `dir` open, excluding this one and the
+ * pids in `ignore`. Returns `{ pids, evidence }` on success and
+ * `{ undetermined: <reason> }` when exclusivity could not be established.
+ *
+ * The distinction is the whole point: a destructive step that cannot tell
+ * "nobody holds this" from "I could not look" must refuse, not assume. The
+ * driver's own stop-and-probe covers only the child it spawned, which is what
+ * the review's F5 found — a server started by an editor session holds its
+ * SQLite handle straight through `rmSync`, and afterwards writes to an
+ * unlinked inode.
+ */
+function holdersOf(dir, ignore = []) {
+  const excluded = new Set([process.pid, ...ignore].map(Number));
+  // The database files, not the directory: `lsof +D` walks a tree and on macOS
+  // missed a live SQLite handle inside it, while naming the paths finds it.
+  const targets = [dir, ...DB_FILES.map((name) => join(dir, name))].filter((path) =>
+    existsSync(path),
+  );
+  if (!targets.length) return { pids: [], evidence: `${dir} holds nothing to be held open` };
+  const probe = spawnSync("lsof", ["-t", "-w", "--", ...targets], { encoding: "utf8" });
+  const out = (probe.stdout ?? "").trim();
+  const err = (probe.stderr ?? "").trim();
+  const evidence = `lsof -t -w -- ${targets.map((path) => path.replace(dir, ".")).join(" ")}`;
+  // Read the pid list before the exit status, because lsof will report holders
+  // it found *and* exit 1 when it could not stat something else on the way —
+  // which is how the first cut of this guard mistook a live handle for an
+  // enumeration failure. A pid on stdout is a holder whatever the status says.
+  const pids = [
+    ...new Set(
+      out
+        .split("\n")
+        .map((line) => Number(line.trim()))
+        .filter((pid) => Number.isSafeInteger(pid) && pid > 0 && !excluded.has(pid)),
+    ),
+  ].filter((pid) => pidProbe(pid) === "alive");
+  if (pids.length) return { pids, evidence };
+  // Nothing on stdout: either genuinely nobody (lsof exits 1, silent), or the
+  // probe never ran. Those are not the same answer, and a destructive step may
+  // not treat the second as the first.
+  const cleanlyEmpty = (probe.status === 0 || probe.status === 1) && out === "" && err === "";
+  if (probe.error || !cleanlyEmpty) {
+    return {
+      undetermined:
+        `could not enumerate the processes holding ${dir} open: ` +
+        `${probe.error ? probe.error.code : `lsof exited ${probe.status}`}` +
+        `${err ? ` — ${err.slice(0, 200)}` : ""}${out ? ` — output: ${out.slice(0, 120)}` : ""}`,
+    };
+  }
+  return { pids: [], evidence };
+}
+
 function pidProbe(pid) {
   try {
     process.kill(pid, 0);
@@ -269,6 +321,27 @@ if (!exitedBeforeDeletion || probe !== "ESRCH") {
   die(`the server process ${stoppedPid} is still addressable (${probe}); refusing to delete.`);
 }
 step(`server ${stoppedPid} stopped (pid probe: ${probe})`);
+
+// Our own child is gone; that says nothing about anybody else's. §12.1 asks
+// that *nothing* hold a handle across the deletion, so establish it rather
+// than assume it (F5/codex).
+const exclusivity = existsSync(STORAGE) ? holdersOf(STORAGE, [stoppedPid]) : { pids: [], evidence: "the storage directory is already absent" };
+if (exclusivity.undetermined) {
+  die(
+    `refusing to delete ${STORAGE}: ${exclusivity.undetermined}.\n` +
+      "§12.1 requires that nothing hold a handle across the deletion, and that" +
+      " cannot be established here. Stop every Amanuensis server against this" +
+      " workspace and re-run where the holders can be enumerated.",
+  );
+}
+if (exclusivity.pids.length) {
+  die(
+    `refusing to delete ${STORAGE}: process(es) ${exclusivity.pids.join(", ")} still hold` +
+      " it open. Another Amanuensis server has the database open, and deleting under it" +
+      " leaves it writing to an unlinked inode. Stop it and re-run.",
+  );
+}
+step(`store is exclusively ours (${exclusivity.evidence}: no other holder)`);
 
 // --- step 3: discard -------------------------------------------------------
 mkdirSync(dirname(archive), { recursive: true });
@@ -380,6 +453,11 @@ const receipt = {
     signal: "SIGTERM",
     exited_before_deletion: exitedBeforeDeletion,
     pid_probe_after_exit: probe,
+    // Scoped to every holder, not only the child this driver spawned.
+    exclusive_before_deletion: {
+      other_holders: exclusivity.pids,
+      established_by: exclusivity.evidence,
+    },
   },
   discard: {
     removed,

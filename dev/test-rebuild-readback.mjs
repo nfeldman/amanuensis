@@ -617,6 +617,104 @@ await check(`${DRIVER_REL} stops its server and proves the pid is gone before de
   return null;
 });
 
+await check(`${DRIVER_REL} establishes exclusivity over the whole store, not just its own child`, () => {
+  if (driver.blocked) return driver.blocked;
+  if (driver.exitStatus !== 0) return `the driver exited ${driver.exitStatus}`;
+  // §12.1 asks that *nothing* hold a handle across the deletion. The driver
+  // used to probe only the pid it had stopped, so a second server with
+  // memory.db open kept its handle through the delete (F5/codex).
+  const exclusive = driver.receipt?.stop?.exclusive_before_deletion ?? null;
+  if (!exclusive) {
+    return "the driver's receipt does not record that the store was exclusively its own before the deletion";
+  }
+  if (!Array.isArray(exclusive.other_holders)) {
+    return "the driver's receipt does not enumerate the other processes holding the store";
+  }
+  if (exclusive.other_holders.length) {
+    return `the driver deleted a store still held by ${exclusive.other_holders.join(", ")}`;
+  }
+  if (typeof exclusive.established_by !== "string" || !exclusive.established_by) {
+    return "the driver's receipt does not say how exclusivity was established";
+  }
+  if (!/no other holder|exclusiv/.test(driver.stdout) && !driver.stdout.includes("exclusively ours")) {
+    return "the driver's own output does not report the exclusivity step";
+  }
+  return null;
+});
+
+await check(`${DRIVER_REL} refuses to delete a store another process holds open`, async () => {
+  if (driver.blocked) return driver.blocked;
+  // The positive control for the guard above: without it, a zero-length
+  // `other_holders` array is a green that has never seen a holder (VP4). A
+  // second server is started against a throwaway workspace and kept alive
+  // while the driver runs; the driver must refuse and leave the store intact.
+  const root = scratch("p16-squatter-");
+  const workspace = join(root, "workspace");
+  mkdirSync(workspace, { recursive: true });
+  for (const args of [
+    ["init", "-q", workspace],
+    ["-C", workspace, "config", "user.email", "p16-gate@invalid"],
+    ["-C", workspace, "config", "user.name", "P16 gate"],
+  ]) {
+    if (spawnSync("git", args, { encoding: "utf8" }).status !== 0) {
+      return "could not prepare a throwaway workspace for the squatter";
+    }
+  }
+  writeFileSync(join(workspace, "README.md"), "throwaway workspace for the P16 squatter arm\n");
+  for (const args of [
+    ["-C", workspace, "add", "-A"],
+    ["-C", workspace, "commit", "-q", "-m", "seed"],
+  ]) {
+    if (spawnSync("git", args, { encoding: "utf8" }).status !== 0) {
+      return "could not seed a throwaway workspace for the squatter";
+    }
+  }
+
+  const squatter = client(workspace);
+  try {
+    await squatter.handshake();
+    const opened = await squatter.call("get_project_info");
+    const session = await squatter.call("start_session", {
+      intent: "P16 gate — holding the store open across a rebuild attempt",
+    });
+    const db = join(workspace, ".amanuensis", "memory.db");
+    if (opened.isError || session.isError || !existsSync(db)) {
+      return `the squatter never opened a database to hold: ${
+        opened.payload?.error ?? session.payload?.error ?? "memory.db was never created"
+      }`;
+    }
+    const run = spawnSync(
+      process.execPath,
+      [
+        join(REPO, DRIVER_REL),
+        "--confirm",
+        "--discard-populated-store",
+        "--workspace",
+        workspace,
+        "--archive",
+        join(root, "archive"),
+        "--receipt",
+        join(root, "receipt.json"),
+      ],
+      { cwd: REPO, encoding: "utf8", timeout: 600_000 },
+    );
+    if (run.status === 0) {
+      return "the driver discarded a store that another live server still held open";
+    }
+    const said = scrub(`${run.stderr ?? ""}${run.stdout ?? ""}`);
+    if (!/still hold it open|hold(ing)? .*open/.test(said)) {
+      return `the driver exited ${run.status} for some other reason: ${said.trim().slice(-200)}`;
+    }
+    if (!said.includes(String(squatter.pid))) {
+      return `the driver refused without naming the holding process ${squatter.pid}`;
+    }
+    if (!existsSync(db)) return "the driver refused but had already deleted the database";
+    return null;
+  } finally {
+    await squatter.stop();
+  }
+});
+
 await check(`${DRIVER_REL} reinitializes and reads back an empty store`, () => {
   if (driver.blocked) return driver.blocked;
   if (driver.exitStatus !== 0) return `the driver exited ${driver.exitStatus}`;

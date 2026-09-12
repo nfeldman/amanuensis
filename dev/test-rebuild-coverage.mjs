@@ -253,7 +253,7 @@ function isKnownStatus(status) {
 }
 
 function pairKey(a, b) {
-  return [a, b].sort().join(" ");
+  return [a, b].sort().join("\0");
 }
 
 // ---------------------------------------------------------------------------
@@ -451,7 +451,7 @@ check("the batches ran in priority order, each behind a checkpoint commit", () =
     if (!commit) {
       return `batch ${batch.n}'s checkpoint ${batch.storage_commit} is not in the storage history`;
     }
-    if (String(commit.message ?? "") !== String(batch.label ?? " ")) {
+    if (String(commit.message ?? "") !== String(batch.label ?? "\0")) {
       return `batch ${batch.n}'s checkpoint commit says ${JSON.stringify(commit.message ?? null)}, not the batch label ${JSON.stringify(batch.label ?? null)}`;
     }
     if (batch.kind === "onboarding" && !/onboarding/i.test(String(batch.label ?? ""))) {
