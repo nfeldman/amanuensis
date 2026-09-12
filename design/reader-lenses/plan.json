@@ -229,14 +229,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "717217beecc9337623e77146bcd62d6d477de49d",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "7090c41e834f6ccd9aedf66923d9572343514bcc",
+      "green_sha": "a3c5946b420109cb9817fbf4366ff4c1f6fe10cf",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "finding_state_current carries the legacy-status fallback once; the renderer, get_findings, get_finding_summary, compile_review_session and the review historical-findings reader all select from it (the spec calls the first list_findings; the tool is named get_findings). findings.md narrows to open and fixed-pending-verification and the new resolved-findings.md carries the resolved records; _build_xref_index routes by state and readback.py holds the one lens membership definition plus the exhaustive census. Two deviations to check: the Unresolved page stays severity-major with state as the secondary sort, because a state-major structure would move '## High findings' to an h3 and break test-materializer.py's asserted anchor - P8/P9 own that restructuring; and resolved-findings.md keeps the existing five-column finding table, so SS7.7's basis-by-kind rendering is left to P9. The first red commit (73b7ed7) reached every assertion but two messages contained 'is not defined', which the launcher reads as a crash signature, so 7090c41 reverts the deliverables, rewords the gate and scrubs that phrase, and 33158ce re-applies them unchanged."
     },
     {
       "id": "P3",
