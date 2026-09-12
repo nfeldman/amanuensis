@@ -996,6 +996,99 @@ def main() -> int:
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
+    # -- a canonical branch that does not track origin -----------------------
+    # "Origin head" is the overview's only external reference point, and a
+    # hard-coded refs/remotes/origin/<branch> resolves nothing in the repos that
+    # most need it: a fork whose upstream is `upstream`, a clone made with
+    # --origin, a branch tracking a differently-named branch.  The dimension
+    # then reads "not known here" about a revision git can name exactly, which
+    # is a false negative in the one row a reader consults to decide whether the
+    # survey is behind.
+    upstream_root = Path(tempfile.mkdtemp(prefix="p3-upstream-"))
+    try:
+
+        def upstream_fixture() -> tuple[dict[str, Any], str | None]:
+            """A workspace whose `main` tracks `upstream/trunk`, and its head."""
+
+            origin = upstream_root / "origin"
+            origin.mkdir(parents=True, exist_ok=True)
+            (origin / "src").mkdir(exist_ok=True)
+            (origin / "src" / "reader.ts").write_text("export const read = () => 0;\n")
+            if git(origin, "init", "--quiet", "--initial-branch=trunk").returncode != 0:
+                return {}, "git could not initialise the upstream fixture"
+            if git(origin, "add", "-A").returncode != 0:
+                return {}, "git could not stage the upstream fixture"
+            if git(origin, "commit", "--quiet", "-m", "upstream").returncode != 0:
+                return {}, "git could not commit the upstream fixture"
+            resolved = git(origin, "rev-parse", "HEAD")
+            if resolved.returncode != 0:
+                return {}, "git could not resolve the upstream head"
+            upstream_head = resolved.stdout.strip()
+            workspace = upstream_root / "workspace"
+            cloned = subprocess.run(
+                ["git", "clone", "--quiet", "--origin", "upstream", str(origin), str(workspace)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if cloned.returncode != 0:
+                return {}, "git could not clone the upstream fixture"
+            if git(workspace, "branch", "-m", "trunk", "main").returncode != 0:
+                return {}, "git could not rename the tracking branch"
+            if git(workspace, "branch", "--set-upstream-to=upstream/trunk", "main").returncode != 0:
+                return {}, "git could not set the upstream of the renamed branch"
+            storage = workspace / ".amanuensis"
+            storage.mkdir(parents=True, exist_ok=True)
+            try:
+                seed(storage, ENTRY_POINT_WITH_THESIS)
+            except Exception as exc:
+                return {}, f"the upstream fixture could not be seeded — {scrub(exc)}"
+            summary = publish(storage)
+            return (
+                {"storage": storage, "head": upstream_head, "summary": summary},
+                None,
+            )
+
+        fixture, fixture_error = upstream_fixture()
+
+        def upstream_alignment() -> str | None:
+            if fixture_error:
+                return fixture_error
+            index = read(fixture["storage"] / "docs" / "index.md")
+            if index is None:
+                return "the upstream fixture published no index.md"
+            body = section(section(index, "Where the record stands"), "Source alignment", level=3)
+            if not body.strip():
+                return "the Source alignment dimension is empty"
+            head = fixture["head"]
+            # The workspace head of a fresh clone is the upstream head, so a
+            # bare substring search over the whole dimension passes on the
+            # "Repository head" row alone.  The row under test is the upstream
+            # one, and it is read on its own.
+            rows = [
+                line
+                for line in body.splitlines()
+                if re.match(r"\s*\|", line) and re.search(r"upstream|origin", line, re.I)
+            ]
+            if not rows:
+                return "Source alignment carries no upstream row at all"
+            row = rows[0]
+            if re.search(r"not known here", row, re.I):
+                return (
+                    "Source alignment says the upstream head is not known here for a branch"
+                    f" tracking upstream/trunk, which git resolves to {head[:8]}: {row.strip()}"
+                )
+            if head[:8] not in row:
+                return (
+                    "the upstream row reports no revision for a branch tracking upstream/trunk;"
+                    f" git resolves it to {head[:8]}: {row.strip()}"
+                )
+            return None
+
+        check("Source alignment resolves an upstream that is not named origin", upstream_alignment)
+    finally:
+        shutil.rmtree(upstream_root, ignore_errors=True)
+
     # -- CI -----------------------------------------------------------------
     def runs_in_ci() -> str | None:
         text = read(CI_FILE)
