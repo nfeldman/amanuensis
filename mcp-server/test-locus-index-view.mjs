@@ -732,6 +732,35 @@ check("the six inference steps are declared in §2.1's order", () => {
     : `the declared order is ${JSON.stringify(order)}`;
 });
 
+// A forced kind is a claim about the value's shape, not a licence to skip the
+// shape check. `asSymbol` slices at `indexOf(":")`; on a value with no colon
+// that index is -1, so `slice(0, -1)` drops the last character and the whole
+// value is also served as the symbol — a path and a symbol neither the caller
+// nor the store ever named. The forced loci are the only ones that reach the
+// constructors without the inference ladder having proved the shape first.
+check("a forced kind whose value does not carry that kind's shape is refused", () => {
+  const gap = needFixture();
+  if (gap) return gap;
+  const problems = [];
+  for (const [value, forced] of [
+    ["nosymbol", "symbol"],
+    [":readLedger", "symbol"],
+    ["src/ledger.ts:", "symbol"],
+  ]) {
+    let locus = null;
+    try {
+      ({ locus } = mods.standing.describeLocusStanding(fixture.ctx, value, forced));
+    } catch {
+      continue; // refused, which is the contract
+    }
+    problems.push(
+      `${JSON.stringify(value)} as ${forced} resolved to path ${JSON.stringify(locus.path)}` +
+        ` symbol ${JSON.stringify(locus.symbol)} split_at ${locus.split_at}`,
+    );
+  }
+  return problems.length ? problems.join("; ") : null;
+});
+
 check("a caller-supplied kind overrides inference and says so, for every kind", () => {
   const gap = needFixture();
   if (gap) return gap;
