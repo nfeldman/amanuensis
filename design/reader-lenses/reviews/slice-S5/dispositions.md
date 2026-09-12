@@ -42,6 +42,11 @@ from an earlier fix session, with no green after it.
   remedy named. The residue declaration (`within_budget: false`) is kept, because
   `get_attention` echoes its full subsystem list untruncatably and a large store can reach
   it honestly — what it may not do is drift to three times the number the trace advertises.
+  The factor of two is headroom over one measurement, not a number the record has earned:
+  the floor measures 3792 bytes for `get_history` against 8192 and 4724 for `get_attention`
+  against 12288 on this packet's gate fixture, and no larger store was available to this
+  session to measure (`~/.amanuensis/workspaces` holds no conspectus for this project). If a
+  real store ever reaches the ceiling, the factor should be re-measured, not raised.
 - **P14.** `get_history(finding_id=…)` serves an empty `questions` section. This is a
   narrowing: the store binds a question to a subsystem and to nothing else.
 - **P6/P14.** Every locus-tool subject is bounded at 512 bytes, enforced in code and

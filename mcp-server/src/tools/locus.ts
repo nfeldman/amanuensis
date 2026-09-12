@@ -1863,12 +1863,17 @@ const ROUND_ROBIN_TRUNCATION_ORDER = "round-robin-sections-then-ledger-ids-v1";
  * advertises. §4.1 gives these two tools one budget each; the 32768-byte
  * ceiling is `describe_locus`'s expanded budget and means nothing here
  * (F1/codex), so the residue is bounded by a ceiling derived from the tool's
- * own budget. The multiplier is stated rather than inferred: the untruncatable
- * floor is the subject or scope block, the section views and their statements,
- * the census, the ledger counts, and the trace, and on the largest store this
- * repository holds it measures well under half the smaller budget. Doubling is
- * the room the record gets; past it the call is refused with the remedy named,
- * because no host should be handed three times what it was told to expect.
+ * own budget. The untruncatable floor is the subject or scope block, the
+ * section views and their statements, the census, the ledger counts, and the
+ * trace; measured on this packet's gate fixture it is 3792 bytes for
+ * `get_history` against 8192 and 4724 for `get_attention` against 12288, both
+ * under half. No larger store has been measured, so the factor is headroom
+ * chosen against that one measurement rather than a number the record has
+ * earned: it is the room the record gets before the call is refused with the
+ * remedy named, because no host should be handed three times what it was told
+ * to expect. `get_attention` echoes its whole subsystem list untruncatably, so
+ * a store with enough subsystems will reach the residue honestly; if one ever
+ * reaches the ceiling, re-measure before raising the factor.
  */
 const ROUND_ROBIN_CEILING_FACTOR = 2;
 const ROUND_ROBIN_OVER_BUDGET_REASON =
