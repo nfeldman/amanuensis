@@ -718,14 +718,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "7b7743e87a8c31168b35fb9e952283fde0cc1cf9",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "16095bc07263faad671d7e549bf5d30540966d21",
+      "green_sha": "ccac3775b05fd96a9e3b17340f0c11274b9585f3",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "search-index.js is written by render_html_projection into the same files map as the HTML, so one code path gives it manifest.projection_files, the publication receipt, and retirement immunity; core._locus_index builds it from file_standing and evidence. Spec gaps filled and recorded in code: a path entry's h is files.html#f-<sha1>, the anchor §7.4 fixes, since §8.1.1's \"#<slug>\" would be the colliding slugify id §7.4 exists to reject; the index carries every distinct ledger path, not only the obligation-bearing ones, so it mirrors the Files index row for row and every entry's anchor resolves, while the read-back requirement stays scoped to the obligation; and a cited symbol whose file no ledger row names lands on files.html with no fragment, because there is no Files row to anchor to. Two deliberate interface readings: the combobox is built by script rather than served, since an input announced as a combobox that nothing can expand promises a control a no-JS reader does not have -- so the gate reads role, aria-expanded, aria-controls, aria-activedescendant and the live region back from the browser, not from the bytes; and Escape restores focus to the element focused before the search, per §8.2's wording, rather than keeping focus in the combobox as the ARIA pattern's first Escape does. The rail's page filter is replaced by one result list over pages, ledger paths, and cited symbols (§8.1.1's extension of ⌘K); the rail itself stays complete and unfiltered, which is also what makes the no-JS path whole. Filters: findings.html filters the whole Unresolved lens including Awaiting verification, hot-spots' severity facet is named by its two band columns because that table keeps critical+high and medium+low apart on purpose, a row recording no value on a facet cannot be excluded by it, and hiding extends from rows to the containers and headings a fully hidden run leaves behind -- guarded so a heading with no filterable row under it is never folded. html_pages_rendered/unchanged still count pages only; the index is not an HTML page and html_pages_total counts the plan. Thirty-one sabotages were run across the builder, the three read-back changes, the combobox, and the filters; two survived the first pass and were closed by strengthening the gate (a duplicated index entry, and the folded-prose-heading regression), and one is a recorded no-op: removing the explicit node.focus() from Enter's same-page branch changes nothing while the target still carries tabindex=\"-1\", and removing the tabindex as well does turn the gate red. Note for the slice reviewer: the checked-in docs/ projection is now behind what this packet renders (every page gains a script reference, a data-root, and the new search markup); republishing it is §12.2's packet, and no CI check byte-compares it."
     },
     {
       "id": "P11",
