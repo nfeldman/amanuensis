@@ -33,7 +33,10 @@
 //   - either wire response — the compact text block plus the duplicated
 //     `structuredContent` — exceeds its §4.1 budget, or carries no omission
 //     ledger, or reports a size it does not have;
-//   - a `scope` argument does not restrict what the response serves;
+//   - a `scope` argument does not restrict what the response serves, a
+//     `sections` argument serves a section it did not name or drops one without
+//     an exact policy entry in the ledger, `limit` is not honoured, or an
+//     unknown section name is accepted;
 //   - either tool is not advertised read-only, is absent from the generated
 //     inventory, or the gate does not run in CI.
 //
@@ -1049,6 +1052,40 @@ await check("a scope argument restricts what get_attention serves", () => {
   const prefixIds = itemsOf(prefixed, "open").map((item) => String(item.finding_id));
   const strays = prefixIds.filter((id) => !id.startsWith("B02-"));
   return strays.length ? `the lib/ prefix serves ${strays.length} finding(s) from outside it` : null;
+});
+
+await check("sections and limit narrow the answer and are declared in the ledger", () => {
+  if (attentionError) return attentionError;
+  let narrowed = null;
+  try {
+    narrowed = call("get_attention", { sections: ["open"], limit: 3 });
+  } catch (e) {
+    return `get_attention(sections, limit) did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const open = sectionOf(narrowed, "open");
+  if (!open?.requested) return "the requested section does not report requested: true";
+  if ((open.items ?? []).length > 3) return `limit 3 served ${(open.items ?? []).length} items`;
+  if ((open.items ?? []).length === 0) return "limit 3 served nothing";
+  if (narrowed.trace?.limit !== 3) return `the trace reports the limit ${narrowed.trace?.limit}`;
+  for (const name of ATTENTION_SECTIONS) {
+    if (name === "open") continue;
+    const view = sectionOf(narrowed, name);
+    if ((view?.items ?? []).length !== 0) return `${name} was not requested and still served items`;
+    if (view?.requested !== false) return `${name} reports requested: ${view?.requested}`;
+    if (view.census > 0) {
+      const policy = (narrowed.omitted ?? []).find(
+        (entry) => entry.section === name && entry.reason === "policy",
+      );
+      if (!policy || policy.count !== view.census)
+        return `${name} was dropped by policy without an exact ledger entry`;
+    }
+  }
+  try {
+    call("get_attention", { sections: ["invented"] });
+    return "an unknown section name was accepted";
+  } catch {
+    return null;
+  }
 });
 
 // ---------------------------------------------------------------------------

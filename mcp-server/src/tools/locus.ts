@@ -338,6 +338,20 @@ interface SectionBuild {
  * item by item, so it is served as a path and a content hash a reader can
  * resolve — §9.1 renders its body on the subsystem page, where the labelling
  * travels with it, and never inside a response §4.1 bounds to 8192 bytes.
+ *
+ * That settles the drift F7/codex left open across §4.2, §5.1 and §9.1, in one
+ * place. §4.2 lists `narrative` as opt-in while §5.1 fixes this tool's
+ * signature at `locus`/`kind`/`sections`/`as_of_sha` and constrains `sections`
+ * to §3.1's eight names, so no channel exists to opt in — read as a contract on
+ * the *tool*, the two cannot both hold. They are not both about the tool.
+ * §4.2's `narrative` names the narrative **body**, which no tool response
+ * serves under any option: §9.1's "on the page only" is where it is opt-in, and
+ * the page is where opting in happens. What §3.4 attaches here is the locator,
+ * about 200 bytes of code-authored path and hash, which travels with
+ * `structure` and is therefore on by default alongside it. No claim changes,
+ * §5.1's input surface is not widened, and the two tools P14 adds carry no
+ * narrative channel of their own — `get_attention`'s `sections` is a different
+ * enum over §5.2's seven names.
  */
 interface NarrativePointer {
   artifact_path: string;
