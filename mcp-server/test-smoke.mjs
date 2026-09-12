@@ -266,7 +266,15 @@ run("lookup_term", { term: "runJob" }, (r) => r !== null && r.gloss === "refined
 run("list_vocabulary", { subsystem_id: "B-01" }, (r) => r.length === 1);
 
 // 10. Xrefs
-run("add_xref", { from_id: "B-01", to_id: "B-02", relationship: "data-flow", strength: "observed" }, (r) => r.ok);
+// §9.2: context is required and must carry a citation token whose revision
+// resolves in the bound workspace; the prose around it is stored verbatim.
+run("add_xref", {
+  from_id: "B-01",
+  to_id: "B-02",
+  relationship: "data-flow",
+  strength: "observed",
+  context: `B-01 enqueues the job B-02 dequeues, at scheduler/main.ts:runJob@${claimSha1}`,
+}, (r) => r.ok && r.citations.length === 1 && r.citations[0] === `scheduler/main.ts:runJob@${claimSha1}`);
 run("get_xrefs", { subsystem_id: "B-01" }, (r) => r.length === 1);
 
 // 11. Contradictions — need a second finding to contradict with

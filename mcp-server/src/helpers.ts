@@ -151,6 +151,93 @@ export function requireWorkspaceCitation(
   return `${sourcePath}${value.slice(separator)}`;
 }
 
+/**
+ * §9.2's citation grammar, as one whitespace-delimited token: a workspace path,
+ * a first-colon separator, a symbol, and a 7–40 character hex revision.
+ *
+ * `requireWorkspaceCitation` cannot validate a citation embedded in prose. It
+ * takes `indexOf(":")` and `lastIndexOf("@")` over the *whole* value, so
+ * `"why: src/a.ts:sym@abc1234"` is accepted with `why` normalized as the path
+ * and the real citation never checked, while `"one-line: why this link
+ * matters"` — the shape `xrefs.context` is documented as (`schema.sql:86`) —
+ * is refused outright for carrying no `@`. Both directions are wrong, so a
+ * context is scanned token by token instead.
+ *
+ * The pattern source is exported so the published input schema can carry the
+ * same grammar the handler enforces rather than a second copy of it.
+ */
+export const CITATION_TOKEN_SOURCE = "[^\\s:]+(?:/[^\\s:]+)*:[^\\s@]+@[0-9a-fA-F]{7,40}";
+
+const CITATION_TOKEN = new RegExp(`^${CITATION_TOKEN_SOURCE}$`);
+
+/**
+ * The tokens of `value` that match the grammar, deduplicated, in prose order.
+ *
+ * Lexical only: no path normalization, no git. Read surfaces use this to
+ * surface the citation a stored row already carries; the write path uses
+ * `extractWorkspaceCitations`, which validates each one.
+ */
+export function citationTokensIn(value: unknown): string[] {
+  if (typeof value !== "string" || value.length === 0) return [];
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  for (const token of value.split(/\s+/)) {
+    if (!CITATION_TOKEN.test(token) || seen.has(token)) continue;
+    seen.add(token);
+    tokens.push(token);
+  }
+  return tokens;
+}
+
+/** The revision a citation token names: everything after its last `@`. */
+export function citationRevision(token: string): string {
+  return token.slice(token.lastIndexOf("@") + 1);
+}
+
+/**
+ * Validate every citation token in a prose value and return them normalized.
+ *
+ * Each token's path goes through `requireWorkspaceSourcePath` and its revision
+ * through the caller's `resolveRevision`, which asks git whether the commit
+ * exists **in the bound workspace** — a well-formed sha that resolves only in
+ * some other repository is not a citation of this one. One unresolvable token
+ * refuses the whole value: a single good citation must not launder the rest.
+ *
+ * **Symbol reachability is not checked.** Deciding whether a symbol exists at a
+ * revision needs a language parser the server does not have, and
+ * `evidence.symbol` is a free-text field that carries parenthetical qualifiers.
+ * The surrounding prose is the caller's to store verbatim.
+ */
+export function extractWorkspaceCitations(
+  value: unknown,
+  label: string,
+  options: { resolveRevision: (revision: string) => boolean },
+): string[] {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ToolError(`missing required string: ${label}`);
+  }
+  const tokens = citationTokensIn(value);
+  if (tokens.length === 0) {
+    throw new ToolError(
+      `${label} must carry at least one whitespace-delimited citation token of the form ` +
+        `file:symbol@sha, with a 7-40 character hex revision; the surrounding prose is kept verbatim`,
+    );
+  }
+  const citations: string[] = [];
+  for (const token of tokens) {
+    const separator = token.indexOf(":");
+    const sourcePath = requireWorkspaceSourcePath(token.slice(0, separator), `${label} citation`);
+    if (!options.resolveRevision(citationRevision(token))) {
+      throw new ToolError(
+        `${label} cites ${token}, whose revision does not resolve in the bound workspace`,
+      );
+    }
+    const normalized = `${sourcePath}${token.slice(separator)}`;
+    if (!citations.includes(normalized)) citations.push(normalized);
+  }
+  return citations;
+}
+
 export function optString(args: Record<string, unknown>, key: string): string | null {
   const v = args[key];
   if (v == null) return null;

@@ -73,6 +73,7 @@ const SCHEMA_REL = "mcp-server/src/schema.sql";
 // The Markdown header rows the two architecture surfaces are distinguished by.
 // A topology has five columns and names a relation between two subsystems; the
 // atlas has three and names only where each subsystem sits.
+const CITATION_SHAPE = "[^\\s:]+:[^\\s@]+@(?:[0-9a-fA-F]{7,40}|\\$\\{[A-Za-z0-9_.]+\\})";
 const TOPOLOGY_HEADER = "| From | Relationship | To | Strength | Context |";
 const ATLAS_HEADER = "| Region | Subsystem | Survey depth |";
 
@@ -191,15 +192,18 @@ function git(cwd, ...args) {
   return String(result.stdout ?? "").trim();
 }
 
-function initRepo(dir) {
+function initRepo(dir, marker) {
   mkdirSync(join(dir, "src"), { recursive: true });
   git(dir, "init", "-q", "-b", "main");
   git(dir, "config", "user.email", "test@localhost");
   git(dir, "config", "user.name", "Edge Contract Gate");
   git(dir, "config", "commit.gpgsign", "false");
-  writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+  // The marker keeps the two repositories' commits distinct: identical content
+  // committed by one identity in the same second is the same sha, and a foreign
+  // sha that happens to equal the workspace's proves nothing.
+  writeFileSync(join(dir, "src", "a.ts"), `export const a = "${marker}";\n`);
   git(dir, "add", "src");
-  git(dir, "commit", "-q", "--no-verify", "-m", "base");
+  git(dir, "commit", "-q", "--no-verify", "-m", `base ${marker}`);
   return git(dir, "rev-parse", "HEAD");
 }
 
@@ -218,10 +222,11 @@ function buildFixture() {
   mkdirSync(workspace, { recursive: true });
   mkdirSync(outsider, { recursive: true });
   mkdirSync(storageRoot, { recursive: true });
-  const head = initRepo(workspace);
+  const head = initRepo(workspace, "workspace");
   // A second repository whose HEAD is a perfectly well-formed sha that this
   // workspace cannot resolve: the grammar alone must not be enough.
-  const foreign = initRepo(outsider);
+  const foreign = initRepo(outsider, "outsider");
+  if (foreign === head) throw new Error("the two fixture repositories share a HEAD");
 
   process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
   const project = mods.project.resolveProject(workspace, {
@@ -384,7 +389,7 @@ check("prose containing a well-formed token is accepted and stored verbatim", ()
   const blocked = needFixture();
   if (blocked) return blocked;
   const pair = nextPair();
-  const context = `B-01 hands the queue to B-02 on job start (src/a.ts:writeQueue@${fixture.head}); the handoff is synchronous.`;
+  const context = `B-01 hands the queue to B-02 on job start, at src/a.ts:writeQueue@${fixture.head} — the handoff is synchronous.`;
   let result = null;
   try {
     result = call("add_xref", { ...pair, context }, fixture.ctx);
@@ -461,6 +466,26 @@ check("one unresolvable token poisons a context that also carries a good one", (
   return null;
 });
 
+check("a citation the writer wrapped in punctuation is not a token", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // §9.2 splits the context on whitespace and anchors the grammar, so
+  // `(src/a.ts:sym@sha).` is not a citation token. The boundary is pinned here
+  // deliberately: a writer must leave the token unpunctuated, and the tool's
+  // description and `phase-2-structural.md` show it that way.
+  const pair = nextPair();
+  const message = refusal(
+    "add_xref",
+    { ...pair, context: `see (src/a.ts:writeQueue@${fixture.head}) for the handoff` },
+    fixture.ctx,
+  );
+  if (message === null) {
+    return "add_xref accepted a parenthesized citation, so the grammar is no longer the anchored token §9.2 specifies";
+  }
+  if (xrefRow(pair)) return `add_xref refused the call but wrote the row anyway — ${message}`;
+  return null;
+});
+
 check("symbol reachability is not checked", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
@@ -515,7 +540,7 @@ check("a recorded edge reaches the owning subsystem's boundaries section", () =>
   const blocked = needFixture();
   if (blocked) return blocked;
   boundaryEdge = { from_id: "B-03", to_id: "B-04", relationship: "data-flow" };
-  const context = `B-03 writes the ledger B-04 reads (src/a.ts:flush@${fixture.head}).`;
+  const context = `B-03 writes the ledger B-04 reads, at src/a.ts:flush@${fixture.head}`;
   try {
     call("add_xref", { ...boundaryEdge, strength: "confirmed", context }, fixture.ctx);
   } catch (e) {
@@ -822,10 +847,16 @@ function sourceFiles() {
 check("test-smoke.mjs's add_xref call passes a context", () => {
   const text = readText(join(MCP, "test-smoke.mjs"));
   if (text === null) return "test-smoke.mjs is absent";
-  const line = text.split("\n").find((candidate) => candidate.includes('"add_xref"'));
-  if (!line) return "test-smoke.mjs no longer calls add_xref";
-  if (!/context\s*:/.test(line)) return `the call passes no context — ${line.trim().slice(0, 160)}`;
-  if (!/@/.test(line)) return `the context carries no citation token — ${line.trim().slice(0, 160)}`;
+  const at = text.indexOf('"add_xref"');
+  if (at === -1) return "test-smoke.mjs no longer calls add_xref";
+  // The call may span lines, so read to the start of the next top-level call.
+  const rest = text.slice(at);
+  const end = rest.indexOf("\nrun(");
+  const call = end === -1 ? rest.slice(0, 600) : rest.slice(0, end);
+  if (!/context\s*:/.test(call)) return `the call passes no context — ${call.trim().slice(0, 200)}`;
+  if (!new RegExp(`${CITATION_SHAPE}`).test(call)) {
+    return `the context carries no citation token — ${call.trim().slice(0, 200)}`;
+  }
   return null;
 });
 

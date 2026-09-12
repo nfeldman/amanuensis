@@ -26,7 +26,7 @@ from .diagrams import (
     runtime_boundary_map,
     seam_graph,
     staleness_map,
-    subsystem_dependency_graph,
+    subsystem_dependency_view,
 )
 from .lint import orientation_violations
 from .manifest import sha256_bytes, sha256_json
@@ -765,6 +765,11 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
     xrefs = rows(conn, "SELECT * FROM xrefs ORDER BY from_id")
     subs = rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id")
     seams = rows(conn, "SELECT id, shared_object, party_a, party_b FROM seams ORDER BY id")
+    # Heading and body come from one call. They were two reads of `xrefs` in two
+    # modules, so a change to either predicate could head an atlas "Subsystem
+    # dependency graph" — a page asserting edges no row records (§9.2). The
+    # `xrefs` rows above stay for the manifest source hash only.
+    dependency_heading, dependency_body = subsystem_dependency_view(conn)
     out = [
         "# Architecture",
         "",
@@ -772,9 +777,9 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
         "",
         runtime_boundary_map(storage),
         "",
-        "## Subsystem dependency graph" if xrefs else "## Subsystem atlas",
+        f"## {dependency_heading}",
         "",
-        subsystem_dependency_graph(conn),
+        dependency_body,
         "",
         "## Seam topology",
         "",

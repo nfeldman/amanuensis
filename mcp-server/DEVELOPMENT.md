@@ -605,7 +605,7 @@ _197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_xref` | Record a cross-reference between two subsystems. relationship is free-form but should use one of the canonical values: shared-pattern, data-flow, dependency, mirrors, contention, temporal-coupling. strength ∈ {observed, confirmed, structural}; defaults to 'observed'. |
+| `add_xref` | Record a cross-reference between two subsystems. context is required and must carry at least one whitespace-delimited citation token of the form file:symbol@sha, with a 7-40 character hex revision — the token's path is validated as a workspace source path and its revision must resolve in the bound workspace. The surrounding prose is stored verbatim and the validated tokens come back in citations[]. The symbol is not checked for reachability: deciding whether a symbol exists at a revision needs a language parser this server does not have, so a citation records where the edge was read, not a symbol the server confirmed. relationship is free-form but should use one of the canonical values: shared-pattern, data-flow, dependency, mirrors, contention, temporal-coupling; an edge recorded because it crosses a subsystem boundary is data-flow or dependency. strength ∈ {observed, confirmed, structural}; defaults to 'observed'. |
 | `get_xrefs` | Return cross-references involving a subsystem (as either source or target). |
 
 <!-- TOOL-INVENTORY-END -->

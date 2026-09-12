@@ -66,7 +66,38 @@ counterpart fills in the other half when it is mapped. Seam concerns
 (`SC-N` codes) are evaluated later by the adversarial agent or the
 coordinator's seam-assessment step — not here.
 
-### 6. Record the inventory as claims
+### 6. Crossing edges
+
+Call `add_xref` once for every data flow or dependency that crosses a
+subsystem boundary; one row per crossing. The traces from step 3 that
+leave this subsystem and the seams written in step 5 are where they
+are found.
+
+- `from_id` / `to_id` — the two subsystems, in the direction the data
+  or the dependency runs.
+- `relationship` — `data-flow` where a value crosses, `dependency`
+  where a call or an import crosses. Those two are what a crossing
+  edge is; the other canonical values describe resemblances between
+  subsystems rather than traffic between them.
+- `strength` — `observed`, `confirmed`, or `structural`.
+- `context` — **required**, and it must carry a citation. Write one
+  line of prose saying why the link matters, with at least one
+  `file:symbol@sha` token in it naming where you read the crossing.
+  The context is split on whitespace and at least one token must be
+  exactly `<path>:<symbol>@<7-40 hex sha>`, so leave the token
+  unpunctuated — `… at src/queue.ts:enqueue@a1b2c3d`, not
+  `(src/queue.ts:enqueue@a1b2c3d)`. The path is checked as a workspace
+  source path and the revision must resolve in this repository. The
+  symbol is not checked for reachability, so cite the symbol you
+  actually read. An edge with no such token cannot be recorded.
+
+Record only edges you read. Never infer one from a shared name, a
+path prefix, or a nearby seam: `architecture.md` renders its topology
+from these rows and nothing else, so an inferred edge becomes a
+published relation no one verified. A boundary you could not read
+from this side is an `record_open_question`, not a guessed edge.
+
+### 7. Record the inventory as claims
 
 Prose is not revision-bound. Everything the steps above established is
 also recorded through `add_claim`, so a later reader can tell what is
@@ -132,12 +163,12 @@ padding rather than accuracy. Record what you found; the adversarial
 pass in Phase 4 pulls every one of these claims as a target and is
 where their truth is tested.
 
-### 7. Update file classifications
+### 8. Update file classifications
 
 Files actually read in this phase move from `candidate` to
 `examined` via `update_file_classification`.
 
-### 8. Vocabulary
+### 9. Vocabulary
 
 Continue adding terms via `define_term`. Any internal name whose
 meaning required reading code should be captured with enough
@@ -174,7 +205,7 @@ Return to the coordinator with a one-line summary:
 - Open questions logged this phase.
 
 The coordinator advances status to `structural` and starts Phase 3
-immediately. No pause. That advance is refused if step 6 recorded no
+immediately. No pause. That advance is refused if step 7 recorded no
 claim, so hand back only once at least one current `<sid>/` claim
 exists.
 
@@ -195,5 +226,5 @@ for the rest.
   a concern while structural reading, record a
   `field_note(category="candidate-concern")` and continue mapping.
 - **Do not cross into unmapped territory.** If a flow exits this
-  subsystem into another, stop at the seam and record the boundary
-  contract.
+  subsystem into another, stop at the seam, record the boundary
+  contract, and record the crossing itself as an edge (step 6).
