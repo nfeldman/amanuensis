@@ -2350,7 +2350,10 @@ class MarkdownRenderer:
                     rows.append((_split_table_row(lines[i]), pending_markers))
                     pending_markers = []
                     i += 1
-                caption = current_section.replace("-", " ") or "Data"
+                # A table before the first `##` (the Files index is one) has no
+                # section to name it. The page's own title is a true caption;
+                # "Data" is furniture that tells a screen-reader user nothing.
+                caption = current_section.replace("-", " ") or title or "Data"
                 normalized_rows = []
                 for values, markers in rows:
                     values += [""] * max(0, len(headers) - len(values))
