@@ -2873,7 +2873,7 @@ function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) 
     .get() as { scoped: number; examined: number | null; candidate: number | null };
   // §6.1's empty state: scope, basis, and the checked revision are always
   // present, and an empty answer never renders as a bare "none".
-  const emptyOpen = `No open finding is recorded at ${head ? head.slice(0, 10) : "an unresolved revision"} over ${ledgerCounts.examined ?? 0} examined file(s) in ${scope.subsystems.length} subsystem(s); ${ledgerCounts.candidate ?? 0} file(s) are scoped but not yet read.`;
+  const emptyOpen = `No open finding is recorded${head ? ` at ${head.slice(0, 10)}` : ""} over ${ledgerCounts.examined ?? 0} examined file(s) in ${scope.subsystems.length} subsystem(s); ${ledgerCounts.candidate ?? 0} file(s) are scoped but not yet read.${head ? "" : " The reviewed revision could not be resolved."}`;
 
   const sections: BudgetedSection[] = [
     buildAttentionFindingSection("open", findings, priorVerified, emptyOpen),
