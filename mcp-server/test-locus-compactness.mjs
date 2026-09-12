@@ -75,6 +75,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const MCP = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(MCP, "..");
@@ -183,6 +184,14 @@ function bytes(value) {
 // Deliverables, loaded defensively: an absent or unbuilt deliverable must read
 // as an assertion failure, not as a crashed gate.
 // ---------------------------------------------------------------------------
+// `dist/` is a build artifact, so a gate that imports it without compiling
+// certifies whatever was last built rather than the source under review: the
+// slice-S2 review inverted three source branches and all three gates stayed
+// green until `npm run build` ran by hand (F1-F3/codex). Compile first, and
+// let a compile failure poison the fixture below rather than passing quietly
+// against stale bytes.
+const built = ensureBuilt();
+
 let mods = null;
 let loadError = null;
 try {
@@ -266,7 +275,9 @@ function git(cwd, ...args) {
 }
 
 let fixture = null;
-let fixtureError = loadError ? `the locus tools could not be loaded — ${loadError}` : null;
+let fixtureError = !built.ok
+  ? `src/ was not compiled before this gate read dist/ — ${built.detail}`
+  : loadError ? `the locus tools could not be loaded — ${loadError}` : null;
 
 function buildFixture() {
   const root = tempRoot("amanuensis-locus-compactness-");
@@ -594,6 +605,12 @@ function omittedIds(payload, section, reason) {
 }
 
 emit("reader-lenses P7 — response budgets and the omission ledger");
+emit("");
+
+emit("build custody");
+
+check("src/ was compiled into dist/ before this gate read it", () => built.detail);
+
 emit("");
 
 // ---------------------------------------------------------------------------

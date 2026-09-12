@@ -63,6 +63,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const MCP = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(MCP, "..");
@@ -205,6 +206,14 @@ const STATE_CASES = [
 // Server bundle. Loaded defensively: an unbuilt or absent deliverable must
 // read as an assertion failure, not as a crashed gate.
 // ---------------------------------------------------------------------------
+// `dist/` is a build artifact, so a gate that imports it without compiling
+// certifies whatever was last built rather than the source under review: the
+// slice-S2 review inverted three source branches and all three gates stayed
+// green until `npm run build` ran by hand (F1-F3/codex). Compile first, and
+// let a compile failure poison the fixture below rather than passing quietly
+// against stale bytes.
+const built = ensureBuilt();
+
 let betterSqlite = null;
 try {
   betterSqlite = (await import("better-sqlite3")).default;
@@ -267,7 +276,9 @@ function git(cwd, ...args) {
 }
 
 let fixture = null;
-let fixtureError = loadError ? `the standing module could not be loaded — ${loadError}` : null;
+let fixtureError = !built.ok
+  ? `src/ was not compiled before this gate read dist/ — ${built.detail}`
+  : loadError ? `the standing module could not be loaded — ${loadError}` : null;
 
 function buildFixture() {
   const root = tempRoot("amanuensis-locus-standing-");
@@ -539,6 +550,12 @@ function needFixture() {
 function standingOf(path, ctx = fixture.ctx) {
   return mods.standing.describeLocusStanding(ctx, path);
 }
+
+emit("build custody");
+
+check("src/ was compiled into dist/ before this gate read it", () => built.detail);
+
+emit("");
 
 // ---------------------------------------------------------------------------
 // 1. The view
