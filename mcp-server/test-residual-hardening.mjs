@@ -15,6 +15,9 @@
 //     revision_bound (F6/codex, high);
 //   - one of those writers stores something other than the resolved
 //     revision, so revision_bound is a claim the record cannot support;
+//   - one of those writers accepts a revision that resolved on an earlier call
+//     but has since stopped resolving — a cached resolution standing in for a
+//     live one (F1/codex, slice-S7);
 //   - the open-finding count is derived from findings.status in any of the
 //     four surfaces that publish one — a duplicate predicate beside
 //     finding_state_current — or the master plan, get_dashboard, and
@@ -332,6 +335,50 @@ if (!fixtureError) {
   }
 }
 
+/**
+ * A second workspace and store, built for the one arm that destroys the commit
+ * it writes at. Two commits: `base` survives, `doomed` is removed mid-arm by
+ * `forget()`, which rewinds the branch and then collects the unreachable
+ * object — the shape a rebase, an amend, or a force-fetch leaves behind.
+ */
+function buildPrunableWorkspace() {
+  const root = tempRoot("amanuensis-p21-prune-");
+  const workspace = join(root, "workspace");
+  mkdirSync(join(workspace, "src"), { recursive: true });
+  rawGit(workspace, "init", "-q", "-b", "main");
+  rawGit(workspace, "config", "user.email", "test@localhost");
+  rawGit(workspace, "config", "user.name", "P21 Residual Hardening");
+  rawGit(workspace, "config", "commit.gpgsign", "false");
+  writeFileSync(join(workspace, "src", "ledger.ts"), "export const row = 1;\n");
+  rawGit(workspace, "add", "-A");
+  rawGit(workspace, "commit", "-q", "--no-verify", "-m", "base");
+  const base = rawGit(workspace, "rev-parse", "HEAD");
+  writeFileSync(join(workspace, "src", "ledger.ts"), "export const row = 2;\n");
+  rawGit(workspace, "add", "-A");
+  rawGit(workspace, "commit", "-q", "--no-verify", "-m", "doomed");
+  const doomed = rawGit(workspace, "rev-parse", "HEAD");
+
+  const project = mods.project.resolveProject(workspace, {
+    selectionSource: "test-residual-hardening",
+    serverVersion: "test",
+  });
+  mods.project.ensureProjectStorage(project, (dbPath) => mods.db.openDatabase(dbPath).close());
+  const db = mods.db.openDatabase(project.dbPath);
+  const ctx = { project, db, sessionId: "p21" };
+  db.prepare("INSERT INTO sessions (session_id, intent) VALUES ('p21', 'p21-prune')").run();
+  db.prepare("INSERT INTO concerns (code, origin) VALUES ('SC-1', 'seeded')").run();
+  db.prepare(
+    "INSERT INTO subsystems (id, name, status, layer) VALUES ('B-01', 'Ledger', 'adversarial', 'core')",
+  ).run();
+  const forget = () => {
+    rawGit(workspace, "reset", "-q", "--hard", base);
+    for (const args of [["reflog", "expire", "--expire=now", "--expire-unreachable=now", "--all"], ["gc", "--prune=now", "--quiet"]]) {
+      spawnSync("git", args, { cwd: workspace, encoding: "utf8" });
+    }
+  };
+  return { root, workspace, project, db, ctx, base, doomed, forget };
+}
+
 function needFixture() {
   return fixture ? null : (fixtureError ?? "the fixture is unavailable");
 }
@@ -478,6 +525,68 @@ check("the three writers store the resolved revision, so revision_bound is backe
   if (item.revision_bound !== true) return "the finding is not reported revision_bound";
   if (item.ref_sha !== fixture.head)
     return `revision_bound is reported over ${JSON.stringify(item.ref_sha)}, not the resolved revision`;
+  return null;
+});
+
+// A resolution that succeeded once is not a resolution that still holds. The
+// writers memoize object-name-shaped input per workspace on the reasoning that
+// "a commit does not stop existing inside one server process" — which rewinding
+// the branch and collecting the loose objects falsifies, and which a rebase, an
+// amend, or a force-fetch reaches by the route a survey session actually takes.
+// The consequence is the one F6/codex was filed for, arriving by a second door:
+// a durable row stored at a revision nothing can resolve, published as
+// `revision_bound` (F1/codex, slice-S7).
+//
+// The arm runs in its own workspace and its own store, because it destroys the
+// commit it writes at and the shared fixture's later arms need theirs.
+check("a writer refuses a revision that has stopped resolving since it was cached", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+
+  let scratch = null;
+  try {
+    scratch = buildPrunableWorkspace();
+  } catch (e) {
+    return `the prunable workspace could not be built — ${e && e.message ? e.message : e}`;
+  }
+
+  // 1. A durable write at the doomed commit, which populates any cache.
+  const first = call("add_evidence", evidenceArgs(scratch.doomed), scratch.ctx);
+  if (!first.ok) return `add_evidence refused a resolvable revision — ${first.error}`;
+
+  // 2. Take the commit away.
+  try {
+    scratch.forget();
+  } catch (e) {
+    return `the doomed commit could not be removed — ${e && e.message ? e.message : e}`;
+  }
+
+  // 3. The denominator: if git still resolves it, the arm proves nothing and
+  //    must say so rather than pass (VP4).
+  const probe = spawnSync("git", ["rev-parse", "--verify", `${scratch.doomed}^{commit}`], {
+    cwd: scratch.workspace,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (probe.status === 0)
+    return "the removed commit still resolves in the scratch workspace, so this arm measures nothing";
+
+  // 4. The same revision, now unresolvable, must be refused by every writer.
+  const bad = [];
+  const second = call("add_evidence", evidenceArgs(scratch.doomed), scratch.ctx);
+  if (second.ok) bad.push("add_evidence accepted a revision that no longer resolves");
+  const finding = call("add_finding", findingArgs("B01-PRUNED", scratch.doomed), scratch.ctx);
+  if (finding.ok) bad.push("add_finding accepted a revision that no longer resolves");
+  const disposition = call("set_disposition", dispositionArgs(scratch.doomed), scratch.ctx);
+  if (disposition.ok) bad.push("set_disposition accepted a revision that no longer resolves");
+  if (bad.length) return bad.join("; ");
+
+  // 5. And nothing reached the store behind the refusal.
+  const rows = scratch.db
+    .prepare("SELECT COUNT(*) AS n FROM evidence WHERE ref_sha=?")
+    .get(scratch.doomed);
+  if (Number(rows?.n ?? 0) !== 1)
+    return `the store holds ${rows?.n} rows at the removed revision, not the one written while it resolved`;
   return null;
 });
 
