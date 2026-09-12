@@ -146,11 +146,19 @@ return a truthful-looking response that hides the disagreement the `mixed` state
 expose. Truncating the thing the design is for is the failure mode to design against, so the
 array that carries the mixed case is the one array outside the budget.
 
-Third, the omission ledger is ADR-0011's, unchanged, including the three reasons. `not-recorded`
-is the addition that matters: it distinguishes *the store holds no row* from *we dropped it*,
-which is the difference between an honest empty and a silent loss. Without it, an empty section
-and a truncated section are indistinguishable, which is exactly ADR-0011's "token truncation
-without an omission ledger" failure.
+Third, the omission ledger is ADR-0011's. The distinction that matters is between *the store
+holds no row* and *we dropped it* — the difference between an honest empty and a silent loss.
+Without it, an empty section and a truncated section are indistinguishable, which is exactly
+ADR-0011's "token truncation without an omission ledger" failure.
+
+The first draft carried that distinction as a third omission reason, `not-recorded`. Both
+reviewers overturned it and both were right for the same reason: §4.3 requires every omitted
+entry to carry a census member's id, and a section whose table holds no row has census 0 and no
+id to carry, so the reason could not satisfy the invariant it sat inside. The distinction is
+kept and moved to where it belongs — it is a property of the section (`census: 0,
+recorded: false`), not an entry in a ledger of dropped items. `irrelevant`, ADR-0011's third
+reason, is also not carried: it means zero lexical overlap with a task query, and selection here
+is registry-exact rather than lexical, so nothing is ever dropped for irrelevance.
 
 The numbers (8192 / 3072 / 4096 / 32768) are engineering judgments sized against the AxiomDB
 store's worst real locus — `coordinator.rs`, six owners, 24 undispositioned concerns — with
@@ -185,12 +193,23 @@ means a row fetch.
 
 ### Reusing ADR-0010's labels (decision 6)
 
-Decision 6 required it, and the fit is good but not total. Five of the seven labels transfer
-verbatim. Two do not: `ruled-out historical` is a History record rather than an Unresolved one,
-and the `survived / contested / defeated challenge` triad is the terminal aggregation of an A7
-run that `get_attention` has no access to. Inventing lookalikes for them would be the exact
-failure ADR-0010 warns about — downstream consumers collapsing unlike epistemic states — so
-they are named as not-reused rather than approximated.
+Decision 6 required it, and the fit is good but not total. Four of the seven labels transfer
+verbatim. Three do not: `ruled-out historical` is a History record rather than an Unresolved
+one; the `survived / contested / defeated challenge` triad is the terminal aggregation of an A7
+run that `get_attention` has no access to; and `latent-defect` is defined over an A8 composition's
+impact base that `get_attention` also does not have. Inventing lookalikes for them would be the
+exact failure ADR-0010 warns about — downstream consumers collapsing unlike epistemic states —
+so they are named as not-reused rather than approximated.
+
+The first draft did exactly that twice, and round-1 caught both. It kept `latent-defect` without
+a base, and it introduced `contested` as a label of its own for unresolved contradictions and
+open matrices — while ADR-0010 already spends that word on the challenge triad. Both reviewers
+overturned the second one independently; it is the only claim on which they agreed to overturn,
+and the draft's own §13 gate ("a `get_attention` label's meaning differs from ADR-0010's") would
+have turned red on it. The lesson is narrower than "reuse the labels": a reuse instruction makes
+the *near misses* the dangerous cases, because a word that almost fits is harder to notice than
+one that does not fit at all. `undiscriminated` is the replacement and the reasoning for the
+word is in §12 item 10; `latent-defect` is dropped rather than renamed, for the reason in item 11.
 
 `stale-knowledge` is extended rather than duplicated. ADR-0010 defines it over a closed claim
 validity interval; the same epistemic state over the ledger is a stale examined file. Both are
@@ -208,7 +227,7 @@ files.
 ### No page is retired
 
 The largest tradeoff in §7. A clean information architecture would retire `contradictions.md`
-and `diagnosticity.md` and fold their records into `contested.md` and the History pages. The
+and `diagnosticity.md` and fold their records into `disagreements.md` and the History pages. The
 materializer supports retirement (`prune_retired`), so the cost is not technical: it is that
 the prose passthrough pages (`entry-point.md`, `onboarding-report.md`, `concern-checklist.md`)
 are authored by survey sessions and may contain Markdown links to retired paths. The coverage
@@ -217,7 +236,7 @@ publishing fail on some existing conspectuses for a reason unrelated to this cha
 at publish time on a user's repository.
 
 Re-homing every existing path costs one thing: `contradictions.md` now carries only *resolved*
-contradictions while its unresolved siblings live on `contested.md`, which is a partition a
+contradictions while its unresolved siblings live on `disagreements.md`, which is a partition a
 reader must learn. Both pages state the split and link to each other. That is a smaller cost
 than a broken publish, and it can be revisited once a survey-authored-link lint exists.
 
@@ -422,7 +441,8 @@ owner may reasonably overrule the design.
 4. **The Phase 2 prerequisite's blast radius.** Requiring a structural claim before advancing to
    `structural` will force fixture updates in several existing tests, each of which must create
    a session, an evidence row, and a commit-resolvable SHA. The plan isolates this in its own
-   packet (P9) so an over-run cannot take the claims-rendering work down with it, but the
+   packet (P12 in the plan as numbered) so an over-run cannot take the claims-rendering work
+   down with it, but the
    estimate is the least confident in the plan. If P9 exhausts its attempts, the fallback is to
    keep the renderer contract and the dogfood gate and drop the status prerequisite — at the
    cost that future surveys of *other* repositories are guided by prose rather than guarded by
@@ -447,6 +467,78 @@ owner may reasonably overrule the design.
    column. Adding one is a schema change this cycle did not take, so file-level standing reports
    subsystem-scoped questions with an explicit `scope` field. A reader asking "what is unknown
    about *this file*" gets a slightly wider answer than the question, labelled as such.
+
+### Added by the round-1 revision (run `20260911-195201-revise`)
+
+9. **`gate.red_expect` is specified here and consumed by a file this session does not own.**
+   The field is in `plan.json` for all eighteen packets and §13 states the rule, but the code
+   that would enforce it is `run.sh:322-328` in the lane's automation directory, and this
+   session is running under that launcher. Editing it mid-run would change the harness driving
+   the session that is editing it. Until that change lands, "the gate was red before its packet"
+   remains satisfiable by a missing file — which is the very false green the field exists to
+   close. **This is the single largest unclosed hole in the plan**, and it is a guard specified
+   in prose rather than enforced in the substrate, which is exactly what GP25 warns about. The
+   packet-level acceptance line ("the red output matches `gate.red_expect`") is a second,
+   weaker instrument: it depends on the implementing session checking its own work.
+
+10. **`undiscriminated` is a coined label.** Decision 1 asks for the least imported meaning, and
+    every alternative was worse against the collision that forced the rename. `contested` is
+    taken by ADR-0010. `unreconciled` collides with ledger reconciliation inside this same
+    codebase (`reconcileTx`, `ledger_reconciled`, `refresh.md`). `competing-explanations` is
+    already the Method page label for the matrix index, which is apparatus, not a record state.
+    `undiscriminated` names the property the three sources share — the evidence does not pick
+    out which of two credible accounts holds — and it is the wording the diagnosticity page hint
+    already used. It is nonetheless a word a reader has to learn, and the owner may prefer
+    another. The change is a rename of one enum value, one page path, and one section key.
+
+11. **`latent-defect` was dropped rather than re-based, and something is lost.** An open finding
+    whose evidence predates the last checked revision is a real and useful category, and
+    `get_attention` can no longer surface it. The alternative was to keep the word with a
+    different base (`git_state.last_checked_sha` instead of the A8 impact base), which is
+    precisely the overloading that made `contested` a defect. Losing a category is recoverable;
+    a vocabulary whose words mean different things in different tools is not. If the owner wants
+    the category back, it needs a *new* name and a stated base, not this one.
+
+12. **The seam gap is measured by a proxy that cannot bind to a seam.** `dispositions` has no
+    seam id and `composition_seam_concerns` holds zero rows, so "this party has assessed some
+    seam concern" is the strongest statement available. Every surface now says so, which is
+    honest but not sufficient: a party that assessed seam A and not seam B counts as having
+    assessed both. The real fix is a seam-bound disposition record, which is a schema change
+    this cycle did not take. The 9 one-sided seams the store holds are found; a one-sided gap
+    *within* an assessed party is not.
+
+13. **Neither substrate check in §9.1 has ever run against real data.** `claims` and
+    `claim_evidence` are both empty on the AxiomDB store and on the self-conspectus that is
+    about to be discarded. The evidence-kind and subject-type refusals are therefore validated
+    only by seeded fixtures. That is the right instrument for a guard, but it means the first
+    real survey to hit them is also their first real test, and a rule that is too strict will be
+    discovered by a session that cannot advance a subsystem.
+
+14. **The routing measurement (§13.2) is specified and unscheduled.** Removing the one-call
+    claim from `test-consumer-route.mjs` was correct — one run of a model is not a measurement —
+    but the replacement is a protocol, not a result. Item 6 above said nothing in this cycle
+    measures whether the consumer route changes agent behavior; that is still true, and now it
+    is written down as a measurement someone has to run rather than as a gate that would have
+    reported a number without earning it.
+
+15. **`docs/` promotion adds a script no existing test covers end to end.**
+    `dev/promote-docs.mjs` is new, and the guard it works around — `resolveStorageOutputPath`'s
+    containment assertion — exists for a good reason. A promotion step is a second path by which
+    bytes reach a tracked directory, and P18's acceptance re-reads the promoted tree at its own
+    path, which is the strongest check available. It does not make the copy itself atomic.
+
+16. **C1 was overturned by one reviewer and upheld by the other, and this session rejected the
+    overturn.** Decision 2 makes History conditional on surviving review, so this is the
+    disposition most exposed to being wrong. The reasoning is in `dispositions.md`: the evidence
+    Codex offered — mutable, unversioned dispositions, seams, vocabulary and subsystem rows —
+    is evidence about §3.3's `as_of_sha` whole-account snapshot, which *was* overturned and
+    *is* removed, not about §6.1's History membership, whose event spine is two append-only
+    tables plus `sessions`, `refresh_runs`, and `projection_verification_runs`. The narrow part
+    that did bear on the lens — `open_questions` and `field_notes` have no event table — is
+    applied. If the owner reads the decision-2 trigger as "any reviewer overturn, regardless of
+    what the evidence bears on", the fallback is mechanical: delete the History group from
+    `NAV_GROUPS`, move its four pages into Unresolved as a final group, and the partition rule
+    in §1.1 is unchanged.
 
 ---
 
@@ -473,6 +565,7 @@ that can fail on its own. The slice boundary — and therefore the review bounda
 variable `PECIA_GATE_ENABLED` and needs a clone of a private repository plus the `pecia` CLI on
 `PATH`. Including it would put a command in the completion list that fails locally for a reason
 unrelated to this branch, which is the opposite of a useful gate. Every other job's steps are
-present, adapted to worktree-root paths, plus all sixteen packet gates. `npm ci` is omitted on
+present, adapted to worktree-root paths, plus every packet gate (sixteen at the time of writing,
+eighteen after the round-1 revision split the rebuild packet). `npm ci` is omitted on
 the assumption that `mcp-server/node_modules` is installed; `npm audit --audit-level=critical`,
 `npm run build`, and every test step are included.
