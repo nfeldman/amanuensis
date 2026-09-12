@@ -17,9 +17,12 @@ import {
 // One predicate for one question: the rollup counted `findings.status`
 // while every lens counted `finding_state_current`, so a repaired finding
 // stayed open here after it had closed everywhere else (F9/codex).
-import { OPEN_FINDING_SQL } from "../vocabulary.js";
+import { OPEN_FINDING_SQL, SUBSYSTEM_STATUSES } from "../vocabulary.js";
 
-const ALL_STATUSES = [...STATUS_ORDER, "deferred"] as const;
+// The validator takes the source's list. `STATUS_ORDER` keeps authorship of
+// the ladder's *order*, which the source does not carry; the gate asserts the
+// two cover the same set (C48, F4/codex).
+const ALL_STATUSES = SUBSYSTEM_STATUSES;
 
 // The canonical schema does not include explicit columns for subsystem name,
 // scope, jump-in reading, etc. — those live in the master-plan.md prose.

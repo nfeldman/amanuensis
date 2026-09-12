@@ -8,13 +8,7 @@ import {
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const RESOLUTIONS = [
-  "a-supersedes-b",
-  "b-supersedes-a",
-  "scope-distinction",
-  "unresolved",
-] as const;
+import { CONTRADICTION_RESOLUTIONS as RESOLUTIONS } from "../vocabulary.js";
 
 export const contradictionTools: ToolDefinition[] = [
   {
