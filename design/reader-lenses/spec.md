@@ -237,7 +237,7 @@ The projection and the tools must say "not examined", never "no findings", at `u
    otherwise. A response may never present one owner's state as the file's state.
 3. **`authority_ceiling`** — `{ value, label, authorizes, deferred_owners[] }`. The ranked
    ladder is `unmapped < scoping < structural < concerns < adversarial < mapped`, exactly
-   `STATUS_ORDER` in `mcp-server/src/invariants.ts:26-35`. `deferred` **is not on that axis**:
+   `STATUS_ORDER` in `mcp-server/src/invariants.ts:23-33`. `deferred` **is not on that axis**:
    the same file calls it "an orthogonal *do not survey* flag that blocks all gated writes",
    so no rank is defined for it and none is invented here. Therefore:
 
@@ -335,7 +335,7 @@ rows only.
 
 | # | Section | Source | Default |
 |---|---|---|---|
-| 1 | `purpose` | owning subsystems' `name`, `scope`, `jump_in_reading` | on |
+| 1 | `purpose` | owning subsystems' `name`, `layer`, `jump_in_reading`; `scope` rendered separately and labelled **Scope** | on |
 | 2 | `structure` | current `claims` whose `subject_id` is the locus or whose evidence cites it | on |
 | 3 | `defects` | `finding_state_current` joined to `findings.primary_files` / `finding_evidence` | on |
 | 4 | `reviews` | `dispositions` whose attached evidence cites the locus | off |
@@ -343,6 +343,15 @@ rows only.
 | 6 | `terms` | `vocabulary` scoped to an owner or whose `first_seen` cites the locus | on |
 | 7 | `leads` | open `field_notes` and open `open_questions` per §2.4's rules | off |
 | 8 | `history_pointer` | counts only: `finding_resolution_events`, `sessions` touching the locus | on |
+
+`subsystems.scope` is **not** a purpose sentence and is never rendered as one. The column's own
+comment calls it "free-text: key files, directories, symbols" (`schema.sql:630`), and the
+AxiomDB values are file-and-boundary lists — `W-01`'s is
+`crates/axiomdb-core/src/write/coordinator.rs (4008 lines); the GraphLockMap /
+DomainRebuildLockMap types and …`. It renders under the heading **Scope** with its recorded text
+verbatim. No durable purpose field exists; where a subsystem has none the section renders
+*"No purpose statement is recorded for this subsystem; `scope` below states what it covers."*
+Inventing one from `name` or from the path list would be BP6, classification-from-naming.
 
 The order above is fixed. `defects` is partitioned `open`, `awaiting-verification`,
 `verified-fixed`, `ruled-out`, `accepted`, in that order, and each partition is ordered by
@@ -358,24 +367,55 @@ An item with no `ref_sha` in its source row carries `ref_sha: null` and
 
 Default is **current** in ADR-0001's sense: for `claims`, `valid_until_sha IS NULL`; for
 findings, the current row of `finding_state_current`; for dispositions, the single stored row.
-`as_of_sha` switches the whole response to the historical reading at that commit:
 
-```sql
--- structure, historical
-SELECT * FROM claims
- WHERE valid_from_sha = :as_of                                   -- exact interval open
-    OR (:as_of IS NOT NULL AND valid_until_sha IS NOT NULL);      -- candidate, filtered by ancestry
-```
+`as_of_sha` does **not** switch the whole response to a historical reading, because most account
+sources cannot support one. `dispositions`, `seams`, `vocabulary`, `subsystems`, and
+`file_ledger` are mutable rows with no validity interval and no event table: they hold one
+current value and no record of any earlier one. A whole-account snapshot at an ancestor commit
+would therefore be a reconstruction the store cannot source, which is exactly the failure
+ADR-0001 § Current rules out. Instead:
 
-Interval membership is decided by commit ancestry in code, exactly as `claims.ts` already does
-(`isAncestor`), never by SHA text or wall-clock order. A historical response carries
-`as_of_sha` and `current: false` at the top level and on every item.
+| Section | `as_of_sha` support | Mechanism |
+|---|---|---|
+| `structure` (claims) | **yes** | `claims.valid_from_sha` / `valid_until_sha`, by ancestry |
+| `defects` (findings) | **yes** | `finding_resolution_events` replayed to the last event at or before `as_of_sha` |
+| `history_pointer` | **yes** | the two event tables, same cut |
+| `purpose`, `reviews`, `boundaries`, `terms`, `leads` | **no** | no validity interval and no event table exists |
+
+A response carrying `as_of_sha` marks each section `as_of_supported: true | false`. Unsupported
+sections are served at their **current** value with `as_of_supported: false` and the sentence
+*"This section has no recorded history; the values below are current, not as of `<sha>`."*
+Serving them silently as if they were historical is the defect; omitting them would make the
+response look emptier at an ancestor than it is. `current: false` appears only on the items the
+store can actually place in time.
+
+For the supported sections the candidate set is **every stored row**; ancestry alone decides
+membership, exactly as the existing as-of path already works:
+`get_claims` selects every `claims` row when `query_sha` is set
+(`mcp-server/src/tools/claims.ts:484-486`) and filters in code with `claimAppliesAt`
+(`claims.ts:156-159`), which tests `isAncestor(valid_from_sha, query)` and
+`valid_until_sha IS NULL OR NOT isAncestor(valid_until_sha, query)`. There is **no SQL
+pre-filter**: the reviewed draft's `WHERE valid_from_sha = :as_of OR valid_until_sha IS NOT NULL`
+dropped every still-open claim opened at a strict ancestor of `as_of_sha`, which is the common
+case and the one a historical read most needs. Membership is decided by commit ancestry in code,
+never by SHA text or wall-clock order.
 
 ### 3.4 No model-generated text
 
-No field of any response in §5 may contain text a model produced during the call. The tools
+No field of any response in §5 may contain text generated **during this tool call**. The tools
 make zero model calls and report `model_calls: 0` in their trace, mirroring ADR-0011's
-`registry-then-lexical-v1` trace contract. Narrative prose written by a survey (the
+`registry-then-lexical-v1` trace contract. That is the whole of the guarantee, and the response
+says so rather than implying more: durable rows written by an earlier survey session *are*
+model-authored prose, and several of the fields served here are exactly that.
+
+Every item therefore carries `authored: "model" | "code"`. The model-authored durable fields are
+`subsystems.scope`, `subsystems.jump_in_reading`, `subsystems.notes`, `claims.statement`,
+`findings.symptom`, `findings.root_cause`, `findings.business_context`,
+`dispositions.rationale`, `finding_resolution_events.rationale`, `field_notes.observation`,
+`open_questions.question` / `what_assumed` / `answer`, `vocabulary.gloss` / `expansion`,
+`seams.*` prose, and the `narrative` artifact. Everything else — states, counts, ids, revisions,
+classifications, timestamps — is `code`. A reader is entitled to know which sentences a model
+wrote, even when no model ran to serve them. Narrative prose written by a survey (the
 `subsystem-survey` artifact) may be attached to the `structure` section **only** under
 `narrative: { artifact_path, content_hash, revision_bound: false, label:
 "Narrative from the survey artifact; not individually bound to a revision" }` and only when the
@@ -389,17 +429,30 @@ Decision 5 makes compactness a design constraint with a mechanical gate.
 
 ### 4.1 Budgets, in bytes of the serialized JSON payload
 
+Budgets are enforced on **the bytes the host actually receives**, not on an internal
+representation. `jsonResult` (`mcp-server/src/helpers.ts:43-56`) emits
+`JSON.stringify(data, null, 2)` as the text block *and* repeats the same object in
+`structuredContent`, so a budget measured on the compact payload under-counts the real cost by
+the indentation overhead and then again by the whole duplicate. Decision 5 binds the emitted
+size, so that is what is measured.
+
+The three tools call `jsonResult(data, { compact: true })`, a new option that serializes the
+text block with `JSON.stringify(data)` — no indentation. `structuredContent` is still populated,
+because the MCP contract and existing hosts depend on it; it is counted, not dropped.
+
 | Budget | Bytes | Enforced on |
 |---|---|---|
-| `describe_locus` default response | **8192** | the compact (`JSON.stringify` without indentation) payload |
-| standing block alone | **3072** | within the above |
-| each optional section when requested | **4096** | per section |
-| whole response with every section requested | **32768** | hard ceiling; exceeding it is an error, not a truncation |
-| `get_attention` default response | **12288** | compact payload |
-| `get_history` default response | **8192** | compact payload |
+| `describe_locus` default response | **8192** | `JSON.stringify(jsonResult(payload, { compact: true }))` — the whole wire response, text block plus `structuredContent` |
+| standing block alone | **3072** | the compact payload's `standing` value |
+| each optional section when requested | **4096** | the compact payload's section value |
+| whole response with every section requested | **32768** | hard ceiling on the wire response; exceeding it is an error, not a truncation |
+| `get_attention` default response | **12288** | wire response, as above |
+| `get_history` default response | **8192** | wire response, as above |
 
-`owners[]` and `unknown[]`'s per-kind **counts** are never truncated. The per-kind sample lists
-inside `unknown[]` are truncated before anything else.
+`trace.response_bytes` reports the wire measurement and `trace.payload_bytes` the compact
+payload, so the two are never confused. `owners[]`, every per-section `census`, and `omitted[]`'s
+per-reason **counts** are never truncated. The per-kind sample lists inside `unknown[]` are
+truncated before anything else.
 
 ### 4.2 Opt-in sections
 
@@ -413,13 +466,41 @@ Truncation follows ADR-0011's omission-ledger discipline. Every candidate item i
 selected or recorded in `omitted[]` with exactly one operational reason:
 
 - `policy` — the section was not requested;
-- `budget` — eligible but ranked below the byte or item budget;
-- `not-recorded` — the source table holds no row (an honest empty, not an omission).
+- `budget` — eligible but ranked below the byte or item budget.
+
+Those are two of ADR-0011's three reasons (`dev/adr/0011-codebase-brief-contract.md:63-65`). The third, `irrelevant`
+("zero lexical overlap with the task query"), does not apply: selection here is registry-exact,
+not lexical, so no candidate is ever dropped for irrelevance. There is **no** `not-recorded`
+reason. An empty source table produces no omission row at all, because an omission row must
+carry the id of a census member and a table with no rows has no id to carry — the reviewed
+draft's third reason could not satisfy its own invariant. An honest empty is a property of the
+section, not an entry in the ledger:
+
+```json
+"sections": { "terms": { "census": 0, "recorded": false, "items": [] } }
+```
+
+with `recorded: false` rendered as *"No terms are recorded for this locus"* and never as
+*"No terms"*.
 
 `census` states the total candidate count per section. The invariant, checked by the tool before
 returning and by the gate: for every section, `selected + omitted == census`, and every omitted
 item id is distinct and present in the census. A response that cannot satisfy the invariant
 fails rather than returning a smaller truthful-looking answer (GP24, GP25).
+
+**The ledger is bounded independently of the census.** `get_attention`'s default census on the
+AxiomDB store is 16 open findings, 31 open questions, and 103 open leads; an `omitted[]` of one
+entry per dropped id would approach the 12288-byte budget on its own and force the tool to error
+rather than answer. `omitted[]` is therefore **aggregated**, one entry per `(section, reason)`:
+
+```json
+{ "section": "leads", "reason": "budget", "count": 97,
+  "ids": ["…"], "ids_truncated": true }
+```
+
+`count` is exact and never truncated — it is what the census invariant reconciles against. `ids`
+carries as many as fit in a 1024-byte per-entry sub-budget and sets `ids_truncated` when it
+cannot carry them all. A truncated id list is itself declared; a truncated count would be a lie.
 
 Truncation order within a section is fixed and stated in the schema: drop the lowest-consequence
 items first — for `defects`, the terminal states before the non-terminal; for `structure`, the
@@ -429,20 +510,32 @@ order is a code constant, never a model choice.
 ### 4.4 The gate must be able to fail on a bloated response
 
 `mcp-server/test-locus-compactness.mjs` seeds a store with a pathological locus — 40 findings,
-120 evidence rows, 60 claims, 30 open leads on one path — and asserts:
+120 evidence rows, 60 claims, 30 open leads on one path — and a second fixture whose
+`get_attention` census exceeds 150 items across sections, and asserts:
 
-1. the default response is ≤ 8192 bytes;
-2. `selected + omitted == census` for every section;
-3. every `omitted` entry carries one of the three reasons;
-4. removing the truncation step makes assertion 1 fail (the red proof is committed as a
+1. `JSON.stringify(jsonResult(payload, { compact: true }))` — the whole wire response, not the
+   compact payload alone — is ≤ 8192 bytes for `describe_locus` and ≤ 12288 for `get_attention`;
+2. the same response serialized through the **default** `jsonResult` is measured and reported, so
+   the indentation and `structuredContent` overhead the budget accounts for is visible in the
+   test output rather than assumed;
+3. `selected + omitted == census` for every section, reconciling against `omitted[].count`;
+4. every `omitted` entry carries `policy` or `budget` and no other reason; a section with
+   `census: 0` carries `recorded: false` and contributes **no** omission row;
+5. on the 150-item fixture the aggregated ledger is under its sub-budget and `ids_truncated` is
+   `true` with `count` still exact;
+6. removing the truncation step makes assertion 1 fail (the red proof is committed as a
    deliberate over-budget fixture the test builds and measures, not as a disabled branch).
 
 ---
 
 ## 5. Tools
 
-Three read tools are added. The 195-tool surface is otherwise unchanged (GP37: no new roles,
-no new ceremony).
+Three read tools are added, taking the surface from **196** to **199**. The reviewed draft said
+195; `node mcp-server/scripts/gen-tool-inventory.mjs --check` on the branch baseline reports
+"tool inventory block up to date (196 tools)", so the baseline is read from the generated
+inventory, never restated from memory. Every expected count in §13 and in `plan.json` derives
+from that command's output rather than from a literal in this document. Nothing else about the
+surface changes (GP37: no new roles, no new ceremony).
 
 ### 5.1 `describe_locus`
 
@@ -484,20 +577,42 @@ apply, with the same meanings:
 | `get_attention` label | ADR-0010 definition, unchanged |
 |---|---|
 | `regression` | currently open finding with a prior `verified-fixed` event |
-| `latent-defect` | currently open finding whose evidence ref is at or before the impact base, with no prior verified repair |
 | `unverified-suspicion` | open `candidate-concern` field note |
 | `unknown` | open question |
 | `stale-knowledge` | a claim validity interval closed at or before the reviewed HEAD — **extended** to include obligation-bearing `file_ledger` rows with `stale=1`, which is the same epistemic state expressed over the ledger rather than over claims; the item carries `source: "claim"` or `source: "ledger"` so the two are never pooled (VP6) |
 
-Labels ADR-0010 defines but that `get_attention` does not reuse, because they require an A8
-composition it does not have: `ruled-out-historical` (it is History, not Unresolved) and
-`survived / contested / defeated challenge`. `get_attention` adds exactly two labels of its
-own, both with the same shape of definition: `awaiting-verification` (current resolution state
-`fixed-pending-verification`) and `contested` (an unresolved contradiction, an open
-diagnosticity matrix, or an `unresolved-competition` disposition). A future review brief can
-cite `get_attention` output without carrying a second vocabulary.
+Three of ADR-0010's labels are **not** reused, each for a stated reason:
 
-Sections: `open`, `awaiting_verification`, `contested`, `decisions`, `leads`, `stale`,
+- `ruled-out-historical` — it is History, not Unresolved.
+- `survived / contested / defeated challenge` — the terminal mechanical A7 aggregation for a
+  hypothesis referenced by a composition; `get_attention` has no composition.
+- `latent-defect` — ADR-0010 defines it as an open finding "whose evidence ref is at or before
+  **the impact base**", and `compile_review_session` computes it exactly that way,
+  `isAncestor(ctx, finding.ref_sha, impact.base_sha)`
+  (`mcp-server/src/tools/review-session.ts:222-227`). `get_attention` has no A8 composition and
+  therefore no impact base. Substituting a different base — `git_state.last_checked_sha`, say —
+  under the same word would be the very overloading decision 6 exists to prevent, so the label
+  is dropped rather than redefined. Findings that would have carried it are `open`, ordered by
+  severity like the rest.
+
+`get_attention` adds exactly two labels of its own, both with the same shape of definition:
+
+| Label | Definition |
+|---|---|
+| `awaiting-verification` | current resolution state `fixed-pending-verification` |
+| `undiscriminated` | an unresolved `contradictions` row, a `diagnosticity_sessions` row whose `outcome` is `open` **or** `unresolved-competition`, or a `dispositions` row classified `unresolved-competition` |
+
+The reviewed draft called the second one `contested`. Both reviewers overturned that
+independently and both were right: ADR-0010 already defines *contested* — "survived, contested,
+or defeated challenge", the terminal A7 aggregation on a hypothesis
+(`dev/adr/0010-derived-review-surface-and-semantic-readback.md:42-43`) — so the draft assigned an
+existing operational label a second, different meaning while its own §13 gate turns red when "a
+`get_attention` label's meaning differs from ADR-0010's". `undiscriminated` states the property
+the three sources share: two or more credible accounts stand and the record does not say which
+of them the evidence picks out. It collides with no ADR-0010 label and with no schema value.
+A future review brief can cite `get_attention` output without carrying a second vocabulary.
+
+Sections: `open`, `awaiting_verification`, `undiscriminated`, `decisions`, `leads`, `stale`,
 `hot_spots`. Default: all, each bounded by §4.
 
 ### 5.3 `get_history`
@@ -541,8 +656,21 @@ must pass.
 
 ## 6. Lens membership
 
-Membership is SQL. One new view removes the duplicated resolution fallback that
-`renderers.py:443` and every future reader would otherwise each re-derive:
+Membership is SQL. One new view removes the duplicated resolution fallback, and **every existing
+reader is migrated onto it** — the duplication is the defect, so leaving copies behind would
+leave the defect:
+
+| Reader | State today |
+|---|---|
+| `materializer/amanuensis_materializer/renderers.py:446-451` (`render_findings`) | full inline fallback CASE |
+| `mcp-server/src/tools/findings.ts:402-406` (`list_findings`) | the same inline fallback CASE, independently maintained |
+| `mcp-server/src/tools/findings.ts:440-443` (`get_finding_summary`) | a **partial** fallback — it maps only `status='fixed'`, so `ruled-out` and `confirmed-acceptable` rows fall through differently from the other two readers |
+| `mcp-server/src/tools/review-session.ts:190-197` (`compile_review_session`) | reads `finding_resolution_current` with **no** fallback, so a legacy row with no event disagrees with the renderer |
+| `mcp-server/src/tools/review.ts:398-400` (historical findings) | reads `finding_resolution_current` with **no** fallback, same disagreement |
+
+All five select from `finding_state_current` after this change. The last two carry no inline
+fallback to delete; their defect is the opposite one — they under-report legacy rows the
+renderer reports — and the view fixes both directions at once.
 
 ```sql
 CREATE VIEW IF NOT EXISTS finding_state_current AS
@@ -562,7 +690,8 @@ SELECT f.finding_id, f.subsystem_id, f.severity, f.status AS legacy_status,
 
 **Codebase.**
 ```sql
-SELECT id FROM subsystems ORDER BY COALESCE(layer,'~'), id;             -- structure
+SELECT id, name, layer, scope FROM subsystems
+ ORDER BY COALESCE(layer,'~'), id;                                       -- structure (scope is Scope, not Purpose)
 SELECT * FROM claims WHERE valid_until_sha IS NULL;                      -- structure
 SELECT * FROM seam_assessability;                                        -- boundaries
 SELECT * FROM xrefs;                                                     -- edges
@@ -579,22 +708,42 @@ checked revision. Territory is never omitted to make the map look complete.
 -- open findings and repairs awaiting verification
 SELECT * FROM finding_state_current
  WHERE resolution_state IN ('open','fixed-pending-verification');
--- contested
+-- undiscriminated
 SELECT id FROM contradictions WHERE resolution='unresolved' OR resolution IS NULL;
-SELECT id FROM diagnosticity_sessions WHERE COALESCE(outcome,'open')='open';
+SELECT id FROM diagnosticity_sessions
+ WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition');
 SELECT subsystem_id, concern_code FROM dispositions
  WHERE classification='unresolved-competition';
 -- decisions and leads
 SELECT id FROM open_questions WHERE resolution='open';
 SELECT id FROM field_notes   WHERE follow_up='open';
--- stale knowledge
+-- stale knowledge: examined readings the repository has moved under
 SELECT subsystem_id, file_path FROM file_ledger
- WHERE stale=1 AND COALESCE(classification,'candidate')
-       NOT IN ('generated-ignore','vendor-ignore','irrelevant');
+ WHERE stale=1 AND classification='examined';
+-- drifted unread scope: reported separately, never as stale knowledge
+SELECT subsystem_id, file_path FROM file_ledger
+ WHERE stale=1 AND COALESCE(classification,'candidate')='candidate';
 ```
+`diagnosticity_sessions.outcome` admits `unresolved-competition` (`schema.sql:4478-4479`). The
+reviewed draft's `COALESCE(outcome,'open')='open'` selected it into neither lens — History
+selects nothing from that table — so a matrix that ended in acknowledged, unresolved competition
+would have vanished from the projection entirely. ADR-0001 § Fully surveyed calls that state
+"visible debt, not hidden success"; it is Unresolved.
+
+The stale-knowledge predicate is narrowed from obligation-bearing to `classification='examined'`
+for the same reason in reverse. `detect_changes` checks every ledger row that carries a `ref_sha`
+(`mcp-server/src/tools/git.ts:236-242`, `246-262`) and marks drifted ones `git-drift` regardless
+of classification, and **all 111** `candidate` rows on the AxiomDB store carry a 40-character
+`ref_sha`. Under the draft's predicate an unread file would have appeared on a page whose own
+hint reads *"Examined files the repository has changed under"* — a false statement about the
+strongest thing the record could be read to claim. Drifted candidates are real and are reported,
+under their own heading *"Scoped but unread, and changed since scoping"*, with their own
+denominator.
+
 Ordering: open findings by severity (`CRITICAL, HIGH, MEDIUM, LOW`) then subsystem then id;
-then awaiting verification by severity; then contested; then decisions by category then id;
-then leads with `candidate-concern` first; then stale rows by subsystem then path.
+then awaiting verification by severity; then undiscriminated; then decisions by category then
+id; then leads with `candidate-concern` first; then stale rows by subsystem then path; then
+drifted candidates by subsystem then path.
 Empty state: *"No open findings at `<checked_sha>` over `<n>` examined files in `<m>`
 subsystems; `<k>` files are scoped but not yet read."* Scope, basis, and checked revision are
 always present; an empty page never renders as a bare "none".
@@ -606,8 +755,10 @@ SELECT * FROM finding_state_current
 SELECT * FROM finding_resolution_events        ORDER BY id DESC;
 SELECT * FROM contradiction_resolution_events  ORDER BY id DESC;
 SELECT * FROM contradictions WHERE resolution IS NOT NULL AND resolution<>'unresolved';
-SELECT * FROM open_questions WHERE resolution IN ('answered','dismissed','superseded');
-SELECT * FROM field_notes    WHERE follow_up <> 'open';
+SELECT * FROM open_questions WHERE resolution IN ('answered','dismissed','superseded')
+ ORDER BY resolved_at DESC, id DESC;   -- resolved-leads.md
+SELECT * FROM field_notes    WHERE follow_up <> 'open'
+ ORDER BY id DESC;                     -- resolved-leads.md; no resolution time is recorded
 SELECT * FROM sessions       ORDER BY started_at DESC;
 SELECT * FROM refresh_runs   ORDER BY id DESC;
 SELECT * FROM projection_verification_runs ORDER BY id DESC;
@@ -630,6 +781,13 @@ Markdown corpus and exactly one across the HTML corpus. Therefore:
   `accepted`;
 - every other lens, the subsystem pages, and the Files index **link** to that anchor and must
   not emit the marker;
+- `_build_xref_index` (`materializer/amanuensis_materializer/core.py:455-462`) currently routes
+  **every** finding id to `findings.md#<id>`. It is changed to route by
+  `finding_state_current.resolution_state`, to the same page §6.2 selects. Without that change
+  every `[[B01-1]]` reference and every recorded link to a now-resolved finding resolves to an
+  anchor that no longer exists, and the coverage axis reports `cross-link-anchor`
+  (`materializer/amanuensis_materializer/readback.py:255-272`) — the partition would break the
+  read-back it is meant to keep green;
 - the subsystem page's "Known defects here" section lists open defects as links plus a
   collapsed count of resolved ones, never as full marked records.
 
@@ -662,19 +820,20 @@ error, not a silently appended group.
 | `vocabulary.md` | Codebase glossary | Codebase glossary | The project's own names | Codebase | — | `glossary` | group changed |
 | `subsystems/<id>-<slug>.md` | `<name>` | `<name>` | Purpose, structure, boundaries, defects, and survey record | Codebase | Subsystems | `subsystem` | reordered (§7.3) |
 | `findings.md` | Open findings | Open findings | Defects open or awaiting verification at the checked revision | Unresolved | — | `findings` | membership narrowed (§6.1) |
-| `contested.md` | Contested records | Contested | Where credible records disagree or evidence does not discriminate | Unresolved | — | `contested` | **new** |
+| `disagreements.md` | Records that disagree | Disagreements | Where credible records disagree or the evidence does not discriminate | Unresolved | — | `undiscriminated` | **new**; carries `unresolved-competition` matrices too |
 | `open-questions.md` | Decisions needed | Decisions needed | Questions the survey could not settle, with the assumption used | Unresolved | — | `questions` | consequence-first ordering |
 | `field-notes.md` | Leads | Leads | Open observations that are not yet findings | Unresolved | — | `notes` | open only; resolved move to History |
-| `stale.md` | Stale knowledge | Stale knowledge | Examined files the repository has changed under | Unresolved | — | `stale` | **new**; carries the ledger markers |
+| `stale.md` | Stale knowledge | Stale knowledge | Examined files the repository has changed under, and scoped files that changed before anyone read them | Unresolved | — | `stale` | **new**; carries the ledger markers; two sections with separate denominators (§6.1) |
 | `hot-spots.md` | Hot spots | Hot spots | Where unresolved work and unread territory concentrate | Unresolved | — | `hotspots` | **new** |
-| `resolved-findings.md` | Resolved findings | Resolved findings | Verified, ruled out, and accepted, with the proof each rests on | History | — | `findings` | **new** |
+| `resolved-findings.md` | Resolved findings | Resolved findings | Verified, ruled out, and accepted, each with the basis its resolution rests on | History | — | `findings` | **new** |
 | `resolution-history.md` | Resolution history | Resolution history | The append-only account of how records reached their state | History | — | `timeline` | **new** |
+| `resolved-leads.md` | Resolved leads and questions | Resolved leads and questions | Questions that were answered or dismissed, and leads that were closed | History | — | `resolved-leads` | **new**; states that for these two families only the terminal state is recorded (§1.1) |
 | `sessions.md` | Sessions and publications | Sessions and publications | What ran, when, and what it produced | History | — | `sessions` | **new** |
-| `contradictions.md` | Conflicting evidence | Conflicting evidence | Resolved disagreements and the evidence that settled them | History | — | `contradictions` | re-homed; unresolved rows move to `contested.md` |
+| `contradictions.md` | Conflicting evidence | Conflicting evidence | Resolved disagreements and the evidence that settled them | History | — | `contradictions` | re-homed; unresolved rows move to `disagreements.md` |
 | `how-to-read.md` | How to read the conspectus | Reader's guide | Every enum, what it authorizes, and what it cannot justify | Method | — | `guide` | generated from the enum source (§10) |
 | `concerns.md` | Review coverage | Review coverage | Which failure modes were tested where | Method | — | `coverage` | group changed |
 | `concern-checklist.md` | Calibrated review checklist | Review checklist | The concern set and its provenance | Method | — | `artifact` | group changed |
-| `diagnosticity.md` | Competing explanations | Competing explanations | Index of evidence matrices and their outcomes | Method | — | `diagnosticity` | group changed; open matrices also listed on `contested.md` as links |
+| `diagnosticity.md` | Competing explanations | Competing explanations | Index of evidence matrices and their outcomes | Method | — | `diagnosticity` | group changed; open and `unresolved-competition` matrices also listed on `disagreements.md` as links |
 | `matrices/<id>.md` | `<symptom>` | `<symptom>` | One matrix | Method | Evidence matrices | `matrix` | group changed |
 | `onboarding-report.md` | Onboarding record | Onboarding record | The repository boundary and initial decomposition | Method | — | `artifact` | group changed |
 | `entry-point.md` | Where to begin | Where to begin | A dated reading path recorded by an earlier session | Method | — | `artifact` | group changed; page states its own date and that it is survey history |
@@ -682,9 +841,15 @@ error, not a silently appended group.
 **No page is retired.** Every existing path survives with a new home or a narrower membership,
 so authored prose links and the coverage read-back axis cannot break on this change.
 
-### 7.2 Overview, first viewport
+### 7.2 Overview, source order
 
-In this order, and nothing else above the fold:
+In this order, first in the document's source, with nothing else between them. The contract is
+over **source order**, not over what a particular reader sees without scrolling: "first viewport"
+is a function of viewport size, zoom, font metrics, and translated or enlarged text, none of
+which the projection controls and none of which a gate can evaluate. `test-lens-pages.py`
+asserts the source order and that no other block precedes item 5; the HTML is additionally
+rendered at 360, 768, and 1280 CSS pixels to confirm nothing in the shell is inserted above
+item 1 at any of them. A literal viewport guarantee is not made, because it could not be kept.
 
 1. **Identity** — the project name as primary identity; Amanuensis named only as the producing
    method (`reporting-style.md`).
@@ -714,7 +879,8 @@ No composite score, no health index, no progress bar, no tile grid (BP26,
 
 ### 7.3 Subsystem page order
 
-1. Purpose (`name`, `layer`, purpose sentence from `scope`)
+1. Identity (`name`, `layer`) and **Scope** — `subsystems.scope` verbatim under that heading,
+   never relabelled Purpose (§3.1). When no purpose statement is recorded the page says so.
 2. Start here (`jump_in_reading`)
 3. Structure — current claims grouped by claim kind; when none, the labelled narrative fallback
    with the heading *"Structural inventory not recorded as claims"* and the artifact's
@@ -729,18 +895,46 @@ No composite score, no health index, no progress bar, no tile grid (BP26,
 
 ### 7.4 Files index
 
-One row per distinct `file_ledger.file_path`. Columns: path (with a stable `id` anchor derived
-from the path slug), owners (every one, each linked to its subsystem page anchor), standing
-state, examined revision (short), open-defect count. Sorted by path. Every row's path anchor is
+One row per distinct `file_ledger.file_path`. Columns: path (with a stable `id` anchor), owners
+(every one, each linked to its subsystem page anchor), standing state, examined revision per
+owner, open-defect count. Sorted by path.
+
+**The anchor is collision-resistant and is not `slugify`.**
+`materializer/amanuensis_materializer/slugs.py:20-23` collapses every run of non-`[a-z0-9-]`
+characters to a single `-`, so `src/a/b.ts`, `src/a-b.ts`, and `src/a.b.ts` all slugify to
+`src-a-b-ts`. The file anchor is `f-<first 10 hex of sha1(file_path)>` with the slug carried as
+visible link text; `test-search-index.py` seeds three colliding paths and requires three distinct
+anchors, each reachable with JavaScript disabled.
+
+The **examined revision is per owner, not per file.** `file_ledger.ref_sha` lives on the
+`(subsystem_id, file_path)` row, so two owners can record different examination revisions for one
+path; the AxiomDB store holds 53 multi-owner paths, one with ten owners. The column renders one
+short revision per owner beside that owner's name, and renders a single value only when every
+owner agrees. A singular revision on a multi-owner row would assert an agreement the ledger does
+not record. Every row's path anchor is
 the ⌘K landing target; the anchor lives on this page and links onward to the owning subsystem
 page's ledger entry, so no per-file page is created (decision 3).
 
 ### 7.5 Not yet surveyed
 
-Four sections, each with its denominator: unledgered paths (`scope_gaps.kind='unledgered'`),
-candidate rows grouped by subsystem, deferred subsystems with their recorded reason, unassessed
-seams (`seam_assessability.assessable=0` or no `SC-%` disposition), and active concerns with no
-disposition anywhere. Each section states the count and the total it is drawn from.
+Five sections, each with its denominator and each counted over the **unit its gap actually
+occupies** (§2.4.6):
+
+1. unledgered paths (`scope_gaps.kind='unledgered'`), over tracked paths;
+2. candidate rows grouped by subsystem, over obligation-bearing ledger rows;
+3. deferred subsystems with their recorded reason, over subsystems;
+4. unassessed **seam sides** — `assessable=0`, or a party holding no `SC-%` disposition —
+   counted as `(seam, side)` pairs over `2 × seams`, carrying §2.4.6's
+   `binding: per-party-proxy` sentence;
+5. **(subsystem, active concern) pairs** with no disposition, over `subsystems × active
+   concerns`.
+
+Sections 4 and 5 were "no `SC-%` disposition" and "active concerns with no disposition anywhere"
+in the reviewed draft. Both report **zero** on the AxiomDB store — every active concern code has
+a disposition somewhere, and no seam lacks `SC-%` on both sides — while the store holds 1,094
+undispositioned pairs and 9 one-sided seams. A section that cannot turn red on the only store it
+has been run against is a zero-denominator green (VP4), and this page exists precisely to show
+what is not known.
 
 ### 7.6 Hot spots
 
@@ -750,11 +944,11 @@ One row per subsystem. Columns, each a separate measure:
 2. Open critical + high
 3. Open medium + low
 4. Awaiting verification
-5. Contested (unresolved contradictions + open matrices + `unresolved-competition` dispositions)
+5. Undiscriminated (unresolved contradictions + `open` and `unresolved-competition` matrices + `unresolved-competition` dispositions)
 6. Weakest evidence quality among `confirmed-bug` dispositions, or `—`
 7. Unread fraction — candidate ÷ obligation-bearing ledger rows, printed as `n/m`
 8. Stale files
-9. Unassessed seams
+9. Unassessed seam sides, as `n/m` over `2 × seams` this subsystem is party to, with §2.4.6's `binding: per-party-proxy` sentence in the column note
 10. Access heat — **the column is omitted entirely** when `access_log` has no row for any
     subsystem, rather than printing a column of zeros (VP4)
 
@@ -764,12 +958,32 @@ no composite column and no total row.
 ### 7.7 History pages
 
 `resolved-findings.md` renders each resolved finding as a full marked record: id, severity,
-symptom, root cause, resolution state, fix revision and location, the verification evidence row
-(for `verified-fixed`), the overturning argument (`rationale`, for `ruled-out`), or the
-acceptance rationale (`accepted`). `resolution-history.md` is a newest-first event timeline over
-`finding_resolution_events` and `contradiction_resolution_events` with the finding or
-contradiction linked. `sessions.md` lists sessions (intent, start, end, outcome), refresh runs,
-and projection verification runs with their three axes.
+symptom, root cause, resolution state, fix revision and location, and its **basis**, which is
+labelled by kind because the schema requires different things of different states.
+`schema.sql:813` requires `evidence_id` only for `verified-fixed`; `accepted` and
+`ruled-out` need `rationale` alone, and `mcp-server/src/tools/findings.ts` accepts them that way.
+ADR-0001 § Resolved licenses this — "resolution evidence **or an explicit authorized
+dismissal**" — so the page does not claim evidence it does not have:
+
+| Resolution state | `basis.kind` | Rendered |
+|---|---|---|
+| `verified-fixed` | `evidence` | the verification `evidence` row, linked, with its kind and revision |
+| `ruled-out` | `authorized-dismissal` | the overturning argument (`rationale`) with the recording session and revision |
+| `accepted` | `authorized-dismissal` | the acceptance rationale, likewise |
+| any of the three with neither | `none-recorded` | *"No basis is recorded for this resolution."* and the row is listed again at the top of the page under **Terminal without a recorded basis**, with its count |
+
+`materializer/test-history-and-contested.py` seeds one `accepted` finding with an empty rationale
+and requires the `none-recorded` rendering and the count; a page that silently renders such a row
+as resolved-with-proof is red. The §7.1 hint says "the basis its resolution rests on", not "the
+proof", because for two of the three states it is not proof.
+
+`resolution-history.md` is a newest-first event timeline over `finding_resolution_events` and
+`contradiction_resolution_events` with the finding or contradiction linked.
+`resolved-leads.md` lists answered, dismissed, and superseded `open_questions` newest-first by
+`resolved_at`, then closed `field_notes` by `id` descending, each group carrying §1.1's
+one-line statement of what the store does and does not record about how they got there.
+`sessions.md` lists sessions (intent, start, end, outcome), refresh runs, and projection
+verification runs with their three axes.
 
 ### 7.8 Method pages
 
@@ -791,7 +1005,15 @@ only projection artifact with no Markdown companion, and it is covered by §8's 
 Decision 3: no per-file pages; a better visual design and simple JavaScript enhancement are
 welcome, tastefully, with accessibility required.
 
-### 8.1 What JavaScript may do
+### 8.1 What new JavaScript may do
+
+This section governs **behaviour added by this change**. The existing projection shell already
+ships inline JavaScript that toggles the light/dark theme (persisting one key in `localStorage`,
+mirroring it across tabs through a `storage` listener) and opens and closes the mobile navigation
+with deterministic focus restoration — `materializer/amanuensis_materializer/html_projection.py`,
+the `_JS` block at line 877, `setMenuOpen` at line 916. Those functions are preserved unchanged
+and are **not** in scope for the restriction below; a rule that forbade them would describe a
+projection that does not exist and has never been the one under review.
 
 1. **Extend ⌘K to file paths and cited symbols.** The materializer writes one projection
    artifact, `search-index.js`, that assigns
@@ -805,8 +1027,9 @@ welcome, tastefully, with accessibility required.
 3. **Anchored navigation**: every record carries a stable `id`; clicking a result moves focus to
    the target and updates the fragment.
 
-Nothing else. No client-side data fetching, no analytics, no persisted view state beyond the
-existing theme key, no dashboard tiles, no animation.
+Nothing else is added. No client-side data fetching, no analytics, no persisted view state
+beyond the existing theme key, no dashboard tiles, no animation. Filter state is not persisted at
+all: it lives in the DOM for the life of the page.
 
 ### 8.2 What it must satisfy
 
@@ -826,10 +1049,21 @@ existing theme key, no dashboard tiles, no animation.
   the behavioral JavaScript stay inline; `search-index.js` is same-directory data.
 - **Read-back coverage of the generated index.** `search-index.js` is listed in
   `manifest.projection_files` and in `.projection-contract.json`'s `pages` array with its
-  content hash, so the **content** axis covers it. The **state** axis gains one check: every
-  obligation-bearing `file_ledger.file_path` appears exactly once in `paths`, and every
-  `evidence` row with a non-null `symbol` appears at least once in `symbols`. A missing or
-  duplicated entry turns the state axis red.
+  content hash, so the **content** axis covers it
+  (`materializer/amanuensis_materializer/readback.py:276-290` hashes whatever the receipt
+  names). The **coverage** axis needs two changes first, or adding the file turns it red for the
+  wrong reason:
+
+  1. `ProjectionVerifier` inventories only `*.md` and `*.html` (`readback.py:147-152`), so a
+     `search-index.js` in `expected_paths` (`core.py:285`) is reported as *"planned page is
+     missing"* (`readback.py:199-207`) even when it is present. The inventory glob gains `*.js`.
+  2. `verify_projection` (`core.py:313-327`) derives `expected_paths` from the page plan alone,
+     so it would never expect the file at all. It derives them from
+     `manifest.projection_files` as well, which is where the materializer records it.
+
+  The **state** axis then gains one check: every obligation-bearing `file_ledger.file_path`
+  appears exactly once in `paths`, and every `evidence` row with a non-null `symbol` appears at
+  least once in `symbols`. A missing or duplicated entry turns the state axis red.
 
 ### 8.3 Register
 
@@ -854,16 +1088,44 @@ structural fact it records in prose, Phase 2 also records a claim through `add_c
 | seam contract | `<sid>/seam/<seam-id>` | `seam` / `<seam-id>` | `observation` | ≥1 `evidence` row citing the writing or reading site |
 
 `claim_key` must be stable across re-surveys so a later reading supersedes rather than
-duplicates. `add_claim` already requires at least one evidence id and already refuses evidence
-unreachable at the asserting commit; no new evidence gate is needed.
+duplicates. `add_claim` already requires at least one evidence id (`claims.ts:239`,
+`minItems: 1`) and already refuses evidence unreachable at the asserting commit
+(`claims.ts:98-115`).
+
+It does **not** check anything else, and the table above is otherwise prose. `add_claim`'s input
+schema declares `subject_type: { type: "string" }` with no enum (`claims.ts:233`), and
+`claims.subject_type` carries no CHECK beyond `length > 0` (`schema.sql:943`, `957`);
+`requireEvidence` resolves and ancestry-checks each row but never reads `evidence.kind`. So the
+"required evidence" column could be satisfied by a `name-inferred` row on an unrelated file, and
+nothing would say so. Two **subtractive** checks are added to `add_claim` itself — code rejecting
+a value, not a prompt asking for one (GP8, whose v2 scope note licenses exactly this shape):
+
+1. `subject_type` is validated against the enum `{symbol, subsystem, seam}` from §10.1's
+   source, by `requireEnum`.
+2. A claim whose `claim_key` matches `^<sid>/(key-type|state-container|flow)/` is refused unless
+   at least one of its `evidence_ids` has `kind ∈ {code-verified, contract-stated}` **and** an
+   `evidence.file_path` equal to the path in `subject_id`. The error names the kinds it found.
+
+Concurrency and seam claims keep the weaker requirement the table states: they are frequently
+derived rather than read, and forcing a kind they cannot honestly carry is the fabrication hazard
+BP4 names. `claims` and `claim_evidence` both hold **0 rows** on the AxiomDB store, so neither
+check can be validated against real data yet; `test-structural-claims.mjs` seeds both the
+accepted and the refused case.
 
 **Phase prerequisite.** `enforcePhasePrerequisites` gains one condition: advancing a subsystem
 to `structural` requires at least one current claim whose `claim_key` begins `<sid>/`. A
 subsystem with genuinely no mutable state container records that as a claim with an explicit
 negative statement rather than omitting the category; no count of claims is required beyond
 one, because forcing a generative field to a shape invites fabrication to order (BP4, and GP8's
-v2 scope note). Claim **truth** remains the adversarial pass's obligation; this gate only
-establishes that the structural account exists in a revision-bound, evidence-backed form.
+v2 scope note). Claim **truth** remains the adversarial pass's obligation — and that pass must actually be given
+the claims. `references/phase-4-adversarial.md` § Process step 1 pulls confirmed bugs, linchpin
+dispositions, and call-path-only `confirmed-acceptable` dispositions; it does not read `claims`
+at all. It gains one target line, *"every current claim whose `claim_key` begins `<sid>/`, via
+`get_claims(subsystem_id)`"*, and one recording line: the challenge outcome for each is written
+as a `claim_validity_event` or an explicit "survived" note before the subsystem may advance to
+`mapped`. Without that, this prerequisite would establish only that claims exist and would name
+a reviewer that never sees them. The gate here establishes that the structural account exists in
+a revision-bound, evidence-backed form; §9.5 establishes that it was challenged.
 
 **Renderer contract.** The subsystem page and `describe_locus`'s `structure` section read
 claims. With zero claims for a subsystem, both render the literal
@@ -874,9 +1136,31 @@ if the subsystem had no structure.
 ### 9.2 The xref and edge contract
 
 Phase 2 records one `add_xref` row for every data flow or dependency that crosses a subsystem
-boundary. `add_xref` gains a required, validated `context`: a non-empty string that contains a
-`file:symbol@sha` citation, checked with `requireWorkspaceCitation(value, "context")`. An edge
-with no citation cannot be recorded.
+boundary. `add_xref` gains a required `context` carrying at least one citation. The validation is
+**token-level**, because `requireWorkspaceCitation` cannot validate a citation embedded in prose:
+
+`mcp-server/src/helpers.ts:99-125` takes `value.indexOf(":")` as the separator and
+`value.lastIndexOf("@")` as the revision **over the whole string**, then normalizes everything
+before the first colon as the path. `requireWorkspaceSourcePath` rejects only absolute,
+traversing, and `.amanuensis` paths (`helpers.ts:79-96`), so it accepts strings containing
+spaces. The consequences are both directions of wrong: `"why: src/a.ts:sym@abc123"` is
+**accepted** with `"why"` normalized as the path — the real citation is never checked — while
+`"one-line: why this link matters"` is **rejected** for having no `@`, though `xrefs.context` is
+documented as exactly that kind of one-line prose (`schema.sql:86`). And nothing in the function
+resolves the revision or the path, so `"src/a.ts:f@NOT_A_SHA trailing prose"` passes.
+
+Therefore: `context` is split on whitespace, and at least one token must match
+`^[^\s:]+(?:/[^\s:]+)*:[^\s@]+@[0-9a-fA-F]{7,40}$`. Each matching token is then validated —
+`requireWorkspaceSourcePath` on the path part, and `git rev-parse --verify <sha>^{commit}` on the
+revision, which must resolve in the bound workspace. The surrounding prose is stored verbatim;
+the validated tokens are returned in the response as `citations[]`. **Symbol reachability is not
+checked** and the contract says so: deciding whether a symbol exists at a revision needs a
+language parser the server does not have, and `evidence.symbol` is a free-text field
+(45 of 209 values on the AxiomDB store carry a parenthetical qualifier). An edge with no
+well-formed, revision-resolving citation token cannot be recorded.
+
+`mcp-server/test-smoke.mjs:254` calls `add_xref` with no `context` and is updated in the same
+packet; it is the only existing caller.
 
 `relationship` for these rows is `data-flow` or `dependency` (the existing enum values).
 `architecture.md` renders topology **from recorded edges only**; with zero `xrefs` rows it
@@ -902,7 +1186,7 @@ The consumer route's answer shape becomes fixed and is stated as a contract in t
 1. **Standing, first, in one line** — the state, the owners when they disagree, the authority
    ceiling, and the checked revision.
 2. **The account**, leading with the most consequential open item when one exists (open finding
-   by severity, then awaiting verification, then contested, then decision, then lead).
+   by severity, then awaiting verification, then undiscriminated, then decision, then lead).
 3. **What is not known** — the `unknown` list, never omitted, never softened.
 
 It cites row ids and `file:symbol@sha` as it does today. It never runs a survey. The existing
