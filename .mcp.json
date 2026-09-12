@@ -2,8 +2,13 @@
   "mcpServers": {
     "amanuensis-memory": {
       "type": "stdio",
-      "command": "node",
+      "command": "mise",
       "args": [
+        "-C",
+        "${CLAUDE_PROJECT_DIR:-.}",
+        "exec",
+        "--",
+        "node",
         "${CLAUDE_PROJECT_DIR:-.}/mcp-server/dist/index.js",
         "--workspace",
         "${CLAUDE_PROJECT_DIR:-.}"

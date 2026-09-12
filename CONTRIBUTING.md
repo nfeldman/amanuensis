@@ -27,6 +27,12 @@ of the published package. See
 [`references/setup.md`](.claude/skills/amanuensis/references/setup.md) for the
 Claude Code, Codex, VS Code, and generic registration shapes.
 
+The checkout's own `.mcp.json` launches that server through `mise exec`, so the
+host's PATH order cannot select a different Node.js than the one `better-sqlite3`
+was compiled against. A bare `node` on a PATH that lists Homebrew first starts
+the server but fails every database-backed tool call with a
+`NODE_MODULE_VERSION` mismatch.
+
 Local Codex development uses a directory-level global skill link plus one
 user-scoped `install --mcp-only` source launcher. This keeps the working checkout
 live without creating project-local registrations or changing the
