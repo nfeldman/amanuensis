@@ -57,10 +57,10 @@
         "P13"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "1226365f264d086be94932322202071dbebcc5d6",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "d052842a38ceee829a3ef19182c0567e9ad97146",
+        "findings": 5
       }
     },
     {
