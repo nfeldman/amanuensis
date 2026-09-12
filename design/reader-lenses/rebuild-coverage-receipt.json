@@ -1,11 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-coverage-receipt/v1",
   "packet": "P17",
-  "recorded_at": "2026-09-12T12:24:59.023Z",
-  "repository_sha": "4cc87740b208bf6dbfc206e018d6f3954bcf0550",
+  "recorded_at": "2026-09-12T14:46:27.176Z",
+  "repository_sha": "09e9730dd94902047d1c7b8c35cc31f5a28b5179",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "project_key": "github.com/nfeldman/amanuensis",
+  "project_name": "amanuensis",
+  "project_name_source": "initialization.json projectIdentity remote:github.com/nfeldman/amanuensis",
   "produced_by": "dev/record-rebuild-coverage.mjs",
   "onboarding": {
     "session_id": "mtyc4dcu-04ike3jr",
@@ -23,7 +25,7 @@
       "excluded_paths": [
         ".amanuensis"
       ],
-      "tracked_files": 562,
+      "tracked_files": 600,
       "storage_tracked_files": 0
     },
     "artifacts": [
@@ -37,9 +39,9 @@
       {
         "path": "master-plan.md",
         "kind": "master-plan",
-        "content_hash": "02792a0945b5ef6491c986b00b4d6e45c3ac57ac142e25da945cbc961fe47ac3",
-        "bytes": 1798,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+        "content_hash": "55508900bfeafefae9ad039ca0bab8b92aad3147382983b77b112aa9d2a874f5",
+        "bytes": 3174,
+        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
       },
       {
         "path": "concern-checklist.md",
@@ -51,23 +53,23 @@
       {
         "path": "entry-point.md",
         "kind": "entry-point",
-        "content_hash": "283c9fe14afc76ced7daee5901d36a916e1be095d379b86769ea71aa3001b660",
-        "bytes": 2293,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+        "content_hash": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba",
+        "bytes": 3859,
+        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
       },
       {
         "path": "findings-index.md",
         "kind": "findings-index",
-        "content_hash": "d538af2e986249afe6f3ae7696d7b15828a6914b9bdcefc9755585c93e18af7e",
-        "bytes": 229,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+        "content_hash": "694d9e2cd39c06e7f1a990fab491b027748126f14f115a12f8936504eb624108",
+        "bytes": 2568,
+        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
       },
       {
         "path": "field-notes.md",
         "kind": "field-notes",
         "content_hash": "fa1c045fbea4f40fd05874332ebc2cae55219f9c36b0f8010af7a8959ca3c6d2",
         "bytes": 1040,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
       }
     ],
     "decomposition": [
@@ -211,11 +213,11 @@
     {
       "id": "B-01",
       "name": "Server runtime and tool dispatch",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 1,
       "files": {
-        "examined": 3,
+        "examined": 5,
         "candidate": 1,
         "deferred-with-reason": 1
       },
@@ -305,21 +307,29 @@
           ]
         },
         {
-          "claim_id": "B-01-C01",
+          "claim_id": "B-01-C08",
           "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-tooldefinition",
           "subject_type": "symbol",
           "subject_id": "mcp-server/src/helpers.ts:ToolDefinition",
           "epistemic_kind": "observation",
-          "statement": "ToolDefinition is the single shape every tool module exports — name, description, inputSchema, and a handler taking (ctx, args) — so a tool is registered by being present in one of the arrays index.ts concatenates, not by any registration call of its own.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "ToolDefinition is the single shape every tool module exports and it has five members: name, description, inputSchema, a handler taking (args, ctx) in that order, and an optional `compact` flag the dispatcher reads to serialize that tool's text block without indentation. A tool is registered by being present in one of the arrays index.ts concatenates, not by any registration call of its own; and a tool that carries a wire budget is one that sets `compact`, so the budget is enforced on the bytes the host receives rather than promised in a comment.",
+          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
           "evidence": [
             {
-              "id": 1,
+              "id": 63,
               "kind": "code-verified",
               "file_path": "mcp-server/src/helpers.ts",
               "symbol": "ToolDefinition",
-              "line_range": "22-36",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "line_range": "22-35",
+              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+            },
+            {
+              "id": 64,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/index.ts",
+              "symbol": "CallToolRequest handler (the compact flag at dispatch)",
+              "line_range": "299-307",
+              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
             }
           ]
         },
@@ -369,14 +379,14 @@
       ],
       "artifact": {
         "path": "B-01-server-runtime-and-tool-dispatch.md",
-        "content_hash": "90852b0fd335a484687aa6c302066cc74c8def2d33fdf6d14014171a17faae04",
-        "bytes": 2434
+        "content_hash": "cd3e9f496a1d3b624e691578d23f11a5aefe0913ce6d75641c12b169cbdb6325",
+        "bytes": 4950
       }
     },
     {
       "id": "B-02",
       "name": "Repository binding and storage custody",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 1,
       "files": {
@@ -511,14 +521,14 @@
       ],
       "artifact": {
         "path": "B-02-repository-binding-and-storage-custody.md",
-        "content_hash": "bf23809ad7461c593cfd4223433170741c4c4ff48669e7ac7284e5280ca0df64",
-        "bytes": 2508
+        "content_hash": "b815eaa57d68ccac031f5aaf38d3c94bed5c1c071579d7b6b68beae1d6501a8b",
+        "bytes": 4417
       }
     },
     {
       "id": "B-03",
       "name": "Conspectus schema, vocabulary, and invariants",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 1,
       "files": {
@@ -616,7 +626,7 @@
           "subject_type": "symbol",
           "subject_id": "mcp-server/src/schema.sql:claims",
           "epistemic_kind": "observation",
-          "statement": "A claim is a row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Only the interval's end is ever written after insertion: invalidation and supersession both UPDATE the predecessor's valid_until_sha, and supersession then inserts the successor, so the history is preserved by a controlled close-plus-insert rather than by immutability.",
+          "statement": "A claim is an immutable row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Superseding a claim closes the old interval and inserts a new row, so the record keeps both readings rather than overwriting one.",
           "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
           "evidence": [
             {
@@ -672,14 +682,14 @@
       ],
       "artifact": {
         "path": "B-03-conspectus-schema-vocabulary-and-invariants.md",
-        "content_hash": "2e36cb8289340852460bd6a9402954cc3aed2cb3488e69f30906ae659469d2fc",
-        "bytes": 1991
+        "content_hash": "3632e2b5b9aa396c50453fa37c34d14fc6ca73fd000361012822af0eec4cd912",
+        "bytes": 4479
       }
     },
     {
       "id": "B-04",
       "name": "Survey record tools",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 2,
       "files": {
@@ -823,14 +833,14 @@
       ],
       "artifact": {
         "path": "B-04-survey-record-tools.md",
-        "content_hash": "e0b8bbc3daae21a3046f356a9554f2680ae569aeff4f269ec1f150ae90edc751",
-        "bytes": 2008
+        "content_hash": "4291a07a4299d918c3640fc3dcf5afbe49588ea8e8472196b1a92b1aac520853",
+        "bytes": 4178
       }
     },
     {
       "id": "B-05",
       "name": "Findings, dispositions, and resolution custody",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 2,
       "files": {
@@ -928,14 +938,14 @@
       ],
       "artifact": {
         "path": "B-05-findings-dispositions-and-resolution-custody.md",
-        "content_hash": "e05dd0ea0ad339ef0a7cc0647ac8daa8f3fd2ed892e60d4ebaf2a46673ebbb73",
-        "bytes": 1509
+        "content_hash": "a12adeec760c3229ae96845584f48f6f2f42fff9fa874d013109581c3e4d3ecb",
+        "bytes": 3418
       }
     },
     {
       "id": "B-06",
       "name": "Locus standing and the reader lenses",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 2,
       "files": {
@@ -1052,14 +1062,14 @@
       ],
       "artifact": {
         "path": "B-06-locus-standing-and-the-reader-lenses.md",
-        "content_hash": "af6903a6aea7fb8d0988a6b002a5d920f969bd46a1b06249d6f108134d79e136",
-        "bytes": 1792
+        "content_hash": "d132efaa14cff4f0ce8bc8dcd7a865f98b9c3bfb5174c19c27965e296538d449",
+        "bytes": 3527
       }
     },
     {
       "id": "B-07",
       "name": "Git state, staleness, and refresh",
-      "status": "structural",
+      "status": "mapped",
       "layer": "mcp-server",
       "priority": 3,
       "files": {
@@ -1155,14 +1165,14 @@
       "seams": [],
       "artifact": {
         "path": "B-07-git-state-staleness-and-refresh.md",
-        "content_hash": "ca13835515d601e357725a31d3446fec4f5807f058dcdb8f578fb6d5ea71e634",
-        "bytes": 1709
+        "content_hash": "38105f5cfe6625ee71a02a6ece63023b2735d74c38a002dec85698d682adfff4",
+        "bytes": 3284
       }
     },
     {
       "id": "B-08",
       "name": "Materializer rendering pipeline",
-      "status": "structural",
+      "status": "mapped",
       "layer": "materializer",
       "priority": 3,
       "files": {
@@ -1269,14 +1279,14 @@
       ],
       "artifact": {
         "path": "B-08-materializer-rendering-pipeline.md",
-        "content_hash": "4361ea87ab2c9a608221366ed4345657a427e5f61a810952c43213982c89c074",
-        "bytes": 1648
+        "content_hash": "96f47bc3b39abfed628f84d9247a56020b1332007f62c74ec6e5b8a0971148b5",
+        "bytes": 3109
       }
     },
     {
       "id": "B-09",
       "name": "Projection read-back and publication custody",
-      "status": "structural",
+      "status": "mapped",
       "layer": "materializer",
       "priority": 3,
       "files": {
@@ -1374,14 +1384,14 @@
       ],
       "artifact": {
         "path": "B-09-projection-read-back-and-publication-custody.md",
-        "content_hash": "f98193cb4f35d6c8723276a3cb72c0ecbb71e7ac3c329a85b1bed9121b445853",
-        "bytes": 1535
+        "content_hash": "755317dbb38dd1830057ed941b4ea5d16b0dab0dbf4573526d99e3df04cf324d",
+        "bytes": 3087
       }
     },
     {
       "id": "B-10",
       "name": "The Amanuensis skill",
-      "status": "structural",
+      "status": "mapped",
       "layer": "methodology",
       "priority": 4,
       "files": {
@@ -1487,18 +1497,18 @@
       ],
       "artifact": {
         "path": "B-10-the-amanuensis-skill.md",
-        "content_hash": "1ce26251e73c0698210c657650eda7444b85bb5936ea458bd9423ca1545f5bd8",
-        "bytes": 1954
+        "content_hash": "0983da5845e2ac01701825ed1666afca914160ff687f59952e2b1741c68bc58c",
+        "bytes": 3430
       }
     },
     {
       "id": "B-11",
       "name": "Development harness and gates",
-      "status": "structural",
+      "status": "mapped",
       "layer": "harness",
       "priority": 4,
       "files": {
-        "examined": 2,
+        "examined": 5,
         "candidate": 2
       },
       "claims": [
@@ -1600,8 +1610,8 @@
       ],
       "artifact": {
         "path": "B-11-development-harness-and-gates.md",
-        "content_hash": "f128cc68fc44b6e8525339f89b2a806a63ef8e8595b8daf126dbec10faece342",
-        "bytes": 1684
+        "content_hash": "54e5f6c5b06dd4e7e3967398c120b20741ba68486314cae489d336bb938f0554",
+        "bytes": 3753
       }
     },
     {
@@ -1617,6 +1627,168 @@
       "seams": [],
       "artifact": null,
       "deferred_reason": "Deferred, not omitted: 103 tracked files that no part of the running system imports or executes. Recorded so the census counts them rather than reporting complete coverage over a repository it never looked at."
+    }
+  ],
+  "registry_ownership": {
+    "mcp-server/src/index.ts": [
+      "B-01"
+    ],
+    "mcp-server/src/codex-host.ts": [
+      "B-02"
+    ],
+    "mcp-server/src/db.ts": [
+      "B-02"
+    ],
+    "mcp-server/src/helpers.ts": [
+      "B-01",
+      "B-04"
+    ],
+    "mcp-server/src/project.ts": [
+      "B-02"
+    ],
+    "mcp-server/src/tools/artifacts.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/chorusmith-adapter.ts": [],
+    "mcp-server/src/tools/claims.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/codebase-brief.ts": [],
+    "mcp-server/src/tools/compare.ts": [],
+    "mcp-server/src/tools/composition.ts": [],
+    "mcp-server/src/tools/concerns.ts": [
+      "B-05"
+    ],
+    "mcp-server/src/tools/contradictions.ts": [
+      "B-05"
+    ],
+    "mcp-server/src/tools/crosswalk.ts": [],
+    "mcp-server/src/tools/dashboard.ts": [],
+    "mcp-server/src/tools/decisions.ts": [],
+    "mcp-server/src/tools/design-session.ts": [],
+    "mcp-server/src/tools/diagnosticity.ts": [],
+    "mcp-server/src/tools/dispatch.ts": [],
+    "mcp-server/src/tools/dispositions.ts": [
+      "B-05"
+    ],
+    "mcp-server/src/tools/evaluation.ts": [],
+    "mcp-server/src/tools/evidence.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/field-notes.ts": [],
+    "mcp-server/src/tools/files.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/findings.ts": [
+      "B-05"
+    ],
+    "mcp-server/src/tools/git.ts": [
+      "B-07"
+    ],
+    "mcp-server/src/tools/impact.ts": [
+      "B-07"
+    ],
+    "mcp-server/src/tools/learning.ts": [],
+    "mcp-server/src/tools/locks.ts": [],
+    "mcp-server/src/tools/locus.ts": [
+      "B-06"
+    ],
+    "mcp-server/src/tools/logging.ts": [],
+    "mcp-server/src/tools/materialize.ts": [
+      "B-09"
+    ],
+    "mcp-server/src/tools/open-questions.ts": [],
+    "mcp-server/src/tools/project.ts": [],
+    "mcp-server/src/tools/refresh.ts": [
+      "B-07"
+    ],
+    "mcp-server/src/tools/research.ts": [],
+    "mcp-server/src/tools/resolution.ts": [
+      "B-05"
+    ],
+    "mcp-server/src/tools/revalidation.ts": [],
+    "mcp-server/src/tools/review-analysis.ts": [],
+    "mcp-server/src/tools/review-session.ts": [],
+    "mcp-server/src/tools/review.ts": [],
+    "mcp-server/src/tools/seams.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/stale.ts": [
+      "B-07"
+    ],
+    "mcp-server/src/tools/storage-history.ts": [],
+    "mcp-server/src/tools/subsystems.ts": [
+      "B-04"
+    ],
+    "mcp-server/src/tools/vocabulary.ts": [],
+    "mcp-server/src/tools/xrefs.ts": [
+      "B-04"
+    ]
+  },
+  "registry_crossings": [
+    {
+      "from_id": "B-01",
+      "to_id": "B-02",
+      "via": [
+        "mcp-server/src/codex-host.ts",
+        "mcp-server/src/db.ts",
+        "mcp-server/src/project.ts"
+      ],
+      "recorded": true
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-04",
+      "via": [
+        "mcp-server/src/helpers.ts",
+        "mcp-server/src/tools/artifacts.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/files.ts",
+        "mcp-server/src/tools/seams.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/xrefs.ts"
+      ],
+      "recorded": true
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-05",
+      "via": [
+        "mcp-server/src/tools/concerns.ts",
+        "mcp-server/src/tools/contradictions.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/resolution.ts"
+      ],
+      "recorded": true
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-06",
+      "via": [
+        "mcp-server/src/tools/locus.ts"
+      ],
+      "recorded": true
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-07",
+      "via": [
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/tools/impact.ts",
+        "mcp-server/src/tools/refresh.ts",
+        "mcp-server/src/tools/stale.ts"
+      ],
+      "recorded": true
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-09",
+      "via": [
+        "mcp-server/src/tools/materialize.ts"
+      ],
+      "recorded": true
     }
   ],
   "xrefs": [
@@ -1645,6 +1817,62 @@
           "path": "mcp-server/src/index.ts",
           "symbol": "main",
           "sha": "258ccd2"
+        }
+      ]
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-05",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "the finding, disposition, concern, contradiction and resolution tools reach a client only through the single registry this module concatenates and dispatches against, so the resolution custody surface exists for a caller exactly when the registry carries it, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "citations": [
+        {
+          "path": "mcp-server/src/index.ts",
+          "symbol": "allTools",
+          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        }
+      ]
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-06",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "the reader-lens tools are placed at the head of the advertised list deliberately — §5.5 makes list order the order a host reads — and describe_locus is also the one name the read-only annotation carve-out holds, so the registry decides both that the consumer route is reachable and that it is annotated as a query, read at mcp-server/src/index.ts:READ_ONLY_TOOLS@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "citations": [
+        {
+          "path": "mcp-server/src/index.ts",
+          "symbol": "READ_ONLY_TOOLS",
+          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        }
+      ]
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-07",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "the git-state, staleness, change-impact and refresh tools are registered by this module and by nothing else, so the freshness surface a host can call is whatever the registry admits, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "citations": [
+        {
+          "path": "mcp-server/src/index.ts",
+          "symbol": "allTools",
+          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        }
+      ]
+    },
+    {
+      "from_id": "B-01",
+      "to_id": "B-09",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "materialize_docs and verify_materialized_docs are dispatched through this registry, so the publication and read-back custody path is entered through the same validator and annotation rules every other tool call is, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "citations": [
+        {
+          "path": "mcp-server/src/index.ts",
+          "symbol": "allTools",
+          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
         }
       ]
     },
@@ -1903,6 +2131,81 @@
   ],
   "storage_history": [
     {
+      "sha": "6edefce787b8544244dd7635d35711537b09ebac",
+      "date": "2026-09-12T10:45:56-04:00",
+      "message": "session mtyhzh5l-zpd2vmfp ended (completed)"
+    },
+    {
+      "sha": "31c3e0ae51441065cd36823eebb1b053294357da",
+      "date": "2026-09-12T10:45:56-04:00",
+      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "408bdddc3c5c0386e98eb2391b825eb1ec4ec467",
+      "date": "2026-09-12T10:45:56-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "7864b703bb22fa8a7569d1964248eb59422612ec",
+      "date": "2026-09-12T10:45:35-04:00",
+      "message": "session mtyhz0dy-j0u391g2 ended (completed)"
+    },
+    {
+      "sha": "6d2958afbb522b8f03be5c3f081042e6469d83e7",
+      "date": "2026-09-12T10:45:35-04:00",
+      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "15eff1723aae1b5758b1063f31cd6ad6da27673d",
+      "date": "2026-09-12T10:45:34-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "a6f6ee96818564512b7bf124816b753f142e1237",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "session mtyhtj8d-3pwkwl91 ended (completed)"
+    },
+    {
+      "sha": "d7da702059975a746dd5261959b75d5243db0bfc",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "b8fa49adcc43a6ebe843a30f996ef3804af48cec",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "2d15fed7b5d465561464d6856663b0731a86aaa5",
+      "date": "2026-09-12T09:17:32-04:00",
+      "message": "session mtyetk3r-agx105wt ended (completed)"
+    },
+    {
+      "sha": "125d8cdb76cb7c82b325f1397b41d2a095cc1a90",
+      "date": "2026-09-12T09:14:58-04:00",
+      "message": "session mtydkog0-axpv7at9 ended (completed)"
+    },
+    {
+      "sha": "2d6dd87de6793322eab6d6c914766911b965299d",
+      "date": "2026-09-12T09:10:01-04:00",
+      "message": "Depth batch 4 · B-10, B-11 carried to mapped · 12 terminal dispositions, 3 confirmed bugs (B10-1 MEDIUM, B11-1 LOW, B11-2 LOW), 8 claim targets all survived"
+    },
+    {
+      "sha": "71352a50f48a17c6aa5a5e7ca40cc112005524f1",
+      "date": "2026-09-12T09:03:39-04:00",
+      "message": "Depth batch 3 · B-07, B-08, B-09 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B07-1 MEDIUM, B08-1 LOW), 12 claim targets all survived"
+    },
+    {
+      "sha": "c0f39267bf4d38c0a3205e4a898561b7cd8f251f",
+      "date": "2026-09-12T08:58:23-04:00",
+      "message": "Depth batch 2 · B-04, B-05, B-06 carried to mapped · 18 terminal dispositions, 3 confirmed bugs (B04-4 MEDIUM, B05-1 MEDIUM, B04-5 LOW scope-restricted), 15 claim targets all survived"
+    },
+    {
+      "sha": "440ab4a28c7d848828884daddf7a9026a88e73ef",
+      "date": "2026-09-12T08:51:59-04:00",
+      "message": "Depth batch 1 · B-01, B-02, B-03 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B01-1 MEDIUM, B03-4 LOW), 18 claim targets challenged with 1 overturned"
+    },
+    {
       "sha": "18dd12993b4de980e84abd92bfe5638b9cef5051",
       "date": "2026-09-12T08:24:54-04:00",
       "message": "session mtyc4dcu-04ike3jr ended (completed — onboarding plus the structural phase of eleven subsystems; concerns, adversarial and packaging phases are not run in this packet)"
@@ -1967,10 +2270,10 @@
     "subsystem_count": 12,
     "structural_or_beyond": 11,
     "deferred": 1,
-    "scoped_files": 53,
+    "scoped_files": 58,
     "claims": 53,
-    "claim_evidence": 72,
-    "xrefs": 16,
+    "claim_evidence": 76,
+    "xrefs": 20,
     "seams": 9
   },
   "fixtures_unchanged": {

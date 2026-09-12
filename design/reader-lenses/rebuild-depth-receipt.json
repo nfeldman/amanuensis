@@ -1,15 +1,15 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-depth-receipt/v1",
   "packet": "P19",
-  "recorded_at": "2026-09-12T13:18:24.173Z",
-  "repository_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+  "recorded_at": "2026-09-12T14:45:41.963Z",
+  "repository_sha": "09e9730dd94902047d1c7b8c35cc31f5a28b5179",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "produced_by": "dev/record-rebuild-depth.mjs",
   "store": {
     "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
     "canonical_branch": "reader-lenses",
-    "session_id": "mtyetk3r-agx105wt"
+    "session_id": "mtyhz0dy-j0u391g2"
   },
   "checklist_concerns": [
     {
@@ -142,8 +142,8 @@
     }
   ],
   "seam_assessment": {
-    "storage_commit": "2d15fed7b5d465561464d6856663b0731a86aaa5",
-    "label": "session mtyetk3r-agx105wt ended (completed)",
+    "storage_commit": "7864b703bb22fa8a7569d1964248eb59422612ec",
+    "label": "session mtyhz0dy-j0u391g2 ended (completed)",
     "covers": "SC-1 through SC-9 and Phase 5 packaging"
   },
   "subsystems": [
@@ -161,25 +161,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "887cad625eec373eb9b80c381bec87b8eafe597a",
+          "storage_label": "Rebuild batch 2 · B-01, B-02, B-03 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:10:06-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "440ab4a28c7d848828884daddf7a9026a88e73ef",
+          "storage_label": "Depth batch 1 · B-01, B-02, B-03 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B01-1 MEDIUM, B03-4 LOW), 18 claim targets challenged with 1 overturned",
+          "observed_at": "2026-09-12T08:51:59-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -440,54 +467,102 @@
             "claim_id": "B-01-C07",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/concurrency did not overturn it: the probe looked for an async boundary inside a handler that could interleave two calls against the connection and found none — better-sqlite3 is synchronous, the transport is one stdio stream, and the dispatcher awaits nothing between validation and the handler's return.",
-            "record": "field-note:9"
+            "record": "claim-challenge-outcome:1",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:9",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-01/flow/tool-call/01",
             "claim_id": "B-01-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/flow/tool-call/01 did not overturn it: allTools is one concatenation with locusTools first, and both the advertised list and the byName dispatch Map are built from that same array, so an ordering or membership difference between what is advertised and what is dispatchable is not expressible here.",
-            "record": "field-note:7"
+            "record": "claim-challenge-outcome:2",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:7",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-01/flow/tool-call/02",
             "claim_id": "B-01-C05",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/flow/tool-call/02 did not overturn it: the validators Map is compiled once at startup from each tool's own inputSchema with Ajv strict:true, and the call path looks the validator up before invoking the handler, so a malformed schema fails at startup and a mistyped argument fails before any handler runs.",
-            "record": "field-note:8"
+            "record": "claim-challenge-outcome:3",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:8",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-servercontext",
             "claim_id": "B-01-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/key-type/mcp-server-src-helpers-ts-servercontext did not overturn it: ServerContext declares exactly project, db and sessionId, and index.ts builds the single instance with db as a getter over ensureDatabase, so no handler reaches the store or the workspace through module state.",
-            "record": "field-note:4"
+            "record": "claim-challenge-outcome:4",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:4",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-tooldefinition",
-            "claim_id": "B-01-C01",
-            "outcome": "overturned",
-            "challenge": "Overturned by the adversarial pass: the claim records a four-member shape with a handler taking (ctx, args). The declaration has five members and the handler takes (args, ctx). The omitted member is `compact`, which the dispatcher reads to serialize a tool's text block without indentation — the mechanism the wire budget is enforced by — so the recorded shape is not merely mis-ordered, it hides the field a budgeted tool depends on.",
-            "record": "claim-validity-event:54",
-            "re_asserted_as": "B-01-C08"
+            "claim_id": "B-01-C08",
+            "outcome": "survived",
+            "challenge": "adversarial probe for claim B-01/key-type/mcp-server-src-helpers-ts-tooldefinition overturned it: the Phase 2 reading recorded a four-member shape with a handler taking (ctx, args), and the declaration has five members with the handler taking (args, ctx). B-01-C01 is invalidated at 0fee11b and B-01-C08 re-asserts the key with the corrected reading, which names the `compact` flag the wire budget depends on.",
+            "record": "claim-challenge-outcome:6",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:3",
+            "outcomes_recorded": 2,
+            "prior_outcomes": [
+              {
+                "claim_id": "B-01-C01",
+                "outcome": "overturned",
+                "record": "claim-challenge-outcome:5",
+                "validity_event": "claim-validity-event:54"
+              }
+            ]
           },
           {
             "claim_key": "B-01/key-type/mcp-server-src-index-ts-toolannotations",
             "claim_id": "B-01-C06",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/key-type/mcp-server-src-index-ts-toolannotations did not overturn it: readOnlyHint is READ_ONLY_TOOLS membership or a get_/list_/lookup_ prefix, destructiveHint is the negation of that conjoined with ADDITIVE_TOOLS membership, and idempotentHint tracks readOnly — so destructive is the default for an unprefixed, unlisted tool, exactly as recorded.",
-            "record": "field-note:5"
+            "record": "claim-challenge-outcome:7",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:5",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-01/state-container/mcp-server-src-index-ts-main",
             "claim_id": "B-01-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-01/state-container/mcp-server-src-index-ts-main did not overturn it: `let db: DB | null` in main, an ensureDatabase closure that returns the existing handle when one is set, and a getter on the context are the whole of it; no path reopens or clears the binding, so the stale-handle consequence the claim states is the one the code has.",
-            "record": "field-note:6"
+            "record": "claim-challenge-outcome:8",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:6",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
-          "survived": 6,
+          "survived": 7,
           "overturned": 1,
           "superseded": 0
         },
@@ -515,25 +590,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "887cad625eec373eb9b80c381bec87b8eafe597a",
+          "storage_label": "Rebuild batch 2 · B-01, B-02, B-03 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:10:06-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "440ab4a28c7d848828884daddf7a9026a88e73ef",
+          "storage_label": "Depth batch 1 · B-01, B-02, B-03 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B01-1 MEDIUM, B03-4 LOW), 18 claim targets challenged with 1 overturned",
+          "observed_at": "2026-09-12T08:51:59-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -720,35 +822,65 @@
             "claim_id": "B-02-C05",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-02/concurrency did not overturn it: the probe looked for a lock that would make the claim's \"not provided by this subsystem\" wrong and found the write_locks table to be an advisory artifact-path registry tools opt into, never consulted by openDatabase or by any storage write, so nothing here detects a second writer.",
-            "record": "field-note:15"
+            "record": "claim-challenge-outcome:9",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:15",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-02/flow/storage-write/01",
             "claim_id": "B-02-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-02/flow/storage-write/01 did not overturn it: resolveStorageOutputPath resolves a relative argument against project.storagePath and hands the result to assertContainedPath with storagePath as the root, so no argument — absolute, traversing, or symlinked — reaches a path outside the storage directory.",
-            "record": "field-note:14"
+            "record": "claim-challenge-outcome:10",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:14",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-02/key-type/mcp-server-src-project-ts-assertcontainedpath",
             "claim_id": "B-02-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-02/key-type/mcp-server-src-project-ts-assertcontainedpath did not overturn it: the probe looked for the usual escape — a prefix comparison that a sibling directory sharing a name prefix would satisfy — and found isWithin plus a per-segment lstat and realpath walk, with equality to the root itself also refused.",
-            "record": "field-note:12"
+            "record": "claim-challenge-outcome:11",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:12",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-02/key-type/mcp-server-src-project-ts-projectcontext",
             "claim_id": "B-02-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-02/key-type/mcp-server-src-project-ts-projectcontext did not overturn it: ProjectContext's members are declared readonly and the binding receipt is built once in resolveProject; no tool handler writes back through the context, so a later call cannot rebind the workspace.",
-            "record": "field-note:11"
+            "record": "claim-challenge-outcome:12",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:11",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-02/state-container/mcp-server-src-db-ts-opendatabase",
             "claim_id": "B-02-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-02/state-container/mcp-server-src-db-ts-opendatabase did not overturn it: openDatabase is the only `new Database(...)` in the server; it sets WAL and foreign_keys, runs migrations strictly before initializeSchema, and closes the connection before throwing when a required view is absent — so a caller never receives a handle to a store that failed the view assertion.",
-            "record": "field-note:13"
+            "record": "claim-challenge-outcome:13",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:13",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -774,25 +906,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "887cad625eec373eb9b80c381bec87b8eafe597a",
+          "storage_label": "Rebuild batch 2 · B-01, B-02, B-03 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:10:06-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "440ab4a28c7d848828884daddf7a9026a88e73ef",
+          "storage_label": "Depth batch 1 · B-01, B-02, B-03 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B01-1 MEDIUM, B03-4 LOW), 18 claim targets challenged with 1 overturned",
+          "observed_at": "2026-09-12T08:51:59-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -1035,42 +1194,78 @@
             "claim_id": "B-03-C06",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-03/concurrency did not overturn it: every invariant helper takes the connection as an argument and is called inside the same synchronous handler as the write it authorizes, and the two that write do so inside db.transaction, so no in-process window exists between a prerequisite passing and the row it admitted.",
-            "record": "field-note:22"
+            "record": "claim-challenge-outcome:14",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:22",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-03/flow/status-advance/01",
             "claim_id": "B-03-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-03/flow/status-advance/01 did not overturn it: enforcePhasePrerequisites checks the ledger count first and then requireStructuralClaim, and enforceForwardPrerequisites replays every intermediate rung, so an insert opening straight at a later status answers for the same evidence as an advance to it.",
-            "record": "field-note:20"
+            "record": "claim-challenge-outcome:15",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:20",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-03/key-type/mcp-server-contracts-conspectus-vocabulary-json-enums-evidence-kind",
             "claim_id": "B-03-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-03/key-type/mcp-server-contracts-conspectus-vocabulary-json-enums-evidence-kind did not overturn it: every value in the source carries label, meaning and cannot_justify, and the file-anchored rule in claims.ts admits exactly code-verified and contract-stated, so the enum states what a value withholds as well as what it grants.",
-            "record": "field-note:19"
+            "record": "claim-challenge-outcome:16",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:19",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-03/key-type/mcp-server-src-invariants-ts-enforcemonotonictransition",
             "claim_id": "B-03-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-03/key-type/mcp-server-src-invariants-ts-enforcemonotonictransition did not overturn it: the guard returns early when either side is deferred, which is the bidirectional exemption the claim states, and throws only when the target rank is strictly lower — so an equal-rank rewrite passes and a regression does not.",
-            "record": "field-note:18"
+            "record": "claim-challenge-outcome:17",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:18",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-03/key-type/mcp-server-src-schema-sql-claims",
             "claim_id": "B-03-C01",
             "outcome": "survived",
-            "challenge": "adversarial probe for claim B-03/key-type/mcp-server-src-schema-sql-claims did not overturn it: the table declares asserted_at_sha, valid_from_sha and a nullable valid_until_sha with a CHECK refusing an interval that closes where it opens, and supersede_claim closes the predecessor and inserts the successor in one commit by updating only the predecessor's valid_until_sha and inserting the successor in the same commit, so neither reading is overwritten.",
-            "record": "field-note:17"
+            "challenge": "adversarial probe for claim B-03/key-type/mcp-server-src-schema-sql-claims did not overturn it: the table declares asserted_at_sha, valid_from_sha and a nullable valid_until_sha with a CHECK refusing an interval that closes where it opens, and supersede_claim closes the predecessor and inserts the successor in one commit rather than updating a row.",
+            "record": "claim-challenge-outcome:18",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:17",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-03/state-container",
             "claim_id": "B-03-C05",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-03/state-container did not overturn it, with one qualification worth the record: the negative claim holds — nothing here is written after open — but \"frozen set of literals\" describes a compile-time guarantee. The generated arrays are `as const`, which is readonly to the type checker and an ordinary mutable array at run time; no code mutates them, so the claim's consequence stands while its word is stronger than the mechanism.",
-            "record": "field-note:21"
+            "record": "claim-challenge-outcome:19",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:21",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -1102,25 +1297,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "96c429842c5e582b2265233f5ec75be4165c507d",
+          "storage_label": "Rebuild batch 3 · B-04, B-05, B-06 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:13:37-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "c0f39267bf4d38c0a3205e4a898561b7cd8f251f",
+          "storage_label": "Depth batch 2 · B-04, B-05, B-06 carried to mapped · 18 terminal dispositions, 3 confirmed bugs (B04-4 MEDIUM, B05-1 MEDIUM, B04-5 LOW scope-restricted), 15 claim targets all survived",
+          "observed_at": "2026-09-12T08:58:23-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -1384,42 +1606,78 @@
             "claim_id": "B-04-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/flow/record-an-edge/01 did not overturn it: add_xref's schema carries the citation pattern built from CITATION_TOKEN_SOURCE, the same exported string the handler's scanner compiles, so the advertised grammar and the enforced one cannot differ.",
-            "record": "field-note:27"
+            "record": "claim-challenge-outcome:20",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:27",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-04/flow/record-an-edge/02",
             "claim_id": "B-04-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/flow/record-an-edge/02 did not overturn it: extractWorkspaceCitations throws on the first token whose revision does not resolve, before any citation is returned, so a value carrying one good token and one bad one is refused whole.",
-            "record": "field-note:28"
+            "record": "claim-challenge-outcome:21",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:28",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-04/flow/record-an-edge/03",
             "claim_id": "B-04-C05",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/flow/record-an-edge/03 did not overturn it, including the part most easily wrong: the comment does say \"the eighth local copy of the two-line git probe\", names findings.ts:37 and claims.ts:104, and states the reason they are not shared — each caller owns a different failure policy.",
-            "record": "field-note:29"
+            "record": "claim-challenge-outcome:22",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:29",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-04/key-type/mcp-server-src-tools-claims-ts-file-anchored-claim-key",
             "claim_id": "B-04-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/key-type/mcp-server-src-tools-claims-ts-file-anchored-claim-key did not overturn it: the pattern is anchored at the start and matches only key-type, state-container and flow after the subsystem segment, so a key cannot slip the rule by prefixing it, and FILE_ANCHORED_EVIDENCE is a filter over the generated EVIDENCE_KINDS rather than a second literal list.",
-            "record": "field-note:26"
+            "record": "claim-challenge-outcome:23",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:26",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-04/key-type/mcp-server-src-tools-claims-ts-requirefileanchoredevidence",
             "claim_id": "B-04-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/key-type/mcp-server-src-tools-claims-ts-requirefileanchoredevidence did not overturn it: the predicate is a single rows.some over a conjunction, so two rows each satisfying one half cannot pass together, and the refusal string enumerates the kinds and paths it did find.",
-            "record": "field-note:25"
+            "record": "claim-challenge-outcome:24",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:25",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-04/state-container",
             "claim_id": "B-04-C06",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-04/state-container did not overturn it: the probe looked for module-level mutable state across every tool module in this subsystem — a cache, a memo, a lazily built index — and found only frozen constants and prepared statements built per call.",
-            "record": "field-note:30"
+            "record": "claim-challenge-outcome:25",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:30",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -1456,25 +1714,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "96c429842c5e582b2265233f5ec75be4165c507d",
+          "storage_label": "Rebuild batch 3 · B-04, B-05, B-06 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:13:37-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "c0f39267bf4d38c0a3205e4a898561b7cd8f251f",
+          "storage_label": "Depth batch 2 · B-04, B-05, B-06 carried to mapped · 18 terminal dispositions, 3 confirmed bugs (B04-4 MEDIUM, B05-1 MEDIUM, B04-5 LOW scope-restricted), 15 claim targets all survived",
+          "observed_at": "2026-09-12T08:58:23-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -1727,28 +2012,52 @@
             "claim_id": "B-05-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-05/concurrency did not overturn it: the probe looked for a read-modify-write over resolution state that two writers could interleave and found none — every transition reads the prior row only to build the event's rationale, and the insert does not depend on that read being still true.",
-            "record": "field-note:34"
+            "record": "claim-challenge-outcome:26",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:34",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-05/flow/read-a-findings-state/01",
             "claim_id": "B-05-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-05/flow/read-a-findings-state/01 did not overturn it: both readers in findings.ts join finding_state_current and the verification path reads finding_resolution_current. The probe did find two readers outside this subsystem that do not — list_subsystems and the master-plan renderer — which is B04-5 and B08-1, not a counterexample to what this subsystem does.",
-            "record": "field-note:33"
+            "record": "claim-challenge-outcome:27",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:33",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-05/key-type/mcp-server-src-schema-sql-finding-state-current",
             "claim_id": "B-05-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-05/key-type/mcp-server-src-schema-sql-finding-state-current did not overturn it: the view LEFT JOINs finding_resolution_current, so every findings row appears exactly once and the CASE supplies a state for one that never received an event — the claim's \"exactly one state\" is a property of the join, not of the writers.",
-            "record": "field-note:31"
+            "record": "claim-challenge-outcome:28",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:31",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-05/state-container/mcp-server-src-tools-findings-ts-findingtools",
             "claim_id": "B-05-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-05/state-container/mcp-server-src-tools-findings-ts-findingtools did not overturn it: no UPDATE or DELETE touches finding_resolution_events anywhere in the server or the materializer, add_finding inserts the finding and its first event in one transaction, and verify_finding_fix appends rather than amending — with a trigger refusing a verified-fixed event whose evidence is not attached as fix-verification.",
-            "record": "field-note:32"
+            "record": "claim-challenge-outcome:29",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:32",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -1780,25 +2089,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "96c429842c5e582b2265233f5ec75be4165c507d",
+          "storage_label": "Rebuild batch 3 · B-04, B-05, B-06 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:13:37-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "c0f39267bf4d38c0a3205e4a898561b7cd8f251f",
+          "storage_label": "Depth batch 2 · B-04, B-05, B-06 carried to mapped · 18 terminal dispositions, 3 confirmed bugs (B04-4 MEDIUM, B05-1 MEDIUM, B04-5 LOW scope-restricted), 15 claim targets all survived",
+          "observed_at": "2026-09-12T08:58:23-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -1966,35 +2302,65 @@
             "claim_id": "B-06-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-06/flow/describe-a-file/01 did not overturn it: the CASE produces exactly the five states named, in that precedence, and the view is built over file_ledger so a path with no row produces no row at all — which is what leaves unledgered to be inferred rather than selected. The ELSE branch the claim does not mention is reachable only for a classification outside the CHECK, and folds to scoped-unread.",
-            "record": "field-note:37"
+            "record": "claim-challenge-outcome:30",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:37",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-06/flow/describe-a-file/02",
             "claim_id": "B-06-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-06/flow/describe-a-file/02 did not overturn it: the budget is measured on the emitted bytes because the dispatcher honours the tool's compact flag, and the 512-byte locus cap is enforced both in the advertised schema and in boundedSubject, so neither bound rests on a host behaving well.",
-            "record": "field-note:38"
+            "record": "claim-challenge-outcome:31",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:38",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-06/key-type/mcp-server-src-standing-ts-standing-authority-order",
             "claim_id": "B-06-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-06/key-type/mcp-server-src-standing-ts-standing-authority-order did not overturn it: the order is one exported array read by the resolver, and the mixed case takes the minimum over it rather than a first-wins or last-wins scan, so a file owned by disagreeing subsystems authorizes what its weakest owner does.",
-            "record": "field-note:35"
+            "record": "claim-challenge-outcome:32",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:35",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-06/key-type/mcp-server-src-tools-locus-ts-no-claims-statement",
             "claim_id": "B-06-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-06/key-type/mcp-server-src-tools-locus-ts-no-claims-statement did not overturn it: the literal is a module constant emitted in place of the structure section, and the survey prose beside it carries its own not-revision-bound label, so a reader cannot mistake an unrecorded inventory for an empty one.",
-            "record": "field-note:36"
+            "record": "claim-challenge-outcome:33",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:36",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-06/state-container",
             "claim_id": "B-06-C05",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-06/state-container did not overturn it: the probe looked for a memo or cache that would outlive a call — the obvious place being the repeated git probes standing performs — and found the GitProbe built per call, so the cost is paid again each time rather than being retained.",
-            "record": "field-note:39"
+            "record": "claim-challenge-outcome:34",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:39",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -2020,25 +2386,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "907c3b36cf0c0a7f18f3d0b40f4626a95fbec591",
+          "storage_label": "Rebuild batch 4 · B-07, B-08, B-09 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:16:15-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "71352a50f48a17c6aa5a5e7ca40cc112005524f1",
+          "storage_label": "Depth batch 3 · B-07, B-08, B-09 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B07-1 MEDIUM, B08-1 LOW), 12 claim targets all survived",
+          "observed_at": "2026-09-12T09:03:39-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -2272,28 +2665,52 @@
             "claim_id": "B-07-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-07/concurrency did not overturn it: every git call in the pass completes before ctx.db.transaction opens, and the transaction contains no subprocess, so the window the claim describes is between the diff and the transaction and nowhere inside it.",
-            "record": "field-note:46"
+            "record": "claim-challenge-outcome:35",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:46",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-07/flow/detect-changes/01",
             "claim_id": "B-07-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-07/flow/detect-changes/01 did not overturn it: the catch around the per-group diff pushes the whole group to unverifiable and continues, so no row of a failed group reaches the fresh bucket by falling through.",
-            "record": "field-note:43"
+            "record": "claim-challenge-outcome:36",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:43",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-07/flow/detect-changes/02",
             "claim_id": "B-07-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-07/flow/detect-changes/02 did not overturn it, and found the one asymmetry worth naming: markFresh excludes rows whose reason is 'absent', so a file that returns to the tree is not cleared by this pass. That is deliberate — the row's path is tracked again but nothing re-examined it — and it does not contradict the claim, whose scope is rows that match their examination commit.",
-            "record": "field-note:44"
+            "record": "claim-challenge-outcome:37",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:44",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-07/state-container/mcp-server-src-tools-git-ts-gittools",
             "claim_id": "B-07-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-07/state-container/mcp-server-src-tools-git-ts-gittools did not overturn it: the probe looked for a second writer of the staleness columns and found clear_staleness, which is a tool the coordinator calls rather than a pass, and which lowers the flag without claiming the file was re-examined — so the reconciliation transaction remains the only thing that raises one.",
-            "record": "field-note:45"
+            "record": "claim-challenge-outcome:38",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:45",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -2325,25 +2742,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "907c3b36cf0c0a7f18f3d0b40f4626a95fbec591",
+          "storage_label": "Rebuild batch 4 · B-07, B-08, B-09 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:16:15-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "71352a50f48a17c6aa5a5e7ca40cc112005524f1",
+          "storage_label": "Depth batch 3 · B-07, B-08, B-09 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B07-1 MEDIUM, B08-1 LOW), 12 claim targets all survived",
+          "observed_at": "2026-09-12T09:03:39-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -2568,28 +3012,52 @@
             "claim_id": "B-08-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-08/concurrency did not overturn it: the probe looked for a snapshot mechanism that would make the claim's \"cannot see a consistent moment\" wrong — a BEGIN, a deferred transaction, immutable=1 — and found none; the URI sets immutable=0 explicitly, which is the opposite choice.",
-            "record": "field-note:50"
+            "record": "claim-challenge-outcome:39",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:50",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-08/flow/publish/01",
             "claim_id": "B-08-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-08/flow/publish/01 did not overturn it: missing_views runs before _plan and its non-empty result returns a refusal, so no page is rendered and nothing is written when a view is absent.",
-            "record": "field-note:48"
+            "record": "claim-challenge-outcome:40",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:48",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-08/key-type/materializer-amanuensis-materializer-db-py-open-ro",
             "claim_id": "B-08-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-08/key-type/materializer-amanuensis-materializer-db-py-open-ro did not overturn it: the URI carries mode=ro, which SQLite enforces at the connection rather than by convention, so the process cannot create a view even if a renderer tried — which is what makes the view probe a statement about the store.",
-            "record": "field-note:47"
+            "record": "claim-challenge-outcome:41",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:47",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-08/state-container/materializer-amanuensis-materializer-core-py-materializer",
             "claim_id": "B-08-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-08/state-container/materializer-amanuensis-materializer-core-py-materializer did not overturn it: the connection is opened inside materialize rather than in __init__ and closed in that function's finally, and no module-level cache survives the call, so a second run re-reads the store rather than a memo of it.",
-            "record": "field-note:49"
+            "record": "claim-challenge-outcome:42",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:49",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -2621,25 +3089,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "907c3b36cf0c0a7f18f3d0b40f4626a95fbec591",
+          "storage_label": "Rebuild batch 4 · B-07, B-08, B-09 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:16:15-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "71352a50f48a17c6aa5a5e7ca40cc112005524f1",
+          "storage_label": "Depth batch 3 · B-07, B-08, B-09 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B07-1 MEDIUM, B08-1 LOW), 12 claim targets all survived",
+          "observed_at": "2026-09-12T09:03:39-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -2816,28 +3311,52 @@
             "claim_id": "B-09-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-09/concurrency did not overturn it, and its honesty is the part that survives: the verification opens no store connection at all, so it genuinely cannot speak to what the store did during the render — the claim understates nothing and overstates nothing.",
-            "record": "field-note:54"
+            "record": "claim-challenge-outcome:43",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:54",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-09/key-type/materializer-amanuensis-materializer-readback-py-ledger-stale-sections",
             "claim_id": "B-09-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-09/key-type/materializer-amanuensis-materializer-readback-py-ledger-stale-sections did not overturn it: the three headings map to disjoint classification sets, the partition is checked against OBLIGATION_BEARING_CLASSIFICATIONS rather than against the page, and a heading claiming a classification twice or none is reported by name.",
-            "record": "field-note:52"
+            "record": "claim-challenge-outcome:44",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:52",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-09/key-type/materializer-amanuensis-materializer-readback-py-write-contract",
             "claim_id": "B-09-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-09/key-type/materializer-amanuensis-materializer-readback-py-write-contract did not overturn it: the content axis reads the receipt and hashes the finished files, and nothing in that path re-renders a page to compare against, which is what lets a tree verified at one path be shown to be the tree committed at another.",
-            "record": "field-note:51"
+            "record": "claim-challenge-outcome:45",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:51",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-09/state-container",
             "claim_id": "B-09-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-09/state-container did not overturn it: the two files beside the pages are written once per publish and read by the next verification, and nothing in the module retains them in memory across a call.",
-            "record": "field-note:53"
+            "record": "claim-challenge-outcome:46",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:53",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -2863,25 +3382,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "d494da67c87d7dc4747f1044dec4dee6b6541bac",
+          "storage_label": "Rebuild batch 5 · B-10, B-11 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:18:12-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "2d6dd87de6793322eab6d6c914766911b965299d",
+          "storage_label": "Depth batch 4 · B-10, B-11 carried to mapped · 12 terminal dispositions, 3 confirmed bugs (B10-1 MEDIUM, B11-1 LOW, B11-2 LOW), 8 claim targets all survived",
+          "observed_at": "2026-09-12T09:10:01-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -3133,28 +3679,52 @@
             "claim_id": "B-10-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-10/concurrency did not overturn it: the prose does permit concurrent phase subagents and coordinates none, and the probe's question — whether that is a hazard — is answered outside the prose, by one server process holding one synchronous connection, so two passes serialize at the handle rather than by agreement.",
-            "record": "field-note:61"
+            "record": "claim-challenge-outcome:47",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:61",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-10/flow/survey-a-subsystem/01",
             "claim_id": "B-10-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-10/flow/survey-a-subsystem/01 did not overturn it: phase-2-structural.md names the five key shapes and defines the slug as the whole path:symbol pair, and claims.ts refuses a file-anchored claim on the same grounds — the prose and the refusal agree, and the refusal is the one that binds.",
-            "record": "field-note:59"
+            "record": "claim-challenge-outcome:48",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:59",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-10/key-type/claude-skills-amanuensis-skill-md-autonomous-phase-execution",
             "claim_id": "B-10-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-10/key-type/claude-skills-amanuensis-skill-md-autonomous-phase-execution did not overturn it: the table is present with a row per status, the text states that autonomous execution does not relax it, and the mapped row says explicitly that status alone is not proof a finding survived challenge — so the prose does not claim more for the ladder than the server enforces.",
-            "record": "field-note:58"
+            "record": "claim-challenge-outcome:49",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:58",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-10/state-container",
             "claim_id": "B-10-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-10/state-container did not overturn it, and this pass is itself the evidence: every durable thing produced here went through a tool call, and the only state the prose held was in the reading of it.",
-            "record": "field-note:60"
+            "record": "claim-challenge-outcome:50",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:60",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -3186,25 +3756,52 @@
       },
       "status_ladder": [
         {
+          "from": null,
+          "to": "unmapped",
+          "covers": [
+            "unmapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
+          "storage_label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
+          "observed_at": "2026-09-12T08:05:01-04:00"
+        },
+        {
+          "from": "unmapped",
+          "to": "structural",
+          "covers": [
+            "scoping",
+            "structural"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "d494da67c87d7dc4747f1044dec4dee6b6541bac",
+          "storage_label": "Rebuild batch 5 · B-10, B-11 surveyed to structural with claims and cited edges",
+          "observed_at": "2026-09-12T08:18:12-04:00"
+        },
+        {
           "from": "structural",
-          "to": "concerns",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "concerns",
-          "to": "adversarial",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        },
-        {
-          "from": "adversarial",
           "to": "mapped",
-          "tool": "update_subsystem_status",
-          "session_id": "mtyetk3r-agx105wt",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "covers": [
+            "concerns",
+            "adversarial",
+            "mapped"
+          ],
+          "source": "storage-checkpoint",
+          "transition_id": null,
+          "tool": null,
+          "session_id": null,
+          "ref_sha": null,
+          "storage_commit": "2d6dd87de6793322eab6d6c914766911b965299d",
+          "storage_label": "Depth batch 4 · B-10, B-11 carried to mapped · 12 terminal dispositions, 3 confirmed bugs (B10-1 MEDIUM, B11-1 LOW, B11-2 LOW), 8 claim targets all survived",
+          "observed_at": "2026-09-12T09:10:01-04:00"
         }
       ],
       "active_concern_denominator": 6,
@@ -3477,28 +4074,52 @@
             "claim_id": "B-11-C04",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-11/concurrency did not overturn it: no CI job reads an artifact another job wrote — there is no upload-artifact or download-artifact step in the workflow — so the jobs are independent by construction rather than by ordering.",
-            "record": "field-note:65"
+            "record": "claim-challenge-outcome:51",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:65",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-11/flow/prove-a-gate/01",
             "claim_id": "B-11-C02",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-11/flow/prove-a-gate/01 did not overturn it: the header states its red conditions and its false greens, and the scrub table routes every emitted line through a replacement pass, so the crash signatures the launcher rejects cannot appear in a message about an absent deliverable.",
-            "record": "field-note:63"
+            "record": "claim-challenge-outcome:52",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:63",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-11/key-type/github-workflows-test-yml-pecia-defects",
             "claim_id": "B-11-C01",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-11/key-type/github-workflows-test-yml-pecia-defects did not overturn it: the job carries an if: on a repository variable, and once enabled an unset token fails the step with a message rather than skipping — the distinction the claim describes is in the workflow, where a script cannot undo it.",
-            "record": "field-note:62"
+            "record": "claim-challenge-outcome:53",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:62",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
             "claim_key": "B-11/state-container",
             "claim_id": "B-11-C03",
             "outcome": "survived",
             "challenge": "adversarial probe for claim B-11/state-container did not overturn it: the receipts are read by later runs and written by none of them, and the claim's own qualification — a receipt proves what was true when it was written and nothing about now — is why each gate pairs the receipt arm with a live arm wherever a subject exists.",
-            "record": "field-note:64"
+            "record": "claim-challenge-outcome:54",
+            "recorded_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "session_id": "mtyhz0dy-j0u391g2",
+            "validity_event": null,
+            "field_note": "field-note:64",
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
@@ -4099,6 +4720,36 @@
   ],
   "field_notes_recorded": 68,
   "storage_history": [
+    {
+      "sha": "7864b703bb22fa8a7569d1964248eb59422612ec",
+      "date": "2026-09-12T10:45:35-04:00",
+      "message": "session mtyhz0dy-j0u391g2 ended (completed)"
+    },
+    {
+      "sha": "6d2958afbb522b8f03be5c3f081042e6469d83e7",
+      "date": "2026-09-12T10:45:35-04:00",
+      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "15eff1723aae1b5758b1063f31cd6ad6da27673d",
+      "date": "2026-09-12T10:45:34-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "a6f6ee96818564512b7bf124816b753f142e1237",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "session mtyhtj8d-3pwkwl91 ended (completed)"
+    },
+    {
+      "sha": "d7da702059975a746dd5261959b75d5243db0bfc",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "b8fa49adcc43a6ebe843a30f996ef3804af48cec",
+      "date": "2026-09-12T10:41:19-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
     {
       "sha": "2d15fed7b5d465561464d6856663b0731a86aaa5",
       "date": "2026-09-12T09:17:32-04:00",

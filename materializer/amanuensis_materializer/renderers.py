@@ -264,12 +264,87 @@ def resolve_workspace(storage: Path) -> Path:
     return storage.parent
 
 
+#: What a page is titled when nothing in the record names the project. A
+#: directory name is *not* the fallback: the worktree this store was surveyed
+#: from is an accident of where the checkout lives, and publishing it as the
+#: project's identity told readers of the Amanuensis self-conspectus that they
+#: were reading about `amanuensis-reader-lenses` (slice-S6, F9/codex).
+UNNAMED_PROJECT = "Project (name not recorded)"
+
+
+def _binding_name(storage: Path) -> str | None:
+    """The project name its binding metadata carries, or None.
+
+    `initialization.json` records the identity the binding resolved at first
+    use: `remote:<host>/<namespace>/<repo>` when the workspace has an origin,
+    and `local:<absolute path>` when it does not. Only the remote form names
+    the project — the local form's last segment *is* the worktree directory,
+    which is the value this function exists to avoid.
+    """
+
+    receipt = storage / "initialization.json"
+    if not receipt.is_file():
+        return None
+    try:
+        record = json.loads(receipt.read_text())
+    except (OSError, ValueError):
+        return None
+    identity = str(record.get("projectIdentity") or "")
+    if not identity.startswith("remote:"):
+        return None
+    key = str(record.get("projectKey") or identity[len("remote:") :])
+    segments = [segment for segment in key.split("/") if segment]
+    return segments[-1] if segments else None
+
+
+def _package_name(workspace: Path) -> str | None:
+    """The name the workspace's own package manifest declares, or None."""
+
+    manifest = workspace / "package.json"
+    if manifest.is_file():
+        try:
+            declared = json.loads(manifest.read_text()).get("name")
+        except (OSError, ValueError):
+            declared = None
+        if isinstance(declared, str) and declared.strip():
+            # A scoped npm name (`@scope/pkg`) names the package, not the scope.
+            return declared.strip().split("/")[-1]
+    for pyproject in (workspace / "pyproject.toml",):
+        if not pyproject.is_file():
+            continue
+        try:
+            lines = pyproject.read_text().splitlines()
+        except OSError:
+            continue
+        in_project = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("["):
+                in_project = stripped == "[project]"
+                continue
+            if in_project and stripped.startswith("name"):
+                _, _, value = stripped.partition("=")
+                declared = value.strip().strip("\"'")
+                if declared:
+                    return declared
+    return None
+
+
 def project_name(storage: Path) -> str:
     """The project's own name, which is the projection's primary identity.
 
     Amanuensis is the producing method and never the title
     (`reporting-style.md` § "Keep information architecture and interface design
     separate").
+
+    Three sources, in the order of how deliberately each was chosen: the name
+    onboarding recorded, the name the repository binding resolved, and the name
+    the workspace's package manifest declares. A directory name is not among
+    them at any position. A store surveyed from a second worktree, a scratch
+    clone, or a temporary checkout answers with the same project name as the
+    first, because none of those change the binding — and where the record
+    genuinely names nothing, the page says so rather than presenting the
+    checkout's folder as an identity.
     """
 
     report = storage / "onboarding-report.md"
@@ -280,7 +355,13 @@ def project_name(storage: Path) -> str:
                 if recorded:
                     return recorded
                 break
-    return resolve_workspace(storage).name or "Project"
+    bound = _binding_name(storage)
+    if bound:
+        return bound
+    declared = _package_name(resolve_workspace(storage))
+    if declared:
+        return declared
+    return UNNAMED_PROJECT
 
 
 def _git_output(workspace: Path, *args: str) -> str | None:

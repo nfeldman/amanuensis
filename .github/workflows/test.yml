@@ -261,6 +261,14 @@ jobs:
       # because the store they were made against is not.
       - name: Dogfood — the committed receipt, the attention fan-in, and the promoted docs/
         run: node dev/test-reader-lenses-dogfood.mjs
+      # The regeneration pass that closed slice-S6's F6, F7 and F9: the durable
+      # challenge-outcome record and the `mapped` prerequisite over it, the
+      # recorded status ladder, the registry crossings, and the project's
+      # canonical name. Its first arm drives the real write path against a
+      # throwaway store, so it runs from the repository root with mcp-server's
+      # dependencies already installed by this job.
+      - name: Regeneration — challenge outcomes, the recorded ladder, the registry edges, the project name
+        run: node dev/test-rebuild-regeneration.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs

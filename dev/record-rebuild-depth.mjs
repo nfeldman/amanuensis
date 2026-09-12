@@ -23,14 +23,26 @@
 //     into a subsystem's active-concern denominator. Putting them in both places
 //     would make a seam assessment look like a missing disposition everywhere it
 //     does not apply.
-//   - A claim target's `record` names where its outcome is durable: a field note
-//     for `survived`, a claim validity event for `overturned` and `superseded`.
-//     A survived claim changes no row, so without that pointer it is
-//     indistinguishable from a claim nobody looked at.
+//   - A claim target's `record` names the `claim_challenge_outcomes` row that
+//     carries its outcome. A surviving claim changes no other row, so without
+//     that record it is indistinguishable from a claim nobody looked at — which
+//     is the state slice-S6 (F6/codex) found the store in, and why the table
+//     exists. `field_note` and `validity_event` carry the probe note and the
+//     closing event the row points back at, when it points at one.
+//   - A status ladder rung names the record that **witnesses** it, and carries
+//     only the fields that record can supply. A rung written by a status writer
+//     after `subsystem_status_transitions` existed names its row, its tool, its
+//     session and its revision; a rung climbed before the table existed is
+//     witnessed by the storage checkpoint whose committed `memory.db` shows the
+//     subsystem at the new status, and reports `tool: null` rather than naming
+//     one the checkpoint cannot see. Nothing here reconstructs a rung from the
+//     subsystem's current status: that reconstruction is what made the depth
+//     gate's ladder assertion a zero-denominator green (slice-S6, F6/codex).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,14 +59,16 @@ const CONTRACT = "amanuensis-reader-lenses/rebuild-depth-receipt/v1";
 // a seam concern this pass opened.
 const SEAM_CONCERN = /^SC-\d+$/;
 
+// The survey progression, which the recorded ladder is read against.
+const STATUS_ORDER = ["unmapped", "scoping", "structural", "concerns", "adversarial", "mapped"];
+
 // The storage checkpoint labels this pass writes.
 const BATCH_LABEL = /^Depth batch (\d+) · (.*)$/;
 const SUBSYSTEM_ID = /\bB-\d{2}\b/g;
 
-// phase-4-adversarial.md's own wording, which is what the probe notes were
-// written to carry, so the outcome is read off the record rather than assumed.
-const SURVIVED_NOTE = /adversarial probe for claim (\S+) did not overturn it/;
-const CHALLENGED_NOTE = /adversarial probe for claim (\S+) (overturned|superseded) it/;
+// Finding targets are still read off their probe notes: a finding's verdict
+// vocabulary is phase-4-adversarial.md's own and has no table of its own.
+// Claim targets no longer are — they come out of `claim_challenge_outcomes`.
 const FINDING_NOTE = /adversarial probe for finding (\S+)/;
 
 function git(args, cwd = REPO) {
@@ -113,6 +127,15 @@ const claimEventRows = all(
   "SELECT id, claim_id, event_type, at_sha, reason FROM claim_validity_events ORDER BY id",
 );
 const fieldNoteRows = all("SELECT id, category, observation, location FROM field_notes ORDER BY id");
+const challengeOutcomeRows = all(
+  `SELECT id, claim_id, claim_key, outcome, challenge, at_sha, validity_event_id,
+          field_note_id, session_id, created_at
+     FROM claim_challenge_outcomes ORDER BY id`,
+);
+const statusTransitionRows = all(
+  `SELECT id, subsystem_id, from_status, to_status, tool, session_id, ref_sha, reason, created_at
+     FROM subsystem_status_transitions ORDER BY id`,
+);
 const openQuestionRows = all(
   "SELECT id, category, subsystem_id, question, what_assumed, resolution FROM open_questions ORDER BY id",
 );
@@ -153,15 +176,14 @@ batches.sort((a, b) => a.n - b.n);
 // covers nothing is how a resumable unit stops meaning anything.
 const sessionClose = storageHistory.find((entry) => /^session \S+ ended/.test(entry.message)) ?? null;
 
-// --- adversarial outcomes, read off the records that carry them ---------------
-const survivedNoteByKey = new Map();
-const challengedNoteByKey = new Map();
+// Read once, before anything uses it: extracting eighteen committed databases
+// is the expensive part of this script, and every subsystem's ladder reads the
+// same observations.
+const checkpointObservations = statusesByCheckpoint();
+
+// --- adversarial outcomes, read off the record that carries them -------------
 const findingNotesById = new Map();
 for (const note of fieldNoteRows) {
-  const survived = SURVIVED_NOTE.exec(note.observation);
-  if (survived) survivedNoteByKey.set(survived[1], note.id);
-  const challenged = CHALLENGED_NOTE.exec(note.observation);
-  if (challenged) challengedNoteByKey.set(challenged[1], note.id);
   const finding = FINDING_NOTE.exec(note.observation);
   if (finding) {
     if (!findingNotesById.has(finding[1])) findingNotesById.set(finding[1], []);
@@ -169,46 +191,72 @@ for (const note of fieldNoteRows) {
   }
 }
 
-const eventsByClaimId = new Map();
-for (const event of claimEventRows) {
-  if (event.event_type === "asserted") continue;
-  if (!eventsByClaimId.has(event.claim_id)) eventsByClaimId.set(event.claim_id, []);
-  eventsByClaimId.get(event.claim_id).push(event);
+/** Every recorded outcome for one claim, oldest first. The record is append-only. */
+const outcomesByClaimId = new Map();
+for (const row of challengeOutcomeRows) {
+  if (!outcomesByClaimId.has(row.claim_id)) outcomesByClaimId.set(row.claim_id, []);
+  outcomesByClaimId.get(row.claim_id).push(row);
 }
 
 /**
  * One outcome per `claim_key` P17 left current — the denominator Phase 4 owes.
- * A key whose claim carries a non-`asserted` validity event was challenged and
- * lost or was superseded; otherwise the survived note is the record.
+ *
+ * Read entirely out of `claim_challenge_outcomes`: the outcome, the challenge
+ * that produced it, and the row that makes it durable. Nothing is inferred
+ * from the shape of a field note or from the presence of a validity event, and
+ * a claim with no recorded outcome comes out with `record: ""` so the gate can
+ * see the hole rather than a default. The **latest** row wins, because the
+ * record is append-only and a later pass appends rather than edits.
  */
 function claimTargetsFor(sid) {
   const owed = (coverage.subsystems.find((row) => row.id === sid)?.claims ?? []).map((c) => c.claim_key);
   return owed.map((key) => {
     const rowsForKey = claimRows.filter((row) => row.claim_key === key);
-    const challenged = rowsForKey
-      .flatMap((row) => eventsByClaimId.get(row.claim_id) ?? [])
+    const outcomes = rowsForKey
+      .flatMap((row) => outcomesByClaimId.get(row.claim_id) ?? [])
       .sort((a, b) => a.id - b.id);
-    if (challenged.length) {
-      const event = challenged[challenged.length - 1];
+    const latest = outcomes.length ? outcomes[outcomes.length - 1] : null;
+    const current = rowsForKey.find((row) => row.valid_until_sha === null) ?? null;
+    if (!latest) {
       return {
         claim_key: key,
-        claim_id: event.claim_id,
-        outcome: event.event_type === "invalidated" ? "overturned" : "superseded",
-        challenge: event.reason,
-        record: `claim-validity-event:${event.id}`,
-        re_asserted_as:
-          rowsForKey.find((row) => row.valid_until_sha === null && row.claim_id !== event.claim_id)
-            ?.claim_id ?? null,
+        claim_id: current?.claim_id ?? null,
+        outcome: "",
+        challenge: "",
+        record: "",
+        validity_event: null,
+        field_note: null,
       };
     }
-    const noteId = survivedNoteByKey.get(key) ?? challengedNoteByKey.get(key) ?? null;
-    const note = fieldNoteRows.find((row) => row.id === noteId);
     return {
       claim_key: key,
-      claim_id: rowsForKey.find((row) => row.valid_until_sha === null)?.claim_id ?? null,
-      outcome: "survived",
-      challenge: note?.observation ?? "",
-      record: noteId === null ? "" : `field-note:${noteId}`,
+      claim_id: latest.claim_id,
+      outcome: latest.outcome,
+      challenge: latest.challenge,
+      record: `claim-challenge-outcome:${latest.id}`,
+      recorded_at_sha: latest.at_sha,
+      session_id: latest.session_id,
+      validity_event:
+        latest.validity_event_id === null ? null : `claim-validity-event:${latest.validity_event_id}`,
+      field_note: latest.field_note_id === null ? null : `field-note:${latest.field_note_id}`,
+      re_asserted_as:
+        latest.outcome === "survived" && current !== null && current.claim_id !== latest.claim_id
+          ? current.claim_id
+          : undefined,
+      outcomes_recorded: outcomes.length,
+      // The earlier readings of the same `claim_key`, newest of them last. A
+      // key whose first reading was overturned and whose re-assertion survived
+      // reports `survived` — that is where the account stands — and the
+      // overturning is here rather than dropped, because an outcome list that
+      // kept only the latest row would make a challenged account and an
+      // unchallenged one look the same from outside.
+      prior_outcomes: outcomes.slice(0, -1).map((row) => ({
+        claim_id: row.claim_id,
+        outcome: row.outcome,
+        record: `claim-challenge-outcome:${row.id}`,
+        validity_event:
+          row.validity_event_id === null ? null : `claim-validity-event:${row.validity_event_id}`,
+      })),
     };
   });
 }
@@ -301,7 +349,7 @@ const subsystems = subsystemRows
           ? { path: artifact.path, content_hash: artifact.content_hash, bytes: artifact.bytes }
           : null;
       })(),
-      status_ladder: ladderFor(row.id, row.status),
+      status_ladder: ladderFor(row.id),
       active_concern_denominator: CHECKLIST.length,
       terminal_dispositions: checklist.length,
       concern_gaps: CHECKLIST.filter((code) => !checklist.some((d) => d.concern_code === code)).map((code) => ({
@@ -326,11 +374,20 @@ const subsystems = subsystemRows
       adversarial: {
         passes: 1,
         claim_targets: targets,
-        outcomes: {
-          survived: targets.filter((t) => t.outcome === "survived").length,
-          overturned: targets.filter((t) => t.outcome === "overturned").length,
-          superseded: targets.filter((t) => t.outcome === "superseded").length,
-        },
+        // Counted over every recorded outcome, not only the latest per key: a
+        // reading that was overturned and then re-asserted is two outcomes,
+        // and reporting one of them would hide the challenge that bit.
+        outcomes: (() => {
+          const every = targets.flatMap((t) => [
+            ...(Array.isArray(t.prior_outcomes) ? t.prior_outcomes.map((p) => p.outcome) : []),
+            t.outcome,
+          ]);
+          return {
+            survived: every.filter((o) => o === "survived").length,
+            overturned: every.filter((o) => o === "overturned").length,
+            superseded: every.filter((o) => o === "superseded").length,
+          };
+        })(),
         finding_verdicts: findings.map((f) => ({
           finding_id: f.finding_id,
           verdict: f.adversarial_verdict,
@@ -380,27 +437,144 @@ function findingConcern(findingId) {
 }
 
 /**
- * The rungs this pass climbed, from where P17 left the subsystem to where it
- * stands now. `update_subsystem_status` is the only writer that moved any of
- * them, and the server replays every intermediate prerequisite on each call,
- * so a recorded rung is one whose deliverable existed when it was taken.
+ * Every subsystem's status as the storage repository's committed `memory.db`
+ * shows it at each checkpoint.
+ *
+ * `commit_phase_gate` checkpoints the WAL into `memory.db` before it stages the
+ * file (`db.ts:checkpointDatabaseForStorageCommit`), so a committed database is
+ * the store as it stood at that moment — which makes the storage history a
+ * durable witness of the ladder for every rung climbed before
+ * `subsystem_status_transitions` existed. It is coarser than a tool call: a
+ * checkpoint taken after a batch shows where the batch ended, not each call it
+ * made. The rung records that honestly, by naming the span it covers.
  */
-function ladderFor(sid, status) {
-  const order = ["unmapped", "scoping", "structural", "concerns", "adversarial", "mapped"];
-  const from = coverage.subsystems.find((row) => row.id === sid)?.status ?? "structural";
-  const start = order.indexOf(from);
-  const end = order.indexOf(status);
-  const steps = [];
-  for (let i = start; i < end; i += 1) {
-    steps.push({
-      from: order[i],
-      to: order[i + 1],
-      tool: "update_subsystem_status",
-      session_id: sessionId,
-      ref_sha: gitState?.last_checked_sha ?? null,
+function statusesByCheckpoint() {
+  const scratch = mkdtempSync(join(tmpdir(), "amanuensis-ladder-"));
+  const observations = [];
+  try {
+    for (const entry of [...storageHistory].reverse()) {
+      const blob = spawnSync("git", ["-C", STORAGE, "show", `${entry.sha}:memory.db`], {
+        encoding: "buffer",
+        maxBuffer: 512 * 1024 * 1024,
+      });
+      if (blob.status !== 0) continue;
+      const path = join(scratch, `${entry.sha}.db`);
+      writeFileSync(path, blob.stdout);
+      let rows = [];
+      try {
+        const snapshot = new DatabaseSync(path, { readOnly: true });
+        rows = snapshot.prepare("SELECT id, status FROM subsystems").all();
+        snapshot.close();
+      } catch {
+        // A checkpoint from before the table existed answers nothing about the
+        // ladder; it is not an error, it is simply not a witness.
+        rows = [];
+      }
+      rmSync(path, { force: true });
+      if (!rows.length) continue;
+      observations.push({ sha: entry.sha, date: entry.date, message: entry.message, rows });
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+  return observations;
+}
+
+
+/**
+ * The ladder a subsystem actually climbed, assembled from the two records that
+ * witness it and from nothing else.
+ *
+ * Both sources are folded into one timeline of *observed statuses*: a
+ * `subsystem_status_transitions` row observes the status it wrote at the
+ * moment it wrote it, and a storage checkpoint observes the status the
+ * committed store held. Sorted by time, a rung is emitted wherever the
+ * observed status changes, carrying the witness that observed the change. A
+ * transition row therefore always wins over the checkpoint that follows it —
+ * it is the earlier and the more precise observation — and the checkpoint is
+ * the witness only where no row exists, which is every rung climbed before the
+ * table did.
+ *
+ * `covers` is the rungs the observation spans. A transition row spans exactly
+ * one; a checkpoint may span several, because a batch commit is coarser than a
+ * tool call. The server replays every intermediate prerequisite on each status
+ * write (`invariants.ts:enforceForwardPrerequisites`), so a span of three is
+ * still three prerequisites that were satisfied — and the gate checks each
+ * covered rung's deliverable against the record rather than taking the span on
+ * trust.
+ */
+function ladderFor(sid) {
+  const timeline = [];
+  for (const row of statusTransitionRows.filter((entry) => entry.subsystem_id === sid)) {
+    timeline.push({
+      at: row.created_at,
+      order: [0, row.id],
+      status: row.to_status,
+      from_hint: row.from_status,
+      witness: {
+        source: "subsystem_status_transitions",
+        transition_id: row.id,
+        tool: row.tool,
+        session_id: row.session_id,
+        ref_sha: row.ref_sha,
+        storage_commit: null,
+        observed_at: row.created_at,
+      },
     });
   }
-  return steps;
+  for (const [index, observation] of checkpointObservations.entries()) {
+    const row = observation.rows.find((entry) => entry.id === sid);
+    if (!row) continue;
+    timeline.push({
+      at: observation.date,
+      order: [1, index],
+      status: row.status,
+      from_hint: null,
+      witness: {
+        source: "storage-checkpoint",
+        transition_id: null,
+        tool: null,
+        session_id: null,
+        ref_sha: null,
+        storage_commit: observation.sha,
+        storage_label: observation.message,
+        observed_at: observation.date,
+      },
+    });
+  }
+  timeline.sort((a, b) => {
+    const byTime = Date.parse(a.at) - Date.parse(b.at);
+    if (byTime !== 0) return byTime;
+    if (a.order[0] !== b.order[0]) return a.order[0] - b.order[0];
+    return a.order[1] - b.order[1];
+  });
+
+  const rungs = [];
+  let current = null;
+  for (const point of timeline) {
+    if (point.status === current) continue;
+    rungs.push({
+      from: current,
+      to: point.status,
+      covers: spanBetween(current, point.status),
+      ...point.witness,
+    });
+    current = point.status;
+  }
+  return rungs;
+}
+
+/**
+ * The rungs of the survey progression an observed change passes through:
+ * everything strictly above `from` up to and including `to`. `deferred` is off
+ * the axis, so a change into or out of it covers only itself.
+ */
+function spanBetween(from, to) {
+  const start = from === null ? -1 : STATUS_ORDER.indexOf(from);
+  const end = STATUS_ORDER.indexOf(to);
+  if (end < 0 || start < 0) return [to];
+  if (end <= start) return [to];
+  return STATUS_ORDER.slice(start + 1, end + 1);
 }
 
 // --- seams ---------------------------------------------------------------------

@@ -393,14 +393,21 @@ export const claimTools: ToolDefinition[] = [
             `no argument behind it is indistinguishable from a claim nobody read`,
         );
       }
-      // The outcome is about the account the subsystem publishes, which is its
-      // *current* claims; a closed interval is history and takes no outcome.
-      const claim = currentClaim(ctx, claimId);
+      const claim = ctx.db.prepare("SELECT * FROM claims WHERE claim_id = ?").get(claimId) as
+        | ClaimRow
+        | undefined;
+      if (!claim) throw new ToolError(`unknown claim: ${claimId}`);
       const atSha = resolveCommit(ctx, requireString(args, "ref_sha"));
       const eventId = optInt(args, "validity_event_id");
       const noteId = optInt(args, "field_note_id");
 
       if (outcome === "survived") {
+        // A claim that survived its challenge is still the account the
+        // subsystem publishes, so it must still be current; a closed interval
+        // is history, and history does not survive a challenge made after it.
+        if (claim.valid_until_sha !== null) {
+          throw new ToolError(`claim ${claimId} is historical, not current authority`);
+        }
         if (eventId !== null) {
           throw new ToolError(
             "a survived claim closed no validity interval, so validity_event_id names an event that cannot be about this outcome",
@@ -414,8 +421,8 @@ export const claimTools: ToolDefinition[] = [
           );
         }
         const event = ctx.db
-          .prepare("SELECT claim_id, event_type FROM claim_validity_events WHERE id = ?")
-          .get(eventId) as { claim_id: string; event_type: string } | undefined;
+          .prepare("SELECT claim_id, event_type, at_sha FROM claim_validity_events WHERE id = ?")
+          .get(eventId) as { claim_id: string; event_type: string; at_sha: string } | undefined;
         if (!event) throw new ToolError(`unknown claim validity event: ${eventId}`);
         if (event.claim_id !== claimId) {
           throw new ToolError(
@@ -426,6 +433,23 @@ export const claimTools: ToolDefinition[] = [
         if (event.event_type !== expected) {
           throw new ToolError(
             `an ${outcome} outcome must cite an '${expected}' event; event ${eventId} is '${event.event_type}'`,
+          );
+        }
+        // The cited event must be the one that closed *this* claim. A claim
+        // that is still current was not overturned, and an event that closed
+        // it at another boundary belongs to a different challenge. This is
+        // also why an overturning outcome is recorded against a historical
+        // claim: closing the interval is what invalidate_claim and
+        // supersede_claim do, so by the time the outcome can cite its event
+        // the claim is no longer current.
+        if (claim.valid_until_sha === null) {
+          throw new ToolError(
+            `claim ${claimId} is still current; an ${outcome} outcome must cite the event that closed it`,
+          );
+        }
+        if (claim.valid_until_sha !== event.at_sha) {
+          throw new ToolError(
+            `claim ${claimId} was closed at ${claim.valid_until_sha}; event ${eventId} is recorded at ${event.at_sha}`,
           );
         }
       }

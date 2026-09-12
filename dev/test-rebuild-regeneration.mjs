@@ -752,6 +752,57 @@ check("an overturning outcome must carry the validity event that overturned it",
   return null;
 });
 
+check("an overturned outcome is accepted on the claim its cited event closed", () => {
+  const missing = needTool("record_claim_challenge");
+  if (missing) return missing;
+  // The positive control. Every case above establishes a refusal; a check
+  // that can only refuse is a check that has never accepted, and this is the
+  // one path an adversarial pass that overturns something has to take.
+  const unit = subsystemAtAdversarial("B-R7");
+  const closing = call(
+    "add_evidence",
+    { file_path: "src/unit.ts", symbol: "Overturn", line_range: "1-1", ref_sha: fixture.head, kind: "code-verified" },
+    fixture.ctx,
+  ).id;
+  call(
+    "invalidate_claim",
+    {
+      claim_id: unit.claimId,
+      at_sha: fixture.head,
+      reason: "the probe found the shape it records is not the shape the code declares",
+      evidence_ids: [closing],
+    },
+    fixture.ctx,
+  );
+  const event = fixture.db
+    .prepare("SELECT id FROM claim_validity_events WHERE claim_id = ? AND event_type = 'invalidated'")
+    .get(unit.claimId);
+  if (!event) return "invalidate_claim recorded no validity event to cite";
+  let written = null;
+  try {
+    written = call(
+      "record_claim_challenge",
+      {
+        claim_id: unit.claimId,
+        outcome: "overturned",
+        challenge: CHALLENGE,
+        ref_sha: fixture.head,
+        validity_event_id: event.id,
+      },
+      fixture.ctx,
+    );
+  } catch (e) {
+    return `an overturning outcome could not be recorded at all — ${e && e.message ? e.message : e}`;
+  }
+  const row = fixture.db
+    .prepare(`SELECT outcome, validity_event_id FROM ${OUTCOME_TABLE} WHERE id = ?`)
+    .get(written?.id);
+  if (!row || row.outcome !== "overturned" || row.validity_event_id !== event.id) {
+    return `the recorded row is ${JSON.stringify(row ?? null)}`;
+  }
+  return null;
+});
+
 check("both records are append-only in the substrate, not merely by convention", () => {
   const missing = needFixture();
   if (missing) return missing;

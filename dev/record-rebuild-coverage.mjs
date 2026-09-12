@@ -10,8 +10,20 @@
 //
 // It derives, and does not accept, everything it can: batches come from the
 // storage repository's own checkpoint commits, claims and their evidence from
-// the tables, and the citation tokens from each edge's stored context. Nothing
-// here is typed in twice.
+// the tables, the citation tokens from each edge's stored context, and the
+// project's own name from the binding receipt rather than from any directory.
+// Nothing here is typed in twice.
+//
+// Two of its blocks exist to give the coverage gate a denominator it does not
+// read out of the same place as the numerator (GP24):
+//
+//   - `registry_ownership` maps every module `mcp-server/src/index.ts` imports
+//     to the subsystem(s) whose file ledger owns it. The gate re-parses that
+//     tracked file for itself and re-derives the crossings, so an edge that is
+//     missing from the store cannot be hidden by omitting it here.
+//   - `registry_crossings` is the resulting set of `(from, to)` pairs, written
+//     down so that a crossing dropped from the store and from the ownership
+//     map at the same time still fails against the re-derivation.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -203,6 +215,71 @@ const xrefs = xrefRows.map((edge) => ({
     }),
 }));
 
+// --- the registry's own crossings, re-derived from the tracked source --------
+// `index.ts` is the one file that decides which tools a host can call, so the
+// subsystems it imports from are dependencies of B-01 whether or not anyone
+// recorded an edge for them (slice-S6, F7/codex). The import list is read off
+// the file rather than declared, so a new import appears in the denominator
+// the moment it is written.
+const INDEX_REL = "mcp-server/src/index.ts";
+const IMPORT_SPECIFIER = /^\s*import\s[^;]*?from\s+"(\.\/[^"]+)"/gm;
+
+function registryImports() {
+  const source = readFileSync(join(REPO, INDEX_REL), "utf8");
+  const found = new Set();
+  let match = IMPORT_SPECIFIER.exec(source);
+  while (match !== null) {
+    found.add(`mcp-server/src/${String(match[1]).replace(/^\.\//, "").replace(/\.js$/, "")}.ts`);
+    match = IMPORT_SPECIFIER.exec(source);
+  }
+  return [...found].sort();
+}
+
+const ownersByPath = new Map();
+for (const row of ledgerRows) {
+  if (!ownersByPath.has(row.file_path)) ownersByPath.set(row.file_path, new Set());
+  ownersByPath.get(row.file_path).add(row.subsystem_id);
+}
+
+const registryOwnership = {};
+for (const path of [INDEX_REL, ...registryImports()]) {
+  registryOwnership[path] = [...(ownersByPath.get(path) ?? [])].sort();
+}
+
+const importerOwners = registryOwnership[INDEX_REL] ?? [];
+const crossingPairs = new Map();
+for (const [path, owners] of Object.entries(registryOwnership)) {
+  if (path === INDEX_REL) continue;
+  for (const importer of importerOwners) {
+    for (const owner of owners) {
+      if (owner === importer) continue;
+      const key = `${importer}\u0000${owner}`;
+      if (!crossingPairs.has(key)) crossingPairs.set(key, { from_id: importer, to_id: owner, via: [] });
+      crossingPairs.get(key).via.push(path);
+    }
+  }
+}
+const registryCrossings = [...crossingPairs.values()].sort((a, b) =>
+  a.from_id === b.from_id ? a.to_id.localeCompare(b.to_id) : a.from_id.localeCompare(b.from_id),
+);
+const recordedPairs = new Set(xrefRows.map((edge) => `${edge.from_id}\u0000${edge.to_id}`));
+for (const crossing of registryCrossings) {
+  crossing.recorded = recordedPairs.has(`${crossing.from_id}\u0000${crossing.to_id}`);
+}
+
+// --- the project's canonical name, from the binding receipt ------------------
+// Never from the storage directory or the worktree basename: this worktree is
+// `amanuensis-reader-lenses` and the project is `amanuensis` (slice-S6,
+// F9/codex). The recorded identity is what the binding decided at
+// initialization, so the name survives being surveyed from a second worktree.
+const initialization = JSON.parse(readFileSync(join(STORAGE, "initialization.json"), "utf8"));
+const projectKey = initialization.projectKey;
+const projectName = String(projectKey ?? "")
+  .split("/")
+  .filter(Boolean)
+  .slice(-1)[0];
+if (!projectName) throw new Error(`the binding receipt carries no usable project key: ${projectKey}`);
+
 const dashboardCounts = {
   subsystem_count: subsystemRows.length,
   structural_or_beyond: subsystemRows.filter((row) =>
@@ -223,7 +300,9 @@ const receipt = {
   repository_sha: head,
   workspace_path: REPO,
   storage_path: STORAGE,
-  project_key: JSON.parse(readFileSync(join(STORAGE, "initialization.json"), "utf8")).projectKey,
+  project_key: projectKey,
+  project_name: projectName,
+  project_name_source: `initialization.json projectIdentity ${initialization.projectIdentity}`,
   produced_by: "dev/record-rebuild-coverage.mjs",
   onboarding: {
     session_id: onboardingSession?.session_id ?? null,
@@ -255,6 +334,8 @@ const receipt = {
   },
   batches,
   subsystems,
+  registry_ownership: registryOwnership,
+  registry_crossings: registryCrossings,
   xrefs,
   seams: seamRows,
   storage_history: storageHistory,
@@ -273,5 +354,6 @@ process.stdout.write(
   `wrote ${OUT_REL}: ${dashboardCounts.subsystem_count} subsystems ` +
     `(${dashboardCounts.structural_or_beyond} structural, ${dashboardCounts.deferred} deferred), ` +
     `${dashboardCounts.claims} claims over ${dashboardCounts.claim_evidence} evidence rows, ` +
-    `${dashboardCounts.xrefs} edges, ${dashboardCounts.seams} seams, ${batches.length} batches\n`,
+    `${dashboardCounts.xrefs} edges over ${registryCrossings.length} registry crossing(s), ` +
+    `${dashboardCounts.seams} seams, ${batches.length} batches, project ${projectName}\n`,
 );
