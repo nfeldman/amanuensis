@@ -630,8 +630,8 @@
         ".github/workflows/test.yml"
       ],
       "gate": {
-        "test_path": "materializer/test-history-and-contested.py",
-        "command": "cd materializer && python3 test-history-and-contested.py",
+        "test_path": "materializer/test-history-and-disagreements.py",
+        "command": "cd materializer && python3 test-history-and-disagreements.py",
         "red_expect": "disagreements|resolved-leads|basis",
         "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
@@ -650,7 +650,7 @@
         "sessions.md carries sessions, refresh runs, and projection verification runs",
         "Every empty lens page states scope, basis, and checked revision",
         "how-to-read.md tables are generated from conspectus-vocabulary.json and list every enum value the server enforces",
-        "The red(P9) commit contains materializer/test-history-and-contested.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The red(P9) commit contains materializer/test-history-and-disagreements.py and its red output matches gate.red_expect, not a module-not-found error",
         "The packet's gate runs in .github/workflows/test.yml",
         "resolved-leads.md carries answered, dismissed, and superseded questions ordered by resolved_at and closed field notes ordered by id, each group stating what the store does not record about how they got there",
         "A seeded accepted finding with an empty rationale renders basis none-recorded and is counted under Terminal without a recorded basis, rather than as resolved-with-proof",
@@ -1323,7 +1323,7 @@
       "cd mcp-server && node test-locus-standing.mjs",
       "cd mcp-server && node test-locus-compactness.mjs",
       "cd materializer && python3 test-lens-pages.py",
-      "cd materializer && python3 test-history-and-contested.py",
+      "cd materializer && python3 test-history-and-disagreements.py",
       "cd materializer && python3 test-search-index.py",
       "cd mcp-server && node test-structural-claims.mjs",
       "cd mcp-server && node test-phase2-claims-gate.mjs",

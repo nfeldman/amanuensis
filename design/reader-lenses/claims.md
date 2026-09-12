@@ -383,10 +383,10 @@ Evidence:
 ### C31
 
 The page plan is the table in `spec.md` §7.1: `files.md`, `not-yet-surveyed.md`,
-`contested.md`, `stale.md`, `hot-spots.md`, `resolved-findings.md`, `resolution-history.md`, and
-`sessions.md` are added; `findings.md`, `contradictions.md`, `field-notes.md`, `seams.md`,
-`vocabulary.md`, `concerns.md`, `diagnosticity.md`, and the prose passthroughs change group or
-membership only.
+`disagreements.md`, `stale.md`, `hot-spots.md`, `resolved-findings.md`, `resolution-history.md`,
+`resolved-leads.md`, and `sessions.md` are added; `findings.md`, `contradictions.md`,
+`field-notes.md`, `seams.md`, `vocabulary.md`, `concerns.md`, `diagnosticity.md`, and the prose
+passthroughs change group or membership only.
 
 Evidence:
 - `materializer/amanuensis_materializer/core.py:323-379` — the current static page plan and its four groups.

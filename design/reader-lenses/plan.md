@@ -19,7 +19,7 @@
 | P6 | describe_locus, its contract, and read-only annotations | ready | P5 | `mcp-server/test-locus-standing.mjs` | C7, C15, C16, C17, C21, C22, C26, C59, C55, C63 |
 | P7 | Response budgets and the omission ledger | ready | P6 | `mcp-server/test-locus-compactness.mjs` | C14, C18, C19, C20, C55, C63 |
 | P8 | Page plan, navigation groups, Files, and Not yet surveyed | ready | P2, P4, P5 | `materializer/test-lens-pages.py` | C30, C31, C33, C34, C35, C55, C63 |
-| P9 | Unresolved and History pages; reader's guide from the enum source | ready | P8 | `materializer/test-history-and-contested.py` | C28, C36, C37, C38, C58, C61, C55, C63 |
+| P9 | Unresolved and History pages; reader's guide from the enum source | ready | P8 | `materializer/test-history-and-disagreements.py` | C28, C36, C37, C38, C58, C61, C55, C63 |
 | P10 | Locus search index and accessible interface enhancement | ready | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41, C55, C63 |
 
 ## S3 · Documentation from claims (review: pending)
@@ -129,7 +129,7 @@
 - `cd mcp-server && node test-locus-standing.mjs`
 - `cd mcp-server && node test-locus-compactness.mjs`
 - `cd materializer && python3 test-lens-pages.py`
-- `cd materializer && python3 test-history-and-contested.py`
+- `cd materializer && python3 test-history-and-disagreements.py`
 - `cd materializer && python3 test-search-index.py`
 - `cd mcp-server && node test-structural-claims.mjs`
 - `cd mcp-server && node test-phase2-claims-gate.mjs`
