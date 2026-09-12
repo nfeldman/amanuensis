@@ -39,6 +39,10 @@
 //   node dev/rebuild-self-conspectus-store.mjs --confirm [--archive <dir>]
 //                                              [--receipt <path>]
 //                                              [--discard-populated-store]
+//                                              [--workspace <dir>]
+//
+// `--workspace` exists for the gate: it runs this procedure against a
+// throwaway workspace, so the sequence below is executed rather than described.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -57,7 +61,17 @@ import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER = join(REPO, "mcp-server", "dist", "index.js");
-const STORAGE = join(REPO, ".amanuensis");
+// The repository root is the workspace in the real run. `--workspace` points it
+// at a throwaway instead, which is how dev/test-rebuild-readback.mjs runs *this
+// procedure* rather than a reimplementation of it: the review found that
+// deleting the stop step below left the gate green (F1/codex). REPO still
+// supplies the built server and the A0 fixtures either way.
+const WORKSPACE = resolve(
+  process.argv.indexOf("--workspace") >= 0 && process.argv[process.argv.indexOf("--workspace") + 1]
+    ? process.argv[process.argv.indexOf("--workspace") + 1]
+    : REPO,
+);
+const STORAGE = join(WORKSPACE, ".amanuensis");
 const DB_FILES = ["memory.db", "memory.db-wal", "memory.db-shm"];
 const MARKER_FILE = "initialization.json";
 const REQUIRED_VIEWS = ["file_standing", "finding_state_current"];
@@ -94,8 +108,8 @@ function die(message) {
 }
 
 function client() {
-  const child = spawn(process.execPath, [SERVER, "--workspace", REPO, "--allow-workspace-pin"], {
-    cwd: REPO,
+  const child = spawn(process.execPath, [SERVER, "--workspace", WORKSPACE, "--allow-workspace-pin"], {
+    cwd: WORKSPACE,
     env: { ...process.env, AMANUENSIS_AUTOPROGRESS: "1" },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -201,15 +215,18 @@ if (!flag("--confirm")) {
 }
 if (!existsSync(SERVER)) die(`the built server is absent at ${SERVER}; run npm run build first.`);
 
-const receiptPath = resolve(REPO, arg("--receipt", "design/reader-lenses/rebuild-receipt.json"));
+const receiptPath = resolve(WORKSPACE, arg("--receipt", "design/reader-lenses/rebuild-receipt.json"));
 const archive = resolve(
   arg("--archive", join(tmpdir(), `amanuensis-pre-rebuild-${Date.now()}`)),
 );
 if (existsSync(archive)) die(`the archive path already exists: ${archive}`);
 
-const repositorySha = spawnSync("git", ["-C", REPO, "rev-parse", "HEAD"], {
+const repositorySha = spawnSync("git", ["-C", WORKSPACE, "rev-parse", "HEAD"], {
   encoding: "utf8",
 }).stdout.trim();
+if (!/^[0-9a-f]{40}$/.test(repositorySha)) {
+  die(`the workspace at ${WORKSPACE} has no HEAD to bind the receipt to.`);
+}
 
 // --- step 1: snapshot ------------------------------------------------------
 const before = client();

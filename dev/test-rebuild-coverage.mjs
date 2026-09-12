@@ -62,6 +62,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -177,8 +178,6 @@ function sha256(absPath) {
 function isHex(value, min, max) {
   return typeof value === "string" && new RegExp(`^[0-9a-f]{${min},${max}}$`).test(value);
 }
-
-import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
 function git(args) {
   return spawnSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });

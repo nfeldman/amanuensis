@@ -78,6 +78,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -191,8 +192,6 @@ function isHex(value, min, max) {
 function nonEmpty(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
-
-import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
 function git(args) {
   return spawnSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });

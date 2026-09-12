@@ -60,15 +60,18 @@ import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -298,8 +301,6 @@ function client(workspace) {
   };
 }
 
-import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
-
 function pidProbe(pid) {
   try {
     process.kill(pid, 0);
@@ -489,9 +490,170 @@ async function runProcedure() {
   return trace;
 }
 
+// ---------------------------------------------------------------------------
+// Arm 0 — the production driver, executed. Arm 1 below carries out §12.1
+// steps 1–5 itself, and the independent review showed what that costs: with
+// `await before.stop()` deleted from dev/rebuild-self-conspectus-store.mjs the
+// gate stayed green, because it reimplemented the procedure instead of running
+// it (F1/codex). So the driver now takes `--workspace` and is run here against
+// a throwaway one. The sequence under test is the one the real rebuild used.
+// ---------------------------------------------------------------------------
+const DRIVER_REL = "dev/rebuild-self-conspectus-store.mjs";
+
+async function runDriver() {
+  const trace = { ran: false };
+  if (!existsSync(join(REPO, SERVER_REL))) {
+    trace.blocked = `the built server is absent at ${SERVER_REL}; run \`npm run build\` in mcp-server/`;
+    return trace;
+  }
+  if (!existsSync(join(REPO, DRIVER_REL))) {
+    trace.blocked = `the rebuild driver is absent at ${DRIVER_REL}`;
+    return trace;
+  }
+  const root = scratch("p16-driver-");
+  const workspace = join(root, "workspace");
+  const archive = join(root, "archive");
+  const receiptPath = join(root, "driver-receipt.json");
+  mkdirSync(workspace, { recursive: true });
+  for (const args of [
+    ["init", "-q", workspace],
+    ["-C", workspace, "config", "user.email", "p16-gate@invalid"],
+    ["-C", workspace, "config", "user.name", "P16 gate"],
+  ]) {
+    const step = spawnSync("git", args, { encoding: "utf8" });
+    if (step.status !== 0) {
+      trace.blocked = `could not prepare a throwaway workspace: ${scrub(step.stderr ?? "").trim()}`;
+      return trace;
+    }
+  }
+  writeFileSync(join(workspace, "README.md"), "throwaway workspace for the P16 driver arm\n");
+  for (const args of [
+    ["-C", workspace, "add", "-A"],
+    ["-C", workspace, "commit", "-q", "-m", "seed"],
+  ]) {
+    const step = spawnSync("git", args, { encoding: "utf8" });
+    if (step.status !== 0) {
+      trace.blocked = `could not seed a throwaway workspace: ${scrub(step.stderr ?? "").trim()}`;
+      return trace;
+    }
+  }
+
+  const run = spawnSync(
+    process.execPath,
+    [
+      join(REPO, DRIVER_REL),
+      "--confirm",
+      "--workspace",
+      workspace,
+      "--archive",
+      archive,
+      "--receipt",
+      receiptPath,
+    ],
+    { cwd: REPO, encoding: "utf8", timeout: 600_000 },
+  );
+  trace.exitStatus = run.status;
+  trace.stdout = scrub(run.stdout ?? "");
+  trace.stderr = scrub((run.stderr ?? "").trim().slice(-600));
+  try {
+    trace.receipt = existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, "utf8")) : null;
+  } catch {
+    trace.receipt = null;
+  }
+  trace.storageGone = !existsSync(join(workspace, ".amanuensis", "memory.db-wal"));
+  trace.ran = true;
+  return trace;
+}
+
 emit("P16 — snapshot, discard, and reinitialize the self-conspectus store");
 emit("");
-emit("§12.1 steps 1–5, executed against throwaway server processes");
+emit(`§12.1 steps 1–5, carried out by ${DRIVER_REL} against a throwaway workspace`);
+
+let driver;
+try {
+  driver = await runDriver();
+} catch (error) {
+  driver = {
+    ran: false,
+    blocked: `the driver could not be run — ${scrub(error?.message ?? String(error))}`,
+  };
+}
+
+await check(`${DRIVER_REL} carries out the whole procedure and exits 0`, () => {
+  if (driver.blocked) return driver.blocked;
+  if (driver.exitStatus !== 0) {
+    return `the driver exited ${driver.exitStatus}: ${driver.stderr || "no stderr"}`;
+  }
+  if (driver.receipt === null) return "the driver wrote no parseable receipt";
+  return null;
+});
+
+await check(`${DRIVER_REL} stops its server and proves the pid is gone before deleting`, () => {
+  if (driver.blocked) return driver.blocked;
+  // This is the assertion the review's sabotage has to trip. The driver refuses
+  // to delete while the pid it stopped is still addressable, so deleting the
+  // stop step makes it exit 1 here instead of recording a clean stop.
+  if (driver.exitStatus !== 0) {
+    return `the driver exited ${driver.exitStatus} rather than stopping its server before the deletion: ${
+      driver.stderr || driver.stdout.trim().split("\n").slice(-1)[0] || "no output"
+    }`;
+  }
+  const stop = driver.receipt?.stop ?? null;
+  if (!stop) return "the driver's receipt records no stop step";
+  if (stop.exited_before_deletion !== true) {
+    return "the driver's receipt does not record the server as exited before the deletion";
+  }
+  if (stop.pid_probe_after_exit !== "ESRCH") {
+    return `the driver probed its stopped pid as ${JSON.stringify(stop.pid_probe_after_exit ?? null)}, not ESRCH`;
+  }
+  if (!/^server \d+ stopped \(pid probe: ESRCH\)$/m.test(driver.stdout)) {
+    return "the driver's own output does not report the stop-and-probe step";
+  }
+  const stopAt = driver.stdout.indexOf("stopped (pid probe:");
+  const discardAt = driver.stdout.indexOf("discarded ");
+  if (stopAt < 0 || discardAt < 0 || stopAt > discardAt) {
+    return "the driver's output does not place the stop before the discard";
+  }
+  return null;
+});
+
+await check(`${DRIVER_REL} reinitializes and reads back an empty store`, () => {
+  if (driver.blocked) return driver.blocked;
+  if (driver.exitStatus !== 0) return `the driver exited ${driver.exitStatus}`;
+  const readback = driver.receipt?.readback ?? null;
+  if (!readback) return "the driver's receipt records no read-back";
+  if (readback.get_project_info?.db_exists !== true) {
+    return "the driver's read-back does not report a live database";
+  }
+  if (readback.read_by_a_further_process !== true) {
+    return "the driver's read-back was not performed by a further process";
+  }
+  if (readback.subsystems !== 0) {
+    return `the driver read back ${readback.subsystems} subsystem(s) from a store it had just emptied`;
+  }
+  return null;
+});
+
+await check(`${DRIVER_REL} leaves the snapshot reachable from the store that replaced it`, () => {
+  if (driver.blocked) return driver.blocked;
+  if (driver.exitStatus !== 0) return `the driver exited ${driver.exitStatus}`;
+  const snapshotSha = driver.receipt?.snapshot?.commit_sha ?? null;
+  const restored = driver.receipt?.history_restored?.commits ?? null;
+  if (!snapshotSha) return "the driver's receipt records no snapshot commit";
+  if (!Array.isArray(restored) || !restored.length) {
+    return "the driver's receipt records no storage history after the rebuild";
+  }
+  const reaches = restored.some((commit) =>
+    String(commit?.sha ?? "").startsWith(String(snapshotSha).slice(0, 7)),
+  );
+  if (!reaches) {
+    return `the rebuilt store's history does not reach the snapshot ${snapshotSha}`;
+  }
+  return null;
+});
+
+emit("");
+emit("§12.1 steps 1–5, executed again against throwaway server processes");
 
 // Nothing the procedure does may reach stdout as a stack trace: a gate that
 // dies mid-step has not evaluated its assertions, and the launcher is right to
