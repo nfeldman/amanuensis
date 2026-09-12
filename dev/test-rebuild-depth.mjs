@@ -214,6 +214,8 @@ function isHex(value, min, max) {
   return typeof value === "string" && new RegExp(`^[0-9a-f]{${min},${max}}$`).test(value);
 }
 
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
+
 function git(args) {
   return spawnSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
@@ -299,9 +301,11 @@ check("the depth receipt declares its contract and binds itself to this reposito
     return `the depth receipt declares ${JSON.stringify(receipt.contract ?? null)}, not ${RECEIPT_CONTRACT}`;
   }
   if (receipt.packet !== "P19") return `the depth receipt names packet ${JSON.stringify(receipt.packet ?? null)}`;
+  const bound = resolveRevisions(REPO, [receipt.repository_sha], "the depth receipt's repository_sha");
   if (!isHex(receipt.repository_sha, 7, 40)) {
     return "the depth receipt does not bind itself to a repository revision";
   }
+  if (bound) return bound;
   if (typeof receipt.storage_path !== "string" || !receipt.storage_path.endsWith("/.amanuensis")) {
     return `the depth receipt's storage path is not a workspace-local store: ${JSON.stringify(receipt.storage_path ?? null)}`;
   }
@@ -327,19 +331,8 @@ check("every subsystem row carries the store's last_checked_sha, and it resolves
   if (disagreeing.length) {
     return `subsystem(s) ${disagreeing.map((row) => row.id).join(", ")} record a last_checked_sha other than the store's ${expected}`;
   }
-  const shallow = git(["rev-parse", "--is-shallow-repository"]).stdout?.toString().trim();
-  if (shallow !== "false") {
-    emit("       (revision ancestry not evaluable in a shallow clone; the launcher's worktree is a full one)");
-    return null;
-  }
-  if (git(["cat-file", "-e", `${expected}^{commit}`]).status !== 0) {
-    return `the store's last_checked_sha ${expected} does not resolve in this repository`;
-  }
-  const head = git(["rev-parse", "HEAD"]).stdout?.toString().trim();
-  if (git(["merge-base", "--is-ancestor", expected, head]).status !== 0) {
-    return `the store's last_checked_sha ${expected} is not an ancestor of HEAD, so the survey was checked against a state not on this branch`;
-  }
-  return null;
+  // Shallow used to be a note-and-pass here; it is RED now (F2/codex).
+  return resolveRevisions(REPO, [expected], "the store's last_checked_sha");
 });
 
 check("every subsystem P17 carried to structural is mapped here, and nothing P17 deferred is", () => {

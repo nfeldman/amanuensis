@@ -192,6 +192,8 @@ function nonEmpty(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
+
 function git(args) {
   return spawnSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
@@ -245,6 +247,8 @@ check("the dogfood receipt declares its contract and binds itself to this reposi
   if (!isHex(receipt.repository_sha, 7, 40)) {
     return "the dogfood receipt does not bind itself to a repository revision";
   }
+  const bound = resolveRevisions(REPO, [receipt.repository_sha], "the dogfood receipt's repository_sha");
+  if (bound) return bound;
   if (typeof receipt.storage_path !== "string" || !receipt.storage_path.endsWith("/.amanuensis")) {
     return `the dogfood receipt's storage path is not a workspace-local store: ${JSON.stringify(receipt.storage_path ?? null)}`;
   }
@@ -257,11 +261,8 @@ check("the dogfood receipt declares its contract and binds itself to this reposi
   if (!isHex(receipt.store?.last_checked_sha, 40, 40)) {
     return `the dogfood receipt records the store's last_checked_sha as ${JSON.stringify(receipt.store?.last_checked_sha ?? null)}, not a resolved commit`;
   }
-  const shallow = git(["rev-parse", "--is-shallow-repository"]).stdout?.trim();
-  if (shallow === "false" && git(["cat-file", "-e", `${receipt.store.last_checked_sha}^{commit}`]).status !== 0) {
-    return `the store's last_checked_sha ${receipt.store.last_checked_sha} does not resolve in this repository`;
-  }
-  return null;
+  // A shallow clone used to skip this silently; it is RED now (F2/codex).
+  return resolveRevisions(REPO, [receipt.store.last_checked_sha], "the store's last_checked_sha");
 });
 
 // ---------------------------------------------------------------------------

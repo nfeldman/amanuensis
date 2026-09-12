@@ -178,6 +178,8 @@ function isHex(value, min, max) {
   return typeof value === "string" && new RegExp(`^[0-9a-f]{${min},${max}}$`).test(value);
 }
 
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
+
 function git(args) {
   return spawnSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
@@ -634,31 +636,18 @@ check("every revision the receipt cites resolves and is an ancestor of HEAD", ()
     }
   }
   if (isHex(receipt.onboarding?.onboarding_sha, 40, 40)) shas.add(receipt.onboarding.onboarding_sha);
+  // The receipt's own binding is a cited revision too: checking it for hex
+  // shape alone accepted forty zeroes (F2/codex).
+  if (typeof receipt.repository_sha === "string" && receipt.repository_sha) {
+    shas.add(receipt.repository_sha);
+  }
   if (!shas.size) return "the receipt cites no revision at all, so nothing binds its claims and edges to the code";
-  // The `mcp-server` CI job checks out at depth 1. A shallow clone cannot answer
-  // ancestry, and answering "green" from a clone that cannot see the history
-  // would be the zero-denominator green this gate exists to avoid — so the
-  // outcome is reported as not evaluable here rather than as a pass. The
-  // launcher's verification worktree is a full clone, where it is evaluated.
-  const shallow = git(["rev-parse", "--is-shallow-repository"]).stdout?.toString().trim();
-  if (shallow !== "false") {
-    emit(`       (revision ancestry not evaluable in a shallow clone; ${shas.size} revision(s) unresolved here)`);
-    return null;
-  }
-  const head = git(["rev-parse", "HEAD"]).stdout?.toString().trim();
-  const unresolved = [];
-  const unreachable = [];
-  for (const sha of shas) {
-    if (git(["cat-file", "-e", `${sha}^{commit}`]).status !== 0) {
-      unresolved.push(sha);
-      continue;
-    }
-    if (git(["merge-base", "--is-ancestor", sha, head]).status !== 0) unreachable.push(sha);
-  }
-  if (unresolved.length) return `revision(s) ${unresolved.join(", ")} do not resolve in this repository`;
-  if (unreachable.length) {
-    return `revision(s) ${unreachable.join(", ")} are not ancestors of HEAD, so what they cite is not on this branch`;
-  }
+  // Unevaluable ancestry is RED, not a note-and-pass. It used to be the
+  // latter, and the `mcp-server` CI job checked out at depth 1, so this check
+  // never evaluated there at all — the zero-denominator green these gates
+  // exist to refuse (VP4). That job now uses `fetch-depth: 0`.
+  const failure = resolveRevisions(REPO, shas, "the revisions the receipt cites");
+  if (failure) return failure;
   return null;
 });
 

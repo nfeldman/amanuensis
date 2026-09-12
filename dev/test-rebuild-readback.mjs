@@ -298,6 +298,8 @@ function client(workspace) {
   };
 }
 
+import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
+
 function pidProbe(pid) {
   try {
     process.kill(pid, 0);
@@ -688,6 +690,9 @@ await check("the receipt declares its contract and the packet that wrote it", ()
   if (!/^[0-9a-f]{7,40}$/.test(receipt.repository_sha ?? "")) {
     return "the receipt does not bind itself to a repository revision";
   }
+  // Hex shape alone accepted forty zeroes (F2/codex): resolve it for real.
+  const bound = resolveRevisions(REPO, [receipt.repository_sha], "the receipt's repository_sha");
+  if (bound) return bound;
   if (typeof receipt.storage_path !== "string" || !receipt.storage_path.endsWith("/.amanuensis")) {
     return `the receipt's storage path is not a workspace-local store: ${JSON.stringify(receipt.storage_path ?? null)}`;
   }

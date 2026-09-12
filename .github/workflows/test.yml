@@ -92,6 +92,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The rebuild gates below resolve every receipt revision against
+          # the history; at the default depth 1 they could not evaluate it.
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "24.18.0"
