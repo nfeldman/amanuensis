@@ -250,20 +250,43 @@ def source_alignment(conn: sqlite3.Connection, storage: Path) -> dict[str, Any]:
     workspace = resolve_workspace(storage)
     branch = str(git.get("canonical_branch") or "")
     head = _git_output(workspace, "rev-parse", "HEAD")
-    origin = (
-        _git_output(workspace, "rev-parse", "--verify", f"refs/remotes/origin/{branch}")
-        if branch
-        else None
-    )
+    upstream_ref, upstream = _upstream_of(workspace, branch)
     return {
         "canonical_branch": branch,
         "last_checked_sha": str(git.get("last_checked_sha") or ""),
         "last_checked_at": str(git.get("last_checked_at") or ""),
         "onboarding_sha": str(git.get("onboarding_sha") or ""),
         "workspace_head": head or "",
-        "origin_head": origin or "",
+        "upstream_ref": upstream_ref,
+        # Kept under its original key; the value is now whatever ref the branch
+        # actually tracks, which is what the row always meant to report.
+        "origin_head": upstream or "",
         **ledger_freshness(conn),
     }
+
+
+def _upstream_of(workspace: Path, branch: str) -> tuple[str, str]:
+    """The remote-tracking revision of the canonical branch, and its ref name.
+
+    `refs/remotes/origin/<branch>` is one configuration, not the shape of the
+    question.  A fork tracks `upstream`, a clone made with `--origin` names the
+    remote something else, and a branch may track a differently-named branch on
+    it -- and in each of those the hard-coded path resolves nothing, so the
+    dimension a reader consults to see whether the survey is behind says the
+    revision is not known when git can name it exactly.  `@{upstream}` is
+    git's own answer to the question; origin remains the fallback for a branch
+    with no tracking configured.
+    """
+
+    if not branch:
+        return "", ""
+    configured = _git_output(workspace, "rev-parse", "--abbrev-ref", f"{branch}@{{upstream}}")
+    if configured:
+        resolved = _git_output(workspace, "rev-parse", "--verify", f"{branch}@{{upstream}}")
+        if resolved:
+            return configured, resolved
+    fallback = _git_output(workspace, "rev-parse", "--verify", f"refs/remotes/origin/{branch}")
+    return (f"origin/{branch}" if fallback else ""), (fallback or "")
 
 
 def _short(sha: str) -> str:
@@ -417,7 +440,14 @@ def render_index(
                 ),
             ),
             ("Repository head", _relation(checked, alignment["workspace_head"])),
-            ("Origin head", _relation(checked, alignment["origin_head"])),
+            (
+                # The row is named for the question, not for one remote. Which
+                # ref answered it belongs in the value, where it is a fact about
+                # this workspace rather than a heading that changes shape.
+                "Upstream head",
+                _relation(checked, alignment["origin_head"])
+                + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
+            ),
             (
                 "Files carrying a survey obligation marked stale",
                 f"{stale_obligation} of {obligation}"

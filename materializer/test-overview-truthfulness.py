@@ -734,8 +734,8 @@ def main() -> int:
                     )
             elif not re.search(r"not (known|recorded|available)", body, re.I):
                 return "Source alignment neither resolves nor disclaims the repository head"
-            if not re.search(r"\bOrigin head\b", body):
-                return "Source alignment omits the origin head"
+            if not re.search(r"\bUpstream head\b", body):
+                return "Source alignment omits the upstream head"
             if not re.search(r"\b1\s+of\s+3\b", body):
                 return (
                     "Source alignment does not report 1 of 3 obligation-bearing ledger"
@@ -997,7 +997,7 @@ def main() -> int:
         shutil.rmtree(root, ignore_errors=True)
 
     # -- a canonical branch that does not track origin -----------------------
-    # "Origin head" is the overview's only external reference point, and a
+    # The upstream row is the overview's only external reference point, and a
     # hard-coded refs/remotes/origin/<branch> resolves nothing in the repos that
     # most need it: a fork whose upstream is `upstream`, a clone made with
     # --origin, a branch tracking a differently-named branch.  The dimension
