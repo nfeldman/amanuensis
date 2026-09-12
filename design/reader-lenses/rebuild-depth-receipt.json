@@ -1062,7 +1062,7 @@
             "claim_key": "B-03/key-type/mcp-server-src-schema-sql-claims",
             "claim_id": "B-03-C01",
             "outcome": "survived",
-            "challenge": "adversarial probe for claim B-03/key-type/mcp-server-src-schema-sql-claims did not overturn it: the table declares asserted_at_sha, valid_from_sha and a nullable valid_until_sha with a CHECK refusing an interval that closes where it opens, and supersede_claim closes the predecessor and inserts the successor in one commit rather than updating a row.",
+            "challenge": "adversarial probe for claim B-03/key-type/mcp-server-src-schema-sql-claims did not overturn it: the table declares asserted_at_sha, valid_from_sha and a nullable valid_until_sha with a CHECK refusing an interval that closes where it opens, and supersede_claim closes the predecessor and inserts the successor in one commit by updating only the predecessor's valid_until_sha and inserting the successor in the same commit, so neither reading is overwritten.",
             "record": "field-note:17"
           },
           {

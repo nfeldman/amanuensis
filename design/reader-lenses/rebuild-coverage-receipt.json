@@ -616,7 +616,7 @@
           "subject_type": "symbol",
           "subject_id": "mcp-server/src/schema.sql:claims",
           "epistemic_kind": "observation",
-          "statement": "A claim is an immutable row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Superseding a claim closes the old interval and inserts a new row, so the record keeps both readings rather than overwriting one.",
+          "statement": "A claim is a row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Only the interval's end is ever written after insertion: invalidation and supersession both UPDATE the predecessor's valid_until_sha, and supersession then inserts the successor, so the history is preserved by a controlled close-plus-insert rather than by immutability.",
           "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
           "evidence": [
             {

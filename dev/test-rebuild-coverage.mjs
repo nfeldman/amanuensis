@@ -617,6 +617,57 @@ check("every seam between two subsystems has an edge, and no structural subsyste
   return null;
 });
 
+// ---------------------------------------------------------------------------
+// The published narrative against the code it describes. The rebuilt B-03
+// claim called claim rows immutable and the adversarial pass upheld it saying
+// supersession happens "rather than updating a row", while both invalidation
+// and supersession execute `UPDATE claims SET valid_until_sha` (F8/codex). A
+// claim about the schema that the schema's own writers contradict is a defect
+// in the record, not a wording quibble — so the contradiction is asserted
+// against the source rather than left to a reader to notice.
+// ---------------------------------------------------------------------------
+const MUTABILITY_SOURCE = "mcp-server/src/tools/claims.ts";
+const CLAIM_INTERVAL_UPDATE = /UPDATE claims SET valid_until_sha/;
+
+check(`no receipt describes claim rows as never updated while ${MUTABILITY_SOURCE} updates them`, () => {
+  const missing = requireReceipt();
+  if (missing) return missing;
+  const sourcePath = join(REPO, MUTABILITY_SOURCE);
+  if (!existsSync(sourcePath)) {
+    return `${MUTABILITY_SOURCE} is absent, so the narrative cannot be checked against it`;
+  }
+  const source = readFileSync(sourcePath, "utf8");
+  const updates = CLAIM_INTERVAL_UPDATE.test(source);
+  // Both directions matter: if the code stops updating the interval in place,
+  // this check must stop demanding that the prose say it does.
+  const narratives = [];
+  for (const row of subsystemsOf()) {
+    for (const claim of Array.isArray(row?.claims) ? row.claims : []) {
+      if (typeof claim?.statement === "string") {
+        narratives.push([`claim ${claim.claim_key ?? "(unkeyed)"}`, claim.statement]);
+      }
+    }
+  }
+  const offenders = narratives.filter(
+    ([, text]) =>
+      /\bimmutable row\b/i.test(text) || /rather than (updating|overwriting) a row/i.test(text),
+  );
+  if (updates && offenders.length) {
+    return (
+      `${offenders.map(([where]) => where).join(", ")} describe(s) a claim row as never updated, ` +
+      `but ${MUTABILITY_SOURCE} executes UPDATE claims SET valid_until_sha on both the ` +
+      "invalidation and the supersession path"
+    );
+  }
+  if (!updates && !offenders.length) {
+    return (
+      `${MUTABILITY_SOURCE} no longer updates valid_until_sha in place, so this check is ` +
+      "measuring nothing — re-derive it against whatever closes a claim interval now"
+    );
+  }
+  return null;
+});
+
 check("every revision the receipt cites resolves and is an ancestor of HEAD", () => {
   const missing = requireReceipt();
   if (missing) return missing;
