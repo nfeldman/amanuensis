@@ -724,6 +724,94 @@ check("it refuses a source whose pages do not match the contract it carries", ()
   return null;
 });
 
+check("a red read-back at the destination restores the previous contents and promotes nothing", () => {
+  if (!existsSync(join(REPO, PROMOTE_REL))) return `${PROMOTE_REL} is absent`;
+  if (!sandbox) return "no temporary directory was available to run the promotion against";
+  const source = join(sandbox, "green-source");
+  const destination = join(sandbox, "managed-destination");
+  mkdirSync(source, { recursive: true });
+  mkdirSync(destination, { recursive: true });
+  // A source that passes every check this script can make without a store: its
+  // one page hashes to its contract, and it carries a manifest.
+  const body = "# published\n";
+  writeFileSync(join(source, "index.md"), body);
+  writeFileSync(
+    join(source, CONTRACT_NAME),
+    `${JSON.stringify(
+      { version: 2, pages: [{ path: "index.md", content_hash: sha256(Buffer.from(body, "utf8")) }], local_links: [] },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(join(source, MANIFEST_NAME), `${JSON.stringify({ pages: [{ path: "index.md" }] }, null, 2)}\n`);
+  // A destination whose own manifest claims what is in it, so the promotion is
+  // replacing a managed output rather than somebody else's files.
+  const previous = "# the contents that must survive a red read-back\n";
+  writeFileSync(join(destination, "index.md"), previous);
+  writeFileSync(join(destination, MANIFEST_NAME), `${JSON.stringify({ pages: [{ path: "index.md" }] }, null, 2)}\n`);
+  // The read-back is stubbed rather than run: this arm is about what the
+  // promotion does when the destination comes back red, and forcing the real
+  // materializer to render a red projection would be testing the materializer.
+  // Green on the source, red on the destination — the order promote-docs calls
+  // them in.
+  const stub = join(sandbox, "readback-stub.sh");
+  const green = JSON.stringify({
+    ok: true,
+    axes: { state: { ok: true }, coverage: { ok: true }, content: { ok: true } },
+    mismatch_count: 0,
+    mode: "readback",
+  });
+  const red = JSON.stringify({
+    ok: false,
+    axes: { state: { ok: true }, coverage: { ok: false }, content: { ok: true } },
+    mismatch_count: 3,
+    mode: "readback",
+  });
+  writeFileSync(
+    stub,
+    [
+      "#!/bin/sh",
+      `COUNT="${join(sandbox, "readback-count")}"`,
+      'n=$(cat "$COUNT" 2>/dev/null || echo 0)',
+      "n=$((n+1))",
+      'echo "$n" > "$COUNT"',
+      'if [ "$n" -ge 2 ]; then',
+      `  echo '${red}'`,
+      "  exit 1",
+      "fi",
+      `echo '${green}'`,
+      "exit 0",
+      "",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  const run = spawnSync(
+    process.execPath,
+    [join(REPO, PROMOTE_REL), "--source", source, "--destination", destination, "--json"],
+    {
+      cwd: REPO,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 120_000,
+      env: { ...process.env, AMANUENSIS_PYTHON: stub },
+    },
+  );
+  if (run.error) return `the promotion script could not be run — ${run.error.message}`;
+  if (run.status === 0) {
+    return "the promotion script reported success after the read-back at the destination came back red";
+  }
+  if (readFileSync(join(destination, "index.md"), "utf8") !== previous) {
+    return "a red read-back at the destination left the promoted bytes in place instead of the previous contents";
+  }
+  const leftovers = readdirSync(sandbox, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith(".managed-destination."))
+    .map((entry) => entry.name);
+  if (leftovers.length) {
+    return `the restored promotion left ${leftovers.join(", ")} beside the destination`;
+  }
+  return null;
+});
+
 if (sandbox) {
   try {
     rmSync(sandbox, { recursive: true, force: true });
