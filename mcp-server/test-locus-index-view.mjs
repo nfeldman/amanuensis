@@ -33,7 +33,12 @@
 //     `finding_state_current` instead of turning the publish red by name;
 //   - the gate does not run in CI.
 //
-// False green it cannot exclude: a *consistent* relabelling. If the
+// False green it cannot exclude: the view's `COALESCE(classification,
+// 'candidate')='candidate'` arm and its `ELSE` arm are interchangeable over
+// the CHECK-constrained classification domain — every value that reaches
+// `ELSE` is null, and both arms return `scoped-unread` for it — so rewriting
+// one into the other is a no-op no assertion here can see, and none should.
+// Beyond that: a *consistent* relabelling. If the
 // standing_state literals were renamed in the view, in the enum source, and
 // in this file together, every assertion below would still pass — the
 // fixture table is the only independent statement of what each ledger shape
@@ -57,7 +62,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const MCP = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(MCP, "..");
@@ -205,6 +210,31 @@ try {
   betterSqlite = (await import("better-sqlite3")).default;
 } catch {
   betterSqlite = null;
+}
+
+// A second copy of the built server whose schema.sql this gate controls.
+// `findSchemaPath` resolves `dist/db.js` against `../src/schema.sql`, so a
+// scratch tree of `dist/` beside a trimmed `src/schema.sql` is what lets the
+// open-time view guard be exercised rather than merely read. The tree lives
+// under mcp-server/ so that `better-sqlite3` still resolves.
+const scratchRoots = [];
+let trimmedDb = null;
+let trimmedError = null;
+try {
+  const scratch = mkdtempSync(join(MCP, ".locus-standing-scratch-"));
+  scratchRoots.push(scratch);
+  cpSync(join(MCP, "dist"), join(scratch, "dist"), { recursive: true });
+  mkdirSync(join(scratch, "src"), { recursive: true });
+  const schema = readFileSync(join(REPO, SCHEMA_REL), "utf8");
+  const trimmed = schema.replace(
+    /CREATE VIEW IF NOT EXISTS file_standing AS[\s\S]*?;\n/,
+    "-- file_standing removed by the P5 gate\n",
+  );
+  if (trimmed === schema) trimmedError = "the file_standing view could not be removed";
+  writeFileSync(join(scratch, "src", "schema.sql"), trimmed);
+  trimmedDb = await import(pathToFileURL(join(scratch, "dist", "db.js")).href);
+} catch (e) {
+  trimmedError = `the scratch server copy could not be built — ${e && e.message ? e.message : e}`;
 }
 
 let mods = null;
@@ -398,6 +428,32 @@ function buildFixture() {
     `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note)
      VALUES (?, ?, ?, ?, ?, 'standing fixture')`,
   ).run(3, "src/ledger.ts", "Ledger::writeRow", base, "code-verified");
+  // A qualified symbol with no exact row anywhere: §2.5 reports it under
+  // `match: "prefix"` and never as a citation of `compact` itself.
+  db.prepare(
+    `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note)
+     VALUES (?, ?, ?, ?, ?, 'standing fixture')`,
+  ).run(4, "src/ledger.ts", "compact (bounded retry)", base, "comment-asserted");
+
+  // One current claim and one superseded claim, both bound to the locus
+  // through the same evidence row. `measured.claims_recorded` counts the
+  // current one only: a superseded claim is a historical reading, and
+  // counting it would report authority the store has already withdrawn.
+  const claim = db.prepare(
+    `INSERT INTO claims
+       (claim_id, claim_key, subject_type, subject_id, statement, epistemic_kind,
+        asserted_at_sha, valid_from_sha, valid_until_sha, session_id)
+     VALUES (?, ?, 'symbol', ?, ?, 'observation', ?, ?, ?, 'standing')`,
+  );
+  claim.run("CL-1", "ledger/writeRow/bound", "src/ledger.ts:writeRow",
+    "the row writer retries under a bound", base, base, null);
+  claim.run("CL-0", "ledger/writeRow/unbounded", "src/ledger.ts:writeRow",
+    "the row writer retries without a bound", base, base, head);
+  for (const claimId of ["CL-1", "CL-0"]) {
+    db.prepare("INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, 1, 'supports')").run(
+      claimId,
+    );
+  }
 
   db.prepare(
     `INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha)
@@ -697,6 +753,9 @@ check("owners[] lists every file_standing row in the mandated field order", () =
     const keys = Object.keys(owner).slice(0, OWNER_FIELDS.length);
     if (!jsonEq(keys, OWNER_FIELDS)) return `owner field order is ${JSON.stringify(keys)}`;
   }
+  const names = (standing.owners ?? []).map((o) => `${o.subsystem_id}=${o.subsystem_name}`);
+  if (!jsonEq(names, ["B-01=Ledger", "B-02=Index"]))
+    return `owner names are ${JSON.stringify(names)}`;
   const blockKeys = Object.keys(standing).slice(0, BLOCK_FIELDS.length);
   return jsonEq(blockKeys, BLOCK_FIELDS) ? null : `block field order is ${JSON.stringify(blockKeys)}`;
 });
@@ -788,8 +847,9 @@ check("measured.ledger_reconciled is null where the path has owners, with a rece
   if (measured.reconciliation_receipt?.last_checked_at !== "2026-09-11 01:30:50")
     problems.push("the reconciliation receipt does not carry git_state's checked time");
   if (measured.staleness_measured !== true) problems.push("staleness_measured is not true");
-  if (measured.evidence_rows !== 3) problems.push(`evidence_rows ${measured.evidence_rows}`);
-  if (measured.claims_recorded !== 0) problems.push(`claims_recorded ${measured.claims_recorded}`);
+  if (measured.evidence_rows !== 4) problems.push(`evidence_rows ${measured.evidence_rows}`);
+  // Two claims cite this path; one has been superseded.
+  if (measured.claims_recorded !== 1) problems.push(`claims_recorded ${measured.claims_recorded}`);
   return problems.length ? problems.join("; ") : null;
 });
 
@@ -939,11 +999,15 @@ check("a symbol locus separates an exact citation from a prefix match", () => {
   return problems.length ? problems.join("; ") : null;
 });
 
-check("an uncited symbol does not inherit the file's state", () => {
+check("a prefix match alone is never a citation of the symbol", () => {
   const gap = needFixture();
   if (gap) return gap;
   const { standing } = standingOf("src/ledger.ts:compact");
-  if (standing.symbol_cited !== false) return "symbol_cited is not false";
+  // Evidence id 4 is `compact (bounded retry)` and nothing cites `compact`
+  // exactly, so this is the arm where merging the two would show.
+  if (!jsonEq((standing.symbol_prefix_matches ?? []).map((e) => e.id), [4]))
+    return `prefix matches ${JSON.stringify(standing.symbol_prefix_matches)}`;
+  if (standing.symbol_cited !== false) return "a prefix match was counted as a citation";
   if (standing.symbol_standing !== "not-individually-cited")
     return `symbol_standing ${standing.symbol_standing}`;
   return String(standing.note ?? "").includes("does not extend to this symbol")
@@ -1039,6 +1103,24 @@ check("the probe passes on a store the current server has opened", () => {
     : null;
 });
 
+check("opening a store whose schema omits a required view fails by name", () => {
+  if (trimmedError) return trimmedError;
+  if (!trimmedDb?.openDatabase) return "the scratch server copy exposes no openDatabase";
+  if (!jsonEq([...(trimmedDb.REQUIRED_VIEWS ?? [])], ["file_standing", "finding_state_current"]))
+    return `REQUIRED_VIEWS is ${JSON.stringify(trimmedDb.REQUIRED_VIEWS)}`;
+  const dir = tempRoot("amanuensis-locus-trimmed-");
+  let message = null;
+  try {
+    trimmedDb.openDatabase(join(dir, "memory.db")).close();
+  } catch (e) {
+    message = e && e.message ? e.message : String(e);
+  }
+  if (message === null) return "the open succeeded with file_standing absent from the schema";
+  return message.includes("file_standing")
+    ? null
+    : `the failure does not name the view: ${message}`;
+});
+
 check("the materializer reads the probe from a shared helper, not an inline copy", () => {
   const core = readText(join(REPO, MATERIALIZER_CORE_REL));
   const db = readText(join(REPO, MATERIALIZER_DB_REL));
@@ -1083,7 +1165,7 @@ if (fixture?.db) {
     /* the fixture is being torn down; a close failure changes no verdict */
   }
 }
-for (const dir of roots) rmSync(dir, { recursive: true, force: true });
+for (const dir of [...roots, ...scratchRoots]) rmSync(dir, { recursive: true, force: true });
 
 if (failures.length) {
   emit("");
