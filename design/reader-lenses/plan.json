@@ -340,8 +340,8 @@
       "attempts": 1,
       "start_sha": "77d1904c459ad0c46d6935ebf1a2363e796fb6ec",
       "red_sha": "508a2a06f52b2be3d4bb735be924ab39a2899e12",
-      "green_sha": "82369e641faddea8a023b8df506d4e6254fef018",
-      "verified_by_launcher": false,
+      "green_sha": "aab65845e3a3c42add75cb41011ab94fbcf53415",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Spec gap filled: §11.3 requires one record per obligation-bearing stale row but §6.1 defines membership only for examined and candidate, leaving deferred-with-reason in no section. stale.md therefore carries a third heading, 'Deferred files that changed after they were set aside', and the read-back census requires every obligation-bearing classification to be claimed by exactly one section, so a fourth would be a partition hole rather than a silent drop. stale.md is planned with group='Working record' to match the nav vocabulary in force today; P8 moves it to 'Unresolved' when it introduces NAV_GROUPS. The revision column is headed by what ref_sha means per section — Read at, Scoped at, Deferred at — since heading a candidate's revision 'Read at' asserts a reading nobody took. Parity runs get_dashboard's own scalar subqueries lifted out of dashboard.ts rather than restating them. Twelve sabotages, including four the read-back census cannot see, each turn the gate red."
     },
