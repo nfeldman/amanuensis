@@ -1106,14 +1106,14 @@
       ],
       "needs_mcp": true,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "55b8b90e78b278a58dbd59bd304f1649f972fd7d",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "b208b62ec0fa5651b2acc757739aedca5f0c2d30",
+      "green_sha": "1a03d4420e0cb9b9ab36803beca0db49f77db590",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "§12.1 step 3 is under-specified and the gate records why: removing only memory.db/-wal/-shm leaves initialization.json naming a missing database (the next open fails with a storage-marker error), and removing the marker too trips the incomplete-store rollback, so the discard archives and removes the whole storage directory and then carries the archived Git history back in, leaving the snapshot reachable from the store that replaced it. This worktree carried no self-conspectus store, so the live run exercised the procedure at the real path over a store this packet initialized for it; design/reader-lenses/rebuild-receipt.json says so in words and the gate's procedure arm proves snapshot recoverability against a populated store instead. Two files beyond the listed deliverables: dev/rebuild-self-conspectus-store.mjs (the one-shot driver, --confirm required) and the receipt it writes. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) has been RED since P8 (75cc4dc7) on subsystem-page links to resolved-findings.md; it was already red at P16's start_sha."
     },
     {
       "id": "P17",
