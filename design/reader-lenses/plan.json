@@ -84,7 +84,8 @@
         "P16",
         "P17",
         "P19",
-        "P18"
+        "P18",
+        "P20"
       ],
       "review": {
         "status": "pending",
@@ -1295,6 +1296,75 @@
       "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Publication is two steps and the second one had to be a script: verified live that verify_materialized_docs pointed at the root docs/ answers \"materializer read-back output escapes its configured root\", because resolveStorageOutputPath confines it beneath project.storagePath -- the guard 12.2 itself endorses. dev/promote-docs.mjs therefore invokes the same --readback-only code path the tool wraps (materialize.py, which the handler passes exactly that flag), directly at the destination; the acceptance line naming the tool is satisfied by the operation, not by the wrapper, and that is the one place this packet reads the spec against its own cited evidence. It refuses in a fixed order -- no contract, drifted bytes, unclaimed files, no manifest, a read-back not green on all three axes, an unmanaged destination -- writes nothing until all six pass, and keeps the previous contents in a backup until the promoted tree is re-verified at the destination path. describe_locus is called with sections named (structure, reviews, leads, history_pointer, raising the wire budget from 8192 to 20480): the budget is measured on the doubled envelope, so a default call on a file this well recorded serves zero items, as P7 measured. Two files beyond the deliverables: dev/record-dogfood-receipt.mjs, which takes the three responses over the wire from a spawned server and reads the evidence citations behind each served claim from the store, and the promotion receipt it consumes (scratch only). docs/ is replaced wholesale -- the eight-subsystem A0-era projection is retired for 75 files over 73 contract pages, read-back green on all three axes at docs/ itself. The gate proves the restore-on-red property for the promotion step, which is this packet's own code; the clean-publish half of acceptance 1 was exercised green live and its red path stays materializer/test-readback.py's, which covers the unmanaged-files refusal but not a red read-back leaving the prior output in place. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) is still RED on subsystem-page links to resolved-findings.md, as P16, P17 and P19 recorded; it is not in P18's regression list and this packet changed neither its subject nor its fixture."
+    },
+    {
+      "id": "P20",
+      "slice": "S6",
+      "title": "Regeneration pass: challenge outcomes before mapped, the missing edges, and the canonical project name",
+      "claims": [
+        "C43",
+        "C52",
+        "C54",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P18"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/claims.ts",
+        "dev/record-rebuild-depth.mjs",
+        "dev/record-rebuild-coverage.mjs",
+        "design/reader-lenses/rebuild-depth-receipt.json",
+        "design/reader-lenses/rebuild-coverage-receipt.json",
+        "design/reader-lenses/dogfood-receipt.json",
+        "docs/",
+        "dev/test-rebuild-regeneration.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-regeneration.mjs",
+        "command": "node dev/test-rebuild-regeneration.mjs",
+        "red_expect": "no challenge outcome|mapped without|synthesized ladder|missing edge|project name|worktree basename",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-rebuild-depth.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "Carries the three slice-S6 findings the fix session verified but could not repair in one session: F6 (challenge outcomes and status transitions are not durable, and mapped has no prerequisite), F7 (cross-subsystem dependencies visible in mcp-server/src/index.ts have no recorded edge), F9 (the promoted docs/ take their identity from the worktree basename). Read design/reader-lenses/reviews/slice-S6/codex.md and dispositions.md first",
+        "A durable record of per-claim challenge outcomes exists (a table and a tool to write it, append-only), status transitions are recorded rather than synthesized, invariants.ts refuses the transition to mapped for a subsystem with a current claim that has no recorded challenge outcome, and record-rebuild-depth.mjs builds the ladder and the adversarial block from those records only; test-rebuild-depth.mjs asserts fields it reads, never fields it synthesizes",
+        "Every cross-subsystem import or registration visible in mcp-server/src/index.ts and the tool registry has an xrefs row written through add_xref with a validated citation token, and the coverage denominator names known cross-subsystem imports so a missing edge turns the coverage gate red",
+        "The project's canonical name is recorded during onboarding or derived from binding metadata (the recorded remote or package name), never from the storage or worktree directory; the overview and every page title use it",
+        "The adversarial pass is re-run over the live store where the new outcome record requires it, both rebuild receipts and the dogfood receipt are regenerated from the live store, docs/ is re-rendered with clean_publish, re-verified, and re-promoted through dev/promote-docs.mjs, and every previously green gate stays green",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P20) commit contains dev/test-rebuild-regeneration.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 300,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Inserted by the launcher owner on 2026-09-12 to carry slice-S6 findings F6, F7, and F9, which the fix session verified and could not repair within its budget because they require a regeneration pass over the live store."
     }
   ],
   "completion": {
@@ -1385,6 +1455,7 @@
       "node dev/test-rebuild-coverage.mjs",
       "node dev/test-rebuild-depth.mjs",
       "node dev/test-rebuild-readback.mjs",
+      "node dev/test-rebuild-regeneration.mjs",
       "node dev/test-roadmap.mjs",
       "ruff check materializer/"
     ]

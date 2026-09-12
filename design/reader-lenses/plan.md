@@ -50,6 +50,7 @@
 | P17 | Rebuild the conspectus through the skill with claims-backed Phase 2 | done (1 attempt) | P16 | `dev/test-rebuild-coverage.mjs` | C52, C42, C43, C45, C55, C63 |
 | P19 | Survey every subsystem through concerns, adversarial review, and packaging to mapped | done (1 attempt) | P17 | `dev/test-rebuild-depth.mjs` | C52, C42, C43, C55, C63 |
 | P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | done (1 attempt) | P17, P19 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
+| P20 | Regeneration pass: challenge outcomes before mapped, the missing edges, and the canonical project name | ready | P18 | `dev/test-rebuild-regeneration.mjs` | C43, C52, C54, C55, C63 |
 
 ## Completion
 
@@ -139,6 +140,7 @@
 - `node dev/test-rebuild-coverage.mjs`
 - `node dev/test-rebuild-depth.mjs`
 - `node dev/test-rebuild-readback.mjs`
+- `node dev/test-rebuild-regeneration.mjs`
 - `node dev/test-roadmap.mjs`
 - `ruff check materializer/`
 
