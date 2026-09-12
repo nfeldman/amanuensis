@@ -469,7 +469,19 @@
         "cannot_justify": { "type": "string" },
         "source_rows": { "type": "integer", "minimum": 0 },
         "counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
-        "session_attribution": { "const": "by-citation" }
+        "session_attribution": { "const": "by-citation" },
+        "narrative": {
+          "type": "object",
+          "description": "§3.4's narrative attachment, served only on a `structure` section whose claim list is empty and whose locus is a subsystem. It is a pointer, not prose: the survey artifact's body is rendered on the subsystem page, where the labelling travels with it, rather than inside a response §4.1 bounds to 8192 bytes. It is never revision-bound, because the survey wrote it as one document rather than item by item.",
+          "additionalProperties": false,
+          "required": ["artifact_path", "content_hash", "revision_bound", "label"],
+          "properties": {
+            "artifact_path": { "type": "string", "minLength": 1 },
+            "content_hash": { "type": ["string", "null"] },
+            "revision_bound": { "const": false },
+            "label": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     }
   }

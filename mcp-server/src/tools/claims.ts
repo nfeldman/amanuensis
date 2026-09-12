@@ -11,7 +11,12 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-import { CLAIM_EPISTEMIC_KINDS, type ClaimEpistemicKind } from "../vocabulary.js";
+import {
+  CLAIM_EPISTEMIC_KINDS,
+  CLAIM_SUBJECT_TYPES,
+  type ClaimEpistemicKind,
+  EVIDENCE_KINDS,
+} from "../vocabulary.js";
 
 interface ClaimRow {
   claim_id: string;
@@ -30,6 +35,59 @@ interface ClaimRow {
 interface EvidenceRow {
   id: number;
   ref_sha: string;
+  kind: string;
+  file_path: string;
+}
+
+/**
+ * §9.1's three file-anchored structural categories, as the `claim_key` shape
+ * that names them. A key type, a state container, or a step of a flow is read
+ * off one file, so the record can require that the reading cite it.
+ * `<sid>/concurrency` and `<sid>/seam/<id>` are deliberately outside the
+ * pattern: §9.1 keeps the weaker requirement for them because they are
+ * frequently derived rather than read, and forcing a kind they cannot honestly
+ * carry is the fabrication hazard BP4 names.
+ */
+const FILE_ANCHORED_CLAIM_KEY = /^[^/\s]+\/(key-type|state-container|flow)\//;
+
+/**
+ * The evidence kinds §9.1 accepts for those three categories, filtered out of
+ * the generated vocabulary rather than restated: if the enum source ever drops
+ * one, this list shrinks with it instead of naming a kind nothing can carry.
+ */
+const FILE_ANCHORED_EVIDENCE: readonly string[] = EVIDENCE_KINDS.filter(
+  (kind) => kind === "code-verified" || kind === "contract-stated",
+);
+
+/** §2.1's symbol split: the path is everything before the **first** colon. */
+function subjectPath(subjectId: string): string {
+  const at = subjectId.indexOf(":");
+  return at < 0 ? subjectId : subjectId.slice(0, at);
+}
+
+/**
+ * §9.1's second subtractive check. One attached row must satisfy **both**
+ * halves — a strong kind *and* the file `subject_id` names. Two rows that each
+ * satisfy one half do not satisfy it together: a `code-verified` reading of a
+ * different file says nothing about this symbol, and a `name-inferred` row on
+ * the right file is the classification-from-naming BP6 rules out. The refusal
+ * names the kinds it found, so the caller can see which half failed.
+ */
+function requireFileAnchoredEvidence(
+  claimKey: string,
+  subjectId: string,
+  rows: EvidenceRow[],
+): void {
+  if (!FILE_ANCHORED_CLAIM_KEY.test(claimKey)) return;
+  const path = subjectPath(subjectId);
+  if (rows.some((row) => FILE_ANCHORED_EVIDENCE.includes(row.kind) && row.file_path === path)) {
+    return;
+  }
+  const found =
+    rows.map((row) => `${row.kind} on ${row.file_path}`).join(", ") || "no evidence at all";
+  throw new ToolError(
+    `claim_key ${claimKey} records a key type, state container, or flow step read off ${path}, so at least one attached evidence row must be ${FILE_ANCHORED_EVIDENCE.join(" or ")} *and* cite ${path}; the attached evidence is ${found}`,
+  );
 }
 
 function requireEvidenceIds(args: Record<string, unknown>): number[] {
@@ -92,7 +150,9 @@ function requireEvidence(
   requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence id(s)");
   const placeholders = evidenceIds.map(() => "?").join(",");
   const rows = ctx.db
-    .prepare(`SELECT id, ref_sha FROM evidence WHERE id IN (${placeholders}) ORDER BY id`)
+    .prepare(
+      `SELECT id, ref_sha, kind, file_path FROM evidence WHERE id IN (${placeholders}) ORDER BY id`,
+    )
     .all(...evidenceIds) as EvidenceRow[];
   for (const row of rows) {
     const evidenceSha = resolveCommit(ctx, row.ref_sha);
@@ -219,7 +279,7 @@ export const claimTools: ToolDefinition[] = [
       properties: {
         claim_id: { type: "string" },
         claim_key: { type: "string" },
-        subject_type: { type: "string" },
+        subject_type: { type: "string", enum: CLAIM_SUBJECT_TYPES },
         subject_id: { type: "string" },
         statement: { type: "string" },
         epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
@@ -243,7 +303,9 @@ export const claimTools: ToolDefinition[] = [
       const sessionId = requireActiveSession(ctx, "add_claim");
       const claimId = requireString(args, "claim_id");
       const claimKey = requireString(args, "claim_key");
-      const subjectType = requireString(args, "subject_type");
+      // §9.1's first subtractive check: the enum §10.1's source owns, enforced
+      // by code rather than asked for in a prompt (GP8's v2 scope note).
+      const subjectType = requireEnum(args, "subject_type", CLAIM_SUBJECT_TYPES);
       const subjectId = requireString(args, "subject_id");
       const statement = requireString(args, "statement");
       const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
@@ -255,7 +317,8 @@ export const claimTools: ToolDefinition[] = [
         );
       }
       const evidenceIds = requireEvidenceIds(args);
-      requireEvidence(ctx, evidenceIds, assertedAtSha);
+      const evidenceRows = requireEvidence(ctx, evidenceIds, assertedAtSha);
+      requireFileAnchoredEvidence(claimKey, subjectId, evidenceRows);
 
       try {
         ctx.db.transaction(() => {
@@ -439,6 +502,10 @@ export const claimTools: ToolDefinition[] = [
       properties: {
         claim_id: { type: "string" },
         claim_key: { type: "string" },
+        // Deliberately unconstrained: this is a read filter over stored rows,
+        // and the store carries legacy subject types outside §10.1's enum
+        // (`impact.ts` reads `finding` and `obligation`). Constraining the
+        // filter would make those rows unreachable rather than invalid.
         subject_type: { type: "string" },
         subject_id: { type: "string" },
         epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
@@ -522,6 +589,7 @@ export const claimTools: ToolDefinition[] = [
       type: "object",
       properties: {
         legacy_source: { type: "string" },
+        // As in `get_claims`: a filter over legacy rows, not a writer.
         subject_type: { type: "string" },
         subject_id: { type: "string" },
       },

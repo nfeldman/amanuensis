@@ -110,7 +110,8 @@ const SCRUB = [
   [/No such file or directory/g, "path is absent"],
   [/No such file/g, "path is absent"],
   [/can't open file/g, "cannot open path"],
-  [/SyntaxError/g, "syntax-error"],
+  [/SyntaxError/g, "parse-failure"],
+  [/syntax error/gi, "malformed statement"],
   [/ImportError/g, "python-import-error"],
   [/ReferenceError/g, "reference-error"],
   [/TypeError/g, "type-error"],
@@ -276,6 +277,9 @@ function buildFixture() {
   write("src/ledger.ts", "export const row = 1;\n");
   write("src/candidate.ts", "export const parsed = 1;\n");
   write("src/other.ts", "export const other = 1;\n");
+  // No ledger row anywhere names this file, so evidence citing it reaches no
+  // subsystem through §3.1's evidence arm.
+  write("src/external.ts", "export const external = 1;\n");
   git(workspace, "add", "src");
   git(workspace, "commit", "-q", "--no-verify", "-m", "base");
   const base = git(workspace, "rev-parse", "HEAD");
@@ -349,6 +353,7 @@ function buildFixture() {
     ledgerNamed: evidenceId("src/ledger.ts", "name-inferred", "Cache", base),
     otherCode: evidenceId("src/other.ts", "code-verified", "Cache", base),
     otherNamed: evidenceId("src/other.ts", "name-inferred", "lock", base),
+    externalDoc: evidenceId("src/external.ts", "doc-asserted", "contract", base),
     candidateCode: evidenceId("src/candidate.ts", "code-verified", "parseRow", base),
   };
 
@@ -460,7 +465,10 @@ check("add_claim accepts each of the three subject types the enum names", () => 
       subject_type: "seam",
       subject_id: "S-01",
       statement: "The ledger row crosses to B-02 without a version tag.",
-      evidence_ids: [fixture.ev.otherNamed],
+      // Neither §3.1 arm reaches this claim: its subject is the seam, not the
+      // subsystem, and its evidence cites a file no ledger row names. Only
+      // §9.1's `<sid>/` namespace selects it, on either surface.
+      evidence_ids: [fixture.ev.externalDoc],
     },
   ];
   for (const claim of accepted) {
@@ -620,6 +628,9 @@ check("the structure section serves a subsystem's current claims", () => {
     (item) => typeof item.statement !== "string" || item.statement.length === 0,
   );
   if (unstated.length) return `${unstated.length} served claim(s) carry no statement`;
+  // Each of the three arms carries at least one claim no other arm reaches, so
+  // dropping any one of them turns this assertion red rather than leaving the
+  // other two to cover for it.
   return null;
 });
 
@@ -708,6 +719,154 @@ check("the account validates against the locus-account contract with the narrati
 });
 
 // ---------------------------------------------------------------------------
+// §7.3: the subsystem page
+// ---------------------------------------------------------------------------
+
+const RENDER_DRIVER = `
+import json, sqlite3, sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from amanuensis_materializer.db import rows
+from amanuensis_materializer.renderers import render_subsystem
+
+conn = sqlite3.connect(f"file:{sys.argv[2]}?mode=ro", uri=True)
+storage = Path(sys.argv[3])
+out = {}
+for s in rows(conn, "SELECT id, name, status, layer, scope, jump_in_reading, notes FROM subsystems ORDER BY id"):
+    text, sources = render_subsystem(conn, storage, s)
+    out[s["id"]] = {"text": text, "sources": sorted(sources)}
+sys.stdout.write(json.dumps(out))
+`;
+
+function renderPages() {
+  const driver = join(fixture.root, "render-subsystem.py");
+  writeFileSync(driver, RENDER_DRIVER);
+  const result = spawnSync(
+    PY,
+    [driver, join(REPO, "materializer"), fixture.project.dbPath, fixture.project.storagePath],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    return { error: scrub(String(result.stderr ?? "")).trim().split("\n").slice(-3).join(" / ") };
+  }
+  try {
+    return { pages: JSON.parse(String(result.stdout ?? "")) };
+  } catch {
+    return { error: "the renderer produced no readable page" };
+  }
+}
+
+// The store is written to between renders — `apply_change_impact` closes a
+// claim below — so a render is memoized per named point in that history rather
+// than once for the run. A single memo would have shown the post-impact page to
+// a check written about the page before it.
+const rendered = new Map();
+function pages(at) {
+  if (!rendered.has(at)) rendered.set(at, renderPages());
+  return rendered.get(at);
+}
+
+function structureSection(text) {
+  const match = String(text ?? "").match(/\n## Structure\n([\s\S]*?)(?=\n## |\s*$)/);
+  return match ? match[1] : null;
+}
+
+check("the subsystem page renders current claims, grouped by claim kind", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const { pages: all, error } = pages("before-impact");
+  if (error) return `the subsystem page could not be rendered — ${error}`;
+  const section = structureSection(all?.["B-01"]?.text);
+  if (section === null) return "B-01's page carries no Structure section";
+  if (section.includes(NO_CLAIMS_SENTENCE)) {
+    return "the page renders the zero-claims heading for a subsystem that has claims";
+  }
+  const wanted = [
+    ["state-container", "Cache holds the pending rows until the writer drains it."],
+    ["flow", "writeRow appends the row before it releases the lock."],
+    ["concurrency", "No two writers hold the ledger lock at once."],
+    ["seam", "The ledger row crosses to B-02 without a version tag."],
+  ];
+  for (const [kind, statement] of wanted) {
+    if (!section.includes(statement)) return `the page does not render the ${kind} claim's statement`;
+  }
+  const headings = CLAIM_KIND_HEADINGS.filter(([kind]) => kind !== "key-type").map(([, h]) => h);
+  const absent = headings.filter((heading) => !section.includes(heading));
+  if (absent.length) return `the page does not group the claims under ${absent.join(", ")}`;
+  return null;
+});
+
+check("a subsystem with zero claims renders the literal and the labelled narrative", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const { pages: all, error } = pages("before-impact");
+  if (error) return `the subsystem page could not be rendered — ${error}`;
+  const section = structureSection(all?.["B-02"]?.text);
+  if (section === null) return "B-02's page carries no Structure section";
+  if (!section.includes(NO_CLAIMS_SENTENCE)) return "the page does not carry §9.1's literal";
+  if (!section.includes("The index keeps one row per key, rebuilt from the ledger.")) {
+    return "the page does not render the survey artifact's narrative under the fallback";
+  }
+  const stored = fixture.db
+    .prepare("SELECT content_hash, ref_sha FROM artifacts WHERE path = 'B-02-index.md'")
+    .get();
+  if (!section.includes(String(stored?.content_hash ?? "").slice(0, 12))) {
+    return "the fallback does not carry the artifact's content hash";
+  }
+  if (!section.includes(String(stored?.ref_sha ?? "").slice(0, 7))) {
+    return "the fallback does not carry the artifact's recorded revision";
+  }
+  return /not .*bound to a revision|not individually bound/.test(section)
+    ? null
+    : "the narrative is not labelled as unbound to a revision";
+});
+
+check("a subsystem with neither claims nor an artifact says so", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const { pages: all, error } = pages("before-impact");
+  if (error) return `the subsystem page could not be rendered — ${error}`;
+  const section = structureSection(all?.["B-03"]?.text);
+  if (section === null) return "B-03's page carries no Structure section";
+  if (!section.includes(NO_CLAIMS_SENTENCE)) return "the page does not carry §9.1's literal";
+  return /no narrative/i.test(section)
+    ? null
+    : "the page does not say that no narrative was left in the claims' place";
+});
+
+check("the tool and the page select the same current claims for a subsystem", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const { pages: all, error } = pages("before-impact");
+  if (error) return `the subsystem page could not be rendered — ${error}`;
+  const section = structureSection(all?.["B-01"]?.text);
+  if (section === null) return "B-01's page carries no Structure section";
+  const served = ((structureOf({ locus: "B-01", sections: SECTIONS }).section?.items) ?? []).map(
+    (item) => item.claim_key,
+  );
+  if (served.length === 0) return "the tool serves no claim, so the comparison is vacuous";
+  const absent = served.filter((key) => !section.includes(key));
+  if (absent.length) return `the page does not carry ${absent.join(", ")}, which the tool serves`;
+  // The other direction: every `B-01/` claim key the page names must be one the
+  // tool serves, so the two surfaces cannot drift apart in either direction.
+  const onPage = [...section.matchAll(/B-01\/[A-Za-z0-9/_.-]+/g)].map((m) => m[0]);
+  const extra = [...new Set(onPage)].filter((key) => !served.includes(key));
+  return extra.length ? `the page carries ${extra.join(", ")}, which the tool does not serve` : null;
+});
+
+check("the page's claims are under read-back custody", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const { pages: all, error } = pages("before-impact");
+  if (error) return `the subsystem page could not be rendered — ${error}`;
+  const sources = all?.["B-01"]?.sources ?? [];
+  return sources.some((name) => /claim/.test(name))
+    ? null
+    : "no claims source is recorded for the page, so a changed claim would not re-render it";
+});
+
+// ---------------------------------------------------------------------------
 // C42's closing arm: a claim closed by apply_change_impact
 // ---------------------------------------------------------------------------
 
@@ -755,87 +914,18 @@ check("apply_change_impact closes a claim and the structure section stops servin
     : "the closed claim vanished from a historical reading at the commit it was current at";
 });
 
-// ---------------------------------------------------------------------------
-// §7.3: the subsystem page
-// ---------------------------------------------------------------------------
-
-const RENDER_DRIVER = `
-import json, sqlite3, sys
-from pathlib import Path
-
-sys.path.insert(0, sys.argv[1])
-from amanuensis_materializer.db import rows
-from amanuensis_materializer.renderers import render_subsystem
-
-conn = sqlite3.connect(f"file:{sys.argv[2]}?mode=ro", uri=True)
-storage = Path(sys.argv[3])
-out = {}
-for s in rows(conn, "SELECT id, name, status, layer, scope, jump_in_reading, notes FROM subsystems ORDER BY id"):
-    text, sources = render_subsystem(conn, storage, s)
-    out[s["id"]] = {"text": text, "sources": sorted(sources)}
-sys.stdout.write(json.dumps(out))
-`;
-
-function renderPages() {
-  const driver = join(fixture.root, "render-subsystem.py");
-  writeFileSync(driver, RENDER_DRIVER);
-  const result = spawnSync(
-    PY,
-    [driver, join(REPO, "materializer"), fixture.project.dbPath, fixture.project.storagePath],
-    { encoding: "utf8" },
-  );
-  if (result.status !== 0) {
-    return { error: scrub(String(result.stderr ?? "")).trim().split("\n").slice(-3).join(" / ") };
-  }
-  try {
-    return { pages: JSON.parse(String(result.stdout ?? "")) };
-  } catch {
-    return { error: "the renderer produced no readable page" };
-  }
-}
-
-let rendered = null;
-function pages() {
-  if (rendered === null) rendered = renderPages();
-  return rendered;
-}
-
-function structureSection(text) {
-  const match = String(text ?? "").match(/\n## Structure\n([\s\S]*?)(?=\n## |\s*$)/);
-  return match ? match[1] : null;
-}
-
-check("the subsystem page renders current claims, grouped by claim kind", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const section = structureSection(all?.["B-01"]?.text);
-  if (section === null) return "B-01's page carries no Structure section";
-  if (section.includes(NO_CLAIMS_SENTENCE)) {
-    return "the page renders the zero-claims heading for a subsystem that has claims";
-  }
-  const wanted = [
-    ["state-container", "Cache holds the pending rows until the writer drains it."],
-    ["flow", "writeRow appends the row before it releases the lock."],
-    ["concurrency", "No two writers hold the ledger lock at once."],
-    ["seam", "The ledger row crosses to B-02 without a version tag."],
-  ];
-  for (const [kind, statement] of wanted) {
-    if (!section.includes(statement)) return `the page does not render the ${kind} claim's statement`;
-  }
-  const headings = CLAIM_KIND_HEADINGS.filter(([kind]) => kind !== "key-type").map(([, h]) => h);
-  const absent = headings.filter((heading) => !section.includes(heading));
-  if (absent.length) return `the page does not group the claims under ${absent.join(", ")}`;
-  return null;
-});
-
 check("the subsystem page drops the claim apply_change_impact closed", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const section = structureSection(all?.["B-01"]?.text);
+  const before = pages("before-impact");
+  if (before.error) return `the subsystem page could not be rendered — ${before.error}`;
+  const wasThere = structureSection(before.pages?.["B-01"]?.text) ?? "";
+  if (!wasThere.includes("Row is the ledger's unit of storage.")) {
+    return "the page did not carry the claim before it was closed, so closing it proves nothing";
+  }
+  const after = pages("after-impact");
+  if (after.error) return `the subsystem page could not be re-rendered — ${after.error}`;
+  const section = structureSection(after.pages?.["B-01"]?.text);
   if (section === null) return "B-01's page carries no Structure section";
   if (section.includes("Row is the ledger's unit of storage.")) {
     return "a claim closed by apply_change_impact is still rendered as current";
@@ -843,75 +933,6 @@ check("the subsystem page drops the claim apply_change_impact closed", () => {
   return section.includes("Key types")
     ? "the closed claim's group is still rendered, so the page reads a superseded claim as current"
     : null;
-});
-
-check("a subsystem with zero claims renders the literal and the labelled narrative", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const section = structureSection(all?.["B-02"]?.text);
-  if (section === null) return "B-02's page carries no Structure section";
-  if (!section.includes(NO_CLAIMS_SENTENCE)) return "the page does not carry §9.1's literal";
-  if (!section.includes("The index keeps one row per key, rebuilt from the ledger.")) {
-    return "the page does not render the survey artifact's narrative under the fallback";
-  }
-  const stored = fixture.db
-    .prepare("SELECT content_hash, ref_sha FROM artifacts WHERE path = 'B-02-index.md'")
-    .get();
-  if (!section.includes(String(stored?.content_hash ?? "").slice(0, 12))) {
-    return "the fallback does not carry the artifact's content hash";
-  }
-  if (!section.includes(String(stored?.ref_sha ?? "").slice(0, 7))) {
-    return "the fallback does not carry the artifact's recorded revision";
-  }
-  return /not .*bound to a revision|not individually bound/.test(section)
-    ? null
-    : "the narrative is not labelled as unbound to a revision";
-});
-
-check("a subsystem with neither claims nor an artifact says so", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const section = structureSection(all?.["B-03"]?.text);
-  if (section === null) return "B-03's page carries no Structure section";
-  if (!section.includes(NO_CLAIMS_SENTENCE)) return "the page does not carry §9.1's literal";
-  return /no narrative/i.test(section)
-    ? null
-    : "the page does not say that no narrative was left in the claims' place";
-});
-
-check("the tool and the page select the same current claims for a subsystem", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const section = structureSection(all?.["B-01"]?.text);
-  if (section === null) return "B-01's page carries no Structure section";
-  const served = ((structureOf({ locus: "B-01", sections: SECTIONS }).section?.items) ?? []).map(
-    (item) => item.claim_key,
-  );
-  if (served.length === 0) return "the tool serves no claim, so the comparison is vacuous";
-  const absent = served.filter((key) => !section.includes(key));
-  if (absent.length) return `the page does not carry ${absent.join(", ")}, which the tool serves`;
-  // The other direction: every `B-01/` claim key the page names must be one the
-  // tool serves, so the two surfaces cannot drift apart in either direction.
-  const onPage = [...section.matchAll(/B-01\/[A-Za-z0-9/_.-]+/g)].map((m) => m[0]);
-  const extra = [...new Set(onPage)].filter((key) => !served.includes(key));
-  return extra.length ? `the page carries ${extra.join(", ")}, which the tool does not serve` : null;
-});
-
-check("the page's claims are under read-back custody", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const { pages: all, error } = pages();
-  if (error) return `the subsystem page could not be rendered — ${error}`;
-  const sources = all?.["B-01"]?.sources ?? [];
-  return sources.some((name) => /claim/.test(name))
-    ? null
-    : "no claims source is recorded for the page, so a changed claim would not re-render it";
 });
 
 // ---------------------------------------------------------------------------

@@ -175,6 +175,20 @@ interface AccountScope {
   term: string | null;
   /** Values a `claims.subject_id` may equal to be about this locus. */
   subjectIds: string[];
+  /**
+   * §9.1's `claim_key` namespace for a subsystem locus, as a LIKE pattern.
+   *
+   * §3.1's two arms — the subject id and the evidence citation — do not select
+   * every claim a subsystem owns: §9.1 gives a seam claim `subject_type: seam`
+   * and a `<sid>/seam/<id>` key, so a seam contract whose evidence cites a file
+   * outside this subsystem's ledger matches neither arm. §9.1's phase
+   * prerequisite and §7.3's page both read the `<sid>/` namespace, so the tool
+   * reads it too; without it the two surfaces would answer "what does this
+   * subsystem claim" differently, and a claim would be current on one and
+   * absent from the other. Null for every other locus kind, which has no
+   * namespace of its own.
+   */
+  claimKeyPrefix: string | null;
 }
 
 function ownersOfPath(db: DB, path: string): string[] {
@@ -198,6 +212,7 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
       subsystemId: id,
       term: null,
       subjectIds: [id],
+      claimKeyPrefix: `${id.replace(/([%_\\])/g, "\\$1")}/%`,
     };
   }
   if (locus.kind === "term") {
@@ -213,6 +228,7 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
       subsystemId: null,
       term,
       subjectIds: [term],
+      claimKeyPrefix: null,
     };
   }
   const path = locus.path as string;
@@ -226,6 +242,7 @@ function buildScope(db: DB, locus: ResolvedLocus): AccountScope {
     subsystemId: null,
     term: null,
     subjectIds: [...new Set(subjectIds)],
+    claimKeyPrefix: null,
   };
 }
 
@@ -299,12 +316,27 @@ interface SectionBuild {
   statement?: string;
   counts?: Record<string, number>;
   session_attribution?: string;
+  narrative?: NarrativePointer;
   /**
    * §4.3's drop order for a section whose rule reads a column the response does
    * not serve: one opaque key per item, descending key order being drop order.
    * Absent for the seven sections whose order is readable from their items.
    */
   drop_keys?: string[];
+}
+
+/**
+ * §3.4's narrative attachment, in the only shape §3.4 permits: a pointer, not
+ * prose. The survey artifact is model-authored and not bound to any revision
+ * item by item, so it is served as a path and a content hash a reader can
+ * resolve — §9.1 renders its body on the subsystem page, where the labelling
+ * travels with it, and never inside a response §4.1 bounds to 8192 bytes.
+ */
+interface NarrativePointer {
+  artifact_path: string;
+  content_hash: string | null;
+  revision_bound: false;
+  label: string;
 }
 
 interface SectionView {
@@ -321,6 +353,7 @@ interface SectionView {
   source_rows?: number;
   counts?: Record<string, number>;
   session_attribution?: string;
+  narrative?: NarrativePointer;
 }
 
 /** The strongest attached evidence kind, ranked by the declared ladder. */
@@ -417,6 +450,43 @@ interface ClaimRow {
   valid_until_sha: string | null;
 }
 
+/**
+ * §9.1's literal. A reader — and a checker — must be able to tell the absence
+ * of a *record* from the absence of the thing recorded (§2.3, §4.3).
+ */
+const NO_CLAIMS_STATEMENT = "Structural inventory not recorded as claims";
+
+/** §3.4's label, carried verbatim beside every narrative pointer. */
+const NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision";
+
+/**
+ * §3.4's narrative attachment for a subsystem locus with no current claim.
+ *
+ * Only a subsystem has one: the `subsystem-survey` artifact is written per
+ * subsystem, and attaching an owner's narrative to one of its files would
+ * assert that the prose is about that file, which nothing recorded it as. A
+ * subsystem that records several survey artifacts serves the first by path —
+ * the pointer is a pointer, and §9.1's page renders every one of them, so
+ * nothing is hidden from a reader by the choice.
+ */
+function surveyNarrative(db: DB, scope: AccountScope): NarrativePointer | null {
+  if (!scope.subsystemId) return null;
+  const row = db
+    .prepare(
+      `SELECT path, content_hash FROM artifacts
+        WHERE kind = 'subsystem-survey' AND subsystem_id = ?
+        ORDER BY path LIMIT 1`,
+    )
+    .get(scope.subsystemId) as { path: string; content_hash: string | null } | undefined;
+  if (!row) return null;
+  return {
+    artifact_path: row.path,
+    content_hash: row.content_hash,
+    revision_bound: false,
+    label: NARRATIVE_LABEL,
+  };
+}
+
 function buildStructure(
   db: DB,
   scope: AccountScope,
@@ -427,6 +497,10 @@ function buildStructure(
   const cites = evidenceMatch(scope);
   const conditions = [`c.subject_id IN (${placeholders(scope.subjectIds)})`];
   const params: unknown[] = [...scope.subjectIds];
+  if (scope.claimKeyPrefix) {
+    conditions.push("c.claim_key LIKE ? ESCAPE '\\'");
+    params.push(scope.claimKeyPrefix);
+  }
   if (cites) {
     conditions.push(
       `EXISTS (SELECT 1 FROM claim_evidence ce JOIN evidence e ON e.id = ce.evidence_id
@@ -489,7 +563,18 @@ function buildStructure(
     authored: "model",
     current: row.valid_until_sha === null,
   }));
-  return { source_rows: rows.length, items };
+  if (items.length > 0) return { source_rows: rows.length, items };
+  // §9.1: an authorized locus with no claim says so in the literal §9.1 fixes,
+  // and never renders an empty section as if the locus had no structure. The
+  // sentence is about the *record*, not about the code: "not recorded as
+  // claims" is what the store can support, where "has no structure" is not.
+  const narrative = surveyNarrative(db, scope);
+  return {
+    source_rows: rows.length,
+    items,
+    statement: NO_CLAIMS_STATEMENT,
+    ...(narrative ? { narrative } : {}),
+  };
 }
 
 interface FindingRow {
@@ -1356,6 +1441,11 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
     // for and the detail follows `requested` like every other section.
     if (build.counts) view.counts = build.counts;
     if (build.session_attribution) view.session_attribution = build.session_attribution;
+    // §3.4: the narrative travels with the section that has no claims to serve,
+    // and never beside items. It is a pointer of about 200 bytes and is not a
+    // truncation candidate: dropping it would leave the literal standing with
+    // nothing a reader could go and read.
+    if (build.narrative) view.narrative = build.narrative;
     if (build.authorized === false) {
       view.authorized = false;
       view.withheld_unauthorized = build.withheld ?? 0;

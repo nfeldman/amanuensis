@@ -106,6 +106,69 @@ NO_PURPOSE_SENTENCE = "No purpose statement is recorded for this subsystem"
 NO_PURPOSE_WITH_SCOPE = f"{NO_PURPOSE_SENTENCE}; the scope below states what it covers."
 NO_PURPOSE_ALONE = f"{NO_PURPOSE_SENTENCE}."
 
+# §9.1's literal and §3.4's label, verbatim.  The subsystem page and
+# `describe_locus` say the same words for the same state, because a reader who
+# meets both must not have to work out whether they mean the same thing.
+NO_STRUCTURAL_CLAIMS = "Structural inventory not recorded as claims"
+NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
+
+# §9.1's five structural categories, as the `claim_key` segment that names each
+# and the heading it groups under.  A claim reached through its subject or its
+# evidence rather than through the subsystem's own namespace has no segment to
+# read, so it groups last under its own heading rather than being dropped or
+# filed under a category nothing recorded it as (BP6).
+CLAIM_KIND_HEADINGS: tuple[tuple[str, str], ...] = (
+    ("key-type", "Key types"),
+    ("state-container", "State containers"),
+    ("flow", "Flow steps"),
+    ("concurrency", "Concurrency invariants"),
+    ("seam", "Seam contracts"),
+    ("other", "Other claims"),
+)
+_CLAIM_KINDS = frozenset(kind for kind, _ in CLAIM_KIND_HEADINGS if kind != "other")
+
+
+def _like_prefix(sid: str) -> str:
+    """`<sid>/%` with SQLite's LIKE wildcards escaped, for the namespace arm."""
+
+    escaped = sid.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"{escaped}/%"
+
+
+def _nest_prose(text: str, under: int) -> str:
+    """Shift a recorded document's ATX headings beneath a page heading.
+
+    An artifact was written as a document of its own and opens at `#`.  Rendered
+    verbatim inside a page section, its first heading would close the section it
+    was placed in and the reader would be told the narrative sits somewhere it
+    does not.  Only the heading *level* moves; the heading text, the order, and
+    every other line are the recorded bytes.  Levels saturate at six rather than
+    wrapping, so a deeply nested source flattens instead of re-opening the page.
+    """
+
+    out: list[str] = []
+    fenced = False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        if not fenced:
+            match = re.match(r"^(#{1,6})(\s)", line)
+            if match:
+                level = min(6, len(match.group(1)) + under)
+                line = "#" * level + line[len(match.group(1)) :]
+        out.append(line)
+    return "\n".join(out)
+
+
+def _claim_kind(sid: str, claim_key: str) -> str:
+    """The §9.1 category a `claim_key` names, or `other` when it names none."""
+
+    prefix = f"{sid}/"
+    if not claim_key.startswith(prefix):
+        return "other"
+    segment = claim_key[len(prefix) :].split("/", 1)[0]
+    return segment if segment in _CLAIM_KINDS else "other"
+
 THESIS_SOURCE = "entry-point.md"
 THESIS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s*what is this (?:codebase|project)\??\s*$", re.IGNORECASE
@@ -841,6 +904,33 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         (sid,),
     )
 
+    # §7.3's Structure section reads claims, and reads them with the same three
+    # arms `describe_locus` uses (§3.1's subject and evidence arms, plus §9.1's
+    # `<sid>/` namespace).  Two surfaces that answered "what does this subsystem
+    # claim" differently would let a claim be current on one and absent from the
+    # other, which is the divergence §13 calls a false green.  `valid_until_sha
+    # IS NULL` is ADR-0001's current: a claim closed by `apply_change_impact`
+    # is history, and history is not rendered here.
+    claims = rows(
+        conn,
+        """
+        SELECT c.claim_id, c.claim_key, c.subject_type, c.subject_id, c.statement,
+               c.epistemic_kind, c.asserted_at_sha
+          FROM claims c
+         WHERE c.valid_until_sha IS NULL
+           AND (c.subject_id = ?
+                OR c.claim_key LIKE ? ESCAPE '\\'
+                OR EXISTS (SELECT 1
+                             FROM claim_evidence ce
+                             JOIN evidence e ON e.id = ce.evidence_id
+                            WHERE ce.claim_id = c.claim_id
+                              AND e.file_path IN (SELECT file_path FROM file_ledger
+                                                   WHERE subsystem_id = ?)))
+         ORDER BY c.claim_key
+        """,
+        (sid, _like_prefix(str(sid)), sid),
+    )
+
     # The per-subsystem survey artifact — hand-authored markdown lives in
     # storage root as <ID>-<slug>.md or similar. We look for any registered
     # artifact with kind='subsystem-survey' and this subsystem_id.
@@ -894,32 +984,72 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     if s.get("jump_in_reading"):
         out += ["## Start here", "", str(s["jump_in_reading"]), ""]
 
-    # 3. Structure. Claims are P11's; until a subsystem carries them the
-    #    narrative attaches under its own labelled heading so no reader mistakes
-    #    unbound prose for a revision-bound inventory.
-    out += ["## Structure", "", "### Structural inventory not recorded as claims", ""]
-    narrative = str(s.get("notes") or "").strip()
+    # 3. Structure — current claims, grouped by what each one records (§7.3).
+    #    With none, §9.1's literal and the labelled narrative fallback: unbound
+    #    prose is never presented where a revision-bound inventory belongs.
+    out += ["## Structure", ""]
+    narrative_promoted = False
     provenance = ", ".join(
         f"`{sv['path']}` at content hash `{str(sv['content_hash'] or '—')[:12]}`"
         f", recorded at {_short(str(sv['ref_sha'] or ''))}"
         for sv in survey_rows
     )
-    if narrative:
+    epistemic_labels = labels("claim_epistemic_kind")
+    if claims:
         out += [
-            "No structural claim is recorded for this subsystem, so nothing below is"
-            " bound to a revision. It is the narrative the survey left."
-            + (f" Its source is {provenance}." if provenance else ""),
-            "",
-            narrative,
+            "What the survey recorded as claims about this subsystem, grouped by what"
+            " each one states. Every claim is bound to the revision it was asserted at"
+            " and to the evidence attached to it; a superseded claim is not shown here.",
             "",
         ]
+        for kind, heading in CLAIM_KIND_HEADINGS:
+            group = [c for c in claims if _claim_kind(sid, str(c["claim_key"])) == kind]
+            if not group:
+                continue
+            out += [
+                f"### {heading}",
+                "",
+                "| Claim | Subject | Statement | Epistemic kind | Asserted at |",
+                "|---|---|---|---|---|",
+            ]
+            for c in group:
+                statement = str(c["statement"] or "—").replace("|", "/")
+                kind = str(c["epistemic_kind"] or "")
+                out.append(
+                    f"| `{c['claim_key']}` | `{c['subject_id']}` | {statement}"
+                    f" | {epistemic_labels.get(kind, kind) or '—'}"
+                    f" | {_short(str(c['asserted_at_sha'] or ''))} |"
+                )
+            out.append("")
     else:
-        out += [
-            "No structural claim is recorded for this subsystem, and no narrative was"
-            " left in its place."
-            + (f" The survey artifact is {provenance}." if provenance else ""),
-            "",
-        ]
+        out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
+        narrative = str(s.get("notes") or "").strip()
+        if survey_prose.strip():
+            narrative_promoted = True
+            out += [
+                "No structural claim is recorded for this subsystem."
+                f" *{NARRATIVE_LABEL}.*"
+                + (f" Its source is {provenance}." if provenance else ""),
+                "",
+                _nest_prose(survey_prose.strip(), 3),
+                "",
+            ]
+        elif narrative:
+            out += [
+                "No structural claim is recorded for this subsystem, and no survey"
+                " artifact is recorded either. What follows is the note the survey left"
+                " on the subsystem record; it is not bound to a revision.",
+                "",
+                _nest_prose(narrative, 3),
+                "",
+            ]
+        else:
+            out += [
+                "No structural claim is recorded for this subsystem, and no narrative was"
+                " left in its place."
+                + (f" The survey artifact is {provenance}." if provenance else ""),
+                "",
+            ]
 
     # 4. Boundaries — seams and recorded edges.
     if seams or xrefs:
@@ -1102,8 +1232,21 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     else:
         out += ["No concern has been dispositioned in this subsystem.", ""]
 
-    if survey_prose:
-        out += ["### Survey artifact", "", survey_prose]
+    if survey_prose and not narrative_promoted:
+        out += ["### Survey artifact", "", _nest_prose(survey_prose, 3)]
+    elif survey_prose:
+        # §7.3 keeps the artifact in the survey record and §9.1 promotes it into
+        # Structure when no claim stands in its place.  Rendering it twice would
+        # make one page carry two copies of one witness, so the apparatus points
+        # at the reading instead of repeating it.
+        out += [
+            "### Survey artifact",
+            "",
+            "The survey artifact is rendered above, under Structure, because no"
+            " structural claim is recorded to stand in its place."
+            + (f" Its source is {provenance}." if provenance else ""),
+            "",
+        ]
 
     text = "\n".join(out).rstrip() + "\n"
     sources: dict[str, str] = (
@@ -1116,6 +1259,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         | _db_source(f"subsystem:{sid}:seams", seams)
         | _db_source(f"subsystem:{sid}:concerns", active_concerns)
         | _db_source(f"subsystem:{sid}:standing", standing)
+        | _db_source(f"subsystem:{sid}:claims", claims)
         | _db_source(f"subsystem:{sid}:artifacts", survey_rows)
         | prose_sources
     )
