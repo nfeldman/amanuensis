@@ -868,6 +868,76 @@ def main() -> int:
             return None
 
         check("the empty-ledger overview says so too", empty_overview_is_honest)
+
+        # -- scoped, but nothing in scope carries an obligation ---------------
+        # §11.2 fixes measurement on `scoped_files`, not on the obligation
+        # count.  A ledger of nothing but generated and vendored paths is
+        # measured: the projection read every scoped row and knows their
+        # freshness exactly.  Saying it was not measured hides a real reading
+        # behind the sentence reserved for having no ledger at all, and it puts
+        # the overview at odds with the HTML strip, which reads scoped_files on
+        # the same store.
+        all_exempt_storage = root / "all-exempt"
+        all_exempt_storage.mkdir(parents=True, exist_ok=True)
+        all_exempt_error: str | None = None
+        try:
+            seed(all_exempt_storage, ledger=False)
+            db = sqlite3.connect(all_exempt_storage / "memory.db")
+            db.executemany(
+                "INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope,"
+                " classification, ref_sha, stale, stale_since, stale_reason)"
+                " VALUES (?, ?, 'In scope.', ?, 'aaaaaaaaaaaa1111', ?, ?, ?)",
+                [
+                    ("B-01", "dist/bundle.js", "generated-ignore", 1, "2026-09-10T12:00:00Z", "git-drift"),
+                    ("B-01", "vendor/lib.js", "vendor-ignore", 0, None, None),
+                ],
+            )
+            db.commit()
+            db.close()
+        except Exception as exc:
+            all_exempt_error = f"the all-exempt fixture could not be seeded — {scrub(exc)}"
+        all_exempt = (
+            publish(all_exempt_storage, "--clean-publish") if all_exempt_error is None else {}
+        )
+        all_exempt_docs = all_exempt_storage / "docs"
+
+        def all_exempt_is_measured() -> str | None:
+            if all_exempt_error:
+                return all_exempt_error
+            if not all_exempt.get("ok"):
+                warnings = [scrub(w)[:120] for w in all_exempt.get("warnings") or []]
+                return (
+                    "the all-exempt publish was not green;"
+                    f" warnings {warnings[:2]}, diagnostic"
+                    f" {scrub(all_exempt.get('_diagnostic'))[:160]}"
+                )
+            shape = ledger_shape(all_exempt_storage, obligation_sql)
+            if shape["scoped"] != 2 or shape["obligation"] != 0:
+                return (
+                    "the all-exempt fixture is not all-exempt:"
+                    f" {shape['scoped']} scoped, {shape['obligation']} obligation-bearing"
+                )
+            body = section(read(all_exempt_docs / "index.md") or "", "Where the record stands")
+            if not body:
+                return "the all-exempt overview has no 'Where the record stands' section"
+            if NOT_MEASURED.lower() in body.lower() or "not measured by this projection" in body:
+                return (
+                    "the overview says freshness was not measured over 2 scoped files it read"
+                    " exactly; §11.2 measures on scoped_files, not on the obligation count"
+                )
+            strip = strip_text(all_exempt_docs, "index.html")
+            if strip is None:
+                return "the all-exempt publish produced no snapshot strip"
+            if NOT_MEASURED in strip:
+                return f"the strip says {NOT_MEASURED!r} over a scoped ledger"
+            if "1" not in body:
+                return "the overview drops the exempt stale count it can still report"
+            return None
+
+        check(
+            "an all-exempt ledger is measured, and reports zero obligation-bearing files",
+            all_exempt_is_measured,
+        )
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
