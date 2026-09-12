@@ -22,7 +22,7 @@ gate, or read-back axis: every change is additive or strictly strengthening.
 |---|---|---|
 | **Codebase** | The recorded account of what the project is, how it works, and which of its territory has not been read. | `codebase` |
 | **Unresolved** | Records that have not reached a terminal, evidence-backed state at the checked revision, in ADR-0001's sense of *resolved*. | `unresolved` |
-| **History** | Records that have reached a terminal state, plus the append-only account of how they got there and of the sessions and publications that produced them. | `history` |
+| **History** | Records that have reached a terminal state, plus — for the families that record one — the append-only account of how they got there, and the sessions and publications that produced them. | `history` |
 | **Method** | The apparatus by which a reader judges how far the rest of the record can be trusted. | `method` |
 
 The **Overview** is not a lens; it is the entrance (§7.2).
@@ -32,6 +32,18 @@ terminal disposition. The partition rule is exactly ADR-0001's definition of *re
 terminal state, an authorized actor or rule, and resolution evidence or an explicit authorized
 dismissal. A repair without verification evidence is `fixed-pending-verification` and therefore
 **Unresolved** (ADR-0005). No record appears in both lenses as a full record.
+
+Only two record families carry an append-only event trail: findings
+(`finding_resolution_events`) and contradictions (`contradiction_resolution_events`), neither of
+which any code path updates or deletes. `open_questions.resolution` and `field_notes.follow_up`
+are mutable columns with no event table (`schema.sql:4538-4560`, `291-305`), so for those two
+families History carries the terminal state and nothing about how it was reached.
+`open_questions` at least records `resolved_at` (`schema.sql:4559`) and orders by it;
+`field_notes` records no resolution time at all (`schema.sql:291-302`) and orders by `id`, which
+is creation order, not resolution order. Both are stated on the page in one line: *"When this
+reached its state is recorded; how it did is not."* for questions, and *"Neither when nor how
+this lead reached its state is recorded, only that it did; the order below is the order the
+leads were opened."* for leads. History never presents a reconstruction it cannot source.
 
 ### 1.2 Every user-visible label introduced
 
@@ -52,9 +64,10 @@ Account section labels (§3): **Purpose and entry**, **Structure**, **Known defe
 
 Page labels (§7.1): **Overview**, **Architecture**, **Subsystems**, **Files**,
 **Not yet surveyed**, **System boundaries**, **Codebase glossary**, **Open findings**,
-**Contested**, **Decisions needed**, **Leads**, **Stale knowledge**, **Hot spots**,
-**Resolved findings**, **Resolution history**, **Sessions and publications**,
-**Conflicting evidence**, **Reader's guide**, **Review coverage**, **Review checklist**,
+**Disagreements**, **Decisions needed**, **Leads**, **Stale knowledge**, **Hot spots**,
+**Resolved findings**, **Resolution history**, **Resolved leads and questions**,
+**Sessions and publications**, **Conflicting evidence**, **Reader's guide**,
+**Review coverage**, **Review checklist**,
 **Competing explanations**, **Onboarding record**, **Where to begin**.
 
 Field labels introduced by standing: **Owners**, **Authority ceiling**, **Checked at**,
@@ -83,14 +96,30 @@ scope note: the guard is over fields code removes or checks, not over a field a 
 | Kind | Syntax | Resolution |
 |---|---|---|
 | `file` | a repository-relative path | normalized by `requireWorkspaceSourcePath` |
-| `symbol` | `<path>:<symbol>` | the path is normalized; the symbol is matched against `evidence.symbol` |
+| `symbol` | `<path>:<symbol>` | split at the **first** `:`; the path is normalized and the entire remainder — further `::` included — is the symbol |
 | `subsystem` | a subsystem id (`^[A-Za-z]-?\d+$` or any `subsystems.id`) | exact match on `subsystems.id` |
 | `term` | any other string | exact match on `vocabulary.term`, else nearest recorded terms |
 
-Kind is inferred deterministically in this order: exact `subsystems.id` match → contains `:` →
-matches a `file_ledger.file_path`, `scope_gaps.file_path`, or `evidence.file_path` → otherwise
-`term`. The chosen kind is always echoed in the response as `locus.kind`; a caller may force it
-with the `kind` argument.
+Kind is inferred deterministically in this order, and the order is a code constant:
+
+1. exact `subsystems.id` match ⟹ `subsystem`;
+2. exact `vocabulary.term` match ⟹ `term`;
+3. contains `:` ⟹ `symbol`, splitting at the **first** `:`; everything after it is the symbol,
+   so `crates/x.rs:GraphWriteCoordinator::evict_idle_locks` yields the symbol
+   `GraphWriteCoordinator::evict_idle_locks`;
+4. exact match on `file_ledger.file_path`, `scope_gaps.file_path`, or `evidence.file_path`
+   ⟹ `file`;
+5. path-shaped — contains `/`, or ends in a `.<ext>` of one to six alphanumerics — ⟹ `file`,
+   resolving to `unledgered` rather than being mis-kinded as a term;
+6. otherwise `term`, resolving to `not-defined`.
+
+Step 2 precedes step 3 because stored terms contain `:`: the AxiomDB store's vocabulary holds
+`Severity (sh:Violation / sh:Warning / sh:Info)`, which the old order kinded `symbol` and left
+unreachable. Step 5 precedes step 6 because §2.2's `unledgered` state exists precisely for a
+path no table names; falling through to `term`/`not-defined` contradicts it.
+
+The chosen kind is always echoed in the response as `locus.kind`; a caller may force it with the
+`kind` argument. `kind_inferred_by` names the step that decided it.
 
 ### 2.2 The state enum and its mechanical predicate
 
@@ -125,16 +154,53 @@ SELECT (SELECT COUNT(*) FROM file_standing WHERE file_path = :path)             
        (SELECT COUNT(*) FROM scope_gaps WHERE file_path = :path AND kind='absent')      AS absent_rows;
 ```
 
-`owner_rows = 0` ⟹ headline state `unledgered`. `gap_rows` distinguishes *recorded as
-unledgered by a reconciliation* from *never reconciled*; it is reported as
-`measured.ledger_reconciled` and never collapsed into the state.
+`owner_rows = 0` ⟹ headline state `unledgered`. `gap_rows` is meaningful **only** when
+`owner_rows = 0`: there it distinguishes *recorded as unledgered by a reconciliation* from *never
+reconciled*, and it is reported as `measured.ledger_reconciled`. For a path that has owner rows,
+`scope_gaps` is silent by construction (`detect_changes` rebuilds the table each run and records
+only unledgered and absent paths, `schema.sql:186-193`), so `ledger_reconciled` is **null** there
+and the response instead carries `measured.reconciliation_receipt`:
+`{ last_checked_sha, last_checked_at }` from `git_state` (`schema.sql:63-71`), or `null` when no
+reconciliation has ever run. A zero gap count is never presented as proof of reconciliation.
 
 **Reachability is not decidable in SQL.** After the view returns `examined`, the tool runs
-`git merge-base --is-ancestor <ref_sha> HEAD` in the bound workspace. A non-zero result, or a
-`ref_sha` that `git rev-parse` cannot resolve, downgrades the owner row to `examined-stale`
-with `stale_reason = "unverifiable-ref"`. When git is unavailable the tool reports
-`reachability_checked: false` and leaves the state at `examined` with that flag set; it never
-silently upgrades.
+`git rev-parse --verify <ref_sha>^{commit}` and then
+`git merge-base --is-ancestor <ref_sha> HEAD` in the bound workspace. The two failures are
+distinct states, and they carry distinct reasons because the existing reconciliation already owns
+one of the two words:
+
+| Outcome | `standing_state` | `stale_reason` |
+|---|---|---|
+| `rev-parse` cannot resolve the revision | `examined-stale` | `unverifiable-ref` |
+| resolves, but is not an ancestor of HEAD | `examined-stale` | `unreachable-ref` |
+| resolves and is an ancestor | `examined` | unchanged |
+
+`unverifiable-ref` keeps exactly the meaning `detect_changes` already writes it with — a commit
+that cannot be compared against (`mcp-server/src/tools/git.ts:246-262` pushes a row to
+`unverifiable` only when `git diff --name-only <ref> <head>` itself fails). Using one word for
+both rules would make the same label mean two things across two writers, which is the defect
+§1.3 forbids. `unreachable-ref` is a new value of `file_ledger.stale_reason`, which carries no
+CHECK constraint (`schema.sql:175`), and is added to the `standing_state` enum source of §10.1.
+
+When git is unavailable the tool reports `reachability_checked: false`. The state stays
+`examined` — the ledger row says what it says — but the **authorization** does not: ADR-0001
+§ Current makes a resolving evidence revision part of what current authority requires, so with
+`reachability_checked: false` the `authorizes` and `cannot_justify` text served for that row is
+the `examined-stale` row of §2.3, and the response carries
+`authorization_downgraded: "reachability-unchecked"`. The tool never silently upgrades, and it
+never serves `examined`'s authorization on an unchecked reading.
+
+**The view must exist before anything reads it.** `file_standing` and `finding_state_current`
+are created by `initializeSchema` in `mcp-server/src/db.ts:48-53`, which only `openDatabase`
+calls; the materializer opens the store read-only
+(`materializer/amanuensis_materializer/db.py:15-23`, `mode=ro`) and never applies `schema.sql`.
+A store last opened by an older server therefore lacks both views while `files.md` (§7.4) and
+§6.1 read them. The materializer probes
+`SELECT 1 FROM sqlite_master WHERE type='view' AND name IN ('file_standing','finding_state_current')`
+at the start of every render and, when either is missing, **turns the publish red** with the
+named cause *"the store predates the reader-lens views; open it once with the current MCP server
+to create them"*. It never falls back to an inline copy of the predicate: two copies of one
+definition is the false green §13 already names.
 
 ### 2.3 What each state authorizes and cannot justify (VP12)
 
@@ -144,6 +210,7 @@ silently upgrades.
 | `excluded` | the recorded exclusion reason and classification | any claim about the file's content or behavior |
 | `scoped-unread` | "this file participates in subsystem S" | any claim about content, behavior, or the absence of defects |
 | `examined` | current claims whose evidence cites this file | claims about symbols no evidence cites; absence of defects |
+| `examined`, `reachability_checked: false` | a dated reading attributed to `ref_sha`, exactly as `examined-stale` | any current claim at the repository head; the examination revision was never resolved |
 | `examined-stale` | a dated historical reading, attributed to `ref_sha` | any current claim at the repository head |
 | `absent` | that the path was once surveyed | anything at the repository head |
 | `mixed` | only what the **weakest** owner state authorizes | anything the weakest owner state cannot justify |
@@ -157,37 +224,78 @@ The projection and the tools must say "not examined", never "no findings", at `u
 1. **`owners[]`** — one entry per `file_standing` row: `subsystem_id`, `subsystem_name`,
    `classification`, `standing_state`, `authority_ceiling`, `ref_sha`, `examined_at`,
    `stale`, `stale_reason`. **Every owner is listed.** There is no truncation of this array;
-   it is excluded from the budget truncation order in §4.
+   it is excluded from the budget truncation order in §4. `file_ledger`'s primary key is
+   `(subsystem_id, file_path)` (`schema.sql:176`), so the array is unbounded in principle — the
+   AxiomDB store's `crates/axiomdb-server/src/main.rs` already carries ten owners. When the
+   complete array alone would push the response past §4.1's hard ceiling, the tool returns a
+   `ToolError` naming the path and the owner count rather than a truncated array: the caller can
+   then read the owners from `list_scope(subsystem_id)`. A truncated `owners[]` is never
+   returned, because §2.4.2's headline `state` is a function of the whole set and a partial set
+   would make `mixed` undecidable.
 2. **`state`** — the headline. It is the single shared owner state when all owners agree, the
    zero-owner state (`unledgered` / `absent`) when there are none, and the literal `"mixed"`
    otherwise. A response may never present one owner's state as the file's state.
-3. **`authority_ceiling`** — `{ value, label, authorizes }` from the subsystem ladder
-   (`unmapped … mapped`, `deferred`), taken as the **weakest** ceiling among owners. It carries
-   the skill's caveat verbatim: `mapped` is a workflow completion mark and is not itself proof
-   that every finding survived challenge.
+3. **`authority_ceiling`** — `{ value, label, authorizes, deferred_owners[] }`. The ranked
+   ladder is `unmapped < scoping < structural < concerns < adversarial < mapped`, exactly
+   `STATUS_ORDER` in `mcp-server/src/invariants.ts:26-35`. `deferred` **is not on that axis**:
+   the same file calls it "an orthogonal *do not survey* flag that blocks all gated writes",
+   so no rank is defined for it and none is invented here. Therefore:
+
+   - the ceiling `value` is the weakest ranked status among **non-deferred** owners;
+   - every deferred owner is listed in `deferred_owners[]` with its recorded reason, and the
+     ceiling text adds *"`<n>` owning subsystem(s) are deferred; nothing was surveyed there"*;
+   - when **every** owner is deferred the ceiling `value` is the literal `"deferred"`, it
+     authorizes nothing, and `cannot_justify` is *any claim about this file's content or
+     behavior*.
+
+   The ceiling carries the skill's caveat verbatim: `mapped` is a workflow completion mark and
+   is not itself proof that every finding survived challenge.
 4. **`revision`** — `{ checked_sha, checked_at, repository_head, origin_head, agrees }` where
    `checked_sha` is `git_state.last_checked_sha`, `repository_head` is the workspace HEAD, and
    `origin_head` is `git rev-parse <canonical_branch>@{upstream}` when an upstream is recorded,
    otherwise `null`. When `checked_sha != repository_head` the response carries
    `unchecked_since: "<checked_sha>"` and every account section is marked
    `as_of: "<checked_sha>"`.
-5. **`measured`** — `{ ledger_rows, ledger_reconciled, staleness_measured, evidence_rows,
-   claims_recorded }`. `staleness_measured` is `ledger_rows > 0`, matching
+5. **`measured`** — `{ ledger_rows, ledger_reconciled, reconciliation_receipt,
+   staleness_measured, evidence_rows, claims_recorded }`. `ledger_reconciled` is non-null only
+   at `owner_rows = 0` (§2.2). `staleness_measured` is `ledger_rows > 0`, matching
    `get_dashboard`'s existing rule (helpers.ts `OBLIGATION_BEARING_SQL`, dashboard.ts). A zero
    can never be read as health without its denominator (VP4).
 6. **`unknown[]`** — mandatory, possibly empty, with exactly these sources and no others:
 
    | `kind` | Exact source |
    |---|---|
-   | `concern-without-disposition` | `concerns.status='active'` and no `dispositions` row for that code in any owner subsystem |
+   | `concern-without-disposition` | for **each** owner subsystem `o`: `concerns.status='active'` and no `dispositions` row `(o, code)`. The unit is the **(owner, concern) pair**, not the concern; the entry carries `subsystem_id` |
    | `candidate-sibling` | `file_ledger` rows classified `candidate` in any owner subsystem (count plus up to 5 paths) |
    | `open-question` | `open_questions.resolution='open'` whose `subsystem_id` is an owner |
-   | `open-lead` | `field_notes.follow_up='open'` whose `location` equals the path or begins `<path>:` or equals an owner id |
-   | `unassessed-seam` | `seam_assessability` rows where an owner is `party_a` or `party_b` and no `dispositions` row with `concern_code LIKE 'SC-%'` exists for either party |
+   | `open-lead` | `field_notes.follow_up='open'` whose `location` equals the path, begins `<path>:`, equals an owner id, or — splitting `location` on `,` and trimming — contains a token that is the path or a directory prefix of it |
+   | `unassessed-seam` | for **each** seam in `seam_assessability` with an owner as `party_a` or `party_b`, and for **each side** that is an owner: `assessable=0`, or that side holds no `dispositions` row with `concern_code LIKE 'SC-%'`. The unit is the **(seam, side) pair** |
 
-   `open_questions` carries no locus column; the `open-question` entries are therefore
-   subsystem-scoped and each carries `scope: "subsystem"` so a reader cannot mistake it for a
-   file-level binding. That limitation is stated in the response, not hidden.
+   Two of these predicates were global in the reviewed draft and reported zero on a store that
+   holds real gaps. Read-only over the AxiomDB store: 1,094 (subsystem, active-concern) pairs
+   have no disposition while **every** active concern code has a disposition *somewhere* (0 of
+   36 codes are wholly undispositioned), and 9 of 20 seams lack an `SC-%` disposition on exactly
+   one side while **0** lack it on both. A predicate quantified over "any owner" or "either
+   party" is therefore a zero-denominator green in the VP4 sense: it cannot turn red on this
+   store's actual gaps. The unit of both predicates is the pair.
+
+   Two limits are stated in the response rather than hidden:
+
+   - `open_questions` carries no locus column, so `open-question` entries are subsystem-scoped
+     and each carries `scope: "subsystem"`.
+   - `dispositions`' primary key is `(subsystem_id, concern_code)` (`schema.sql:220`) — **no
+     seam id**. The only seam-bound concern record is `composition_seam_concerns`
+     (`schema.sql:2205-2211`), which holds 0 rows on the AxiomDB store. The `SC-%` proxy
+     therefore says *this party has assessed some seam concern*, never *this party has assessed
+     this seam*. Every `unassessed-seam` entry carries
+     `binding: "per-party-proxy; no seam-bound disposition is recorded"`, and the same sentence
+     appears on §7.5's page and beside §7.6's column.
+   - `field_notes.location` is free-form: 0 of 103 rows on the AxiomDB store equal a subsystem
+     id, 6 carry a `:…@` citation, and values such as
+     `crates/axiomdb-core/src/reason/, crates/axiomdb-core/src/write/` are comma-joined
+     directories. Each `open-lead` entry carries
+     `location_match: "exact" | "prefix" | "owner" | "none"` so a directory-prefix hit is never
+     read as a file-level binding.
 
 ### 2.5 Standing for the other locus kinds
 
@@ -197,14 +305,24 @@ The projection and the tools must say "not examined", never "no findings", at `u
   five terminal classifications broken out; findings by resolution state; seam assessability
   per `seam_assessability.assessable`. `unknown[]` uses the same five sources.
 - **`symbol`** — the file's standing block verbatim, plus `symbol_cited` (`true` when an
-  `evidence` row has that `file_path` and `symbol`), the citing evidence ids and kinds, and
-  when `symbol_cited` is false the literal `symbol_standing: "not-individually-cited"` with
-  the sentence *the file's state does not extend to this symbol*. The file's state is never
-  silently inherited by the symbol.
+  `evidence` row has that `file_path` and an exactly equal `symbol`), the citing evidence ids
+  and kinds, and when `symbol_cited` is false the literal
+  `symbol_standing: "not-individually-cited"` with the sentence *the file's state does not
+  extend to this symbol*. Exact match alone under-reports: 45 of 209 `evidence.symbol` values on
+  the AxiomDB store carry a parenthetical qualifier
+  (`GraphWriteCoordinator::execute_inner (SSI retry fence re-check)`), so the response also
+  reports `symbol_prefix_matches[]` — evidence rows on the same `file_path` whose `symbol` equals
+  the requested symbol followed by a space or `(` — under
+  `match: "prefix"`, never merged into `symbol_cited`. The file's state is never silently
+  inherited by the symbol.
 - **`term`** — the `vocabulary` row (`gloss`, `expansion`, `subsystem_id`, `first_seen`,
   `ref_sha`) or `state: "not-defined"` with up to five nearest recorded terms, selected
-  deterministically: same-subsystem terms first, then case-insensitive prefix matches, then
-  lexicographic order. No model call and no fuzzy scoring.
+  deterministically: case-insensitive prefix matches ordered lexicographically, then
+  lexicographic order over the remainder. There is **no** same-subsystem tier: a term's
+  subsystem is known only from its `vocabulary` row (`schema.sql:360-370`), which a
+  `not-defined` term by definition does not have, and `describe_locus` takes no subsystem
+  argument (§5.1), so that tier had no referent and could not be evaluated. No model call and no
+  fuzzy scoring.
 
 ---
 
