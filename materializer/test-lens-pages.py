@@ -132,6 +132,8 @@ EXPECTED_NAV_GROUPS: tuple[str, ...] = (
 )
 SUBSYSTEM_SUBGROUP = "Subsystems"
 MATRIX_SUBGROUP = "Evidence matrices"
+MATRIX_ID = 7
+MATRIX_SYMPTOM = "rows appear twice after a restart"
 
 FILES_PAGE = "files.md"
 GAPS_PAGE = "not-yet-surveyed.md"
@@ -482,6 +484,11 @@ def seed(storage: Path) -> None:
         "INSERT INTO xrefs (from_id, to_id, relationship, strength, context)"
         " VALUES ('B-01', 'B-02', 'depends-on', 'confirmed', 'the reader drains the buffer')"
     )
+    cur.execute(
+        "INSERT INTO diagnosticity_sessions (id, subsystem_id, symptom, outcome, session_id)"
+        f" VALUES ({MATRIX_ID}, 'B-01', ?, 'open', 'p8')",
+        (MATRIX_SYMPTOM,),
+    )
     db.commit()
     db.close()
     (storage / "entry-point.md").write_text(ENTRY_POINT)
@@ -783,6 +790,46 @@ def main() -> int:
 
         check("navigation renders the five groups in NAV_GROUPS order", nav_order)
 
+        def order_survives_a_reordered_plan() -> str | None:
+            """The rail's order is NAV_GROUPS', not the order pages are planned.
+
+            The plan is written in NAV_GROUPS order, so grouping by first
+            appearance renders the same rail on any ordinary store. Reversing
+            the plan separates the two: only a renderer reading the constant
+            still emits Overview first.
+            """
+
+            if core is None:
+                return f"core.py could not be read — {import_errors.get('core', 'no reason')}"
+            materializer_cls = getattr(core, "Materializer", None)
+            if materializer_cls is None:
+                return "core.py exposes no Materializer"
+
+            class ReversedPlan(materializer_cls):  # type: ignore[misc, valid-type]
+                def _plan(self, conn):  # noqa: ANN001, ANN202
+                    return list(reversed(super()._plan(conn)))
+
+            out = root / "reversed-docs"
+            reversed_summary = ReversedPlan(
+                storage=storage, output=out, force_full=True, verify_readback=False
+            ).materialize()
+            if not reversed_summary.get("ok"):
+                warnings = [scrub(w)[:160] for w in reversed_summary.get("warnings") or []]
+                return f"the reordered plan did not render; warnings {warnings[:2]}"
+            groups = nav_groups(nav_of(read(out / "index.html") or ""))
+            if tuple(groups) != EXPECTED_NAV_GROUPS:
+                return (
+                    "reversing the page plan reordered the rail to"
+                    f" {tuple(groups)!r}; the order must come from NAV_GROUPS,"
+                    " not from the order pages are planned in"
+                )
+            return None
+
+        check(
+            "the rail's group order comes from NAV_GROUPS, not the plan's order",
+            order_survives_a_reordered_plan,
+        )
+
         def pages_sit_in_their_group() -> str | None:
             if not nav:
                 return "the navigation rail could not be read"
@@ -837,6 +884,34 @@ def main() -> int:
         check(
             "subsystem pages render under the Subsystems subgroup of Codebase",
             subsystems_are_a_subgroup,
+        )
+
+        def matrices_are_a_subgroup() -> str | None:
+            if not nav:
+                return "the navigation rail could not be read"
+            inside = group_contents(nav, "Method")
+            if not inside:
+                return "the Method group has no items"
+            subgroups = [text for kind, text in inside if kind == "h3"]
+            if MATRIX_SUBGROUP not in subgroups:
+                return (
+                    f"Method carries no {MATRIX_SUBGROUP!r} subgroup; its h3"
+                    f" headings are {subgroups!r}"
+                )
+            index_of_h3 = next(i for i, (k, t) in enumerate(inside) if k == "h3")
+            after = [t for k, t in inside[index_of_h3:] if k == "item"]
+            if MATRIX_SYMPTOM not in after:
+                return (
+                    "the seeded evidence matrix does not render under it;"
+                    f" the subgroup holds {after!r}"
+                )
+            if not (docs / "diagnosticity" / f"dm-{MATRIX_ID}.md").is_file():
+                return "the per-matrix page path changed, retiring the old one"
+            return None
+
+        check(
+            "evidence matrices render under the Evidence matrices subgroup of Method",
+            matrices_are_a_subgroup,
         )
 
         def rogue_group_is_a_render_error() -> str | None:
@@ -1257,6 +1332,19 @@ def main() -> int:
                 return (
                     "a subsystem with no recorded scope does not say so;"
                     f" the section reads {body.strip()[:160]!r}"
+                )
+            # B-03 owns two ledger rows, so a sentence that sends the reader to
+            # the ledger is true and one that calls the ledger empty is not.
+            if "ledger" not in body.lower():
+                return (
+                    "the section does not point at the only other record of what"
+                    f" belongs to this subsystem; it reads {body.strip()[:160]!r}"
+                )
+            if re.search(r"no file is recorded", body, re.IGNORECASE):
+                owned = sum(1 for r in LEDGER if r[0] == "B-03")
+                return (
+                    f"the section says no file is recorded while {owned} ledger row(s)"
+                    " name this subsystem"
                 )
             return None
 
