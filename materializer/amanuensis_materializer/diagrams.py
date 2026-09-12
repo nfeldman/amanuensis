@@ -45,16 +45,14 @@ def _edge_coverage_sentence(covered: int, total: int) -> str:
     uncovered = total - covered
     if uncovered == 0:
         return (
-            f"_Every one of the {total} recorded subsystems carries at least one recorded"
-            " edge. Edges below are recorded rows; none is inferred from names, prefixes,"
-            " or seams._"
+            f"_All {total} recorded subsystems carry at least one recorded edge. No edge"
+            " below is inferred from a name, a prefix, or a nearby seam._"
         )
     verb = "carries" if uncovered == 1 else "carry"
     return (
-        f"_{uncovered} of {total} recorded subsystems {verb} no recorded edge, so the"
-        " relations below are what has been recorded rather than the whole dependency"
-        " surface. Edges are recorded rows; none is inferred from names, prefixes, or"
-        " seams._"
+        f"_{uncovered} of {total} recorded subsystems {verb} no recorded edge; the table"
+        " below is what the survey recorded, not the whole dependency surface. No edge is"
+        " inferred from a name, a prefix, or a nearby seam._"
     )
 
 
