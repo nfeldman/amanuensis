@@ -262,8 +262,8 @@ check("the mapped prerequisite lives in enforcePhasePrerequisites, not beside it
   if (mapped < 0) {
     return `enforcePhasePrerequisites has no 'mapped' case: a subsystem reaches mapped without a challenge outcome on any claim`;
   }
-  if (!body.slice(mapped).includes(OUTCOME_TABLE)) {
-    return `the 'mapped' case does not read ${OUTCOME_TABLE}, so mapped without a recorded outcome is still permitted`;
+  if (!source.includes(OUTCOME_TABLE)) {
+    return `${INVARIANTS_REL} never reads ${OUTCOME_TABLE}, so mapped without a recorded outcome is still permitted`;
   }
   return null;
 });
@@ -285,7 +285,7 @@ try {
 }
 if (built.ok) {
   try {
-    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns] =
+    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools] =
       await Promise.all([
         import("../mcp-server/dist/db.js"),
         import("../mcp-server/dist/project.js"),
@@ -297,8 +297,9 @@ if (built.ok) {
         import("../mcp-server/dist/tools/project.js"),
         import("../mcp-server/dist/tools/dispositions.js"),
         import("../mcp-server/dist/tools/concerns.js"),
+        import("../mcp-server/dist/tools/git.js"),
       ]);
-    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns };
+    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools };
   } catch (e) {
     loadError = e && e.message ? e.message : String(e);
   }
@@ -327,6 +328,7 @@ function toolNamed(name) {
     mods?.projectTools?.projectTools,
     mods?.dispositions?.dispositionTools,
     mods?.concerns?.concernTools,
+    mods?.gitTools?.gitTools,
   ];
   for (const group of groups) {
     if (!Array.isArray(group)) continue;
@@ -387,6 +389,11 @@ function buildFixture() {
   const db = mods.db.openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   ctx.sessionId = call("start_session", { intent: "p20-regeneration-gate" }, ctx).session_id;
+  call(
+    "set_git_state",
+    { canonical_branch: "main", onboarding_sha: base, last_checked_sha: head },
+    ctx,
+  );
   call("add_concern", { code: "FIXTURE-1", category: "cache", origin: "seeded" }, ctx);
   return { project, db, ctx, base, head, workspace };
 }
@@ -498,6 +505,23 @@ check("a subsystem whose current claim has no challenge outcome is refused at ma
   return null;
 });
 
+check("upsert_subsystem cannot reach mapped around the prerequisite either", () => {
+  const missing = needFixture();
+  if (missing) return missing;
+  const denied = refusal(
+    "upsert_subsystem",
+    { id: "B-R1", name: "Subsystem B-R1", status: "mapped" },
+    fixture.ctx,
+  );
+  if (denied === null) {
+    return "B-R1 reached mapped without a challenge outcome through upsert_subsystem: the prerequisite sits on one writer, not on the shared path";
+  }
+  if (!denied.includes("record_claim_challenge")) {
+    return `the second door's refusal does not name the tool that records the outcome: ${denied}`;
+  }
+  return null;
+});
+
 check("recording the outcome admits the advance, and the transition is recorded", () => {
   const missing = needTool("record_claim_challenge");
   if (missing) return missing;
@@ -530,8 +554,12 @@ check("recording the outcome admits the advance, and the transition is recorded"
   if (last.tool !== "update_subsystem_status") {
     return `the rung names ${JSON.stringify(last.tool)} as its writer`;
   }
-  if (!nonEmpty(last.session_id)) return "the recorded rung is attributed to no session";
-  if (!nonEmpty(last.ref_sha)) return "the recorded rung is bound to no revision";
+  if (last.session_id !== fixture.ctx.sessionId) {
+    return `the recorded rung is attributed to ${JSON.stringify(last.session_id)}, not the session that climbed it`;
+  }
+  if (last.ref_sha !== fixture.head) {
+    return `the recorded rung is bound to ${JSON.stringify(last.ref_sha)}, not the revision the store was last checked at`;
+  }
   return null;
 });
 

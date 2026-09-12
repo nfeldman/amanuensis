@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   ok,
   optBool,
+  optInt,
   optString,
   requireEnum,
   requireExistingIds,
@@ -49,6 +50,22 @@ interface EvidenceRow {
  * carry is the fabrication hazard BP4 names.
  */
 const FILE_ANCHORED_CLAIM_KEY = /^[^/\s]+\/(key-type|state-container|flow)\//;
+
+/**
+ * §9.1's outcome vocabulary for a claim target, which is deliberately not the
+ * finding-target verdict vocabulary: a claim either stood, fell, or was
+ * replaced by a better reading of the same `claim_key`.
+ */
+const CLAIM_CHALLENGE_OUTCOMES = ["survived", "overturned", "superseded"] as const;
+
+/**
+ * The floor on a recorded challenge. `survived` changes no row, so without an
+ * argument attached it is indistinguishable from a claim nobody looked at —
+ * which is precisely the state slice-S6 found the store in. The floor is a
+ * length, not a shape: demanding a template over a field the writer must
+ * author is the fabrication-to-order hazard BP4 names.
+ */
+const MIN_CHALLENGE_LENGTH = 24;
 
 /**
  * The evidence kinds §9.1 accepts for those three categories, filtered out of
@@ -346,6 +363,129 @@ export const claimTools: ToolDefinition[] = [
         friendlyWriteError(error, claimKey);
       }
       return ok({ claim_id: claimId, claim_key: claimKey, valid_from_sha: validFromSha });
+    },
+  },
+  {
+    name: "record_claim_challenge",
+    description: `Record the adversarial pass's outcome for one current claim (spec.md §9.1, Phase 4). outcome ∈ {${CLAIM_CHALLENGE_OUTCOMES.join(", ")}}. \`challenge\` is what would have overturned the claim and where that was looked for, in prose of at least ${MIN_CHALLENGE_LENGTH} characters; a one-word note is not a challenge. An 'overturned' or 'superseded' outcome must name the claim_validity_events row that closed the claim — invalidate_claim and supersede_claim write it — and 'survived' must not, because nothing was closed. field_note_id optionally links the probe note the pass wrote. The record is append-only: a later pass records a further outcome, it does not edit this one. Every current \`<sid>/\` claim must carry an outcome before the subsystem may advance to 'mapped'.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        claim_id: { type: "string" },
+        outcome: { type: "string", enum: [...CLAIM_CHALLENGE_OUTCOMES] },
+        challenge: { type: "string", minLength: MIN_CHALLENGE_LENGTH },
+        ref_sha: { type: "string" },
+        validity_event_id: { type: "integer" },
+        field_note_id: { type: "integer" },
+      },
+      required: ["claim_id", "outcome", "challenge", "ref_sha"],
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const sessionId = requireActiveSession(ctx, "record_claim_challenge");
+      const claimId = requireString(args, "claim_id");
+      const outcome = requireEnum(args, "outcome", CLAIM_CHALLENGE_OUTCOMES);
+      const challenge = requireString(args, "challenge");
+      if (challenge.trim().length < MIN_CHALLENGE_LENGTH) {
+        throw new ToolError(
+          `challenge must say what would have overturned claim ${claimId} and where that was ` +
+            `looked for, in at least ${MIN_CHALLENGE_LENGTH} characters; a survived outcome with ` +
+            `no argument behind it is indistinguishable from a claim nobody read`,
+        );
+      }
+      // The outcome is about the account the subsystem publishes, which is its
+      // *current* claims; a closed interval is history and takes no outcome.
+      const claim = currentClaim(ctx, claimId);
+      const atSha = resolveCommit(ctx, requireString(args, "ref_sha"));
+      const eventId = optInt(args, "validity_event_id");
+      const noteId = optInt(args, "field_note_id");
+
+      if (outcome === "survived") {
+        if (eventId !== null) {
+          throw new ToolError(
+            "a survived claim closed no validity interval, so validity_event_id names an event that cannot be about this outcome",
+          );
+        }
+      } else {
+        if (eventId === null) {
+          throw new ToolError(
+            `an ${outcome} outcome must name the claim_validity_events row that closed ${claimId}; ` +
+              `an overturning that closed no interval overturned nothing`,
+          );
+        }
+        const event = ctx.db
+          .prepare("SELECT claim_id, event_type FROM claim_validity_events WHERE id = ?")
+          .get(eventId) as { claim_id: string; event_type: string } | undefined;
+        if (!event) throw new ToolError(`unknown claim validity event: ${eventId}`);
+        if (event.claim_id !== claimId) {
+          throw new ToolError(
+            `claim validity event ${eventId} belongs to claim ${event.claim_id}, not ${claimId}`,
+          );
+        }
+        const expected = outcome === "overturned" ? "invalidated" : "superseded";
+        if (event.event_type !== expected) {
+          throw new ToolError(
+            `an ${outcome} outcome must cite an '${expected}' event; event ${eventId} is '${event.event_type}'`,
+          );
+        }
+      }
+      if (noteId !== null && !ctx.db.prepare("SELECT 1 FROM field_notes WHERE id = ?").get(noteId)) {
+        throw new ToolError(`unknown field note: ${noteId}`);
+      }
+
+      const result = ctx.db
+        .prepare(
+          `INSERT INTO claim_challenge_outcomes
+             (claim_id, claim_key, outcome, challenge, at_sha, validity_event_id, field_note_id, session_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(claimId, claim.claim_key, outcome, challenge, atSha, eventId, noteId, sessionId);
+      return ok({
+        id: Number(result.lastInsertRowid),
+        claim_id: claimId,
+        claim_key: claim.claim_key,
+        outcome,
+        at_sha: atSha,
+      });
+    },
+  },
+  {
+    name: "get_claim_challenges",
+    description:
+      "Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        claim_id: { type: "string" },
+        subsystem_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const claimId = optString(args, "claim_id");
+      const subsystemId = optString(args, "subsystem_id");
+      if (claimId === null && subsystemId === null) {
+        throw new ToolError("name a claim_id or a subsystem_id");
+      }
+      if (claimId !== null) {
+        return ctx.db
+          .prepare(
+            `SELECT id, claim_id, claim_key, outcome, challenge, at_sha, validity_event_id,
+                    field_note_id, session_id, created_at
+               FROM claim_challenge_outcomes WHERE claim_id = ? ORDER BY id`,
+          )
+          .all(claimId);
+      }
+      const prefix = `${subsystemId}/`;
+      return ctx.db
+        .prepare(
+          `SELECT o.id, o.claim_id, o.claim_key, o.outcome, o.challenge, o.at_sha,
+                  o.validity_event_id, o.field_note_id, o.session_id, o.created_at
+             FROM claim_challenge_outcomes o
+            WHERE substr(o.claim_key, 1, length(?)) = ?
+            ORDER BY o.id`,
+        )
+        .all(prefix, prefix);
     },
   },
   {

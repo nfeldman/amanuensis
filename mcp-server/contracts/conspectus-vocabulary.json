@@ -231,6 +231,14 @@
         {
           "table": "subsystems",
           "column": "status"
+        },
+        {
+          "table": "subsystem_status_transitions",
+          "column": "from_status"
+        },
+        {
+          "table": "subsystem_status_transitions",
+          "column": "to_status"
         }
       ],
       "values": [

@@ -1133,6 +1133,100 @@ BEGIN
     ) THEN RAISE(ABORT, 'supersession evidence must support the successor claim') END;
 END;
 
+-- ---------------------------------------------------------------------------
+-- Phase 4's outcome per claim, and the ladder each subsystem actually climbed.
+--
+-- §9.1 requires the adversarial pass to pull every current `<sid>/` claim as a
+-- target and record the outcome "before the subsystem may advance to
+-- `mapped`". Until this table existed there was nowhere to put a *survived*
+-- outcome: `claim_validity_events` admits only asserted/invalidated/
+-- superseded/revalidated, and a claim that survives its challenge changes no
+-- row — so it was indistinguishable from a claim nobody looked at, and the
+-- `mapped` prerequisite could not be written (slice-S6, F6/codex).
+--
+-- `claim_key` is denormalized from the claim the row points at, because the
+-- prerequisite is a prefix query over it and the claim's own row may later be
+-- closed; the writer copies it rather than taking it from the caller.
+-- `validity_event_id` is required for a non-`survived` outcome: an overturning
+-- that closed no interval overturned nothing.
+CREATE TABLE IF NOT EXISTS claim_challenge_outcomes (
+    id                INTEGER PRIMARY KEY,
+    claim_id          TEXT    NOT NULL REFERENCES claims(claim_id) ON DELETE CASCADE,
+    claim_key         TEXT    NOT NULL,
+    outcome           TEXT    NOT NULL CHECK (outcome IN (
+                                'survived','overturned','superseded')),
+    challenge         TEXT    NOT NULL,
+    at_sha            TEXT    NOT NULL,
+    validity_event_id INTEGER REFERENCES claim_validity_events(id) ON DELETE RESTRICT,
+    field_note_id     INTEGER REFERENCES field_notes(id) ON DELETE RESTRICT,
+    session_id        TEXT    NOT NULL REFERENCES sessions(session_id),
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (length(trim(challenge)) >= 24),
+    CHECK (outcome = 'survived' OR validity_event_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_challenge_outcomes_claim
+    ON claim_challenge_outcomes(claim_id, id);
+CREATE INDEX IF NOT EXISTS idx_claim_challenge_outcomes_key
+    ON claim_challenge_outcomes(claim_key, id);
+
+-- Append-only in the substrate, not by convention: an outcome that can be
+-- edited after the advance is no longer the record the advance rested on.
+CREATE TRIGGER IF NOT EXISTS claim_challenge_outcomes_are_append_only
+BEFORE UPDATE ON claim_challenge_outcomes
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'claim challenge outcomes are append-only; record a further outcome instead');
+END;
+
+CREATE TRIGGER IF NOT EXISTS claim_challenge_outcomes_are_not_deletable
+BEFORE DELETE ON claim_challenge_outcomes
+FOR EACH ROW
+WHEN (SELECT COUNT(*) FROM claims WHERE claim_id = OLD.claim_id) > 0
+BEGIN
+    SELECT RAISE(ABORT, 'claim challenge outcomes are append-only; they go only with the claim they challenge');
+END;
+
+-- One row per rung actually climbed. The depth receipt's ladder used to be
+-- reconstructed from the subsystem's current status with the writing tool, the
+-- session and the revision typed into the recorder, so the gate that asserted
+-- those fields was asserting its own reconstruction (slice-S6, F6/codex).
+-- Every tool that writes `subsystems.status` appends here, and only a write
+-- that changes the status does: a no-op re-affirmation is not a rung.
+CREATE TABLE IF NOT EXISTS subsystem_status_transitions (
+    id            INTEGER PRIMARY KEY,
+    subsystem_id  TEXT    NOT NULL REFERENCES subsystems(id) ON DELETE CASCADE,
+    from_status   TEXT             CHECK (from_status IN ('unmapped','scoping','structural',
+                                              'concerns','adversarial','mapped','deferred')),
+    to_status     TEXT    NOT NULL CHECK (to_status IN ('unmapped','scoping','structural',
+                                              'concerns','adversarial','mapped','deferred')),
+    tool          TEXT    NOT NULL CHECK (tool IN (
+                                'upsert_subsystem','update_subsystem_status','reset_subsystem')),
+    session_id    TEXT             REFERENCES sessions(session_id),
+    ref_sha       TEXT,
+    reason        TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (from_status IS NULL OR from_status != to_status)
+);
+
+CREATE INDEX IF NOT EXISTS idx_subsystem_status_transitions_subsystem
+    ON subsystem_status_transitions(subsystem_id, id);
+
+CREATE TRIGGER IF NOT EXISTS subsystem_status_transitions_are_append_only
+BEFORE UPDATE ON subsystem_status_transitions
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'subsystem status transitions are append-only; the ladder is history, not state');
+END;
+
+CREATE TRIGGER IF NOT EXISTS subsystem_status_transitions_are_not_deletable
+BEFORE DELETE ON subsystem_status_transitions
+FOR EACH ROW
+WHEN (SELECT COUNT(*) FROM subsystems WHERE id = OLD.subsystem_id) > 0
+BEGIN
+    SELECT RAISE(ABORT, 'subsystem status transitions are append-only; they go only with the subsystem');
+END;
+
 -- Existing rows remain untouched. This view is an explicitly lossy bridge:
 -- it gives legacy knowledge stable typed handles without pretending the old
 -- records had claim-level temporal precision they never carried.

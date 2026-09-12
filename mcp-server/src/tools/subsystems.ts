@@ -10,6 +10,7 @@ import {
   enforceForwardPrerequisites,
   enforceMonotonicTransition,
   readSubsystemStatus,
+  recordStatusTransition,
   STATUS_ORDER,
   type SubsystemStatus,
 } from "../invariants.js";
@@ -136,6 +137,17 @@ export const subsystemTools: ToolDefinition[] = [
              updated_at=datetime('now')`,
         )
         .run(id, name, status, layer, scope, jumpIn, notes, priority ?? null);
+      // The rung this write climbed, appended to the ladder. `upsert_subsystem`
+      // is a status writer as much as `update_subsystem_status` is, so a ladder
+      // that recorded only the latter would have a hole exactly where the
+      // second door is (slice-S3 F3/codex; slice-S6 F6/codex).
+      recordStatusTransition(ctx.db, {
+        subsystemId: id,
+        fromStatus: previousStatus,
+        toStatus: status,
+        tool: "upsert_subsystem",
+        sessionId: ctx.sessionId,
+      });
       return ok();
     },
   },
@@ -174,6 +186,13 @@ export const subsystemTools: ToolDefinition[] = [
       ctx.db
         .prepare("UPDATE subsystems SET status=?, updated_at=datetime('now') WHERE id=?")
         .run(status, id);
+      recordStatusTransition(ctx.db, {
+        subsystemId: id,
+        fromStatus: currentStatus,
+        toStatus: status,
+        tool: "update_subsystem_status",
+        sessionId: ctx.sessionId,
+      });
       return ok({ previous_status: currentStatus });
     },
   },
@@ -325,6 +344,17 @@ export const subsystemTools: ToolDefinition[] = [
             "UPDATE subsystems SET status=?, updated_at=datetime('now'), notes = COALESCE(notes, '') || char(10) || ? WHERE id = ?",
           )
           .run(toStatus, `[reset ${new Date().toISOString()}] ${reason}`, id);
+        // A regression is a rung of the recorded ladder too: a subsystem that
+        // reached `mapped`, was reset, and climbed back has a history, and a
+        // ladder that showed only the climb would be a history with a hole.
+        recordStatusTransition(ctx.db, {
+          subsystemId: id,
+          fromStatus: row.status as SubsystemStatus,
+          toStatus,
+          tool: "reset_subsystem",
+          sessionId: ctx.sessionId,
+          reason,
+        });
       });
       txn();
 
