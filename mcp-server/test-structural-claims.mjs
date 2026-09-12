@@ -1037,9 +1037,9 @@ check("supersede_claim accepts a successor that satisfies the rule", () => {
       claim_id: "b09-probe-accept",
       claim_key: "B-09/key-type/probe-accept",
       subject_type: "symbol",
-      subject_id: "src/ledger.ts:Probe",
+      subject_id: "src/external.ts:Probe",
       statement: "Probe is a key type.",
-      evidence_ids: [fixture.ev.ledgerCode],
+      evidence_ids: [fixture.ev.externalCode],
     });
   } catch (e) {
     return `the predecessor could not be seeded — ${e && e.message ? e.message : e}`;

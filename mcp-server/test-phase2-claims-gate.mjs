@@ -722,6 +722,19 @@ check("resetting below structural discards the claims that satisfied the gate", 
   if (typeof result?.deleted?.claims !== "number") {
     return "reset_subsystem does not report how many claims it discarded, so the loss is silent";
   }
+  // A reset to `scoping` clears the ledger too, and the ledger prerequisite
+  // fires first. Re-populate the ledger — the scoping pass the reset sent the
+  // subsystem back to — so the only thing that can still refuse the re-advance
+  // is the missing claim, which is the thing under test.
+  call(
+    "add_files_to_scope",
+    {
+      subsystem_id: "B-23",
+      ref_sha: fixture.base,
+      files: [{ file_path: "src/B-23.ts", why_in_scope: "re-scoped after the reset" }],
+    },
+    fixture.ctx,
+  );
   const message = refusal(
     "update_subsystem_status",
     { id: "B-23", status: "structural" },

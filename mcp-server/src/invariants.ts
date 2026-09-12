@@ -258,6 +258,38 @@ export function enforcePhasePrerequisites(
 }
 
 /**
+ * Every prerequisite between where a subsystem is and where a write is putting
+ * it, checked in order so the first missing one names the phase that was
+ * skipped. Regressions, no-op writes and `deferred` toggles pass through: the
+ * rule binds genuine forward motion only.
+ *
+ * `previousStatus` is `null` for a row that does not exist yet, which an insert
+ * opening straight at a later status is. That is read as `unmapped` — the
+ * status such a row would have had a moment earlier — rather than as "no
+ * transition to check", because a fresh insert at `structural` reaches the same
+ * state as an advance to `structural` and must answer for the same evidence.
+ *
+ * Every tool that writes `subsystems.status` calls this. A prerequisite one
+ * writer honours and another walks around is not enforced, and `upsert_subsystem`
+ * is a status writer as much as `update_subsystem_status` is (slice-S3,
+ * F3/codex).
+ */
+export function enforceForwardPrerequisites(
+  db: DB,
+  subsystemId: string,
+  previousStatus: SubsystemStatus | null,
+  targetStatus: SubsystemStatus,
+): void {
+  const from = previousStatus ?? "unmapped";
+  const currentRank = STATUS_ORDER.indexOf(from as Exclude<SubsystemStatus, "deferred">);
+  const targetRank = STATUS_ORDER.indexOf(targetStatus as Exclude<SubsystemStatus, "deferred">);
+  if (currentRank < 0 || targetRank <= currentRank) return;
+  for (const status of STATUS_ORDER.slice(currentRank + 1, targetRank + 1)) {
+    enforcePhasePrerequisites(db, subsystemId, status);
+  }
+}
+
+/**
  * Require an active session. Writes to the conspectus should always
  * be attributable to a session for audit purposes; the coordinator
  * opens one as Phase 0 of onboarding and at the start of each survey

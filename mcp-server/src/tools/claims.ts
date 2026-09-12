@@ -207,6 +207,17 @@ function claimAppliesAt(ctx: ServerContext, row: ClaimRow, querySha: string): bo
   return row.valid_until_sha === null || !isAncestor(ctx, row.valid_until_sha, querySha);
 }
 
+/**
+ * The one place a row is written to `claims`. §9.1's file-anchored check runs
+ * here rather than in `add_claim`'s handler because a claim_key has two doors:
+ * `add_claim` opens it and `supersede_claim` replaces what is behind it, and a
+ * successor inherits its predecessor's `claim_key` and `subject_id` — it
+ * asserts the same file-anchored thing about the same symbol. Enforcing on one
+ * door only left the other able to replace a sound reading with a
+ * `name-inferred` row on an unrelated file while the `structural` gate went on
+ * counting the key as satisfied (slice-S3, F5/codex). The rows passed are the
+ * ones that will be attached as `supports`, not every id the caller named.
+ */
 function insertClaim(
   ctx: ServerContext,
   values: {
@@ -219,10 +230,12 @@ function insertClaim(
     assertedAtSha: string;
     validFromSha: string;
     sessionId: string;
-    evidenceIds: number[];
+    evidenceRows: EvidenceRow[];
     reason: string;
   },
 ): void {
+  requireFileAnchoredEvidence(values.claimKey, values.subjectId, values.evidenceRows);
+  const evidenceIds = values.evidenceRows.map((row) => row.id);
   ctx.db
     .prepare(
       `INSERT INTO claims (
@@ -241,20 +254,14 @@ function insertClaim(
       values.validFromSha,
       values.sessionId,
     );
-  attachEvidence(ctx, values.claimId, values.evidenceIds, "supports");
+  attachEvidence(ctx, values.claimId, evidenceIds, "supports");
   ctx.db
     .prepare(
       `INSERT INTO claim_validity_events
          (claim_id, event_type, at_sha, reason, evidence_id, session_id)
        VALUES (?, 'asserted', ?, ?, ?, ?)`,
     )
-    .run(
-      values.claimId,
-      values.assertedAtSha,
-      values.reason,
-      values.evidenceIds[0],
-      values.sessionId,
-    );
+    .run(values.claimId, values.assertedAtSha, values.reason, evidenceIds[0], values.sessionId);
 }
 
 function friendlyWriteError(error: unknown, claimKey?: string): never {
@@ -318,7 +325,6 @@ export const claimTools: ToolDefinition[] = [
       }
       const evidenceIds = requireEvidenceIds(args);
       const evidenceRows = requireEvidence(ctx, evidenceIds, assertedAtSha);
-      requireFileAnchoredEvidence(claimKey, subjectId, evidenceRows);
 
       try {
         ctx.db.transaction(() => {
@@ -332,7 +338,7 @@ export const claimTools: ToolDefinition[] = [
             assertedAtSha,
             validFromSha,
             sessionId,
-            evidenceIds,
+            evidenceRows,
             reason: "initial assertion",
           });
         })();
@@ -436,7 +442,7 @@ export const claimTools: ToolDefinition[] = [
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
       requireStrictDescendant(ctx, atSha, predecessor.valid_from_sha, "supersession");
       const evidenceIds = requireEvidenceIds(args);
-      requireEvidence(ctx, evidenceIds, atSha);
+      const evidenceRows = requireEvidence(ctx, evidenceIds, atSha);
       const predecessorEvidence = new Set(
         (
           ctx.db
@@ -447,7 +453,11 @@ export const claimTools: ToolDefinition[] = [
       if (!evidenceIds.some((id) => !predecessorEvidence.has(id))) {
         throw new ToolError("supersession requires new evidence not attached to the predecessor");
       }
-      const successorEvidence = evidenceIds.filter((id) => !predecessorEvidence.has(id));
+      // Only the rows that will actually support the successor. The carried-over
+      // ids support the predecessor and stay attached to it; a successor judged
+      // on its predecessor's evidence would inherit a soundness it never earned.
+      const successorRows = evidenceRows.filter((row) => !predecessorEvidence.has(row.id));
+      const successorEvidence = successorRows.map((row) => row.id);
 
       try {
         ctx.db.transaction(() => {
@@ -464,7 +474,7 @@ export const claimTools: ToolDefinition[] = [
             assertedAtSha: atSha,
             validFromSha: atSha,
             sessionId,
-            evidenceIds: successorEvidence,
+            evidenceRows: successorRows,
             reason: rationale,
           });
           ctx.db
