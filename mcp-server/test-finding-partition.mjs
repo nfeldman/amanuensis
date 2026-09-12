@@ -627,7 +627,7 @@ check(`compile_review_session places ${LEGACY_ID} in history as an accepted cont
     composition_run_id: "partition-composition",
   });
   const item = (review.items ?? []).find(
-    (row) => row.source_type === "finding" && String(row.statement ?? "").includes(LEGACY_ID),
+    (row) => row.record_uri === `amanuensis://finding/${LEGACY_ID}`,
   );
   if (!item) return `${LEGACY_ID} is absent from the review session`;
   if (item.section !== "history" || item.semantic_state !== "acceptable-control")

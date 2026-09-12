@@ -42,7 +42,7 @@ from .manifest import (
     sha256_bytes,
     sources_differ,
 )
-from .readback import ProjectionVerifier, write_contract
+from .readback import ProjectionVerifier, finding_page, write_contract
 from .renderers import RenderResult
 from .slugs import matrix_page, subsystem_page
 from .xref import XrefIndex, resolve_all
@@ -337,7 +337,8 @@ class Materializer:
                 PagePlan("index.md", lambda: renderers.render_index(conn, storage), title="Project overview", label="Overview", hint="Start here for the survey's present state, freshness, and highest-signal routes into the codebase.", group="Orientation", kind="overview"),
                 PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.", group="Orientation", kind="architecture"),
                 PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystem map", hint="See every architectural region, how deeply it has been surveyed, and where a reader should enter it.", group="Orientation", kind="registry"),
-                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Confirmed findings", label="Findings", hint="Review defects that survived the evidence and adversarial gates, ordered by impact.", group="Evidence", kind="findings"),
+                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Review the defects that are open or awaiting verification at the checked revision.", group="Evidence", kind="findings"),
+                PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Read the findings whose resolution is recorded as verified, ruled out, or accepted, grouped by that state.", group="Evidence", kind="findings"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern.", group="Evidence", kind="coverage"),
                 PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Inspect shared objects and ordering assumptions where independently understandable subsystems meet.", group="Evidence", kind="seams"),
                 PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Find places where credible records disagree instead of having their differences silently smoothed away.", group="Evidence", kind="contradictions"),
@@ -452,12 +453,22 @@ class Materializer:
                 _compact_definition(parties, s["shared_object"]),
             )
 
-        # Findings → findings.md#<lower-id>
-        for f in rows(conn, "SELECT finding_id, subsystem_id, symptom FROM findings"):
+        # Findings → the page their resolution state selects (spec §6.2). A
+        # resolved finding's full record moves to resolved-findings.md, so
+        # routing every id to findings.md would leave each recorded reference
+        # pointing at an anchor that no longer exists and the coverage axis
+        # reporting cross-link-anchor.
+        for f in rows(
+            conn,
+            """SELECT v.finding_id, v.subsystem_id, v.resolution_state, f.symptom
+                 FROM finding_state_current v
+                 JOIN findings f ON f.finding_id = v.finding_id""",
+        ):
             subsystem = subsystem_names.get(f["subsystem_id"], f["subsystem_id"])
+            page = finding_page(f["resolution_state"]) or "findings.md"
             entries[f["finding_id"]] = (
                 f["finding_id"],
-                f"findings.md#{f['finding_id'].lower()}",
+                f"{page}#{f['finding_id'].lower()}",
                 _compact_definition(f"Finding in {subsystem}", f["symptom"]),
             )
 
