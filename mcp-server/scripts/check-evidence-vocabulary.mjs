@@ -23,9 +23,12 @@
 // each party as text is what keeps the comparison able to fail.
 //
 // SKILL.md is the only hand-written party and is the one the check exists to
-// catch. Its prose is compared as a set, not in order: the ladder publishes the
-// kinds strongest-first, which is a claim about strength, not about the order
-// any validator stores them in.
+// catch. Every vocabulary its prose publishes is compared — the evidence-kind
+// ladder, the disposition verdicts, the phase ladder, and the authorized-claims
+// table — as a set, not in order: the ladder publishes the kinds
+// strongest-first, which is a claim about strength, not about the order any
+// validator stores them in. A surface may legitimately publish a subset, and
+// each says which values it omits and why.
 //
 // Usage:
 //   node scripts/check-evidence-vocabulary.mjs
@@ -155,41 +158,83 @@ if (kinds.length && quality.length) {
     report("json", `evidence_quality carries values no evidence row can carry: ${unbacked.join(", ")}`);
 }
 
-// ---- party 4: the hand-written ladder ------------------------------------
-const skillText = read(resolve(REPO, ".claude/skills/amanuensis/SKILL.md"));
-if (skillText === null) report("skill", "the skill contract could not be read");
-else if (kinds.length) {
-  const ladderMatch = skillText.match(/kind ladder \(([^)]*)\)/s);
-  if (!ladderMatch) report("skill", "the documented kind ladder could not be found");
-  else {
-    const documented = ladderMatch[1]
-      .split(">")
-      .map((entry) => entry.trim().replace(/`/g, "").replace(/\s+/g, " "))
-      .filter(Boolean);
-    const undocumented = kinds.filter((kind) => !documented.includes(kind));
-    const unimplemented = documented.filter((value) => !kinds.includes(value));
-    if (undocumented.length)
-      report("skill", `the kind ladder omits accepted evidence kinds: ${undocumented.join(", ")}`);
-    if (unimplemented.length)
-      report("skill", `the kind ladder documents kinds no tool accepts: ${unimplemented.join(", ")}`);
-  }
+// ---- party 4: the hand-written prose ------------------------------------
+// SKILL.md is the only hand-written party and the one this check exists to
+// catch. Every vocabulary it publishes is compared, not just the two the
+// original B03-3 check knew about: changing the phase ladder's `concerns` to
+// `concerns-broken` left this check and P1 green (F2/codex). Each surface
+// declares its own extractor and its own documented omissions, because a
+// prose ladder legitimately publishes a subset — `deferred` is an orthogonal
+// do-not-survey flag with no rank, so the status ladder does not carry it.
+const clean = (entry) => entry.trim().replace(/`/g, "").replace(/\s+/g, " ");
 
-  // The disposition verdicts are published in the same prose and drift the
-  // same way.
-  const classifications = sourceLists.get("DISPOSITION_CLASSIFICATIONS") ?? [];
-  const verdictMatch = skillText.match(/`set_disposition` writes\s+one of `([^`]*)`/s);
-  if (!verdictMatch) report("skill", "the documented disposition verdicts could not be found");
-  else if (classifications.length) {
-    const documented = verdictMatch[1]
-      .split("|")
-      .map((entry) => entry.trim().replace(/`/g, "").replace(/\s+/g, " "))
-      .filter(Boolean);
-    const undocumented = classifications.filter((value) => !documented.includes(value));
-    const unimplemented = documented.filter((value) => !classifications.includes(value));
+const SKILL_SURFACES = [
+  {
+    constName: "EVIDENCE_KINDS",
+    what: "the kind ladder",
+    extract: (text) => {
+      const match = text.match(/kind ladder \(([^)]*)\)/s);
+      return match ? match[1].split(">").map(clean).filter(Boolean) : null;
+    },
+  },
+  {
+    constName: "DISPOSITION_CLASSIFICATIONS",
+    what: "the disposition verdicts",
+    extract: (text) => {
+      const match = text.match(/`set_disposition` writes\s+one of `([^`]*)`/s);
+      return match ? match[1].split("|").map(clean).filter(Boolean) : null;
+    },
+  },
+  {
+    constName: "SUBSYSTEM_STATUSES",
+    what: "the phase ladder",
+    omits: ["deferred"],
+    extract: (text) => {
+      const match = text.match(/\n(unmapped(?:[ \t]*→[ \t]*[a-z-]+)+)[ \t]*\n/);
+      return match ? match[1].split("→").map(clean).filter(Boolean) : null;
+    },
+  },
+  {
+    constName: "SUBSYSTEM_STATUSES",
+    what: "the authorized-claims table",
+    omits: ["deferred"],
+    extract: (text) => {
+      const at = text.indexOf("| Status | Authorized claims |");
+      if (at === -1) return null;
+      const found = [];
+      for (const line of text.slice(at).split("\n").slice(2)) {
+        if (!line.startsWith("|")) break;
+        const match = line.match(/^\|\s*`([^`]+)`\s*\|/);
+        if (match) found.push(clean(match[1]));
+      }
+      return found.length ? found : null;
+    },
+  },
+];
+
+const skillText = read(resolve(REPO, ".claude/skills/amanuensis/SKILL.md"));
+let skillSurfaces = 0;
+if (skillText === null) report("skill", "the skill contract could not be read");
+else {
+  for (const surface of SKILL_SURFACES) {
+    const want = sourceLists.get(surface.constName);
+    if (!want) {
+      report("json", `${surface.what} names ${surface.constName}, which the source does not carry`);
+      continue;
+    }
+    const expected = want.filter((value) => !(surface.omits ?? []).includes(value));
+    const documented = surface.extract(skillText);
+    if (documented === null) {
+      report("skill", `${surface.what} could not be found`);
+      continue;
+    }
+    skillSurfaces += 1;
+    const undocumented = expected.filter((value) => !documented.includes(value));
+    const unimplemented = documented.filter((value) => !expected.includes(value));
     if (undocumented.length)
-      report("skill", `the disposition verdicts omit accepted values: ${undocumented.join(", ")}`);
+      report("skill", `${surface.what} omits accepted values: ${undocumented.join(", ")}`);
     if (unimplemented.length)
-      report("skill", `the disposition verdicts document values no tool accepts: ${unimplemented.join(", ")}`);
+      report("skill", `${surface.what} documents values no tool accepts: ${unimplemented.join(", ")}`);
   }
 }
 
@@ -200,5 +245,5 @@ if (errors.length) {
 }
 console.log(
   `OK — ${PARTIES.json}, ${PARTIES.ts}, ${PARTIES.py}, and ${PARTIES.skill} agree ` +
-    `(${sourceLists.size} vocabularies, ${kinds.length} evidence kinds).`,
+    `(${sourceLists.size} vocabularies; ${skillSurfaces} of them published in prose).`,
 );
