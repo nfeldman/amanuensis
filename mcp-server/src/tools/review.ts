@@ -396,8 +396,11 @@ function buildCandidates(
       | undefined;
     if (!finding) continue;
     const evidence = findingEvidence(ctx, findingId, run.head_sha);
+    // finding_state_current carries the legacy fallback, so a finding recorded
+    // before resolution events existed reports the same state here as it does
+    // on every other surface instead of an empty resolution.
     const resolution = ctx.db
-      .prepare("SELECT * FROM finding_resolution_current WHERE finding_id=?")
+      .prepare("SELECT * FROM finding_state_current WHERE finding_id=?")
       .get(findingId);
     add({
       section: "historical_findings",

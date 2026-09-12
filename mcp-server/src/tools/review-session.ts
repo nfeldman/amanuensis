@@ -189,9 +189,13 @@ function compile(args: Record<string, unknown>, ctx: ServerContext): Record<stri
 
   const findings = ctx.db
     .prepare(
-      `SELECT f.*, r.resolution_state
+      // finding_state_current, not finding_resolution_current: a legacy row
+      // with no resolution event previously arrived here with a null state and
+      // was labelled an active finding, so an accepted or ruled-out record
+      // could re-enter a review session as actionable work.
+      `SELECT f.*, v.resolution_state
          FROM findings f
-         LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
+         JOIN finding_state_current v ON v.finding_id=f.finding_id
         ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                  WHEN 'MEDIUM' THEN 2 ELSE 3 END, f.finding_id`,
     )

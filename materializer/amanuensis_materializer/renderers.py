@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Sequence
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
@@ -25,10 +26,18 @@ from .diagrams import (
     subsystem_dependency_graph,
 )
 from .manifest import sha256_bytes, sha256_json
-from .readback import finding_marker, stale_marker
+from .readback import FINDING_LENS_PAGES, finding_marker, stale_marker
 from .slugs import matrix_slug, subsystem_page
+from .vocabulary import labels
 
 RenderResult = tuple[str, dict[str, str]]
+
+# The resolution states each findings page renders, from the one definition in
+# readback.py, and their human labels from the enum source (spec §6.1, §10).
+FINDING_LENS_STATES: dict[str, tuple[str, ...]] = {
+    page: states for _lens, page, states in FINDING_LENS_PAGES
+}
+RESOLUTION_LABELS = labels("finding_resolution_state")
 
 
 def _fmt_time(ts: str | None) -> str:
@@ -439,27 +448,89 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
 # ---------------------------------------------------------------------------
 
 
-def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
-    fs = rows(
+def _finding_rows(
+    conn: sqlite3.Connection, states: Sequence[str], order: str
+) -> list[dict[str, Any]]:
+    """Findings in the given resolution states, read through the partition view.
+
+    `finding_state_current` carries the legacy-status fallback once (spec §6),
+    so the renderer no longer keeps its own copy of it.
+    """
+    placeholders = ",".join("?" for _ in states)
+    return rows(
         conn,
-        """SELECT f.*,
+        f"""SELECT f.*,
                   s.name AS subsystem_name,
-                  COALESCE(r.resolution_state,
-                    CASE f.status WHEN 'fixed' THEN 'fixed-pending-verification'
-                                  WHEN 'ruled-out' THEN 'ruled-out'
-                                  WHEN 'confirmed-acceptable' THEN 'accepted'
-                                  ELSE 'open' END) AS resolution_state,
-                  r.fix_sha, r.evidence_id AS resolution_evidence_id
+                  v.resolution_state, v.fix_sha, v.fix_location,
+                  v.resolution_evidence_id, v.resolution_recorded_at
              FROM findings f
+             JOIN finding_state_current v ON v.finding_id=f.finding_id
              LEFT JOIN subsystems s ON s.id=f.subsystem_id
-             LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
-            ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
+            WHERE v.resolution_state IN ({placeholders})
+            ORDER BY {order}""",
+        list(states),
+    )
+
+
+def _finding_table(subsystem_rows: Sequence[dict[str, Any]]) -> list[str]:
+    """One subsystem's findings as full marked records (spec §6.2)."""
+    subsystem_id = str(subsystem_rows[0]["subsystem_id"])
+    subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
+    out = [
+        f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
+        "",
+        "| ID | Status | Symptom | Root cause | Ref SHA |",
+        "|---|---|---|---|---|",
+    ]
+    for f in subsystem_rows:
+        out.append(finding_marker(str(f["finding_id"])))
+        out.append(
+            f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
+            f"{f['resolution_state']} | "
+            f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
+            f"`{(f['ref_sha'] or '—')[:8]}` |"
+        )
+    out.append("")
+    return out
+
+
+def _by_subsystem(fs: Sequence[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Group rows by subsystem, keeping the order the query established."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for f in fs:
+        groups.setdefault(str(f["subsystem_id"]), []).append(f)
+    return list(groups.values())
+
+
+def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The Unresolved lens: open defects and repairs awaiting verification.
+
+    Resolved records render on `resolved-findings.md` instead, each with its
+    marker, so every finding is a full record on exactly one page (spec §6.2).
+    """
+    # §6.1 orders the Unresolved lens open-first, then repairs awaiting
+    # verification. The page's own sections stay severity-major, so the state
+    # rank orders the rows inside each severity section.
+    fs = _finding_rows(
+        conn,
+        FINDING_LENS_STATES["findings.md"],
+        """CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                        WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
+                     CASE v.resolution_state WHEN 'open' THEN 0 ELSE 1 END,
                      f.subsystem_id, f.finding_id""",
     )
-    out = ["# Findings", ""]
+    out = ["# Open findings", ""]
     if not fs:
-        out.append("_No confirmed findings yet._")
+        resolved = row(
+            conn,
+            "SELECT COUNT(*) AS n FROM finding_state_current"
+            " WHERE resolution_state NOT IN ('open','fixed-pending-verification')",
+        ) or {"n": 0}
+        out.append(
+            "_No finding is open or awaiting verification. "
+            f"{resolved['n'] or 0} resolved record(s) are on "
+            "[resolved-findings.md](resolved-findings.md)._"
+        )
     else:
         # Severity is the primary grouping; the full subsystem name supplies
         # the human-oriented subheading for the records that follow.
@@ -468,26 +539,34 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             if not sev_rows:
                 continue
             out += [f"## {sev.title()} findings", ""]
-            subsystem_ids = list(dict.fromkeys(str(f["subsystem_id"]) for f in sev_rows))
-            for subsystem_id in subsystem_ids:
-                subsystem_rows = [f for f in sev_rows if f["subsystem_id"] == subsystem_id]
-                subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
-                out += [
-                    f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
-                    "",
-                    "| ID | Status | Symptom | Root cause | Ref SHA |",
-                    "|---|---|---|---|---|",
-                ]
-                for f in subsystem_rows:
-                    out.append(finding_marker(str(f["finding_id"])))
-                    out.append(
-                        f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
-                        f"{f['resolution_state']} | "
-                        f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
-                        f"`{(f['ref_sha'] or '—')[:8]}` |"
-                    )
-                out.append("")
-    return "\n".join(out) + "\n", _db_source("findings:all", fs)
+            for subsystem_rows in _by_subsystem(sev_rows):
+                out += _finding_table(subsystem_rows)
+    return "\n".join(out) + "\n", _db_source("findings:open", fs)
+
+
+def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The History lens for findings: verified, ruled out, and accepted.
+
+    One section per resolution state, newest resolution first within it. A row
+    whose state came from the legacy-status fallback has no recorded resolution
+    time and sorts last in its section, which is what the store knows.
+    """
+    fs = _finding_rows(
+        conn,
+        FINDING_LENS_STATES["resolved-findings.md"],
+        "v.resolution_recorded_at DESC, f.subsystem_id, f.finding_id",
+    )
+    out = ["# Resolved findings", ""]
+    if not fs:
+        out.append("_No resolution is recorded for any finding._")
+    for state in FINDING_LENS_STATES["resolved-findings.md"]:
+        state_rows = [f for f in fs if f["resolution_state"] == state]
+        if not state_rows:
+            continue
+        out += [f"## {RESOLUTION_LABELS.get(state, state)}", ""]
+        for subsystem_rows in _by_subsystem(state_rows):
+            out += _finding_table(subsystem_rows)
+    return "\n".join(out) + "\n", _db_source("findings:resolved", fs)
 
 
 def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
