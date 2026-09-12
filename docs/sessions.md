@@ -6,7 +6,9 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
-| `mtyi7pwh-5cag5ago` | `P20 regeneration: clean publish and promotion of the regenerated projection` | 2026-09-12 14:52 UTC | not closed | not recorded |
+| `mtyiggow-9i3vr68s` | `P20 regeneration: clean publish and promotion of the regenerated projection` | 2026-09-12 14:59 UTC | not closed | not recorded |
+| `mtyifaun-25lkyutz` | `P20 regeneration: transcribe P19's recorded adversarial probes into the durable challenge-outcome record, and record the registry crossings index.ts makes visible` | 2026-09-12 14:58 UTC | 2026-09-12 14:58 UTC | completed |
+| `mtyi7pwh-5cag5ago` | `P20 regeneration: clean publish and promotion of the regenerated projection` | 2026-09-12 14:52 UTC | 2026-09-12 14:52 UTC | completed |
 | `mtyi6u7d-zjcwsuvz` | `P20 regeneration: clean publish and promotion of the regenerated projection` | 2026-09-12 14:51 UTC | 2026-09-12 14:51 UTC | completed |
 | `mtyi67ge-c4n4m29c` | `P20 regeneration: transcribe P19's recorded adversarial probes into the durable challenge-outcome record, and record the registry crossings index.ts makes visible` | 2026-09-12 14:51 UTC | 2026-09-12 14:51 UTC | completed |
 | `mtyhtj8d-3pwkwl91` | `P20 regeneration: transcribe P19's recorded adversarial probes into the durable challenge-outcome record, and record the registry crossings index.ts makes visible` | 2026-09-12 14:41 UTC | not closed | not recorded |
@@ -23,6 +25,7 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `projection-7954ffea-a954-4410-acbf-c6e3ed126789` | `clean-publish` | green | green | green | 2026-09-12 14:52 UTC |
 | `projection-42c0c374-ec59-4edb-98d3-19d3cd672526` | `clean-publish` | green | green | green | 2026-09-12 14:51 UTC |
 | `projection-602ac79e-4cec-4efd-9fb0-61f5ee137a45` | `clean-publish` | green | green | green | 2026-09-12 13:30 UTC |
 | `projection-8a011257-4c7b-42f1-b721-7b490684d574` | `clean-publish` | green | green | green | 2026-09-12 13:17 UTC |

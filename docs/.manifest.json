@@ -1,17 +1,17 @@
 {
   "version": "0.5.0",
-  "generated_at": "2026-09-12T14:52:21Z",
+  "generated_at": "2026-09-12T14:59:09Z",
   "pages": [
     {
       "path": "architecture.md",
       "sources": {
         "db:arch:seams": "da5d8c999ff7a7700cbd74515438fea7a4134b97341415e42c82be241c7d28d6",
         "db:arch:subs": "58ba7eabdb038bda04828484033235393d56290ed144355eb3e9e64ea86019ca",
-        "db:arch:xrefs": "774e8a52cbb750067b0641b67e72ca024948fbb8a960d2ed42e9c7da296511f4",
+        "db:arch:xrefs": "c7c857e36839e753fad4b37950c8644564905111935075716ad18f916671a5e3",
         "prose:onboarding-report.md": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0"
       },
       "content_hash": "2ff7b61fe7dc96f03758e0b4f16662465a97405d9665fd385dc9c0200b15877e",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
         "prose:concern-checklist.md": "e94150ceb4d2b308dfdc51e0183396c46b5e5bac5d01df7a96d252acb8517eb9"
       },
       "content_hash": "e94150ceb4d2b308dfdc51e0183396c46b5e5bac5d01df7a96d252acb8517eb9",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "concerns.md",
@@ -29,7 +29,7 @@
         "db:concerns:subs": "ed60ea2e6bab0b9438355f7ae1c389fa2d24f0059585a740b9eeb1a28c4631a5"
       },
       "content_hash": "eb8c36878080cc0d8638c5c79d475c54e80f7cc284fa4d02210b90715ad8d959",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "contradictions.md",
@@ -39,7 +39,7 @@
         "db:contradictions:standing": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0"
       },
       "content_hash": "589e54d80a254caee61038587f758b9c5effab0b9d17c74ec55381571e1cbf9f",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "diagnosticity.md",
@@ -47,7 +47,7 @@
         "db:diagnosticity:index": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "52978217cbfbdcb15f5e81b3f04c53f77055e6608a23fb52c7a56a3dd977f6c3",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "disagreements.md",
@@ -57,7 +57,7 @@
         "db:disagreements:matrices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "3ea162d1382c32208f7df68b7ce9be6186b22dc13089dfe36bae5f990925e878",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "entry-point.md",
@@ -65,7 +65,7 @@
         "prose:entry-point.md": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba"
       },
       "content_hash": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "field-notes.md",
@@ -74,7 +74,7 @@
         "db:notes:open": "a6ca49cf669fee12289f3d7356806a69b85cb4b37085df13bfb6204e47c62d3d"
       },
       "content_hash": "b835db44f22b13cfd95fc2a6e9298e3cb2c0b0f83b5b212f6bca511c29ec1a81",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "files.md",
@@ -84,7 +84,7 @@
         "db:files:standing": "71ef1607366216fe0eadc71d3b4e5587932846f6b7bd2a7293ed5cb48df0fb0d"
       },
       "content_hash": "d21b5ad5971a7eaa54c9eeae15c92308d7d7cecf0150855877f743af58647d67",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "findings.md",
@@ -92,7 +92,7 @@
         "db:findings:open": "a1097d44d674be96bdb9a381785df3a44fdd61556483dbdeeb033e4443b1935f"
       },
       "content_hash": "738c5f4f893a96c68532400a94dbbe933063dc94b646635c46653c033ff394e0",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "hot-spots.md",
@@ -101,7 +101,7 @@
         "db:hotspots:measures": "5363931d51b35c5637438a514d667f54bf939210ab652692664c0c483194a973"
       },
       "content_hash": "8be71d03daaddd55d95b9c9f8cb1401d6984f9a3695cd2aad6b7c38d1757cd30",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "how-to-read.md",
@@ -110,25 +110,25 @@
         "synthetic:how-to-read-contract": "92521fc3cbd964bd"
       },
       "content_hash": "e5e13dc5251dbbc892fcacf7d4cbc9ca1a0552dd2c30f6e656dcd1a6c73a927d",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "index.md",
       "sources": {
-        "db:index:alignment": "48df7674f2fb22a8d080f03451bafbe77a0b77344a0017505f5089be4a3b4326",
+        "db:index:alignment": "250be35b1b9d2369c56ab04ae3251ebfc8905fe7e69048f2b1b334ee15afe828",
         "db:index:decisions": "11d0a8967009cbcdf468f09e5b09e73e7119b528c35a0e0b23f2ae052786b8fa",
         "db:index:identity": "931d73cc206559d429b860b80e58fd83819968632537639b2d7bb1dabd1c6c70",
-        "db:index:session": "713d0dbb967e4daddcbb9e6aa324f5ca7ddf8b4f097751aa0897254bf447911f",
+        "db:index:session": "2c1b57a0c4add081afc9f7eb879c463aeb456cac4b48c311bd1c7846690753a9",
         "db:index:stale-objects": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:index:states": "8de14c71dba4c8c514e97e808a95a500bf48ab9e44f5a4b0dfaff0d5182cdd8f",
         "db:index:subs": "2c9aa45e24fefd461ec181a60af7965b54b3946518639fb259fb25fb93c3bbf3",
         "db:index:unledgered": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
         "db:index:unresolved": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:index:verification": "ea7da79410ba2e43609e87a48af679e533052a7e2ea16b16afba06f2da28b753",
+        "db:index:verification": "ee7783225299a4277fa2ba8dc30f0a19ee902674ad19adae60dae1fa3d65bfbc",
         "prose:entry-point.md": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba"
       },
-      "content_hash": "c3062b5c2259116a50b1772b31267581bfffafa96ca1b54ee723d3e4a538f9dc",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "content_hash": "a7a0132b81e874ade5b11186317371e6f7ecd1d4d83dbf4e55b4cf78159e7450",
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "master-plan.md",
@@ -137,7 +137,7 @@
         "db:master-plan:subs": "6f5f649f3084baf8753473771ed61b014d46e425a523b5534e6b1678a2146898"
       },
       "content_hash": "ca33852697fa39451a46449c2195b47230bec54311035241746f2b748cd3a14a",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "not-yet-surveyed.md",
@@ -153,7 +153,7 @@
         "db:gaps:unledgered": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "0bb0fa4bf68e35ec7fc4eabb134afa1e3cba4ed9fbec5b86a31c183d23a70320",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "onboarding-report.md",
@@ -161,7 +161,7 @@
         "prose:onboarding-report.md": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0"
       },
       "content_hash": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "open-questions.md",
@@ -170,7 +170,7 @@
         "db:open_questions:open": "0b52e5ca76dea84e314e32575419e02dab07aa0619baa748da0d09882b68eda6"
       },
       "content_hash": "ce20f2965483fb01faa6ffc7ebdea5090caf7352a019d0956759df1b01b5dd12",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "resolution-history.md",
@@ -179,7 +179,7 @@
         "db:history:finding-events": "20691b7ef57722fcd5a5c89c89f024f3aafcec3cc69915e2f340155f5579e79a"
       },
       "content_hash": "6e8b278b882a7360dcc1350db039d0054dce3132c49726b820b23562ebee431c",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "resolved-findings.md",
@@ -188,7 +188,7 @@
         "db:findings:resolved-basis": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
       },
       "content_hash": "d4cef656166128d9bf1b66baf1717d509a4389cc1fb1444b6647478107d259f6",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "resolved-leads.md",
@@ -197,7 +197,7 @@
         "db:resolved-leads:questions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "a14bd884c690018893717964967522fdbb45b279ef1e74127fc0935a7b739eae",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "seams.md",
@@ -206,17 +206,17 @@
         "db:seams:assess": "6b97fcdb6771dd24ea0af0d61f2974d17d59c099faec901cabb2bdaf4e34a3db"
       },
       "content_hash": "0e74cb57507f21195d97bd862799074df03ac04dd96c041f0279be1e5e2def2b",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "sessions.md",
       "sources": {
         "db:sessions:refreshes": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:sessions:sessions": "0d21e6a2df31fce11dda630d031a79b81f4721519df1013133f497c490515c33",
-        "db:sessions:verifications": "0d5011e0218d0bdf4ad386a4ab897a2e62a5defa3d492b1985fa4a624882c445"
+        "db:sessions:sessions": "ac6bdecc1a0c87056047e7727cd5a21d6e3e0bd4fde349add20aa120ef82c62c",
+        "db:sessions:verifications": "213a4b072147290848413cc150787e280da71db065118e9ac78ff456dca2523b"
       },
-      "content_hash": "62992559848d58c6e8375916ccfe2e713460e269f6a41e80ee041f3cb0d015f6",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "content_hash": "ac27704fce853031701cae624d4fe82c46e94c13959322d4cbb220485f983902",
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "stale.md",
@@ -227,7 +227,7 @@
         "db:stale:names": "b43ea9e8bbfdd9c21ceab5b261a57a7a58a6e0606f81b2407f0927e033958f03"
       },
       "content_hash": "6e213257aaa0dc69682a69cbb766d7a1be81d016f43e025264a2f383bf769547",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b01-server-runtime-and-tool-dispatch.md",
@@ -246,7 +246,7 @@
         "prose:B-01-server-runtime-and-tool-dispatch.md": "cd3e9f496a1d3b624e691578d23f11a5aefe0913ce6d75641c12b169cbdb6325"
       },
       "content_hash": "20a4e4c9864be73bb8a0a6c421201af026dce749340b24023685ab7411af83d3",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b02-repository-binding-and-storage-custody.md",
@@ -265,7 +265,7 @@
         "prose:B-02-repository-binding-and-storage-custody.md": "b815eaa57d68ccac031f5aaf38d3c94bed5c1c071579d7b6b68beae1d6501a8b"
       },
       "content_hash": "565d9c28dd53ce8415466f8e6f6e3d165f1a175572dca7684dcd3dec39594390",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b03-conspectus-schema-vocabulary-and-invariants.md",
@@ -284,7 +284,7 @@
         "prose:B-03-conspectus-schema-vocabulary-and-invariants.md": "3632e2b5b9aa396c50453fa37c34d14fc6ca73fd000361012822af0eec4cd912"
       },
       "content_hash": "cf91bde1a102a8ca626b408f4dfefe2867bb5c4d1ee1167f2b753e19e60ef10d",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b04-survey-record-tools.md",
@@ -303,7 +303,7 @@
         "prose:B-04-survey-record-tools.md": "4291a07a4299d918c3640fc3dcf5afbe49588ea8e8472196b1a92b1aac520853"
       },
       "content_hash": "c1a6e20107ebb0ac63c28dc8a6b1f675ee6bcda6b1fa0e746b0244f77e64464d",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b05-findings-dispositions-and-resolution-custody.md",
@@ -322,7 +322,7 @@
         "prose:B-05-findings-dispositions-and-resolution-custody.md": "a12adeec760c3229ae96845584f48f6f2f42fff9fa874d013109581c3e4d3ecb"
       },
       "content_hash": "a98ec964a405a22abf3dad95885f579c7fc5179f66db4d40af7ee8f6d19b8cb1",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b06-locus-standing-and-the-reader-lenses.md",
@@ -341,7 +341,7 @@
         "prose:B-06-locus-standing-and-the-reader-lenses.md": "d132efaa14cff4f0ce8bc8dcd7a865f98b9c3bfb5174c19c27965e296538d449"
       },
       "content_hash": "ba48cfec86cc9fa49c6ea553a5a952d5f9e5be27c0b642ad53ab64e103db38f2",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b07-git-state-staleness-and-refresh.md",
@@ -360,7 +360,7 @@
         "prose:B-07-git-state-staleness-and-refresh.md": "38105f5cfe6625ee71a02a6ece63023b2735d74c38a002dec85698d682adfff4"
       },
       "content_hash": "ab2b443299004ad09a7a2ab272203a746851ba50b0b60664d8e212fce47e3271",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b08-materializer-rendering-pipeline.md",
@@ -379,7 +379,7 @@
         "prose:B-08-materializer-rendering-pipeline.md": "96f47bc3b39abfed628f84d9247a56020b1332007f62c74ec6e5b8a0971148b5"
       },
       "content_hash": "9dc69f32d5e8702ec0328c4ba3581c79ed7b4f39ed89ffd021b8f0f4cb24fc12",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b09-projection-read-back-and-publication-custody.md",
@@ -398,7 +398,7 @@
         "prose:B-09-projection-read-back-and-publication-custody.md": "755317dbb38dd1830057ed941b4ea5d16b0dab0dbf4573526d99e3df04cf324d"
       },
       "content_hash": "ce193b90ffd84e2f691586fd7f10630192dfbabbb5b616674c1250301227bc43",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b10-the-amanuensis-skill.md",
@@ -417,7 +417,7 @@
         "prose:B-10-the-amanuensis-skill.md": "0983da5845e2ac01701825ed1666afca914160ff687f59952e2b1741c68bc58c"
       },
       "content_hash": "7b5572b88ce18ba54fdd59b04680dabc069900c700cbb3827d67f220a7d20ec5",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b11-development-harness-and-gates.md",
@@ -436,7 +436,7 @@
         "prose:B-11-development-harness-and-gates.md": "54e5f6c5b06dd4e7e3967398c120b20741ba68486314cae489d336bb938f0554"
       },
       "content_hash": "cd3b0627ecc6b8034959f69631d19ed0138cc62fb5a4a39aca3817639faccb88",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "subsystems/b12-vendored-research-corpus.md",
@@ -454,7 +454,7 @@
         "db:subsystem:B-12:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "6c8e5ee6b755ba6c515ab19e7425a4d8cbccb47663b4efbcda3c6499b9a49ed4",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     },
     {
       "path": "vocabulary.md",
@@ -462,7 +462,7 @@
         "db:vocab:all": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "9edecd353ac43ca1491c1cbc7c274e2d7fddde9879374646898d2af3c38705b8",
-      "rendered_at": "2026-09-12T14:52:21Z"
+      "rendered_at": "2026-09-12T14:59:09Z"
     }
   ],
   "projection_files": [
@@ -516,7 +516,7 @@
     },
     {
       "path": "index.html",
-      "content_hash": "b0bf114401d3555963cde24081dfbf195d11ef5638096a25a34220c9385349d2"
+      "content_hash": "9247d7b357ff85b1266e710d0d023e29a8ba8139008efacca2c8a3988a914a42"
     },
     {
       "path": "master-plan.html",
@@ -556,7 +556,7 @@
     },
     {
       "path": "sessions.html",
-      "content_hash": "a1898ae2d39d3b8ba12aa1f887547e440e4505dfe513f89a4e60b3f0ecf2b51c"
+      "content_hash": "da301331752981411c68c1a33e2926d785bfd396a4531f02e34e26053c8b1253"
     },
     {
       "path": "stale.html",

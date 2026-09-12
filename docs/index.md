@@ -29,7 +29,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | Metric | Value |
 |---|---|
 | Checked at | `0fee11b0fea1` on `reader-lenses`, 2026-09-12 13:14 UTC |
-| Repository head | `8c0600a9a516` — a different revision from the one the survey checked |
+| Repository head | `331078257db7` — a different revision from the one the survey checked |
 | Upstream head | not known here |
 | Files carrying a survey obligation marked stale | 0 of 58 |
 | Scoped files exempt from that obligation, marked stale | none in scope |
@@ -58,7 +58,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-12 14:51 UTC |
+| Verified at | 2026-09-12 14:52 UTC |
 
 ## Findings by resolution state
 
@@ -79,5 +79,5 @@ Four dimensions, each read from durable records and each reported on its own ter
 
 ## Latest session
 
-`P20 regeneration: clean publish and promotion of the regenerated projection` — started 2026-09-12 14:52 UTC · **active**
+`P20 regeneration: clean publish and promotion of the regenerated projection` — started 2026-09-12 14:59 UTC · **active**
 

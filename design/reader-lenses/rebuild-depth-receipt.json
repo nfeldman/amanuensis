@@ -1,15 +1,15 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-depth-receipt/v1",
   "packet": "P19",
-  "recorded_at": "2026-09-12T14:51:14.995Z",
-  "repository_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642",
+  "recorded_at": "2026-09-12T14:59:16.362Z",
+  "repository_sha": "331078257db7b478aae4f97884fe00cbd90a6e24",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "produced_by": "dev/record-rebuild-depth.mjs",
   "store": {
     "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
     "canonical_branch": "reader-lenses",
-    "session_id": "mtyi67ge-c4n4m29c"
+    "session_id": "mtyiggow-9i3vr68s"
   },
   "checklist_concerns": [
     {
@@ -142,8 +142,8 @@
     }
   ],
   "seam_assessment": {
-    "storage_commit": "9569bf1898fb1c1f4128472fe7def5c63387e253",
-    "label": "session mtyi67ge-c4n4m29c ended (completed)",
+    "storage_commit": "e6e6391e51514d1bb17a224d00455a82694abd89",
+    "label": "session mtyiggow-9i3vr68s ended (completed)",
     "covers": "SC-1 through SC-9 and Phase 5 packaging"
   },
   "subsystems": [
@@ -4727,6 +4727,36 @@
   ],
   "field_notes_recorded": 69,
   "storage_history": [
+    {
+      "sha": "e6e6391e51514d1bb17a224d00455a82694abd89",
+      "date": "2026-09-12T10:59:11-04:00",
+      "message": "session mtyiggow-9i3vr68s ended (completed)"
+    },
+    {
+      "sha": "94aae28ede3a160bffeecef7eac38aee01a139a7",
+      "date": "2026-09-12T10:58:14-04:00",
+      "message": "session mtyifaun-25lkyutz ended (completed)"
+    },
+    {
+      "sha": "5a12ed11d4c4b623a07b73f7b07f950e20b5f200",
+      "date": "2026-09-12T10:58:14-04:00",
+      "message": "P20 regeneration · 0 claim challenge outcomes transcribed from their probe notes, 1 registry crossings recorded"
+    },
+    {
+      "sha": "cf5cc7ed4b1e7bdcd690491d4d0b2f5677a9f596",
+      "date": "2026-09-12T10:58:14-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "275b82aeb82775c1f2574ca515febb7a988e70ea",
+      "date": "2026-09-12T10:52:23-04:00",
+      "message": "session mtyi7pwh-5cag5ago ended (completed)"
+    },
+    {
+      "sha": "54f5ee2b9cdfa1f384b6d9d0e37718cbc1c807f3",
+      "date": "2026-09-12T10:51:42-04:00",
+      "message": "session mtyi6u7d-zjcwsuvz ended (completed)"
+    },
     {
       "sha": "9569bf1898fb1c1f4128472fe7def5c63387e253",
       "date": "2026-09-12T10:51:11-04:00",

@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-12T14:52:31.661Z",
-  "repository_sha": "8c0600a9a516a54639dfc590da74a92a05956cd5",
+  "recorded_at": "2026-09-12T14:59:15.796Z",
+  "repository_sha": "331078257db7b478aae4f97884fe00cbd90a6e24",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
@@ -65,7 +65,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
+            "repository_head": "331078257db7b478aae4f97884fe00cbd90a6e24",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -460,7 +460,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
+            "repository_head": "331078257db7b478aae4f97884fe00cbd90a6e24",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -840,7 +840,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
+            "repository_head": "331078257db7b478aae4f97884fe00cbd90a6e24",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -1582,7 +1582,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-7954ffea-a954-4410-acbf-c6e3ed126789",
+      "projection_run_id": "projection-506f60bf-f973-4951-a5de-78dd82e64717",
       "pages_rendered": 36,
       "html_pages_rendered": 36,
       "summary": {
@@ -1618,17 +1618,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-7954ffea-a954-4410-acbf-c6e3ed126789"
+        "projection_run_id": "projection-506f60bf-f973-4951-a5de-78dd82e64717"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "8d9bbfb9189abdb38ba52b617b0c2ba8fd6ef2bd7ce6991ef7c1df26ca051b87",
-      "manifest_sha256": "caef7ed12a286a1be737adb0ec909de0790c28f2d02a4b211d2fce28750e63ed",
+      "projection_contract_sha256": "3b3859908765740fa208ef475ae236e757a5bc307d4bb9093bff20b68da70bfb",
+      "manifest_sha256": "b45f6afd3c88bd9245154a164b2e095f57db69c38ef1a508d0bf6beccf85024c",
       "page_count": 73,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-12T14:52:27.179Z",
+      "promoted_at": "2026-09-12T14:59:15.239Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",
