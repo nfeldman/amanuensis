@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from . import renderers
-from .db import open_ro, row, rows
+from .db import VIEW_ABSENT_CAUSE, missing_views, open_ro, row, rows
 from .html_projection import SitePage, render_html_projection
 from .manifest import (
     MATERIALIZER_VERSION,
@@ -162,9 +162,45 @@ class Materializer:
         self.summary.ok = False
 
     # ---------------------------------------------------------------------
+    def _refused(self, message: str) -> dict[str, Any]:
+        """The summary shape a render that never started still has to return."""
+
+        self._warn(message)
+        return {
+            "ok": False,
+            "output_dir": str(self.output),
+            "html_entrypoint": str(self.output / "index.html"),
+            "pages_total": 0,
+            "pages_rendered": 0,
+            "pages_unchanged": 0,
+            "pages_retired": [],
+            "xref_updates": 0,
+            "html_pages_total": 0,
+            "html_pages_rendered": 0,
+            "html_pages_unchanged": 0,
+            "html_pages_retired": [],
+            "warnings": self.summary.warnings,
+            "readback": None,
+        }
+
+    # ---------------------------------------------------------------------
     def materialize(self) -> dict[str, Any]:
         conn = open_ro(self.storage / "memory.db")
         try:
+            # The reader-lens views are created by the MCP server's schema
+            # application and by nothing else; this process opens the store
+            # read-only. A store last opened by an older server therefore
+            # reaches here without them while the pages below read them.
+            # Refuse by name rather than render a projection that silently
+            # drops whichever lens the absent view feeds, and never fall back
+            # to an inline copy of the predicate: two copies of one definition
+            # is the drift the views exist to remove.
+            absent = missing_views(conn)
+            if absent:
+                return self._refused(
+                    f"required view(s) absent from the store: {', '.join(absent)} — "
+                    f"{VIEW_ABSENT_CAUSE}"
+                )
             plan = self._plan(conn)
             self.summary.pages_total = len(plan)
 

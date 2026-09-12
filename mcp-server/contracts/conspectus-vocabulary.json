@@ -238,42 +238,49 @@
           "value": "unmapped",
           "label": "Unmapped",
           "meaning": "This subsystem has not yet been surveyed; no architectural claims are authorized.",
+          "authorizes": "nothing",
           "cannot_justify": "any claim about this subsystem's behavior"
         },
         {
           "value": "scoping",
           "label": "Scoping",
           "meaning": "Only the subsystem boundary and file scope are established so far.",
+          "authorizes": "which files are in scope for this subsystem",
           "cannot_justify": "any behavioral claim; file scope is all that is established"
         },
         {
           "value": "structural",
           "label": "Structural",
           "meaning": "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
+          "authorizes": "claims about types, state containers, flows, and the concurrency model",
           "cannot_justify": "any correctness claim"
         },
         {
           "value": "concerns",
           "label": "Concerns",
           "meaning": "Structural mapping is complete and concern-by-concern review is in progress.",
+          "authorizes": "concern review decisions that cite evidence",
           "cannot_justify": "that a finding survived adversarial challenge"
         },
         {
           "value": "adversarial",
           "label": "Adversarial",
           "meaning": "Candidate conclusions are being challenged; treat them as provisional.",
+          "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
           "cannot_justify": "that the challenge pass has finished"
         },
         {
           "value": "mapped",
           "label": "Mapped",
           "meaning": "Survey complete through structural analysis, concern review, and adversarial challenge.",
+          "authorizes": "the recorded survey through structural analysis, concern review, and adversarial challenge",
           "cannot_justify": "that the reading is current at the repository head"
         },
         {
           "value": "deferred",
           "label": "Deferred",
           "meaning": "This subsystem is intentionally outside the active survey plan.",
+          "authorizes": "nothing",
           "cannot_justify": "anything about this subsystem's behavior"
         }
       ]

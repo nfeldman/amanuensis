@@ -448,12 +448,14 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning:
           "This subsystem has not yet been surveyed; no architectural claims are authorized.",
         cannot_justify: "any claim about this subsystem's behavior",
+        authorizes: "nothing",
       },
       {
         value: "scoping",
         label: "Scoping",
         meaning: "Only the subsystem boundary and file scope are established so far.",
         cannot_justify: "any behavioral claim; file scope is all that is established",
+        authorizes: "which files are in scope for this subsystem",
       },
       {
         value: "structural",
@@ -461,18 +463,22 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning:
           "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
         cannot_justify: "any correctness claim",
+        authorizes: "claims about types, state containers, flows, and the concurrency model",
       },
       {
         value: "concerns",
         label: "Concerns",
         meaning: "Structural mapping is complete and concern-by-concern review is in progress.",
         cannot_justify: "that a finding survived adversarial challenge",
+        authorizes: "concern review decisions that cite evidence",
       },
       {
         value: "adversarial",
         label: "Adversarial",
         meaning: "Candidate conclusions are being challenged; treat them as provisional.",
         cannot_justify: "that the challenge pass has finished",
+        authorizes:
+          "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
       },
       {
         value: "mapped",
@@ -480,12 +486,15 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning:
           "Survey complete through structural analysis, concern review, and adversarial challenge.",
         cannot_justify: "that the reading is current at the repository head",
+        authorizes:
+          "the recorded survey through structural analysis, concern review, and adversarial challenge",
       },
       {
         value: "deferred",
         label: "Deferred",
         meaning: "This subsystem is intentionally outside the active survey plan.",
         cannot_justify: "anything about this subsystem's behavior",
+        authorizes: "nothing",
       },
     ],
   },

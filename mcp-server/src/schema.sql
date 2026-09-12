@@ -192,6 +192,41 @@ CREATE TABLE IF NOT EXISTS scope_gaps (
     PRIMARY KEY (file_path, kind)
 );
 
+-- Per-owner standing: what a reader is entitled to claim about one file on
+-- the authority of one subsystem's examination of it. One row per file_ledger
+-- row, and no new table -- every column the CASE reads is already stored.
+--
+-- `unledgered` and `mixed` are deliberately absent from the CASE. Both are
+-- properties of the *set* of rows for a path (none at all, or two that
+-- disagree) and no single row can carry them; the standing block computes
+-- them over this view's rows. Reachability of `ref_sha` is likewise not
+-- decidable in SQL: a row that leaves here `examined` may still be downgraded
+-- to `examined-stale` by the git ancestry probe in src/standing.ts.
+--
+-- `stale_reason = 'absent'` is tested first because a path that left the
+-- repository cannot support a reading at the head whatever its classification
+-- says, and `COALESCE(classification,'candidate')` is what makes a null
+-- classification a scoped, unread file rather than a state of its own.
+CREATE VIEW IF NOT EXISTS file_standing AS
+SELECT l.file_path,
+       l.subsystem_id,
+       l.classification,
+       CASE
+         WHEN l.stale_reason = 'absent'                       THEN 'absent'
+         WHEN l.classification IN ('generated-ignore','vendor-ignore',
+                                   'irrelevant','deferred-with-reason')
+                                                              THEN 'excluded'
+         WHEN COALESCE(l.classification,'candidate')='candidate' THEN 'scoped-unread'
+         WHEN l.classification = 'examined' AND l.stale = 0    THEN 'examined'
+         WHEN l.classification = 'examined'                    THEN 'examined-stale'
+         ELSE 'scoped-unread'
+       END                                                     AS standing_state,
+       l.stale, l.stale_reason, l.ref_sha, l.examined_at,
+       s.name                                                  AS subsystem_name,
+       s.status                                                AS authority_ceiling
+  FROM file_ledger l
+  LEFT JOIN subsystems s ON s.id = l.subsystem_id;
+
 ----------------------------------------------------------------------
 -- DISPOSITIONS: concern × subsystem classification
 ----------------------------------------------------------------------

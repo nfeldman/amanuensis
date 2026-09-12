@@ -210,6 +210,9 @@ jobs:
       - name: Finding partition — one state view, five readers, one page per finding
         working-directory: mcp-server
         run: node test-finding-partition.mjs
+      - name: Locus standing — the file_standing view, kind inference, reachability
+        working-directory: mcp-server
+        run: node test-locus-index-view.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs

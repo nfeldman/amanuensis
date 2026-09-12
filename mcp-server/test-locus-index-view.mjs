@@ -185,6 +185,9 @@ const STATE_CASES = [
   { path: "src/case/o.ts", rows: [], expect: "unledgered" },
   // Zero owner rows, recorded absent by a reconciliation.
   { path: "src/case/p.ts", rows: [], gap: "absent", expect: "absent" },
+  // Zero owner rows, recorded unledgered by a reconciliation. §2.2 reads
+  // ledger_reconciled off this row and off no other.
+  { path: "src/case/r.ts", rows: [], gap: "unledgered", expect: "unledgered" },
   // Two owners that disagree. §2.4.2 forbids presenting either as the file's.
   {
     path: "src/case/q.ts",
@@ -543,7 +546,7 @@ const INFERENCE_CASES = [
     step: "colon-split",
     path: "src/ledger.ts",
     symbol: "Ledger::writeRow",
-    split_at: 14,
+    split_at: 13,
   },
   {
     label: "a path a table names resolves at step 4",
@@ -727,8 +730,11 @@ check("a deferred owner is excluded from the ceiling rank and listed separately"
   if (!jsonEq(deferred, ["B-03"])) problems.push(`deferred_owners ${JSON.stringify(deferred)}`);
   if ((ceiling.deferred_owners ?? [])[0]?.reason !== "set aside until the rewrite lands")
     problems.push("the deferred owner carries no recorded reason");
-  if (!String(ceiling.authorizes ?? "").includes("deferred"))
-    problems.push("the ceiling text does not report the deferred owner");
+  if (
+    String(ceiling.deferred_note ?? "") !==
+    "1 owning subsystem(s) are deferred; nothing was surveyed there."
+  )
+    problems.push(`the ceiling deferral note is ${JSON.stringify(ceiling.deferred_note)}`);
   if (!String(ceiling.caveat ?? "").includes(CEILING_CAVEAT))
     problems.push("the ceiling drops the mapped caveat");
   return problems.length ? problems.join("; ") : null;
@@ -740,6 +746,8 @@ check("an all-deferred file has ceiling deferred and authorizes nothing", () => 
   const ceiling = standingOf("src/set-aside.ts").standing.authority_ceiling ?? {};
   if (ceiling.value !== "deferred") return `ceiling value ${ceiling.value}`;
   if (ceiling.authorizes !== "nothing") return `ceiling authorizes ${ceiling.authorizes}`;
+  if (!String(ceiling.deferred_note ?? "").includes("nothing was surveyed there"))
+    return "the all-deferred ceiling carries no deferral note";
   return String(ceiling.cannot_justify ?? "").includes("content or behavior")
     ? null
     : "the all-deferred ceiling does not refuse claims about content or behavior";
@@ -789,7 +797,7 @@ check("measured.ledger_reconciled is a boolean only where the path has no owners
   const gap = needFixture();
   if (gap) return gap;
   const never = standingOf("src/case/o.ts").standing.measured ?? {};
-  const recorded = standingOf("src/case/p.ts").standing.measured ?? {};
+  const recorded = standingOf("src/case/r.ts").standing.measured ?? {};
   const problems = [];
   if (never.ledger_rows !== 0) problems.push(`unledgered ledger_rows ${never.ledger_rows}`);
   if (never.ledger_reconciled !== false)

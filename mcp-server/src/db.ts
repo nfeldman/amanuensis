@@ -32,6 +32,17 @@ export interface WalCheckpoint {
   checkpointed: number;
 }
 
+/**
+ * Views the reader surfaces read and that no other process creates.
+ *
+ * The materializer opens the store `mode=ro` and applies no schema, so these
+ * exist only because `initializeSchema` below ran. Naming them here, and
+ * asserting them on every open, is what makes the materializer's probe
+ * (`materializer/amanuensis_materializer/db.py`) a statement about the store's
+ * age rather than about a schema that silently stopped defining them.
+ */
+export const REQUIRED_VIEWS = ["file_standing", "finding_state_current"] as const;
+
 export function openDatabase(dbPath: string): DB {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
@@ -43,7 +54,31 @@ export function openDatabase(dbPath: string): DB {
   // work in the common case.
   runMigrations(db);
   initializeSchema(db);
+  requireViews(db);
   return db;
+}
+
+/**
+ * Fail the open when the applied schema did not leave every required view in
+ * place. Without this the loss is silent here and surfaces downstream as a
+ * refused publish, blaming the store for a schema defect.
+ */
+function requireViews(db: DB): void {
+  const placeholders = REQUIRED_VIEWS.map(() => "?").join(",");
+  const present = new Set(
+    (
+      db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='view' AND name IN (${placeholders})`)
+        .all(...REQUIRED_VIEWS) as { name: string }[]
+    ).map((row) => row.name),
+  );
+  const absent = REQUIRED_VIEWS.filter((name) => !present.has(name));
+  if (absent.length > 0) {
+    db.close();
+    throw new Error(
+      `amanuensis-memory: applying schema.sql left required view(s) absent: ${absent.join(", ")}`,
+    );
+  }
 }
 
 function initializeSchema(db: DB): void {
