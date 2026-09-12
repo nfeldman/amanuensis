@@ -23,7 +23,7 @@ export const dispositionTools: ToolDefinition[] = [
   {
     name: "set_disposition",
     description:
-      "Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. This is the primary DB analog of the subsystem survey's Concern Disposition Table.",
+      "Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. ref_sha must resolve to a commit in the bound workspace and is stored resolved. This is the primary DB analog of the subsystem survey's Concern Disposition Table.",
     inputSchema: {
       type: "object",
       properties: {

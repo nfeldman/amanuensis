@@ -68,7 +68,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "add_finding",
     description:
-      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms.",
+      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at.",
     inputSchema: {
       type: "object",
       properties: {

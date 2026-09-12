@@ -25,7 +25,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "add_evidence",
     description:
-      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
+      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
     inputSchema: {
       type: "object",
       properties: {

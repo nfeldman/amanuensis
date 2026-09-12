@@ -353,7 +353,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
+| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. ref_sha must resolve to a commit in the bound workspace and is stored resolved. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
 | `get_dispositions` | Return dispositions. Filter by subsystem_id, concern_code, or both. Omit both to return everything (useful for adversarial review across the conspectus). |
 | `get_concern_coverage` | Return the concern × subsystem matrix (active concerns × registered subsystems) with current disposition or '—' for unexamined cells. Used to produce the materialized heatmap. |
 
@@ -373,7 +373,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_evidence` | Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells. |
+| `add_evidence` | Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells. |
 | `attach_evidence_to_disposition` | Link an evidence row to a disposition with a role (supports / contradicts / linchpin / compensating). Idempotent — repeated calls just update the role. |
 | `attach_evidence_to_finding` | Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / fix-verification / compensating). verify_finding_fix requires fix-verification. |
 | `get_evidence` | Fetch evidence rows. Filter by id, file_path, kind, ref_sha, or any combination. Returns the full row with collected_at timestamp. |
@@ -400,7 +400,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. |
+| `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at. |
 | `update_finding_status` | Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session. |
 | `verify_finding_fix` | Promote a fixed-pending-verification finding to verified-fixed. The evidence must be attached to the finding, collected in the active session, and repository-bound to the fix commit or one of its descendants. Historical events remain append-only. |
 | `get_finding_resolution_history` | Return the append-only resolution history for one finding, including pending repairs, verification evidence, reopenings, and superseded verified states. |
