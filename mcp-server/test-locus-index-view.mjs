@@ -492,6 +492,20 @@ function buildFixture() {
   const upstreamCtx =
     cloned.status === 0 ? { ...ctx, project: { ...project, workspacePath: clone } } : null;
 
+  // A clone with the conventional `origin` remote whose branch records no
+  // upstream at all: only the refs/remotes/origin/<branch> fallback can
+  // resolve a head here.
+  const conventional = join(root, "conventional-clone");
+  const clonedConventional = spawnSync("git", ["clone", "-q", workspace, conventional], {
+    encoding: "utf8",
+  });
+  let conventionalCtx = null;
+  if (clonedConventional.status === 0) {
+    spawnSync("git", ["-C", conventional, "config", "--unset", "branch.main.remote"]);
+    spawnSync("git", ["-C", conventional, "config", "--unset", "branch.main.merge"]);
+    conventionalCtx = { ...ctx, project: { ...project, workspacePath: conventional } };
+  }
+
   return {
     root,
     workspace,
@@ -506,6 +520,7 @@ function buildFixture() {
     ctx,
     noGitCtx,
     upstreamCtx,
+    conventionalCtx,
   };
 }
 
@@ -880,7 +895,13 @@ check("origin_head resolves the ref the branch tracks, whatever the remote is na
   const tracking = standingOf("src/only.ts", fixture.upstreamCtx).standing.revision ?? {};
   if (tracking.origin_head !== fixture.head)
     return `origin_head ${tracking.origin_head}, expected ${fixture.head}`;
-  // And the primary workspace, which tracks nothing, still reports null.
+  if (!fixture.conventionalCtx) return "the conventional clone could not be created";
+  // A clone that records no upstream but does carry refs/remotes/origin/main:
+  // the fallback is the only thing that can resolve a head here.
+  const fallback = standingOf("src/only.ts", fixture.conventionalCtx).standing.revision ?? {};
+  if (fallback.origin_head !== fixture.head)
+    return `the origin/<branch> fallback reported ${fallback.origin_head}`;
+  // And the primary workspace, which has no remote at all, still reports null.
   const untracked = standingOf("src/only.ts").standing.revision ?? {};
   return untracked.origin_head === null
     ? null
