@@ -52,7 +52,7 @@
 | P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | done (1 attempt) | P17, P19 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
 | P20 | Regeneration pass: challenge outcomes before mapped, the missing edges, and the canonical project name | done (1 attempt) | P18 | `dev/test-rebuild-regeneration.mjs` | C43, C52, C54, C55, C63 |
 
-## S7 · Residual hardening (review: pending)
+## S7 · Residual hardening (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

@@ -101,8 +101,10 @@
         "P21"
       ],
       "review": {
-        "status": "pending",
-        "start_sha": "d36800d3793b09eb052d089386cd7c5e1cc69e1d"
+        "status": "reviewed",
+        "start_sha": "d36800d3793b09eb052d089386cd7c5e1cc69e1d",
+        "reviewed_sha": "cb941a28df893dd8185b32a0987be20798370c78",
+        "findings": 6
       }
     }
   ],
