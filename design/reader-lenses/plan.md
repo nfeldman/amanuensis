@@ -40,7 +40,7 @@
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
 | P14 | get_attention and get_history | done (1 attempt) | P7, P9 | `mcp-server/test-attention-history.mjs` | C23, C24, C55, C63 |
-| P15 | Consumer routing: server instructions, skill route, installer opt-in | ready | P14 | `mcp-server/test-consumer-route.mjs` | C25, C46, C47, C64, C55, C63 |
+| P15 | Consumer routing: server instructions, skill route, installer opt-in | ready (1 attempt) | P14 | `mcp-server/test-consumer-route.mjs` | C25, C46, C47, C64, C55, C63 |
 
 ## S6 · Dogfood rebuild (review: pending)
 
