@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | P1 | Single enum source for every vocabulary surface | done (1 attempt) | — | `mcp-server/test-vocabulary-source.mjs` | C1, C3, C7, C48, C55, C63 |
 | P2 | Partition findings by resolution state | done (1 attempt) | P1 | `mcp-server/test-finding-partition.mjs` | C2, C27, C28, C29, C55, C63 |
-| P3 | Overview thesis by heading and the orientation lint | ready (1 attempt) | P1, P2 | `materializer/test-overview-truthfulness.py` | C32, C49, C55, C63 |
+| P3 | Overview thesis by heading and the orientation lint | done (1 attempt) | P1, P2 | `materializer/test-overview-truthfulness.py` | C32, C49, C55, C63 |
 | P4 | Ledger-derived freshness and a stale axis with a denominator | ready | P1 | `materializer/test-ledger-freshness.py` | C50, C51, C60, C55, C63 |
 
 ## S2 · Standing (review: pending)
