@@ -406,9 +406,14 @@ function buildFixture() {
     `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b, a_writes, b_reads, notes)
      VALUES ('SM-01', 'ledger rows', 'table', 'B-01', 'B-02', 'appends rows', 'reads rows', 'the index trails the ledger')`,
   ).run();
+  // The edge carries a citation in its prose, because §9.2's xref write path
+  // refuses one that does not. A context with no citation token cannot exercise
+  // §3.2's rule here at all: `xrefs` has no `ref_sha` column, so the assertion
+  // below is only load-bearing against a row the current write path could
+  // actually have produced (slice-S4 F5/codex).
   db.prepare(
-    "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-01','B-02','data-flow','observed','the index reads what the ledger writes')",
-  ).run();
+    "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-01','B-02','data-flow','observed',?)",
+  ).run(`the index reads what the ledger writes at src/examined.ts:readLedger@${head}`);
 
   const vocab = db.prepare(
     "INSERT INTO vocabulary (term, gloss, expansion, subsystem_id, first_seen, ref_sha) VALUES (?, ?, ?, ?, ?, ?)",

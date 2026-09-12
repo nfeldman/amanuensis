@@ -615,7 +615,14 @@ check("a recorded edge reaches the owning subsystem's boundaries section", () =>
   return null;
 });
 
-check("a cited edge is presented as bound to its revision", () => {
+check("a cited edge exposes its citations and is still served unbound", () => {
+  // §3.2 binds an item to a revision only where its *source row* carries one,
+  // and `xrefs` has no `ref_sha` column. The revision a writer cited lives in
+  // prose the same table stores verbatim; promoting the first prose token to
+  // `ref_sha` presents an edge as revision-bound on the strength of a sentence,
+  // and P6's gate asserts the opposite on the same section. The citation is
+  // served — in `citations[]`, where a reader can see how many revisions the
+  // edge was actually read at — and the binding flag stays false (F5/codex).
   const blocked = needFixture();
   if (blocked) return blocked;
   if (!boundaryEdge) return "the boundary fixture edge was never recorded";
@@ -627,8 +634,8 @@ check("a cited edge is presented as bound to its revision", () => {
   if (!Array.isArray(edge.citations) || !edge.citations.includes(wanted)) {
     return `the edge carries citations ${JSON.stringify(edge.citations)}, not the token recorded in its context`;
   }
-  if (edge.ref_sha !== fixture.head || edge.revision_bound !== true) {
-    return `the edge reports ref_sha ${JSON.stringify(edge.ref_sha)} / revision_bound ${JSON.stringify(edge.revision_bound)}, so a cited edge reads as unbound`;
+  if (edge.ref_sha !== null || edge.revision_bound !== false) {
+    return `the edge reports ref_sha ${JSON.stringify(edge.ref_sha)} / revision_bound ${JSON.stringify(edge.revision_bound)}, but xrefs has no revision column for either to be read from`;
   }
   return null;
 });
