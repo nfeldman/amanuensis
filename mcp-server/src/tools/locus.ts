@@ -1144,7 +1144,12 @@ function unknownId(entry: UnknownEntry): string {
     case "open-lead":
       return `unknown:lead/${String(entry.note_id)}`;
     case "unassessed-seam":
-      return `unknown:seam/${String(entry.seam_id)}`;
+      // §2.4.6's census unit is the (seam, side) pair, so the seam alone names
+      // two members at any file both parties own, and the ledger could not say
+      // which side went unserved (F9/codex). The subsystem follows the side
+      // because "side b" is only meaningful against the seam row a reader
+      // would otherwise have to go and fetch.
+      return `unknown:seam/${String(entry.seam_id)}/${String(entry.side)}/${String(entry.subsystem_id)}`;
     default:
       return `unknown:${String(entry.kind)}`;
   }
