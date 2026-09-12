@@ -12,10 +12,10 @@
         "P4"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "a27cf3e352e928f087240720585dfa705d1f74b9",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "7bc1e3348d4e8765edba56e7fc4293f859b3c707",
+        "findings": 5
       }
     },
     {
