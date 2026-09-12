@@ -662,8 +662,8 @@
       "attempts": 1,
       "start_sha": "925dff942ac79ba76d80342568e72606abaa99a0",
       "red_sha": "4d9f2682df0367a1bfde8dccc26622d62d3e2e87",
-      "green_sha": "329bda371092f225731955ed87d0f369ed06354d",
-      "verified_by_launcher": false,
+      "green_sha": "d37ce7784cdb92302a0b7e5b9235a76eeb138482",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Spec gap filled: a contradiction contributes to the Undiscriminated column of every subsystem owning one of its findings, since contradictions carry no subsystem_id and a cross-subsystem disagreement is undiscriminated territory in both. Two files outside the deliverables changed: test-materializer.py's contradictions assertion tracks the §7.1 rename to Conflicting evidence and adds a route check (same strength, new membership), and materializer/test-history-and-disagreements.py is the gate itself, whose fixture was strengthened after the red commit so each of §7.6's four sort keys is separately falsifiable — a stable sort over id-ordered rows had made the tiebreaks untestable (VP4). The spec's §7.7 order for closed leads (id descending) and §1.1's fixed sentence ('the order below is the order the leads were opened') read in tension; the sentence is emitted verbatim and the column is headed Opened so the list is unambiguous."
     },
