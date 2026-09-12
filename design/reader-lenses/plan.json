@@ -544,8 +544,8 @@
       "attempts": 1,
       "start_sha": "e9a58f5725076fd624ab2ab0312f6b34cbd51229",
       "red_sha": "b4c86e8c2813a6e05d8f6fafccfc68935c271d76",
-      "green_sha": "5ed08c812ee53fdea42cad8dc17ac1a22a8672dd",
-      "verified_by_launcher": false,
+      "green_sha": "3b443fe039159378313c965e607b17ddbc3cf163",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Budgets are enforced on the emitted wire response: ToolDefinition gains a compact flag and index.ts's one dispatch line reads it (index.ts is P6's deliverable; P14's two tools inherit the same flag). Two gaps §4.3 leaves open are filled and named in trace.truncation_order: retention across sections is round-robin (the deepest served list gives up the next item) so a truncated account samples every section instead of emptying the lowest-ranked ones, and when every truncatable item is gone the ledger's id samples shrink down a fixed ladder while counts stay exact and within_budget:false declares the residue. Measured consequence the owner should weigh: the emitted envelope is 2.13x the compact payload it duplicates, so against a 3467-3695 byte floor (standing, the eight section views, census, ledger, trace) the 8192-byte default budget leaves about 150 bytes and a default describe_locus serves zero to two items; a second owner puts the floor alone over budget. P18's §12.4 assertion 1 must therefore request sections explicitly, where the budget is 20480, and eight item-level checks in P6's gate now do the same with every assertion unchanged."
     },
