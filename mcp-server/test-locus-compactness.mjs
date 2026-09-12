@@ -843,9 +843,16 @@ await check("a response that cannot reach the ceiling is an error, not a truncat
   }
   if (!(raised instanceof mods.helpers.ToolError))
     return `the refusal is not a ToolError: ${raised && raised.message ? raised.message : raised}`;
-  return /ceiling|32768/.test(String(raised.message))
+  const message = String(raised.message);
+  if (!/ceiling|32768/.test(message)) return `the refusal does not name the ceiling: ${message}`;
+  // C8: the refusal exists so the caller can go and read the owners from
+  // `list_scope`, which takes a path. A byte count alone does not say which
+  // locus was refused or how many owners made it unservable.
+  if (!message.includes("src/crowded.ts"))
+    return `the refusal does not name the locus it refused: ${message}`;
+  return new RegExp(`\\b${fixture.crowdedIds.length}\\b`).test(message)
     ? null
-    : `the refusal does not name the ceiling: ${raised.message}`;
+    : `the refusal does not carry the ${fixture.crowdedIds.length}-owner count: ${message}`;
 });
 
 // ---------------------------------------------------------------------------
