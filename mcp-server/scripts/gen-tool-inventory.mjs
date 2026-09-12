@@ -36,19 +36,49 @@ function scanToolFiles() {
   // quoted `name:` strings. This is robust to ordering in index.ts.
   const mapping = new Map(); // name -> filename
   const order = new Map();   // filename -> [names in order]
+  const declaredIn = new Map(); // name -> [filename, ...]
   for (const fname of readdirSync(toolsDir).sort()) {
     if (!fname.endsWith(".ts")) continue;
     const content = readFileSync(join(toolsDir, fname), "utf8");
     const names = [];
-    const re = /^\s+name:\s*"([^"]+)"/gm;
+    // A `name:` alone is not a tool: these modules also build response
+    // sections shaped `{ name, source_rows, items }`. A tool is the object
+    // that publishes a `description` and an `inputSchema` immediately after
+    // its name, which is what the MCP surface is made of.
+    const re = /^\s+name:\s*"([^"]+)",\n\s+description:[\s\S]{0,4000}?\n\s+inputSchema:/gm;
     let m;
     while ((m = re.exec(content)) !== null) {
       mapping.set(m[1], fname);
       names.push(m[1]);
+      declaredIn.set(m[1], [...(declaredIn.get(m[1]) ?? []), fname]);
     }
     if (names.length) order.set(fname, names);
   }
-  return { mapping, order };
+  return { mapping, order, declaredIn };
+}
+
+/**
+ * Reconcile the tool names the source declares with the names the running
+ * server advertises.
+ *
+ * The rendered block is derived from `tools/list` alone, so a compiling
+ * `ToolDefinition` that is never registered in `index.ts` changes no byte of
+ * DEVELOPMENT.md and `--check` stays green: the inventory was a projection of
+ * the server, never a comparison against the source. (`check-tool-schemas.mjs`
+ * counted 202 schemas against 201 advertised tools and the review's sabotage
+ * still passed every gate.) A name is a finding in either direction — declared
+ * and unregistered, or declared twice.
+ */
+function reconcile(tools, { declaredIn }) {
+  const advertised = new Set(tools.map((t) => t.name));
+  const problems = [];
+  for (const [name, files] of [...declaredIn].sort()) {
+    if (files.length > 1)
+      problems.push(`${name} is declared in ${[...new Set(files)].join(" and ")}`);
+    if (!advertised.has(name))
+      problems.push(`${name} is declared in ${files[0]} but tools/list does not advertise it`);
+  }
+  return problems;
 }
 
 async function fetchToolList() {
@@ -156,8 +186,15 @@ function replaceBlock(readme, block) {
 }
 
 async function main() {
-  const { mapping, order } = scanToolFiles();
+  const { mapping, order, declaredIn } = scanToolFiles();
   const tools = await fetchToolList();
+  const unreconciled = reconcile(tools, { declaredIn });
+  if (unreconciled.length) {
+    process.stderr.write(
+      `tool inventory is UNRECONCILED against src/tools/:\n  ${unreconciled.join("\n  ")}\n`,
+    );
+    process.exit(1);
+  }
   const block = renderBlock(tools, { mapping, order });
   const current = readFileSync(readmePath, "utf8");
   const updated = replaceBlock(current, block);
