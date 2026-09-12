@@ -34,6 +34,15 @@ CONTRACT_NAME = ".projection-contract.json"
 CONTRACT_VERSION = "2"
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 HTML_SUFFIXES = {".html", ".htm"}
+LINKED_SUFFIXES = {".md", ".html", ".htm"}
+
+# The generated locus index (spec §8.1.1). It is a projection file like any
+# page: inventoried, hashed into the receipt, and — unlike a page — read back
+# against the ledger and the evidence it indexes.
+SEARCH_INDEX_NAME = "search-index.js"
+SEARCH_INDEX_ASSIGNMENT = re.compile(
+    r"window\.__amanuensisLocusIndex\s*=\s*(\{.*\})\s*;", re.DOTALL
+)
 
 # Lens membership for a finding, defined once (spec §6.1) and read by the
 # renderer, the cross-reference index, and the census below.  A finding renders
@@ -160,6 +169,11 @@ def _anchors(text: str, suffix: str) -> set[str]:
 
 
 def _local_links(text: str, suffix: str = ".md") -> list[str]:
+    # Only the two prose formats carry cross-links. The generated index is
+    # JavaScript, and running a Markdown link pattern over a JSON payload would
+    # invent link targets for the coverage axis to fail to resolve.
+    if suffix not in LINKED_SUFFIXES:
+        return []
     return [
         target
         for target in _links(text, suffix)
@@ -224,9 +238,13 @@ class ProjectionVerifier:
                 )
             return self._summary(mismatches)
 
+        # `*.js` joins the inventory so the generated index is a page the
+        # coverage axis can find. Without it the file is present, expected, and
+        # reported missing — the wrong red, which is as much a defect as the
+        # wrong green (§8.2).
         projection = {
             str(path.relative_to(self.output)): path.read_text()
-            for pattern in ("*.md", "*.html")
+            for pattern in ("*.md", "*.html", "*.js")
             for path in self.output.rglob(pattern)
             if path.is_file()
         }
@@ -239,6 +257,7 @@ class ProjectionVerifier:
             stale = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
             mismatches.extend(self._finding_partition_census(conn, projection))
             mismatches.extend(self._ledger_stale_census(conn, projection))
+            mismatches.extend(self._locus_index_census(conn, projection))
         finally:
             conn.close()
         # The Markdown and HTML views must each carry authoritative markers.
@@ -627,6 +646,124 @@ class ProjectionVerifier:
                                 "a row exempt from the survey obligation carries"
                                 f" {count} {label} stale record(s)"
                             ),
+                        }
+                    )
+        return mismatches
+
+    def _locus_index_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """The generated locus index, read back against what it indexes (§8.2).
+
+        The content axis proves the file's bytes match the receipt and the
+        coverage axis proves it is present; neither can tell a correct index
+        from an empty one that was hashed honestly. This axis reads the two
+        durable tables the index is derived from:
+
+        * every obligation-bearing `file_ledger.file_path` appears in `paths`
+          exactly once — a path indexed twice gives a reader two results for
+          one file and hides which is current, and a path missing is a file
+          ⌘K cannot reach;
+        * every `evidence` row with a non-null `symbol` appears in `symbols` at
+          least once. At least, not exactly: one symbol can carry evidence in
+          several files, and each of those is a separate place to land.
+
+        A row exempt from the survey obligation may be indexed — the Files
+        index lists it — but nothing here requires it, so the denominator is
+        the obligation, not the ledger's whole extent.
+        """
+
+        mismatches: list[dict[str, str]] = []
+        text = projection.get(SEARCH_INDEX_NAME)
+        if text is None:
+            mismatches.append(
+                {
+                    "axis": "state",
+                    "object_type": "locus-index",
+                    "object_id": SEARCH_INDEX_NAME,
+                    "detail": "the generated locus index is absent from the projection",
+                }
+            )
+            return mismatches
+        found = SEARCH_INDEX_ASSIGNMENT.search(text)
+        if not found:
+            mismatches.append(
+                {
+                    "axis": "state",
+                    "object_type": "locus-index",
+                    "object_id": SEARCH_INDEX_NAME,
+                    "detail": "the index carries no window.__amanuensisLocusIndex assignment",
+                }
+            )
+            return mismatches
+        try:
+            index = json.loads(found.group(1))
+        except json.JSONDecodeError as exc:
+            mismatches.append(
+                {
+                    "axis": "state",
+                    "object_type": "locus-index",
+                    "object_id": SEARCH_INDEX_NAME,
+                    "detail": f"the index payload is unreadable: {exc}",
+                }
+            )
+            return mismatches
+
+        indexed = Counter(
+            str(entry.get("p"))
+            for entry in index.get("paths") or []
+            if isinstance(entry, dict)
+        )
+        if not table_exists(conn, "file_ledger"):
+            mismatches.append(
+                {
+                    "axis": "state",
+                    "object_type": "locus-index",
+                    "object_id": "file_ledger",
+                    "detail": "the file ledger is absent from the store",
+                }
+            )
+            return mismatches
+        for ledger_row in rows(
+            conn,
+            "SELECT DISTINCT file_path FROM file_ledger"
+            f" WHERE {OBLIGATION_BEARING_SQL} ORDER BY file_path",
+        ):
+            file_path = str(ledger_row["file_path"])
+            count = indexed.get(file_path, 0)
+            if count != 1:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "locus-index-path",
+                        "object_id": file_path,
+                        "detail": (
+                            "the obligation-bearing ledger path is indexed"
+                            f" {count} time(s), not exactly once"
+                        ),
+                    }
+                )
+
+        symbols = {
+            (str(entry.get("y")), str(entry.get("p")))
+            for entry in index.get("symbols") or []
+            if isinstance(entry, dict)
+        }
+        if table_exists(conn, "evidence"):
+            for cited in rows(
+                conn,
+                "SELECT DISTINCT symbol, file_path FROM evidence"
+                " WHERE symbol IS NOT NULL AND TRIM(symbol) <> ''"
+                " ORDER BY symbol, file_path",
+            ):
+                pair = (str(cited["symbol"]), str(cited["file_path"]))
+                if pair not in symbols:
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": "locus-index-symbol",
+                            "object_id": f"{pair[0]} in {pair[1]}",
+                            "detail": "the cited symbol is absent from the index",
                         }
                     )
         return mismatches

@@ -320,6 +320,9 @@ jobs:
       - name: Unresolved and History pages, the resolution basis, and the reader's guide
         working-directory: materializer
         run: python3 test-history-and-disagreements.py
+      - name: Locus search index, read-back custody, and the accessible search
+        working-directory: materializer
+        run: python3 test-search-index.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor

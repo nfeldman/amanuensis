@@ -836,6 +836,13 @@ def run_browser_checks(binary: str, docs: Path) -> None:
                     "aria-controls points at an element whose role is"
                     f" {probe.get('listboxRole')!r}, not listbox"
                 )
+            if not probe.get("hasActiveDescendantAttribute"):
+                return "the combobox exposes no aria-activedescendant"
+            if probe.get("autocomplete") != "list":
+                return (
+                    "the combobox does not declare aria-autocomplete=\"list\"; it"
+                    f" declares {probe.get('autocomplete')!r}"
+                )
             if not probe.get("liveRegions"):
                 return "no aria-live=\"polite\" region is present"
             return None

@@ -35,6 +35,7 @@ from typing import Any
 from . import renderers
 from .db import VIEW_ABSENT_CAUSE, missing_views, open_ro, row, rows
 from .html_projection import (
+    SEARCH_INDEX_PATH,
     SitePage,
     UnknownNavGroup,
     assert_nav_groups,
@@ -133,6 +134,59 @@ def _routes(plan: list[PagePlan]) -> list[tuple[str, str, str, str, str]]:
     return [
         (p.path, p.label or p.title, p.hint, p.group, p.subgroup) for p in plan
     ]
+
+
+def _locus_index(conn) -> dict[str, list[dict[str, Any]]]:
+    """The generated locus index ⌘K reads (spec §8.1.1).
+
+    One entry per distinct ledger path — the Files index's own row set, so
+    every entry's anchor resolves to a row a reader can reach with scripts
+    disabled — and one entry per cited `evidence` symbol. The path's standing
+    is the owners' state when they agree and `mixed` when they do not, which is
+    the rule §2.4.2 fixes and the Files index already renders; a single owner's
+    state stood in for the file would assert an agreement the ledger does not
+    record.
+
+    A symbol whose file no ledger row names has no Files row to land on, so it
+    carries the index page itself rather than an anchor that resolves nowhere.
+    """
+
+    by_path: dict[str, list[dict[str, Any]]] = {}
+    for entry in rows(
+        conn,
+        "SELECT file_path, subsystem_id, standing_state FROM file_standing"
+        " ORDER BY file_path, subsystem_id",
+    ):
+        by_path.setdefault(str(entry["file_path"]), []).append(entry)
+
+    paths: list[dict[str, Any]] = []
+    for file_path, owners in sorted(by_path.items()):
+        states = {str(owner["standing_state"]) for owner in owners}
+        paths.append(
+            {
+                "p": file_path,
+                "o": [str(owner["subsystem_id"]) for owner in owners],
+                "s": next(iter(states)) if len(states) == 1 else "mixed",
+                "h": f"files.html#{renderers.file_anchor(file_path)}",
+            }
+        )
+
+    symbols: list[dict[str, Any]] = []
+    for entry in rows(
+        conn,
+        "SELECT DISTINCT symbol, file_path FROM evidence"
+        " WHERE symbol IS NOT NULL AND TRIM(symbol) <> ''"
+        " ORDER BY symbol, file_path",
+    ):
+        file_path = str(entry["file_path"])
+        anchor = (
+            f"files.html#{renderers.file_anchor(file_path)}"
+            if file_path in by_path
+            else "files.html"
+        )
+        symbols.append({"y": str(entry["symbol"]), "p": file_path, "h": anchor})
+
+    return {"paths": paths, "symbols": symbols}
 
 
 @dataclass
@@ -332,6 +386,7 @@ class Materializer:
                 site_pages,
                 html_context,
                 previous_files=self.manifest.projection_files,
+                locus_index=_locus_index(conn),
             )
             self.manifest.projection_files = html_result.files
             self.summary.html_pages_total = len(site_pages)
@@ -377,7 +432,15 @@ class Materializer:
             conn.close()
 
     def verify_projection(self) -> dict[str, Any]:
-        """Read back an existing projection without rendering or repairing it."""
+        """Read back an existing projection without rendering or repairing it.
+
+        The page plan names the Markdown pages and their HTML companions; it
+        does not name the generated artifacts a render produces beside them, so
+        `manifest.projection_files` is read as well (§8.2). Without it the
+        coverage axis would report `search-index.js` as an unplanned file the
+        moment the inventory learned to see it — a read-back that turns red on
+        a correct projection is worse than one that never looked.
+        """
         conn = open_ro(self.storage / "memory.db")
         try:
             plan = self._plan(conn)
@@ -388,6 +451,9 @@ class Materializer:
             ]
         finally:
             conn.close()
+        expected_paths = sorted(
+            set(expected_paths) | {SEARCH_INDEX_PATH} | set(self.manifest.projection_files)
+        )
         summary = ProjectionVerifier(self.storage, self.output, expected_paths).verify()
         summary["html_entrypoint"] = str(self.output / "index.html")
         return summary

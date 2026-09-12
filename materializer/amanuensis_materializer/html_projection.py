@@ -11,6 +11,7 @@ static web server.
 from __future__ import annotations
 
 import html
+import json
 import posixpath
 import re
 import textwrap
@@ -25,7 +26,7 @@ from .manifest import sha256_bytes
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
 
-HTML_PROJECTION_VERSION = "1.13.0"
+HTML_PROJECTION_VERSION = "1.14.0"
 
 # The navigation groups, in the order a reader meets them (spec §7.1). Four of
 # them are the reader lenses of §1.1; `Overview` is the entrance and is not a
@@ -35,6 +36,12 @@ HTML_PROJECTION_VERSION = "1.13.0"
 # here is a render error: a lens the reader's guide does not explain, appended
 # silently, is exactly the drift this constant removes.
 NAV_GROUPS: tuple[str, ...] = ("Overview", "Codebase", "Unresolved", "History", "Method")
+
+# The one generated projection artifact that is neither Markdown nor HTML
+# (spec §8.1.1). It assigns a single global and runs nothing, is referenced by
+# a relative `<script src>` so it loads from `file://`, and is recorded in
+# `manifest.projection_files` and in the publication receipt like any page.
+SEARCH_INDEX_PATH = "search-index.js"
 
 
 class UnknownNavGroup(ValueError):
@@ -779,8 +786,28 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
 .page-foot p { margin: 0; max-width: 52rem; }
 .page-foot a { color: inherit; }
-.empty-search { display: none; margin: 1rem 0; color: var(--text-muted); font-size: .8rem; }
-.empty-search.visible { display: block; }
+[hidden] { display: none !important; }
+
+/* Search results and the in-page filters. Ruled registers, not cards: a row
+   per result, one rule between them, no icon and no badge (§8.3). Every one of
+   these elements is built by script; nothing here is served hidden. */
+.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+.search-status:empty { display: none; }
+.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
+.search-results:empty { display: none; border-top: 0; }
+.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
+.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
+.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
+.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
+.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
 
 @media (max-width: 900px) {
   .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
@@ -927,30 +954,338 @@ _JS = r"""
     if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
   });
 
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
   const search = document.querySelector('[data-nav-search]');
-  const empty = document.querySelector('[data-empty-search]');
-  const filter = () => {
-    const needle = search.value.trim().toLocaleLowerCase();
-    let visible = 0;
-    document.querySelectorAll('.nav-item').forEach((item) => {
-      const match = !needle || item.dataset.search.includes(needle);
-      item.hidden = !match;
-      if (match) visible += 1;
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
     });
-    document.querySelectorAll('.nav-subgroup').forEach((subgroup) => {
-      subgroup.hidden = !subgroup.querySelector('.nav-item:not([hidden])');
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
     });
-    document.querySelectorAll('.nav-group').forEach((group) => {
-      group.hidden = !group.querySelector('.nav-item:not([hidden])');
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
     });
-    empty?.classList.toggle('visible', visible === 0);
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
   };
-  search?.addEventListener('input', filter);
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault(); search?.focus(); search?.select();
     }
   });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
 })();
 """
 
@@ -960,6 +1295,26 @@ def _plain(text: str) -> str:
     text = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", text)
     text = text.replace("**", "").replace("__", "").replace("`", "")
     return html.unescape(text).strip()
+
+
+def _record_key_text(value: str) -> str:
+    """The human name a heading or key cell carries, without link or emphasis.
+
+    A subsystem heading and a hot-spot row both name their subsystem as a
+    Markdown link, so the facet a filter offers has to be the link's text and
+    not the whole cell — otherwise the two pages would name one subsystem two
+    different ways.
+    """
+
+    match = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
+    return _plain(match.group(1) if match else value)
+
+
+def _positive_count(value: str) -> bool:
+    """Whether a measure cell records a count above zero."""
+
+    match = re.match(r"^\s*(\d+)", _plain(value))
+    return bool(match) and int(match.group(1)) > 0
 
 
 def _rel_link(from_path: str, to_path: str) -> str:
@@ -1317,6 +1672,26 @@ class MarkdownRenderer:
         self.current_html_path = current_html_path
         self.repository_url = repository_url.rstrip("/") if repository_url else None
         self.used_slugs: dict[str, int] = {}
+        # The heading a record currently sits under, by level. Both filterable
+        # pages group by exactly what the filter narrows on (§8.1.2), so the
+        # facets are read from the page's own hierarchy rather than restated.
+        self.headings: dict[int, str] = {}
+        self.facets: dict[str, list[str]] = {}
+        self.filter_scope = ""
+
+    def _note_heading(self, level: int, raw: str) -> None:
+        self.headings[level] = _record_key_text(raw)
+        for deeper in [key for key in self.headings if key > level]:
+            del self.headings[deeper]
+
+    def _facet(self, key: str, value: str) -> str:
+        """Record one facet value in first-appearance order and return it."""
+
+        if value:
+            values = self.facets.setdefault(key, [])
+            if value not in values:
+                values.append(value)
+        return value
 
     def _heading_slug(self, title: str) -> str:
         base = slugify(_plain(title))
@@ -1509,9 +1884,28 @@ class MarkdownRenderer:
                 content = f'<div class="record-fields">{"".join(fields)}</div>'
 
             aria = html.escape(f"{projection.kind.replace('-', ' ')} {key_text}", quote=True)
+            # The Unresolved lens's records are this page's filterable rows
+            # (§8.1.2). Subsystem and severity are the headings the record
+            # already sits under, so the filter narrows on the page's own
+            # grouping rather than on a second, restated classification.
+            filter_attrs = ""
+            if self.current_html_path == "findings.html" and projection.kind == "finding":
+                self.filter_scope = "findings"
+                subsystem = self._facet("subsystem", self.headings.get(4, ""))
+                severity = self._facet(
+                    "severity",
+                    re.sub(
+                        r"\s+findings$", "", self.headings.get(3, ""), flags=re.IGNORECASE
+                    ),
+                )
+                filter_attrs = (
+                    " data-filter-row"
+                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(severity, quote=True)}"'
+                )
             rendered.append(
                 "".join(markers)
-                + f'<article class="record record-{projection.kind}" role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
+                + f'<article class="record record-{projection.kind}"{filter_attrs} role="listitem" aria-labelledby="{html.escape(heading_id, quote=True)}" data-record-label="{aria}">'
                 + meta
                 + content
                 + "</article>"
@@ -2217,6 +2611,22 @@ class MarkdownRenderer:
             return self._summary_list(rows, caption)
 
         lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
+        # `hot-spots.md`'s one measure table carries this page's filterable
+        # rows (§8.1.2). The severity facet is named by the band columns
+        # themselves: the table keeps critical+high and medium+low apart on
+        # purpose, and a filter that merged them into four severities would
+        # assert a resolution the columns do not record.
+        hot_spots = (
+            self.current_html_path == "hot-spots.html"
+            and signature[:1] == ("subsystem",)
+            and any(re.search(r"critical|medium", key) for key in signature)
+        )
+        severity_columns: list[tuple[int, str]] = []
+        if hot_spots:
+            self.filter_scope = "hot-spots"
+            for index, key in enumerate(signature):
+                if re.search(r"critical|medium", key):
+                    severity_columns.append((index, self._facet("severity", _plain(headers[index]))))
         visible_headers = [header for index, header in enumerate(headers) if not lifecycle or index != 1]
         head = "".join(f'<th scope="col">{_inline(cell)}</th>' for cell in visible_headers)
         table_rows: list[str] = []
@@ -2240,7 +2650,20 @@ class MarkdownRenderer:
                     cells.append(
                         f'<td data-label="{html.escape(label, quote=True)}">{_inline(value)}</td>'
                     )
-            table_rows.append("".join(markers) + f'<tr>{"".join(cells)}</tr>')
+            row_attrs = ""
+            if hot_spots:
+                subsystem = self._facet("subsystem", _record_key_text(values[0]))
+                bands = "|".join(
+                    label
+                    for index, label in severity_columns
+                    if index < len(values) and _positive_count(values[index])
+                )
+                row_attrs = (
+                    " data-filter-row"
+                    f' data-filter-subsystem="{html.escape(subsystem, quote=True)}"'
+                    f' data-filter-severity="{html.escape(bands, quote=True)}"'
+                )
+            table_rows.append("".join(markers) + f'<tr{row_attrs}>{"".join(cells)}</tr>')
         kind = " lifecycle-table" if lifecycle else ""
         return (
             f'<div class="table-wrap{kind}"><table><caption>{html.escape(caption)}</caption>'
@@ -2311,6 +2734,7 @@ class MarkdownRenderer:
                     and re.fullmatch(r"Active concerns(?:\s+\(\d+\))?", _plain(raw), re.IGNORECASE)
                 ):
                     display_raw = "Active concerns"
+                self._note_heading(level, display_raw)
                 if level == 2:
                     if in_section:
                         body.append("</section>")
@@ -2518,6 +2942,7 @@ def _shell(
     source_title: str,
     body: str,
     context: dict[str, Any],
+    filters: tuple[str, dict[str, list[str]]] | None = None,
 ) -> str:
     canonical = str(context.get("canonical_branch") or "not recorded")
     project_name = str(context.get("project_name") or "Project")
@@ -2554,6 +2979,24 @@ def _shell(
             context.get("identifier_definitions") or {}
         ).items()
     }
+    # Every result's target is a projection-root-relative path, and a page in a
+    # subdirectory has to reach it from where it sits; the prefix is computed
+    # once here rather than guessed by the script from `location`.
+    root_prefix = home_link[: -len("index.html")]
+    index_href = _rel_link(page.html_path, SEARCH_INDEX_PATH)
+    # The facets this page's rows carry, stamped where the script can read them
+    # without a second pass over the DOM (§8.1.2). A page with no filterable
+    # row carries nothing, so no control is built for it.
+    scope, facets = filters or ("", {})
+    filter_attrs = ""
+    if scope and facets:
+        filter_attrs = f' data-filter-scope="{html.escape(scope, quote=True)}"'
+        for key, values in sorted(facets.items()):
+            if values:
+                filter_attrs += (
+                    f' data-facet-{html.escape(key, quote=True)}='
+                    f'"{html.escape("|".join(values), quote=True)}"'
+                )
     nav = _identifier_markup(_nav(pages, page), definitions)
     body = _identifier_markup(body, definitions)
     eyebrow = _identifier_markup(_page_eyebrow(page), definitions)
@@ -2568,7 +3011,7 @@ def _shell(
 <script>document.documentElement.classList.add('js');try{{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script>
 <style>{_CSS}</style>
 </head>
-<body>
+<body data-root="{html.escape(root_prefix, quote=True)}">
 <a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
   <aside class="nav-rail" aria-label="{html.escape(project_name, quote=True)} report navigation">
@@ -2576,9 +3019,9 @@ def _shell(
       <span class="brand-mark">{html.escape(project_name)}</span>
       <span class="brand-sub">Architecture survey · Amanuensis</span>
     </a>
-    <label class="search-label" for="conspectus-search">Find a page <span aria-hidden="true">⌘K</span></label>
-    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Name, ID, or topic…" autocomplete="off">
-    <p class="empty-search" data-empty-search>No matching page in this projection.</p>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
     <nav class="rail-nav">{nav}</nav>
     <div class="rail-foot">
       <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="{html.escape(md_link, quote=True)}">Markdown source</a></div>
@@ -2600,15 +3043,39 @@ def _shell(
           {status_meta}
         </div>
       </header>
-      <article class="content content-{html.escape(slugify(page.kind), quote=True)}">{body}</article>
+      <article class="content content-{html.escape(slugify(page.kind), quote=True)}"{filter_attrs}>{body}</article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>
+<script src="{html.escape(index_href, quote=True)}"></script>
 <script>{_JS}</script>
 </body>
 </html>
 '''
+
+
+def render_search_index(locus_index: dict[str, Any] | None) -> str:
+    """Serialize the locus index as the one assignment §8.1.1 fixes.
+
+    Data only: it assigns a single global and runs nothing, so a reader with
+    scripts disabled loses the search and nothing else. The envelope is stable
+    so the read-back state axis can parse it back without executing it.
+    """
+
+    index = locus_index or {}
+    payload = json.dumps(
+        {
+            "paths": list(index.get("paths") or []),
+            "symbols": list(index.get("symbols") or []),
+        },
+        separators=(",", ":"),
+    )
+    return (
+        "/* Amanuensis locus index — generated with the projection, and covered\n"
+        "   by the same publication receipt. Data only: one global, no behaviour. */\n"
+        f"window.__amanuensisLocusIndex = {payload};\n"
+    )
 
 
 def render_html_projection(
@@ -2616,6 +3083,7 @@ def render_html_projection(
     pages: list[SitePage],
     context: dict[str, Any],
     previous_files: dict[str, str] | None = None,
+    locus_index: dict[str, Any] | None = None,
 ) -> HtmlProjectionResult:
     """Render HTML companions from finished Markdown and retire old HTML."""
 
@@ -2629,6 +3097,20 @@ def render_html_projection(
     warnings: list[str] = []
     rendered = 0
     unchanged = 0
+
+    # The index is a projection file like any other: written here, hashed into
+    # `files`, and therefore recorded in `manifest.projection_files` and in the
+    # publication receipt the caller writes from it (§8.2).
+    # It is not an HTML page, so it is written without touching the page
+    # counters: `html_pages_rendered` and `html_pages_unchanged` are read
+    # against `html_pages_total`, which counts the page plan.
+    index_text = render_search_index(locus_index)
+    index_target = output / SEARCH_INDEX_PATH
+    files[SEARCH_INDEX_PATH] = sha256_bytes(index_text.encode("utf-8"))
+    if not index_target.is_file() or index_target.read_text() != index_text:
+        index_target.parent.mkdir(parents=True, exist_ok=True)
+        index_target.write_text(index_text)
+
     for page in pages:
         source = output / page.markdown_path
         if not source.is_file():
@@ -2640,7 +3122,14 @@ def render_html_projection(
             repository_url=str(context.get("repository_url") or "") or None,
         )
         source_title, body = parser.render(source.read_text())
-        document = _shell(page, pages, source_title, body, context)
+        document = _shell(
+            page,
+            pages,
+            source_title,
+            body,
+            context,
+            (parser.filter_scope, parser.facets),
+        )
         target = output / page.html_path
         digest = sha256_bytes(document.encode("utf-8"))
         files[page.html_path] = digest
