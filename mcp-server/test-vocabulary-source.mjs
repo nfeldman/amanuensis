@@ -673,6 +673,169 @@ check("the obligation-bearing predicate is generated, with no hand-maintained co
   return bad.length ? bad.join("; ") : null;
 });
 
+// ---------------------------------------------------------------------------
+// A single enum source is only single-sourced if databases created before a
+// widening are brought forward to it.  `CREATE TABLE IF NOT EXISTS` does not
+// rewrite an existing table and SQLite cannot alter a CHECK in place, so a
+// store opened by this server must be migrated or it enforces a vocabulary the
+// contract no longer describes.  The fixture is the canonical schema with one
+// value removed from every mapped CHECK — surface-identical to a real legacy
+// store, differing only in the constraint under test.
+// ---------------------------------------------------------------------------
+const CHECK_RE = (column) =>
+  new RegExp(`(${column}\\s+TEXT[^,]*?CHECK\\s*\\(\\s*${column}\\s+IN\\s*\\()([^)]*)(\\))`, "s");
+
+function mappedColumns() {
+  const out = [];
+  for (const [name, decl] of Object.entries(source?.enums ?? {})) {
+    for (const m of decl.sql ?? []) {
+      out.push({ enum: name, table: m.table, column: m.column, values: enumValues(name) ?? [] });
+    }
+  }
+  return out;
+}
+
+function checkValues(createSql, column) {
+  const m = CHECK_RE(column).exec(createSql ?? "");
+  if (!m) return null;
+  return [...m[2].matchAll(/'([^']*)'/g)].map((v) => v[1]);
+}
+
+let upgrade = null;
+let upgradeError = null;
+{
+  const schemaText = readText(join(REPO, SCHEMA_REL));
+  const mapped = mappedColumns();
+  if (schemaText === null) upgradeError = `${SCHEMA_REL} is absent`;
+  else if (!mapped.length) upgradeError = "the source maps no CHECK-constrained column";
+  else {
+    // Narrow every mapped CHECK by one value, the way a pre-widening store is
+    // narrow.  `dropped` is what an upgraded store must come to accept again.
+    let legacySchema = schemaText;
+    const dropped = [];
+    for (const entry of mapped) {
+      const re = CHECK_RE(entry.column);
+      const found = re.exec(legacySchema);
+      if (!found) continue;
+      const values = [...found[2].matchAll(/'([^']*)'/g)].map((v) => v[1]);
+      if (values.length < 2) continue;
+      const keep = values.slice(0, -1);
+      dropped.push({ ...entry, dropped: values[values.length - 1], keep });
+      legacySchema = legacySchema.replace(
+        re,
+        (_all, head, _body, tail) => `${head}${keep.map((v) => `'${v}'`).join(",")}${tail}`,
+      );
+    }
+    const dir = mkdtempSync(join(tmpdir(), "p1-legacy-"));
+    scratchDirs.push(dir);
+    const dbPath = join(dir, "memory.db");
+    const seedPath = join(dir, "seed.mjs");
+    const runPath = join(dir, "run.mjs");
+    writeFileSync(join(dir, "legacy-schema.sql"), legacySchema);
+    // Two processes: one creates the legacy store with a direct driver, the
+    // other opens it the way the server does.  The upgrade under test is
+    // whatever `openDatabase` performs, never anything this gate applies.
+    writeFileSync(
+      seedPath,
+      `import { createRequire } from "node:module";
+const Database = createRequire(${JSON.stringify(join(MCP, "package.json"))})("better-sqlite3");
+import { readFileSync } from "node:fs";
+const db = new Database(${JSON.stringify(dbPath)});
+db.exec(readFileSync(${JSON.stringify(join(dir, "legacy-schema.sql"))}, "utf8"));
+db.prepare("INSERT INTO subsystems (id, name, status) VALUES ('B-01','Legacy','mapped')").run();
+db.prepare("INSERT INTO concerns (code, origin, status) VALUES ('C1','seeded','active')").run();
+db.prepare("INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale, pass_type) VALUES ('B-01','C1','confirmed-bug','f.ts:v@abc','code-verified','legacy row','survey')").run();
+db.close();
+console.log("seeded");`,
+    );
+    writeFileSync(
+      runPath,
+      `import { openDatabase } from ${JSON.stringify(join(MCP, "dist/db.js"))};
+const db = openDatabase(${JSON.stringify(dbPath)});
+const schema = Object.fromEntries(
+  db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table'").all().map((r) => [r.name, r.sql]),
+);
+const accepted = {};
+try {
+  db.prepare("INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale, pass_type) VALUES ('B-02','C1','confirmed-bug','f.ts:v@abc',?, 'probe','survey')");
+} catch {}
+for (const q of ${JSON.stringify(enumValues("evidence_quality") ?? [])}) {
+  try {
+    db.prepare("INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale, pass_type) VALUES (?, 'C1','confirmed-bug','f.ts:v@abc',?,'probe','survey')").run("B-q-" + q, q);
+    accepted[q] = true;
+  } catch (e) { accepted[q] = String(e.message); }
+}
+const out = {
+  schema,
+  accepted,
+  preserved: db.prepare("SELECT COUNT(*) AS n FROM dispositions WHERE subsystem_id='B-01' AND rationale='legacy row'").get().n,
+  indexes: db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND sql IS NOT NULL").all().map((r) => r.name),
+  triggers: db.prepare("SELECT name FROM sqlite_master WHERE type='trigger'").all().map((r) => r.name),
+  fkViolations: db.pragma("foreign_key_check").length,
+};
+db.close();
+console.log(JSON.stringify(out));`,
+    );
+    const seeded = runNode([seedPath], dir);
+    if (seeded.status !== 0) upgradeError = `the legacy fixture could not be built — ${scrub(seeded.out).slice(-240)}`;
+    else {
+      const ran = runNode([runPath], dir);
+      if (ran.status !== 0) upgradeError = `opening the legacy store failed — ${scrub(ran.out).slice(-240)}`;
+      else {
+        const line = ran.out.trim().split("\n").pop();
+        try {
+          upgrade = { ...JSON.parse(line), dropped };
+        } catch {
+          upgradeError = `the upgrade probe printed no result — ${scrub(ran.out).slice(-240)}`;
+        }
+      }
+    }
+  }
+}
+
+check("a store created before a widening is brought forward to the enum source", () => {
+  if (upgradeError) return upgradeError;
+  const behind = [];
+  for (const entry of upgrade.dropped) {
+    const live = checkValues(upgrade.schema[entry.table], entry.column);
+    if (live === null) {
+      behind.push(`${entry.table}.${entry.column} carries no CHECK after the upgrade`);
+      continue;
+    }
+    const missing = entry.values.filter((v) => !live.includes(v));
+    if (missing.length) behind.push(`${entry.table}.${entry.column} still rejects ${missing.join(", ")}`);
+  }
+  return behind.length ? behind.join("; ") : null;
+});
+
+check("the upgrade preserves the rows, indexes, triggers, and keys it rebuilds", () => {
+  if (upgradeError) return upgradeError;
+  const bad = [];
+  if (upgrade.preserved !== 1) bad.push(`the legacy disposition row did not survive (${upgrade.preserved} rows)`);
+  if (upgrade.fkViolations !== 0) bad.push(`${upgrade.fkViolations} foreign-key violation(s) after the rebuild`);
+  const schemaText = readText(join(REPO, SCHEMA_REL)) ?? "";
+  for (const kind of [
+    ["index", /CREATE INDEX IF NOT EXISTS (\w+)/g, upgrade.indexes],
+    ["trigger", /CREATE TRIGGER IF NOT EXISTS (\w+)/g, upgrade.triggers],
+  ]) {
+    const [label, re, live] = kind;
+    const declared = [...schemaText.matchAll(re)].map((m) => m[1]);
+    const missing = declared.filter((n) => !live.includes(n));
+    if (missing.length) bad.push(`${missing.length} ${label}(s) absent after the rebuild: ${missing.slice(0, 3).join(", ")}`);
+  }
+  return bad.length ? bad.join("; ") : null;
+});
+
+check("every vocabulary value the source declares is writable on an upgraded store", () => {
+  if (upgradeError) return upgradeError;
+  const rejected = Object.entries(upgrade.accepted)
+    .filter(([, v]) => v !== true)
+    .map(([q]) => q);
+  return rejected.length
+    ? `an upgraded store rejects ${rejected.join(", ")} for dispositions.evidence_quality`
+    : null;
+});
+
 check("the packet's gate and the generator checks run in CI", () => {
   const ci = readText(join(REPO, ".github/workflows/test.yml"));
   if (ci === null) return ".github/workflows/test.yml is absent";
