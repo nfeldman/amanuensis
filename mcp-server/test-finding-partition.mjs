@@ -745,6 +745,46 @@ check("findings.md renders only open and fixed-pending-verification records", ()
   return null;
 });
 
+// §6.1 orders the Unresolved lens state-major: every open finding, by
+// severity, before every repair awaiting verification. Severity-major ordering
+// reads a critical repair someone has already made as more urgent than an open
+// defect nobody has touched, which is the opposite of what the page is for.
+// The fixture crosses the two axes — B01-2 is LOW and open, B01-4 is HIGH and
+// awaiting verification — so an ordering that got severity and state the wrong
+// way round cannot come out looking right by accident.
+check("findings.md orders every open record before every awaiting-verification one", () => {
+  const blocked = needDocs();
+  if (blocked) return blocked;
+  const open = readText(join(docs, OPEN_PAGE));
+  if (open === null) return `${OPEN_PAGE} was not rendered`;
+  const at = (id) => open.indexOf(findingMarker(id));
+  const lowOpen = at("B01-2");
+  const highPending = at("B01-4");
+  if (lowOpen < 0 || highPending < 0)
+    return `${OPEN_PAGE} does not carry both crossed records (B01-2 at ${lowOpen}, B01-4 at ${highPending})`;
+  if (highPending < lowOpen)
+    return `a HIGH awaiting-verification record precedes a LOW open one; the page is ordered severity-major`;
+  return null;
+});
+
+check("findings.md separates the two unresolved states by heading", () => {
+  const blocked = needDocs();
+  if (blocked) return blocked;
+  const open = readText(join(docs, OPEN_PAGE));
+  if (open === null) return `${OPEN_PAGE} was not rendered`;
+  const headings = [...open.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+  if (headings.length < 2)
+    return `${OPEN_PAGE} carries ${headings.length} top-level section(s): ${headings.join(", ") || "none"}`;
+  // The reader must be able to see which group a record is in without reading
+  // the row, so the state grouping is a heading, not a column.
+  const at = (id) => open.indexOf(findingMarker(id));
+  const boundary = open.search(/^## .*(verification|verified)/gim);
+  if (boundary < 0) return `${OPEN_PAGE} has no awaiting-verification section: ${headings.join(", ")}`;
+  if (at("B01-2") > boundary) return "an open record renders under the awaiting-verification heading";
+  if (at("B01-4") < boundary) return "an awaiting-verification record renders above its own heading";
+  return null;
+});
+
 check(
   "each finding's marker appears exactly once per corpus, on the page its state selects",
   () => {
