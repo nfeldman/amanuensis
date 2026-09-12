@@ -28,6 +28,9 @@ All 14 distinct regression commands of P14 and P15 pass, plus the locus-family g
 `test-structural-claims.mjs`. `npx biome check src/` needed a format pass over the new code
 and passes.
 
+The whole `mcp-server` suite was then run — all 57 `test-*.mjs` files — and exactly one
+fails.
+
 One failure outside this slice, not introduced here: `mcp-server/test-finding-partition.mjs`
 (GATE P2, slice S1) fails two assertions about subsystem pages linking to
 `resolved-findings.md`. It reads `dist/tools/findings.js` and the HTML projection; this
