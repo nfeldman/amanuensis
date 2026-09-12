@@ -15,7 +15,8 @@
 //     split point;
 //   - a resolvable non-ancestor ref_sha does not downgrade to examined-stale
 //     with stale_reason `unreachable-ref`, an unresolvable one does not
-//     downgrade with `unverifiable-ref`, or an unavailable git changes the
+//     downgrade with `unverifiable-ref`, an `examined` row carrying no
+//     examination revision at all is served as current, or an unavailable git changes the
 //     state instead of serving the examined-stale authorization text;
 //   - `owners[]` omits a file_standing row, the headline state is one owner's
 //     state rather than `mixed`, or the mandated field order is broken;
@@ -369,6 +370,11 @@ function buildFixture() {
   ledger.run("B-02", "src/only.ts", "examined", base, examinedAt, 0, null);
   ledger.run("B-02", "src/unreachable.ts", "examined", aside, examinedAt, 0, null);
   ledger.run("B-02", "src/unverifiable.ts", "examined", "0".repeat(40), examinedAt, 0, null);
+  // §2.2's limiting case: `file_ledger.ref_sha` carries no NOT NULL
+  // constraint (schema.sql:165), so an `examined` row can exist with no
+  // examination revision at all. `detect_changes` only checks rows that carry
+  // a `ref_sha`, so nothing else ever revisits this row either.
+  ledger.run("B-02", "src/no-ref.ts", "examined", null, examinedAt, 0, null);
   // Ceiling arms: one deferred owner beside a ranked one, and all-deferred.
   ledger.run("B-01", "src/archive.ts", "examined", base, examinedAt, 0, null);
   ledger.run("B-03", "src/archive.ts", "examined", base, examinedAt, 0, null);
@@ -780,6 +786,34 @@ check("an unresolvable revision downgrades with unverifiable-ref", () => {
   if (standing.state !== "examined-stale") return `state ${standing.state}`;
   if (owner.stale_reason !== "unverifiable-ref") return `stale_reason ${owner.stale_reason}`;
   return null;
+});
+
+check("an examined row with no examination revision downgrades with unverifiable-ref", () => {
+  const gap = needFixture();
+  if (gap) return gap;
+  const contract = readText(join(REPO, CONTRACT_REL));
+  if (contract === null) return `${CONTRACT_REL} is absent`;
+  const values = JSON.parse(contract).enums?.standing_state?.values ?? [];
+  const stale = values.find((v) => v.value === "examined-stale") ?? {};
+  const { standing } = standingOf("src/no-ref.ts");
+  const owner = standing.owners?.[0] ?? {};
+  const problems = [];
+  // ADR-0001 makes a resolving evidence revision part of what current
+  // authority requires, and a null revision resolves to nothing — the
+  // limiting case of §2.2's unresolvable row, not an exemption from it.
+  if (standing.state !== "examined-stale")
+    problems[problems.length] = `state ${standing.state}, expected standing_state examined-stale`;
+  if (owner.stale_reason !== "unverifiable-ref")
+    problems[problems.length] = `stale_reason ${owner.stale_reason}`;
+  // git was available and the question was answered, so this is not the
+  // "unchecked" arm: the authorization is downgraded by the state itself.
+  if (standing.reachability_checked !== true)
+    problems[problems.length] = "reachability_checked is not true";
+  if (standing.authorizes !== stale.authorizes)
+    problems[problems.length] = "authorizes is not the examined-stale text";
+  if (standing.cannot_justify !== stale.cannot_justify)
+    problems[problems.length] = "cannot_justify is not the examined-stale text";
+  return problems.length ? problems.join("; ") : null;
 });
 
 check("with git unavailable the state stays examined and the authorization does not", () => {
