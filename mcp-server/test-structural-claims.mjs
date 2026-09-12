@@ -772,6 +772,21 @@ function structureSection(text) {
   return match ? match[1] : null;
 }
 
+/**
+ * The body beneath one `### <heading>` group inside a rendered Structure
+ * section, up to the next heading of any level. `null` when the group is not
+ * rendered at all, which a caller must distinguish from an empty group: a
+ * missing category and a category that grouped nothing are different defects.
+ */
+function claimGroup(section, heading) {
+  const lines = String(section ?? "").split("\n");
+  const at = lines.findIndex((line) => line.trim() === `### ${heading}`);
+  if (at < 0) return null;
+  const rest = lines.slice(at + 1);
+  const end = rest.findIndex((line) => /^#{1,6}\s/.test(line));
+  return (end < 0 ? rest : rest.slice(0, end)).join("\n");
+}
+
 check("the subsystem page renders current claims, grouped by claim kind", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
@@ -782,18 +797,33 @@ check("the subsystem page renders current claims, grouped by claim kind", () => 
   if (section.includes(NO_CLAIMS_SENTENCE)) {
     return "the page renders the zero-claims heading for a subsystem that has claims";
   }
+  // Every one of §9.1's five categories, asserted under its own heading. The
+  // statement alone is not enough: a renderer that dropped a category would
+  // still print the claim under "Other claims", and a check that only asked
+  // whether the text appeared somewhere in the section would stay green while
+  // the reader was told the claim is uncategorised. Each pair is therefore
+  // resolved through claimGroup(), which reads the rows *beneath* the heading.
   const wanted = [
-    ["state-container", "Cache holds the pending rows until the writer drains it."],
-    ["flow", "writeRow appends the row before it releases the lock."],
-    ["concurrency", "No two writers hold the ledger lock at once."],
-    ["seam", "The ledger row crosses to B-02 without a version tag."],
+    ["key-type", "Key types", "Row is the ledger's unit of storage."],
+    ["state-container", "State containers", "Cache holds the pending rows until the writer drains it."],
+    ["flow", "Flow steps", "writeRow appends the row before it releases the lock."],
+    ["concurrency", "Concurrency invariants", "No two writers hold the ledger lock at once."],
+    ["seam", "Seam contracts", "The ledger row crosses to B-02 without a version tag."],
   ];
-  for (const [kind, statement] of wanted) {
-    if (!section.includes(statement)) return `the page does not render the ${kind} claim's statement`;
+  const declared = new Map(CLAIM_KIND_HEADINGS);
+  for (const [kind, heading, statement] of wanted) {
+    if (declared.get(kind) !== heading) {
+      return `this gate and §9.1 disagree on the heading for ${kind}`;
+    }
+    if (!section.includes(statement)) {
+      return `the page does not render the ${kind} claim's statement`;
+    }
+    const group = claimGroup(section, heading);
+    if (group === null) return `the page does not group the claims under ${heading}`;
+    if (!group.includes(statement)) {
+      return `the ${kind} claim's statement is not rendered under ${heading}`;
+    }
   }
-  const headings = CLAIM_KIND_HEADINGS.filter(([kind]) => kind !== "key-type").map(([, h]) => h);
-  const absent = headings.filter((heading) => !section.includes(heading));
-  if (absent.length) return `the page does not group the claims under ${absent.join(", ")}`;
   return null;
 });
 

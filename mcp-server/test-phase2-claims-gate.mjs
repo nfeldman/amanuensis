@@ -735,9 +735,38 @@ check("phase-4-adversarial.md records each claim's challenge outcome before mapp
   if (!survived) {
     return "the document does not say how a claim that survives the challenge is recorded, so an unchallenged claim is indistinguishable from an upheld one";
   }
-  return /before .{0,40}mapped|advance.{0,60}mapped|mapped/i.test(text)
+  // The clause is prose, and §9.1 puts it here rather than in
+  // `enforcePhasePrerequisites` on purpose: `claim_validity_events.event_type`
+  // (schema.sql:1060) has no `survived` value, so no query can tell a claim
+  // that survived its challenge from one nobody challenged, and a substrate
+  // gate would have to refuse the legitimate all-survived result. A prose
+  // obligation is what there is to assert — so assert its *direction*, not
+  // merely that the word `mapped` appears somewhere in the file. The prior
+  // form ended in a bare `|mapped/i`, which the document's own two other
+  // mentions satisfied no matter what the clause said.
+  const sentences = text
+    .replace(/\n+/g, " ")
+    .split(/(?<=\.)\s+/)
+    .filter((sentence) => /\bmapped\b/.test(sentence) && /claim|outcome/i.test(sentence));
+  if (sentences.length === 0) {
+    return "no sentence ties a claim's recorded outcome to the advance to mapped";
+  }
+  // Permission-shaped: the inverted clause says mapping may proceed anyway.
+  const permissive = sentences.find((sentence) =>
+    /whether or not|need not|optional|not required|may be deferred|without .{0,30}outcome/i.test(
+      sentence,
+    ),
+  );
+  if (permissive) {
+    return `the document permits mapped without a recorded outcome — "${permissive.trim().slice(0, 120)}"`;
+  }
+  // Obligation-shaped: the requirement has to be stated as one.
+  const obligation = sentences.find((sentence) =>
+    /\bmust\b|\bmay not\b|\bcannot\b|\bbefore\b.{0,80}\bmapped\b/i.test(sentence),
+  );
+  return obligation
     ? null
-    : "the document does not tie the recorded outcomes to the advance to mapped";
+    : "the document mentions claims and mapped together but never states the outcome as a requirement, so it reads as advice rather than a precondition";
 });
 
 // ---------------------------------------------------------------------------
