@@ -1361,8 +1361,8 @@
       "attempts": 1,
       "start_sha": "0016335b32d05629eb1752570d1b4905745f9a24",
       "red_sha": "9861534282eef3cfd371ed8370ad76bb72408590",
-      "green_sha": "43ac1054be777af509b6ac59027ef498a1b88a71",
-      "verified_by_launcher": false,
+      "green_sha": "747d247df82934696391c7b3da296bebaebe2337",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Closes slice-S6 F6, F7, F9 and reconciles F8 in the live store. Two append-only tables (claim_challenge_outcomes, subsystem_status_transitions) with substrate triggers; record_claim_challenge/get_claim_challenges; enforcePhasePrerequisites gains a 'mapped' case requiring an outcome on every current <sid>/ claim, so both status writers are gated. record-rebuild-depth.mjs now reads the ladder from the transition rows and, for rungs climbed before the table existed, from the subsystems.status held in each storage checkpoint's committed memory.db — a rung declares its source and the span it covers, and test-rebuild-depth.mjs checks the deliverable behind each covered rung instead of asserting fields the recorder typed in. Four registry crossings (B-01 to B-05/B-06/B-07/B-09) recorded through add_xref; the coverage receipt now carries registry_ownership and registry_crossings re-derived from the tracked index.ts. project_name comes from binding metadata or a package manifest, never a directory. Files beyond the declared deliverables, each because the packet could not land otherwise: dev/record-regeneration-pass.mjs (new, the auditable live-store write path), dev/test-rebuild-depth.mjs, mcp-server/test-invariants.mjs and mcp-server/test-edge-contract.mjs (fixtures and an allowlist the new prerequisite and the new caller reach), mcp-server/contracts/conspectus-vocabulary.json plus the generated vocabulary modules and DEVELOPMENT.md. dev/test-finding-partition (P2) and dev/test-activation-evidence were already red at 0016335 and are unchanged by this packet."
     }
