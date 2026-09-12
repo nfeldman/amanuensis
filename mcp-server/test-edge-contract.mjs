@@ -1044,20 +1044,32 @@ check("test-smoke.mjs's add_xref call passes a context", () => {
   return null;
 });
 
-check("test-smoke.mjs is the only add_xref caller this packet had to update", () => {
-  const allowed = new Set([
-    join(MCP, "test-smoke.mjs"),
+check("every add_xref caller in the tree passes a cited context", () => {
+  // The tool's own module, and the two gates that exercise it by construction.
+  // Everything else that names `add_xref` is a caller, and a caller that does
+  // not pass a cited context is a caller the contract never reached — which is
+  // what this check was written to catch when §9.2 made `context` required.
+  // It enumerates rather than forbids: a later packet may legitimately record
+  // edges, and the obligation it takes on is the same one test-smoke took.
+  const exempt = new Set([
     join(MCP, "test-edge-contract.mjs"),
     join(MCP, "src", "tools", "xrefs.ts"),
   ]);
-  const callers = sourceFiles().filter((file) => {
-    if (allowed.has(file)) return false;
+  const bad = [];
+  for (const file of sourceFiles()) {
+    if (exempt.has(file)) continue;
     const text = readText(file);
-    return text !== null && /add_xref/.test(text);
-  });
-  return callers.length === 0
-    ? null
-    : `add_xref is also named by ${callers.map((f) => f.slice(REPO.length + 1)).join(", ")}, which this packet did not update`;
+    if (text === null || !/add_xref/.test(text)) continue;
+    const rel = file.slice(REPO.length + 1);
+    if (!/context\s*:/.test(text)) {
+      bad.push(`${rel} calls add_xref and passes no context`);
+      continue;
+    }
+    if (!new RegExp(CITATION_SHAPE).test(text)) {
+      bad.push(`${rel} calls add_xref and its context carries no citation token`);
+    }
+  }
+  return bad.length ? bad.join("; ") : null;
 });
 
 check("phase-2-structural.md tells Phase 2 to record crossing edges with a citation", () => {

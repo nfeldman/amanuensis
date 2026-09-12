@@ -108,40 +108,40 @@ const REGISTRY_EDGES = [
     from_id: "B-01",
     to_id: "B-05",
     relationship: "dependency",
-    context:
+    context: (sha) =>
       "the finding, disposition, concern, contradiction and resolution tools reach a client only " +
       "through the single registry this module concatenates and dispatches against, so the " +
       "resolution custody surface exists for a caller exactly when the registry carries it, read at " +
-      "mcp-server/src/index.ts:allTools@__SHA__",
+      `mcp-server/src/index.ts:allTools@${sha}`,
   },
   {
     from_id: "B-01",
     to_id: "B-06",
     relationship: "dependency",
-    context:
+    context: (sha) =>
       "the reader-lens tools are placed at the head of the advertised list deliberately — §5.5 " +
       "makes list order the order a host reads — and describe_locus is also the one name the " +
       "read-only annotation carve-out holds, so the registry decides both that the consumer route " +
       "is reachable and that it is annotated as a query, read at " +
-      "mcp-server/src/index.ts:READ_ONLY_TOOLS@__SHA__",
+      `mcp-server/src/index.ts:READ_ONLY_TOOLS@${sha}`,
   },
   {
     from_id: "B-01",
     to_id: "B-07",
     relationship: "dependency",
-    context:
+    context: (sha) =>
       "the git-state, staleness, change-impact and refresh tools are registered by this module and " +
       "by nothing else, so the freshness surface a host can call is whatever the registry admits, " +
-      "read at mcp-server/src/index.ts:allTools@__SHA__",
+      `read at mcp-server/src/index.ts:allTools@${sha}`,
   },
   {
     from_id: "B-01",
     to_id: "B-09",
     relationship: "dependency",
-    context:
+    context: (sha) =>
       "materialize_docs and verify_materialized_docs are dispatched through this registry, so the " +
       "publication and read-back custody path is entered through the same validator and annotation " +
-      "rules every other tool call is, read at mcp-server/src/index.ts:allTools@__SHA__",
+      `rules every other tool call is, read at mcp-server/src/index.ts:allTools@${sha}`,
   },
 ];
 
@@ -366,7 +366,7 @@ for (const edge of REGISTRY_EDGES) {
       to_id: edge.to_id,
       relationship: edge.relationship,
       strength: "structural",
-      context: edge.context.replace(/__SHA__/g, head),
+      context: edge.context(head),
     });
   }
   report.edges_written += 1;

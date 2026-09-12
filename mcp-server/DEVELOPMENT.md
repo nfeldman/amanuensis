@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_199 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
+_201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -222,11 +222,13 @@ _199 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 | `export_chorusmith_adapter_artifact` | Project one durable CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, or RunManifest through its @1.0.0 adapter into an Amanuensis custody envelope containing a Chorusmith PersistArtifactInput-compatible projection. Chorusmith must compute its own native record hash during future ingress; export is append-only, projection-only, and grants no external write authority. |
 | `get_chorusmith_adapter_run` | Read one immutable adapter manifest, its ordered landed/pending steps, restart receipts, and parity verifications. This is also the RunManifest@1.0.0 adapter's projection source. |
 
-### `claims` (6)
+### `claims` (8)
 
 | Tool | Description |
 |---|---|
 | `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. |
+| `record_claim_challenge` | Record the adversarial pass's outcome for one current claim (spec.md §9.1, Phase 4). outcome ∈ {survived, overturned, superseded}. `challenge` is what would have overturned the claim and where that was looked for, in prose of at least 24 characters; a one-word note is not a challenge. An 'overturned' or 'superseded' outcome must name the claim_validity_events row that closed the claim — invalidate_claim and supersede_claim write it — and 'survived' must not, because nothing was closed. field_note_id optionally links the probe note the pass wrote. The record is append-only: a later pass records a further outcome, it does not edit this one. Every current `<sid>/` claim must carry an outcome before the subsystem may advance to 'mapped'. |
+| `get_claim_challenges` | Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history. |
 | `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. |
 | `supersede_claim` | Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. |
 | `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |

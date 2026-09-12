@@ -453,7 +453,10 @@ export const claimTools: ToolDefinition[] = [
           );
         }
       }
-      if (noteId !== null && !ctx.db.prepare("SELECT 1 FROM field_notes WHERE id = ?").get(noteId)) {
+      if (
+        noteId !== null &&
+        !ctx.db.prepare("SELECT 1 FROM field_notes WHERE id = ?").get(noteId)
+      ) {
         throw new ToolError(`unknown field note: ${noteId}`);
       }
 

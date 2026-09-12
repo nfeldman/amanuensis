@@ -150,6 +150,32 @@ function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
   );
 }
 
+// Phase 4's own deliverable: every current `<sid>/` claim needs a recorded
+// challenge outcome before the subsystem may advance to `mapped`. A survived
+// outcome is the ordinary result and the one a fixture climb produces.
+function seedChallengeOutcomes(ctx, id) {
+  const unchallenged = ctx.db
+    .prepare(
+      `SELECT claim_id FROM claims c
+        WHERE c.valid_until_sha IS NULL
+          AND substr(c.claim_key, 1, length(?)) = ?
+          AND NOT EXISTS (SELECT 1 FROM claim_challenge_outcomes o WHERE o.claim_id = c.claim_id)`,
+    )
+    .all(`${id}/`, `${id}/`);
+  for (const row of unchallenged) {
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: row.claim_id,
+        outcome: "survived",
+        challenge: "fixture probe: read the declaration and found nothing that would overturn it",
+        ref_sha: headSha(ctx),
+      },
+      ctx,
+    );
+  }
+}
+
 // Convenience: advance a subsystem through the survey to a target depth,
 // satisfying every phase prerequisite along the way.
 //
@@ -220,8 +246,12 @@ function advanceTo(ctx, id, status) {
         );
       }
     }
-    // mapped: gate is 0 open findings; vacuously satisfied when advanceTo
-    // hasn't added any findings.
+    if (order[i] === "mapped") {
+      // Phase 4's prerequisite: every current `<sid>/` claim carries a
+      // recorded challenge outcome before the subsystem may publish its
+      // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
+      seedChallengeOutcomes(ctx, id);
+    }
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
 }
@@ -995,7 +1025,9 @@ t("phase prerequisites: happy path passes all gates", () => {
       ctx,
     );
     call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
-    // No open findings → can map.
+    // Phase 4's prerequisite: the structural account is challenged before it
+    // is published as mapped (§9.1).
+    seedChallengeOutcomes(ctx, "B-01");
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
   } finally {

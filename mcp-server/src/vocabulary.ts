@@ -1195,7 +1195,11 @@ export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly Vocabular
   finding_resolution_state: [{ table: "finding_resolution_events", column: "resolution_state" }],
   finding_status: [{ table: "findings", column: "status" }],
   file_classification: [{ table: "file_ledger", column: "classification" }],
-  subsystem_status: [{ table: "subsystems", column: "status" }],
+  subsystem_status: [
+    { table: "subsystems", column: "status" },
+    { table: "subsystem_status_transitions", column: "from_status" },
+    { table: "subsystem_status_transitions", column: "to_status" },
+  ],
   evidence_kind: [{ table: "evidence", column: "kind" }],
   evidence_quality: [{ table: "dispositions", column: "evidence_quality" }],
   disposition_classification: [{ table: "dispositions", column: "classification" }],
