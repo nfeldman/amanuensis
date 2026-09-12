@@ -1,0 +1,1133 @@
+#!/usr/bin/env node
+// Gate for reader-lenses packet P6 — describe_locus, its output contract, and
+// the read-only annotations it is advertised with
+// (spec.md §2.3, §3.1–§3.4, §5.1, §5.5; claims C7, C15, C16, C17, C21, C22,
+// C26, C55, C59, C63).
+//
+// Turns red when:
+//   - `describe_locus` is not exported from src/tools/locus.ts, is not the
+//     first tool the server advertises, or does not appear as a `locus` group
+//     in the generated tool inventory;
+//   - its input schema drops `additionalProperties: false`, stops requiring a
+//     non-empty `locus`, or stops constraining `sections` and `kind` to their
+//     enums;
+//   - a response does not validate against
+//     contracts/locus-account.schema.json, or reports anything but
+//     `model_calls: 0` and the registry-exact selection;
+//   - an unledgered path raises instead of returning the `unledgered` standing
+//     with an empty account, or an unresolvable `as_of_sha` does *not* raise;
+//   - a `candidate` row serves a structural claim, or the withholding is not
+//     declared with the state's own `cannot_justify` sentence;
+//   - any response says "no findings" or "no open findings" at a state §2.3
+//     forbids it at, or an examined locus with no recorded finding fails to
+//     say so;
+//   - a multi-owner file with disagreeing owners reports one owner's state
+//     rather than `mixed`, or drops an owner;
+//   - any account item loses `ref_sha`, `revision_bound`, or `authored`, or
+//     marks a row with no revision as revision-bound;
+//   - `as_of_sha` is served as a whole-account snapshot: the three supported
+//     sections must be marked supported and the other five served at current
+//     with `as_of_supported: false` and a sentence saying so;
+//   - a claim opened at a strict ancestor and still open is dropped from a
+//     historical reading, or a claim invalidated at the requested commit is
+//     served by it (the SQL pre-filter the review overturned);
+//   - a zero `measured` field is served without its denominator, or
+//     `staleness_measured` reports health on an empty ledger;
+//   - an origin head that disagrees with the workspace head is reconciled,
+//     dropped, or written over the workspace head;
+//   - the gate does not run in CI.
+//
+// False greens it cannot exclude. The account's *labels* are asserted against
+// this file's own constants, so a consistent rename of a section key here and
+// in the implementation would pass — the enum source and the spec table are
+// the independent statements, and only the section names are cross-read. It
+// cannot exclude a defects partition that is right for the five resolution
+// states this fixture seeds and wrong for a sixth the schema might later add,
+// because the partition map is read from the vocabulary contract but its
+// *assignment* is exercised only on seeded rows. It cannot exclude an
+// authorization gate that is right for `scoped-unread` and wrong for a state
+// no fixture here reaches at the structure section. And it says nothing about
+// response size: the byte budgets are P7's gate, and asserting a bound here
+// would duplicate a control without measuring it.
+//
+// Output protocol: exactly one status line, last, on stdout. Every subprocess
+// is captured and never echoed, and every message is scrubbed, so a missing
+// deliverable reports as an assertion failure rather than as a crash.
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const MCP = dirname(fileURLToPath(import.meta.url));
+const REPO = resolve(MCP, "..");
+
+const CONTRACT_REL = "mcp-server/contracts/locus-account.schema.json";
+const INVENTORY_REL = "mcp-server/DEVELOPMENT.md";
+const INDEX_REL = "mcp-server/src/index.ts";
+const CI_REL = ".github/workflows/test.yml";
+const VOCABULARY_REL = "mcp-server/contracts/conspectus-vocabulary.json";
+
+// §3.1's eight sections, in the order the table fixes. Written out rather than
+// read from the implementation so that reordering the implementation cannot
+// also reorder what this gate expects.
+const SECTIONS = [
+  "purpose",
+  "structure",
+  "defects",
+  "reviews",
+  "boundaries",
+  "terms",
+  "leads",
+  "history_pointer",
+];
+// §4.2: on by default, and opt-in. `history_pointer` is always present as
+// counts; only its detail is opt-in.
+const DEFAULT_SECTIONS = ["purpose", "structure", "defects", "boundaries", "terms"];
+const OPT_IN_SECTIONS = ["reviews", "leads"];
+// §3.1: the defects partition, in order.
+const DEFECT_PARTITIONS = ["open", "awaiting-verification", "verified-fixed", "ruled-out", "accepted"];
+// §3.3: the three sections a historical reading can be sourced for.
+const AS_OF_SUPPORTED = ["structure", "defects", "history_pointer"];
+// §5.1's output contract version.
+const CONTRACT_VERSION = "1.0.0";
+// §2.4.5's fields, in order. A zero in any of them is read against the others.
+const MEASURED_FIELDS = [
+  "ledger_rows",
+  "ledger_reconciled",
+  "reconciliation_receipt",
+  "staleness_measured",
+  "evidence_rows",
+  "claims_recorded",
+];
+// §2.3's sentence for `scoped-unread`, carried from the enum source.
+const SCOPED_UNREAD_CANNOT = "any claim about content, behavior, or the absence of defects";
+// §3.3's sentence for a section that cannot be read historically.
+const AS_OF_UNSUPPORTED_SENTENCE = "This section has no recorded history";
+
+// ---------------------------------------------------------------------------
+// Output funnel. Nothing reaches stdout except through emit(), and everything
+// is scrubbed of the launcher's crash signatures so that a genuine assertion
+// failure is never mistaken for a gate that never ran.
+// ---------------------------------------------------------------------------
+const SCRUB = [
+  [/MODULE_NOT_FOUND/g, "module-absent"],
+  [/ModuleNotFoundError/g, "python-module-absent"],
+  [/Cannot find module/g, "cannot load module"],
+  [/No such file or directory/g, "path is absent"],
+  [/No such file/g, "path is absent"],
+  [/can't open file/g, "cannot open path"],
+  [/SyntaxError/g, "syntax-error"],
+  [/ImportError/g, "python-import-error"],
+  [/ReferenceError/g, "reference-error"],
+  [/TypeError/g, "type-error"],
+  [/ENOENT/g, "PATH-ABSENT"],
+  [/is not defined/g, "is undeclared"],
+  [/command not found/g, "executable is absent"],
+];
+
+function scrub(text) {
+  let out = String(text ?? "");
+  for (const [pattern, replacement] of SCRUB) out = out.replace(pattern, replacement);
+  return out;
+}
+
+function emit(line) {
+  process.stdout.write(`${scrub(line)}\n`);
+}
+
+const failures = [];
+function check(label, fn) {
+  let reason = null;
+  try {
+    reason = fn();
+  } catch (e) {
+    reason = `threw while checking — ${e && e.message ? e.message : e}`;
+  }
+  if (reason) {
+    failures.push(`${label}: ${reason}`);
+    emit(`  FAIL ${label}: ${reason}`);
+  } else {
+    emit(`  ok   ${label}`);
+  }
+}
+
+function readText(absPath) {
+  if (!existsSync(absPath)) return null;
+  try {
+    return readFileSync(absPath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function readJson(absPath) {
+  const text = readText(absPath);
+  if (text === null) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Deliverables, loaded defensively: an absent or unbuilt deliverable must read
+// as an assertion failure, not as a crashed gate.
+// ---------------------------------------------------------------------------
+let mods = null;
+let loadError = null;
+try {
+  const [db, project, locus] = await Promise.all([
+    import("./dist/db.js"),
+    import("./dist/project.js"),
+    import("./dist/tools/locus.js"),
+  ]);
+  mods = { db, project, locus };
+} catch (e) {
+  loadError = e && e.message ? e.message : String(e);
+}
+
+let Ajv2020 = null;
+try {
+  Ajv2020 = (await import("ajv/dist/2020.js")).default;
+} catch {
+  Ajv2020 = null;
+}
+
+const contract = readJson(join(REPO, CONTRACT_REL));
+const vocabulary = readJson(join(REPO, VOCABULARY_REL));
+let validateAccount = null;
+let validatorError = null;
+if (contract && Ajv2020) {
+  try {
+    validateAccount = new Ajv2020({ strict: true }).compile(contract);
+  } catch (e) {
+    validatorError = e && e.message ? e.message : String(e);
+  }
+}
+
+function describeLocusTool() {
+  const tools = mods?.locus?.locusTools;
+  if (!Array.isArray(tools)) return null;
+  return tools.find((tool) => tool?.name === "describe_locus") ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Fixture: one workspace with three commits, a clone whose origin disagrees
+// with its own head, and a store seeded so that every branch below has both a
+// positive and a negative row to separate.
+// ---------------------------------------------------------------------------
+const roots = [];
+function tempRoot(prefix) {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  roots.push(dir);
+  return dir;
+}
+
+function git(cwd, ...args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args[0]} did not succeed`);
+  return String(result.stdout ?? "").trim();
+}
+
+let fixture = null;
+let fixtureError = loadError ? `the locus tools could not be loaded — ${loadError}` : null;
+
+function buildFixture() {
+  const root = tempRoot("amanuensis-locus-account-");
+  const workspace = join(root, "workspace");
+  const storageRoot = join(root, "storage-root");
+  mkdirSync(join(workspace, "src"), { recursive: true });
+  mkdirSync(storageRoot, { recursive: true });
+  git(workspace, "init", "-q", "-b", "main");
+  git(workspace, "config", "user.email", "test@localhost");
+  git(workspace, "config", "user.name", "Locus Account Test");
+  git(workspace, "config", "commit.gpgsign", "false");
+  const commit = (body, message) => {
+    writeFileSync(join(workspace, "src", "ledger.ts"), body);
+    git(workspace, "add", "src/ledger.ts");
+    git(workspace, "commit", "-q", "--no-verify", "-m", message);
+    return git(workspace, "rev-parse", "HEAD");
+  };
+  const base = commit("export const row = 1;\n", "base");
+  const mid = commit("export const row = 2;\n", "mid");
+  const head = commit("export const row = 3;\n", "head");
+
+  process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
+  const project = mods.project.resolveProject(workspace, {
+    selectionSource: "test-locus-standing",
+    serverVersion: "test",
+  });
+  mods.project.ensureProjectStorage(project, (dbPath) => mods.db.openDatabase(dbPath).close());
+  const db = mods.db.openDatabase(project.dbPath);
+  const ctx = { project, db, sessionId: null };
+
+  db.prepare("INSERT INTO sessions (session_id, intent) VALUES ('p6', 'p6-gate')").run();
+
+  const subsystem = db.prepare(
+    "INSERT INTO subsystems (id, name, status, layer, scope, jump_in_reading, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  );
+  subsystem.run("B-01", "Ledger", "concerns", "core", "src/ledger.ts and the row writer", "src/examined.ts", null);
+  subsystem.run("B-02", "Index", "mapped", "core", null, null, null);
+  subsystem.run("B-03", "Archive", "deferred", "core", null, null, "set aside until the rewrite lands");
+
+  const ledger = db.prepare(
+    `INSERT INTO file_ledger
+       (subsystem_id, file_path, why_in_scope, classification, ref_sha, examined_at, stale, stale_reason)
+     VALUES (?, ?, 'account fixture', ?, ?, ?, 0, NULL)`,
+  );
+  const examinedAt = "2026-09-01 12:00:00";
+  ledger.run("B-01", "src/examined.ts", "examined", head, examinedAt);
+  ledger.run("B-01", "src/clean.ts", "examined", head, examinedAt);
+  ledger.run("B-01", "src/candidate.ts", "candidate", null, null);
+  ledger.run("B-01", "src/mixed.ts", "examined", head, examinedAt);
+  ledger.run("B-02", "src/mixed.ts", "candidate", null, null);
+
+  const evidence = db.prepare(
+    `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note, session_id)
+     VALUES (?, ?, ?, ?, ?, 'account fixture', 'p6')`,
+  );
+  evidence.run(1, "src/examined.ts", "readLedger", head, "code-verified");
+  evidence.run(2, "src/candidate.ts", "parseRow", head, "name-inferred");
+  evidence.run(3, "src/examined.ts", "readLedger", base, "doc-asserted");
+  evidence.run(4, "src/examined.ts", "readLedger", head, "test-observed");
+
+  const claim = db.prepare(
+    `INSERT INTO claims
+       (claim_id, claim_key, subject_type, subject_id, statement, epistemic_kind,
+        asserted_at_sha, valid_from_sha, valid_until_sha, session_id)
+     VALUES (?, ?, 'symbol', ?, ?, 'observation', ?, ?, ?, 'p6')`,
+  );
+  // Current, opened at a strict ancestor of every query commit: the reading at
+  // `mid` must carry it. The pre-filter the round-1 review overturned dropped
+  // exactly this row.
+  claim.run("CL-1", "ledger/readLedger/bound", "src/examined.ts:readLedger",
+    "the ledger reader retries under a bound", base, base, null);
+  // Invalidated at `mid`: current reads must drop it, a reading at `base` must
+  // carry it, and a reading at `mid` must not.
+  claim.run("CL-0", "ledger/readLedger/unbounded", "src/examined.ts:readLedger",
+    "the ledger reader retries without a bound", base, base, mid);
+  // A content claim at a path the ledger classifies `candidate`. §2.3 forbids
+  // serving it there; the store holds it all the same.
+  claim.run("CL-C", "candidate/parseRow/validates", "src/candidate.ts:parseRow",
+    "the candidate parser validates every row", base, base, null);
+  const claimEvidence = db.prepare(
+    "INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, ?, 'supports')",
+  );
+  // CL-1 carries a weak row and a strong row: the item must report the
+  // strongest, or a reader ranks the claim by whichever row was inserted last.
+  claimEvidence.run("CL-1", 3);
+  claimEvidence.run("CL-1", 1);
+  claimEvidence.run("CL-0", 3);
+  claimEvidence.run("CL-C", 2);
+
+  const finding = db.prepare(
+    `INSERT INTO findings
+       (finding_id, subsystem_id, symptom, root_cause, severity, status, primary_files, ref_sha, session_id)
+     VALUES (?, 'B-01', ?, 'account fixture', ?, ?, ?, ?, 'p6')`,
+  );
+  const primary = JSON.stringify([`src/examined.ts:readLedger@${head}`]);
+  finding.run("B01-0", "the reader drops the last row", "HIGH", "confirmed-bug", primary, head);
+  finding.run("B01-1", "the reader double-counts a retry", "HIGH", "confirmed-bug", primary, head);
+  finding.run("B01-4", "the reader logs the wrong cursor", "MEDIUM", "confirmed-bug", primary, head);
+  // Legacy row: no resolution event at all, so `finding_state_current`'s
+  // fallback is what places it.
+  finding.run("B01-3", "the reader was thought to deadlock", "CRITICAL", "ruled-out", primary, head);
+  // Repaired at `head`: the event names a revision, so a reading at `mid`
+  // cannot carry it and must report the finding open there.
+  finding.run("B01-2", "the reader leaked a handle", "LOW", "confirmed-bug", primary, head);
+  const findingEvidence = db.prepare(
+    "INSERT INTO finding_evidence (finding_id, evidence_id, role) VALUES (?, ?, 'symptom')",
+  );
+  for (const id of ["B01-0", "B01-1", "B01-2", "B01-3", "B01-4"]) findingEvidence.run(id, 1);
+  db.prepare(
+    `INSERT INTO finding_resolution_events
+       (finding_id, resolution_state, fix_location, fix_sha, rationale, session_id)
+     VALUES ('B01-2', 'fixed-pending-verification', 'src/examined.ts:readLedger', ?, 'handle closed on the error path', 'p6')`,
+  ).run(head);
+
+  db.prepare("INSERT INTO concerns (code, category, question, status) VALUES (?, ?, ?, 'active')").run(
+    "CC-1",
+    "concurrency",
+    "can two writers interleave?",
+  );
+  db.prepare("INSERT INTO concerns (code, category, question, status) VALUES (?, ?, ?, 'active')").run(
+    "SC-1",
+    "seam",
+    "is the seam contract written down?",
+  );
+  db.prepare(
+    `INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale)
+     VALUES ('B-01', 'CC-1', 'ruled-out', ?, 'code-verified', 'the writer holds the lock across the retry')`,
+  ).run(`src/examined.ts:readLedger@${head}`);
+  db.prepare(
+    "INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B-01','CC-1',1,'supports')",
+  ).run();
+
+  db.prepare(
+    `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b, a_writes, b_reads, notes)
+     VALUES ('SM-01', 'ledger rows', 'table', 'B-01', 'B-02', 'appends rows', 'reads rows', 'the index trails the ledger')`,
+  ).run();
+  db.prepare(
+    "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-01','B-02','data-flow','observed','the index reads what the ledger writes')",
+  ).run();
+
+  const vocab = db.prepare(
+    "INSERT INTO vocabulary (term, gloss, expansion, subsystem_id, first_seen, ref_sha) VALUES (?, ?, ?, ?, ?, ?)",
+  );
+  vocab.run("row cursor", "the position a reader resumes from", null, "B-01", `src/examined.ts:readLedger@${head}`, head);
+  // A term with no recorded revision: §3.2's `revision_bound: false` case.
+  vocab.run("compaction", "folding the ledger into one revision", null, "B-01", null, null);
+
+  db.prepare(
+    `INSERT INTO field_notes (id, category, observation, location, ref_sha, follow_up, session_id)
+     VALUES (7, 'anomaly', 'the retry path is untested', ?, ?, 'open', 'p6')`,
+  ).run("src/examined.ts:readLedger", head);
+  db.prepare(
+    `INSERT INTO open_questions (id, category, subsystem_id, question, resolution, ref_sha)
+     VALUES (3, 'scope-judgment', 'B-01', 'does the ledger own the index schema?', 'open', ?)`,
+  ).run(head);
+
+  db.prepare(
+    `INSERT INTO git_state (repo_id, canonical_branch, last_checked_sha, last_checked_at, onboarding_sha)
+     VALUES ('default', 'main', ?, '2026-09-11 02:15:00', ?)`,
+  ).run(head, base);
+
+  // A clone whose recorded upstream is the workspace's head while its own HEAD
+  // has moved on. §2.4.4 reports both; it never reconciles them.
+  const divergent = join(root, "divergent-clone");
+  let divergentCtx = null;
+  const cloned = spawnSync("git", ["clone", "-q", workspace, divergent], { encoding: "utf8" });
+  if (cloned.status === 0) {
+    git(divergent, "config", "user.email", "test@localhost");
+    git(divergent, "config", "user.name", "Locus Account Test");
+    git(divergent, "config", "commit.gpgsign", "false");
+    writeFileSync(join(divergent, "src", "ledger.ts"), "export const row = 4;\n");
+    git(divergent, "add", "src/ledger.ts");
+    git(divergent, "commit", "-q", "--no-verify", "-m", "ahead of origin");
+    divergentCtx = {
+      ...ctx,
+      project: { ...project, workspacePath: divergent },
+      divergentHead: git(divergent, "rev-parse", "HEAD"),
+    };
+  }
+
+  return { root, workspace, storageRoot, base, mid, head, project, db, ctx, divergent, divergentCtx };
+}
+
+if (!fixtureError) {
+  try {
+    fixture = buildFixture();
+  } catch (e) {
+    fixtureError = `the fixture could not be built — ${e && e.message ? e.message : e}`;
+  }
+}
+
+function needFixture() {
+  return fixtureError ?? null;
+}
+
+function describeLocus(args, ctx = fixture.ctx) {
+  const tool = describeLocusTool();
+  if (!tool) throw new Error("describe_locus is not exported from the locus tools");
+  return tool.handler(args, ctx);
+}
+
+function sectionOf(payload, name) {
+  return payload?.sections?.[name] ?? null;
+}
+
+function allItems(payload) {
+  const out = [];
+  for (const name of SECTIONS) {
+    const section = sectionOf(payload, name);
+    if (!section || !Array.isArray(section.items)) continue;
+    for (const item of section.items) out.push([name, item]);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// 1. The output contract
+// ---------------------------------------------------------------------------
+emit("contract");
+
+check("contracts/locus-account.schema.json ships version 1.0.0 and is a compiled schema", () => {
+  if (contract === null) return `${CONTRACT_REL} is absent or is not JSON`;
+  if (Ajv2020 === null) return "the draft 2020-12 validator could not be loaded";
+  if (validatorError) return `the contract does not compile: ${validatorError}`;
+  if (!validateAccount) return "the contract did not compile";
+  if (contract.additionalProperties !== false)
+    return "the contract admits properties it does not declare";
+  const version = contract.properties?.contract_version?.const;
+  if (version !== CONTRACT_VERSION) return `contract_version is ${JSON.stringify(version)}`;
+  const required = new Set(contract.required ?? []);
+  const missing = [
+    "contract_version",
+    "locus",
+    "standing",
+    "sections",
+    "census",
+    "omitted",
+    "trace",
+    "current",
+  ].filter((key) => !required.has(key));
+  return missing.length ? `the contract does not require ${missing.join(", ")}` : null;
+});
+
+check("the contract constrains the section set to §3.1's eight", () => {
+  if (contract === null) return `${CONTRACT_REL} is absent`;
+  const properties = contract.properties?.sections?.properties;
+  if (!properties) return "the contract does not declare the sections object";
+  const declared = Object.keys(properties);
+  const missing = SECTIONS.filter((name) => !declared.includes(name));
+  const extra = declared.filter((name) => !SECTIONS.includes(name));
+  if (missing.length) return `the contract omits ${missing.join(", ")}`;
+  if (extra.length) return `the contract declares unknown sections ${extra.join(", ")}`;
+  return contract.properties?.sections?.additionalProperties === false
+    ? null
+    : "the sections object admits sections the contract does not declare";
+});
+
+// ---------------------------------------------------------------------------
+// 2. Tool surface (C21, C22, C26)
+// ---------------------------------------------------------------------------
+emit("");
+emit("tool surface");
+
+check("describe_locus is the first tool src/tools/locus.ts exports", () => {
+  if (loadError) return `the locus tools could not be loaded — ${loadError}`;
+  const tools = mods.locus.locusTools;
+  if (!Array.isArray(tools) || tools.length === 0) return "locusTools is absent or empty";
+  if (tools[0]?.name !== "describe_locus")
+    return `the first exported tool is ${JSON.stringify(tools[0]?.name)}`;
+  return typeof tools[0]?.handler === "function" ? null : "describe_locus carries no handler";
+});
+
+check("its input schema is closed and constrains locus, kind, and sections", () => {
+  const tool = describeLocusTool();
+  if (!tool) return "describe_locus is not exported";
+  const schema = tool.inputSchema ?? {};
+  if (schema.additionalProperties !== false) return "the input schema is open";
+  if (!Array.isArray(schema.required) || !schema.required.includes("locus"))
+    return "locus is not required";
+  const locus = schema.properties?.locus ?? {};
+  if (locus.type !== "string" || (locus.minLength ?? 0) < 1)
+    return "locus is not a non-empty string";
+  const kind = schema.properties?.kind?.enum;
+  if (!Array.isArray(kind) || ["file", "symbol", "subsystem", "term"].some((k) => !kind.includes(k)))
+    return `kind is not constrained to the four locus kinds: ${JSON.stringify(kind)}`;
+  const sections = schema.properties?.sections?.items?.enum;
+  if (!Array.isArray(sections)) return "sections items carry no enum";
+  const missing = SECTIONS.filter((name) => !sections.includes(name));
+  const extra = sections.filter((name) => !SECTIONS.includes(name));
+  if (missing.length) return `the sections enum omits ${missing.join(", ")}`;
+  if (extra.length) return `the sections enum admits ${extra.join(", ")}`;
+  return schema.properties?.as_of_sha?.type === "string" ? null : "as_of_sha is not a string";
+});
+
+check("index.ts registers the locus tools first and carries an explicit read-only set", () => {
+  const source = readText(join(REPO, INDEX_REL));
+  if (source === null) return `${INDEX_REL} is absent`;
+  if (!/READ_ONLY_TOOLS/.test(source)) return "index.ts declares no READ_ONLY_TOOLS set";
+  if (!/READ_ONLY_TOOLS[\s\S]{0,200}describe_locus/.test(source))
+    return "describe_locus is not in READ_ONLY_TOOLS";
+  const composition = source.match(/const allTools: ToolDefinition\[\] = \[([\s\S]*?)\];/);
+  if (!composition) return "allTools could not be read from index.ts";
+  const first = composition[1].trim().split("\n")[0]?.trim();
+  return first === "...locusTools," ? null : `allTools opens with ${JSON.stringify(first)}`;
+});
+
+// ---------------------------------------------------------------------------
+// 3. Advertised annotations, read from a live server (C22, C26)
+// ---------------------------------------------------------------------------
+emit("");
+emit("advertised surface");
+
+async function listTools() {
+  const workspace = tempRoot("amanuensis-locus-list-");
+  return await new Promise((resolveFn) => {
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        server.kill("SIGTERM");
+      } catch {
+        /* the server is being torn down; a kill failure changes no verdict */
+      }
+      resolveFn(value);
+    };
+    const server = spawn(process.execPath, [join(MCP, "dist", "index.js"), "--workspace", workspace], {
+      env: { ...process.env, AMANUENSIS_STORAGE_ROOT: join(workspace, "storage") },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let out = "";
+    server.on("error", (e) => done({ error: e && e.message ? e.message : String(e) }));
+    server.stdout.on("data", (chunk) => {
+      out += chunk.toString();
+      for (const line of out.split("\n")) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          const message = JSON.parse(line);
+          if (message.id === 2) done({ tools: message.result?.tools ?? [] });
+        } catch {
+          /* a partial line; the next chunk completes it */
+        }
+      }
+    });
+    server.stderr.on("data", () => {});
+    const timer = setTimeout(() => done({ error: "the server did not answer tools/list in time" }), 30_000);
+    const send = (message) => {
+      try {
+        server.stdin.write(`${JSON.stringify(message)}\n`);
+      } catch (e) {
+        done({ error: e && e.message ? e.message : String(e) });
+      }
+    };
+    send({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "p6", version: "0" } },
+    });
+    send({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
+    send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
+  });
+}
+
+const advertised = await listTools();
+
+check("tools/list advertises describe_locus first", () => {
+  if (advertised.error) return `the tool list could not be read — ${advertised.error}`;
+  const names = advertised.tools.map((tool) => tool.name);
+  if (!names.includes("describe_locus")) return "describe_locus is not advertised";
+  return names[0] === "describe_locus" ? null : `the list opens with ${names[0]}`;
+});
+
+check("describe_locus advertises readOnlyHint true and destructiveHint false", () => {
+  if (advertised.error) return `the tool list could not be read — ${advertised.error}`;
+  const tool = advertised.tools.find((entry) => entry.name === "describe_locus");
+  if (!tool) return "describe_locus is not advertised";
+  const expected = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  };
+  for (const [field, value] of Object.entries(expected)) {
+    if (tool.annotations?.[field] !== value)
+      return `${field} is ${JSON.stringify(tool.annotations?.[field])}, not ${value}`;
+  }
+  // The carve-out must not widen: a write tool stays destructive.
+  const write = advertised.tools.find((entry) => entry.name === "update_subsystem_status");
+  if (!write) return "update_subsystem_status is not advertised";
+  return write.annotations?.readOnlyHint === false && write.annotations?.destructiveHint === true
+    ? null
+    : "the read-only carve-out reaches a write tool";
+});
+
+check("the generated tool inventory carries the locus group", () => {
+  const inventory = readText(join(REPO, INVENTORY_REL));
+  if (inventory === null) return `${INVENTORY_REL} is absent`;
+  if (!/\blocus\b/.test(inventory)) return "DEVELOPMENT.md names no locus group";
+  if (!inventory.includes("describe_locus")) return "DEVELOPMENT.md does not list describe_locus";
+  const regenerated = spawnSync(process.execPath, [join(MCP, "scripts", "gen-tool-inventory.mjs"), "--check"], {
+    cwd: MCP,
+    encoding: "utf8",
+  });
+  return regenerated.status === 0
+    ? null
+    : `gen-tool-inventory.mjs --check does not pass: ${scrub(String(regenerated.stdout ?? "") + String(regenerated.stderr ?? "")).trim().split("\n").slice(-1)[0]}`;
+});
+
+// ---------------------------------------------------------------------------
+// 4. An unknown locus is an answer, not an error (C21)
+// ---------------------------------------------------------------------------
+emit("");
+emit("unknown locus");
+
+check("an unledgered path returns the unledgered standing and an empty account", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  let payload;
+  try {
+    payload = describeLocus({ locus: "src/unledgered.ts" });
+  } catch (e) {
+    return `describe_locus raised on an unledgered path — ${e && e.message ? e.message : e}`;
+  }
+  if (payload?.ok === false) return `describe_locus returned an error: ${payload.error}`;
+  if (payload?.standing?.state !== "unledgered")
+    return `state is ${JSON.stringify(payload?.standing?.state)}`;
+  if (!Array.isArray(payload?.standing?.owners) || payload.standing.owners.length !== 0)
+    return "the unledgered standing carries owners";
+  if (!Array.isArray(payload?.standing?.unknown)) return "unknown[] is absent";
+  const populated = SECTIONS.filter((name) => (sectionOf(payload, name)?.items ?? []).length > 0);
+  return populated.length ? `the account is not empty: ${populated.join(", ")}` : null;
+});
+
+check("an unresolvable as_of_sha is an error", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  try {
+    const payload = describeLocus({ locus: "src/examined.ts", as_of_sha: "0".repeat(40) });
+    return payload?.ok === false
+      ? null
+      : "an unresolvable as_of_sha returned a reading instead of an error";
+  } catch {
+    return null;
+  }
+});
+
+check("a term no vocabulary row names returns not-defined, not an error", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  let payload;
+  try {
+    payload = describeLocus({ locus: "quiescence" });
+  } catch (e) {
+    return `describe_locus raised on an unknown term — ${e && e.message ? e.message : e}`;
+  }
+  if (payload?.locus?.kind !== "term") return `the locus kinded ${payload?.locus?.kind}`;
+  return payload?.standing?.state === "not-defined"
+    ? null
+    : `state is ${JSON.stringify(payload?.standing?.state)}`;
+});
+
+// ---------------------------------------------------------------------------
+// 5. §2.3's authorization, carried into the account (C7)
+// ---------------------------------------------------------------------------
+emit("");
+emit("authorization");
+
+check("a candidate row serves no structural claim and says why", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/candidate.ts" });
+  if (payload?.standing?.state !== "scoped-unread")
+    return `state is ${JSON.stringify(payload?.standing?.state)}`;
+  const structure = sectionOf(payload, "structure");
+  if (!structure) return "the structure section is absent";
+  if ((structure.items ?? []).length !== 0)
+    return `the structure section serves ${structure.items.length} item(s)`;
+  const serialized = JSON.stringify(payload);
+  if (serialized.includes("the candidate parser validates every row"))
+    return "a content claim reached the response";
+  if (structure.authorized !== false) return "the withholding is not declared";
+  if (structure.withheld_unauthorized !== 1)
+    return `withheld_unauthorized is ${JSON.stringify(structure.withheld_unauthorized)}, not 1`;
+  if (structure.recorded !== true)
+    return "the section reports nothing recorded while the store holds a row";
+  return String(structure.statement ?? "").includes(SCOPED_UNREAD_CANNOT)
+    ? null
+    : `the statement does not carry §2.3's sentence: ${JSON.stringify(structure.statement)}`;
+});
+
+check("'no findings' is never said at a state §2.3 forbids it at", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  for (const locus of ["src/candidate.ts", "src/unledgered.ts"]) {
+    const serialized = JSON.stringify(describeLocus({ locus })).toLowerCase();
+    if (serialized.includes("no findings") || serialized.includes("no open findings"))
+      return `${locus} reports an absence of findings`;
+    if (!serialized.includes("not examined")) return `${locus} does not say "not examined"`;
+  }
+  return null;
+});
+
+check("'no open findings' is said at an examined locus that has none", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/clean.ts" });
+  if (payload?.standing?.state !== "examined")
+    return `state is ${JSON.stringify(payload?.standing?.state)}`;
+  const defects = sectionOf(payload, "defects");
+  if (!defects) return "the defects section is absent";
+  if (defects.census !== 0) return `census is ${defects.census}`;
+  if (defects.recorded !== false) return "an empty source is not declared as unrecorded";
+  return String(defects.statement ?? "").toLowerCase().includes("no open findings")
+    ? null
+    : `the statement is ${JSON.stringify(defects.statement)}`;
+});
+
+// ---------------------------------------------------------------------------
+// 6. The account (C14's order, C15's binding, C59's authorship)
+// ---------------------------------------------------------------------------
+emit("");
+emit("account");
+
+check("the eight sections are present in §3.1's order", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts", sections: SECTIONS });
+  const keys = Object.keys(payload?.sections ?? {});
+  return JSON.stringify(keys) === JSON.stringify(SECTIONS)
+    ? null
+    : `the sections are ${JSON.stringify(keys)}`;
+});
+
+check("the default call carries the on-by-default sections and no opt-in section", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts" });
+  for (const name of DEFAULT_SECTIONS) {
+    const section = sectionOf(payload, name);
+    if (!section) return `${name} is absent from a default call`;
+    if (section.requested === false) return `${name} is not requested by default`;
+  }
+  for (const name of OPT_IN_SECTIONS) {
+    const section = sectionOf(payload, name);
+    if (!section) return `${name} is absent from a default call`;
+    if ((section.items ?? []).length !== 0) return `${name} is served without being requested`;
+    if (section.requested !== false) return `${name} does not declare that it was not requested`;
+  }
+  const omitted = payload?.omitted ?? [];
+  const policy = omitted.filter((entry) => entry.reason === "policy").map((entry) => entry.section);
+  const uncounted = OPT_IN_SECTIONS.filter(
+    (name) => (payload?.census?.by_section?.[name] ?? 0) > 0 && !policy.includes(name),
+  );
+  return uncounted.length
+    ? `an unrequested section with candidates records no policy omission: ${uncounted.join(", ")}`
+    : null;
+});
+
+check("an opt-in section is served when it is requested", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts", sections: ["reviews", "leads"] });
+  const reviews = sectionOf(payload, "reviews");
+  const leads = sectionOf(payload, "leads");
+  if ((reviews?.items ?? []).length !== 1)
+    return `reviews serves ${(reviews?.items ?? []).length} item(s), not the one disposition whose evidence cites the file`;
+  if (reviews.items[0].concern_code !== "CC-1")
+    return `the review item is ${JSON.stringify(reviews.items[0].concern_code)}`;
+  if ((leads?.items ?? []).length !== 2)
+    return `leads serves ${(leads?.items ?? []).length} item(s), not the open lead and the open question`;
+  // A section the call did not ask for is not served by asking for another.
+  return (sectionOf(payload, "purpose")?.items ?? []).length === 0
+    ? null
+    : "an explicit section list still served purpose";
+});
+
+check("structure serves the current claim, with its strongest evidence kind", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts" });
+  const items = sectionOf(payload, "structure")?.items ?? [];
+  if (items.length !== 1) return `structure serves ${items.length} item(s), not the one current claim`;
+  const item = items[0];
+  if (item.claim_id !== "CL-1") return `the item is ${JSON.stringify(item.claim_id)}`;
+  if (item.statement !== "the ledger reader retries under a bound")
+    return "the statement is not the stored one";
+  if (item.ref_sha !== fixture.base) return `ref_sha is ${JSON.stringify(item.ref_sha)}`;
+  if (item.evidence_kind !== "code-verified")
+    return `evidence_kind is ${JSON.stringify(item.evidence_kind)}, not the strongest attached`;
+  if (item.revision_bound !== true) return "a revision-bound claim is not marked bound";
+  return item.authored === "model" ? null : `authored is ${JSON.stringify(item.authored)}`;
+});
+
+check("defects partition and order follow §3.1", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const defects = sectionOf(describeLocus({ locus: "src/examined.ts" }), "defects");
+  const items = defects?.items ?? [];
+  if (items.length !== 5) return `defects serves ${items.length} item(s), not the five seeded`;
+  const partitions = [...new Set(items.map((item) => item.partition))];
+  const ordered = DEFECT_PARTITIONS.filter((name) => partitions.includes(name));
+  if (JSON.stringify(partitions) !== JSON.stringify(ordered))
+    return `the partitions appear as ${JSON.stringify(partitions)}`;
+  const byPartition = (name) => items.filter((item) => item.partition === name).map((i) => i.finding_id);
+  if (JSON.stringify(byPartition("open")) !== JSON.stringify(["B01-0", "B01-1", "B01-4"]))
+    return `the open partition is ${JSON.stringify(byPartition("open"))}, not severity then id`;
+  if (JSON.stringify(byPartition("awaiting-verification")) !== JSON.stringify(["B01-2"]))
+    return `awaiting-verification holds ${JSON.stringify(byPartition("awaiting-verification"))}`;
+  if (JSON.stringify(byPartition("ruled-out")) !== JSON.stringify(["B01-3"]))
+    return `ruled-out holds ${JSON.stringify(byPartition("ruled-out"))}`;
+  return null;
+});
+
+check("purpose renders scope separately and says no purpose statement is recorded", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const purpose = sectionOf(describeLocus({ locus: "src/examined.ts" }), "purpose");
+  const items = purpose?.items ?? [];
+  if (items.length !== 1) return `purpose serves ${items.length} item(s)`;
+  const item = items[0];
+  if (item.subsystem_id !== "B-01") return `the owner is ${JSON.stringify(item.subsystem_id)}`;
+  if (item.scope !== "src/ledger.ts and the row writer")
+    return "scope is not the stored text";
+  if (Object.keys(item).includes("purpose") && item.purpose !== null)
+    return "a purpose sentence was invented";
+  return String(purpose.statement ?? "").includes("No purpose statement is recorded")
+    ? null
+    : `the statement is ${JSON.stringify(purpose.statement)}`;
+});
+
+check("boundaries and terms carry unbound rows as revision_bound false", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts" });
+  const boundaries = sectionOf(payload, "boundaries")?.items ?? [];
+  if (boundaries.length !== 2)
+    return `boundaries serves ${boundaries.length} item(s), not the seam and the xref`;
+  for (const item of boundaries) {
+    if (item.ref_sha !== null) return `a seam or xref carries a ref_sha it has no column for`;
+    if (item.revision_bound !== false) return "an unbound boundary row is marked revision-bound";
+  }
+  const terms = sectionOf(payload, "terms")?.items ?? [];
+  const unbound = terms.find((item) => item.term === "compaction");
+  const bound = terms.find((item) => item.term === "row cursor");
+  if (!unbound || !bound) return `terms serves ${JSON.stringify(terms.map((t) => t.term))}`;
+  if (unbound.revision_bound !== false) return "a term with no ref_sha is marked revision-bound";
+  return bound.revision_bound === true && bound.ref_sha === fixture.head
+    ? null
+    : "a term recorded at a revision is not bound to it";
+});
+
+check("every item carries authored and a revision binding that matches its ref_sha", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts", sections: SECTIONS });
+  const items = allItems(payload);
+  if (items.length === 0) return "the account served no item to check";
+  for (const [section, item] of items) {
+    if (item.authored !== "model" && item.authored !== "code")
+      return `${section} item carries authored ${JSON.stringify(item.authored)}`;
+    if (!Object.prototype.hasOwnProperty.call(item, "ref_sha"))
+      return `${section} item carries no ref_sha field`;
+    if (typeof item.revision_bound !== "boolean")
+      return `${section} item carries no revision_bound flag`;
+    if (item.ref_sha === null && item.revision_bound !== false)
+      return `${section} item claims a revision binding it has no revision for`;
+    if (item.ref_sha !== null && item.revision_bound !== true)
+      return `${section} item hides the revision it is bound to`;
+  }
+  return null;
+});
+
+// ---------------------------------------------------------------------------
+// 7. Mixed ownership (C7's weakest-owner rule reaching the account)
+// ---------------------------------------------------------------------------
+emit("");
+emit("mixed ownership");
+
+check("a file whose owners disagree reports mixed and lists every owner", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/mixed.ts" });
+  if (payload?.standing?.state !== "mixed")
+    return `state is ${JSON.stringify(payload?.standing?.state)}`;
+  const owners = payload.standing.owners ?? [];
+  if (owners.length !== 2) return `owners lists ${owners.length} of the 2 ledger rows`;
+  const ids = owners.map((owner) => owner.subsystem_id).sort();
+  if (JSON.stringify(ids) !== JSON.stringify(["B-01", "B-02"]))
+    return `owners lists ${JSON.stringify(ids)}`;
+  // §2.3: mixed authorizes only what the weakest owner authorizes, so the
+  // structure section is withheld exactly as it is at scoped-unread.
+  const structure = sectionOf(payload, "structure");
+  return structure?.authorized === false
+    ? null
+    : "mixed served the strongest owner's authorization";
+});
+
+// ---------------------------------------------------------------------------
+// 8. Historical readings (C16)
+// ---------------------------------------------------------------------------
+emit("");
+emit("as_of_sha");
+
+check("only the three sourceable sections support a historical reading", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts", sections: SECTIONS, as_of_sha: fixture.mid });
+  if (payload?.current !== false) return "a historical reading is reported as current";
+  if (payload?.as_of_sha !== fixture.mid) return "the response does not echo as_of_sha";
+  for (const name of SECTIONS) {
+    const section = sectionOf(payload, name);
+    const expected = AS_OF_SUPPORTED.includes(name);
+    if (section?.as_of_supported !== expected)
+      return `${name} reports as_of_supported ${JSON.stringify(section?.as_of_supported)}`;
+    if (!expected && !String(section?.statement ?? "").includes(AS_OF_UNSUPPORTED_SENTENCE))
+      return `${name} is served historically without saying it has no recorded history`;
+  }
+  return null;
+});
+
+check("a claim opened at a strict ancestor and still open survives the cut", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const atMid = describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.mid });
+  const ids = (sectionOf(atMid, "structure")?.items ?? []).map((item) => item.claim_id);
+  if (!ids.includes("CL-1"))
+    return `the reading at mid dropped the open claim: ${JSON.stringify(ids)}`;
+  if (ids.includes("CL-0")) return "a claim invalidated at mid was served by the reading at mid";
+  const atBase = describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.base });
+  const baseIds = (sectionOf(atBase, "structure")?.items ?? []).map((item) => item.claim_id);
+  return baseIds.includes("CL-0")
+    ? null
+    : `the reading at base dropped the claim that was current there: ${JSON.stringify(baseIds)}`;
+});
+
+check("a resolution event at a later commit is not replayed into an earlier reading", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const now = sectionOf(describeLocus({ locus: "src/examined.ts" }), "defects")?.items ?? [];
+  const then =
+    sectionOf(describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.mid }), "defects")?.items ?? [];
+  const stateOf = (items, id) => items.find((item) => item.finding_id === id)?.resolution_state;
+  if (stateOf(now, "B01-2") !== "fixed-pending-verification")
+    return `at head B01-2 reads ${JSON.stringify(stateOf(now, "B01-2"))}`;
+  return stateOf(then, "B01-2") === "open"
+    ? null
+    : `at mid B01-2 reads ${JSON.stringify(stateOf(then, "B01-2"))}, replaying a repair recorded at head`;
+});
+
+// ---------------------------------------------------------------------------
+// 9. Determinism and the trace (C17)
+// ---------------------------------------------------------------------------
+emit("");
+emit("determinism");
+
+check("the response reports model_calls 0 and registry-exact selection", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts" });
+  if (payload?.trace?.model_calls !== 0)
+    return `model_calls is ${JSON.stringify(payload?.trace?.model_calls)}`;
+  if (payload?.trace?.selection !== "registry-exact-v1")
+    return `selection is ${JSON.stringify(payload?.trace?.selection)}`;
+  if (payload?.contract_version !== CONTRACT_VERSION)
+    return `contract_version is ${JSON.stringify(payload?.contract_version)}`;
+  return typeof payload?.trace?.payload_bytes === "number" ? null : "the trace reports no size";
+});
+
+check("the same store and head produce byte-identical output", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const first = JSON.stringify(describeLocus({ locus: "src/examined.ts", sections: SECTIONS }));
+  const second = JSON.stringify(describeLocus({ locus: "src/examined.ts", sections: SECTIONS }));
+  return first === second ? null : "two identical calls disagreed";
+});
+
+check("every response validates against the shipped contract", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  if (!validateAccount) return "the contract did not compile";
+  const cases = [
+    { locus: "src/examined.ts", sections: SECTIONS },
+    { locus: "src/unledgered.ts" },
+    { locus: "src/candidate.ts" },
+    { locus: "src/mixed.ts" },
+    { locus: "B-01" },
+    { locus: "src/examined.ts:readLedger" },
+    { locus: "row cursor" },
+    { locus: "quiescence" },
+    { locus: "src/examined.ts", as_of_sha: fixture.mid },
+  ];
+  for (const args of cases) {
+    const payload = describeLocus(args);
+    if (!validateAccount(payload)) {
+      const error = (validateAccount.errors ?? [])[0];
+      return `${args.locus} does not validate: ${error?.instancePath || "/"} ${error?.message}`;
+    }
+  }
+  return null;
+});
+
+// ---------------------------------------------------------------------------
+// 10. Measured fields keep their denominators (C7, VP4)
+// ---------------------------------------------------------------------------
+emit("");
+emit("measured");
+
+check("a zero measured field is served with its denominator, never as health", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const unledgered = describeLocus({ locus: "src/unledgered.ts" }).standing.measured ?? {};
+  const keys = Object.keys(unledgered);
+  if (JSON.stringify(keys) !== JSON.stringify(MEASURED_FIELDS))
+    return `measured carries ${JSON.stringify(keys)}`;
+  if (unledgered.ledger_rows !== 0) return `ledger_rows is ${unledgered.ledger_rows}`;
+  if (unledgered.staleness_measured !== false)
+    return "an empty ledger reports that staleness was measured";
+  if (unledgered.ledger_reconciled === null)
+    return "a path with no owner row does not report whether a reconciliation recorded it";
+  const examined = describeLocus({ locus: "src/examined.ts" }).standing.measured ?? {};
+  if (examined.staleness_measured !== true)
+    return "a ledgered path reports that staleness was not measured";
+  if (examined.ledger_reconciled !== null)
+    return "a ledgered path reports a reconciliation the scope_gaps table cannot witness";
+  return examined.reconciliation_receipt?.last_checked_sha === fixture.head
+    ? null
+    : "the reconciliation receipt does not carry git_state's checked revision";
+});
+
+// ---------------------------------------------------------------------------
+// 11. The origin head is reported, not reconciled (§2.4.4)
+// ---------------------------------------------------------------------------
+emit("");
+emit("revision");
+
+check("an origin head that disagrees with the workspace head is reported", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  if (!fixture.divergentCtx) return "the divergent clone could not be built";
+  const revision = describeLocus({ locus: "src/examined.ts" }, fixture.divergentCtx).standing.revision;
+  if (revision.repository_head !== fixture.divergentCtx.divergentHead)
+    return "repository_head is not the workspace head";
+  if (revision.origin_head !== fixture.head)
+    return `origin_head is ${JSON.stringify(revision.origin_head)}, not the recorded upstream head`;
+  if (revision.origin_head === revision.repository_head)
+    return "the two heads were reconciled into one";
+  return revision.checked_sha === fixture.head ? null : "checked_sha was rewritten by the probe";
+});
+
+// ---------------------------------------------------------------------------
+// 12. Custody
+// ---------------------------------------------------------------------------
+emit("");
+emit("custody");
+
+check("the packet's gate runs in CI", () => {
+  const ci = readText(join(REPO, CI_REL));
+  if (ci === null) return `${CI_REL} is absent`;
+  return ci.includes("node test-locus-standing.mjs") ? null : "the gate is not run in CI";
+});
+
+check("the account reads its section and partition names from the enum source", () => {
+  if (vocabulary === null) return `${VOCABULARY_REL} is absent`;
+  const states = (vocabulary.enums?.finding_resolution_state?.values ?? []).map((v) => v.value);
+  const missing = ["open", "accepted", "ruled-out", "fixed-pending-verification", "verified-fixed"].filter(
+    (state) => !states.includes(state),
+  );
+  if (missing.length) return `the enum source lost ${missing.join(", ")}`;
+  const source = readText(join(MCP, "src", "tools", "locus.ts"));
+  if (source === null) return "mcp-server/src/tools/locus.ts is absent";
+  if (!/from "\.\.\/vocabulary\.js"/.test(source))
+    return "locus.ts does not read the generated enum module";
+  return /const\s+\w*(SEVERIT|EVIDENCE_KINDS)\w*\s*=\s*\[/.test(source)
+    ? "locus.ts redeclares an enum the vocabulary source owns"
+    : null;
+});
+
+// ---------------------------------------------------------------------------
+if (fixture?.db) {
+  try {
+    fixture.db.close();
+  } catch {
+    /* the fixture is being torn down; a close failure changes no verdict */
+  }
+}
+for (const dir of roots) rmSync(dir, { recursive: true, force: true });
+
+if (failures.length) {
+  emit("");
+  emit(
+    `GATE P6 RED: the describe_locus account, its standing block, and its unknown[] sources do not hold — ${failures.length} assertion(s) failed; first: ${failures[0]}`,
+  );
+  process.exit(1);
+}
+emit("");
+emit("GATE P6 GREEN");
