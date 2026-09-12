@@ -856,12 +856,14 @@ check("a second outcome for one claim appends rather than replacing the first", 
   return null;
 });
 
+// The behavioural arm is finished with its store; everything below reads
+// committed files.
+try {
+  fixture?.db?.close?.();
+} catch {
+  /* the fixture store is disposable */
+}
 for (const dir of roots) {
-  try {
-    fixture?.db?.close?.();
-  } catch {
-    /* the fixture store is disposable */
-  }
   try {
     rmSync(dir, { recursive: true, force: true });
   } catch {
