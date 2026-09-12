@@ -483,8 +483,8 @@
       "attempts": 1,
       "start_sha": "3a841f9ff113b69df34e0d7a3602db825869120c",
       "red_sha": "9c11c87325aad3922e36cef0d8bccb9de0a9d331",
-      "green_sha": "aef743c1b0e79324f344bdcdbef6f12bb5820d6b",
-      "verified_by_launcher": false,
+      "green_sha": "c4dd0e0093fc5956af527bd38e08e161ed0a7973",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "describe_locus ships with the eight sections of 3.1, the 1.0.0 contract, READ_ONLY_TOOLS, and the locus group first in the inventory (197 tools). Three gaps the spec left open were filled and are the places to look first: (1) the structure section is withheld at a standing that authorizes no content claim, declared as authorized=false with withheld_unauthorized, source_rows and 2.3s cannot_justify carried in a field rather than quoted in prose, because acceptance requires a candidate row to serve no content claim while the store may hold one; (2) an as_of defects replay places an event by fix_sha ancestry, counts events that name no revision, and reports as_of_placeable=false for a finding whose only witness is the mutable status column rather than back-dating it; (3) the empty-defects sentence is per locus kind - a subsystem may say \"no open findings\" once its status reaches concerns, a term never. trace.response_bytes is null and the omission ledger carries only policy reasons: byte enforcement and budget truncation are P7. locus.ts carries a third copy of the two git ancestry questions (claims.ts and standing.ts have the others) because each owns a different failure policy; unifying them belongs to no packet here. Eighteen sabotages were run against the gate and one survives, named in the gate files false-green note: deleting the census-reconciliation throw, which needs P7s over-budget fixture to see."
     },
