@@ -52,6 +52,12 @@
 | P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | done (1 attempt) | P17, P19 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
 | P20 | Regeneration pass: challenge outcomes before mapped, the missing edges, and the canonical project name | done (1 attempt) | P18 | `dev/test-rebuild-regeneration.mjs` | C43, C52, C54, C55, C63 |
 
+## S7 · Residual hardening (review: pending)
+
+| Packet | Title | Status | Depends on | Gate | Claims |
+|---|---|---|---|---|---|
+| P21 | Residual hardening from the final review: revision-bound writers, one status predicate, and gates that can turn red | ready | P20 | `mcp-server/test-residual-hardening.mjs` | C6, C16, C27, C48, C55, C63 |
+
 ## Completion
 
 - `cd materializer && python3 test-history-and-disagreements.py`
@@ -107,6 +113,7 @@
 - `cd mcp-server && node test-refresh-recovery.mjs`
 - `cd mcp-server && node test-release-rollback.mjs`
 - `cd mcp-server && node test-research-broker.mjs`
+- `cd mcp-server && node test-residual-hardening.mjs`
 - `cd mcp-server && node test-resolution-proof.mjs`
 - `cd mcp-server && node test-revalidation-scheduler.mjs`
 - `cd mcp-server && node test-review-analysis.mjs`

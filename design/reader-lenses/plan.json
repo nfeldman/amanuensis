@@ -93,6 +93,16 @@
         "reviewed_sha": "9f0daac0b3b91cf73f97a3471f1f7d0e0f810ccb",
         "findings": 10
       }
+    },
+    {
+      "id": "S7",
+      "title": "Residual hardening",
+      "packets": [
+        "P21"
+      ],
+      "review": {
+        "status": "pending"
+      }
     }
   ],
   "packets": [
@@ -1365,6 +1375,83 @@
       "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Closes slice-S6 F6, F7, F9 and reconciles F8 in the live store. Two append-only tables (claim_challenge_outcomes, subsystem_status_transitions) with substrate triggers; record_claim_challenge/get_claim_challenges; enforcePhasePrerequisites gains a 'mapped' case requiring an outcome on every current <sid>/ claim, so both status writers are gated. record-rebuild-depth.mjs now reads the ladder from the transition rows and, for rungs climbed before the table existed, from the subsystems.status held in each storage checkpoint's committed memory.db — a rung declares its source and the span it covers, and test-rebuild-depth.mjs checks the deliverable behind each covered rung instead of asserting fields the recorder typed in. Four registry crossings (B-01 to B-05/B-06/B-07/B-09) recorded through add_xref; the coverage receipt now carries registry_ownership and registry_crossings re-derived from the tracked index.ts. project_name comes from binding metadata or a package manifest, never a directory. Files beyond the declared deliverables, each because the packet could not land otherwise: dev/record-regeneration-pass.mjs (new, the auditable live-store write path), dev/test-rebuild-depth.mjs, mcp-server/test-invariants.mjs and mcp-server/test-edge-contract.mjs (fixtures and an allowlist the new prerequisite and the new caller reach), mcp-server/contracts/conspectus-vocabulary.json plus the generated vocabulary modules and DEVELOPMENT.md. dev/test-finding-partition (P2) and dev/test-activation-evidence were already red at 0016335 and are unchanged by this packet."
+    },
+    {
+      "id": "P21",
+      "slice": "S7",
+      "title": "Residual hardening from the final review: revision-bound writers, one status predicate, and gates that can turn red",
+      "claims": [
+        "C6",
+        "C16",
+        "C27",
+        "C48",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P20"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/standing.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/dashboard.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        "mcp-server/scripts/check-evidence-vocabulary.mjs",
+        "mcp-server/test-vocabulary-source.mjs",
+        "materializer/test-overview-truthfulness.py",
+        "mcp-server/test-residual-hardening.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-residual-hardening.mjs",
+        "command": "cd mcp-server && node test-residual-hardening.mjs",
+        "red_expect": "unresolved ref_sha|revision_bound|duplicate predicate|findings.status|literal stale_reason|validator accepts|bare percentage",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-locus-index-view.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-adversarial-correctness.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && npx biome check src/",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "ruff check materializer/",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "Carries the six final-review findings the fix session verified and deferred with no packet: F6/codex (high) - the evidence, findings, and dispositions writers accept any non-empty ref_sha and describe_locus reports revision_bound for it; F4/codex and F2/codex - stale_reason writers use bare literals, nothing consumes the generated STALE_REASONS, and the vocabulary gate cannot turn red on them; F9/codex - the master plan, get_dashboard, and list_subsystems derive open counts from findings.status while the lenses read finding_state_current; F2/claude - the vocabulary gate's tool-validator check cannot fire; F3/claude - the overview lint misses a bare percentage presented as health. Read design/reader-lenses/reviews/final/codex.md, claude.md, and dispositions.md first",
+        "add_evidence, add_finding, and set_disposition resolve ref_sha in the bound workspace the way add_claim does and refuse an unresolvable one; revision_bound is true only for a resolved revision",
+        "git.ts and standing.ts take their stale_reason values from the generated STALE_REASONS, and the vocabulary gate turns red when a writer uses a value the source does not carry or a tool validator accepts one",
+        "One predicate over finding_state_current serves the master plan, get_dashboard, and list_subsystems open counts; the duplicate over findings.status is removed, and a gate proves the three agree on a store holding a legacy-only finding",
+        "The overview truthfulness lint catches a bare percentage presented as health, with a red case",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P21) commit contains mcp-server/test-residual-hardening.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 180,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Inserted by the launcher owner on 2026-09-12 to carry the six final-review findings deferred with no packet. A high finding left open at completion would be the false green the lane exists to prevent."
     }
   ],
   "completion": {
@@ -1422,6 +1509,7 @@
       "cd mcp-server && node test-refresh-recovery.mjs",
       "cd mcp-server && node test-release-rollback.mjs",
       "cd mcp-server && node test-research-broker.mjs",
+      "cd mcp-server && node test-residual-hardening.mjs",
       "cd mcp-server && node test-resolution-proof.mjs",
       "cd mcp-server && node test-revalidation-scheduler.mjs",
       "cd mcp-server && node test-review-analysis.mjs",
