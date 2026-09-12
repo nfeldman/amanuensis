@@ -1553,7 +1553,7 @@
   },
   "final_review": {
     "status": "reviewed",
-    "reviewed_sha": "5d1366e460b9073c5f6d4f08a4aff15a8d14e720",
+    "reviewed_sha": "595238ada3eb41bcd5f964d4526537b1c1cc99dd",
     "findings": 0
   }
 }
