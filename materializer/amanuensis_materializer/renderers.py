@@ -135,6 +135,13 @@ def _like_prefix(sid: str) -> str:
     return f"{escaped}/%"
 
 
+# CommonMark fences: three or more backticks or tildes, indented at most three
+# spaces.  Tracking only the backtick form let a `~~~` block's contents through
+# as prose, and a `#` inside one was demoted as if it were a document heading
+# (slice-S3, F10/codex).
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+
+
 def _nest_prose(text: str, under: int) -> str:
     """Shift a recorded document's ATX headings beneath a page heading.
 
@@ -147,11 +154,18 @@ def _nest_prose(text: str, under: int) -> str:
     """
 
     out: list[str] = []
-    fenced = False
+    fence: tuple[str, int] | None = None
     for line in text.split("\n"):
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        if not fenced:
+        opener = _FENCE.match(line)
+        if fence is None:
+            # CommonMark: a fence opens on three or more backticks or tildes.
+            if opener:
+                fence = (opener.group(1)[0], len(opener.group(1)))
+        elif opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= fence[1]:
+            # …and closes only on the same character, at least as long. A
+            # shorter run, or the other character, is content.
+            fence = None
+        if fence is None and not opener:
             match = re.match(r"^(#{1,6})(\s)", line)
             if match:
                 level = min(6, len(match.group(1)) + under)

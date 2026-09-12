@@ -506,7 +506,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "get_claims",
     description:
-      "Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted.",
+      "Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted.",
     inputSchema: {
       type: "object",
       properties: {
@@ -519,6 +519,12 @@ export const claimTools: ToolDefinition[] = [
         subject_type: { type: "string" },
         subject_id: { type: "string" },
         epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
+        // §9.1's `get_claims(subsystem_id)`: every claim whose `claim_key`
+        // begins `<sid>/`. Phase 4 pulls its targets this way, and reading
+        // every current claim in the store to filter them client-side made
+        // the completeness of the adversarial pass a property of the caller's
+        // code rather than of the query (slice-S3, F8/codex).
+        subsystem_id: { type: "string" },
         query_sha: { type: "string" },
         include_historical: { type: "boolean" },
       },
@@ -527,6 +533,15 @@ export const claimTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const clauses: string[] = [];
       const params: string[] = [];
+      const subsystemId = optString(args, "subsystem_id");
+      if (subsystemId !== null) {
+        // substr, not LIKE: a subsystem id may carry `_` or `%`, and an
+        // unescaped pattern would reach into another subsystem's namespace —
+        // the same reason `requireStructuralClaim` matches this way.
+        const prefix = `${subsystemId}/`;
+        clauses.push("substr(claim_key, 1, length(?)) = ?");
+        params.push(prefix, prefix);
+      }
       for (const [argument, column] of [
         ["claim_id", "claim_id"],
         ["claim_key", "claim_key"],

@@ -987,7 +987,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Carried in from slice-S3's fix session (F7/codex, deferred): C19 lists `narrative` as opt-in, but 5.1 fixes describe_locus's signature at locus/kind/sections/as_of_sha and constrains `sections` to 3.1's eight names, so there is no channel to opt in and locus.ts attaches view.narrative whenever a subsystem locus serves no claim. P11 resolved the contradiction the other way - pointer in the tool, prose on the page - and recorded it in locus-account.schema.json's narrative description and in test-structural-claims.mjs, which asserts the pointer positively. Closing the drift means either deleting those assertions or widening 5.1's input surface; this packet is the one that reopens that surface, so decide it here and reconcile 4.2, 5.1 and 9.1's 'on the page only' in one place."
     },
     {
       "id": "P15",

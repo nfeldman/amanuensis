@@ -637,6 +637,27 @@ def main() -> None:
             staleness_db.close()
         print("staleness map: unmeasured, stale, and measured-clean states distinguished")
 
+        # _nest_prose shifts a survey artifact's headings beneath the page
+        # section it is rendered inside (§3.4, §9.1).  It must move headings and
+        # nothing else: a `#` inside a fenced code block is content the survey
+        # recorded, and rewriting it changes bytes the reader is told are
+        # verbatim.  Tracking only the backtick fence let the tilde form
+        # through (slice-S3, F10/codex).
+        rmod = __import__("amanuensis_materializer.renderers", fromlist=["renderers"])
+        nest = rmod._nest_prose
+        cases = [
+            ("~~~text\n# literal code heading\n~~~", "~~~text\n# literal code heading\n~~~"),
+            ("```text\n# literal code heading\n```", "```text\n# literal code heading\n```"),
+            ("~~~~\n~~~\n# inside the longer fence\n~~~~", "~~~~\n~~~\n# inside the longer fence\n~~~~"),
+            ("```\n~~~\n# inside the backtick fence\n```", "```\n~~~\n# inside the backtick fence\n```"),
+            # …while a heading outside every fence still moves.
+            ("# survey title\n~~~\n# not a heading\n~~~\n## after", "#### survey title\n~~~\n# not a heading\n~~~\n##### after"),
+        ]
+        for source, expected in cases:
+            got = nest(source, 3)
+            assert got == expected, f"_nest_prose({source!r}) -> {got!r}, wanted {expected!r}"
+        print("nested prose: headings move, fenced content of either fence character does not")
+
         print("\nOK — all diff-aware behaviors verified.")
 
 

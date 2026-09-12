@@ -42,9 +42,10 @@ Find those.
 - Every **current claim whose `claim_key` begins `<sid>/`** — Phase
   2's structural inventory: key types, state containers, flow steps,
   the concurrency invariant, seam contracts, and any explicit negative
-  claim. `get_claims` has no subsystem filter, so call `get_claims()`
-  for the current claims and keep the rows on that prefix. Every one
-  of them is a target; none is exempt for being small.
+  claim. Call `get_claims(subsystem_id: "<sid>")`, which returns
+  exactly those rows — the prefix is matched on the server, so a
+  target cannot be lost to a filter you forgot to write. Every one of
+  them is a target; none is exempt for being small.
 
 ### 2. For each target, formulate the disproof question
 

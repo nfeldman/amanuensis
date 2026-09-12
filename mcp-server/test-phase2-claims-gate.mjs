@@ -878,6 +878,104 @@ check("phase-4-adversarial.md pulls every current <sid>/ claim as a target", () 
     : "the target list does not restrict the claims to the subsystem's own `<sid>/` prefix";
 });
 
+check("get_claims carries the server-side subsystem filter §9.1 names", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // F8/codex. §9.1 pulls Phase 4's targets with `get_claims(subsystem_id)`.
+  // Without it the instructions had to fetch every current claim in the store
+  // and filter client-side, which makes the completeness of the adversarial
+  // pass a property of the caller's code rather than of the query.
+  const tool = toolNamed("get_claims");
+  if (!tool) return "get_claims is not exported by the built tools";
+  if (!tool.inputSchema?.properties?.subsystem_id) {
+    return "get_claims has no subsystem_id filter, so §9.1's target pull has no server-side form";
+  }
+  scopedSubsystem("B-30");
+  scopedSubsystem("B-30x");
+  seedClaim({
+    claimKey: "B-30/concurrency",
+    subjectType: "subsystem",
+    subjectId: "B-30",
+    statement: "B-30 is single-threaded.",
+    evidenceId: seedEvidence("src/B-30.ts"),
+  });
+  seedClaim({
+    claimKey: "B-30x/concurrency",
+    subjectType: "subsystem",
+    subjectId: "B-30x",
+    statement: "B-30x is single-threaded.",
+    evidenceId: seedEvidence("src/B-30x.ts"),
+  });
+  const rows = call("get_claims", { subsystem_id: "B-30" }, fixture.ctx);
+  if (!Array.isArray(rows)) return "get_claims did not return a list of claims";
+  const keys = rows.map((row) => row.claim_key).sort();
+  if (!keys.includes("B-30/concurrency")) {
+    return `the filter dropped the subsystem's own claim — it returned ${keys.join(", ") || "nothing"}`;
+  }
+  const foreign = keys.filter((key) => !key.startsWith("B-30/"));
+  return foreign.length === 0
+    ? null
+    : `the filter also returned ${foreign.join(", ")}, so it is a prefix match on the id rather than on '<sid>/'`;
+});
+
+check("phase-4-adversarial.md pulls its targets through that filter", () => {
+  const text = readText(join(REPO, PHASE_4_REL));
+  if (text === null) return `${PHASE_4_REL} is absent`;
+  const body = stepBody(text, /pull the targets/i);
+  if (body === null) return "the document has no numbered 'Pull the targets' step";
+  return /get_claims\s*\(\s*subsystem_id/.test(body)
+    ? null
+    : "the target list does not call get_claims(subsystem_id), so completeness rests on a filter the caller has to remember to write";
+});
+
+check("the documented claim_key distinguishes two files that define the same symbol", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // F9/codex. `idx_claims_current_key` admits one current row per `claim_key`,
+  // so a `<symbol-slug>` built from the symbol alone makes `a/config.ts:Config`
+  // and `b/config.ts:Config` collide: the second reading is refused and the
+  // inventory is silently one fact short. The document has to define the slug
+  // so that cannot happen, and the store has to accept both readings.
+  const text = readText(join(REPO, PHASE_2_REL));
+  if (text === null) return `${PHASE_2_REL} is absent`;
+  const at = text.indexOf("`<symbol-slug>` is");
+  if (at < 0) return "the document never defines `<symbol-slug>`";
+  // The defining paragraph only. The bullets under it carry `<path>` in every
+  // `subject_id`, so a window that runs past the blank line finds the word
+  // whatever the definition says.
+  const paragraphEnd = text.indexOf("\n\n", at);
+  const slug = text.slice(at, paragraphEnd < 0 ? text.length : paragraphEnd);
+  if (!/path/i.test(slug)) {
+    return `\`<symbol-slug>\` is defined without the path, so two files defining the same symbol produce one claim_key — "${slug.replace(/\n/g, " ").slice(0, 110)}"`;
+  }
+  scopedSubsystem("B-31");
+  const pairs = [
+    ["src/http/config.ts", "src-http-config-ts-config"],
+    ["src/db/config.ts", "src-db-config-ts-config"],
+  ];
+  for (const [path, expected] of pairs) {
+    try {
+      seedClaim({
+        claimKey: `B-31/key-type/${expected}`,
+        subjectType: "symbol",
+        subjectId: `${path}:Config`,
+        statement: `Config is ${path}'s key type.`,
+        evidenceId: seedEvidence(path),
+      });
+    } catch (e) {
+      return `${path}'s reading was refused — ${e && e.message ? e.message : e}`;
+    }
+  }
+  const both = fixture.db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM claims WHERE valid_until_sha IS NULL AND substr(claim_key, 1, 14) = 'B-31/key-type/'",
+    )
+    .get();
+  return (both?.n ?? 0) === 2
+    ? null
+    : `only ${both?.n ?? 0} of the two same-symbol readings is current, so the slug collides`;
+});
+
 check("phase-4-adversarial.md records each claim's challenge outcome before mapped", () => {
   const text = readText(join(REPO, PHASE_4_REL));
   if (text === null) return `${PHASE_4_REL} is absent`;

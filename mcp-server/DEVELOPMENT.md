@@ -229,7 +229,7 @@ _197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 | `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. |
 | `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. |
 | `supersede_claim` | Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. |
-| `get_claims` | Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
+| `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
 

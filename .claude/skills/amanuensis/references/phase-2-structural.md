@@ -75,8 +75,18 @@ adversarial pass has something to challenge.
 
 One claim per structural fact, with a `claim_key` that is **stable
 across re-surveys** — the next survey of the same fact supersedes this
-claim rather than adding a duplicate beside it. `<symbol-slug>` is the
-symbol lowercased with non-alphanumerics collapsed to `-`.
+claim rather than adding a duplicate beside it.
+
+`<symbol-slug>` is the whole `<path>:<symbol>` pair — the same string
+`subject_id` carries — lowercased with non-alphanumerics collapsed to
+`-`, so `src/http/config.ts:Config` slugs to
+`src-http-config-ts-config`. The path is part of it because
+`idx_claims_current_key` admits one current row per `claim_key`: a slug
+built from the symbol alone makes two files that both define `Config`
+collide, and the second reading is refused rather than recorded, so the
+subsystem's inventory is silently short by one (slice-S3, F9/codex).
+Two symbols of the same name in one file are the language's problem,
+not the key's.
 
 - **Key type** — `<sid>/key-type/<symbol-slug>`; `subject_type:
   "symbol"`, `subject_id: "<path>:<symbol>"`; `epistemic_kind:
