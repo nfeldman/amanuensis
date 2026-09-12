@@ -16,7 +16,7 @@
  */
 import { spawnSync } from "node:child_process";
 import type { DB } from "./db.js";
-import { requireWorkspaceSourcePath, type ServerContext } from "./helpers.js";
+import { requireWorkspaceSourcePath, ToolError, type ServerContext } from "./helpers.js";
 import { STATUS_ORDER, statusRank } from "./invariants.js";
 import { VOCABULARY } from "./vocabulary.js";
 
@@ -284,6 +284,17 @@ function isVocabularyTerm(db: DB, value: string): boolean {
 
 function asSymbol(value: string, step: LocusInferenceStep): ResolvedLocus {
   const splitAt = value.indexOf(":");
+  // The inference ladder only reaches this constructor once the value has been
+  // shown to carry a colon (§2.1 step 3), but a caller-supplied kind skips the
+  // ladder. Without this check `splitAt` is -1 on a colonless value, and
+  // `slice(0, -1)` then hands `requireWorkspaceSourcePath` the value minus its
+  // last character — a path the store never named, served as if it had been
+  // resolved. The shape is the claim the forced kind is making; check it.
+  if (splitAt <= 0 || splitAt === value.length - 1) {
+    throw new ToolError(
+      "a symbol locus must be path:symbol with a non-empty path and a non-empty symbol",
+    );
+  }
   const path = requireWorkspaceSourcePath(normalizeCandidate(value.slice(0, splitAt)), "locus");
   return {
     value,
