@@ -191,20 +191,33 @@ function tool(name) {
   return null;
 }
 
-/** Call a tool. Returns `{ ok, value, error }`; a throw is a refusal. */
+/**
+ * Call a tool. Returns `{ ok, value, error, accepted }`; a throw is a refusal.
+ *
+ * `accepted` is the list `requireEnum` names in its refusal — the set the
+ * running validator says it takes. Probing with one out-of-source value is not
+ * enough on its own: the sabotage that opened F2/claude widened one list by
+ * exactly one value, which still refuses every other probe.
+ */
 function call(name, args, ctx) {
   const definition = tool(name);
   if (!definition || typeof definition.handler !== "function") {
-    return { ok: false, value: null, error: `tool ${name} is not registered` };
+    return { ok: false, value: null, error: `tool ${name} is not registered`, missing: true };
   }
+  const readAccepted = (message) => {
+    const match = /must be one of:\s*(.+)$/m.exec(String(message ?? ""));
+    return match ? match[1].split(",").map((entry) => entry.trim()).filter(Boolean) : null;
+  };
   try {
     const value = definition.handler(args, ctx);
     if (value && typeof value === "object" && value.ok === false) {
-      return { ok: false, value, error: String(value.error ?? "refused") };
+      const error = String(value.error ?? "refused");
+      return { ok: false, value, error, accepted: readAccepted(error) };
     }
-    return { ok: true, value, error: null };
+    return { ok: true, value, error: null, accepted: null };
   } catch (e) {
-    return { ok: false, value: null, error: e && e.message ? e.message : String(e) };
+    const error = e && e.message ? e.message : String(e);
+    return { ok: false, value: null, error, accepted: readAccepted(error) };
   }
 }
 
@@ -249,9 +262,21 @@ function buildFixture() {
   writeFileSync(join(workspace, "src", "drift.ts"), "export const drift = 1;\n");
   writeFileSync(join(workspace, "src", "bad-ref.ts"), "export const bad = 1;\n");
   writeFileSync(join(workspace, "src", "gone.ts"), "export const gone = 1;\n");
+  writeFileSync(join(workspace, "src", "unreachable.ts"), "export const off = 1;\n");
   rawGit(workspace, "add", "-A");
   rawGit(workspace, "commit", "-q", "--no-verify", "-m", "base");
   const base = rawGit(workspace, "rev-parse", "HEAD");
+
+  // A commit on a side branch that never reaches main, over a file main does
+  // not touch. Its ledger row survives reconciliation as `examined` — the only
+  // state §2.2 consults the reachability table for — so it is the one positive
+  // case for standing.ts's `unreachable-ref` branch.
+  rawGit(workspace, "checkout", "-q", "-b", "side");
+  writeFileSync(join(workspace, "src", "aside.ts"), "export const aside = 2;\n");
+  rawGit(workspace, "add", "-A");
+  rawGit(workspace, "commit", "-q", "--no-verify", "-m", "side");
+  const side = rawGit(workspace, "rev-parse", "HEAD");
+  rawGit(workspace, "checkout", "-q", "main");
 
   writeFileSync(join(workspace, "src", "drift.ts"), "export const drift = 2;\n");
   rmSync(join(workspace, "src", "gone.ts"));
@@ -285,6 +310,7 @@ function buildFixture() {
   ledger.run("B-01", "src/drift.ts", base);
   ledger.run("B-01", "src/bad-ref.ts", "deadbeef");
   ledger.run("B-01", "src/gone.ts", base);
+  ledger.run("B-01", "src/unreachable.ts", side);
 
   // Checked at the workspace head, so §2.4.4 serves the account at current
   // rather than at an ancestor cut; the reconciliation below still has work,
@@ -294,7 +320,7 @@ function buildFixture() {
      VALUES ('default', 'main', ?, ?)`,
   ).run(base, head);
 
-  return { root, workspace, storageRoot, project, db, ctx, base, head, short: head.slice(0, 8) };
+  return { root, workspace, storageRoot, project, db, ctx, base, side, head, short: head.slice(0, 8) };
 }
 
 if (!fixtureError) {
@@ -620,6 +646,43 @@ check("git.ts and standing.ts take their stale_reason values from the generated 
   return bad.length ? bad.join("; ") : null;
 });
 
+// The standing arm runs first, on purpose. §2.2 consults the reachability
+// table only for a row the view still calls `examined`, and the detect_changes
+// arm below marks two of these rows stale; reading standing afterwards would
+// report the ledger column back rather than the table under test.
+check("the standing reachability table writes only stale_reason values the source carries", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const reasons = sourceValues("stale_reason");
+  if (!reasons) return "the vocabulary source carries no stale_reason enum";
+  const wanted = [
+    ["src/unreachable.ts", "unreachable-ref"],
+    ["src/bad-ref.ts", "unverifiable-ref"],
+  ];
+  const bad = [];
+  for (const [path, reason] of wanted) {
+    const account = call("describe_locus", { locus: path }, fixture.ctx);
+    if (!account.ok) {
+      bad.push(`describe_locus refused ${path} — ${account.error}`);
+      continue;
+    }
+    const owners = account.value?.standing?.owners ?? [];
+    if (owners.length === 0) {
+      bad.push(`describe_locus reports no owner for ${path}`);
+      continue;
+    }
+    const reported = owners.map((owner) => owner.stale_reason);
+    const offending = reported.filter((value) => value !== null && !reasons.includes(String(value)));
+    if (offending.length) {
+      bad.push(`${path} carries a literal stale_reason ${JSON.stringify(offending[0])}`);
+      continue;
+    }
+    if (!reported.includes(reason))
+      bad.push(`${path} reads ${JSON.stringify(reported)}, not ${reason}`);
+  }
+  return bad.length ? bad.join("; ") : null;
+});
+
 check("detect_changes writes only stale_reason values the source carries", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
@@ -646,25 +709,6 @@ check("detect_changes writes only stale_reason values the source carries", () =>
     .filter(([path, reason]) => byPath.get(path) !== reason)
     .map(([path, reason]) => `${path} reads ${JSON.stringify(byPath.get(path) ?? null)}, not ${reason}`);
   return wrong.length ? wrong.join("; ") : null;
-});
-
-check("the standing reachability table writes only stale_reason values the source carries", () => {
-  const blocked = needFixture();
-  if (blocked) return blocked;
-  const reasons = sourceValues("stale_reason");
-  if (!reasons) return "the vocabulary source carries no stale_reason enum";
-  const account = call("describe_locus", { locus: "src/bad-ref.ts" }, fixture.ctx);
-  if (!account.ok) return `describe_locus refused the unresolvable-ref path — ${account.error}`;
-  const owners = account.value?.standing?.owners ?? [];
-  if (owners.length === 0) return "describe_locus reports no owner for the ledgered path";
-  const offending = owners
-    .filter((owner) => owner.stale_reason !== null && !reasons.includes(String(owner.stale_reason)))
-    .map((owner) => `${owner.subsystem_id} carries a literal stale_reason ${JSON.stringify(owner.stale_reason)}`);
-  if (offending.length) return offending.join("; ");
-  const reported = owners.map((owner) => owner.stale_reason);
-  return reported.includes("unverifiable-ref")
-    ? null
-    : `an unresolvable examination revision reads ${JSON.stringify(reported)}, not unverifiable-ref`;
 });
 
 // ---------------------------------------------------------------------------
@@ -735,12 +779,28 @@ function validatorProbes() {
       enumName: "field_note_category",
     },
     {
+      label: "add_claim.subject_type",
+      tool: "add_claim",
+      args: {
+        claim_id: "B-01-c1",
+        claim_key: "B-01/concurrency/writer",
+        subject_type: OUT_OF_SOURCE,
+        subject_id: "src/ledger.ts:append",
+        statement: "the writer holds the ledger lock for the whole append",
+        epistemic_kind: "observation",
+        ref_sha: head,
+        evidence_ids: [1],
+      },
+      enumName: "claim_subject_type",
+    },
+    {
       label: "add_claim.epistemic_kind",
       tool: "add_claim",
       args: {
+        claim_id: "B-01-c2",
         claim_key: "B-01/concurrency/writer",
-        subject_type: "file",
-        subject_id: "src/ledger.ts",
+        subject_type: "symbol",
+        subject_id: "src/ledger.ts:append",
         statement: "the writer holds the ledger lock for the whole append",
         epistemic_kind: OUT_OF_SOURCE,
         ref_sha: head,
@@ -766,7 +826,24 @@ check("no tool validator accepts a value the vocabulary source does not carry", 
       continue;
     }
     const result = call(probe.tool, probe.args, fixture.ctx);
-    if (result.ok) bad.push(`the ${probe.label} validator accepts ${OUT_OF_SOURCE}`);
+    if (result.missing) {
+      bad.push(`${probe.tool} is not registered`);
+      continue;
+    }
+    if (result.ok) {
+      bad.push(`the ${probe.label} validator accepts ${OUT_OF_SOURCE}`);
+      continue;
+    }
+    if (result.accepted === null) {
+      bad.push(`the ${probe.label} validator refused without naming what it accepts`);
+      continue;
+    }
+    const extra = result.accepted.filter((value) => !values.includes(value));
+    const absent = values.filter((value) => !result.accepted.includes(value));
+    if (extra.length)
+      bad.push(`the ${probe.label} validator accepts ${extra.join(", ")}, which the source does not carry`);
+    if (absent.length)
+      bad.push(`the ${probe.label} validator refuses ${absent.join(", ")}, which the source carries`);
   }
   return bad.length ? bad.slice(0, 4).join("; ") : null;
 });
