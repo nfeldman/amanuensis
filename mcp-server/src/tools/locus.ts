@@ -923,9 +923,29 @@ function buildLeads(db: DB, standing: StandingBlock, locusKind: LocusKind): Sect
   return { source_rows: items.length, items };
 }
 
-function buildHistoryPointer(db: DB, scope: AccountScope, findings: FindingRow[]): SectionBuild {
+/**
+ * §3.1's history pointer. The section declares `as_of_supported: true`, so a
+ * historical reading owes it the same cut the defects section takes: an event
+ * belongs to a reading at `as_of` when the revision it names is an ancestor of
+ * it (§3.3, C16). Serving the whole event table under a historical reading
+ * reported repairs that had not happened yet at the requested commit
+ * (F8/codex).
+ *
+ * Two rows the cut cannot place are kept rather than dropped, matching
+ * `resolutionAt`'s policy: an event that names no revision, and a session,
+ * which has wall-clock timestamps and no revision at all. Both are marked
+ * `as_of_placeable: false` so a reader knows the cut was not made by revision
+ * alone, and the unplaceable events are counted.
+ */
+function buildHistoryPointer(
+  db: DB,
+  scope: AccountScope,
+  findings: FindingRow[],
+  probe: CommitProbe,
+  asOf: string | null,
+): SectionBuild {
   const findingIds = findings.map((row) => row.finding_id);
-  const events = findingIds.length
+  const allEvents = findingIds.length
     ? (db
         .prepare(
           `SELECT id, finding_id, resolution_state, fix_sha, fix_location, rationale, recorded_at
@@ -934,6 +954,10 @@ function buildHistoryPointer(db: DB, scope: AccountScope, findings: FindingRow[]
         )
         .all(...findingIds) as ResolutionEventRow[])
     : [];
+  const events = asOf
+    ? allEvents.filter((row) => !row.fix_sha || probe.isAncestor(row.fix_sha, asOf))
+    : allEvents;
+  const unplaceableEvents = asOf ? events.filter((row) => !row.fix_sha).length : 0;
   // C24's by-citation attribution: a session reaches this locus only through a
   // row that cites it — the evidence it collected here, or a finding it
   // recorded — never through a claim that the session touched the file.
@@ -974,31 +998,45 @@ function buildHistoryPointer(db: DB, scope: AccountScope, findings: FindingRow[]
       }[])
     : [];
   const items: Item[] = [
-    ...events.map((row) => ({
-      kind: "resolution-event",
-      event_id: row.id,
-      finding_id: row.finding_id,
-      resolution_state: row.resolution_state,
-      recorded_at: row.recorded_at,
-      ref_sha: row.fix_sha,
-      revision_bound: row.fix_sha !== null,
-      authored: "model",
-    })),
-    ...sessions.map((row) => ({
-      kind: "session",
-      session_id: row.session_id,
-      intent: row.intent,
-      started_at: row.started_at,
-      ended_at: row.ended_at,
-      ref_sha: null,
-      revision_bound: false,
-      authored: "code",
-    })),
+    ...events.map((row) => {
+      const item: Item = {
+        kind: "resolution-event",
+        event_id: row.id,
+        finding_id: row.finding_id,
+        resolution_state: row.resolution_state,
+        recorded_at: row.recorded_at,
+        ref_sha: row.fix_sha,
+        revision_bound: row.fix_sha !== null,
+        authored: "model",
+      };
+      if (asOf) item.as_of_placeable = row.fix_sha !== null;
+      return item;
+    }),
+    ...sessions.map((row) => {
+      const item: Item = {
+        kind: "session",
+        session_id: row.session_id,
+        intent: row.intent,
+        started_at: row.started_at,
+        ended_at: row.ended_at,
+        ref_sha: null,
+        revision_bound: false,
+        authored: "code",
+      };
+      // A session carries timestamps and no revision, so the cut cannot place
+      // it at a commit; §3.3 forbids placing it by wall clock instead.
+      if (asOf) item.as_of_placeable = false;
+      return item;
+    }),
   ];
   return {
     source_rows: items.length,
     items,
-    counts: { finding_resolution_events: events.length, sessions: sessions.length },
+    counts: {
+      finding_resolution_events: events.length,
+      sessions: sessions.length,
+      ...(unplaceableEvents > 0 ? { as_of_unplaceable_events: unplaceableEvents } : {}),
+    },
     // C24's declaration: a session reaches a locus only through a row that
     // cites it, never through a claim that the session touched the file.
     session_attribution: "by-citation",
@@ -1273,7 +1311,7 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
     boundaries: () => buildBoundaries(db, scope),
     terms: () => buildTerms(db, scope),
     leads: () => buildLeads(db, standing, locus.kind),
-    history_pointer: () => buildHistoryPointer(db, scope, findings),
+    history_pointer: () => buildHistoryPointer(db, scope, findings, probe, asOf),
   };
 
   // §2.4.4: when the recorded reconciliation is behind the workspace head,
