@@ -171,9 +171,18 @@ one of the two words:
 
 | Outcome | `standing_state` | `stale_reason` |
 |---|---|---|
+| the row carries no `ref_sha` at all | `examined-stale` | `unverifiable-ref` |
 | `rev-parse` cannot resolve the revision | `examined-stale` | `unverifiable-ref` |
 | resolves, but is not an ancestor of HEAD | `examined-stale` | `unreachable-ref` |
 | resolves and is an ancestor | `examined` | unchanged |
+
+The first row is the limiting case of the second, and it is reachable:
+`file_ledger.ref_sha` carries no NOT NULL constraint (`schema.sql:165`), so an `examined` row
+with no examination revision is a row the store permits. It is also a row nothing else revisits
+— §9.2's `detect_changes` checks only ledger rows that carry a `ref_sha` — so were it served as
+`examined` it would hold current authority permanently without a single revision ever being
+resolved. Serving it at `examined` would also have to report `reachability_checked: true`, which
+would be a false statement about a check that had no subject.
 
 `unverifiable-ref` keeps exactly the meaning `detect_changes` already writes it with — a commit
 that cannot be compared against (`mcp-server/src/tools/git.ts:246-262` pushes a row to

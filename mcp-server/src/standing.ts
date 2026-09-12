@@ -399,13 +399,21 @@ function gitProbe(ctx: ServerContext): GitProbe {
  * §2.2's reachability table. Only ever consulted for a row the view left
  * `examined`; the two failures carry distinct reasons because `detect_changes`
  * already owns `unverifiable-ref` and using one word for both rules would make
- * the same label mean two things across two writers.
+ * the same label mean two things across two writers. A missing revision joins
+ * the unresolvable outcome rather than passing (F4/codex).
  */
 function reachability(
   git: GitProbe,
   refSha: string | null,
 ): { state: "examined" | "examined-stale"; reason: string | null } {
-  if (!refSha) return { state: "examined", reason: null };
+  // A row with no examination revision is the limiting case of the table's
+  // first outcome, not an exemption from it: there is no revision for
+  // `rev-parse` to resolve, so the reading cannot be attributed to a commit
+  // and ADR-0001 § Current will not grant it current authority. It reads
+  // `unverifiable-ref` for the same reason a bad SHA does — a commit that
+  // cannot be compared against — and `detect_changes` never revisits it,
+  // because that pass only checks rows that carry a `ref_sha`.
+  if (!refSha) return { state: "examined-stale", reason: "unverifiable-ref" };
   const resolved = git.run(["rev-parse", "--verify", `${refSha}^{commit}`]);
   if (resolved.status !== 0) return { state: "examined-stale", reason: "unverifiable-ref" };
   if (!git.head) return { state: "examined-stale", reason: "unverifiable-ref" };
