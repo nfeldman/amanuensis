@@ -312,6 +312,11 @@ function buildFixture() {
   ledger.run("B-01", "src/candidate.ts", "candidate", null, null);
   ledger.run("B-01", "src/mixed.ts", "examined", head, examinedAt);
   ledger.run("B-02", "src/mixed.ts", "candidate", null, null);
+  // A vendored path carrying an `@`. `requireWorkspaceSourcePath` accepts it,
+  // so the store holds it and every read surface has to parse a citation to it
+  // the way ingress did — last `@`, not first.
+  ledger.run("B-01", "src/pkg@v1/file.ts", "examined", head, examinedAt);
+  ledger.run("B-01", "src/pkg", "examined", head, examinedAt);
 
   const evidence = db.prepare(
     `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note, session_id)
@@ -325,6 +330,7 @@ function buildFixture() {
   // Same file, a different symbol. A symbol locus must not inherit it, and the
   // file locus must (§2.5, §3.1's evidence arm).
   evidence.run(6, "src/examined.ts", "writeLedger", head, "code-verified");
+  evidence.run(7, "src/pkg@v1/file.ts", "loadVendored", head, "code-verified");
 
   const claim = db.prepare(
     `INSERT INTO claims
@@ -379,10 +385,25 @@ function buildFixture() {
   // Repaired at `head`: the event names a revision, so a reading at `mid`
   // cannot carry it and must report the finding open there.
   finding.run("B01-2", "the reader leaked a handle", "LOW", "confirmed-bug", primary, head);
+  // A citation whose *path* carries an `@`. `requireWorkspaceCitation` accepts
+  // it (first colon, last `@`), so a store can hold it; every read surface has
+  // to parse it the same way.
+  finding.run(
+    "B01-5",
+    "the vendored copy shadows the workspace module",
+    "MEDIUM",
+    "confirmed-bug",
+    JSON.stringify([`src/pkg@v1/file.ts:loadVendored@${head}`]),
+    head,
+  );
   const findingEvidence = db.prepare(
     "INSERT INTO finding_evidence (finding_id, evidence_id, role) VALUES (?, ?, 'symptom')",
   );
   for (const id of ["B01-0", "B01-1", "B01-2", "B01-3", "B01-4"]) findingEvidence.run(id, 1);
+  // B01-5 hangs off no evidence row at `src/examined.ts`: the `primary_files`
+  // arm is the only thing that can place it, which is what this fixture is
+  // measuring.
+  findingEvidence.run("B01-5", 7);
   db.prepare(
     `INSERT INTO finding_resolution_events
        (finding_id, resolution_state, fix_location, fix_sha, rationale, session_id)
@@ -954,6 +975,27 @@ check("defects partition and order follow §3.1", () => {
     return `awaiting-verification holds ${JSON.stringify(byPartition("awaiting-verification"))}`;
   if (JSON.stringify(byPartition("ruled-out")) !== JSON.stringify(["B01-3"]))
     return `ruled-out holds ${JSON.stringify(byPartition("ruled-out"))}`;
+  return null;
+});
+
+// §9.2's citation grammar is `path:symbol@revision`, parsed at ingress with
+// the *first* colon and the *last* `@` (`helpers.ts:requireWorkspaceCitation`).
+// A path may legitimately carry an `@` — `src/pkg@v1/file.ts` — so a read
+// surface that splits on the *first* `@` reduces that citation to `src/pkg`
+// and the finding is served at a path nobody cited while vanishing from the
+// path that was. The read must parse what the write accepted.
+check("a citation whose path carries an @ is read at the path, not at its prefix", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const atPath =
+    sectionOf(describeLocus({ locus: "src/pkg@v1/file.ts", sections: SECTIONS }), "defects")
+      ?.items ?? [];
+  if (!atPath.some((item) => item.finding_id === "B01-5"))
+    return `src/pkg@v1/file.ts does not carry B01-5; it served ${JSON.stringify(atPath.map((i) => i.finding_id))}`;
+  const atPrefix =
+    sectionOf(describeLocus({ locus: "src/pkg", sections: SECTIONS }), "defects")?.items ?? [];
+  if (atPrefix.some((item) => item.finding_id === "B01-5"))
+    return "src/pkg carries B01-5, a finding cited to src/pkg@v1/file.ts";
   return null;
 });
 
