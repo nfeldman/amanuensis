@@ -48,96 +48,98 @@
 |---|---|---|---|---|---|
 | P16 | Snapshot, discard, and reinitialize the self-conspectus store | done (1 attempt) | P10, P12, P13, P15 | `dev/test-rebuild-readback.mjs` | C52, C55, C63 |
 | P17 | Rebuild the conspectus through the skill with claims-backed Phase 2 | done (1 attempt) | P16 | `dev/test-rebuild-coverage.mjs` | C52, C42, C43, C45, C55, C63 |
-| P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | ready | P17 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
+| P19 | Survey every subsystem through concerns, adversarial review, and packaging to mapped | ready | P17 | `dev/test-rebuild-depth.mjs` | C52, C42, C43, C55, C63 |
+| P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | ready | P17, P19 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
 
 ## Completion
 
-- `node dev/render-roadmap.mjs --check`
-- `node dev/test-roadmap.mjs`
-- `node dev/test-pecia-roadmap.mjs`
-- `node dev/test-pecia-roadmap-red-gates.mjs`
-- `node dev/check-living-conspectus.mjs`
-- `node dev/test-living-conspectus.mjs`
-- `cd mcp-server && npm audit --audit-level=critical`
-- `cd mcp-server && npx biome check src/`
-- `cd mcp-server && npm run build`
+- `cd materializer && python3 test-history-and-disagreements.py`
+- `cd materializer && python3 test-ledger-freshness.py`
+- `cd materializer && python3 test-lens-pages.py`
+- `cd materializer && python3 test-materializer.py`
+- `cd materializer && python3 test-overview-truthfulness.py`
+- `cd materializer && python3 test-readback.py`
+- `cd materializer && python3 test-search-index.py`
+- `cd mcp-server && node scripts/check-evidence-vocabulary.mjs`
 - `cd mcp-server && node scripts/check-sql-identifiers.mjs`
 - `cd mcp-server && node scripts/check-tool-schemas.mjs`
-- `cd mcp-server && node test-mcp-compatibility.mjs`
-- `cd mcp-server && node test-smoke.mjs`
-- `cd mcp-server && node test-storage-git.mjs`
-- `cd mcp-server && node test-cloud-storage.mjs`
-- `cd mcp-server && node test-autoprogress.mjs`
-- `cd mcp-server && node test-compare.mjs`
-- `cd mcp-server && node test-priority.mjs`
-- `cd mcp-server && node test-cloud-e2e.mjs`
-- `cd mcp-server && node test-installer.mjs`
+- `cd mcp-server && node scripts/gen-tool-inventory.mjs --check`
 - `cd mcp-server && node test-activation-contract.mjs`
 - `cd mcp-server && node test-activation-doctor.mjs`
-- `cd mcp-server && node test-workspace-binding.mjs`
+- `cd mcp-server && node test-adversarial-correctness.mjs`
+- `cd mcp-server && node test-adversarial-security.mjs`
+- `cd mcp-server && node test-attention-history.mjs`
+- `cd mcp-server && node test-autoprogress.mjs`
+- `cd mcp-server && node test-change-impact.mjs`
+- `cd mcp-server && node test-chorusmith-adapter.mjs`
+- `cd mcp-server && node test-cloud-e2e.mjs`
+- `cd mcp-server && node test-cloud-storage.mjs`
+- `cd mcp-server && node test-codebase-brief.mjs`
 - `cd mcp-server && node test-codex-parent-workspace.mjs`
-- `cd mcp-server && node test-nested-activation-binding.mjs`
+- `cd mcp-server && node test-compare.mjs`
+- `cd mcp-server && node test-composition.mjs`
+- `cd mcp-server && node test-consumer-route.mjs`
+- `cd mcp-server && node test-crosswalk-qualification.mjs`
+- `cd mcp-server && node test-decisions.mjs`
+- `cd mcp-server && node test-derived-staleness.mjs`
+- `cd mcp-server && node test-design-session.mjs`
+- `cd mcp-server && node test-edge-contract.mjs`
+- `cd mcp-server && node test-finding-partition.mjs`
 - `cd mcp-server && node test-first-use-laziness.mjs`
 - `cd mcp-server && node test-first-use-recovery.mjs`
-- `node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json`
-- `node dev/test-codex-host-evidence-red-gates.mjs`
-- `cd mcp-server && node test-package-artifact.mjs`
-- `cd mcp-server && node test-package-activation-parity.mjs`
-- `node dev/test-package-activation-parity-red-gates.mjs`
-- `node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json`
-- `node dev/test-activation-operating-envelope-red-gates.mjs`
-- `node dev/test-activation-operating-trust-cleanup.mjs`
-- `cd mcp-server && node test-release-rollback.mjs`
-- `node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json`
-- `node dev/test-friction-free-release-readiness-red-gates.mjs`
-- `node dev/render-friction-free-release-readiness.mjs --check`
-- `cd mcp-server && node test-adversarial-correctness.mjs`
-- `cd mcp-server && node test-invariants.mjs`
-- `cd mcp-server && node test-derived-staleness.mjs`
-- `cd mcp-server && node test-startup-bounds.mjs`
-- `cd mcp-server && node scripts/check-evidence-vocabulary.mjs`
-- `cd mcp-server && node test-temporal-claims.mjs`
-- `cd mcp-server && node test-change-impact.mjs`
-- `cd mcp-server && node test-revalidation-scheduler.mjs`
-- `cd mcp-server && node test-resolution-proof.mjs`
-- `cd mcp-server && node test-projection-custody.mjs`
-- `cd mcp-server && node test-refresh-recovery.mjs`
-- `cd mcp-server && node test-review-brief.mjs`
-- `cd mcp-server && node test-review-analysis.mjs`
-- `cd mcp-server && node test-composition.mjs`
-- `cd mcp-server && node test-review-session.mjs`
-- `cd mcp-server && node test-codebase-brief.mjs`
-- `cd mcp-server && node test-design-session.mjs`
-- `cd mcp-server && node test-decisions.mjs`
-- `cd mcp-server && node test-research-broker.mjs`
-- `cd mcp-server && node test-crosswalk-qualification.mjs`
-- `cd mcp-server && node test-learning-ledger.mjs`
-- `cd mcp-server && node test-operating-envelope.mjs`
-- `cd mcp-server && node test-chorusmith-adapter.mjs`
 - `cd mcp-server && node test-historical-evaluation.mjs`
-- `cd mcp-server && node test-adversarial-security.mjs`
-- `cd mcp-server && node test-perf-ceilings.mjs`
-- `cd mcp-server && node scripts/gen-tool-inventory.mjs --check`
-- `ruff check materializer/`
-- `cd materializer && python3 test-materializer.py`
-- `cd materializer && python3 test-readback.py`
-- `cd mcp-server && node test-vocabulary-source.mjs`
-- `cd mcp-server && node test-finding-partition.mjs`
-- `cd materializer && python3 test-overview-truthfulness.py`
-- `cd materializer && python3 test-ledger-freshness.py`
+- `cd mcp-server && node test-installer.mjs`
+- `cd mcp-server && node test-invariants.mjs`
+- `cd mcp-server && node test-learning-ledger.mjs`
+- `cd mcp-server && node test-locus-compactness.mjs`
 - `cd mcp-server && node test-locus-index-view.mjs`
 - `cd mcp-server && node test-locus-standing.mjs`
-- `cd mcp-server && node test-locus-compactness.mjs`
-- `cd materializer && python3 test-lens-pages.py`
-- `cd materializer && python3 test-history-and-disagreements.py`
-- `cd materializer && python3 test-search-index.py`
-- `cd mcp-server && node test-structural-claims.mjs`
+- `cd mcp-server && node test-mcp-compatibility.mjs`
+- `cd mcp-server && node test-nested-activation-binding.mjs`
+- `cd mcp-server && node test-operating-envelope.mjs`
+- `cd mcp-server && node test-package-activation-parity.mjs`
+- `cd mcp-server && node test-package-artifact.mjs`
+- `cd mcp-server && node test-perf-ceilings.mjs`
 - `cd mcp-server && node test-phase2-claims-gate.mjs`
-- `cd mcp-server && node test-edge-contract.mjs`
-- `cd mcp-server && node test-attention-history.mjs`
-- `cd mcp-server && node test-consumer-route.mjs`
+- `cd mcp-server && node test-priority.mjs`
+- `cd mcp-server && node test-projection-custody.mjs`
+- `cd mcp-server && node test-refresh-recovery.mjs`
+- `cd mcp-server && node test-release-rollback.mjs`
+- `cd mcp-server && node test-research-broker.mjs`
+- `cd mcp-server && node test-resolution-proof.mjs`
+- `cd mcp-server && node test-revalidation-scheduler.mjs`
+- `cd mcp-server && node test-review-analysis.mjs`
+- `cd mcp-server && node test-review-brief.mjs`
+- `cd mcp-server && node test-review-session.mjs`
+- `cd mcp-server && node test-smoke.mjs`
+- `cd mcp-server && node test-startup-bounds.mjs`
+- `cd mcp-server && node test-storage-git.mjs`
+- `cd mcp-server && node test-structural-claims.mjs`
+- `cd mcp-server && node test-temporal-claims.mjs`
+- `cd mcp-server && node test-vocabulary-source.mjs`
+- `cd mcp-server && node test-workspace-binding.mjs`
+- `cd mcp-server && npm audit --audit-level=critical`
+- `cd mcp-server && npm run build`
+- `cd mcp-server && npx biome check src/`
+- `node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json`
+- `node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json`
+- `node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json`
+- `node dev/check-living-conspectus.mjs`
+- `node dev/render-friction-free-release-readiness.mjs --check`
+- `node dev/render-roadmap.mjs --check`
+- `node dev/test-activation-operating-envelope-red-gates.mjs`
+- `node dev/test-activation-operating-trust-cleanup.mjs`
+- `node dev/test-codex-host-evidence-red-gates.mjs`
+- `node dev/test-friction-free-release-readiness-red-gates.mjs`
+- `node dev/test-living-conspectus.mjs`
+- `node dev/test-package-activation-parity-red-gates.mjs`
+- `node dev/test-pecia-roadmap-red-gates.mjs`
+- `node dev/test-pecia-roadmap.mjs`
 - `node dev/test-reader-lenses-dogfood.mjs`
-- `node dev/test-rebuild-readback.mjs`
 - `node dev/test-rebuild-coverage.mjs`
+- `node dev/test-rebuild-depth.mjs`
+- `node dev/test-rebuild-readback.mjs`
+- `node dev/test-roadmap.mjs`
+- `ruff check materializer/`
 
 Final review: pending
