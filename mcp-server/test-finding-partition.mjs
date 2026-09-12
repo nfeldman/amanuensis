@@ -679,7 +679,18 @@ if (!fixtureError) {
   try {
     const published = fixture.call("materialize_docs", { clean_publish: true });
     if (!published.ok || !published.published) {
-      publishError = `the publication was refused: ${JSON.stringify(published.mismatches ?? published.error ?? published.warnings ?? published)}`;
+      // Name the axis and the objects it reported: a refused publication is
+      // how a mis-routed finding link or a broken census reaches this gate.
+      const mismatches = [
+        ...(published.mismatches ?? []),
+        ...(published.readback?.mismatches ?? []),
+      ].map((m) => `${m.axis}/${m.object_type}/${m.object_id}: ${m.detail}`);
+      publishError =
+        "the publication was refused — " +
+        `axes ${JSON.stringify(published.axes ?? published.readback?.axes ?? null)}; ` +
+        (mismatches.length
+          ? mismatches.slice(0, 6).join(" | ")
+          : JSON.stringify(published.error ?? published.warnings ?? published).slice(0, 400));
     } else {
       docs = join(fixture.project.storagePath, "docs");
     }
