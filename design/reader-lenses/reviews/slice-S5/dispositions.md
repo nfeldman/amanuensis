@@ -46,3 +46,27 @@ from an earlier fix session, with no green after it.
   narrowing: the store binds a question to a subsystem and to nothing else.
 - **P6/P14.** Every locus-tool subject is bounded at 512 bytes, enforced in code and
   advertised as `maxLength`. The longest path this repository tracks is 111 bytes.
+
+## Sibling call sites checked while repairing F3 and F8
+
+A repair scoped to the symbol a finding names leaves the same defect alive next door, so
+both families were swept across the tree.
+
+- **F8 — clean.** `src/standing.ts:666` and `:965` are the other two readers of
+  `seam_assessability`. Both already select `assessable` and both already treat a side as
+  unassessed when the seam is not assessable *or* the party holds no `SC-%` disposition
+  (`standing.ts:687`). `hot_spots` was the single outlier; nothing else needed changing.
+- **F3 — one sibling found, deliberately not repaired here.**
+  `src/tools/stale.ts:37` joins `LEFT JOIN hot_subsystems h ON h.entry_id = fl.subsystem_id`,
+  comparing an entry id against a subsystem id exactly as `buildHotSpots` did.
+  `hot_subsystems` groups `access_log` by `entry_id`, so the join matches nothing, `heat` and
+  `access_count` are always 0, and `get_stale_backlog`'s documented `ORDER BY heat DESC`
+  silently degenerates to `subsystem_id, file_path`. The correct join runs through
+  `entries.subsystem_id`, as `buildHotSpots` now does. Related: `get_hot_subsystems`
+  (`src/tools/dashboard.ts:5`) is described as returning "the most-accessed subsystems" and
+  returns entry ids.
+
+  Left alone because `stale.ts` is no packet's deliverable in this branch, the change alters
+  a shipped tool's result ordering, and no gate in slice-S5 covers it. It is an owner call
+  and a packet of its own, not a fix session's to slip in unreviewed. `action: recorded`,
+  outside the nine findings.
