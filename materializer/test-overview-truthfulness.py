@@ -452,6 +452,51 @@ def publish(storage: Path, *args: str) -> dict[str, Any]:
     return summary
 
 
+def scratch_materializer(root: Path, patch: Callable[[str], str | None]) -> tuple[Path | None, str | None]:
+    """A copy of the materializer package with one renderer line rewritten.
+
+    The composite-index check reads the published overview, so the only way to
+    prove it can fire is to publish an overview that carries a composite index.
+    Patching a scratch copy is how the finding-partition gate drives its own
+    census arms, and it leaves the tracked tree untouched.
+    """
+
+    scratch = root / "scratch-materializer"
+    if scratch.exists():
+        shutil.rmtree(scratch)
+    shutil.copytree(ROOT, scratch, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    target = scratch / "amanuensis_materializer" / "renderers.py"
+    try:
+        text = target.read_text()
+    except OSError as exc:
+        return None, f"the scratch renderer could not be read — {scrub(exc)}"
+    patched = patch(text)
+    if patched is None or patched == text:
+        return None, "the renderer carries no overview status row for the arm to drive"
+    target.write_text(patched)
+    return scratch, None
+
+
+def publish_with(scratch: Path, storage: Path, *args: str) -> dict[str, Any]:
+    proc = subprocess.run(
+        [sys.executable, str(scratch / "materialize.py"), "--storage", str(storage), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    summary: dict[str, Any] = {}
+    if lines:
+        try:
+            summary = json.loads(lines[-1])
+        except json.JSONDecodeError:
+            summary = {}
+    summary["_returncode"] = proc.returncode
+    if not lines:
+        summary["_diagnostic"] = scrub(proc.stderr)[-400:]
+    return summary
+
+
 def read(path: Path) -> str | None:
     try:
         return path.read_text()
@@ -937,6 +982,46 @@ def main() -> int:
         check(
             "the composite index lint clears the negative corpus (VP7)",
             composite_index_negative_arm,
+        )
+
+        def composite_index_red_arm() -> str | None:
+            """The check above, proved able to fire on a real publish (VP4)."""
+
+            def patch(text: str) -> str | None:
+                marker = '"Paths in scope with no ledger row",'
+                if marker not in text:
+                    return None
+                return text.replace(marker, '"Conspectus health",\n                "72%",\n                ),\n                (\n                marker_removed,', 1).replace(
+                    "marker_removed,", '"Paths in scope with no ledger row",', 1
+                )
+
+            scratch, scratch_error = scratch_materializer(root, patch)
+            if scratch_error:
+                return scratch_error
+            armed_storage, armed_error = seeded(root, "composite-arm", ENTRY_POINT_WITH_THESIS)
+            if armed_error:
+                return armed_error
+            (armed_storage / "workspace_path").write_text(f"{workspace}\n")
+            armed = publish_with(scratch, armed_storage, "--clean-publish")
+            armed_index = read(armed_storage / "docs" / "index.md") or ""
+            if not armed_index:
+                warnings = [scrub(w) for w in armed.get("warnings") or []]
+                return (
+                    "the armed publish produced no overview to read"
+                    f" — {armed.get('_diagnostic') or warnings[:2]}"
+                )
+            offending = composite_index_violations(armed_index)
+            if not any("Conspectus health" in message for message in offending):
+                return (
+                    "an overview publishing a health percentage passed the"
+                    " composite-index check, so the check cannot turn red"
+                    f" — it reported {offending[:2]}"
+                )
+            return None
+
+        check(
+            "the composite index check turns red on an overview that publishes one",
+            composite_index_red_arm,
         )
 
         def state_counts() -> str | None:
