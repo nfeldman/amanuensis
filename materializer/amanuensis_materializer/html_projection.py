@@ -2488,7 +2488,8 @@ def _nav(pages: list[SitePage], current: SitePage) -> str:
                 subgroups.setdefault(page.subgroup, []).append(page)
         group_id = f"nav-group-{slugify(group)}"
         body = (
-            f'<ul class="nav-list">{"".join(_nav_item(page, current) for page in direct)}</ul>'
+            f'<ul class="nav-list" aria-labelledby="{group_id}">'
+            f'{"".join(_nav_item(page, current) for page in direct)}</ul>'
             if direct
             else ""
         )

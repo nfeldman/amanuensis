@@ -40,7 +40,13 @@ from .readback import (
     stale_marker,
 )
 from .slugs import matrix_slug, subsystem_page
-from .vocabulary import OBLIGATION_BEARING_SQL, labels, values_of
+from .vocabulary import (
+    OBLIGATION_BEARING_SQL,
+    cannot_justify,
+    labels,
+    meanings,
+    values_of,
+)
 
 RenderResult = tuple[str, dict[str, str]]
 
@@ -50,6 +56,10 @@ FINDING_LENS_STATES: dict[str, tuple[str, ...]] = {
     page: states for _lens, page, states in FINDING_LENS_PAGES
 }
 RESOLUTION_LABELS = labels("finding_resolution_state")
+STANDING_LABELS = labels("standing_state")
+SUBSYSTEM_STATUS_LABELS = labels("subsystem_status")
+SUBSYSTEM_STATUS_MEANINGS = meanings("subsystem_status")
+SUBSYSTEM_STATUS_LIMITS = cannot_justify("subsystem_status")
 
 
 def _fmt_time(ts: str | None) -> str:
@@ -303,6 +313,13 @@ def _relation(recorded: str, other: str) -> str:
     if other == recorded:
         return f"{_short(other)} — the same revision the survey checked"
     return f"{_short(other)} — a different revision from the one the survey checked"
+
+
+def _count(n: int, singular: str, plural: str | None = None) -> str:
+    """`1 file` / `2 files`. Generated prose is read, not parsed; `file(s)` is
+    a schema artifact showing through."""
+
+    return f"{n} {singular if n == 1 else (plural or singular + 's')}"
 
 
 def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
@@ -773,10 +790,16 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     out += ["## Scope", ""]
     if s.get("scope"):
         out += [str(s["scope"]), ""]
+    elif files:
+        out += [
+            "No scope statement is recorded for this subsystem. The file ledger in"
+            " its survey record is the only account of what belongs to it.",
+            "",
+        ]
     else:
         out += [
-            "No scope statement is recorded for this subsystem. The file ledger"
-            " below is the only record of what belongs to it.",
+            "No scope statement is recorded for this subsystem, and no file is"
+            " recorded in its ledger. Nothing here states what it contains.",
             "",
         ]
 
@@ -816,6 +839,8 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         out += ["## Boundaries", ""]
         if seams:
             out += [
+                "### Seams",
+                "",
                 "| Seam | Shared object | Other party | Assessable |",
                 "|---|---|---|---|",
             ]
@@ -833,6 +858,8 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             out.append("")
         if xrefs:
             out += [
+                "### Recorded edges",
+                "",
                 "| From | → | To | Relationship | Strength | Context |",
                 "|---|---|---|---|---|---|",
             ]
@@ -860,26 +887,30 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     up = "../"
     if open_findings:
         out += [
-            f"{len(open_findings)} defect(s) here are open or awaiting verification."
-            " Each one's full record, with its evidence, is on"
+            f"{_count(len(open_findings), 'defect')} here"
+            f" {'is' if len(open_findings) == 1 else 'are'} open or awaiting"
+            " verification. Each one's full record, with its evidence, is on"
             f" [Open findings]({up}findings.md).",
             "",
         ]
         for f in open_findings:
             page = finding_page(str(f["resolution_state"])) or "findings.md"
+            state = RESOLUTION_LABELS.get(
+                str(f["resolution_state"]), str(f["resolution_state"])
+            )
             out.append(
-                f"- [{f['finding_id']}]({up}{page}#{str(f['finding_id']).lower()})"
-                f" · {_sev_badge(str(f['severity']))}"
-                f" · {RESOLUTION_LABELS.get(str(f['resolution_state']), f['resolution_state'])}"
-                f" — {f['symptom']}"
+                f"- {f['symptom']}"
+                f" — [{f['finding_id']}]({up}{page}#{str(f['finding_id']).lower()})"
+                f" · {_sev_badge(str(f['severity']))} · {state}"
             )
         out.append("")
     else:
         out += ["No defect here is open or awaiting verification.", ""]
     if resolved:
         out += [
-            f"{len(resolved)} further defect(s) here reached a terminal state; they are"
-            f" recorded on [Resolved findings]({up}resolved-findings.md).",
+            f"{_count(len(resolved), 'further defect')} here reached a terminal"
+            f" state; {'it is' if len(resolved) == 1 else 'they are'} recorded on"
+            f" [Resolved findings]({up}resolved-findings.md).",
             "",
         ]
 
@@ -905,12 +936,31 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         for state in values_of("finding_resolution_state")
     }
     assessable_seams = sum(1 for sm in seams if int(sm["assessable"] or 0))
-    out += _metric_table(
+    status = str(s["status"] or "unmapped")
+    # What the ladder status authorizes and what it cannot justify, from the one
+    # enum source (§10). A count without that sentence beside it reads as
+    # coverage; it is an upper bound on what may be claimed.
+    out += [
+        f"**{SUBSYSTEM_STATUS_LABELS.get(status, status)}** —"
+        f" {SUBSYSTEM_STATUS_MEANINGS.get(status, 'no meaning is recorded for this status.')}"
+        f" It cannot justify {SUBSYSTEM_STATUS_LIMITS.get(status, 'more than it records')}.",
+        "",
+    ]
+    # A ledger with no rows has no denominator, and `0 of 0` reads as coverage
+    # of an empty set rather than as nothing measured (VP4).
+    ledger_facts: list[tuple[str, str]] = (
         [
-            ("Files read", f"{examined} of {len(standing)} ledger rows"),
+            ("Files read", f"{examined} of {_count(len(standing), 'ledger row')}"),
             ("Files in scope, not yet read", f"{candidate} of {len(standing)}"),
             ("Files excluded from the survey obligation", f"{excluded} of {len(standing)}"),
             ("Ledger rows the repository has changed under", f"{stale_here} of {len(standing)}"),
+        ]
+        if standing
+        else [("Ledger", "no file is recorded, so nothing here is measured")]
+    )
+    out += _metric_table(
+        [
+            *ledger_facts,
             (
                 "Active concerns with a disposition recorded here",
                 f"{len(on_active)} of {len(active_concerns)}"
@@ -1933,7 +1983,6 @@ def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResul
 # Files index and the recorded edge of the map (§7.4, §7.5)
 # ---------------------------------------------------------------------------
 
-STANDING_LABELS = labels("standing_state")
 
 # §2.4.6. `dispositions`' primary key is `(subsystem_id, concern_code)` — no
 # seam id — and `composition_seam_concerns` holds no rows on any store we have
@@ -2043,7 +2092,8 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         ]
     else:
         out += [
-            f"{len(by_path)} distinct path(s) across {len(standing)} ledger row(s),"
+            f"{_count(len(by_path), 'distinct path')} across"
+            f" {_count(len(standing), 'ledger row')},"
             f" read at {_short(checked)}. Every owner of a path is listed, and the"
             " examined revision is the one that owner recorded — two subsystems"
             " may have read the same file at different revisions.",
@@ -2212,7 +2262,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
             by_directory.setdefault(head, []).append(path)
         for directory in sorted(by_directory, key=lambda d: (-len(by_directory[d]), d)):
             paths = by_directory[directory]
-            out += [f"### {directory} — {len(paths)} path(s)", ""]
+            out += [f"### {directory} — {_count(len(paths), 'path')}", ""]
             out += [f"- `{path}`" for path in paths]
             out.append("")
 
@@ -2232,9 +2282,10 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         for subsystem_id in sorted(by_subsystem):
             entries = by_subsystem[subsystem_id]
             name = names.get(subsystem_id, subsystem_id)
+            owned = sum(1 for r in ledger if str(r["subsystem_id"]) == subsystem_id)
             out += [
-                f"### **{subsystem_id}** {name} — {len(entries)} unread of"
-                f" {sum(1 for r in ledger if str(r['subsystem_id']) == subsystem_id)}",
+                f"### {name} **{subsystem_id}** — {len(entries)} unread of"
+                f" {_count(owned, 'row')} carrying an obligation",
                 "",
             ]
             out += [

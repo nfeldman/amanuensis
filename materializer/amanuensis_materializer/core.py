@@ -388,13 +388,34 @@ class Materializer:
         storage = self.storage
         plan: list[PagePlan] = []
 
+        def passthrough(rel_src: str, title: str, label: str, hint: str) -> PagePlan | None:
+            """One canonical artifact, passed through when it is on disk.
+
+            Planned inline rather than in a trailing loop so the rail's order
+            inside Method is §7.1's table order, not "every generated page,
+            then whatever prose happened to exist".
+            """
+
+            if not (storage / rel_src).is_file():
+                return None
+            return PagePlan(
+                rel_src,
+                (lambda r=rel_src, t=title: renderers.passthrough_prose(storage, r, t) or ("", {})),
+                title=title,
+                label=label,
+                hint=hint,
+                group="Method",
+                kind="artifact",
+            )
+
         # Static top-level pages, in §7.1's order. `group` is one of
         # `NAV_GROUPS` and nothing else; `subgroup` names a division inside it.
         # Every hint opens with the clause §7.1 fixes for it, so the rail, the
         # page's own description meta, and the table a reviewer reads say the
         # same thing.
         plan.extend(
-            [
+            page
+            for page in [
                 PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="Identity, four status dimensions, and one route into each lens.", group="Overview", kind="overview"),
                 PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
                 PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
@@ -414,30 +435,13 @@ class Materializer:
                 PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Records that disagree, and the evidence that settled the ones now resolved.", group="History", kind="contradictions"),
                 PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Every enum, what it authorizes, and what it cannot justify.", group="Method", kind="guide"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", group="Method", kind="coverage"),
+                passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", group="Method", kind="diagnosticity"),
+                passthrough("onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus."),
+                passthrough("entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index."),
             ]
+            if page is not None
         )
-
-        # Prose passthroughs for canonical artifacts — only if they
-        # exist. Each passes through the file with a tiny header if
-        # needed.
-        for rel_src, out_rel, title, label, hint in (
-            ("onboarding-report.md", "onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus."),
-            ("entry-point.md", "entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index."),
-            ("concern-checklist.md", "concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
-        ):
-            if (storage / rel_src).is_file():
-                plan.append(
-                    PagePlan(
-                        out_rel,
-                        (lambda r=rel_src, t=title: renderers.passthrough_prose(storage, r, t) or ("", {})),
-                        title=title,
-                        label=label,
-                        hint=hint,
-                        group="Method",
-                        kind="artifact",
-                    )
-                )
 
         # Per-subsystem pages.
         for s in rows(
