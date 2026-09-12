@@ -27,7 +27,7 @@
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
 | P11 | Structure from claims with a labelled narrative fallback | done (1 attempt) | P6, P8 | `mcp-server/test-structural-claims.mjs` | C42, C44, C55, C63 |
-| P12 | Phase 2 writes structural claims, and the status gate that requires one | ready | P11 | `mcp-server/test-phase2-claims-gate.mjs` | C42, C43, C55, C63 |
+| P12 | Phase 2 writes structural claims, and the status gate that requires one | ready (1 attempt) | P11 | `mcp-server/test-phase2-claims-gate.mjs` | C42, C43, C55, C63 |
 
 ## S4 · Connective view (review: pending)
 
