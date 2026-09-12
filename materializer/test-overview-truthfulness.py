@@ -566,39 +566,6 @@ def corpus(docs: Path, suffix: str) -> str:
 # `Overall readiness: 7 of 12`.
 # ---------------------------------------------------------------------------
 _CODE_SPAN = re.compile(r"`[^`]*`")
-_PERCENTAGE = re.compile(r"\b\d{1,3}(?:\.\d+)?\s*%")
-_RATIO = re.compile(r"\b\d{1,5}\s*(?:of|/)\s*\d{1,5}\b")
-_COMPOSITE_LABEL = re.compile(
-    r"(?i)\b(health|overall|composite|readiness|maturity|completeness"
-    r"|confidence|grade|rating|score)\b"
-)
-
-
-def composite_index_violations(text: str) -> list[str]:
-    """Lines presenting a composite judgement of the record as one figure.
-
-    Returns one message per offending line, empty when the text is clean.  Code
-    spans are masked first, so a quoted `72%` in a sentence about the subject
-    matter is not read as a status figure — the same masking §11.1's
-    orientation lint applies for the same reason.
-    """
-
-    out: list[str] = []
-    for raw in str(text or "").splitlines():
-        line = _CODE_SPAN.sub(" ", raw).strip()
-        if not line:
-            continue
-        if _PERCENTAGE.search(line):
-            out.append(f"a bare percentage presented as a status figure: {line}")
-            continue
-        ratio = _RATIO.search(line)
-        if ratio is None:
-            continue
-        if _COMPOSITE_LABEL.search(line[: ratio.start()]):
-            out.append(f"a composite ratio presented as a status figure: {line}")
-    return out
-
-
 # The two corpora the lint is measured on.  A lint with only the positive arm
 # measures nothing about its false-alarm rate (VP7), and the negative corpus
 # here is not invented: every line of it is a shape `render_index` publishes.
@@ -635,8 +602,25 @@ def main() -> int:
         lint_error = f"{exc!r}"
 
     violations: Callable[[str], Any] | None = None
+    composite: Callable[[str], Any] | None = None
     if lint is not None:
         violations = getattr(lint, "orientation_violations", None)
+        composite = getattr(lint, "composite_index_violations", None)
+
+    def composite_index_violations(text: str) -> list[str]:
+        """The production lint's verdict, or nothing when it is not exposed.
+
+        Resolved off the module rather than imported, for the reason the
+        orientation lint is: a lint this gate cannot find has to read as an
+        assertion failure, not as a crashed gate. Until slice-S7 this gate
+        carried its own copy of the rule, which is why it could report on a
+        publish it could not stop (F5/codex).
+        """
+
+        if composite is None:
+            return []
+        result = composite(text)
+        return [str(item) for item in result] if isinstance(result, list) else []
 
     def flagged(text: str) -> list[str] | None:
         """The lint's verdict, or None when the lint cannot be consulted."""
@@ -659,6 +643,19 @@ def main() -> int:
         return None
 
     check("orientation lint exposes orientation_violations", lint_available)
+
+    def composite_lint_available() -> str | None:
+        if composite is None:
+            return (
+                "amanuensis_materializer/lint.py does not expose"
+                " composite_index_violations, so the rule is not in production"
+                f" (import reported {scrub(lint_error)})"
+            )
+        if not isinstance(composite("Health: 72%"), list):
+            return "composite_index_violations did not return a list of violations"
+        return None
+
+    check("the composite index lint is production code, not gate code", composite_lint_available)
 
     def positive_arm() -> str | None:
         if violations is None:
@@ -985,7 +982,13 @@ def main() -> int:
         )
 
         def composite_index_red_arm() -> str | None:
-            """The check above, proved able to fire on a real publish (VP4)."""
+            """A renderer that grows a composite row must turn the publish red.
+
+            The check is on the publish, not on the bytes: reading a published
+            index and finding the figure in it proves the gate can see one, not
+            that anything stopped it. Until slice-S7 that was the whole arm, and
+            the armed publish returned ok/published with no warnings (F5/codex).
+            """
 
             def patch(text: str) -> str | None:
                 marker = '"Paths in scope with no ledger row",'
@@ -1003,25 +1006,64 @@ def main() -> int:
                 return armed_error
             (armed_storage / "workspace_path").write_text(f"{workspace}\n")
             armed = publish_with(scratch, armed_storage, "--clean-publish")
-            armed_index = read(armed_storage / "docs" / "index.md") or ""
-            if not armed_index:
-                warnings = [scrub(w) for w in armed.get("warnings") or []]
+            warnings = [scrub(w) for w in armed.get("warnings") or []]
+            named = [w for w in warnings if "composite index" in w]
+            if armed.get("ok") is not False:
                 return (
-                    "the armed publish produced no overview to read"
-                    f" — {armed.get('_diagnostic') or warnings[:2]}"
+                    "an overview publishing a health percentage published green"
+                    f" — ok={armed.get('ok')!r}, warnings={warnings[:2]}"
                 )
-            offending = composite_index_violations(armed_index)
-            if not any("Conspectus health" in message for message in offending):
+            if not named:
                 return (
-                    "an overview publishing a health percentage passed the"
-                    " composite-index check, so the check cannot turn red"
-                    f" — it reported {offending[:2]}"
+                    "the publish was refused but no warning names the composite"
+                    f" index, so it would not tell a reader what to correct — {warnings[:2]}"
                 )
             return None
 
         check(
-            "the composite index check turns red on an overview that publishes one",
+            "an overview that renders a composite index turns the publish red",
             composite_index_red_arm,
+        )
+
+        def composite_index_thesis_arm() -> str | None:
+            """The same rule over the slot a session writes by hand.
+
+            This is the case the slice-S7 review actually seeded: a thesis
+            carrying `Health: 72%`, published with code 0, ok true, no warnings,
+            and the figure still in index.md. Three things have to hold now —
+            the publish is red, a warning names the file to correct, and the
+            figure is not in the bytes.
+            """
+
+            thesis = ENTRY_POINT_WITH_THESIS.replace(
+                THESIS_SENTENCE, f"{THESIS_SENTENCE}\n\nHealth: 72%", 1
+            )
+            if "Health: 72%" not in thesis:
+                return "the composite thesis fixture could not be seeded, so this arm measures nothing"
+            storage_dir, seed_error = seeded(root, "composite-thesis", thesis)
+            if seed_error:
+                return seed_error
+            (storage_dir / "workspace_path").write_text(f"{workspace}\n")
+            result = publish_with(ROOT, storage_dir, "--clean-publish")
+            warnings = [scrub(w) for w in result.get("warnings") or []]
+            if result.get("ok") is not False:
+                return (
+                    "a thesis carrying a composite index published green"
+                    f" — ok={result.get('ok')!r}, warnings={warnings[:2]}"
+                )
+            if not any("entry-point.md" in w for w in warnings):
+                return (
+                    "the publish was refused but no warning names entry-point.md,"
+                    f" so it does not say what to correct — {warnings[:2]}"
+                )
+            published = read(storage_dir / "docs" / "index.md")
+            if published and "72%" in published:
+                return "the refused thesis still published its percentage into index.md"
+            return None
+
+        check(
+            "a thesis carrying a composite index turns the publish red",
+            composite_index_thesis_arm,
         )
 
         def state_counts() -> str | None:
