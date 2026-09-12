@@ -1167,14 +1167,14 @@
       ],
       "needs_mcp": true,
       "budget_minutes": 240,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "05b79685671d4a785b14ea83ad970f0682ef52d8",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+      "green_sha": "8cdffc6882fcd6dddfec84ced6ea4884286b976e",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "The store is untracked, so the gate asserts over design/reader-lenses/rebuild-coverage-receipt.json -- written by dev/record-rebuild-coverage.mjs, two files beyond the listed deliverables -- and re-checks the live store read-only (node:sqlite, no server spawn) wherever one is present, saying which mode it ran in. Scope is onboarding plus Phase 1 and Phase 2 for every subsystem: eleven reached structural with 53 claims over 72 evidence rows, 16 cited edges and 9 seams, in five batches behind their own storage checkpoint commits; phases 3-5 are outside this packet's acceptance and no finding exists yet, so findings-index.md is empty and says so. Two gaps filled and recorded here: onboarding owes a checkpoint while surveying no subsystem, so batch 1 declares kind='onboarding' and nothing else may be empty; and B-12 (scholiast/, 103 files the running system never imports) is deferred at directory granularity -- three ledger rows, 100 files left visibly unclassified rather than silently claimed -- recorded as open question 4. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) is still RED on subsystem-page links to resolved-findings.md, as P16 recorded; it is not in P17's regression list and was red before P17 began."
     },
     {
       "id": "P18",
