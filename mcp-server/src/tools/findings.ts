@@ -18,21 +18,7 @@ import {
   requireOverturnEvidence,
   requireSubsystemStatus,
 } from "../invariants.js";
-import {
-  FINDING_RESOLUTION_STATES,
-  FINDING_STATUSES,
-  PASS_TYPES,
-  SEVERITIES,
-} from "../vocabulary.js";
-
-// One count per resolution state, generated from the enum source so the roll-up
-// cannot fall behind the vocabulary. The column for a state is its value with
-// dashes replaced, which keeps the two names `get_finding_summary` already
-// published — `fixed_pending_verification` and `verified_fixed`.
-const RESOLUTION_STATE_COUNTS = FINDING_RESOLUTION_STATES.map(
-  (state) =>
-    `SUM(CASE WHEN v.resolution_state='${state}' THEN 1 ELSE 0 END) AS ${state.replace(/-/g, "_")}`,
-).join(",\n                ");
+import { FINDING_STATUSES, PASS_TYPES, SEVERITIES } from "../vocabulary.js";
 
 function git(ctx: ServerContext, args: string[]): ReturnType<typeof spawnSync> {
   return spawnSync("git", args, {
@@ -412,10 +398,15 @@ export const findingTools: ToolDefinition[] = [
           `SELECT f.finding_id, f.subsystem_id, f.symptom, f.root_cause, f.severity, f.status,
                   f.fix_location, f.primary_files, f.business_context, f.ref_sha, f.session_id,
                   f.pass_type, f.created_at, f.updated_at,
-                  v.resolution_state, v.fix_sha, v.resolution_evidence_id,
-                  v.resolution_recorded_at
+                  COALESCE(r.resolution_state,
+                    CASE f.status WHEN 'fixed' THEN 'fixed-pending-verification'
+                                  WHEN 'ruled-out' THEN 'ruled-out'
+                                  WHEN 'confirmed-acceptable' THEN 'accepted'
+                                  ELSE 'open' END) AS resolution_state,
+                  r.fix_sha, r.evidence_id AS resolution_evidence_id,
+                  r.recorded_at AS resolution_recorded_at
              FROM findings f
-             JOIN finding_state_current v ON v.finding_id = f.finding_id
+             LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id
              ${where}
              ORDER BY
                CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
@@ -445,9 +436,12 @@ export const findingTools: ToolDefinition[] = [
                 SUM(CASE WHEN f.severity='LOW' THEN 1 ELSE 0 END) AS low,
                 SUM(CASE WHEN f.status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs,
                 SUM(CASE WHEN f.status='fixed' THEN 1 ELSE 0 END) AS fixed,
-                ${RESOLUTION_STATE_COUNTS}
+                SUM(CASE WHEN COALESCE(r.resolution_state,
+                    CASE WHEN f.status='fixed' THEN 'fixed-pending-verification' END)
+                    = 'fixed-pending-verification' THEN 1 ELSE 0 END) AS fixed_pending_verification,
+                SUM(CASE WHEN r.resolution_state='verified-fixed' THEN 1 ELSE 0 END) AS verified_fixed
            FROM findings f
-           JOIN finding_state_current v ON v.finding_id=f.finding_id
+           LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
           GROUP BY f.subsystem_id ORDER BY f.subsystem_id`,
         )
         .all();

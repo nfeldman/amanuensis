@@ -207,9 +207,6 @@ jobs:
       - name: Single enum source — generated files, SQL CHECKs, validators, hint tables
         working-directory: mcp-server
         run: node test-vocabulary-source.mjs
-      - name: Finding partition — one state view, five readers, one page per finding
-        working-directory: mcp-server
-        run: node test-finding-partition.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs

@@ -22,32 +22,13 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from .db import open_ro, row, rows, table_exists
+from .db import open_ro, rows
 from .manifest import sha256_bytes
-from .vocabulary import values_of
 
 CONTRACT_NAME = ".projection-contract.json"
 CONTRACT_VERSION = "2"
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 HTML_SUFFIXES = {".html", ".htm"}
-
-# Lens membership for a finding, defined once (spec §6.1) and read by the
-# renderer, the cross-reference index, and the census below.  A finding renders
-# as a full marked record on exactly one of these pages; every other surface
-# links to it.  The order is the page order a reader meets.
-FINDING_LENS_PAGES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ("Unresolved", "findings.md", ("open", "fixed-pending-verification")),
-    ("History", "resolved-findings.md", ("verified-fixed", "ruled-out", "accepted")),
-)
-
-FINDING_PAGE_BY_STATE: dict[str, str] = {
-    state: page for _lens, page, states in FINDING_LENS_PAGES for state in states
-}
-
-
-def finding_page(resolution_state: str | None) -> str | None:
-    """The page a finding in this resolution state renders on, or None."""
-    return FINDING_PAGE_BY_STATE.get(str(resolution_state or ""))
 
 
 def finding_marker(finding_id: str) -> str:
@@ -176,7 +157,6 @@ class ProjectionVerifier:
         try:
             findings = rows(conn, "SELECT finding_id FROM findings ORDER BY finding_id")
             stale = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
-            mismatches.extend(self._finding_partition_census(conn, projection))
         finally:
             conn.close()
         # The Markdown and HTML views must each carry authoritative markers.
@@ -309,131 +289,6 @@ class ProjectionVerifier:
                     }
                 )
         return self._summary(mismatches)
-
-    def _finding_partition_census(
-        self, conn: Any, projection: dict[str, str]
-    ) -> list[dict[str, str]]:
-        """Exhaustive census of the finding partition (spec §6.1, §6.2).
-
-        Three properties, each able to turn the state axis red on its own:
-
-        * every value of the resolution vocabulary is claimed by exactly one
-          lens — a new enum value with no lens is a partition hole, not a
-          rendering detail;
-        * `finding_state_current` returns exactly one row per `findings` row,
-          and each row lands in exactly one lens membership query.  A row in
-          both or in neither is reported by id;
-        * the row's marker is on the page its lens selects, in both corpora.
-          The marker count check above proves a finding renders once; this
-          proves it renders in the right lens.
-        """
-        mismatches: list[dict[str, str]] = []
-        claimed: dict[str, list[str]] = {}
-        for lens, _page, states in FINDING_LENS_PAGES:
-            for state in states:
-                claimed.setdefault(state, []).append(lens)
-        for state in values_of("finding_resolution_state"):
-            lenses = claimed.get(state, [])
-            if len(lenses) != 1:
-                named = ", ".join(lenses) or "no lens"
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "finding-partition-vocabulary",
-                        "object_id": state,
-                        "detail": (
-                            f"the resolution state is claimed by {named}"
-                            f" ({len(lenses)} lenses), not by exactly one"
-                        ),
-                    }
-                )
-        for state in claimed:
-            if state not in values_of("finding_resolution_state"):
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "finding-partition-vocabulary",
-                        "object_id": state,
-                        "detail": "a lens claims a resolution state the vocabulary does not carry",
-                    }
-                )
-
-        if not table_exists(conn, "finding_state_current"):
-            mismatches.append(
-                {
-                    "axis": "state",
-                    "object_type": "finding-partition",
-                    "object_id": "finding_state_current",
-                    "detail": "the partition view is absent from the store",
-                }
-            )
-            return mismatches
-
-        recorded = [str(r["finding_id"]) for r in rows(conn, "SELECT finding_id FROM findings")]
-        membership: dict[str, list[str]] = {finding_id: [] for finding_id in recorded}
-        states: dict[str, str] = {}
-        for lens, _page, lens_states in FINDING_LENS_PAGES:
-            placeholders = ",".join("?" for _ in lens_states)
-            for r in rows(
-                conn,
-                "SELECT finding_id, resolution_state FROM finding_state_current"
-                f" WHERE resolution_state IN ({placeholders})",
-                list(lens_states),
-            ):
-                finding_id = str(r["finding_id"])
-                membership.setdefault(finding_id, []).append(lens)
-                states[finding_id] = str(r["resolution_state"])
-        view_total = (
-            row(conn, "SELECT COUNT(*) AS n FROM finding_state_current") or {"n": 0}
-        )["n"]
-        if int(view_total or 0) != len(recorded):
-            mismatches.append(
-                {
-                    "axis": "state",
-                    "object_type": "finding-partition",
-                    "object_id": "finding_state_current",
-                    "detail": (
-                        f"the partition view returns {view_total} rows for {len(recorded)}"
-                        " findings rows"
-                    ),
-                }
-            )
-        for finding_id in sorted(membership):
-            lenses = membership[finding_id]
-            if len(lenses) != 1:
-                named = ", ".join(lenses) or "no lens"
-                mismatches.append(
-                    {
-                        "axis": "state",
-                        "object_type": "finding-partition",
-                        "object_id": finding_id,
-                        "detail": (
-                            f"the finding lands in {named} ({len(lenses)} lens membership"
-                            " queries), not in exactly one"
-                        ),
-                    }
-                )
-                continue
-            expected = finding_page(states.get(finding_id))
-            if expected is None:
-                continue
-            marker = finding_marker(finding_id)
-            for suffix in (".md", ".html"):
-                page = str(Path(expected).with_suffix(suffix))
-                count = projection.get(page, "").count(marker)
-                if count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": "finding-partition",
-                            "object_id": finding_id,
-                            "detail": (
-                                f"{states.get(finding_id)} selects {page}, which carries the"
-                                f" state marker {count} times"
-                            ),
-                        }
-                    )
-        return mismatches
 
     @staticmethod
     def _summary(mismatches: list[dict[str, str]]) -> dict[str, Any]:

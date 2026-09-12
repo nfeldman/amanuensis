@@ -870,26 +870,6 @@ SELECT e.*
      LIMIT 1
  );
 
--- One row per findings row, carrying the legacy-status fallback exactly once.
--- Every reader of finding resolution selects from here: the renderer, the two
--- findings tools, the review session, and the review historical-findings
--- reader.  Before this view each of them mapped `findings.status` its own way
--- (or not at all), so one legacy row with no resolution event could read as
--- `accepted` on one surface and as an active defect on another.  `legacy_status`
--- stays visible because it remains the coarse mutable projection, not the
--- authority.
-CREATE VIEW IF NOT EXISTS finding_state_current AS
-SELECT f.finding_id, f.subsystem_id, f.severity, f.status AS legacy_status,
-       COALESCE(r.resolution_state,
-                CASE f.status WHEN 'fixed'                THEN 'fixed-pending-verification'
-                              WHEN 'ruled-out'            THEN 'ruled-out'
-                              WHEN 'confirmed-acceptable' THEN 'accepted'
-                              ELSE 'open' END)            AS resolution_state,
-       r.fix_sha, r.fix_location, r.evidence_id AS resolution_evidence_id,
-       r.recorded_at AS resolution_recorded_at
-  FROM findings f
-  LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id;
-
 CREATE TABLE IF NOT EXISTS contradiction_resolution_events (
     id              INTEGER PRIMARY KEY,
     contradiction_id INTEGER NOT NULL REFERENCES contradictions(id) ON DELETE CASCADE,

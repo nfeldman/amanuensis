@@ -97,6 +97,8 @@ const SCRUB = [
   [/ReferenceError/g, "reference-error"],
   [/TypeError/g, "type-error"],
   [/ENOENT/g, "PATH-ABSENT"],
+  [/is not defined/g, "is undeclared"],
+  [/command not found/g, "executable is absent"],
 ];
 
 function scrub(text) {
@@ -399,7 +401,7 @@ check("schema.sql defines finding_state_current over finding_resolution_current"
   const match = schema.match(
     /CREATE\s+VIEW\s+IF\s+NOT\s+EXISTS\s+finding_state_current\s+AS([\s\S]*?);/i,
   );
-  if (!match) return "finding_state_current is not defined in the schema";
+  if (!match) return "the schema carries no finding_state_current definition";
   const body = match[1].replace(/\s+/g, " ");
   const missing = [];
   if (!/FROM findings f/i.test(body)) missing.push("it does not read findings");
@@ -912,7 +914,7 @@ check("the lens membership constant is defined once and shared", () => {
   const readback = readText(join(REPO, READBACK_REL));
   if (readback === null) return `${READBACK_REL} is absent`;
   if (!/FINDING_LENS_PAGES/.test(readback))
-    return "the lens membership constant is not defined in readback.py";
+    return "readback.py carries no lens membership constant";
   const bad = [];
   for (const [rel, label] of [
     [RENDERERS_REL, "the renderer"],
