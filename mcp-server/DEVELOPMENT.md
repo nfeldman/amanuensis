@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
+_199 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -442,11 +442,13 @@ _197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 | `release_lock` | Release a write lock. Only the holder may release it. Safe to call even if no lock exists. |
 | `get_active_locks` | Return all currently held (non-expired) locks. Reads from the active_write_locks view. |
 
-### `locus` (1)
+### `locus` (3)
 
 | Tool | Description |
 |---|---|
 | `describe_locus` | Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
+| `get_attention` | Return what the conspectus records as unresolved: open findings and regressions, repairs awaiting verification, records where two credible accounts still stand, open questions, unverified suspicions, knowledge the repository has moved under, and per-subsystem measures. Every item carries an operational label whose meaning is fixed by the reader's guide. Reads only; makes no model call and generates no text. Pass `scope` to narrow to one subsystem id or one repository path prefix. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
+| `get_history` | Return what the conspectus records as concluded about one locus or one finding: resolution events, claim supersessions and validity events, resolved contradictions, answered or dismissed questions, closed leads, and the sessions that cite the subject. Newest first, one page. Exactly one of `locus` or `finding_id` is required. Reads only; makes no model call and generates no text. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
 
 ### `logging` (3)
 

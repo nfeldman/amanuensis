@@ -46,7 +46,7 @@ import {
   type SymbolStandingBlock,
   type UnknownEntry,
 } from "../standing.js";
-import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
+import { ATTENTION_LABELS, EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
 
 /** §5.1: the output contract shipped at contracts/locus-account.schema.json. */
 export const LOCUS_ACCOUNT_CONTRACT_VERSION = "1.0.0";
@@ -133,6 +133,12 @@ class CommitProbe {
       stdio: ["ignore", "pipe", "pipe"],
     });
     return { status: result.status ?? 1, stdout: String(result.stdout ?? "").trim() };
+  }
+
+  /** The workspace head, or null when git cannot answer. */
+  head(): string | null {
+    const result = this.run(["rev-parse", "--verify", "HEAD"]);
+    return result.status === 0 && result.stdout ? result.stdout : null;
   }
 
   /** Resolve a revision or refuse the call; an unresolvable as_of_sha is an error (§5.1). */
@@ -1737,6 +1743,1629 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
   return payload;
 }
 
+// ---------------------------------------------------------------------------
+// §5.2, §5.3: the two lens tools, and the budget engine they share
+// ---------------------------------------------------------------------------
+
+/** §5.2's contract, shipped at contracts/attention.schema.json. */
+export const ATTENTION_CONTRACT_VERSION = "1.0.0";
+/** §5.3's contract, shipped at contracts/locus-history.schema.json. */
+export const LOCUS_HISTORY_CONTRACT_VERSION = "1.0.0";
+
+/** §5.2's sections, in the order the response presents them. */
+export const ATTENTION_SECTIONS = [
+  "open",
+  "awaiting_verification",
+  "undiscriminated",
+  "decisions",
+  "leads",
+  "stale",
+  "hot_spots",
+] as const;
+type AttentionSection = (typeof ATTENTION_SECTIONS)[number];
+
+/** §5.3's families, in the order the response presents them. */
+export const HISTORY_SECTIONS = [
+  "resolutions",
+  "claims",
+  "contradictions",
+  "questions",
+  "leads",
+  "sessions",
+] as const;
+type HistorySection = (typeof HISTORY_SECTIONS)[number];
+
+/** §4.1's two remaining budgets. */
+const ATTENTION_WIRE_BUDGET = 12288;
+const HISTORY_WIRE_BUDGET = 8192;
+
+/**
+ * Retention across sections, highest retention first, for both tools.
+ *
+ * The rule is `describe_locus`'s: the deepest served list gives up the next
+ * item, so every section that holds something is sampled before any section is
+ * asked for a second row, and this list breaks the ties — the section nearest
+ * the end gives way first. A section-major order would empty the last families
+ * outright on any store large enough to truncate, which would turn a partial
+ * answer into one that looks whole.
+ */
+const ATTENTION_RETENTION: readonly AttentionSection[] = [
+  "open", // what the record says is wrong and unrepaired
+  "awaiting_verification", // repairs with no proof yet
+  "undiscriminated", // where two accounts still stand
+  "decisions", // what only a human can settle
+  "stale", // readings the repository has moved under
+  "leads", // suspicions that are not yet findings
+  "hot_spots", // measures, derivable from the sections above
+];
+
+const HISTORY_RETENTION: readonly HistorySection[] = [
+  "resolutions",
+  "contradictions",
+  "claims",
+  "questions",
+  "leads",
+  "sessions",
+];
+
+const ROUND_ROBIN_TRUNCATION_ORDER = "round-robin-sections-then-ledger-ids-v1";
+
+/**
+ * §4.1's residual case for the two tools: `census`, every per-reason `count`,
+ * and the scope block are never truncated, so a response can be over budget
+ * with nothing left to drop. It says so rather than refusing an answer the
+ * record supports.
+ */
+const ROUND_ROBIN_OVER_BUDGET_REASON =
+  "This response is over its byte budget with every truncatable item already dropped: each section's census and each omission count are never truncated.";
+
+interface BudgetedSection {
+  name: string;
+  /** Rows the source holds for this scope, before the section's own policy. */
+  source_rows: number;
+  /** Eligible candidates, already in retention order: the last is dropped first. */
+  items: Item[];
+  /** Stable ids, parallel to `items`. */
+  ids: string[];
+  /**
+   * Candidates the section's own policy excludes: counted in the census and
+   * recorded in the ledger under `policy`, never served. §4.3's two reasons are
+   * the only ones, and ADR-0011 defines `policy` as exclusion by the declared
+   * mode policy — which is what a candidate no §5.2 label covers is.
+   */
+  policy_ids: string[];
+  statement?: string;
+  counts?: Record<string, number>;
+  session_attribution?: string;
+  ordering_basis?: string;
+  seam_binding?: string;
+}
+
+interface RoundRobinTrace {
+  model_calls: 0;
+  selection: string;
+  budget_bytes: number;
+  payload_bytes: number;
+  response_bytes: number;
+  truncation_order: string;
+  truncated: boolean;
+  within_budget: boolean;
+  over_budget_reason: string | null;
+  limit: number | null;
+}
+
+interface BudgetedView {
+  census: number;
+  recorded: boolean;
+  requested: boolean;
+  items: Item[];
+  statement?: string;
+  counts?: Record<string, number>;
+  session_attribution?: string;
+  ordering_basis?: string;
+  seam_binding?: string;
+}
+
+/**
+ * §4.1 and §4.3, for the two tools that carry one budget each.
+ *
+ * `describe_locus` keeps its own loop rather than sharing this one, because it
+ * enforces three budgets this does not — the standing block's value, each
+ * optional section's value, and the 32768-byte ceiling error that names the
+ * locus's owners. The parts both need are the ones that decide whether a
+ * response is honest: `buildLedger`'s aggregation, the id sub-budget ladder,
+ * and the census invariant, all of which are shared.
+ */
+function serveWithinBudget(
+  sections: readonly BudgetedSection[],
+  budgetBytes: number,
+  limit: number | null,
+  /** Highest retention first; ties are broken toward the front of this list. */
+  retention: readonly string[],
+  requested: (name: string) => boolean,
+  assemble: (parts: {
+    sections: Record<string, BudgetedView>;
+    census: { total: number; by_section: Record<string, number> };
+    omitted: OmissionEntry[];
+    trace: RoundRobinTrace;
+  }) => Record<string, unknown>,
+): Record<string, unknown> {
+  interface State {
+    section: BudgetedSection;
+    view: BudgetedView;
+    served: Item[];
+    keep: number;
+    wanted: boolean;
+  }
+  const states: State[] = [];
+  const views: Record<string, BudgetedView> = {};
+  const census: Record<string, number> = {};
+  for (const section of sections) {
+    const wanted = requested(section.name);
+    const served: Item[] = [];
+    const total = section.items.length + section.policy_ids.length;
+    const view: BudgetedView = {
+      census: total,
+      recorded: section.source_rows > 0,
+      requested: wanted,
+      items: served,
+    };
+    if (section.statement) view.statement = section.statement;
+    if (section.counts) view.counts = section.counts;
+    if (section.session_attribution) view.session_attribution = section.session_attribution;
+    if (section.ordering_basis) view.ordering_basis = section.ordering_basis;
+    if (section.seam_binding) view.seam_binding = section.seam_binding;
+    // §4.3: an item limit evicts under `budget`, the same reason the byte
+    // budget evicts under, because both are the caller's ranking cut rather
+    // than a policy about what the section holds.
+    const ceiling = limit === null ? section.items.length : Math.min(limit, section.items.length);
+    states.push({ section, view, served, keep: wanted ? ceiling : 0, wanted });
+    views[section.name] = view;
+    census[section.name] = total;
+  }
+
+  const omitted: OmissionEntry[] = [];
+  const trace: RoundRobinTrace = {
+    model_calls: 0,
+    selection: "registry-exact-v1",
+    budget_bytes: budgetBytes,
+    payload_bytes: 0,
+    response_bytes: 0,
+    truncation_order: ROUND_ROBIN_TRUNCATION_ORDER,
+    truncated: false,
+    within_budget: true,
+    over_budget_reason: null,
+    limit,
+  };
+  const payload = assemble({
+    sections: views,
+    census: {
+      total: Object.values(census).reduce((sum, count) => sum + count, 0),
+      by_section: census,
+    },
+    omitted,
+    trace,
+  });
+
+  let idBudget: number = OMITTED_IDS_BUDGET;
+
+  function refresh(): void {
+    const groups: DroppedGroup[] = [];
+    for (const state of states) {
+      state.served.splice(0, state.served.length, ...state.section.items.slice(0, state.keep));
+      const policy = state.wanted
+        ? [...state.section.policy_ids]
+        : [...state.section.policy_ids, ...state.section.ids];
+      if (policy.length) {
+        groups.push({ section: state.section.name, reason: "policy", ids: policy });
+      }
+      if (state.wanted) {
+        const budgetDropped = state.section.ids.slice(state.keep);
+        if (budgetDropped.length) {
+          groups.push({ section: state.section.name, reason: "budget", ids: budgetDropped });
+        }
+      }
+    }
+    omitted.splice(0, omitted.length, ...buildLedger(groups, idBudget));
+    trace.truncated = omitted.some((entry) => entry.reason === "budget");
+  }
+
+  function settle(): number {
+    for (let pass = 0; pass < 8; pass += 1) {
+      const compact = Buffer.byteLength(JSON.stringify(payload), "utf8");
+      const wire = responseBytes(payload, { compact: true });
+      if (trace.payload_bytes === compact && trace.response_bytes === wire) return wire;
+      trace.payload_bytes = compact;
+      trace.response_bytes = wire;
+    }
+    throw new ToolError("the response size could not be measured to a fixed point");
+  }
+
+  /** One item from whichever served list is deepest; `retention` breaks ties. */
+  const byRetention = [...states].sort(
+    (a, b) => retention.indexOf(a.section.name) - retention.indexOf(b.section.name),
+  );
+  function dropNext(): boolean {
+    let chosen: State | null = null;
+    for (const state of byRetention) {
+      if (state.keep === 0) continue;
+      if (!chosen || state.keep >= chosen.keep) chosen = state;
+    }
+    if (!chosen) return false;
+    chosen.keep -= 1;
+    refresh();
+    return true;
+  }
+
+  function shrinkIdBudget(): boolean {
+    const next = OMITTED_IDS_LADDER.find((value) => value < idBudget);
+    if (next === undefined) return false;
+    idBudget = next;
+    refresh();
+    return true;
+  }
+
+  refresh();
+  for (let guard = 0; guard < 20000; guard += 1) {
+    const wire = settle();
+    if (wire <= budgetBytes) break;
+    const largest = Math.max(
+      1,
+      ...states.flatMap((state) =>
+        state.served.map((item) => Buffer.byteLength(JSON.stringify(item), "utf8")),
+      ),
+    );
+    const step = Math.max(1, Math.floor((wire - budgetBytes) / (2 * largest)));
+    let dropped = 0;
+    for (let index = 0; index < step; index += 1) {
+      if (!dropNext()) break;
+      dropped += 1;
+    }
+    if (dropped === 0 && !shrinkIdBudget()) break;
+  }
+
+  // The drop step is sized against the largest served item, so a pass can give
+  // up more than the shortfall needed. Take back what still fits, highest
+  // retention first: a budget met with room to spare is a smaller answer than
+  // the record supports, and the ledger would declare a drop that was not
+  // required.
+  for (let guard = 0; guard < 20000; guard += 1) {
+    let grown: State | null = null;
+    for (const state of byRetention) {
+      if (state.keep >= state.section.items.length || !state.wanted) continue;
+      if (limit !== null && state.keep >= limit) continue;
+      if (!grown || state.keep < grown.keep) grown = state;
+    }
+    if (!grown) break;
+    grown.keep += 1;
+    refresh();
+    if (settle() > budgetBytes) {
+      grown.keep -= 1;
+      refresh();
+      settle();
+      break;
+    }
+  }
+
+  const wire = settle();
+  if (wire > WIRE_CEILING) {
+    throw new ToolError(
+      `this response cannot be served inside the ${WIRE_CEILING}-byte ceiling: the untruncatable part measures ${wire} bytes. Narrow the call with scope or sections.`,
+    );
+  }
+  if (wire > budgetBytes) {
+    trace.within_budget = false;
+    trace.over_budget_reason = ROUND_ROBIN_OVER_BUDGET_REASON;
+    settle();
+  }
+
+  // §4.3's invariant, checked before returning.
+  for (const state of states) {
+    const dropped = omitted
+      .filter((entry) => entry.section === state.section.name)
+      .reduce((total, entry) => total + entry.count, 0);
+    if (state.served.length + dropped !== state.view.census) {
+      throw new ToolError(
+        `section ${state.section.name} cannot reconcile its census: ${state.served.length} selected + ${dropped} omitted != ${state.view.census}`,
+      );
+    }
+  }
+  return payload;
+}
+
+// ---------------------------------------------------------------------------
+// §5.2: get_attention
+// ---------------------------------------------------------------------------
+
+/**
+ * §5.2's seven labels, as a code constant checked against the vocabulary
+ * source by `test-vocabulary-source.mjs`. Four are ADR-0010's operational
+ * definitions reused verbatim, two are this tool's own, and `open` is
+ * `finding_state_current.resolution_state`'s own value rather than a label
+ * anything here invents.
+ *
+ * Three of ADR-0010's seven are deliberately absent. `ruled-out-historical` is
+ * History, not Unresolved. The A7 challenge aggregation — *survived*,
+ * *contested*, *defeated* — is terminal over a hypothesis a composition
+ * references, and this tool has no composition. `latent-defect` is defined
+ * over the impact base of an A8 composition, which this tool also has no
+ * access to; substituting a different base under the same word is the
+ * overloading decision 6 exists to prevent, so the findings that would have
+ * carried it are `open`.
+ */
+
+interface AttentionScope {
+  requested: string | null;
+  kind: "project" | "subsystem" | "path-prefix";
+  subsystems: string[];
+  path_prefix: string | null;
+  /** False when the argument names nothing the store holds. */
+  resolved: boolean;
+}
+
+function likeEscape(value: string): string {
+  return value.replace(/([%_\\])/g, "\\$1");
+}
+
+/**
+ * §5.2's scope argument, disambiguated by §2.1's rule: an exact `subsystems.id`
+ * decides first, and anything else is read as a repository path prefix. A
+ * prefix that names no ledgered path resolves to an honest empty rather than
+ * to the whole project, because silently widening a scope nobody asked for is
+ * how a narrow question gets a wide answer.
+ */
+function resolveAttentionScope(db: DB, requested: string | null): AttentionScope {
+  const everySubsystem = (
+    db.prepare("SELECT id FROM subsystems ORDER BY id").all() as { id: string }[]
+  ).map((row) => row.id);
+  if (!requested) {
+    return {
+      requested: null,
+      kind: "project",
+      subsystems: everySubsystem,
+      path_prefix: null,
+      resolved: true,
+    };
+  }
+  const subsystem = db.prepare("SELECT id FROM subsystems WHERE id = ?").get(requested) as
+    | { id: string }
+    | undefined;
+  if (subsystem) {
+    return {
+      requested,
+      kind: "subsystem",
+      subsystems: [subsystem.id],
+      path_prefix: null,
+      resolved: true,
+    };
+  }
+  const owners = (
+    db
+      .prepare(
+        "SELECT DISTINCT subsystem_id FROM file_ledger WHERE file_path LIKE ? ESCAPE '\\' ORDER BY subsystem_id",
+      )
+      .all(`${likeEscape(requested)}%`) as { subsystem_id: string }[]
+  ).map((row) => row.subsystem_id);
+  return {
+    requested,
+    kind: "path-prefix",
+    subsystems: owners,
+    path_prefix: requested,
+    resolved: owners.length > 0,
+  };
+}
+
+/** Whether a stored path lies under the scope, or true when no prefix is set. */
+function pathInScope(scope: AttentionScope, path: string | null): boolean {
+  if (!scope.path_prefix) return true;
+  return path?.startsWith(scope.path_prefix) === true;
+}
+
+/**
+ * Whether a `field_notes.location` names something in scope. The column is a
+ * comma-separated free-text list of paths, symbols, and subsystem ids
+ * (`schema.sql:344`), so each token is tested against both the path prefix and
+ * the owning subsystems. This is scope membership, not §2.4.6's per-locus
+ * binding, which is why it is a separate predicate rather than a second copy
+ * of `standing.ts`'s `locationMatch`.
+ */
+function locationInScope(scope: AttentionScope, location: string | null): boolean {
+  if (scope.kind === "project") return true;
+  if (!location) return false;
+  const tokens = location
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+  for (const token of tokens) {
+    if (scope.subsystems.includes(token)) return true;
+    const path = token.split("@")[0]?.split(":")[0] ?? token;
+    if (scope.path_prefix && path.startsWith(scope.path_prefix)) return true;
+  }
+  return false;
+}
+
+interface AttentionFinding {
+  finding_id: string;
+  subsystem_id: string;
+  severity: string;
+  resolution_state: string;
+  ref_sha: string | null;
+  primary_files: string | null;
+}
+
+/**
+ * The unresolved findings in scope: §6.1's Unresolved predicate, narrowed by
+ * the scope argument. A path prefix narrows by what the finding *cites* — an
+ * evidence row or a `primary_files` citation under the prefix — rather than by
+ * its subsystem alone, because a subsystem owning one file under the prefix
+ * would otherwise answer for every finding it holds.
+ */
+function attentionFindings(db: DB, scope: AttentionScope): AttentionFinding[] {
+  if (scope.subsystems.length === 0) return [];
+  const rows = db
+    .prepare(
+      `SELECT s.finding_id, s.subsystem_id, s.severity, s.resolution_state,
+              f.ref_sha, f.primary_files
+         FROM finding_state_current s JOIN findings f ON f.finding_id = s.finding_id
+        WHERE s.resolution_state IN ('open','fixed-pending-verification')
+          AND s.subsystem_id IN (${placeholders(scope.subsystems)})
+        ORDER BY s.finding_id`,
+    )
+    .all(...scope.subsystems) as AttentionFinding[];
+  if (!scope.path_prefix) return rows;
+  const cited = new Set(
+    (
+      db
+        .prepare(
+          `SELECT DISTINCT fe.finding_id FROM finding_evidence fe
+             JOIN evidence e ON e.id = fe.evidence_id
+            WHERE e.file_path LIKE ? ESCAPE '\\'`,
+        )
+        .all(`${likeEscape(scope.path_prefix)}%`) as { finding_id: string }[]
+    ).map((row) => row.finding_id),
+  );
+  return rows.filter((row) => {
+    if (cited.has(row.finding_id)) return true;
+    if (!row.primary_files) return false;
+    let entries: unknown;
+    try {
+      entries = JSON.parse(row.primary_files);
+    } catch {
+      return false;
+    }
+    if (!Array.isArray(entries)) return false;
+    return entries.some((entry) => {
+      if (typeof entry !== "string") return false;
+      const citation = entry.split("@")[0] ?? entry;
+      const colon = citation.indexOf(":");
+      const path = colon === -1 ? citation : citation.slice(0, colon);
+      return path.startsWith(scope.path_prefix as string);
+    });
+  });
+}
+
+/** The revision the response is read against: the reconciled head, else HEAD. */
+function checkedSha(db: DB, probe: CommitProbe): string | null {
+  const row = db
+    .prepare("SELECT last_checked_sha FROM git_state WHERE repo_id = 'default'")
+    .get() as { last_checked_sha: string | null } | undefined;
+  if (row?.last_checked_sha) return row.last_checked_sha;
+  return probe.head();
+}
+
+function severityOrder(a: AttentionFinding, b: AttentionFinding): number {
+  return (
+    severityRank(a.severity) - severityRank(b.severity) ||
+    a.subsystem_id.localeCompare(b.subsystem_id) ||
+    a.finding_id.localeCompare(b.finding_id)
+  );
+}
+
+function buildAttentionFindingSection(
+  name: "open" | "awaiting_verification",
+  findings: AttentionFinding[],
+  priorVerified: ReadonlySet<string>,
+  emptyStatement: string,
+): BudgetedSection {
+  const state = name === "open" ? "open" : "fixed-pending-verification";
+  const rows = findings.filter((row) => row.resolution_state === state).sort(severityOrder);
+  const items: Item[] = rows.map((row) => {
+    const regression = name === "open" && priorVerified.has(row.finding_id);
+    const item: Item = {
+      finding_id: row.finding_id,
+      label: regression ? "regression" : name === "open" ? "open" : "awaiting-verification",
+      severity: row.severity,
+      subsystem_id: row.subsystem_id,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "code",
+    };
+    if (regression) item.prior_verified_fixed = true;
+    return item;
+  });
+  const section: BudgetedSection = {
+    name,
+    source_rows: rows.length,
+    items,
+    ids: rows.map((row) => `finding:${row.finding_id}`),
+    policy_ids: [],
+    ordering_basis: "severity-then-subsystem-then-id",
+  };
+  if (rows.length === 0) section.statement = emptyStatement;
+  return section;
+}
+
+/** §5.2's `undiscriminated`: the three sources that share the one property. */
+function buildUndiscriminated(
+  db: DB,
+  scope: AttentionScope,
+  findingIds: ReadonlySet<string>,
+): BudgetedSection {
+  const items: Item[] = [];
+  const ids: string[] = [];
+  const contradictions = db
+    .prepare(
+      `SELECT id, finding_a, finding_b, conflict_type FROM contradictions
+        WHERE COALESCE(resolution,'unresolved') = 'unresolved' ORDER BY id`,
+    )
+    .all() as { id: number; finding_a: string; finding_b: string; conflict_type: string }[];
+  const scopedContradictions =
+    scope.kind === "project"
+      ? contradictions
+      : contradictions.filter(
+          (row) => findingIds.has(row.finding_a) || findingIds.has(row.finding_b),
+        );
+  for (const row of scopedContradictions) {
+    items.push({
+      kind: "contradiction",
+      contradiction_id: row.id,
+      label: "undiscriminated",
+      conflict_type: row.conflict_type,
+      findings: [row.finding_a, row.finding_b],
+      ref_sha: null,
+      revision_bound: false,
+      authored: "code",
+    });
+    ids.push(`contradiction:${row.id}`);
+  }
+  const matrices = (
+    scope.subsystems.length === 0
+      ? []
+      : (db
+          .prepare(
+            `SELECT id, subsystem_id, symptom, COALESCE(outcome,'open') AS outcome
+               FROM diagnosticity_sessions
+              WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')
+                AND subsystem_id IN (${placeholders(scope.subsystems)})
+              ORDER BY id`,
+          )
+          .all(...scope.subsystems) as {
+          id: number;
+          subsystem_id: string;
+          symptom: string;
+          outcome: string;
+        }[])
+  ) as { id: number; subsystem_id: string; symptom: string; outcome: string }[];
+  for (const row of matrices) {
+    items.push({
+      kind: "diagnosticity-matrix",
+      matrix_id: row.id,
+      label: "undiscriminated",
+      subsystem_id: row.subsystem_id,
+      outcome: row.outcome,
+      symptom: row.symptom,
+      ref_sha: null,
+      revision_bound: false,
+      authored: "model",
+    });
+    ids.push(`matrix:${row.id}`);
+  }
+  const dispositions =
+    scope.subsystems.length === 0
+      ? []
+      : (db
+          .prepare(
+            `SELECT subsystem_id, concern_code FROM dispositions
+              WHERE classification = 'unresolved-competition'
+                AND subsystem_id IN (${placeholders(scope.subsystems)})
+              ORDER BY subsystem_id, concern_code`,
+          )
+          .all(...scope.subsystems) as { subsystem_id: string; concern_code: string }[]);
+  for (const row of dispositions) {
+    items.push({
+      kind: "disposition",
+      subsystem_id: row.subsystem_id,
+      concern_code: row.concern_code,
+      label: "undiscriminated",
+      ref_sha: null,
+      revision_bound: false,
+      authored: "code",
+    });
+    ids.push(`disposition:${row.subsystem_id}/${row.concern_code}`);
+  }
+  const section: BudgetedSection = {
+    name: "undiscriminated",
+    source_rows: items.length,
+    items,
+    ids,
+    policy_ids: [],
+    counts: {
+      contradictions: scopedContradictions.length,
+      matrices: matrices.length,
+      dispositions: dispositions.length,
+    },
+    ordering_basis: "contradictions-then-matrices-then-dispositions-each-by-id",
+  };
+  if (items.length === 0) {
+    section.statement = "No record in scope holds two accounts the evidence does not pick between.";
+  }
+  return section;
+}
+
+/** §5.2's `decisions`: open questions, ADR-0010's `unknown` verbatim. */
+function buildDecisions(db: DB, scope: AttentionScope): BudgetedSection {
+  const rows = (
+    scope.kind === "project"
+      ? (db
+          .prepare(
+            `SELECT id, category, subsystem_id, question, ref_sha FROM open_questions
+              WHERE COALESCE(resolution,'open') = 'open' ORDER BY category, id`,
+          )
+          .all() as QuestionRow[])
+      : scope.subsystems.length === 0
+        ? []
+        : (db
+            .prepare(
+              `SELECT id, category, subsystem_id, question, ref_sha FROM open_questions
+                WHERE COALESCE(resolution,'open') = 'open'
+                  AND subsystem_id IN (${placeholders(scope.subsystems)})
+                ORDER BY category, id`,
+            )
+            .all(...scope.subsystems) as QuestionRow[])
+  ) as QuestionRow[];
+  const section: BudgetedSection = {
+    name: "decisions",
+    source_rows: rows.length,
+    items: rows.map((row) => ({
+      question_id: row.id,
+      label: "unknown",
+      category: row.category,
+      subsystem_id: row.subsystem_id,
+      question: row.question,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "model",
+    })),
+    ids: rows.map((row) => `question:${row.id}`),
+    policy_ids: [],
+    ordering_basis: "category-then-id",
+  };
+  if (rows.length === 0) {
+    section.statement = "No open question is recorded in scope.";
+  }
+  return section;
+}
+
+interface QuestionRow {
+  id: number;
+  category: string;
+  subsystem_id: string | null;
+  question: string;
+  ref_sha: string | null;
+}
+
+/**
+ * §5.2's `leads`. ADR-0010 defines `unverified-suspicion` over the
+ * `candidate-concern` category alone, and §10's label enum carries no value for
+ * an open note of another category, so the other four categories are census
+ * members excluded by policy rather than items given a label that would say
+ * something the record does not. Their count is exact and their ids are in the
+ * ledger, so the tool's answer still reconciles with the Leads page.
+ */
+function buildAttentionLeads(db: DB, scope: AttentionScope): BudgetedSection {
+  const rows = db
+    .prepare(
+      `SELECT id, category, observation, location, ref_sha FROM field_notes
+        WHERE COALESCE(follow_up,'open') = 'open' ORDER BY id`,
+    )
+    .all() as {
+    id: number;
+    category: string;
+    observation: string;
+    location: string | null;
+    ref_sha: string | null;
+  }[];
+  const inScope = rows.filter((row) => locationInScope(scope, row.location));
+  const suspicions = inScope.filter((row) => row.category === "candidate-concern");
+  const others = inScope.filter((row) => row.category !== "candidate-concern");
+  const byCategory: Record<string, number> = {};
+  for (const row of others) byCategory[row.category] = (byCategory[row.category] ?? 0) + 1;
+  const section: BudgetedSection = {
+    name: "leads",
+    source_rows: inScope.length,
+    items: suspicions.map((row) => ({
+      note_id: row.id,
+      label: "unverified-suspicion",
+      category: row.category,
+      observation: row.observation,
+      location: row.location,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "model",
+    })),
+    ids: suspicions.map((row) => `lead:${row.id}`),
+    policy_ids: others.map((row) => `lead:${row.id}`),
+    counts: { unverified_suspicion: suspicions.length, ...byCategory },
+    ordering_basis: "id",
+    statement:
+      others.length > 0
+        ? "Open leads of other categories are in the omission ledger under policy: unverified-suspicion is an open candidate-concern note, and no label here covers the rest."
+        : undefined,
+  };
+  if (inScope.length === 0) {
+    section.statement = "No lead is open in scope.";
+  }
+  return section;
+}
+
+interface StaleClaimRow {
+  claim_id: string;
+  claim_key: string;
+  subject_type: string;
+  subject_id: string;
+  valid_from_sha: string;
+  valid_until_sha: string;
+}
+
+/**
+ * §5.2's `stale`, the one label carrying two sources. ADR-0010's definition is
+ * over claims; §5.2 extends it to obligation-bearing ledger rows, which is the
+ * same epistemic state expressed over the ledger. Every item declares which,
+ * and the two are counted apart and never summed, because a count over both
+ * would be a property of the roster rather than of either population (VP6).
+ *
+ * The extension stops where §6.1 stops it: a `candidate` row's drift happened
+ * before anyone read the file, so calling it stale *knowledge* would assert a
+ * reading nobody took. Those rows are counted under their own name.
+ */
+function buildStale(
+  db: DB,
+  scope: AttentionScope,
+  probe: CommitProbe,
+  head: string | null,
+): BudgetedSection {
+  const claimRows = db
+    .prepare(
+      `SELECT claim_id, claim_key, subject_type, subject_id, valid_from_sha, valid_until_sha
+         FROM claims WHERE valid_until_sha IS NOT NULL ORDER BY claim_id`,
+    )
+    .all() as StaleClaimRow[];
+  const prefixes = scope.subsystems.map((id) => `${id}/`);
+  const scopedClaims = claimRows.filter((row) => {
+    if (scope.kind !== "project") {
+      const named =
+        scope.subsystems.includes(row.subject_id) ||
+        prefixes.some((prefix) => row.claim_key.startsWith(prefix)) ||
+        pathInScope(scope, row.subject_id.split(":")[0] ?? row.subject_id);
+      if (!named) return false;
+    }
+    // "Closed at or before the reviewed HEAD" is an ancestry question, never a
+    // text or wall-clock one (§3.3). A head git cannot resolve leaves the row
+    // out rather than admitting one the tool cannot place.
+    return head === null ? false : probe.isAncestor(row.valid_until_sha, head);
+  });
+  const ledgerRows = db
+    .prepare(
+      `SELECT subsystem_id, file_path, COALESCE(classification,'candidate') AS classification,
+              ref_sha, stale_reason, stale_since
+         FROM file_ledger
+        WHERE stale = 1
+          AND COALESCE(classification,'candidate')
+              NOT IN ('generated-ignore','vendor-ignore','irrelevant')
+        ORDER BY subsystem_id, file_path`,
+    )
+    .all() as {
+    subsystem_id: string;
+    file_path: string;
+    classification: string;
+    ref_sha: string | null;
+    stale_reason: string | null;
+    stale_since: string | null;
+  }[];
+  const scopedLedger = ledgerRows.filter(
+    (row) =>
+      (scope.kind === "project" || scope.subsystems.includes(row.subsystem_id)) &&
+      pathInScope(scope, row.file_path),
+  );
+  const examined = scopedLedger.filter((row) => row.classification === "examined");
+  const unread = scopedLedger.filter((row) => row.classification === "candidate");
+  const deferred = scopedLedger.filter((row) => row.classification === "deferred-with-reason");
+
+  const items: Item[] = [
+    ...scopedClaims.map((row) => ({
+      source: "claim",
+      label: "stale-knowledge",
+      claim_id: row.claim_id,
+      claim_key: row.claim_key,
+      subject_type: row.subject_type,
+      subject_id: row.subject_id,
+      closed_at_sha: row.valid_until_sha,
+      ref_sha: row.valid_until_sha,
+      revision_bound: true,
+      authored: "code",
+    })),
+    ...examined.map((row) => ({
+      source: "ledger",
+      label: "stale-knowledge",
+      subsystem_id: row.subsystem_id,
+      file_path: row.file_path,
+      classification: row.classification,
+      stale_reason: row.stale_reason,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "code",
+    })),
+  ];
+  const section: BudgetedSection = {
+    name: "stale",
+    source_rows: scopedClaims.length + scopedLedger.length,
+    items,
+    ids: [
+      ...scopedClaims.map((row) => `claim:${row.claim_id}`),
+      ...examined.map((row) => `ledger:${row.subsystem_id}/${row.file_path}`),
+    ],
+    policy_ids: [...unread, ...deferred].map(
+      (row) => `ledger:${row.subsystem_id}/${row.file_path}`,
+    ),
+    counts: {
+      claim: scopedClaims.length,
+      ledger: examined.length,
+      drifted_unread: unread.length,
+      drifted_deferred: deferred.length,
+    },
+    ordering_basis: "claims-then-ledger-rows-by-subsystem-and-path",
+    statement:
+      unread.length + deferred.length > 0
+        ? "The two sources are counted apart and never summed. Drifted rows nobody has read are in the ledger under policy: no reading of them has gone stale."
+        : "The two sources are counted apart and never summed.",
+  };
+  if (items.length === 0 && section.policy_ids.length === 0) {
+    section.statement = head
+      ? `No claim interval is closed at or before ${head.slice(0, 10)} and no obligation-bearing ledger row in scope is stale.`
+      : "No claim interval is closed and no obligation-bearing ledger row in scope is stale; the reviewed revision could not be resolved.";
+  }
+  return section;
+}
+
+/** §7.6's per-subsystem measures, each column a separate measure and no total. */
+function buildHotSpots(db: DB, scope: AttentionScope): BudgetedSection {
+  const ids = scope.subsystems;
+  if (ids.length === 0) {
+    return {
+      name: "hot_spots",
+      source_rows: 0,
+      items: [],
+      ids: [],
+      policy_ids: [],
+      statement: "No subsystem is in scope.",
+      ordering_basis: "open-critical-high-then-open-medium-low-then-unread-fraction-then-id",
+    };
+  }
+  const holder = placeholders(ids);
+  const counted = <T extends Record<string, unknown>>(sql: string, ...params: unknown[]): T[] =>
+    db.prepare(sql).all(...params) as T[];
+
+  const severityRows = counted<{ subsystem_id: string; severity: string; n: number }>(
+    `SELECT subsystem_id, severity, COUNT(*) AS n FROM finding_state_current
+      WHERE resolution_state = 'open' AND subsystem_id IN (${holder})
+      GROUP BY subsystem_id, severity`,
+    ...ids,
+  );
+  const awaitingRows = counted<{ subsystem_id: string; n: number }>(
+    `SELECT subsystem_id, COUNT(*) AS n FROM finding_state_current
+      WHERE resolution_state = 'fixed-pending-verification' AND subsystem_id IN (${holder})
+      GROUP BY subsystem_id`,
+    ...ids,
+  );
+  const matrixRows = counted<{ subsystem_id: string; n: number }>(
+    `SELECT subsystem_id, COUNT(*) AS n FROM diagnosticity_sessions
+      WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')
+        AND subsystem_id IN (${holder}) GROUP BY subsystem_id`,
+    ...ids,
+  );
+  const dispositionRows = counted<{ subsystem_id: string; n: number }>(
+    `SELECT subsystem_id, COUNT(*) AS n FROM dispositions
+      WHERE classification = 'unresolved-competition' AND subsystem_id IN (${holder})
+      GROUP BY subsystem_id`,
+    ...ids,
+  );
+  const contradictionRows = counted<{ subsystem_id: string; n: number }>(
+    `SELECT f.subsystem_id AS subsystem_id, COUNT(DISTINCT c.id) AS n
+       FROM contradictions c JOIN findings f
+         ON f.finding_id = c.finding_a OR f.finding_id = c.finding_b
+      WHERE COALESCE(c.resolution,'unresolved') = 'unresolved'
+        AND f.subsystem_id IN (${holder}) GROUP BY f.subsystem_id`,
+    ...ids,
+  );
+  const ledgerRows = counted<{
+    subsystem_id: string;
+    candidate: number;
+    obligation: number;
+    stale: number;
+  }>(
+    `SELECT subsystem_id,
+            SUM(CASE WHEN COALESCE(classification,'candidate') = 'candidate' THEN 1 ELSE 0 END) AS candidate,
+            SUM(CASE WHEN COALESCE(classification,'candidate')
+                     NOT IN ('generated-ignore','vendor-ignore','irrelevant') THEN 1 ELSE 0 END) AS obligation,
+            SUM(CASE WHEN stale = 1 AND COALESCE(classification,'candidate')
+                     NOT IN ('generated-ignore','vendor-ignore','irrelevant') THEN 1 ELSE 0 END) AS stale
+       FROM file_ledger WHERE subsystem_id IN (${holder}) GROUP BY subsystem_id`,
+    ...ids,
+  );
+  const bugQuality = counted<{ subsystem_id: string; evidence_quality: string | null }>(
+    `SELECT subsystem_id, evidence_quality FROM dispositions
+      WHERE classification = 'confirmed-bug' AND subsystem_id IN (${holder})`,
+    ...ids,
+  );
+  const seamRows = counted<{ seam_id: string; party_a: string; party_b: string }>(
+    "SELECT seam_id, party_a, party_b FROM seam_assessability",
+  );
+  const assessed = new Set(
+    counted<{ subsystem_id: string }>(
+      "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
+    ).map((row) => row.subsystem_id),
+  );
+  // §7.6 column 10: the column is omitted entirely when nothing was recorded,
+  // rather than printing a column of zeros over an empty table (VP4).
+  const accessRecorded =
+    (db.prepare("SELECT COUNT(*) AS n FROM access_log").get() as { n: number } | undefined)?.n ?? 0;
+  const accessRows = accessRecorded
+    ? counted<{ entry_id: string; n: number }>(
+        "SELECT entry_id, COUNT(*) AS n FROM access_log GROUP BY entry_id",
+      )
+    : [];
+
+  const sum = (rows: { subsystem_id: string; n: number }[], id: string): number =>
+    rows.filter((row) => row.subsystem_id === id).reduce((total, row) => total + row.n, 0);
+
+  const items: Item[] = ids.map((id) => {
+    const severityOf = (names: string[]): number =>
+      severityRows
+        .filter((row) => row.subsystem_id === id && names.includes(row.severity))
+        .reduce((total, row) => total + row.n, 0);
+    const ledger = ledgerRows.find((row) => row.subsystem_id === id) ?? {
+      subsystem_id: id,
+      candidate: 0,
+      obligation: 0,
+      stale: 0,
+    };
+    const qualities = bugQuality
+      .filter((row) => row.subsystem_id === id)
+      .map((row) => row.evidence_quality)
+      .filter((value): value is string => typeof value === "string");
+    // Weakest, not strongest: the ladder ranks strongest first, so the largest
+    // rank is the reading a confirmed bug rests on at its weakest point.
+    let weakest: string | null = null;
+    let weakestRank = -1;
+    for (const quality of qualities) {
+      const rank = (EVIDENCE_KINDS as readonly string[]).indexOf(quality);
+      const effective = rank < 0 ? EVIDENCE_KINDS.length : rank;
+      if (effective > weakestRank) {
+        weakestRank = effective;
+        weakest = quality;
+      }
+    }
+    const seams = seamRows.filter((row) => row.party_a === id || row.party_b === id);
+    let unassessedSides = 0;
+    for (const seam of seams) {
+      for (const party of [seam.party_a, seam.party_b]) {
+        if (!assessed.has(party)) unassessedSides += 1;
+      }
+    }
+    const item: Item = {
+      subsystem_id: id,
+      open_critical_high: severityOf(["CRITICAL", "HIGH"]),
+      open_medium_low: severityOf(["MEDIUM", "LOW"]),
+      awaiting_verification: sum(awaitingRows, id),
+      undiscriminated: sum(contradictionRows, id) + sum(matrixRows, id) + sum(dispositionRows, id),
+      weakest_confirmed_bug_evidence: weakest,
+      unread: { candidate: ledger.candidate, obligation_bearing: ledger.obligation },
+      stale_files: ledger.stale,
+      unassessed_seam_sides: { sides: unassessedSides, of: seams.length * 2 },
+      ref_sha: null,
+      revision_bound: false,
+      authored: "code",
+    };
+    if (accessRecorded) {
+      item.access_heat = accessRows
+        .filter((row) => row.entry_id === id)
+        .reduce((total, row) => total + row.n, 0);
+    }
+    return item;
+  });
+  // §7.6's sort. There is no composite column and no total row: each measure
+  // is read on its own, and the order only decides which row is read first.
+  const fraction = (item: Item): number => {
+    const unread = item.unread as { candidate: number; obligation_bearing: number };
+    return unread.obligation_bearing === 0 ? 0 : unread.candidate / unread.obligation_bearing;
+  };
+  items.sort(
+    (a, b) =>
+      Number(b.open_critical_high) - Number(a.open_critical_high) ||
+      Number(b.open_medium_low) - Number(a.open_medium_low) ||
+      fraction(b) - fraction(a) ||
+      String(a.subsystem_id).localeCompare(String(b.subsystem_id)),
+  );
+  return {
+    name: "hot_spots",
+    source_rows: items.length,
+    items,
+    ids: items.map((item) => `subsystem:${String(item.subsystem_id)}`),
+    policy_ids: [],
+    ordering_basis: "open-critical-high-then-open-medium-low-then-unread-fraction-then-id",
+    // §2.4.6: a disposition carries no seam id, so `unassessed_seam_sides` is
+    // counted over each party's own SC-prefixed dispositions — a proxy for the
+    // side, not an assessment of the seam. §7.6 column 10 is omitted entirely
+    // rather than printed as zeros over an empty table (VP4).
+    seam_binding: "per-party-proxy",
+    statement: accessRecorded ? undefined : "Access heat is not measured: access_log holds no row.",
+  };
+}
+
+function getAttentionHandler(args: Record<string, unknown>, ctx: ServerContext) {
+  const requestedScope = optString(args, "scope");
+  const requestedSections = optStringArray(args, "sections");
+  const limitArgument = args.limit;
+  let limit: number | null = null;
+  if (limitArgument !== undefined && limitArgument !== null) {
+    if (
+      typeof limitArgument !== "number" ||
+      !Number.isInteger(limitArgument) ||
+      limitArgument < 1
+    ) {
+      throw new ToolError("limit must be a positive integer");
+    }
+    limit = limitArgument;
+  }
+  if (requestedSections) {
+    for (const name of requestedSections) {
+      if (!(ATTENTION_SECTIONS as readonly string[]).includes(name)) {
+        throw new ToolError(`unknown section: ${name}`);
+      }
+    }
+  }
+  const db = ctx.db;
+  const probe = new CommitProbe(ctx);
+  const scope = resolveAttentionScope(db, requestedScope);
+  const head = checkedSha(db, probe);
+  const findings = attentionFindings(db, scope);
+  const findingIds = new Set(findings.map((row) => row.finding_id));
+  const priorVerified = new Set(
+    (
+      db
+        .prepare(
+          "SELECT DISTINCT finding_id FROM finding_resolution_events WHERE resolution_state = 'verified-fixed'",
+        )
+        .all() as { finding_id: string }[]
+    ).map((row) => row.finding_id),
+  );
+  const ledgerCounts = db
+    .prepare(
+      `SELECT COUNT(*) AS scoped,
+              SUM(CASE WHEN classification = 'examined' THEN 1 ELSE 0 END) AS examined,
+              SUM(CASE WHEN COALESCE(classification,'candidate') = 'candidate' THEN 1 ELSE 0 END) AS candidate
+         FROM file_ledger`,
+    )
+    .get() as { scoped: number; examined: number | null; candidate: number | null };
+  // §6.1's empty state: scope, basis, and the checked revision are always
+  // present, and an empty answer never renders as a bare "none".
+  const emptyOpen = `No open finding is recorded at ${head ? head.slice(0, 10) : "an unresolved revision"} over ${ledgerCounts.examined ?? 0} examined file(s) in ${scope.subsystems.length} subsystem(s); ${ledgerCounts.candidate ?? 0} file(s) are scoped but not yet read.`;
+
+  const sections: BudgetedSection[] = [
+    buildAttentionFindingSection("open", findings, priorVerified, emptyOpen),
+    buildAttentionFindingSection(
+      "awaiting_verification",
+      findings,
+      priorVerified,
+      "No repair is awaiting verification in scope.",
+    ),
+    buildUndiscriminated(db, scope, findingIds),
+    buildDecisions(db, scope),
+    buildAttentionLeads(db, scope),
+    buildStale(db, scope, probe, head),
+    buildHotSpots(db, scope),
+  ];
+
+  // A subtractive guard, in the substrate rather than in a comment (GP8): a
+  // label outside §10's enum never reaches a caller, whatever a later section
+  // builder decides to write.
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (section.name === "hot_spots") continue;
+      if (!(ATTENTION_LABELS as readonly string[]).includes(String(item.label))) {
+        throw new ToolError(
+          `section ${section.name} produced the label ${String(item.label)}, which the vocabulary source does not carry`,
+        );
+      }
+    }
+  }
+
+  const wanted = new Set<string>(requestedSections ?? ATTENTION_SECTIONS);
+  return serveWithinBudget(
+    sections,
+    ATTENTION_WIRE_BUDGET,
+    limit,
+    ATTENTION_RETENTION,
+    (name) => wanted.has(name),
+    ({ sections: views, census, omitted, trace }) => ({
+      contract_version: ATTENTION_CONTRACT_VERSION,
+      scope: {
+        requested: scope.requested,
+        kind: scope.kind,
+        subsystems: scope.subsystems,
+        path_prefix: scope.path_prefix,
+        resolved: scope.resolved,
+      },
+      checked_sha: head,
+      sections: views,
+      census,
+      omitted,
+      trace,
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §5.3: get_history
+// ---------------------------------------------------------------------------
+
+/**
+ * §1.1's two sentences, carried on the sections whose record family keeps no
+ * event trail. A History surface that ordered these silently would imply an
+ * account of how they reached their state that the store does not hold.
+ */
+const QUESTION_ORDER_STATEMENT = "When this reached its state is recorded; how it did is not.";
+const LEAD_ORDER_STATEMENT =
+  "Neither when nor how this lead reached its state is recorded, only that it did; the order below is the order the leads were opened.";
+
+interface HistorySubject {
+  kind: "locus" | "finding";
+  locus: ResolvedLocus | null;
+  scope: AccountScope | null;
+  findingIds: string[];
+  owners: string[];
+  path: string | null;
+}
+
+function resolveHistorySubject(ctx: ServerContext, args: Record<string, unknown>): HistorySubject {
+  const locusArgument = optString(args, "locus");
+  const findingArgument = optString(args, "finding_id");
+  if ((locusArgument === null) === (findingArgument === null)) {
+    throw new ToolError("exactly one of locus or finding_id is required");
+  }
+  if (findingArgument !== null) {
+    const row = ctx.db
+      .prepare("SELECT finding_id, subsystem_id FROM findings WHERE finding_id = ?")
+      .get(findingArgument) as { finding_id: string; subsystem_id: string } | undefined;
+    if (!row) throw new ToolError(`unknown finding: ${findingArgument}`);
+    return {
+      kind: "finding",
+      locus: null,
+      scope: null,
+      findingIds: [row.finding_id],
+      owners: [row.subsystem_id],
+      path: null,
+    };
+  }
+  const { locus } = describeLocusStanding(ctx, locusArgument as string, null);
+  const scope = buildScope(ctx.db, locus);
+  const findings = matchingFindings(ctx.db, scope);
+  return {
+    kind: "locus",
+    locus,
+    scope,
+    findingIds: findings.map((row) => row.finding_id),
+    owners: scope.owners,
+    path: scope.path,
+  };
+}
+
+function buildResolutionHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  const rows = subject.findingIds.length
+    ? (db
+        .prepare(
+          `SELECT id, finding_id, resolution_state, fix_sha, fix_location, rationale, recorded_at
+             FROM finding_resolution_events
+            WHERE finding_id IN (${placeholders(subject.findingIds)})
+            ORDER BY id DESC`,
+        )
+        .all(...subject.findingIds) as ResolutionEventRow[])
+    : [];
+  return {
+    name: "resolutions",
+    source_rows: rows.length,
+    items: rows.map((row) => ({
+      event_id: row.id,
+      finding_id: row.finding_id,
+      resolution_state: row.resolution_state,
+      recorded_at: row.recorded_at,
+      rationale: row.rationale,
+      ref_sha: row.fix_sha,
+      revision_bound: row.fix_sha !== null,
+      authored: "model",
+    })),
+    ids: rows.map((row) => `event:${row.id}`),
+    policy_ids: [],
+    ordering_basis: "event-id-descending",
+    statement: rows.length === 0 ? "No resolution event is recorded for this subject." : undefined,
+  };
+}
+
+function buildClaimHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  if (subject.kind === "finding") {
+    return {
+      name: "claims",
+      source_rows: 0,
+      items: [],
+      ids: [],
+      policy_ids: [],
+      ordering_basis: "event-id-descending",
+      statement: "Claims are recorded against a locus, not against a finding.",
+    };
+  }
+  const scope = subject.scope as AccountScope;
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  if (scope.subjectIds.length) {
+    conditions.push(`c.subject_id IN (${placeholders(scope.subjectIds)})`);
+    params.push(...scope.subjectIds);
+  }
+  if (scope.claimKeyPrefix) {
+    conditions.push("c.claim_key LIKE ? ESCAPE '\\'");
+    params.push(scope.claimKeyPrefix);
+  }
+  const cites = evidenceMatch(scope);
+  if (cites) {
+    conditions.push(
+      `EXISTS (SELECT 1 FROM claim_evidence ce JOIN evidence e ON e.id = ce.evidence_id
+                WHERE ce.claim_id = c.claim_id AND ${cites.sql})`,
+    );
+    params.push(...cites.params);
+  }
+  if (conditions.length === 0) {
+    return {
+      name: "claims",
+      source_rows: 0,
+      items: [],
+      ids: [],
+      policy_ids: [],
+      ordering_basis: "event-id-descending",
+      statement: "No claim names this locus.",
+    };
+  }
+  const where = conditions.join(" OR ");
+  const events = db
+    .prepare(
+      `SELECT v.id, v.claim_id, v.event_type, v.at_sha, v.reason, v.created_at
+         FROM claim_validity_events v JOIN claims c ON c.claim_id = v.claim_id
+        WHERE ${where} ORDER BY v.id DESC`,
+    )
+    .all(...params) as {
+    id: number;
+    claim_id: string;
+    event_type: string;
+    at_sha: string;
+    reason: string;
+    created_at: string;
+  }[];
+  const supersessions = db
+    .prepare(
+      `SELECT s.predecessor_claim_id, s.successor_claim_id, s.at_sha, s.rationale, s.created_at
+         FROM claim_supersessions s JOIN claims c ON c.claim_id = s.predecessor_claim_id
+        WHERE ${where} ORDER BY s.created_at DESC, s.predecessor_claim_id DESC`,
+    )
+    .all(...params) as {
+    predecessor_claim_id: string;
+    successor_claim_id: string;
+    at_sha: string;
+    rationale: string;
+    created_at: string;
+  }[];
+  const items: Item[] = [
+    ...supersessions.map((row) => ({
+      kind: "supersession",
+      predecessor_claim_id: row.predecessor_claim_id,
+      successor_claim_id: row.successor_claim_id,
+      recorded_at: row.created_at,
+      rationale: row.rationale,
+      ref_sha: row.at_sha,
+      revision_bound: true,
+      authored: "model",
+    })),
+    ...events.map((row) => ({
+      kind: "validity-event",
+      event_id: row.id,
+      claim_id: row.claim_id,
+      event_type: row.event_type,
+      recorded_at: row.created_at,
+      reason: row.reason,
+      ref_sha: row.at_sha,
+      revision_bound: true,
+      authored: "model",
+    })),
+  ];
+  return {
+    name: "claims",
+    source_rows: items.length,
+    items,
+    ids: [
+      ...supersessions.map((row) => `supersession:${row.predecessor_claim_id}`),
+      ...events.map((row) => `claim-event:${row.id}`),
+    ],
+    policy_ids: [],
+    ordering_basis: "supersessions-then-validity-events-newest-first",
+    statement:
+      items.length === 0
+        ? "No claim about this locus has been superseded or invalidated."
+        : undefined,
+  };
+}
+
+function buildContradictionHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  const rows = subject.findingIds.length
+    ? (db
+        .prepare(
+          `SELECT e.id, e.contradiction_id, e.resolution, e.scope_note, e.rationale, e.recorded_at,
+                  c.finding_a, c.finding_b
+             FROM contradiction_resolution_events e
+             JOIN contradictions c ON c.id = e.contradiction_id
+            WHERE c.finding_a IN (${placeholders(subject.findingIds)})
+               OR c.finding_b IN (${placeholders(subject.findingIds)})
+            ORDER BY e.id DESC`,
+        )
+        .all(...subject.findingIds, ...subject.findingIds) as {
+        id: number;
+        contradiction_id: number;
+        resolution: string;
+        scope_note: string | null;
+        rationale: string;
+        recorded_at: string;
+        finding_a: string;
+        finding_b: string;
+      }[])
+    : [];
+  return {
+    name: "contradictions",
+    source_rows: rows.length,
+    items: rows.map((row) => ({
+      event_id: row.id,
+      contradiction_id: row.contradiction_id,
+      resolution: row.resolution,
+      findings: [row.finding_a, row.finding_b],
+      recorded_at: row.recorded_at,
+      rationale: row.rationale,
+      ref_sha: null,
+      revision_bound: false,
+      authored: "model",
+    })),
+    ids: rows.map((row) => `contradiction-event:${row.id}`),
+    policy_ids: [],
+    ordering_basis: "event-id-descending",
+    statement:
+      rows.length === 0 ? "No contradiction touching this subject has been resolved." : undefined,
+  };
+}
+
+function buildQuestionHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  const owners = subject.owners;
+  const rows = owners.length
+    ? (db
+        .prepare(
+          `SELECT id, category, subsystem_id, question, answer, resolution, resolved_at, ref_sha
+             FROM open_questions
+            WHERE resolution IN ('answered','dismissed','superseded')
+              AND subsystem_id IN (${placeholders(owners)})
+            ORDER BY resolved_at DESC, id DESC`,
+        )
+        .all(...owners) as {
+        id: number;
+        category: string;
+        subsystem_id: string | null;
+        question: string;
+        answer: string | null;
+        resolution: string;
+        resolved_at: string | null;
+        ref_sha: string | null;
+      }[])
+    : [];
+  return {
+    name: "questions",
+    source_rows: rows.length,
+    items: rows.map((row) => ({
+      question_id: row.id,
+      resolution: row.resolution,
+      category: row.category,
+      subsystem_id: row.subsystem_id,
+      question: row.question,
+      resolved_at: row.resolved_at,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "model",
+    })),
+    ids: rows.map((row) => `question:${row.id}`),
+    policy_ids: [],
+    ordering_basis: "resolved_at-descending-then-id",
+    statement: rows.length
+      ? QUESTION_ORDER_STATEMENT
+      : "No question about this subject has been answered, dismissed, or superseded.",
+  };
+}
+
+function buildLeadHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  const rows = db
+    .prepare(
+      `SELECT id, category, observation, location, follow_up, ref_sha, created_at
+         FROM field_notes WHERE COALESCE(follow_up,'open') <> 'open' ORDER BY id DESC`,
+    )
+    .all() as {
+    id: number;
+    category: string;
+    observation: string;
+    location: string | null;
+    follow_up: string;
+    ref_sha: string | null;
+    created_at: string;
+  }[];
+  const matched = rows.filter((row) => {
+    if (subject.kind === "finding") return row.follow_up === subject.findingIds[0];
+    const tokens = (row.location ?? "")
+      .split(",")
+      .map((token) => token.trim())
+      .filter((token) => token.length > 0);
+    return tokens.some((token) => {
+      if (subject.owners.includes(token)) return true;
+      if (!subject.path) return false;
+      const path = token.split("@")[0]?.split(":")[0] ?? token;
+      return path === subject.path;
+    });
+  });
+  return {
+    name: "leads",
+    source_rows: matched.length,
+    items: matched.map((row) => ({
+      note_id: row.id,
+      follow_up: row.follow_up,
+      category: row.category,
+      observation: row.observation,
+      location: row.location,
+      ref_sha: row.ref_sha,
+      revision_bound: row.ref_sha !== null,
+      authored: "model",
+    })),
+    ids: matched.map((row) => `lead:${row.id}`),
+    policy_ids: [],
+    ordering_basis: "id-descending",
+    statement: matched.length
+      ? LEAD_ORDER_STATEMENT
+      : "No lead about this subject has been closed.",
+  };
+}
+
+function buildSessionHistory(db: DB, subject: HistorySubject): BudgetedSection {
+  // C24's declared attribution: a session reaches a subject only through a row
+  // that cites it — evidence collected there, or a finding it recorded — never
+  // through a claim that the session touched the file.
+  const sessionIds = new Set<string>();
+  if (subject.scope) {
+    const cites = evidenceMatch(subject.scope);
+    if (cites) {
+      for (const row of db
+        .prepare(
+          `SELECT DISTINCT e.session_id FROM evidence e WHERE ${cites.sql} AND e.session_id IS NOT NULL`,
+        )
+        .all(...cites.params) as { session_id: string }[]) {
+        sessionIds.add(row.session_id);
+      }
+    }
+  }
+  if (subject.findingIds.length) {
+    for (const row of db
+      .prepare(
+        `SELECT DISTINCT session_id FROM findings
+          WHERE finding_id IN (${placeholders(subject.findingIds)}) AND session_id IS NOT NULL`,
+      )
+      .all(...subject.findingIds) as { session_id: string }[]) {
+      sessionIds.add(row.session_id);
+    }
+    for (const row of db
+      .prepare(
+        `SELECT DISTINCT session_id FROM finding_resolution_events
+          WHERE finding_id IN (${placeholders(subject.findingIds)}) AND session_id IS NOT NULL`,
+      )
+      .all(...subject.findingIds) as { session_id: string }[]) {
+      sessionIds.add(row.session_id);
+    }
+  }
+  const ids = [...sessionIds];
+  const rows = ids.length
+    ? (db
+        .prepare(
+          `SELECT session_id, intent, started_at, ended_at, outcome FROM sessions
+            WHERE session_id IN (${placeholders(ids)}) ORDER BY started_at DESC, session_id DESC`,
+        )
+        .all(...ids) as {
+        session_id: string;
+        intent: string;
+        started_at: string;
+        ended_at: string | null;
+        outcome: string | null;
+      }[])
+    : [];
+  return {
+    name: "sessions",
+    source_rows: rows.length,
+    items: rows.map((row) => ({
+      session_id: row.session_id,
+      intent: row.intent,
+      started_at: row.started_at,
+      ended_at: row.ended_at,
+      outcome: row.outcome,
+      ref_sha: null,
+      revision_bound: false,
+      authored: "code",
+    })),
+    ids: rows.map((row) => `session:${row.session_id}`),
+    policy_ids: [],
+    session_attribution: "by-citation",
+    ordering_basis: "started_at-descending",
+    statement: rows.length === 0 ? "No session cites this subject." : undefined,
+  };
+}
+
+function getHistoryHandler(args: Record<string, unknown>, ctx: ServerContext) {
+  const limitArgument = args.limit;
+  let limit: number | null = null;
+  if (limitArgument !== undefined && limitArgument !== null) {
+    if (
+      typeof limitArgument !== "number" ||
+      !Number.isInteger(limitArgument) ||
+      limitArgument < 1
+    ) {
+      throw new ToolError("limit must be a positive integer");
+    }
+    limit = limitArgument;
+  }
+  const db = ctx.db;
+  const subject = resolveHistorySubject(ctx, args);
+  const sections: BudgetedSection[] = [
+    buildResolutionHistory(db, subject),
+    buildClaimHistory(db, subject),
+    buildContradictionHistory(db, subject),
+    buildQuestionHistory(db, subject),
+    buildLeadHistory(db, subject),
+    buildSessionHistory(db, subject),
+  ];
+  return serveWithinBudget(
+    sections,
+    HISTORY_WIRE_BUDGET,
+    limit,
+    HISTORY_RETENTION,
+    () => true,
+    ({ sections: views, census, omitted, trace }) => ({
+      contract_version: LOCUS_HISTORY_CONTRACT_VERSION,
+      subject: {
+        kind: subject.kind,
+        locus: subject.locus,
+        finding_id: subject.kind === "finding" ? subject.findingIds[0] : null,
+      },
+      sections: views,
+      census,
+      omitted,
+      trace,
+    }),
+  );
+}
+
 export const locusTools: ToolDefinition[] = [
   {
     name: "describe_locus",
@@ -1760,5 +3389,40 @@ export const locusTools: ToolDefinition[] = [
     // budget is measured on the bytes the host receives.
     compact: true,
     handler: describeLocusHandler,
+  },
+  {
+    name: "get_attention",
+    description:
+      "Return what the conspectus records as unresolved: open findings and regressions, repairs awaiting verification, records where two credible accounts still stand, open questions, unverified suspicions, knowledge the repository has moved under, and per-subsystem measures. Every item carries an operational label whose meaning is fixed by the reader's guide. Reads only; makes no model call and generates no text. Pass `scope` to narrow to one subsystem id or one repository path prefix. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string", minLength: 1 },
+        sections: {
+          type: "array",
+          items: { type: "string", enum: [...ATTENTION_SECTIONS] },
+        },
+        limit: { type: "integer", minimum: 1 },
+      },
+      additionalProperties: false,
+    },
+    compact: true,
+    handler: getAttentionHandler,
+  },
+  {
+    name: "get_history",
+    description:
+      "Return what the conspectus records as concluded about one locus or one finding: resolution events, claim supersessions and validity events, resolved contradictions, answered or dismissed questions, closed leads, and the sessions that cite the subject. Newest first, one page. Exactly one of `locus` or `finding_id` is required. Reads only; makes no model call and generates no text. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        locus: { type: "string", minLength: 1 },
+        finding_id: { type: "string", minLength: 1 },
+        limit: { type: "integer", minimum: 1 },
+      },
+      additionalProperties: false,
+    },
+    compact: true,
+    handler: getHistoryHandler,
   },
 ];

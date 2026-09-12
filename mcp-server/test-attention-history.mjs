@@ -491,6 +491,21 @@ function itemsOf(payload, name) {
   return Array.isArray(section?.items) ? section.items : [];
 }
 
+/**
+ * Every id the section's census holds: the ones it served plus the ones its
+ * ledger records. A byte budget decides how many rows fit; it never decides
+ * what the census holds, so membership is asserted here and selection is
+ * asserted separately.
+ */
+function censusIds(payload, section, servedId) {
+  const served = itemsOf(payload, section).map(servedId);
+  const ledger = (payload?.omitted ?? []).filter((entry) => entry.section === section);
+  for (const entry of ledger) {
+    if (entry.ids_truncated) return { ids: null, truncated: true };
+  }
+  return { ids: new Set([...served, ...ledger.flatMap((entry) => entry.ids ?? [])]), truncated: false };
+}
+
 function omittedIds(payload, section, reason) {
   const entries = Array.isArray(payload?.omitted) ? payload.omitted : [];
   const out = [];
@@ -650,21 +665,30 @@ await check("an open question is unknown, and a resolved one is not served", () 
 
 await check("a seeded unresolved-competition matrix is undiscriminated, with its two siblings", () => {
   if (attentionError) return attentionError;
-  const items = itemsOf(attention, "undiscriminated");
-  const matrix = items.find((item) => item.kind === "diagnosticity-matrix" && item.matrix_id === 1);
-  if (!matrix) return "the unresolved-competition matrix is not served in undiscriminated";
-  if (matrix.label !== "undiscriminated") return `the matrix carries ${JSON.stringify(matrix.label)}`;
-  if (items.some((item) => item.kind === "diagnosticity-matrix" && item.matrix_id === 2))
-    return "the resolved matrix is served as undiscriminated";
-  const contradiction = items.find((item) => item.kind === "contradiction" && item.contradiction_id === 1);
-  if (!contradiction) return "the unresolved contradiction is not served in undiscriminated";
-  if (items.some((item) => item.kind === "contradiction" && item.contradiction_id === 2))
-    return "the resolved contradiction is served as undiscriminated";
-  const disposition = items.find((item) => item.kind === "disposition" && item.concern_code === "CC-1");
-  if (!disposition) return "the unresolved-competition disposition is not served in undiscriminated";
-  if (items.some((item) => item.kind === "disposition" && item.concern_code === "CC-2"))
-    return "a confirmed-bug disposition is served as undiscriminated";
-  return null;
+  const { ids, truncated } = censusIds(attention, "undiscriminated", (item) =>
+    item.kind === "contradiction"
+      ? `contradiction:${item.contradiction_id}`
+      : item.kind === "diagnosticity-matrix"
+        ? `matrix:${item.matrix_id}`
+        : `disposition:${item.subsystem_id}/${item.concern_code}`,
+  );
+  if (truncated) return "the undiscriminated ledger truncated its ids, so membership cannot be read";
+  for (const expected of ["matrix:1", "contradiction:1", "disposition:B-01/CC-1"]) {
+    if (!ids.has(expected)) return `${expected} is neither served nor in the ledger`;
+  }
+  for (const refused of ["matrix:2", "contradiction:2", "disposition:B-01/CC-2"]) {
+    if (ids.has(refused)) return `${refused} is resolved and is in the undiscriminated census`;
+  }
+  if (ids.size !== 3) return `the census holds ${ids.size} members for three seeded rows`;
+  const counts = sectionOf(attention, "undiscriminated")?.counts ?? {};
+  if (counts.contradictions !== 1 || counts.matrices !== 1 || counts.dispositions !== 1)
+    return `the per-source counts read ${JSON.stringify(counts)}`;
+  for (const item of itemsOf(attention, "undiscriminated")) {
+    if (item.label !== "undiscriminated") return `a served item carries ${JSON.stringify(item.label)}`;
+  }
+  const matrix = itemsOf(attention, "undiscriminated").find((item) => item.kind === "diagnosticity-matrix");
+  if (!matrix) return "no matrix is served, so the label cannot be read off one";
+  return matrix.matrix_id === 1 ? null : `the matrix served is ${matrix.matrix_id}`;
 });
 
 await check("every served label is one of §5.2's seven, and no refused label appears anywhere", () => {
@@ -720,25 +744,35 @@ await check("every stale-knowledge item declares source claim or source ledger",
     if (item.source !== "claim" && item.source !== "ledger")
       return `a stale item declares the source ${JSON.stringify(item.source)}`;
   }
-  const claim = items.find((item) => item.source === "claim" && item.claim_id === "C-1");
-  if (!claim) return "the claim closed at the checked head is not served as stale-knowledge";
-  if (items.some((item) => item.source === "claim" && (item.claim_id === "C-2" || item.claim_id === "C-3")))
-    return "a current claim is served as stale knowledge";
-  const ledger = items.find((item) => item.source === "ledger" && item.file_path === "src/drifted.ts");
-  if (!ledger) return "the examined file the repository changed under is not served as stale-knowledge";
+  const { ids, truncated } = censusIds(attention, "stale", (item) =>
+    item.source === "claim" ? `claim:${item.claim_id}` : `ledger:${item.subsystem_id}/${item.file_path}`,
+  );
+  if (truncated) return "the stale ledger truncated its ids, so membership cannot be read";
+  if (!ids.has("claim:C-1")) return "the claim closed at the checked head is not in the stale census";
+  for (const current of ["claim:C-2", "claim:C-3"]) {
+    if (ids.has(current)) return `${current} is current and is in the stale census`;
+  }
+  if (!ids.has("ledger:B-01/src/drifted.ts"))
+    return "the examined file the repository changed under is not in the stale census";
   return null;
 });
 
 await check("a drifted file nobody has read is not labelled stale-knowledge", () => {
   if (attentionError) return attentionError;
-  const items = itemsOf(attention, "stale");
-  const unread = items.find((item) => item.file_path === "src/unread.ts" && item.label === "stale-knowledge");
-  if (unread) return "a `candidate` ledger row is served as stale knowledge, which asserts a reading nobody took";
-  const section = sectionOf(attention, "stale");
-  const counts = section?.counts ?? {};
+  for (const item of itemsOf(attention, "stale")) {
+    if (item.file_path === "src/unread.ts")
+      return "a `candidate` ledger row is served as stale knowledge, which asserts a reading nobody took";
+  }
+  const underBudget = omittedIds(attention, "stale", "budget");
+  if (underBudget.includes("ledger:B-01/src/unread.ts"))
+    return "the unread row is omitted under budget, so it was eligible to carry the label";
+  const underPolicy = omittedIds(attention, "stale", "policy");
+  if (!underPolicy.includes("ledger:B-01/src/unread.ts"))
+    return "the drifted unread row is neither served nor recorded under policy, so it vanished";
+  const counts = sectionOf(attention, "stale")?.counts ?? {};
   return typeof counts.drifted_unread === "number" && counts.drifted_unread >= 1
     ? null
-    : "the drifted unread row is neither served nor counted, so it vanished from the response";
+    : `the drifted unread row is not counted: ${JSON.stringify(counts)}`;
 });
 
 await check("the two stale sources are counted apart and never summed", () => {
@@ -833,27 +867,40 @@ emit("history");
 
 await check("get_history serves resolution events newest first", () => {
   if (historyError) return historyError;
-  const items = itemsOf(history, "resolutions");
+  const view = sectionOf(history, "resolutions");
+  if (view?.census !== 6) return `the resolutions census is ${view?.census} on a store holding six events`;
+  const items = view.items ?? [];
   const ids = items.map((item) => item.event_id);
-  if (ids.length < 2) return `only ${ids.length} resolution event(s) are served on a store holding six`;
+  if (ids.length === 0) return "no resolution event is served";
   const sorted = [...ids].sort((a, b) => b - a);
   if (JSON.stringify(ids) !== JSON.stringify(sorted)) return `the events are served ${JSON.stringify(ids)}`;
-  const states = new Set(items.map((item) => item.resolution_state));
-  return states.has("verified-fixed") ? null : "the verified-fixed event is not served";
+  if (ids[0] !== 6) return `the newest event is ${ids[0]}, so the page is not newest-first`;
+  const census = censusIds(history, "resolutions", (item) => `event:${item.event_id}`);
+  if (census.truncated) return "the resolutions ledger truncated its ids";
+  for (let id = 1; id <= 6; id += 1) {
+    if (!census.ids.has(`event:${id}`)) return `event:${id} is neither served nor in the ledger`;
+  }
+  return null;
 });
 
 await check("get_history serves claim supersessions and validity events", () => {
   if (historyError) return historyError;
-  const items = itemsOf(history, "claims");
-  const supersession = items.find((item) => item.kind === "supersession");
-  if (!supersession) return "no claim supersession is served";
+  const view = sectionOf(history, "claims");
+  if (view?.census !== 3) return `the claims census is ${view?.census} for one supersession and two validity events`;
+  const { ids, truncated } = censusIds(history, "claims", (item) =>
+    item.kind === "supersession" ? `supersession:${item.predecessor_claim_id}` : `claim-event:${item.event_id}`,
+  );
+  if (truncated) return "the claims ledger truncated its ids, so membership cannot be read";
+  for (const expected of ["supersession:C-1", "claim-event:1", "claim-event:2"]) {
+    if (!ids.has(expected)) return `${expected} is neither served nor in the ledger`;
+  }
+  const supersession = (view.items ?? []).find((item) => item.kind === "supersession");
+  if (!supersession) return "the supersession is not the first thing served, so a reader sees no conclusion";
   if (supersession.predecessor_claim_id !== "C-1" || supersession.successor_claim_id !== "C-3")
     return `the supersession reads ${JSON.stringify([supersession.predecessor_claim_id, supersession.successor_claim_id])}`;
-  const events = items.filter((item) => item.kind === "validity-event");
-  if (events.length < 2) return `only ${events.length} claim validity event(s) are served on a store holding two`;
-  const ids = events.map((item) => item.event_id);
-  const sorted = [...ids].sort((a, b) => b - a);
-  return JSON.stringify(ids) === JSON.stringify(sorted) ? null : `the events are served ${JSON.stringify(ids)}`;
+  const events = (view.items ?? []).filter((item) => item.kind === "validity-event").map((item) => item.event_id);
+  const sorted = [...events].sort((a, b) => b - a);
+  return JSON.stringify(events) === JSON.stringify(sorted) ? null : `the events are served ${JSON.stringify(events)}`;
 });
 
 await check("get_history serves contradiction resolutions, and only resolved ones", () => {
@@ -867,16 +914,28 @@ await check("get_history serves contradiction resolutions, and only resolved one
 
 await check("get_history serves closed questions and resolved leads, newest first by their own basis", () => {
   if (historyError) return historyError;
-  const questions = itemsOf(history, "questions");
-  const ids = questions.map((item) => item.question_id);
-  if (!ids.includes(2) || !ids.includes(3)) return `the closed questions served are ${JSON.stringify(ids)}`;
-  if (ids.includes(1)) return "the open question is served as history";
-  if (ids[0] !== 3) return `the questions are not newest-first by resolved_at: ${JSON.stringify(ids)}`;
-  const leads = itemsOf(history, "leads");
-  const leadIds = leads.map((item) => item.note_id);
-  if (!leadIds.includes(3) || !leadIds.includes(4)) return `the closed leads served are ${JSON.stringify(leadIds)}`;
-  if (leadIds.includes(1) || leadIds.includes(2)) return "an open lead is served as history";
-  if (leadIds[0] !== 4) return `the leads are not in descending id order: ${JSON.stringify(leadIds)}`;
+  const questions = censusIds(history, "questions", (item) => `question:${item.question_id}`);
+  if (questions.truncated) return "the questions ledger truncated its ids";
+  for (const expected of ["question:2", "question:3"]) {
+    if (!questions.ids.has(expected)) return `${expected} is neither served nor in the ledger`;
+  }
+  if (questions.ids.has("question:1")) return "the open question is in the history census";
+  const servedQuestions = itemsOf(history, "questions").map((item) => item.question_id);
+  if (servedQuestions[0] !== 3)
+    return `the newest closed question by resolved_at is not served first: ${JSON.stringify(servedQuestions)}`;
+  if (!String(sectionOf(history, "questions")?.statement ?? "").includes("how it did is not"))
+    return "the questions section does not carry §1.1's sentence about what the store does not record";
+
+  const leads = censusIds(history, "leads", (item) => `lead:${item.note_id}`);
+  if (leads.truncated) return "the leads ledger truncated its ids";
+  for (const expected of ["lead:3", "lead:4"]) {
+    if (!leads.ids.has(expected)) return `${expected} is neither served nor in the ledger`;
+  }
+  for (const open of ["lead:1", "lead:2"]) {
+    if (leads.ids.has(open)) return `${open} is open and is in the history census`;
+  }
+  const servedLeads = itemsOf(history, "leads").map((item) => item.note_id);
+  if (servedLeads[0] !== 4) return `the leads are not in descending id order: ${JSON.stringify(servedLeads)}`;
   const statement = String(sectionOf(history, "leads")?.statement ?? "");
   return statement.includes("the order below is the order the leads were opened")
     ? null
@@ -886,11 +945,14 @@ await check("get_history serves closed questions and resolved leads, newest firs
 await check("get_history serves the sessions attributed to the locus by citation, newest first", () => {
   if (historyError) return historyError;
   const view = sectionOf(history, "sessions");
-  const items = view?.items ?? [];
-  const ids = items.map((item) => item.session_id);
-  if (!ids.includes("s-1") || !ids.includes("s-2")) return `the sessions served are ${JSON.stringify(ids)}`;
-  if (ids[0] !== "s-2") return `the sessions are not newest-first by started_at: ${JSON.stringify(ids)}`;
-  for (const item of items) {
+  const { ids, truncated } = censusIds(history, "sessions", (item) => `session:${item.session_id}`);
+  if (truncated) return "the sessions ledger truncated its ids";
+  for (const expected of ["session:s-1", "session:s-2"]) {
+    if (!ids.has(expected)) return `${expected} is neither served nor in the ledger`;
+  }
+  const served = (view?.items ?? []).map((item) => item.session_id);
+  if (served[0] !== "s-2") return `the sessions are not newest-first by started_at: ${JSON.stringify(served)}`;
+  for (const item of view?.items ?? []) {
     for (const field of ["intent", "started_at", "ended_at", "outcome"]) {
       if (!(field in item)) return `a session row carries no ${field}`;
     }

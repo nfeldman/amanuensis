@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/locus-history/1.0.0",
+  "title": "Amanuensis locus history",
+  "description": "The get_history response: what the conspectus records as concluded about one locus or one finding, newest first, one page. Only findings and contradictions carry an append-only event trail; the other families record a terminal state and say what they do not record about how it was reached (\u00a71.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "subject",
+    "sections",
+    "census",
+    "omitted",
+    "trace"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0.0"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "locus",
+        "finding_id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "locus",
+            "finding"
+          ]
+        },
+        "locus": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "finding_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resolutions",
+        "claims",
+        "contradictions",
+        "questions",
+        "leads",
+        "sessions"
+      ],
+      "properties": {
+        "resolutions": {
+          "$ref": "#/$defs/section"
+        },
+        "claims": {
+          "$ref": "#/$defs/section"
+        },
+        "contradictions": {
+          "$ref": "#/$defs/section"
+        },
+        "questions": {
+          "$ref": "#/$defs/section"
+        },
+        "leads": {
+          "$ref": "#/$defs/section"
+        },
+        "sessions": {
+          "$ref": "#/$defs/section"
+        }
+      }
+    },
+    "census": {
+      "$ref": "#/$defs/census"
+    },
+    "omitted": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/omission"
+      }
+    },
+    "trace": {
+      "$ref": "#/$defs/trace"
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "description": "One concluded record. Every item states the revision it is bound to and who authored its durable text; a family whose rows carry no revision says so with ref_sha null rather than borrowing one.",
+      "required": [
+        "ref_sha",
+        "revision_bound",
+        "authored"
+      ],
+      "properties": {
+        "ref_sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision_bound": {
+          "type": "boolean"
+        },
+        "authored": {
+          "enum": [
+            "model",
+            "code"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "census",
+        "recorded",
+        "requested",
+        "items"
+      ],
+      "properties": {
+        "census": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "requested": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        },
+        "statement": {
+          "type": "string",
+          "description": "For questions and leads this carries \u00a71.1's sentence about what the store does not record."
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "ordering_basis": {
+          "type": "string",
+          "description": "The column the newest-first order is taken over: an event id, a resolved_at, or a creation order the family records instead of a resolution time."
+        },
+        "session_attribution": {
+          "type": "string"
+        },
+        "seam_binding": {
+          "type": "string"
+        }
+      }
+    },
+    "census": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "by_section"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "by_section": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "section",
+        "reason",
+        "count",
+        "ids",
+        "ids_truncated"
+      ],
+      "properties": {
+        "section": {
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "policy",
+            "budget"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ids_truncated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_calls",
+        "selection",
+        "budget_bytes",
+        "payload_bytes",
+        "response_bytes",
+        "truncation_order",
+        "truncated",
+        "within_budget",
+        "over_budget_reason",
+        "limit"
+      ],
+      "properties": {
+        "model_calls": {
+          "const": 0
+        },
+        "selection": {
+          "type": "string"
+        },
+        "budget_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "response_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "truncation_order": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "within_budget": {
+          "type": "boolean"
+        },
+        "over_budget_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

@@ -231,6 +231,9 @@ jobs:
       - name: Cited edges — add_xref's citation contract and topology from recorded rows
         working-directory: mcp-server
         run: node test-edge-contract.mjs
+      - name: Attention and history — operational labels, census reconciliation, budgets
+        working-directory: mcp-server
+        run: node test-attention-history.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
