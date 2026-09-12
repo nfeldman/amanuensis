@@ -28,6 +28,8 @@
 //   - `as_of_sha` is served as a whole-account snapshot: the three supported
 //     sections must be marked supported and the other five served at current
 //     with `as_of_supported: false` and a sentence saying so;
+//   - `history_pointer` declares `as_of_supported: true` and then serves
+//     events and counts from HEAD without the ancestry cut;
 //   - a claim opened at a strict ancestor and still open is dropped from a
 //     historical reading, or a claim invalidated at the requested commit is
 //     served by it (the SQL pre-filter the review overturned);
@@ -1123,6 +1125,38 @@ check("a resolution event at a later commit is not replayed into an earlier read
   return stateOf(then, "B01-2") === "open"
     ? null
     : `at mid B01-2 reads ${JSON.stringify(stateOf(then, "B01-2"))}, replaying a repair recorded at head`;
+});
+
+check("history_pointer applies the same ancestry cut it declares support for", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const at = (sha) =>
+    sectionOf(
+      describeLocus({
+        locus: "src/examined.ts",
+        sections: SECTIONS,
+        ...(sha ? { as_of_sha: sha } : {}),
+      }),
+      "history_pointer",
+    );
+  const now = at(null);
+  const nowEvents = (now?.items ?? []).filter((item) => item.kind === "resolution-event");
+  if (!nowEvents.some((item) => item.finding_id === "B01-2"))
+    return "the current reading does not carry B01-2's resolution event at all";
+  const then = at(fixture.mid);
+  // The section declares as_of_supported: true, so it owes the reading the
+  // same cut defects takes. B01-2's only event names `head`, which is not an
+  // ancestor of `mid`.
+  if (then?.as_of_supported !== true)
+    return `history_pointer reports as_of_supported ${JSON.stringify(then?.as_of_supported)}`;
+  const thenEvents = (then?.items ?? []).filter((item) => item.kind === "resolution-event");
+  const leaked = thenEvents.filter((item) => item.finding_id === "B01-2");
+  if (leaked.length)
+    return `the reading at mid replayed a resolution event recorded at head: ${JSON.stringify(leaked.map((i) => i.event_id))}`;
+  // The counts are part of the reading, not decoration.
+  if (then?.counts?.finding_resolution_events !== thenEvents.length)
+    return `counts.finding_resolution_events is ${JSON.stringify(then?.counts?.finding_resolution_events)} against ${thenEvents.length} served`;
+  return null;
 });
 
 // ---------------------------------------------------------------------------
