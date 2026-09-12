@@ -789,6 +789,14 @@ LISTBOX_PROBE = """
   };
 """
 
+HEADING_PROBE = """
+  return Array.from(document.querySelectorAll('h2, h3, h4, h5, h6')).map((heading) => ({
+    text: heading.textContent.replace(/\\s+/g, ' ').replace(/^§\\s*/, '').trim(),
+    hidden: heading.hidden,
+    rows: heading.hidden === undefined ? -1 : 0
+  }));
+"""
+
 FILTER_PROBE = """
   const scope = document.querySelector('fieldset[data-filter-controls]');
   const rows = Array.from(document.querySelectorAll('[data-filter-row]'));
@@ -1030,6 +1038,29 @@ def run_browser_checks(binary: str, docs: Path) -> None:
                     f" \"{expected} of {OPEN_RECORDS} rows shown\"; it reads"
                     f" {after.get('statusText')!r}"
                 )
+            headings = browser.js(HEADING_PROBE) or []
+            emptied = [
+                heading
+                for heading in headings
+                if re.match(r"critical findings$", heading.get("text", ""), re.IGNORECASE)
+            ]
+            if not emptied:
+                return "the page carries no severity heading to fold"
+            if not all(heading.get("hidden") for heading in emptied):
+                return (
+                    "a severity group whose every record is filtered out is still"
+                    " announced as a group with records in it"
+                )
+            kept = [
+                heading
+                for heading in headings
+                if heading.get("text", "").strip().lower() == "open"
+            ]
+            if kept and any(heading.get("hidden") for heading in kept):
+                return (
+                    "the resolution-state heading folded while records under it are"
+                    " still shown"
+                )
             restored = browser.js(
                 """
                 const boxes = Array.from(document.querySelectorAll(
@@ -1092,6 +1123,19 @@ def run_browser_checks(binary: str, docs: Path) -> None:
                 return (
                     f"the live region does not announce \"1 of {HOT_SPOT_ROWS} rows"
                     f" shown\"; it reads {after.get('statusText')!r}"
+                )
+            headings = browser.js(HEADING_PROBE) or []
+            prose = [
+                heading
+                for heading in headings
+                if "each column measures" in heading.get("text", "").lower()
+            ]
+            if not prose:
+                return "the page carries no prose heading to check against folding"
+            if any(heading.get("hidden") for heading in prose):
+                return (
+                    "a heading with no filterable row under it was folded away; the"
+                    " filter hid prose the reader still needs to read the columns"
                 )
             return None
 
@@ -1478,6 +1522,35 @@ def main() -> int:
             return None
 
         check("removing one cited symbol turns the state axis red", removing_a_symbol_turns_state_red)
+
+        def duplicating_a_path_turns_state_red() -> str | None:
+            if not parsed.get("paths"):
+                return "there is no index to sabotage"
+            victim = OBLIGATION_PATHS[0]
+            twice = [
+                entry
+                for entry in parsed["paths"]
+                for _ in range(2 if str(entry.get("p")) == victim else 1)
+            ]
+            if len(twice) != len(parsed["paths"]) + 1:
+                return f"the fixture path {victim!r} was not in the index to duplicate"
+            index_path.write_text(
+                "window.__amanuensisLocusIndex = "
+                + json.dumps({**parsed, "paths": twice})
+                + ";\n"
+            )
+            verified = publish(storage, "--readback-only")
+            state = axis_ok(verified, "state")
+            if state is None:
+                return "the read-back summary reports no state axis"
+            if state:
+                return (
+                    f"indexing {victim!r} twice left the state axis green; a reader"
+                    " gets two results for one file and no way to tell them apart"
+                )
+            return None
+
+        check("indexing one path twice turns the state axis red", duplicating_a_path_turns_state_red)
 
         def deleting_the_index_turns_coverage_red() -> str | None:
             if index_path.is_file():
