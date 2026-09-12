@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-coverage-receipt/v1",
   "packet": "P17",
-  "recorded_at": "2026-09-12T12:19:56.942Z",
-  "repository_sha": "7162972148db9c0c1e1847657efdf21bae854a24",
+  "recorded_at": "2026-09-12T12:24:59.023Z",
+  "repository_sha": "4cc87740b208bf6dbfc206e018d6f3954bcf0550",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "project_key": "github.com/nfeldman/amanuensis",
@@ -23,7 +23,7 @@
       "excluded_paths": [
         ".amanuensis"
       ],
-      "tracked_files": 560,
+      "tracked_files": 562,
       "storage_tracked_files": 0
     },
     "artifacts": [
@@ -1902,6 +1902,11 @@
     }
   ],
   "storage_history": [
+    {
+      "sha": "18dd12993b4de980e84abd92bfe5638b9cef5051",
+      "date": "2026-09-12T08:24:54-04:00",
+      "message": "session mtyc4dcu-04ike3jr ended (completed — onboarding plus the structural phase of eleven subsystems; concerns, adversarial and packaging phases are not run in this packet)"
+    },
     {
       "sha": "041b1a8cd2880cf7254264d91e11a7b81008a040",
       "date": "2026-09-12T08:18:55-04:00",
