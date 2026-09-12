@@ -834,22 +834,24 @@ check("the stale_reason writers write only values the source carries", () => {
   return offending.length ? offending.join("; ") : null;
 });
 
-check("a schema-published enum is exactly the source's list", () => {
-  if (liveError) return liveError;
+// A vocabulary a host validates from the published input schema, before the
+// handler runs. The behavioural arm above cannot reach it, so the schema
+// itself is required to be the generated array rather than a copy of it.
+check("a schema-published enum is the generated array, not a copy", () => {
   const bad = [];
-  for (const [enumName, name, property] of [["xref_strength", "add_xref", "strength"]]) {
+  for (const [enumName, module, property] of [["xref_strength", "xrefs", "strength"]]) {
     const values = enumValues(enumName);
     if (!values) {
       bad.push(`the source carries no ${enumName}`);
       continue;
     }
-    const text = readText(join(MCP, "src", "tools", `${name === "add_xref" ? "xrefs" : name}.ts`));
+    const text = readText(join(MCP, "src", "tools", `${module}.ts`));
     if (text === null) {
-      bad.push(`the module publishing ${name} is absent`);
+      bad.push(`src/tools/${module}.ts is absent`);
       continue;
     }
     if (!new RegExp(`${property}:\\s*\\{[^}]*enum:\\s*\\[\\.\\.\\.`).test(text))
-      bad.push(`${name}.${property} does not publish the generated array as its schema enum`);
+      bad.push(`${module}.ts does not publish the generated array as ${property}'s schema enum`);
   }
   return bad.length ? bad.join("; ") : null;
 });

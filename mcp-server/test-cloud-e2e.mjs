@@ -121,10 +121,14 @@ function makeTargetRepo(label) {
  * at least one current claim keyed `<sid>/`, and `add_claim` resolves its
  * ref_sha in the bound workspace, so the seed commit is what it cites.
  */
-function seedStructuralClaim(ws, ctx, subsystemId) {
-  const sha = String(
+function headSha(ws) {
+  return String(
     spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" }).stdout ?? "",
   ).trim();
+}
+
+function seedStructuralClaim(ws, ctx, subsystemId) {
+  const sha = headSha(ws);
   const evidenceId = call(
     "add_evidence",
     {
@@ -205,10 +209,10 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
         subsystem_id: "B-01",
         concern_code: "CC-1",
         classification: "confirmed-acceptable",
-        evidence: "main.ts:root@abc",
+        evidence: `main.ts:root@${headSha(target)}`,
         evidence_quality: "name-inferred",
         rationale: "name suggests bounded; verified by reviewer's answer to OQ",
-        ref_sha: "abc",
+        ref_sha: headSha(target),
         pass_type: "survey",
       },
       ctx,
@@ -308,7 +312,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
           evidence: "x",
           evidence_quality: "code-verified",
           rationale: "r",
-          ref_sha: "abc",
+          ref_sha: headSha(ws),
           pass_type: "survey",
         },
         ctx,

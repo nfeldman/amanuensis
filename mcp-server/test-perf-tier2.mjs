@@ -105,7 +105,7 @@ measure("set_disposition (gate: status + concern lookup + upsert)", () => {
       evidence: "x",
       evidence_quality: "code-verified",
       rationale: "r",
-      ref_sha: "deadbeef",
+      ref_sha: seedSha,
       pass_type: "survey",
     },
     ctx,
@@ -124,7 +124,7 @@ measure("add_finding (gate: status + insert)", () => {
       root_cause: "r",
       severity: "LOW",
       status: "confirmed-bug",
-      ref_sha: "abc",
+      ref_sha: seedSha,
       pass_type: "survey",
     },
     ctx,
@@ -171,4 +171,6 @@ console.log("\nInterpretation:");
 console.log("  - Tier 2 adds a PK status lookup per gated write (~1-5µs).");
 console.log("  - Compared to the write itself (INSERT + indexes, ~30-100µs),");
 console.log("    the gate overhead is ≤10% on the hot path.");
-console.log("  - No network, no lock, no subprocess — this is cache-friendly SQLite.");
+console.log("  - No network and no lock. The first durable write at a revision");
+console.log("    resolves it with one `git rev-parse`; that resolution is memoized");
+console.log("    per workspace, so the steady state above spawns no subprocess.");

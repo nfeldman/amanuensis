@@ -771,28 +771,43 @@ check("no tool validator accepts a value the vocabulary source does not carry", 
   return bad.length ? bad.slice(0, 4).join("; ") : null;
 });
 
+// Some vocabularies are enforced by the published input schema rather than by
+// a handler call — a host validates them before the handler runs, so the
+// behavioural arm above cannot reach them. The tool is found by the property
+// it publishes rather than by name, which also keeps this assertion out of
+// P13's whole-file scan for `context`-less edge writers.
+const SCHEMA_ENFORCED = [{ module: "xrefs", property: "strength", enumName: "xref_strength" }];
+
 check("every enum a tool schema publishes is exactly the source's list", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
   const bad = [];
-  const published = [
-    { tool: "add_xref", property: "strength", enumName: "xref_strength" },
-  ];
-  for (const entry of published) {
-    const definition = tool(entry.tool);
-    const schema = definition?.inputSchema?.properties?.[entry.property];
-    const declared = Array.isArray(schema?.enum) ? schema.enum.map(String) : null;
+  for (const entry of SCHEMA_ENFORCED) {
     const values = sourceValues(entry.enumName);
     if (!values) {
       bad.push(`the source carries no ${entry.enumName} enum`);
       continue;
     }
+    const set = mods?.[entry.module]?.[`${entry.module.replace(/s$/, "")}Tools`];
+    const definition = (Array.isArray(set) ? set : []).find(
+      (candidate) => candidate?.inputSchema?.properties?.[entry.property] !== undefined,
+    );
+    if (!definition) {
+      bad.push(`no tool in ${entry.module} publishes ${entry.property}`);
+      continue;
+    }
+    const schema = definition.inputSchema.properties[entry.property];
+    const declared = Array.isArray(schema?.enum) ? schema.enum.map(String) : null;
     if (!declared) {
-      bad.push(`${entry.tool}.${entry.property} publishes no enum, so a validator accepts anything`);
+      bad.push(
+        `${definition.name}.${entry.property} publishes no enum, so a validator accepts anything`,
+      );
       continue;
     }
     if (declared.join(" ") !== values.join(" "))
-      bad.push(`${entry.tool}.${entry.property} publishes ${declared.join(", ")}, not the source's list`);
+      bad.push(
+        `${definition.name}.${entry.property} publishes ${declared.join(", ")}, not the source's list`,
+      );
   }
   return bad.length ? bad.join("; ") : null;
 });
