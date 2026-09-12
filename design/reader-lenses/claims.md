@@ -47,7 +47,9 @@ Evidence:
 ### C4
 
 A locus is a file path, a `<path>:<symbol>` pair, a subsystem id, or a vocabulary term; kind is
-inferred in a fixed order and always echoed.
+inferred in the order exact subsystem id, exact vocabulary term, contains `:` (split at the
+first), path-table match, path-shaped, else term; the split point and the deciding step are
+always echoed.
 
 Evidence:
 - `mcp-server/src/helpers.ts:75-95` — `requireWorkspaceSourcePath` normalization and reserved-state guard.
@@ -69,10 +71,11 @@ Evidence:
 
 ### C6
 
-Reachability of `ref_sha` is decided in code by git ancestry after the view returns `examined`;
-an unreachable or unresolvable revision downgrades the owner row to `examined-stale` with
-`stale_reason = "unverifiable-ref"`, and an unavailable git reports `reachability_checked:
-false`.
+Reachability of `ref_sha` is decided in code after the view returns `examined`: an unresolvable
+revision downgrades the owner row to `examined-stale` with `stale_reason = "unverifiable-ref"`,
+matching `detect_changes`'s existing meaning, and a resolvable non-ancestor downgrades it with
+the distinct reason `unreachable-ref`; an unavailable git reports `reachability_checked: false`
+and serves the `examined-stale` authorization text.
 
 Evidence:
 - `mcp-server/src/tools/claims.ts:57-90` — `resolveCommit`, `isAncestor`, `requireStrictDescendant`.
@@ -93,8 +96,9 @@ Evidence:
 
 ### C8
 
-`owners[]` lists every `file_standing` row and is exempt from truncation; the headline `state`
-is `mixed` when owners disagree.
+`owners[]` lists every `file_standing` row and is exempt from truncation; when the complete array
+alone would exceed the hard ceiling the tool errors with the path and owner count rather than
+returning a partial array; the headline `state` is `mixed` when owners disagree.
 
 Evidence:
 - `SELECT COUNT(*) FROM (SELECT file_path FROM file_ledger GROUP BY file_path HAVING COUNT(DISTINCT subsystem_id)>1);` → `53`.
@@ -104,8 +108,9 @@ Evidence:
 
 ### C9
 
-`authority_ceiling` is the weakest owning subsystem's ladder status, carrying the caveat that
-`mapped` is a workflow completion mark and not proof that every finding survived challenge.
+`authority_ceiling` is the weakest ranked status among non-deferred owners; deferred owners are
+listed separately and given no rank, and the ceiling carries the caveat that `mapped` is a
+workflow completion mark and not proof that every finding survived challenge.
 
 Evidence:
 - `mcp-server/src/schema.sql:626-630` — `subsystems.status` enum.
@@ -128,7 +133,8 @@ Evidence:
 ### C11
 
 Standing reports a `measured` block — `ledger_rows`, `ledger_reconciled`,
-`staleness_measured`, `evidence_rows`, `claims_recorded` — so zero can never read as health.
+`reconciliation_receipt`, `staleness_measured`, `evidence_rows`, `claims_recorded` — so zero can
+never read as health; `ledger_reconciled` is non-null only where the path has no owner rows.
 
 Evidence:
 - `mcp-server/src/tools/dashboard.ts:66-73` — `staleness_measured: row.scoped_files > 0`, with the finding B03-2 note.
@@ -139,9 +145,10 @@ Evidence:
 
 ### C12
 
-`unknown[]` is mandatory and drawn from exactly five sources — undispositioned active concerns,
-candidate siblings, open questions, open leads, unassessed seams — and open questions carry
-`scope: "subsystem"`.
+`unknown[]` is mandatory and drawn from exactly five sources — undispositioned (owner, active
+concern) pairs, candidate siblings, open questions, open leads, unassessed (seam, side) pairs;
+open questions carry `scope: "subsystem"`, open leads carry `location_match`, and unassessed
+seam sides carry the per-party-proxy limitation.
 
 Evidence:
 - `mcp-server/src/schema.sql:137-155` — `concerns.status IN ('active','retired','merged','candidate')`.
@@ -156,8 +163,9 @@ Evidence:
 ### C13
 
 A subsystem locus reports its own ladder status and counts; a symbol locus reports
-`symbol_cited` and never inherits the file's state silently; a term locus returns the
-vocabulary row or `not-defined` with up to five deterministically selected nearest terms.
+`symbol_cited` on exact match plus separate `symbol_prefix_matches`, and never inherits the
+file's state silently; a term locus returns the vocabulary row or `not-defined` with up to five
+nearest terms selected by prefix then lexicographic order, with no subsystem tier.
 
 Evidence:
 - `mcp-server/src/schema.sql:751-769` — `evidence.symbol`, `idx_evidence_file`.
@@ -190,8 +198,10 @@ Evidence:
 
 ### C16
 
-The default reading is current in ADR-0001's sense; `as_of_sha` returns the historical reading,
-and interval membership is decided by commit ancestry in code.
+The default reading is current in ADR-0001's sense; `as_of_sha` returns a historical reading only
+for the sections whose sources carry validity intervals or event tables, marks every other
+section `as_of_supported: false` and serves it at current, and decides interval membership by
+commit ancestry in code over every stored row with no SQL pre-filter.
 
 Evidence:
 - `dev/adr/0001-living-conspectus-terms.md` § Current, § Stale, § Invalid.
@@ -200,8 +210,10 @@ Evidence:
 
 ### C17
 
-No response field contains model-generated text; the tools report `model_calls: 0`, and survey
-narrative is attached only under an explicit `narrative` label with `revision_bound: false`.
+No response field contains text generated during the tool call; the tools report
+`model_calls: 0`, every item carries `authored: "model" | "code"` identifying durable
+model-authored source fields, and survey narrative is attached only under an explicit
+`narrative` label with `revision_bound: false`.
 
 Evidence:
 - `dev/adr/0011-codebase-brief-contract.md` § Select deterministically and account for loss — `model_calls: 0`.
@@ -212,7 +224,9 @@ Evidence:
 ### C18
 
 Response budgets are 8192 bytes for the `describe_locus` default, 3072 for standing, 4096 per
-optional section, 32768 as a hard ceiling, 12288 for `get_attention`, 8192 for `get_history`.
+optional section, 32768 as a hard ceiling, 12288 for `get_attention`, 8192 for `get_history`,
+enforced on the emitted wire response — compact text block plus `structuredContent` — and not on
+an internal payload.
 
 Evidence:
 - `design/reader-lenses/decisions.md:24-27` — compactness is a design constraint with a mechanical gate.
@@ -231,9 +245,11 @@ Evidence:
 
 ### C20
 
-Truncation is declared through an omission ledger with exactly three reasons — `policy`,
-`budget`, `not-recorded` — with `selected + omitted == census` per section and a fixed,
-code-constant truncation order.
+Truncation is declared through an omission ledger with exactly two reasons — `policy` and
+`budget` — aggregated per `(section, reason)` with an exact `count`, with
+`selected + omitted == census` per section, an unrecorded source declared as
+`census: 0, recorded: false` rather than as an omission, and a fixed, code-constant truncation
+order.
 
 Evidence:
 - `dev/adr/0011-codebase-brief-contract.md` § Select deterministically and account for loss — the three operational reasons and the exact census reconciliation.
@@ -265,10 +281,10 @@ Evidence:
 
 ### C23
 
-`get_attention` reuses ADR-0010's `regression`, `latent-defect`, `unverified-suspicion`,
-`unknown`, and `stale-knowledge` verbatim, extends `stale-knowledge` to obligation-bearing stale
-ledger rows with a `source` discriminator, and adds exactly two labels of its own,
-`awaiting-verification` and `contested`.
+`get_attention` reuses ADR-0010's `regression`, `unverified-suspicion`, `unknown`, and
+`stale-knowledge` verbatim, does not reuse `latent-defect` or `contested`, extends
+`stale-knowledge` to obligation-bearing stale ledger rows with a `source` discriminator, and adds
+exactly two labels of its own, `awaiting-verification` and `undiscriminated`.
 
 Evidence:
 - `design/reader-lenses/decisions.md:29-31` — reuse ADR-0010's operational labels.
@@ -280,8 +296,9 @@ Evidence:
 ### C24
 
 `get_history(locus? | finding_id?, limit?)` returns resolution events, claim supersessions and
-validity events, contradiction resolution events, closed questions, resolved leads, and the
-sessions that touched the locus, newest first.
+validity events, contradiction resolution events, closed questions ordered by `resolved_at`,
+resolved leads ordered by `id`, and the sessions attributed to the locus through citing rows,
+declared as `session_attribution: by-citation`.
 
 Evidence:
 - `mcp-server/src/schema.sql:798-861` — `finding_resolution_events`, `finding_resolution_current`.
@@ -314,8 +331,9 @@ Evidence:
 
 ### C27
 
-One new view, `finding_state_current`, carries the legacy-status fallback once, and every reader
-of finding resolution reads it.
+One new view, `finding_state_current`, carries the legacy-status fallback once, and all five
+existing readers of finding resolution — `renderers.py`, `list_findings`, `get_finding_summary`,
+`compile_review_session`, and the review historical-findings reader — select from it.
 
 Evidence:
 - `materializer/amanuensis_materializer/renderers.py:443-455` — the fallback CASE expression written inline in the renderer.
@@ -327,7 +345,9 @@ Evidence:
 ### C28
 
 Each lens has a membership predicate in SQL, a stated ordering, and an honest empty state
-carrying scope, basis, and checked revision.
+carrying scope, basis, and checked revision; stale knowledge is `classification='examined'` with
+drifted candidates reported separately, `unresolved-competition` matrices are Unresolved, and
+closed questions and resolved leads have a History page.
 
 Evidence:
 - `mcp-server/src/schema.sql:264-282` — `contradictions.resolution` enum including `unresolved`.
@@ -340,7 +360,8 @@ Evidence:
 ### C29
 
 A finding renders as a full record with its opaque marker on exactly one page, selected by its
-current resolution state; every other surface links.
+current resolution state; every other surface links, and `_build_xref_index` routes finding ids
+to the same page so no cross-link anchor breaks.
 
 Evidence:
 - `materializer/amanuensis_materializer/readback.py:32-40` — `finding_marker`, `stale_marker`.
@@ -375,9 +396,10 @@ Evidence:
 
 ### C32
 
-The overview's first viewport carries identity, a thesis taken by heading, four separate status
-dimensions from durable records, one linked count per `finding_resolution_state` value, and one
-route into each lens, with no composite score.
+The overview carries, first in source order and with nothing between them, identity, a thesis
+taken by heading, four separate status dimensions from durable records, one linked count per
+`finding_resolution_state` value, and one route into each lens, with no composite score; the
+contract is over source order, not over a literal viewport.
 
 Evidence:
 - `materializer/amanuensis_materializer/renderers.py:103-124` — the thesis is currently the first non-header paragraph of `entry-point.md`.
@@ -389,7 +411,8 @@ Evidence:
 
 ### C33
 
-The subsystem page order is purpose, start here, structure, boundaries, vocabulary, known
+The subsystem page order is identity and Scope — `subsystems.scope` rendered under that heading
+and never as a purpose sentence — then start here, structure, boundaries, vocabulary, known
 defects here, standing, then the survey record as secondary apparatus.
 
 Evidence:
@@ -399,8 +422,9 @@ Evidence:
 
 ### C34
 
-One Files index carries every distinct ledger path with its owners, standing, examined revision,
-open-defect count, and a stable anchor; no per-file page is generated.
+One Files index carries every distinct ledger path with its owners, standing, a per-owner
+examined revision, open-defect count, and a collision-resistant path-hash anchor rather than a
+slug; no per-file page is generated.
 
 Evidence:
 - `design/reader-lenses/decisions.md:12-17`.
@@ -410,7 +434,8 @@ Evidence:
 ### C35
 
 The Not-yet-surveyed page carries unledgered paths, candidate rows by subsystem, deferred
-subsystems, unassessed seams, and undispositioned active concerns, each with its denominator.
+subsystems, unassessed (seam, side) pairs, and undispositioned (subsystem, active concern)
+pairs, each counted over the unit its gap occupies and each with its denominator.
 
 Evidence:
 - `SELECT kind, COUNT(*) FROM scope_gaps GROUP BY 1;` → `unledgered|1717`.
@@ -434,9 +459,11 @@ Evidence:
 
 ### C37
 
-`resolved-findings.md` renders each resolved finding as a full marked record with its proof;
-`resolution-history.md` is a newest-first event timeline; `sessions.md` carries sessions,
-refresh runs, and projection verification runs.
+`resolved-findings.md` renders each resolved finding as a full marked record with its basis
+labelled by kind — verification evidence, authorized dismissal, or `none-recorded`;
+`resolution-history.md` is a newest-first
+event timeline; `resolved-leads.md` carries closed questions and resolved leads; `sessions.md`
+carries sessions, refresh runs, and projection verification runs.
 
 Evidence:
 - `mcp-server/src/schema.sql:798-816` — `fix_location`, `fix_sha`, `evidence_id`, `rationale` on every event.
@@ -459,8 +486,9 @@ Evidence:
 
 ### C39
 
-JavaScript may extend ⌘K over a generated locus index, filter the open-findings and hot-spot
-tables in place, and manage anchored navigation; it may do nothing else.
+New JavaScript may extend ⌘K over a generated locus index, filter the open-findings and hot-spot
+tables in place, and manage anchored navigation, and may add nothing else; the existing shell's
+theme and mobile-navigation behaviour is preserved unchanged and is outside the restriction.
 
 Evidence:
 - `materializer/amanuensis_materializer/html_projection.py:932-955` — the existing `⌘K` handler filters nav items only.
@@ -483,8 +511,10 @@ Evidence:
 ### C41
 
 `search-index.js` is a projection artifact covered by the content axis through the publication
-receipt, and the state axis requires every obligation-bearing ledger path exactly once and every
-cited symbol at least once.
+receipt; the projection inventory is widened to `*.js` and `verify_projection` derives expected
+paths from `manifest.projection_files` so the coverage axis does not report it missing; and the
+state axis requires every obligation-bearing ledger path exactly once and every cited symbol at
+least once.
 
 Evidence:
 - `materializer/amanuensis_materializer/readback.py:86-107` — `write_contract` hashes every listed page into `.projection-contract.json`.
@@ -495,8 +525,9 @@ Evidence:
 ### C42
 
 Phase 2 records key types, state containers, flow steps, concurrency invariants, and seam
-contracts as `add_claim` calls with stable `claim_key`s and at least one code-grade evidence row
-each.
+contracts as `add_claim` calls with stable `claim_key`s; `add_claim` validates `subject_type`
+against an enum and refuses a key-type, state-container, or flow claim whose evidence is all
+outside `{code-verified, contract-stated}` or cites a different file than `subject_id`.
 
 Evidence:
 - `mcp-server/src/tools/claims.ts:225-252` — `add_claim` input schema; `evidence_ids` `minItems: 1`.
@@ -509,7 +540,8 @@ Evidence:
 
 Advancing a subsystem to `structural` requires at least one current claim whose `claim_key`
 begins `<sid>/`; no larger count is required, and claim truth remains the adversarial pass's
-obligation.
+obligation, which requires Phase 4 to pull current `<sid>/` claims as targets and record each
+challenge outcome before `mapped`.
 
 Evidence:
 - `.claude/skills/amanuensis/SKILL.md:123` — `structural` authorizes types, state containers, flows, and the concurrency model.
@@ -531,8 +563,10 @@ Evidence:
 
 ### C45
 
-`add_xref` requires a non-empty `context` containing a `file:symbol@sha` citation, and
-`architecture.md` renders topology from recorded edges only.
+`add_xref` requires a `context` containing at least one whitespace-delimited token matching the
+`file:symbol@sha` grammar, validates that token's path and resolves its revision while keeping
+the surrounding prose and not checking symbol reachability, and `architecture.md` renders
+topology from recorded edges only.
 
 Evidence:
 - `mcp-server/src/tools/xrefs.ts:5-38` — `add_xref` input schema with `context` optional.
@@ -563,9 +597,11 @@ Evidence:
 
 ### C48
 
-`mcp-server/contracts/conspectus-vocabulary.json` is the single enum source; `vocabulary.ts` and
-`vocabulary.py` are generated from it with a `--check` mode in CI, and
-`check-evidence-vocabulary.mjs` is extended to compare against it.
+`mcp-server/contracts/conspectus-vocabulary.json` is the single enum source carrying every
+CHECK-constrained vocabulary and the obligation-bearing flag; `vocabulary.ts` and `vocabulary.py`
+are generated from it with `--check` and `--check-sql` modes in CI, and
+`check-evidence-vocabulary.mjs` is replaced by a four-way comparison over the JSON source, both
+generated files, and `SKILL.md`.
 
 Evidence:
 - `mcp-server/scripts/check-evidence-vocabulary.mjs:1-42` — the existing three-copy comparison and the B03-3 rationale.
@@ -576,8 +612,9 @@ Evidence:
 
 ### C49
 
-An orientation lint rejects freshness or status vocabulary in the published thesis, turns the
-publish red, and names the file to correct.
+An orientation lint rejects survey-status assertions and count fractions in the published thesis,
+turns the publish red, and names the file to correct; its gate carries a negative corpus as well
+as a positive one.
 
 Evidence:
 - `materializer/amanuensis_materializer/renderers.py:103-124` — the thesis is the first non-header paragraph of `entry-point.md`.
@@ -611,8 +648,9 @@ Evidence:
 
 ### C52
 
-The self-conspectus store is snapshotted, discarded, and rebuilt through the skill with
-claims-backed Phase 2 and recorded edges.
+The self-conspectus store is snapshotted, the server stopped, the store deleted, a new server
+started and read back against an empty store, and only then rebuilt through the skill with
+claims-backed Phase 2 and recorded edges, in checkpointed packets.
 
 Evidence:
 - `design/reader-lenses/decisions.md:18-23`.
@@ -622,7 +660,9 @@ Evidence:
 
 ### C53
 
-`docs/` is republished by a clean publish and committed; the A0 historical fixture under
+`materialize_docs` writes `.amanuensis/docs`, its output path being confined to project storage;
+`dev/promote-docs.mjs` promotes the green publish to the tracked `docs/` and re-reads it at that
+path before it is committed; the A0 historical fixture under
 `dev/conspectus/` is never rewritten and `dev/check-living-conspectus.mjs` stays green.
 
 Evidence:
@@ -633,9 +673,10 @@ Evidence:
 
 ### C54
 
-The dogfood gate asserts `examined` standing with at least one structural claim on three named
-files, exact set equality between `get_attention` and `finding_state_current`, and a green clean
-publish.
+The dogfood gate runs against a committed receipt rather than the untracked store, and asserts
+`examined` standing with at least one structural claim on three named files, exact set equality
+between `finding_state_current` and `get_attention`'s selected ids unioned with its
+budget-omitted ids, and a green clean publish byte-matching the promoted `docs/`.
 
 Evidence:
 - `design/reader-lenses/decisions.md:18-23`.
@@ -647,10 +688,112 @@ Evidence:
 ### C55
 
 Every gate in the plan names the condition that turns it red and the false green it cannot
-exclude, and every packet gate is a new test file that fails before its packet and passes after.
+exclude; the `red(<id>)` commit contains the gate file, and each packet carries a
+`gate.red_expect` assertion pattern the red output must match, so a module-not-found exit is not
+accepted as red.
 
 Evidence:
 - `dev/adr/0001-living-conspectus-terms.md` § Complete — every required control has a recorded red proof.
 - `.github/workflows/test.yml` — the `pecia-defects` job comment records three zero-denominator greens already found in this repository (B03-2, B04-1, B04-3).
 - `mcp-server/src/schema.sql:165-172` — finding B03-2 recorded in the schema itself.
 - Catalog VP4; VP25.
+
+### C56
+
+The materializer probes for `file_standing` and `finding_state_current` at the start of every
+render and turns the publish red with a named cause when either is absent; it never falls back to
+an inline copy of the predicate.
+
+Evidence:
+- `materializer/amanuensis_materializer/db.py:15-23` — `open_ro` opens `mode=ro` and applies no schema.
+- `mcp-server/src/db.ts:48-53` — `initializeSchema` runs `schema.sql`; only `openDatabase` calls it.
+- `mcp-server/src/schema.sql` — the views are `CREATE VIEW IF NOT EXISTS`, created on server open.
+- Catalog VP4; GP25.
+
+### C57
+
+`unreachable-ref` is a new `file_ledger.stale_reason` value for a resolvable revision that is not
+an ancestor of HEAD; `unverifiable-ref` keeps the meaning `detect_changes` already writes.
+
+Evidence:
+- `mcp-server/src/tools/git.ts:246-262` — a ref is `unverifiable` only when `git diff --name-only <ref> <head>` fails.
+- `mcp-server/src/tools/git.ts:274-275` — `markStale.run("unverifiable-ref", …)`.
+- `mcp-server/src/schema.sql:175` — `stale_reason` carries no CHECK constraint.
+- `SELECT COUNT(DISTINCT ref_sha) FROM file_ledger WHERE classification='examined' AND ref_sha IS NOT NULL;` → `4`; all four resolve and are ancestors in `~/repos/axiomdb`, so the store cannot exercise the branch.
+
+### C58
+
+History carries no account of how `open_questions` and `field_notes` reached their terminal
+state; each page states that limit in one line.
+
+Evidence:
+- `mcp-server/src/schema.sql:4538-4560` — `open_questions.resolution` and `resolved_at` are mutable columns.
+- `mcp-server/src/schema.sql:291-302` — `field_notes.follow_up` is free text with no resolution time.
+- `mcp-server/src/schema.sql:798-814`, `863-866` — the two event tables that do exist.
+- No `UPDATE` or `DELETE` on `finding_resolution_events` exists in `mcp-server/src/` or `materializer/`.
+- Catalog GP12; BP7.
+
+### C59
+
+Every account item carries `authored: "model" | "code"`, naming the durable fields an earlier
+survey session's model wrote.
+
+Evidence:
+- `mcp-server/src/schema.sql:630-632` — `subsystems.scope`, `jump_in_reading`, `notes` are free text.
+- `mcp-server/src/schema.sql:945` — `claims.statement`.
+- `mcp-server/src/schema.sql:296` — `field_notes.observation`.
+- `dev/adr/0011-codebase-brief-contract.md` § trace contract.
+- Catalog GP12.
+
+### C60
+
+Ledger rows classified `candidate` with `stale=1` are reported under their own heading with their
+own denominator, never as stale knowledge.
+
+Evidence:
+- `mcp-server/src/tools/git.ts:236-242`, `246-262` — `detect_changes` marks drift on every row carrying a `ref_sha`, regardless of classification.
+- `SELECT COUNT(*) FROM file_ledger WHERE classification='candidate';` → `111`; `SELECT COUNT(*) FROM file_ledger WHERE classification='candidate' AND length(ref_sha)=40;` → `111`.
+- Catalog VP6.
+
+### C61
+
+`resolved-leads.md` is a History page carrying answered, dismissed, and superseded questions and
+closed field notes.
+
+Evidence:
+- `SELECT resolution, COUNT(*) FROM open_questions GROUP BY 1;` → `answered|5`, `open|31`.
+- `SELECT follow_up, COUNT(*) FROM field_notes GROUP BY 1;` → `open|103`.
+- `mcp-server/src/schema.sql:4555-4559` — `resolution` enum and `resolved_at`.
+- ADR-0005 § projection read-back — every rendered record is reachable from a planned page.
+
+### C62
+
+`dev/promote-docs.mjs` promotes a green `.amanuensis/docs` publish to the tracked `docs/` and
+re-reads the promoted tree before it is committed.
+
+Evidence:
+- `mcp-server/src/tools/materialize.ts:241-245` — `output_dir` defaults to `docs` and is resolved by `resolveStorageOutputPath`.
+- `mcp-server/src/project.ts:1003-1012` — relative output resolves under `project.storagePath` and is containment-asserted.
+- `git ls-files docs | wc -l` → `48`.
+- Catalog GP21.
+
+### C63
+
+The `red(<id>)` commit contains the gate file, and each packet carries a `gate.red_expect` pattern
+the launcher requires the red output to match and rejects module-not-found on.
+
+Evidence:
+- `run.sh:326` — `[ "$red_status" -ne 0 ]` accepts any non-zero exit.
+- `run.sh:324` — `( cd … && npm run build … ) || true` swallows a failed build at the red commit.
+- `cd mcp-server && node test-locus-compactness.mjs` on the baseline exits with `MODULE_NOT_FOUND`.
+- Catalog VP4; VP15.
+
+### C64
+
+The one-call routing property is a measurement with two arms and at least two runs per condition,
+recorded separately; it is not a gate and blocks no packet.
+
+Evidence:
+- Catalog VP5 — repeatability before effect, ≥2 runs per condition.
+- Catalog VP10 — verify the baseline arm, not only the treatment.
+- Catalog BP26 — visible rigor with no decision leverage.
