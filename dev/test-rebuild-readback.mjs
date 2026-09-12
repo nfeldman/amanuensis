@@ -179,6 +179,15 @@ function sha256(absPath) {
   return createHash("sha256").update(readFileSync(absPath)).digest("hex");
 }
 
+// `get_storage_history` abbreviates; `commit_phase_gate` returns the short sha.
+// Compare on the shorter of the two so a full sha and its abbreviation match.
+function sameCommit(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  if (!/^[0-9a-f]{7,40}$/.test(left) || !/^[0-9a-f]{7,40}$/.test(right)) return false;
+  const length = Math.min(left.length, right.length);
+  return left.slice(0, length) === right.slice(0, length);
+}
+
 // ---------------------------------------------------------------------------
 // A minimal MCP stdio client. The procedure arm has to cross real process
 // boundaries — that is the whole point of §12.1 — so it drives spawned server
@@ -607,9 +616,10 @@ await check("the reinitialized store is live, not a stale handle", () => {
 await check("the snapshot stays reachable from the rebuilt store", () => {
   if (trace.blocked) return trace.blocked;
   if (trace.historyRestoreError) return trace.historyRestoreError;
-  const newest = trace.historyAfterRestore?.commits?.[0];
-  if (!newest || !String(newest.message ?? "").startsWith(SNAPSHOT_PREFIX)) {
-    return `the rebuilt store's history does not reach the snapshot: ${JSON.stringify(newest?.message ?? null)}`;
+  const commits = trace.historyAfterRestore?.commits ?? [];
+  const reached = commits.find((commit) => sameCommit(commit.sha, trace.snapshot?.commit_sha));
+  if (!reached || !String(reached.message ?? "").startsWith(SNAPSHOT_PREFIX)) {
+    return `the rebuilt store's history does not reach the snapshot: ${JSON.stringify(commits.map((c) => c.message))}`;
   }
   if (trace.restoredSnapshotCarriesCanary !== true) {
     return "the snapshot commit no longer yields the pre-rebuild database";
@@ -767,11 +777,15 @@ await check("the receipt's storage history still reaches the snapshot", () => {
   const missing = requireReceipt();
   if (missing) return missing;
   const restored = receipt.history_restored ?? {};
-  if (!String(restored.head_message ?? "").startsWith(SNAPSHOT_PREFIX)) {
-    return `the rebuilt store's recorded history head is ${JSON.stringify(restored.head_message ?? null)}`;
+  if (!sameCommit(restored.snapshot_sha, receipt.snapshot?.commit_sha)) {
+    return "the recorded history names a different snapshot than the one the receipt took";
   }
-  if (restored.snapshot_sha !== receipt.snapshot?.commit_sha) {
-    return "the recorded history does not reach the snapshot the receipt took";
+  const commits = Array.isArray(restored.commits) ? restored.commits : [];
+  const reached = commits.find((commit) => sameCommit(commit.sha, restored.snapshot_sha));
+  if (!reached || !String(reached.message ?? "").startsWith(SNAPSHOT_PREFIX)) {
+    return `the rebuilt store's recorded history does not reach the snapshot: ${JSON.stringify(
+      commits.map((commit) => commit.message),
+    )}`;
   }
   return null;
 });

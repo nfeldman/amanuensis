@@ -237,6 +237,10 @@ jobs:
       - name: Consumer route — instructions, annotations, inventory, skill route, installer
         working-directory: mcp-server
         run: node test-consumer-route.mjs
+      # Runs from the repository root: it drives spawned server processes across
+      # a real deletion, and reads the committed receipt of the live run.
+      - name: Self-conspectus rebuild — snapshot, discard, reinitialize, read back
+        run: node dev/test-rebuild-readback.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
