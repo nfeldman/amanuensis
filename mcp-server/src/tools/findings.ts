@@ -9,6 +9,7 @@ import {
   requireString,
   requireWorkspaceCitation,
   requireWorkspaceSourcePath,
+  resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -40,13 +41,6 @@ function git(ctx: ServerContext, args: string[]): ReturnType<typeof spawnSync> {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-}
-
-function resolveCommit(ctx: ServerContext, requested: string): string {
-  const result = git(ctx, ["rev-parse", "--verify", `${requested}^{commit}`]);
-  const sha = result.stdout?.toString().trim() ?? "";
-  if (result.status !== 0 || !sha) throw new ToolError(`unknown git commit: ${requested}`);
-  return sha;
 }
 
 function requireAncestor(ctx: ServerContext, ancestor: string, descendant: string): void {
@@ -120,7 +114,10 @@ export const findingTools: ToolDefinition[] = [
         requireWorkspaceCitation(citation, "primary_files"),
       );
       const businessContext = optString(args, "business_context");
-      const refSha = requireString(args, "ref_sha");
+      // Resolved in the bound workspace, and stored resolved: the opening
+      // resolution event is cut by this revision and describe_locus reports
+      // the finding revision-bound on it (F6/codex).
+      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 
       if (status === "fixed" || status === "ruled-out") {
@@ -236,7 +233,7 @@ export const findingTools: ToolDefinition[] = [
             "fixed requires both fix_location and fix_sha and remains pending until verify_finding_fix succeeds",
           );
         }
-        fixSha = resolveCommit(ctx, requestedFixSha);
+        fixSha = resolveWorkspaceCommit(ctx, requestedFixSha, "fix_sha");
       }
 
       const overturnEvidence =
@@ -352,8 +349,12 @@ export const findingTools: ToolDefinition[] = [
       if (evidence.role !== "fix-verification") {
         throw new ToolError("verification evidence must be attached with role fix-verification");
       }
-      const fixSha = resolveCommit(ctx, current.fix_sha);
-      const evidenceSha = resolveCommit(ctx, evidence.ref_sha);
+      const fixSha = resolveWorkspaceCommit(ctx, current.fix_sha, "fix_sha");
+      const evidenceSha = resolveWorkspaceCommit(
+        ctx,
+        evidence.ref_sha,
+        "the verification evidence ref_sha",
+      );
       requireAncestor(ctx, fixSha, evidenceSha);
       ctx.db
         .prepare(

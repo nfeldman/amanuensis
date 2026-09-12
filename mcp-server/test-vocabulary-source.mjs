@@ -6,8 +6,14 @@
 //   - a generated enum file differs from contracts/conspectus-vocabulary.json;
 //   - a SQL `CHECK (<col> IN (…))` for a column the source names differs from
 //     the source, or SQLite itself rejects a value the source carries;
-//   - a tool validator accepts a value the source does not carry — checked by
-//     requiring the validators to *be* the generated arrays, not copies of them;
+//   - a tool validator accepts a value the source does not carry — checked
+//     twice: statically, by requiring the validators to *be* the generated
+//     arrays rather than copies of them, and behaviourally, by driving each
+//     bound validator on a live store with a value the source does not carry
+//     and requiring the refusal. The static half alone greps for an absent
+//     literal and a present import, so widening a call to
+//     `requireEnum(args, "kind", [...EVIDENCE_KINDS, "bogus"])` left it green
+//     while `add_evidence` accepted `bogus` (F2/claude);
 //   - the reader's guide hint tables list a value the server rejects, or omit
 //     one it accepts;
 //   - an enum value lacks `label`, `meaning`, or `cannot_justify`;
@@ -38,6 +44,7 @@ import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const MCP = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(MCP, "..");
@@ -551,6 +558,300 @@ check("tool validators are the generated arrays, not copies of them", () => {
       bad.push(`${binding.file} does not import from the generated module`);
   }
   return bad.length ? bad.slice(0, 5).join("; ") : null;
+});
+
+// ---------------------------------------------------------------------------
+// The behavioural half of the same question (F2/claude). The static check
+// above reads text; this one drives the validator. A widened `requireEnum`
+// call keeps the literal absent and the import present, so only a live refusal
+// can tell the two apart.
+// ---------------------------------------------------------------------------
+const OUT_OF_SOURCE = "not-a-vocabulary-value";
+
+const built = ensureBuilt();
+
+let liveTools = null;
+let liveError = built.ok ? null : `src/ was not compiled before this gate read dist/ — ${built.detail}`;
+if (!liveError) {
+  try {
+    const loaded = await Promise.all([
+      import("./dist/db.js"),
+      import("./dist/project.js"),
+      import("./dist/tools/evidence.js"),
+      import("./dist/tools/findings.js"),
+      import("./dist/tools/dispositions.js"),
+      import("./dist/tools/files.js"),
+      import("./dist/tools/field-notes.js"),
+      import("./dist/tools/claims.js"),
+      import("./dist/tools/git.js"),
+      import("./dist/tools/locus.js"),
+    ]);
+    liveTools = {
+      db: loaded[0],
+      project: loaded[1],
+      sets: [
+        loaded[2].evidenceTools,
+        loaded[3].findingTools,
+        loaded[4].dispositionTools,
+        loaded[5].fileTools,
+        loaded[6].fieldNoteTools,
+        loaded[7].claimTools,
+        loaded[8].gitTools,
+        loaded[9].locusTools,
+      ],
+    };
+  } catch (e) {
+    liveError = `the tool modules could not be loaded — ${e && e.message ? e.message : e}`;
+  }
+}
+
+let validatorFixture = null;
+if (!liveError) {
+  try {
+    const dir = mkdtempSync(join(tmpdir(), "p1-validators-"));
+    scratchDirs.push(dir);
+    const workspace = join(dir, "workspace");
+    const storageRoot = join(dir, "storage-root");
+    mkdirSync(join(workspace, "src"), { recursive: true });
+    mkdirSync(storageRoot, { recursive: true });
+    const git = (...args) => {
+      const r = spawnSync("git", args, { cwd: workspace, encoding: "utf8" });
+      if (r.status !== 0) throw new Error(`git ${args[0]} did not succeed`);
+      return String(r.stdout ?? "").trim();
+    };
+    git("init", "-q", "-b", "main");
+    git("config", "user.email", "test@localhost");
+    git("config", "user.name", "P1 Validator Arm");
+    git("config", "commit.gpgsign", "false");
+    writeFileSync(join(workspace, "src", "ledger.ts"), "export const row = 1;\n");
+    writeFileSync(join(workspace, "src", "drift.ts"), "export const drift = 1;\n");
+    writeFileSync(join(workspace, "src", "gone.ts"), "export const gone = 1;\n");
+    writeFileSync(join(workspace, "src", "bad-ref.ts"), "export const bad = 1;\n");
+    git("add", "-A");
+    git("commit", "-q", "--no-verify", "-m", "base");
+    const head = git("rev-parse", "HEAD");
+    process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
+    const project = liveTools.project.resolveProject(workspace, {
+      selectionSource: "test-vocabulary-source",
+      serverVersion: "test",
+    });
+    liveTools.project.ensureProjectStorage(project, (dbPath) =>
+      liveTools.db.openDatabase(dbPath).close(),
+    );
+    const db = liveTools.db.openDatabase(project.dbPath);
+    db.prepare("INSERT INTO sessions (session_id, intent) VALUES ('p1', 'p1-gate')").run();
+    db.prepare("INSERT INTO concerns (code, origin) VALUES ('SC-1', 'seeded')").run();
+    db.prepare(
+      "INSERT INTO subsystems (id, name, status, layer) VALUES ('B-01', 'Ledger', 'adversarial', 'core')",
+    ).run();
+    const ledger = db.prepare(
+      `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha, stale)
+       VALUES ('B-01', ?, 'validator arm', 'examined', ?, 0)`,
+    );
+    ledger.run("src/ledger.ts", head);
+    // One row per reconciliation outcome, so the stale_reason arm below has a
+    // positive case for each of the three literals detect_changes writes.
+    ledger.run("src/drift.ts", head);
+    ledger.run("src/gone.ts", head);
+    ledger.run("src/bad-ref.ts", "deadbeef");
+    writeFileSync(join(workspace, "src", "drift.ts"), "export const drift = 2;\n");
+    rmSync(join(workspace, "src", "gone.ts"));
+    git("add", "-A");
+    git("commit", "-q", "--no-verify", "-m", "drift");
+    const later = git("rev-parse", "HEAD");
+    db.prepare(
+      `INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha, last_checked_sha)
+       VALUES ('default', 'main', ?, ?)`,
+    ).run(head, head);
+    validatorFixture = { db, head, later, ctx: { project, db, sessionId: "p1" } };
+  } catch (e) {
+    liveError = `the validator fixture could not be built — ${e && e.message ? e.message : e}`;
+  }
+}
+
+/**
+ * Drive one validator and read back the set it says it accepts.
+ *
+ * `requireEnum` refuses with `<key> must be one of: <values>`, so the running
+ * validator publishes its own accepted list in the refusal. Probing with a
+ * single out-of-source value is not enough on its own: the sabotage that
+ * opened this finding widened the list by exactly one value
+ * (`[...EVIDENCE_KINDS, "bogus"]`), which still refuses any *other* probe.
+ * Reading the list out of the refusal is what makes the arm exact, and it is
+ * still the running code speaking rather than its source text.
+ */
+function driveValidator(name, args) {
+  for (const set of liveTools?.sets ?? []) {
+    if (!Array.isArray(set)) continue;
+    const definition = set.find((entry) => entry?.name === name);
+    if (!definition) continue;
+    const readAccepted = (message) => {
+      const match = /must be one of:\s*(.+)$/m.exec(String(message ?? ""));
+      return match ? match[1].split(",").map((entry) => entry.trim()).filter(Boolean) : null;
+    };
+    try {
+      const value = definition.handler(args, validatorFixture.ctx);
+      if (value && typeof value === "object" && value.ok === false)
+        return { refused: true, accepted: readAccepted(value.error), value };
+      return { refused: false, accepted: null, value };
+    } catch (e) {
+      return { refused: true, accepted: readAccepted(e && e.message ? e.message : e), value: null };
+    }
+  }
+  return { refused: false, missing: true, accepted: null };
+}
+
+check("every bound validator refuses a value the source does not carry", () => {
+  if (liveError) return liveError;
+  const head = validatorFixture.head;
+  const finding = (id, extra) => ({
+    finding_id: id,
+    subsystem_id: "B-01",
+    symptom: "the row writer drops the last entry",
+    root_cause: "the loop bound is exclusive",
+    severity: "MEDIUM",
+    status: "confirmed-bug",
+    ref_sha: head,
+    pass_type: "survey",
+    ...extra,
+  });
+  const disposition = (extra) => ({
+    subsystem_id: "B-01",
+    concern_code: "SC-1",
+    classification: "ruled-out",
+    evidence: `src/ledger.ts:row@${head}`,
+    evidence_quality: "code-verified",
+    rationale: "the writer is bounded by the ledger row count",
+    ref_sha: head,
+    pass_type: "survey",
+    ...extra,
+  });
+  const probes = [
+    ["evidence_kind", "add_evidence.kind", "add_evidence", {
+      file_path: "src/ledger.ts",
+      ref_sha: head,
+      kind: OUT_OF_SOURCE,
+    }],
+    ["severity", "add_finding.severity", "add_finding", finding("V-1", { severity: OUT_OF_SOURCE })],
+    ["finding_status", "add_finding.status", "add_finding", finding("V-2", { status: OUT_OF_SOURCE })],
+    ["pass_type", "add_finding.pass_type", "add_finding", finding("V-3", { pass_type: OUT_OF_SOURCE })],
+    ["disposition_classification", "set_disposition.classification", "set_disposition",
+      disposition({ classification: OUT_OF_SOURCE })],
+    ["evidence_quality", "set_disposition.evidence_quality", "set_disposition",
+      disposition({ evidence_quality: OUT_OF_SOURCE })],
+    ["file_classification", "update_file_classification.classification", "update_file_classification", {
+      subsystem_id: "B-01",
+      file_path: "src/ledger.ts",
+      classification: OUT_OF_SOURCE,
+    }],
+    ["field_note_category", "add_field_note.category", "add_field_note", {
+      subsystem_id: "B-01",
+      category: OUT_OF_SOURCE,
+      observation: "a note whose category the source does not carry",
+      location: "src/ledger.ts",
+    }],
+    ["claim_subject_type", "add_claim.subject_type", "add_claim", {
+      claim_id: "B-01-c1",
+      claim_key: "B-01/concurrency/writer",
+      subject_type: OUT_OF_SOURCE,
+      subject_id: "src/ledger.ts:append",
+      statement: "the writer holds the ledger lock for the whole append",
+      epistemic_kind: "observation",
+      ref_sha: head,
+      evidence_ids: [1],
+    }],
+    ["claim_epistemic_kind", "add_claim.epistemic_kind", "add_claim", {
+      claim_id: "B-01-c2",
+      claim_key: "B-01/concurrency/writer",
+      subject_type: "symbol",
+      subject_id: "src/ledger.ts:append",
+      statement: "the writer holds the ledger lock for the whole append",
+      epistemic_kind: OUT_OF_SOURCE,
+      ref_sha: head,
+      evidence_ids: [1],
+    }],
+  ];
+  const bad = [];
+  for (const [enumName, label, name, args] of probes) {
+    const values = enumValues(enumName);
+    if (!values) {
+      bad.push(`the source carries no ${enumName}`);
+      continue;
+    }
+    if (values.includes(OUT_OF_SOURCE)) {
+      bad.push(`${enumName} carries the probe value, so this arm measures nothing`);
+      continue;
+    }
+    const outcome = driveValidator(name, args);
+    if (outcome.missing) {
+      bad.push(`${name} is not registered`);
+      continue;
+    }
+    if (!outcome.refused) {
+      bad.push(`${label} accepts ${OUT_OF_SOURCE}`);
+      continue;
+    }
+    if (outcome.accepted === null) {
+      bad.push(`${label} refused without naming the values it accepts`);
+      continue;
+    }
+    const extra = outcome.accepted.filter((value) => !values.includes(value));
+    const absent = values.filter((value) => !outcome.accepted.includes(value));
+    if (extra.length) bad.push(`${label} accepts ${extra.join(", ")}, which the source does not carry`);
+    if (absent.length) bad.push(`${label} refuses ${absent.join(", ")}, which the source carries`);
+  }
+  return bad.length ? bad.slice(0, 5).join("; ") : null;
+});
+
+check("the stale_reason writers write only values the source carries", () => {
+  if (liveError) return liveError;
+  const reasons = enumValues("stale_reason");
+  if (!reasons) return "the source carries no stale_reason enum";
+  // detect_changes is the first writer: three outcomes, three literals, and
+  // nothing in the tree read the generated enum until F4/codex (`git-driftt`
+  // reached the ledger and this gate stayed green).
+  const detect = driveValidator("detect_changes", { current_sha: validatorFixture.later });
+  if (detect.missing) return "detect_changes is not registered";
+  if (detect.refused) return "detect_changes refused the fixture revision";
+  const written = validatorFixture.db
+    .prepare("SELECT file_path, stale_reason FROM file_ledger WHERE stale_reason IS NOT NULL")
+    .all();
+  if (written.length === 0)
+    return "detect_changes marked nothing stale on a fixture holding a drifted, an absent, and an unverifiable row";
+  const bad = written
+    .filter((row) => !reasons.includes(String(row.stale_reason)))
+    .map((row) => `detect_changes wrote ${JSON.stringify(row.stale_reason)} for ${row.file_path}`);
+  if (bad.length) return bad.join("; ");
+  // standing.ts is the second writer, reached through describe_locus's owner
+  // rows rather than through the ledger.
+  const account = driveValidator("describe_locus", { locus: "src/bad-ref.ts" });
+  if (account.missing) return "describe_locus is not registered";
+  const owners = account.value?.standing?.owners ?? [];
+  if (owners.length === 0) return "describe_locus reports no owner for a ledgered path";
+  const offending = owners
+    .filter((owner) => owner.stale_reason !== null && !reasons.includes(String(owner.stale_reason)))
+    .map((owner) => `standing wrote ${JSON.stringify(owner.stale_reason)} for ${owner.subsystem_id}`);
+  return offending.length ? offending.join("; ") : null;
+});
+
+check("a schema-published enum is exactly the source's list", () => {
+  if (liveError) return liveError;
+  const bad = [];
+  for (const [enumName, name, property] of [["xref_strength", "add_xref", "strength"]]) {
+    const values = enumValues(enumName);
+    if (!values) {
+      bad.push(`the source carries no ${enumName}`);
+      continue;
+    }
+    const text = readText(join(MCP, "src", "tools", `${name === "add_xref" ? "xrefs" : name}.ts`));
+    if (text === null) {
+      bad.push(`the module publishing ${name} is absent`);
+      continue;
+    }
+    if (!new RegExp(`${property}:\\s*\\{[^}]*enum:\\s*\\[\\.\\.\\.`).test(text))
+      bad.push(`${name}.${property} does not publish the generated array as its schema enum`);
+  }
+  return bad.length ? bad.join("; ") : null;
 });
 
 check("SQLite accepts every value the source carries for the columns it names", () => {

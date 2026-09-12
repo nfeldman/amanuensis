@@ -286,10 +286,13 @@ function buildFixture() {
   ledger.run("B-01", "src/bad-ref.ts", "deadbeef");
   ledger.run("B-01", "src/gone.ts", base);
 
+  // Checked at the workspace head, so §2.4.4 serves the account at current
+  // rather than at an ancestor cut; the reconciliation below still has work,
+  // because staleness is decided per row against its own examination commit.
   db.prepare(
     `INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha, last_checked_sha)
      VALUES ('default', 'main', ?, ?)`,
-  ).run(base, base);
+  ).run(base, head);
 
   return { root, workspace, storageRoot, project, db, ctx, base, head, short: head.slice(0, 8) };
 }
@@ -436,9 +439,13 @@ check("the three writers store the resolved revision, so revision_bound is backe
   if (bad.length) return bad.join("; ");
 
   // The read surface's claim, on the record the writers just made.
-  const account = call("describe_locus", { locus: "src/ledger.ts" }, fixture.ctx);
+  const account = call(
+    "describe_locus",
+    { locus: "src/ledger.ts", sections: ["defects"] },
+    fixture.ctx,
+  );
   if (!account.ok) return `describe_locus refused the fixture path — ${account.error}`;
-  const defects = account.value?.account?.defects;
+  const defects = account.value?.sections?.defects;
   const item = (defects?.items ?? []).find((entry) => entry.finding_id === "B01-1");
   if (!item) return "describe_locus does not carry the fixture finding, so revision_bound is unproven";
   if (item.revision_bound !== true) return "the finding is not reported revision_bound";
@@ -590,16 +597,25 @@ check("the master plan counts open findings from finding_state_current", () => {
 emit("");
 emit("F4/codex, F2/codex — the stale_reason writers are bound to the enum source");
 
-check("git.ts and standing.ts read the generated STALE_REASONS", () => {
+// Comments are stripped first: a doc comment naming the enum is not a binding
+// to it, and this arm exists because two writers were bound to nothing.
+function withoutComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
+}
+
+check("git.ts and standing.ts take their stale_reason values from the generated enum", () => {
   const bad = [];
   for (const rel of [GIT_REL, STANDING_REL]) {
-    const text = readText(join(REPO, rel));
-    if (text === null) {
+    const raw = readText(join(REPO, rel));
+    if (raw === null) {
       bad.push(`${rel} is absent`);
       continue;
     }
-    if (!/\bSTALE_REASONS\b/.test(text))
-      bad.push(`${rel} writes a literal stale_reason instead of reading the generated STALE_REASONS`);
+    const text = withoutComments(raw);
+    if (!/from "\.{1,2}\/vocabulary\.js"/.test(text))
+      bad.push(`${rel} does not read the generated enum module`);
+    if (!/\bStaleReason\b|\bSTALE_REASONS\b/.test(text))
+      bad.push(`${rel} writes a literal stale_reason instead of taking it from the generated STALE_REASONS`);
   }
   return bad.length ? bad.join("; ") : null;
 });
@@ -793,14 +809,15 @@ emit("F3/claude — the overview lint catches a composite index that carries no 
 // false-alarm rate (VP7), so both corpora are driven here.
 const COMPOSITE_POSITIVE = [
   "Health: 72%",
-  "Overall readiness: 7 of 12",
+  "| Overall readiness | 7 of 12 |",
   "Conspectus health 34/57",
-  "Readiness — 88 %",
+  "Maturity — 88 %",
 ];
 const COMPOSITE_NEGATIVE = [
-  "Stale, obligation-bearing: 12 of 240 ledger rows",
-  "The WAL replay covers 100% of committed transactions.",
+  "| Files carrying a survey obligation marked stale | 12 of 240 |",
+  "| Files read, of those carrying an obligation | 340 of 512 |",
   "Findings by resolution state: open 4, verified-fixed 9",
+  "The replay covers `100%` of committed transactions.",
 ];
 
 check("the overview gate exposes a composite-index lint that catches a bare percentage", () => {

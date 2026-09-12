@@ -18,8 +18,11 @@ Turns red when:
     identity, the thesis, four separately named status dimensions, one linked
     count per `finding_resolution_state` value, and one route into each lens;
   - a status dimension reports a number the fixture's store contradicts, a
-    composite score or progress meter appears, or a resolution state with zero
-    findings loses its row;
+    composite score or progress meter appears, a bare percentage or a
+    composite-labelled ratio is published as a status figure, or a resolution
+    state with zero findings loses its row;
+  - the composite-index lint misses a line of its positive corpus, or flags one
+    of the counts §11.2 requires the overview to publish (VP7);
   - the `entries`-derived stale marker stops being emitted exactly once per
     corpus, or any read-back axis goes red on a clean fixture;
   - the gate does not run in CI.
@@ -498,6 +501,81 @@ def corpus(docs: Path, suffix: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# The composite-index lint (C32, BP26).
+#
+# `no_composite_score` below matches the *word* score, index, grade, or rating,
+# so `Health score: 72%` was caught and `Health: 72%` was not (F3/claude).  The
+# word was never the thing forbidden: BP26 forbids combining four kinds of
+# ignorance into one figure, and the two shapes that figure takes are a
+# percentage and a ratio.
+#
+# A percentage is banned outright in the overview.  Every number the four
+# dimensions publish is a count, and §11.2 requires each one to carry its own
+# denominator in its own units; a percentage is exactly the operation that
+# dissolves that denominator, so there is no honest one to publish here.
+#
+# A ratio is *not* banned outright, because `12 of 240 ledger rows` is the
+# shape §11.2 mandates.  It is banned when its label names a judgement of the
+# record as a whole rather than a thing being counted — which is the difference
+# between `Files read, of those carrying an obligation: 340 of 512` and
+# `Overall readiness: 7 of 12`.
+# ---------------------------------------------------------------------------
+_CODE_SPAN = re.compile(r"`[^`]*`")
+_PERCENTAGE = re.compile(r"\b\d{1,3}(?:\.\d+)?\s*%")
+_RATIO = re.compile(r"\b\d{1,5}\s*(?:of|/)\s*\d{1,5}\b")
+_COMPOSITE_LABEL = re.compile(
+    r"(?i)\b(health|overall|composite|readiness|maturity|completeness"
+    r"|confidence|grade|rating|score)\b"
+)
+
+
+def composite_index_violations(text: str) -> list[str]:
+    """Lines presenting a composite judgement of the record as one figure.
+
+    Returns one message per offending line, empty when the text is clean.  Code
+    spans are masked first, so a quoted `72%` in a sentence about the subject
+    matter is not read as a status figure — the same masking §11.1's
+    orientation lint applies for the same reason.
+    """
+
+    out: list[str] = []
+    for raw in str(text or "").splitlines():
+        line = _CODE_SPAN.sub(" ", raw).strip()
+        if not line:
+            continue
+        if _PERCENTAGE.search(line):
+            out.append(f"a bare percentage presented as a status figure: {line}")
+            continue
+        ratio = _RATIO.search(line)
+        if ratio is None:
+            continue
+        if _COMPOSITE_LABEL.search(line[: ratio.start()]):
+            out.append(f"a composite ratio presented as a status figure: {line}")
+    return out
+
+
+# The two corpora the lint is measured on.  A lint with only the positive arm
+# measures nothing about its false-alarm rate (VP7), and the negative corpus
+# here is not invented: every line of it is a shape `render_index` publishes.
+COMPOSITE_CAUGHT = (
+    "Health: 72%",
+    "| Overall readiness | 7 of 12 |",
+    "Conspectus health 34/57",
+    "Maturity — 88 %",
+    "| Composite grade | 3/5 |",
+)
+COMPOSITE_CLEARED = (
+    "| Files carrying a survey obligation marked stale | 12 of 240 |",
+    "| Files read, of those carrying an obligation | 340 of 512 |",
+    "| Findings open | 4 |",
+    "| Subsystems by survey depth | 2 mapped, 1 concerns, 4 unmapped |",
+    "Four dimensions, each read from durable records and each reported on its"
+    " own terms. None of them is combined with another.",
+    "The replay covers `100%` of committed transactions.",
+)
+
+
+# ---------------------------------------------------------------------------
 def main() -> int:
     emit("GATE P3 — overview thesis by heading and the orientation lint")
     emit("")
@@ -820,6 +898,46 @@ def main() -> int:
             return None
 
         check("no composite score, index, or progress meter", no_composite_score)
+
+        def no_composite_index() -> str | None:
+            """The half the word-matching check above cannot see (F3/claude)."""
+            if not index:
+                return "the published overview index.md is not readable"
+            offending = composite_index_violations(index)
+            return "; ".join(offending[:3]) if offending else None
+
+        check(
+            "no composite index: no bare percentage or composite ratio in the overview",
+            no_composite_index,
+        )
+
+        def composite_index_positive_arm() -> str | None:
+            missed = [line for line in COMPOSITE_CAUGHT if not composite_index_violations(line)]
+            if missed:
+                return (
+                    "the composite-index lint misses a bare percentage or ratio"
+                    f" presented as health: {' | '.join(missed)}"
+                )
+            return None
+
+        check(
+            "the composite index lint catches every figure in its positive corpus",
+            composite_index_positive_arm,
+        )
+
+        def composite_index_negative_arm() -> str | None:
+            flagged = [line for line in COMPOSITE_CLEARED if composite_index_violations(line)]
+            if flagged:
+                return (
+                    "the composite-index lint flags counts the overview is required"
+                    f" to publish: {' | '.join(flagged)}"
+                )
+            return None
+
+        check(
+            "the composite index lint clears the negative corpus (VP7)",
+            composite_index_negative_arm,
+        )
 
         def state_counts() -> str | None:
             if not index:

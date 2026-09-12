@@ -6,6 +6,7 @@ import {
   requireInt,
   requireString,
   requireWorkspaceSourcePath,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
@@ -43,7 +44,11 @@ export const evidenceTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       requireActiveSession(ctx, "add_evidence");
       const filePath = requireWorkspaceSourcePath(args.file_path);
-      const refSha = requireString(args, "ref_sha");
+      // The revision is resolved in the bound workspace and the resolved
+      // commit is what is stored: every read surface reports a non-null
+      // ref_sha as revision-bound, so an unresolvable one would publish a
+      // binding the record cannot support (F6/codex).
+      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
       const kind = requireEnum(args, "kind", EVIDENCE_KINDS);
       const symbol = optString(args, "symbol");
       const lineRange = optString(args, "line_range");

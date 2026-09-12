@@ -1,4 +1,9 @@
 import { OBLIGATION_BEARING_SQL, optInt, type ToolDefinition } from "../helpers.js";
+// One predicate for one question. The open count was derived here from
+// `findings.status`, and from `finding_state_current` in every lens, so a
+// finding whose resolution event had overtaken its coarse status was open on
+// this surface and closed on the others (F9/codex).
+import { OPEN_FINDING_SQL } from "../vocabulary.js";
 
 export const dashboardTools: ToolDefinition[] = [
   {
@@ -35,7 +40,7 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*)                                       FROM subsystems)      AS subsystem_count,
                   (SELECT COUNT(*) FILTER (WHERE status='mapped')        FROM subsystems)      AS mapped_count,
                   (SELECT COUNT(*)                                       FROM findings)        AS total_findings,
-                  (SELECT COUNT(*) FILTER (WHERE status='confirmed-bug') FROM findings)        AS open_bugs,
+                  (SELECT COUNT(*) FILTER (WHERE ${OPEN_FINDING_SQL}) FROM finding_state_current) AS open_bugs,
                   (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS stale_entries,
                   (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger) AS stale_exempt,
                   (SELECT COUNT(*)                                       FROM file_ledger)     AS scoped_files,

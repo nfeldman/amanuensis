@@ -18,7 +18,7 @@ import { spawnSync } from "node:child_process";
 import type { DB } from "./db.js";
 import { requireWorkspaceSourcePath, type ServerContext, ToolError } from "./helpers.js";
 import { STATUS_ORDER, statusRank } from "./invariants.js";
-import { VOCABULARY } from "./vocabulary.js";
+import { type StaleReason, VOCABULARY } from "./vocabulary.js";
 
 export type LocusKind = "file" | "symbol" | "subsystem" | "term";
 
@@ -412,11 +412,15 @@ function gitProbe(ctx: ServerContext): GitProbe {
  * already owns `unverifiable-ref` and using one word for both rules would make
  * the same label mean two things across two writers. A missing revision joins
  * the unresolvable outcome rather than passing (F4/codex).
+ *
+ * The reason is typed `StaleReason` — `(typeof STALE_REASONS)[number]` from
+ * the generated module — so a value the vocabulary source does not carry stops
+ * compiling here rather than reaching a reader as a literal nothing publishes.
  */
 function reachability(
   git: GitProbe,
   refSha: string | null,
-): { state: "examined" | "examined-stale"; reason: string | null } {
+): { state: "examined" | "examined-stale"; reason: StaleReason | null } {
   // A row with no examination revision is the limiting case of the table's
   // first outcome, not an exemption from it: there is no revision for
   // `rev-parse` to resolve, so the reading cannot be attributed to a commit

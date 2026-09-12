@@ -16,31 +16,36 @@
           "value": "open",
           "label": "Open",
           "meaning": "No terminal resolution event has been recorded; the item is still open.",
-          "cannot_justify": "that the defect is still reproducible at the repository head"
+          "cannot_justify": "that the defect is still reproducible at the repository head",
+          "resolution_open": true
         },
         {
           "value": "accepted",
           "label": "Accepted",
           "meaning": "The behavior is recorded as understood and acceptable; it is not an open defect.",
-          "cannot_justify": "that the judgement was revisited at the repository head"
+          "cannot_justify": "that the judgement was revisited at the repository head",
+          "resolution_open": false
         },
         {
           "value": "ruled-out",
           "label": "Ruled out",
           "meaning": "The candidate problem was overturned by evidence or adversarial review.",
-          "cannot_justify": "that no related defect exists at the same locus"
+          "cannot_justify": "that no related defect exists at the same locus",
+          "resolution_open": false
         },
         {
           "value": "fixed-pending-verification",
           "label": "Unverified fix",
           "meaning": "A repair is recorded, but independent fix evidence has not yet closed the finding.",
-          "cannot_justify": "that the defect is gone at the repository head"
+          "cannot_justify": "that the defect is gone at the repository head",
+          "resolution_open": false
         },
         {
           "value": "verified-fixed",
           "label": "Verified fixed",
           "meaning": "A later revision contains a repair backed by recorded verification evidence.",
-          "cannot_justify": "that the repair is still present at the repository head"
+          "cannot_justify": "that the repair is still present at the repository head",
+          "resolution_open": false
         }
       ]
     },

@@ -1265,6 +1265,24 @@ export const OBLIGATION_BEARING_CLASSIFICATIONS = [
 export const OBLIGATION_BEARING_SQL =
   "COALESCE(classification, 'candidate') NOT IN ('generated-ignore', 'vendor-ignore', 'irrelevant')";
 
+/**
+ * The resolution states that leave a finding open. One question, one
+ * predicate: get_dashboard, list_subsystems, and the master plan read the
+ * same SQL over `finding_state_current` that the lenses do, so a finding
+ * whose event log has overtaken `findings.status` cannot be counted open on
+ * one surface and closed on another.
+ */
+export const OPEN_RESOLUTION_STATES = ["open"] as const;
+export const CLOSED_RESOLUTION_STATES = [
+  "accepted",
+  "ruled-out",
+  "fixed-pending-verification",
+  "verified-fixed",
+] as const;
+
+/** SQL predicate selecting the finding_state_current rows still open. */
+export const OPEN_FINDING_SQL = "resolution_state IN ('open')";
+
 /** Terms orientation prose may not use; see the orientation lint. */
 export const ORIENTATION_FORBIDDEN_TERMS = [
   "stale",

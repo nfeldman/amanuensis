@@ -14,6 +14,10 @@ import {
   STATUS_ORDER,
   type SubsystemStatus,
 } from "../invariants.js";
+// One predicate for one question: the rollup counted `findings.status`
+// while every lens counted `finding_state_current`, so a repaired finding
+// stayed open here after it had closed everywhere else (F9/codex).
+import { OPEN_FINDING_SQL } from "../vocabulary.js";
 
 const ALL_STATUSES = [...STATUS_ORDER, "deferred"] as const;
 
@@ -44,9 +48,9 @@ export const subsystemTools: ToolDefinition[] = [
       // and a JS Map merge.
       const sql = `
         SELECT s.id, s.name, s.status, s.layer, s.scope, s.jump_in_reading, s.notes, s.priority,
-               COUNT(f.finding_id) FILTER (WHERE f.status='confirmed-bug') AS confirmed_bugs
+               COUNT(v.finding_id) FILTER (WHERE ${OPEN_FINDING_SQL}) AS confirmed_bugs
           FROM subsystems s
-          LEFT JOIN findings f ON f.subsystem_id = s.id
+          LEFT JOIN finding_state_current v ON v.subsystem_id = s.id
          ${statusFilter ? "WHERE s.status = ?" : ""}
          GROUP BY s.id
          ORDER BY CASE WHEN s.priority IS NULL THEN 1 ELSE 0 END, s.priority, s.layer, s.id`;

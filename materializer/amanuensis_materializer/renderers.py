@@ -42,6 +42,7 @@ from .readback import (
 from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
     OBLIGATION_BEARING_SQL,
+    OPEN_FINDING_SQL,
     VOCABULARY,
     VOCABULARY_CONTRACT_VERSION,
     cannot_justify,
@@ -901,9 +902,17 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         )
         for s in subs:
             s["priority"] = None
+    # One predicate for one question. This roll-up read `findings.status`
+    # while every lens read `finding_state_current`, so the master plan called
+    # a repaired finding open after the subsystem page had closed it
+    # (F9/codex). Both now select the same generated predicate over the view,
+    # which also carries the legacy-status fallback for a finding recorded
+    # before the resolution event log existed.
     finds = rows(
         conn,
-        "SELECT subsystem_id, COUNT(*) AS n, SUM(CASE WHEN status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs FROM findings GROUP BY subsystem_id",
+        "SELECT subsystem_id, COUNT(*) AS n,"
+        f" SUM(CASE WHEN {OPEN_FINDING_SQL} THEN 1 ELSE 0 END) AS open_bugs"
+        " FROM finding_state_current GROUP BY subsystem_id",
     )
     finds_by_ss = {f["subsystem_id"]: f for f in finds}
 

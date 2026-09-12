@@ -1175,6 +1175,26 @@ OBLIGATION_BEARING_SQL = (
     "COALESCE(classification, 'candidate') NOT IN ('generated-ignore', 'vendor-ignore', 'irrelevant')"
 )
 
+# The resolution states that leave a finding open. One question, one
+# predicate: get_dashboard, list_subsystems, and the master plan read the same
+# SQL over `finding_state_current` that the lenses do, so a finding whose event
+# log has overtaken `findings.status` cannot be counted open on one surface and
+# closed on another.
+OPEN_RESOLUTION_STATES: tuple[str, ...] = (
+    "open",
+)
+CLOSED_RESOLUTION_STATES: tuple[str, ...] = (
+    "accepted",
+    "ruled-out",
+    "fixed-pending-verification",
+    "verified-fixed",
+)
+
+# SQL predicate selecting the finding_state_current rows still open.
+OPEN_FINDING_SQL = (
+    "resolution_state IN ('open')"
+)
+
 # Terms orientation prose may not use; see the orientation lint.
 ORIENTATION_FORBIDDEN_TERMS: tuple[str, ...] = (
     "stale",

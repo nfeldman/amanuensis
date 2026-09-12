@@ -5,6 +5,7 @@ import {
   requireEnum,
   requireString,
   requireWorkspaceCitation,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
@@ -58,7 +59,10 @@ export const dispositionTools: ToolDefinition[] = [
       const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITIES);
       const linchpin = optBool(args, "linchpin_dependent", false);
       const rationale = requireString(args, "rationale");
-      const refSha = requireString(args, "ref_sha");
+      // Resolved in the bound workspace, and stored resolved, for the reason
+      // add_claim already resolved its own: an unresolvable revision is
+      // published as a revision-bound reading by every reader (F6/codex).
+      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 

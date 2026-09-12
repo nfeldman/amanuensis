@@ -9,6 +9,22 @@ import {
   requireString,
   type ToolDefinition,
 } from "../helpers.js";
+// The reconciliation's three outcomes are named by the enum source, not by a
+// literal beside each `markStale` call. Typing the writer's argument is what
+// makes the compiler refuse a value the source does not carry: `git-driftt`
+// was reachable here and no gate could see it (F4/codex, F2/codex).
+import type { StaleReason } from "../vocabulary.js";
+
+/**
+ * The `stale_reason` for one reconciliation outcome. `StaleReason` is
+ * `(typeof STALE_REASONS)[number]` from the generated module, so a value the
+ * vocabulary source does not carry stops compiling at the call site instead of
+ * landing in the ledger — which is what `git-driftt` did, invisibly to every
+ * gate, until F4/codex and F2/codex found it by mutation.
+ */
+function staleReason(value: StaleReason): StaleReason {
+  return value;
+}
 
 function getGit(ctx: ServerContext): {
   canonical_branch: string;
@@ -269,16 +285,18 @@ export const gitTools: ToolDefinition[] = [
           `UPDATE file_ledger SET stale=1, stale_since=datetime('now'), stale_reason=?
              WHERE subsystem_id=? AND file_path=? AND stale=0`,
         );
-        for (const row of drifted) markStale.run("git-drift", row.subsystem_id, row.file_path);
-        for (const row of absent) markStale.run("absent", row.subsystem_id, row.file_path);
-        for (const row of unverifiable)
-          markStale.run("unverifiable-ref", row.subsystem_id, row.file_path);
+        const mark = (rows: typeof ledgerRows, reason: StaleReason) => {
+          for (const row of rows) markStale.run(reason, row.subsystem_id, row.file_path);
+        };
+        mark(drifted, staleReason("git-drift"));
+        mark(absent, staleReason("absent"));
+        mark(unverifiable, staleReason("unverifiable-ref"));
         // Staleness is re-derived in both directions. A row whose content
         // matches its examination commit again is fresh by the same rule that
         // made it stale, so leaving it flagged would be churn, not obligation.
         const markFresh = ctx.db.prepare(
           `UPDATE file_ledger SET stale=0, stale_since=NULL, stale_reason=NULL
-             WHERE subsystem_id=? AND file_path=? AND stale=1 AND stale_reason IS NOT 'absent'`,
+             WHERE subsystem_id=? AND file_path=? AND stale=1 AND stale_reason IS NOT '${staleReason("absent")}'`,
         );
         for (const row of fresh) markFresh.run(row.subsystem_id, row.file_path);
 

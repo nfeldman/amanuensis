@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+
 import type { DB } from "./db.js";
 import type { ProjectContext } from "./project.js";
 
@@ -86,6 +88,57 @@ export function ok(extra: Record<string, unknown> = {}) {
 
 export function err(message: string, extra: Record<string, unknown> = {}) {
   return { ok: false as const, error: message, ...extra };
+}
+
+/**
+ * Resolve a revision to the commit it names **in the bound workspace**.
+ *
+ * `add_claim` has always done this (`claims.ts:129`); `add_evidence`,
+ * `add_finding`, and `set_disposition` took the same field through
+ * `requireString` and stored whatever arrived. The consequence was not a
+ * cosmetic one: `describe_locus` reports `revision_bound: true` for any
+ * non-null `ref_sha`, so `deadbeef` — or a sha that resolves only in some
+ * other repository — was published as a revision-bound reading (F6/codex).
+ * Resolving at ingress is what makes that flag a claim the record supports.
+ *
+ * The resolved 40-character object name is returned and stored, not the value
+ * as typed, so a later reader comparing revisions by ancestry has a commit to
+ * compare rather than a prefix to guess at.
+ *
+ * Successful resolutions of an object-name-shaped input are memoized per
+ * workspace. A commit does not stop existing inside one server process, and a
+ * survey session writes hundreds of rows at one revision; symbolic refs
+ * (`HEAD`, a branch) are deliberately never cached, because those move.
+ * Failures are never cached: a revision can arrive by fetch.
+ */
+const OBJECT_NAME = /^[0-9a-fA-F]{7,40}$/;
+const resolvedCommits = new Map<string, string>();
+
+export function resolveWorkspaceCommit(
+  ctx: ServerContext,
+  requested: string,
+  label = "ref_sha",
+): string {
+  const cacheable = OBJECT_NAME.test(requested);
+  const key = `${ctx.project.workspacePath}\u0000${requested}`;
+  if (cacheable) {
+    const memo = resolvedCommits.get(key);
+    if (memo !== undefined) return memo;
+  }
+  const result = spawnSync("git", ["rev-parse", "--verify", `${requested}^{commit}`], {
+    cwd: ctx.project.workspacePath,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const sha = String(result.stdout ?? "").trim();
+  if (result.status !== 0 || !sha) {
+    throw new ToolError(
+      `${label} ${requested} does not resolve to a commit in the bound workspace ` +
+        `${ctx.project.workspacePath}; record the revision the reading was taken at`,
+    );
+  }
+  if (cacheable) resolvedCommits.set(key, sha);
+  return sha;
 }
 
 export function requireString(args: Record<string, unknown>, key: string): string {

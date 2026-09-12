@@ -223,6 +223,9 @@ jobs:
       - name: Locus compactness — wire budgets and the omission ledger
         working-directory: mcp-server
         run: node test-locus-compactness.mjs
+      - name: Residual hardening — revision-bound writers, one open-finding predicate
+        working-directory: mcp-server
+        run: node test-residual-hardening.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs
