@@ -56,7 +56,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P21 | Residual hardening from the final review: revision-bound writers, one status predicate, and gates that can turn red | ready | P20 | `mcp-server/test-residual-hardening.mjs` | C6, C16, C27, C48, C55, C63 |
+| P21 | Residual hardening from the final review: revision-bound writers, one status predicate, and gates that can turn red | ready (1 attempt) | P20 | `mcp-server/test-residual-hardening.mjs` | C6, C16, C27, C48, C55, C63 |
 
 ## Completion
 
