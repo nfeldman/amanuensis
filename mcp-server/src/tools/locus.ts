@@ -1177,6 +1177,12 @@ function buildHistoryPointer(
  * repeats it — except the two that §4.1 states over the compact payload's own
  * values, which are named for what they bound.
  */
+const WIRE_BUDGET = 8192;
+const WIRE_BUDGET_PER_OPTIONAL_SECTION = 4096;
+const WIRE_CEILING = 32768;
+const STANDING_VALUE_BUDGET = 3072;
+const OPTIONAL_SECTION_VALUE_BUDGET = 4096;
+
 /**
  * §4.1's budgets are measured on the bytes the host receives, and the locus a
  * caller names is echoed into the parts of a response that are never
@@ -1204,12 +1210,6 @@ function boundedSubject(name: string, value: string): string {
   }
   return value;
 }
-
-const WIRE_BUDGET = 8192;
-const WIRE_BUDGET_PER_OPTIONAL_SECTION = 4096;
-const WIRE_CEILING = 32768;
-const STANDING_VALUE_BUDGET = 3072;
-const OPTIONAL_SECTION_VALUE_BUDGET = 4096;
 
 /** §4.3: the id list an aggregated ledger entry carries, per entry. */
 const OMITTED_IDS_BUDGET = 1024;
