@@ -449,10 +449,20 @@ def render_index(
                 + (f" (`{alignment['upstream_ref']}`)" if alignment.get("upstream_ref") else ""),
             ),
             (
+                # §11.2 measures freshness on `scoped_files`, never on the
+                # obligation count. A ledger whose scoped rows all happen to be
+                # exempt has been read exactly, and saying it was not measured
+                # would hide a real reading behind the sentence reserved for
+                # having no ledger at all -- and put this row at odds with the
+                # HTML strip, which reads `scoped_files` on the same store.
                 "Files carrying a survey obligation marked stale",
                 f"{stale_obligation} of {obligation}"
                 if obligation
-                else "not measured by this projection",
+                else (
+                    "none of the scoped files carries a survey obligation"
+                    if scoped
+                    else "not measured by this projection"
+                ),
             ),
             (
                 "Scoped files exempt from that obligation, marked stale",
