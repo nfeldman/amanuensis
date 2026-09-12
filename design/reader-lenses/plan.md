@@ -11,7 +11,7 @@
 | P3 | Overview thesis by heading and the orientation lint | done (1 attempt) | P1, P2 | `materializer/test-overview-truthfulness.py` | C32, C49, C55, C63 |
 | P4 | Ledger-derived freshness and a stale axis with a denominator | done (1 attempt) | P1 | `materializer/test-ledger-freshness.py` | C50, C51, C60, C55, C63 |
 
-## S2 · Standing (review: pending)
+## S2 · Standing (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

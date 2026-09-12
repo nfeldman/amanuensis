@@ -30,10 +30,10 @@
         "P10"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "b6720be88363f33bd41262204ec69d433e47a9bf",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "b7688b3e8ed912e2c7623d57b598e3f140db7ae1",
+        "findings": 11
       }
     },
     {
