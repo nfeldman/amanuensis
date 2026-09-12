@@ -67,6 +67,10 @@ const REPO = resolve(MCP, "..");
 const PY = process.env.AMANUENSIS_PYTHON ?? "python3";
 
 const PHASE_2_REL = ".claude/skills/amanuensis/references/phase-2-structural.md";
+// Phase 2's recording obligation, verbatim, with whitespace collapsed: the
+// directive this gate exists to keep in the skill, in its positive polarity.
+const PHASE_2_OBLIGATION =
+  "Call `add_xref` once for every data flow or dependency that crosses a subsystem boundary; one row per crossing.";
 const CI_REL = ".github/workflows/test.yml";
 const SCHEMA_REL = "mcp-server/src/schema.sql";
 
@@ -743,6 +747,56 @@ function topologyRows(markdown) {
   return out;
 }
 
+// The topology is a table, and an edge is a *directed* relation: which column a
+// value lands in is the claim. Asserting that both endpoints appear somewhere in
+// the row passes a renderer that swaps From and To, publishing every dependency
+// backwards (slice-S4 F1/codex). So rows are read as cells, and each recorded
+// field is asserted in its own column.
+//
+// `_safe_label` rewrites `|` to `/` before a value reaches a cell, so splitting
+// on the delimiter cannot be confused by the content.
+const TOPOLOGY_COLUMNS = TOPOLOGY_HEADER.split("|").slice(1, -1).map((c) => c.trim());
+
+function topologyCells(markdown) {
+  const rows = topologyRows(markdown);
+  if (rows === null) return null;
+  return rows.map((row) => {
+    const parts = row.split("|");
+    return parts.slice(1, parts.length - 1).map((cell) => cell.trim());
+  });
+}
+
+// A From or To cell is `**[<id>](<route>)** <name>`; the id is the claim, the
+// link and the name are presentation.
+function endpointId(cell) {
+  const match = /^\*\*\[([^\]]+)\]\([^)]*\)\*\*/.exec(String(cell ?? ""));
+  return match ? match[1] : null;
+}
+
+// Assert one rendered row against the row that was recorded, column by column.
+// Returns a reason or null.
+function edgeRowMismatch(cells, recorded) {
+  const [from, to, relationship, strength, context] = recorded;
+  if (cells.length !== TOPOLOGY_COLUMNS.length) {
+    return `the row has ${cells.length} cells, not the ${TOPOLOGY_COLUMNS.length} the header declares`;
+  }
+  const wanted = [
+    ["From", endpointId(cells[0]), from],
+    ["Relationship", cells[1], relationship],
+    ["To", endpointId(cells[2]), to],
+    ["Strength", cells[3], strength],
+  ];
+  for (const [column, got, want] of wanted) {
+    if (got !== want) {
+      return `the ${column} column reads ${JSON.stringify(got)}, not ${JSON.stringify(want)}`;
+    }
+  }
+  if (!cells[4].includes(context)) {
+    return `the Context column reads ${JSON.stringify(cells[4])}, which does not carry the recorded context`;
+  }
+  return null;
+}
+
 check("a store with zero xrefs renders the atlas, not a topology", () => {
   const { markdown, error } = renderArchitecture({
     subsystems: FOUR_SUBSYSTEMS,
@@ -785,13 +839,12 @@ check("a seam is never rendered as a dependency edge", () => {
     seams: [["SM-07", "ledger_table", "B-03", "B-04"]],
   });
   if (error) return error;
-  const rows = topologyRows(markdown);
-  if (rows === null) return "no dependency topology was rendered for a store that carries an edge";
-  if (rows.length !== 1) return `${rows.length} edge rows were rendered for one recorded xrefs row`;
-  if (!rows[0].includes("B-01") || !rows[0].includes("B-02")) {
-    return `the rendered edge is ${rows[0].trim()}, not the recorded row`;
-  }
-  if (rows.some((row) => row.includes("B-03") || row.includes("B-04"))) {
+  const cells = topologyCells(markdown);
+  if (cells === null) return "no dependency topology was rendered for a store that carries an edge";
+  if (cells.length !== 1) return `${cells.length} edge rows were rendered for one recorded xrefs row`;
+  const wrong = edgeRowMismatch(cells[0], ["B-01", "B-02", "data-flow", "confirmed", `src/a.ts:flush@${"a".repeat(40)}`]);
+  if (wrong) return `the rendered edge does not match the recorded row — ${wrong}`;
+  if (cells.some((row) => row.some((cell) => cell.includes("B-03") || cell.includes("B-04")))) {
     return "the seam between B-03 and B-04 was rendered as a dependency edge";
   }
   return null;
@@ -808,14 +861,24 @@ check("every rendered edge row is a recorded xrefs row", () => {
     seams: [["SM-07", "ledger_table", "B-03", "B-04"]],
   });
   if (error) return error;
-  const rows = topologyRows(markdown);
-  if (rows === null) return "no dependency topology was rendered for a store that carries edges";
-  if (rows.length !== recorded.length) {
-    return `${rows.length} edge rows were rendered for ${recorded.length} recorded xrefs rows`;
+  const cells = topologyCells(markdown);
+  if (cells === null) return "no dependency topology was rendered for a store that carries edges";
+  if (cells.length !== recorded.length) {
+    return `${cells.length} edge rows were rendered for ${recorded.length} recorded xrefs rows`;
   }
-  for (const [from, to, rel] of recorded) {
-    const found = rows.find((row) => row.includes(from) && row.includes(to) && row.includes(rel));
-    if (!found) return `the recorded edge ${from} -${rel}-> ${to} is not rendered`;
+  // The two recorded edges share the endpoint B-02, in opposite roles: a row
+  // matched by "names both ids" would accept either edge for either row, so the
+  // From column decides which recorded row a rendered row is, and every other
+  // column is then asserted against it.
+  for (const row of recorded) {
+    const [from, to, rel] = row;
+    const rendered = cells.find((cand) => endpointId(cand[0]) === from && endpointId(cand[2]) === to);
+    if (!rendered) {
+      const shown = cells.map((c) => `${endpointId(c[0])} -> ${endpointId(c[2])}`).join(", ");
+      return `the recorded edge ${from} -${rel}-> ${to} is not rendered; the table carries ${shown}`;
+    }
+    const wrong = edgeRowMismatch(rendered, row);
+    if (wrong) return `the rendered row for ${from} -${rel}-> ${to} is wrong — ${wrong}`;
   }
   return null;
 });
@@ -944,11 +1007,30 @@ check("phase-2-structural.md tells Phase 2 to record crossing edges with a citat
   const after = text.indexOf("\n### ", at);
   const section = text.slice(before === -1 ? 0 : before + 1, after === -1 ? text.length : after);
   const sentences = section
-    .replace(/\n+/g, " ")
+    // The slice starts at the step's heading, which carries no terminator and
+    // would otherwise be absorbed into the first sentence.
+    .replace(/^#{1,6}[^\n]*\n/, "")
+    .replace(/\s+/g, " ")
     .split(/(?<=\.)\s+/)
+    .map((sentence) => sentence.trim())
     .filter((sentence) => /add_xref/.test(sentence));
-  if (!sentences.some((sentence) => /\bmust\b|\brecord\b|\bone row\b/i.test(sentence))) {
-    return "add_xref is mentioned but never as an obligation on the phase";
+  // A keyword scan for "must", "record", or "one row" reads an obligation out
+  // of its own inversion: "Never record an `add_xref` row …" contains "record"
+  // and passed (slice-S4 F3/codex). Polarity is the whole content of the
+  // directive, so the obligation is pinned as an exact sentence. Rewording it
+  // is a change to what Phase 2 is told to do, and updating this constant is
+  // how that change gets stated deliberately rather than drifting.
+  if (!sentences.includes(PHASE_2_OBLIGATION)) {
+    const shown = sentences.length ? sentences.map((x) => JSON.stringify(x)).join(" / ") : "none";
+    return `the step does not carry Phase 2's recording obligation verbatim — its add_xref sentences are ${shown}`;
+  }
+  // Defence in depth: an inversion added *beside* the pinned sentence rather
+  // than replacing it. An imperative prohibition naming the tool contradicts
+  // the obligation, so it must not stand unremarked; a genuine new restriction
+  // on the phase is a directive change and belongs in this constant too.
+  const prohibition = sentences.find((sentence) => /^(never|do not|don't|no longer)\b/i.test(sentence));
+  if (prohibition) {
+    return `the step also tells Phase 2 ${JSON.stringify(prohibition)}, which contradicts the recording obligation`;
   }
   if (!/cross(?:es|ing|-)?\s*(?:a\s+)?(?:subsystem\s+)?boundar/i.test(section)) {
     return "the instruction does not say which relationships are recorded — the ones that cross a subsystem boundary";
@@ -962,10 +1044,109 @@ check("phase-2-structural.md tells Phase 2 to record crossing edges with a citat
   return null;
 });
 
+// The gate command and the directory it must be invoked from. `includes()` on
+// the whole file is satisfied by the command sitting in a comment — the step
+// `run: echo skipped # node test-edge-contract.mjs` left the check green while
+// CI ran nothing (slice-S4 F2/codex). So the workflow is read as steps, and the
+// gate must be a line the shell actually executes, in the right directory, in a
+// step nothing conditions away.
+const GATE_COMMAND = "node test-edge-contract.mjs";
+const GATE_WORKDIR = "mcp-server";
+
+// Minimal reader for the one shape a workflow step takes: a `- key: value` list
+// item followed by sibling `key: value` lines, with `|`/`>` block scalars read
+// to the end of their indented block. Enough to answer "what does this step
+// run, from where, and under what condition"; not a general YAML parser.
+function workflowSteps(text) {
+  const lines = text.split("\n");
+  const steps = [];
+  let current = null;
+  let block = null; // { key, indent }
+  const indentOf = (line) => line.length - line.trimStart().length;
+  for (const line of lines) {
+    if (block) {
+      if (line.trim() === "" || indentOf(line) >= block.indent) {
+        current[block.key] += `${line.trim()}\n`;
+        continue;
+      }
+      block = null;
+    }
+    const item = /^(\s*)-\s+([\w-]+):[ \t]*(.*)$/.exec(line);
+    if (item) {
+      current = { __indent: item[1].length + 2 };
+      steps.push(current);
+      current[item[2]] = item[3];
+      if (/^[|>]/.test(item[3].trim())) {
+        current[item[2]] = "";
+        block = { key: item[2], indent: current.__indent + 2 };
+      }
+      continue;
+    }
+    if (!current) continue;
+    const key = /^(\s*)([\w-]+):[ \t]*(.*)$/.exec(line);
+    if (!key) continue;
+    if (key[1].length !== current.__indent) {
+      // A dedent ends the step; a deeper key belongs to a nested mapping
+      // (`with:`, `env:`) and is not a step key.
+      if (key[1].length < current.__indent) current = null;
+      continue;
+    }
+    current[key[2]] = key[3];
+    if (/^[|>]/.test(key[3].trim())) {
+      current[key[2]] = "";
+      block = { key: key[2], indent: current.__indent + 2 };
+    }
+  }
+  return steps;
+}
+
+// Drop shell comments so a commented-out command is not read as an invocation.
+function shellLines(run) {
+  return String(run ?? "")
+    .split("\n")
+    .map((line) => line.split("#")[0].trim())
+    .filter(Boolean);
+}
+
 check("this gate runs in CI", () => {
   const ci = readText(join(REPO, CI_REL));
   if (ci === null) return `${CI_REL} is absent`;
-  return ci.includes("node test-edge-contract.mjs") ? null : "the gate is not run in CI";
+  const steps = workflowSteps(ci);
+  if (steps.length === 0) return `no steps could be read from ${CI_REL}`;
+  const invoking = steps.filter((step) => shellLines(step.run).includes(GATE_COMMAND));
+  if (invoking.length === 0) {
+    const mentioned = ci.includes(GATE_COMMAND);
+    return mentioned
+      ? `${CI_REL} names \`${GATE_COMMAND}\` but no step executes it — it is commented out or otherwise inert`
+      : `no step in ${CI_REL} runs \`${GATE_COMMAND}\``;
+  }
+  const reasons = [];
+  for (const step of invoking) {
+    if (step["working-directory"] !== GATE_WORKDIR) {
+      reasons.push(
+        `the step runs from ${JSON.stringify(step["working-directory"] ?? "the repository root")}, not ${GATE_WORKDIR}`,
+      );
+      continue;
+    }
+    if (step.if !== undefined) {
+      reasons.push(`the step is conditioned on \`if: ${step.if}\`, so CI may skip it`);
+      continue;
+    }
+    if (step.continue_on_error !== undefined || step["continue-on-error"] !== undefined) {
+      reasons.push("the step declares continue-on-error, so a red gate would not fail the job");
+      continue;
+    }
+    return null;
+  }
+  return `${CI_REL} runs the gate, but not unconditionally: ${reasons.join("; ")}`;
+});
+
+check("the CI workflow runs on push, so the gate is not manual-only", () => {
+  const ci = readText(join(REPO, CI_REL));
+  if (ci === null) return `${CI_REL} is absent`;
+  const on = /\non:\n((?:[ \t]+.*\n|\n)*)/.exec(ci);
+  if (!on) return `${CI_REL} declares no \`on:\` triggers`;
+  return /^\s+push:/m.test(on[1]) ? null : `${CI_REL} does not trigger on push — ${on[1].trim().slice(0, 120)}`;
 });
 
 // ---------------------------------------------------------------------------
