@@ -216,6 +216,9 @@ jobs:
       - name: describe_locus — the account, its contract, and read-only annotations
         working-directory: mcp-server
         run: node test-locus-standing.mjs
+      - name: Locus compactness — wire budgets and the omission ledger
+        working-directory: mcp-server
+        run: node test-locus-compactness.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs

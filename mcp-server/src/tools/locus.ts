@@ -28,6 +28,7 @@ import {
   optString,
   optStringArray,
   requireString,
+  responseBytes,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -42,6 +43,7 @@ import {
   type StandingBlock,
   type StandingState,
   type SymbolStandingBlock,
+  type UnknownEntry,
 } from "../standing.js";
 import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
 
@@ -297,6 +299,12 @@ interface SectionBuild {
   statement?: string;
   counts?: Record<string, number>;
   session_attribution?: string;
+  /**
+   * §4.3's drop order for a section whose rule reads a column the response does
+   * not serve: one opaque key per item, descending key order being drop order.
+   * Absent for the seven sections whose order is readable from their items.
+   */
+  drop_keys?: string[];
 }
 
 interface SectionView {
@@ -814,7 +822,7 @@ function buildTerms(db: DB, scope: AccountScope): SectionBuild {
   if (conditions.length === 0) return { source_rows: 0, items: [] };
   const rows = db
     .prepare(
-      `SELECT term, gloss, subsystem_id, first_seen, ref_sha
+      `SELECT term, gloss, subsystem_id, first_seen, ref_sha, created_at
          FROM vocabulary WHERE ${conditions.join(" OR ")} ORDER BY term`,
     )
     .all(...params) as {
@@ -823,9 +831,14 @@ function buildTerms(db: DB, scope: AccountScope): SectionBuild {
     subsystem_id: string | null;
     first_seen: string | null;
     ref_sha: string | null;
+    created_at: string;
   }[];
   return {
     source_rows: rows.length,
+    // §4.3's "reverse creation order": the term recorded most recently is the
+    // first to go. `created_at` decides it and is not served, so the order
+    // travels beside the items rather than inside them.
+    drop_keys: rows.map((row) => `${row.created_at}|${row.term}`),
     items: rows.map((row) => ({
       term: row.term,
       gloss: row.gloss,
@@ -972,8 +985,167 @@ function buildHistoryPointer(db: DB, scope: AccountScope, findings: FindingRow[]
 }
 
 // ---------------------------------------------------------------------------
-// The tool
 // ---------------------------------------------------------------------------
+// §4: the budgets, and the ledger that declares what they cost
+// ---------------------------------------------------------------------------
+
+/**
+ * §4.1's table, as code constants. Every budget below is measured on the bytes
+ * the host receives — the compact text block plus the `structuredContent` that
+ * repeats it — except the two that §4.1 states over the compact payload's own
+ * values, which are named for what they bound.
+ */
+const WIRE_BUDGET = 8192;
+const WIRE_BUDGET_PER_OPTIONAL_SECTION = 4096;
+const WIRE_CEILING = 32768;
+const STANDING_VALUE_BUDGET = 3072;
+const OPTIONAL_SECTION_VALUE_BUDGET = 4096;
+
+/** §4.3: the id list an aggregated ledger entry carries, per entry. */
+const OMITTED_IDS_BUDGET = 1024;
+/**
+ * The ladder that sub-budget walks down when every truncatable item is already
+ * gone and the response is still over budget. Counts are never touched (§4.1);
+ * only the sample of ids beside them shrinks, and it says that it did.
+ */
+const OMITTED_IDS_LADDER = [OMITTED_IDS_BUDGET, 512, 256, 128, 64, 0] as const;
+
+/**
+ * §4.3's order, named in the response so a reader can tell which policy
+ * produced the answer, and versioned so a change to it is visible rather than
+ * silent.
+ */
+const TRUNCATION_ORDER = "unknown-then-round-robin-sections-then-ledger-ids-v1";
+
+/**
+ * Retention across sections, highest retention first.
+ *
+ * §4.3 fixes the order *within* a section and leaves the order across them
+ * open; this constant fills it. Retention is round-robin rather than
+ * section-major: the deepest served list always gives up the next item, so
+ * every section that holds something is sampled before any section is asked for
+ * a second row. A section-major order would empty the last five sections
+ * outright on any store large enough to truncate, which would make the account
+ * a partial answer pretending to be a whole one. This list breaks the ties —
+ * when several sections are equally deep, the one nearest the end gives way.
+ */
+const SECTION_RETENTION: readonly AccountSection[] = [
+  "purpose", // one row per owner: the cheapest orientation the account has
+  "defects", // what the record says is wrong, its own order leading with open
+  "structure", // what the record says the locus is
+  "boundaries", // what it touches
+  "terms", // what its words mean here
+  "leads", // what is unresolved; standing's unknown[] counts them too
+  "reviews", // concern dispositions, opt-in
+  "history_pointer", // detail behind a pointer whose counts are always served
+];
+
+/** §3.1's terminal resolution states, which §4.3 drops before the others. */
+const TERMINAL_PARTITIONS: readonly string[] = ["verified-fixed", "ruled-out", "accepted"];
+
+/**
+ * A stable id for every candidate, distinct across the whole response: the
+ * ledger reconciles against the census by id (§4.3), so two rows that share an
+ * id would let an omission stand for something it did not drop. Sections that
+ * mix two sources name the source, because the two id spaces are independent.
+ */
+function itemId(section: AccountSection, item: Item): string {
+  switch (section) {
+    case "purpose":
+      return `purpose:${String(item.subsystem_id)}`;
+    case "structure":
+      return `structure:${String(item.claim_id)}`;
+    case "defects":
+      return `defects:${String(item.finding_id)}`;
+    case "reviews":
+      return `reviews:${String(item.subsystem_id)}/${String(item.concern_code)}`;
+    case "boundaries":
+      return item.kind === "seam"
+        ? `boundaries:seam/${String(item.seam_id)}`
+        : `boundaries:xref/${String(item.from_id)}>${String(item.to_id)}/${String(item.relationship)}`;
+    case "terms":
+      return `terms:${String(item.term)}`;
+    case "leads":
+      return item.kind === "lead"
+        ? `leads:note/${String(item.note_id)}`
+        : `leads:question/${String(item.question_id)}`;
+    case "history_pointer":
+      return item.kind === "resolution-event"
+        ? `history:event/${String(item.event_id)}`
+        : `history:session/${String(item.session_id)}`;
+  }
+}
+
+/** The same, for the standing block's unknown[] entries (§2.4.6). */
+function unknownId(entry: UnknownEntry): string {
+  switch (entry.kind) {
+    case "concern-without-disposition":
+      return `unknown:concern/${String(entry.subsystem_id)}/${String(entry.concern_code)}`;
+    case "candidate-sibling":
+      return `unknown:candidate-siblings/${String(entry.count)}`;
+    case "open-question":
+      return `unknown:question/${String(entry.question_id)}`;
+    case "open-lead":
+      return `unknown:lead/${String(entry.note_id)}`;
+    case "unassessed-seam":
+      return `unknown:seam/${String(entry.seam_id)}`;
+    default:
+      return `unknown:${String(entry.kind)}`;
+  }
+}
+
+/**
+ * §4.3's within-section order, as item indices with the most-retained first:
+ * the last index returned is the first one dropped. Two of the eight rules are
+ * §4.3's own words; the rest are stated here because §4.3 does not state them,
+ * and each is a code constant rather than a judgment made per call.
+ */
+function retentionOrder(section: AccountSection, build: SectionBuild): number[] {
+  const indices = build.items.map((_, index) => index);
+  // A builder that reads a column it does not serve hands the order over as
+  // keys: descending key order is drop order, so retention is ascending.
+  if (build.drop_keys) {
+    const keys = build.drop_keys;
+    return indices.sort((a, b) => String(keys[a]).localeCompare(String(keys[b])));
+  }
+  if (section === "structure") {
+    // §4.3: the weakest `evidence_kind` goes first. A claim with no attached
+    // evidence ranks below every kind rather than above them.
+    const rank = (index: number): number => {
+      const kind = build.items[index]?.evidence_kind;
+      const found = (EVIDENCE_KINDS as readonly string[]).indexOf(String(kind ?? ""));
+      return found < 0 ? EVIDENCE_KINDS.length : found;
+    };
+    return indices.sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        String(build.items[a]?.claim_id).localeCompare(String(build.items[b]?.claim_id)),
+    );
+  }
+  if (section === "history_pointer") {
+    // A pointer is most useful pointing at the latest conclusion, so recency
+    // is retained and the oldest row gives way first. A resolution event is a
+    // conclusion and a session is a visit, so the visits go first.
+    const rank = (index: number): number =>
+      build.items[index]?.kind === "resolution-event" ? 0 : 1;
+    const recency = (index: number): string =>
+      String(build.items[index]?.event_id ?? build.items[index]?.started_at ?? "");
+    return indices.sort(
+      (a, b) => rank(a) - rank(b) || recency(b).localeCompare(recency(a)),
+    );
+  }
+  // The remaining five sections are already presented in retention order:
+  //   defects      §3.1's partition order leads with the two non-terminal
+  //                states and orders each partition by severity then id, so
+  //                the tail is the weakest of the terminal states — which is
+  //                exactly §4.3's "terminal states before the non-terminal";
+  //   leads        `field_notes` and `open_questions` both in ascending id, so
+  //                the tail is the newest — §4.3's "reverse creation order";
+  //   boundaries   seams before xrefs, each in recorded order;
+  //   purpose      one row per owner, in owner order;
+  //   reviews      by subsystem then concern code.
+  return indices;
+}
 
 interface OmissionEntry {
   section: string;
@@ -983,41 +1155,74 @@ interface OmissionEntry {
   ids_truncated: boolean;
 }
 
-/** §4.3: an aggregated ledger entry, one per (section, reason), with an exact count. */
-const OMITTED_IDS_BUDGET = 1024;
-
-function itemId(section: string, item: Item): string {
-  const key =
-    item.claim_id ??
-    item.finding_id ??
-    item.term ??
-    item.subsystem_id ??
-    item.seam_id ??
-    item.note_id ??
-    item.question_id ??
-    item.event_id ??
-    item.session_id ??
-    item.concern_code;
-  return `${section}:${String(key ?? "row")}`;
+interface DroppedGroup {
+  section: string;
+  reason: "policy" | "budget";
+  /** Every dropped id, in the order they were dropped: never truncated here. */
+  ids: string[];
 }
 
-function omissionFor(section: string, items: Item[]): OmissionEntry {
-  const ids: string[] = [];
-  let bytes = 0;
-  let truncated = false;
-  for (const item of items) {
-    const id = itemId(section, item);
-    bytes += id.length + 3;
-    if (bytes > OMITTED_IDS_BUDGET) {
-      truncated = true;
-      break;
+/**
+ * §4.3's ledger: one entry per `(section, reason)` with an exact count, and an
+ * id list bounded by its own sub-budget. The count is what the census invariant
+ * reconciles against, so it is never truncated; a truncated id list says so.
+ */
+function buildLedger(groups: readonly DroppedGroup[], idBudget: number): OmissionEntry[] {
+  const out: OmissionEntry[] = [];
+  for (const group of groups) {
+    if (group.ids.length === 0) continue;
+    const ids: string[] = [];
+    // The brackets, then each id with its quotes and separator.
+    let used = 2;
+    for (const id of group.ids) {
+      used += Buffer.byteLength(id, "utf8") + 3;
+      if (used > idBudget) break;
+      ids.push(id);
     }
-    ids.push(id);
+    out.push({
+      section: group.section,
+      reason: group.reason,
+      count: group.ids.length,
+      ids,
+      ids_truncated: ids.length < group.ids.length,
+    });
   }
-  // The count is exact and never truncated: it is what the census invariant
-  // reconciles against, and a truncated count would be a lie (§4.3).
-  return { section, reason: "policy", count: items.length, ids, ids_truncated: truncated };
+  return out;
 }
+
+/** The array standing keeps its unknown[] in, or null for a kind that has none. */
+function standingUnknown(standing: StandingBlock, kind: LocusKind): UnknownEntry[] | null {
+  const block = (
+    kind === "symbol" ? (standing as SymbolStandingBlock).file : standing
+  ) as { unknown?: unknown } | undefined;
+  return Array.isArray(block?.unknown) ? (block.unknown as UnknownEntry[]) : null;
+}
+
+interface AccountTrace {
+  model_calls: 0;
+  selection: string;
+  budget_bytes: number;
+  payload_bytes: number;
+  response_bytes: number;
+  truncation_order: string;
+  truncated: boolean;
+  within_budget: boolean;
+  over_budget_reason: string | null;
+}
+
+/**
+ * §4.1's residual case, stated once. `owners[]`, every census and every
+ * per-reason count are never truncated, so a locus with enough owners cannot be
+ * brought inside its budget by dropping anything. The response says so rather
+ * than refusing an answer the record can support; only the 32768-byte ceiling
+ * is an error.
+ */
+const OVER_BUDGET_REASON =
+  "This response is over its byte budget with every truncatable item already dropped: owners[], each section's census, and each omission count are never truncated.";
+
+// ---------------------------------------------------------------------------
+// The tool
+// ---------------------------------------------------------------------------
 
 function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext) {
   const value = requireString(args, "locus");
@@ -1060,19 +1265,32 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
   const revision = (standing as { revision?: { unchecked_since?: string | null } }).revision;
   const uncheckedSince = revision?.unchecked_since ?? null;
 
+  interface SectionState {
+    name: AccountSection;
+    view: SectionView;
+    build: SectionBuild;
+    requested: boolean;
+    /** Item indices, most-retained first (§4.3). */
+    retention: number[];
+    /** How many of `retention` are still served. */
+    keep: number;
+    /** The array `view.items` holds; mutated in place as items are dropped. */
+    served: Item[];
+  }
+
   const sections: Record<string, SectionView> = {};
-  const omitted: OmissionEntry[] = [];
-  const bySection: Record<string, number> = {};
+  const states: SectionState[] = [];
+  const census: Record<string, number> = {};
   for (const name of ACCOUNT_SECTIONS) {
     const requested = wanted.has(name);
     const build = builders[name]();
-    const census = build.items.length;
+    const served: Item[] = [];
     const view: SectionView = {
-      census,
+      census: build.items.length,
       recorded: build.source_rows > 0,
       requested,
       as_of_supported: name === "structure" || name === "defects" || name === "history_pointer",
-      items: requested ? build.items : [],
+      items: served,
     };
     // §4.2: `history_pointer`'s counts are on by default; only its detail is
     // opt-in, so the counts are attached whether or not the section was asked
@@ -1084,71 +1302,263 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
       view.withheld_unauthorized = build.withheld ?? 0;
       if (build.cannot_justify) view.cannot_justify = build.cannot_justify;
     }
-    if (build.source_rows !== census) view.source_rows = build.source_rows;
+    if (build.source_rows !== view.census) view.source_rows = build.source_rows;
     if (asOf && !view.as_of_supported) {
       view.statement = asOfUnsupportedSentence(asOf);
     } else if (build.statement) {
       view.statement = build.statement;
     }
     if (uncheckedSince) view.as_of = uncheckedSince;
-    if (view.items.length === 0 && census > 0) {
-      omitted.push(omissionFor(name, build.items));
-    }
-    bySection[name] = census;
+    const retention = retentionOrder(name, build);
+    states.push({
+      name,
+      view,
+      build,
+      requested,
+      retention,
+      keep: requested ? retention.length : 0,
+      served,
+    });
+    census[name] = view.census;
     sections[name] = view;
   }
+  const stateOf = (name: AccountSection): SectionState =>
+    states.find((state) => state.name === name) as SectionState;
 
-  // §4.3's invariant, checked before returning: a response that cannot
-  // reconcile its own census fails rather than returning a smaller
-  // truthful-looking answer.
-  for (const name of ACCOUNT_SECTIONS) {
-    const view = sections[name] as SectionView;
-    const dropped = omitted
-      .filter((entry) => entry.section === name)
-      .reduce((total, entry) => total + entry.count, 0);
-    if (view.items.length + dropped !== view.census) {
-      throw new ToolError(
-        `section ${name} cannot reconcile its census: ${view.items.length} selected + ${dropped} omitted != ${view.census}`,
-      );
+  // §4.1: unknown[]'s per-kind sample lists are truncated before anything
+  // else, so they are grouped by kind and given up round-robin: a sample keeps
+  // one of each kind for as long as it keeps any.
+  const unknownArray = standingUnknown(standing, locus.kind);
+  const unknownGroups: { entries: UnknownEntry[]; keep: number }[] = [];
+  if (unknownArray) {
+    const byKind = new Map<string, UnknownEntry[]>();
+    for (const entry of unknownArray) {
+      const group = byKind.get(entry.kind) ?? [];
+      group.push(entry);
+      byKind.set(entry.kind, group);
     }
+    for (const entries of byKind.values()) unknownGroups.push({ entries, keep: entries.length });
+    census.unknown = unknownArray.length;
   }
+  const unknownAll = unknownArray ? [...unknownArray] : [];
 
+  const optionalRequested = [...wanted].filter((name) => !DEFAULT_SECTIONS.includes(name)).length;
+  const budgetBytes = Math.min(
+    WIRE_CEILING,
+    WIRE_BUDGET + WIRE_BUDGET_PER_OPTIONAL_SECTION * optionalRequested,
+  );
+
+  const omitted: OmissionEntry[] = [];
+  const trace: AccountTrace = {
+    model_calls: 0,
+    selection: "registry-exact-v1",
+    budget_bytes: budgetBytes,
+    payload_bytes: 0,
+    response_bytes: 0,
+    truncation_order: TRUNCATION_ORDER,
+    truncated: false,
+    within_budget: true,
+    over_budget_reason: null,
+  };
   const payload = {
     contract_version: LOCUS_ACCOUNT_CONTRACT_VERSION,
     locus,
     standing,
     sections,
     census: {
-      total: Object.values(bySection).reduce((sum, count) => sum + count, 0),
-      by_section: bySection,
+      total: Object.values(census).reduce((sum, count) => sum + count, 0),
+      by_section: census,
     },
     omitted,
-    trace: {
-      model_calls: 0,
-      selection: "registry-exact-v1",
-      // §4.1: 8192 for the default response, 4096 for each optional section
-      // the call asks for, and 32768 as the hard ceiling no request exceeds.
-      budget_bytes: Math.min(
-        32768,
-        8192 + 4096 * [...wanted].filter((name) => !DEFAULT_SECTIONS.includes(name)).length,
-      ),
-      payload_bytes: 0,
-      // The wire measurement belongs to the emitting helper, not to the
-      // handler: it counts the text block and the duplicated
-      // structuredContent, neither of which exists yet at this point.
-      response_bytes: null,
-    },
+    trace,
     current: asOf === null,
     as_of_sha: asOf,
   };
-  // Measured, not estimated: iterate to the fixed point where the reported
-  // size is the size of the payload that reports it.
-  let measured = 0;
-  for (let pass = 0; pass < 4; pass += 1) {
-    payload.trace.payload_bytes = measured;
-    const size = Buffer.byteLength(JSON.stringify(payload), "utf8");
-    if (size === measured) break;
-    measured = size;
+
+  let idBudget: number = OMITTED_IDS_BUDGET;
+
+  /** Re-derive every truncation-dependent part of the payload in place. */
+  function refresh(): void {
+    for (const state of states) {
+      const kept = new Set(state.retention.slice(0, state.keep));
+      state.served.splice(
+        0,
+        state.served.length,
+        ...state.build.items.filter((_, index) => kept.has(index)),
+      );
+    }
+    if (unknownArray) {
+      const kept = new Set<UnknownEntry>();
+      for (const group of unknownGroups) for (const entry of group.entries.slice(0, group.keep)) kept.add(entry);
+      unknownArray.splice(0, unknownArray.length, ...unknownAll.filter((entry) => kept.has(entry)));
+    }
+    const groups: DroppedGroup[] = [];
+    if (unknownArray) {
+      const dropped: string[] = [];
+      for (const group of unknownGroups) {
+        for (const entry of group.entries.slice(group.keep)) dropped.push(unknownId(entry));
+      }
+      if (dropped.length) groups.push({ section: "unknown", reason: "budget", ids: dropped });
+    }
+    for (const state of states) {
+      // A section the call did not ask for is dropped whole, by policy; a
+      // section it did ask for gives up its least-retained items, by budget.
+      // The two reasons are exclusive by construction (§4.3).
+      const reason: "policy" | "budget" = state.requested ? "budget" : "policy";
+      const droppedIndices = state.requested
+        ? state.retention.slice(state.keep)
+        : state.retention;
+      const ids = droppedIndices.map((index) => itemId(state.name, state.build.items[index] as Item));
+      if (ids.length) groups.push({ section: state.name, reason, ids });
+    }
+    omitted.splice(0, omitted.length, ...buildLedger(groups, idBudget));
+    trace.truncated = omitted.some((entry) => entry.reason === "budget");
+  }
+
+  /** §4.1's standing budget is stated over the compact payload's own value. */
+  function standingBytes(): number {
+    return Buffer.byteLength(JSON.stringify(standing), "utf8");
+  }
+
+  /**
+   * The reported sizes are part of the response they measure, so they are
+   * iterated to the fixed point where the number a response reports is the
+   * number it has. Writing a longer number can only make the response longer,
+   * so the iteration is monotone and settles in a pass or two.
+   */
+  function settle(): number {
+    for (let pass = 0; pass < 8; pass += 1) {
+      const compact = Buffer.byteLength(JSON.stringify(payload), "utf8");
+      const wire = responseBytes(payload, { compact: true });
+      if (trace.payload_bytes === compact && trace.response_bytes === wire) return wire;
+      trace.payload_bytes = compact;
+      trace.response_bytes = wire;
+    }
+    throw new ToolError("the response size could not be measured to a fixed point");
+  }
+
+  /** Give up one unknown[] entry, from the deepest per-kind sample. */
+  function dropUnknown(): boolean {
+    let deepest: { entries: UnknownEntry[]; keep: number } | null = null;
+    for (const group of unknownGroups) {
+      if (group.keep === 0) continue;
+      if (!deepest || group.keep >= deepest.keep) deepest = group;
+    }
+    if (!deepest) return false;
+    deepest.keep -= 1;
+    refresh();
+    return true;
+  }
+
+  /** Give up one item from the named section's least-retained end. */
+  function dropFrom(name: AccountSection): boolean {
+    const state = stateOf(name);
+    if (state.keep === 0) return false;
+    state.keep -= 1;
+    refresh();
+    return true;
+  }
+
+  /**
+   * §4.3's order: unknown[]'s samples first, then one item from whichever
+   * served list is deepest — the round-robin the retention list breaks ties
+   * for.
+   */
+  function dropNext(): boolean {
+    if (unknownGroups.some((group) => group.keep > 0)) return dropUnknown();
+    let chosen: SectionState | null = null;
+    for (const name of SECTION_RETENTION) {
+      const state = stateOf(name);
+      if (state.keep === 0) continue;
+      if (!chosen || state.keep >= chosen.keep) chosen = state;
+    }
+    if (!chosen) return false;
+    chosen.keep -= 1;
+    refresh();
+    return true;
+  }
+
+  /** The last resort: shrink the ledger's id samples, never its counts. */
+  function shrinkIdBudget(): boolean {
+    const next = OMITTED_IDS_LADDER.find((value) => value < idBudget);
+    if (next === undefined) return false;
+    idBudget = next;
+    refresh();
+    return true;
+  }
+
+  refresh();
+
+  // §4.1's standing budget. unknown[] is the only part of the block that may
+  // be truncated, so when the sample is gone the block is as small as the
+  // record allows and the response says so under `within_budget`.
+  while (standingBytes() > STANDING_VALUE_BUDGET && dropUnknown()) {
+    /* refresh() re-measured the block; the condition re-reads it */
+  }
+
+  // §4.1's per-section budget, on each optional section the call asked for.
+  for (const state of states) {
+    if (!state.requested || DEFAULT_SECTIONS.includes(state.name)) continue;
+    while (
+      Buffer.byteLength(JSON.stringify(state.view), "utf8") > OPTIONAL_SECTION_VALUE_BUDGET &&
+      dropFrom(state.name)
+    ) {
+      /* dropFrom() re-materialized the view; the condition re-reads it */
+    }
+  }
+
+  // §4.1's wire budget, measured on the emitted response. Each pass drops what
+  // the shortfall needs, sized against the largest served item so the estimate
+  // never overshoots, and re-measures.
+  for (let guard = 0; guard < 20000; guard += 1) {
+    const wire = settle();
+    if (wire <= budgetBytes) break;
+    const largest = Math.max(
+      1,
+      ...states.flatMap((state) =>
+        state.served.map((item) => Buffer.byteLength(JSON.stringify(item), "utf8")),
+      ),
+      ...(unknownArray ?? []).map((entry) => Buffer.byteLength(JSON.stringify(entry), "utf8")),
+    );
+    const step = Math.max(1, Math.floor((wire - budgetBytes) / (2 * largest)));
+    let dropped = 0;
+    for (let index = 0; index < step; index += 1) {
+      if (!dropNext()) break;
+      dropped += 1;
+    }
+    if (dropped === 0 && !shrinkIdBudget()) break;
+  }
+
+  const wire = settle();
+  // §4.1: exceeding the hard ceiling is an error, not a truncation. The two
+  // are different failures: a budget the response cannot reach is declared,
+  // because the record still supports the answer; a response past the ceiling
+  // is refused, because no host should be handed it.
+  if (wire > WIRE_CEILING) {
+    throw new ToolError(
+      `this locus cannot be served inside the ${WIRE_CEILING}-byte ceiling: the untruncatable part of the response measures ${wire} bytes`,
+    );
+  }
+  if (wire > budgetBytes) {
+    trace.within_budget = false;
+    trace.over_budget_reason = OVER_BUDGET_REASON;
+    settle();
+  }
+
+  // §4.3's invariant, checked before returning: a response that cannot
+  // reconcile its own census fails rather than returning a smaller
+  // truthful-looking answer.
+  for (const [name, count] of Object.entries(census)) {
+    const served =
+      name === "unknown" ? (unknownArray?.length ?? 0) : (sections[name]?.items.length ?? 0);
+    const dropped = omitted
+      .filter((entry) => entry.section === name)
+      .reduce((total, entry) => total + entry.count, 0);
+    if (served + dropped !== count) {
+      throw new ToolError(
+        `section ${name} cannot reconcile its census: ${served} selected + ${dropped} omitted != ${count}`,
+      );
+    }
   }
   return payload;
 }
@@ -1157,7 +1567,7 @@ export const locusTools: ToolDefinition[] = [
   {
     name: "describe_locus",
     description:
-      "Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set.",
+      "Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1172,6 +1582,9 @@ export const locusTools: ToolDefinition[] = [
       required: ["locus"],
       additionalProperties: false,
     },
+    // §4.1: the text block is serialized without indentation, because the
+    // budget is measured on the bytes the host receives.
+    compact: true,
     handler: describeLocusHandler,
   },
 ];

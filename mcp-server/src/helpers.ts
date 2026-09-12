@@ -24,6 +24,24 @@ export interface ToolDefinition {
   description: string;
   inputSchema: JsonSchema;
   handler: (args: Record<string, unknown>, ctx: ServerContext) => unknown;
+  /**
+   * Serialize this tool's text block without indentation (spec §4.1). The
+   * dispatcher in `index.ts` reads the flag, so a tool whose response carries a
+   * byte budget has that budget enforced on the bytes the host receives rather
+   * than on a promise in a comment. Absent means the indented default, which is
+   * what every tool written before the budgets existed still emits.
+   */
+  compact?: boolean;
+}
+
+export interface JsonResultOptions {
+  /**
+   * §4.1: emit the text block as `JSON.stringify(data)` rather than as
+   * `JSON.stringify(data, null, 2)`. `structuredContent` still repeats the same
+   * object, because the MCP contract and existing hosts depend on it; the
+   * duplicate is counted against the budget, not dropped.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -32,19 +50,34 @@ export interface ToolDefinition {
  * MCP's protocol-level `isError` signal so hosts can react without reparsing
  * prose.
  */
-export function jsonResult(data: unknown) {
+export function jsonResult(data: unknown, options: JsonResultOptions = {}) {
   const result: {
     content: Array<{ type: "text"; text: string }>;
     structuredContent?: Record<string, unknown>;
     isError?: boolean;
   } = {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    content: [
+      {
+        type: "text" as const,
+        text: options.compact === true ? JSON.stringify(data) : JSON.stringify(data, null, 2),
+      },
+    ],
   };
   if (data !== null && typeof data === "object" && !Array.isArray(data)) {
     result.structuredContent = data as Record<string, unknown>;
     if ((data as { ok?: unknown }).ok === false) result.isError = true;
   }
   return result;
+}
+
+/**
+ * The bytes a host actually receives: the whole emitted envelope, text block
+ * and the `structuredContent` that duplicates it. §4.1 binds every response
+ * budget to this measurement rather than to the payload, so the measurement
+ * lives beside the emitter and both the tools and their gate read the same one.
+ */
+export function responseBytes(data: unknown, options: JsonResultOptions = {}): number {
+  return Buffer.byteLength(JSON.stringify(jsonResult(data, options)), "utf8");
 }
 
 export function ok(extra: Record<string, unknown> = {}) {

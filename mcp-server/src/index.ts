@@ -294,7 +294,10 @@ async function main(): Promise<void> {
       assertProjectBinding(project);
       if (name !== "get_project_info") ensureDatabase();
       const data = tool.handler(args, ctx);
-      return jsonResult(data);
+      // §4.1: the tool declares whether its text block is serialized compactly,
+      // and the dispatcher honors the declaration. A tool that carries a byte
+      // budget therefore has it enforced on the emitted response.
+      return jsonResult(data, { compact: tool.compact === true });
     } catch (e) {
       if (e instanceof ToolError) {
         return jsonResult({ ok: false, error: e.message });

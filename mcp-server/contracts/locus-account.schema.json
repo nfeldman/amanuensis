@@ -59,12 +59,14 @@
         "total": { "type": "integer", "minimum": 0 },
         "by_section": {
           "type": "object",
+          "description": "Candidate count per section before any truncation, plus `unknown` where the standing block carries a sample list. Never truncated.",
           "additionalProperties": { "type": "integer", "minimum": 0 }
         }
       }
     },
     "omitted": {
       "type": "array",
+      "description": "The omission ledger: one entry per (section, reason), with an exact count that reconciles selected + omitted == census. `section` is one of the eight account sections or `unknown`, the standing block's sample list. `ids` carries as many census members as fit a 1024-byte per-entry sub-budget and sets ids_truncated when it cannot carry them all; `count` is never truncated.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -80,14 +82,29 @@
     },
     "trace": {
       "type": "object",
+      "description": "What produced the response and what it cost. Every byte count is measured, not estimated: payload_bytes is the compact payload and response_bytes the whole emitted envelope, text block plus the structuredContent that repeats it, which is what every budget in spec 4.1 is enforced on.",
       "additionalProperties": false,
-      "required": ["model_calls", "selection", "budget_bytes", "payload_bytes", "response_bytes"],
+      "required": [
+        "model_calls",
+        "selection",
+        "budget_bytes",
+        "payload_bytes",
+        "response_bytes",
+        "truncation_order",
+        "truncated",
+        "within_budget",
+        "over_budget_reason"
+      ],
       "properties": {
         "model_calls": { "const": 0 },
         "selection": { "const": "registry-exact-v1" },
         "budget_bytes": { "type": "integer", "minimum": 1 },
         "payload_bytes": { "type": "integer", "minimum": 0 },
-        "response_bytes": { "type": ["integer", "null"], "minimum": 0 }
+        "response_bytes": { "type": "integer", "minimum": 0 },
+        "truncation_order": { "type": "string", "minLength": 1 },
+        "truncated": { "type": "boolean" },
+        "within_budget": { "type": "boolean" },
+        "over_budget_reason": { "type": ["string", "null"] }
       }
     },
     "current": { "type": "boolean" },

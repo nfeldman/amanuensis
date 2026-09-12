@@ -223,12 +223,18 @@ function prettyWireBytes(payload) {
 //
 //   src/hot.ts      §4.4's pathological locus — 40 findings, 120 evidence
 //                   rows, 60 claims, 30 open leads on the one path.
+//                   Nothing else is recorded against it: §4.4 names four
+//                   sources and the budget is measured against exactly those,
+//                   so a later reading of this gate can tell the fixture from
+//                   the assertion.
+//   src/spread.ts   moderate censuses in all eight sections, so the retention
+//                   order across sections has something to spread over.
 //   src/wide.ts     a 150-item census in a single section, so the aggregated
 //                   ledger's id sub-budget is what gives way rather than the
 //                   count.
 //   src/owned.ts    six agreeing owners, so `owners[]` is bigger than the
 //                   standing budget and cannot be truncated to reach it.
-//   src/crowded.ts  sixteen owners, so the whole response is past the 32768
+//   src/crowded.ts  forty owners, so the whole response is past the 32768
 //                   ceiling that §4.1 says is an error rather than a
 //                   truncation.
 //   src/quiet.ts    a ledgered file with nothing else recorded, so every empty
@@ -260,7 +266,7 @@ function buildFixture() {
   git(workspace, "config", "user.email", "test@localhost");
   git(workspace, "config", "user.name", "Locus Compactness Test");
   git(workspace, "config", "commit.gpgsign", "false");
-  for (const name of ["hot", "wide", "owned", "crowded", "quiet"]) {
+  for (const name of ["hot", "spread", "wide", "owned", "crowded", "quiet"]) {
     writeFileSync(join(workspace, "src", `${name}.ts`), `export const ${name} = 1;\n`);
   }
   git(workspace, "add", "src");
@@ -288,9 +294,11 @@ function buildFixture() {
   subsystem.run("B-01", "Hot path", "concerns", "src/hot.ts and the readers it owns", "src/hot.ts");
   subsystem.run("B-02", "Wide", "concerns", "src/wide.ts", "src/wide.ts");
   subsystem.run("B-03", "Quiet", "concerns", "src/quiet.ts", "src/quiet.ts");
+  subsystem.run("B-04", "Spread", "concerns", "src/spread.ts", "src/spread.ts");
   ledger.run("B-01", "src/hot.ts", head);
   ledger.run("B-02", "src/wide.ts", head);
   ledger.run("B-03", "src/quiet.ts", head);
+  ledger.run("B-04", "src/spread.ts", head);
   // Six owners that agree, so the file's standing state stays `examined` and
   // the only thing over budget is the owner list itself.
   const ownerIds = [];
@@ -301,7 +309,7 @@ function buildFixture() {
     ledger.run(id, "src/owned.ts", head);
   }
   const crowdedIds = [];
-  for (let i = 1; i <= 16; i += 1) {
+  for (let i = 1; i <= 40; i += 1) {
     const id = `C-${String(i).padStart(2, "0")}`;
     crowdedIds.push(id);
     subsystem.run(id, `Crowd ${i}`, "concerns", "src/crowded.ts", "src/crowded.ts");
@@ -412,31 +420,101 @@ function buildFixture() {
   for (let i = 1; i <= 30; i += 1) {
     note.run(i, `the ${i}th retry path is untested and may not be reachable`, head);
   }
-  // One dispositioned concern, so `reviews` has a census to omit by policy.
-  db.prepare(
-    "INSERT INTO concerns (code, category, origin, notes, status) VALUES ('CC-1', 'concurrency', 'seeded', 'can two readers interleave?', 'active')",
-  ).run();
-  db.prepare(
-    `INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale)
-     VALUES ('B-01', 'CC-1', 'ruled-out', ?, 'code-verified', 'the reader holds the lock across the retry')`,
-  ).run(`src/hot.ts:readRow1@${head}`);
-  db.prepare(
-    "INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B-01','CC-1',1,'supports')",
-  ).run();
-  // Two terms and two boundary rows, so the round-robin retention has more
-  // than two sections to spread across.
-  const vocab = db.prepare(
-    "INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha) VALUES (?, ?, 'B-01', ?, ?)",
+  // The spread locus: every remaining section given a census of its own, so the
+  // retention order across sections is exercised on a locus whose composition
+  // is this gate's rather than §4.4's.
+  const spreadEvidence = db.prepare(
+    `INSERT INTO evidence (id, file_path, symbol, ref_sha, kind, note, session_id)
+     VALUES (?, 'src/spread.ts', ?, ?, 'code-verified', 'the spread fixture', 'p7')`,
   );
-  vocab.run("row cursor", "the position a reader resumes from", `src/hot.ts:readRow1@${head}`, head);
-  vocab.run("retry ceiling", "the bound a reader retries under", null, null);
-  db.prepare(
+  for (let i = 1; i <= 6; i += 1) spreadEvidence.run(500 + i, `spread${i}`, head);
+  for (let i = 1; i <= 8; i += 1) {
+    claim.run(
+      `SP-${String(i).padStart(2, "0")}`,
+      `spread/row/${i}`,
+      "src/spread.ts",
+      `the spread reader holds invariant ${i} across a restart`,
+      head,
+      head,
+    );
+  }
+  const spreadFinding = db.prepare(
+    `INSERT INTO findings
+       (finding_id, subsystem_id, symptom, root_cause, severity, status, primary_files, ref_sha, session_id)
+     VALUES (?, 'B-04', ?, 'spread fixture', 'HIGH', 'confirmed-bug', ?, ?, 'p7')`,
+  );
+  const spreadPrimary = JSON.stringify([`src/spread.ts:spread1@${head}`]);
+  for (let i = 1; i <= 8; i += 1) {
+    spreadFinding.run(
+      `B04-${String(i).padStart(2, "0")}`,
+      `the spread reader drops the ${i}th row on a restart`,
+      spreadPrimary,
+      head,
+    );
+    findingEvidence.run(`B04-${String(i).padStart(2, "0")}`, 500 + ((i % 6) + 1));
+  }
+  const concern = db.prepare(
+    "INSERT INTO concerns (code, category, origin, notes, status) VALUES (?, 'concurrency', 'seeded', ?, 'active')",
+  );
+  const disposition = db.prepare(
+    `INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale)
+     VALUES ('B-04', ?, 'ruled-out', ?, 'code-verified', 'the reader holds the lock across the retry')`,
+  );
+  const dispositionEvidence = db.prepare(
+    "INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B-04', ?, ?, 'supports')",
+  );
+  for (let i = 1; i <= 4; i += 1) {
+    concern.run(`CC-${i}`, `can two readers interleave at step ${i}?`);
+    disposition.run(`CC-${i}`, `src/spread.ts:spread1@${head}`);
+    dispositionEvidence.run(`CC-${i}`, 500 + i);
+  }
+  // Six terms with distinct creation stamps: §4.3's "reverse creation order"
+  // is decided by a column the response does not serve, so an order read off
+  // the served fields would differ from the one the rule names.
+  const vocab = db.prepare(
+    `INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha, created_at)
+     VALUES (?, ?, 'B-04', ?, ?, ?)`,
+  );
+  const termOrder = [
+    "restart barrier",
+    "row cursor",
+    "retry ceiling",
+    "handle table",
+    "spread lock",
+    "wide fence",
+  ];
+  termOrder.forEach((term, index) => {
+    vocab.run(
+      term,
+      `the ${term} the spread reader depends on`,
+      `src/spread.ts:spread1@${head}`,
+      head,
+      `2026-09-0${index + 1} 09:00:00`,
+    );
+  });
+  const seam = db.prepare(
     `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b, a_writes, b_reads)
-     VALUES ('SM-01', 'ledger rows', 'table', 'B-01', 'B-02', 'appends rows', 'reads rows')`,
-  ).run();
-  db.prepare(
-    "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-01','B-02','data-flow','observed','the wide reader reads what the hot path writes')",
-  ).run();
+     VALUES (?, ?, 'table', 'B-04', 'B-02', 'appends rows', 'reads rows')`,
+  );
+  const xref = db.prepare(
+    "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-04', ?, 'data-flow', 'observed', ?)",
+  );
+  for (let i = 1; i <= 3; i += 1) seam.run(`SM-0${i}`, `spread rows ${i}`);
+  xref.run("B-02", "the wide reader reads what the spread path writes");
+  xref.run("B-01", "the hot path reads what the spread path writes");
+  const spreadResolution = db.prepare(
+    `INSERT INTO finding_resolution_events
+       (finding_id, resolution_state, fix_location, fix_sha, rationale, session_id)
+     VALUES (?, 'fixed-pending-verification', 'src/spread.ts:spread1', ?, 'the restart path now replays the cursor', 'p7')`,
+  );
+  for (const id of ["B04-01", "B04-02"]) spreadResolution.run(id, head);
+  const spreadNote = db.prepare(
+    `INSERT INTO field_notes (id, category, observation, location, ref_sha, follow_up, session_id)
+     VALUES (?, 'anomaly', ?, 'src/spread.ts', ?, 'open', 'p7')`,
+  );
+  for (let i = 1; i <= 4; i += 1) {
+    spreadNote.run(100 + i, `the ${i}th restart path is unverified`, head);
+  }
 
   db.prepare(
     `INSERT INTO git_state (repo_id, canonical_branch, last_checked_sha, last_checked_at, onboarding_sha)
@@ -453,6 +531,7 @@ function buildFixture() {
     ctx,
     claimKinds,
     findingPartitions,
+    termOrder,
     wideIds,
     ownerIds,
     crowdedIds,
@@ -994,6 +1073,11 @@ await check("structure drops the weakest evidence first", () => {
   const strongestDropped = Math.min(...dropped.map(rank));
   if (weakestServed > strongestDropped)
     return `a claim with ${EVIDENCE_LADDER[strongestDropped]} evidence was dropped while one with ${EVIDENCE_LADDER[weakestServed]} was served`;
+  const expected = [...fixture.claimKinds.keys()]
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .slice(0, served.length);
+  if (JSON.stringify([...served].sort()) !== JSON.stringify([...expected].sort()))
+    return `structure serves ${JSON.stringify(served)}, not the strongest ${JSON.stringify(expected)}`;
   for (const item of structure.items) {
     if (rank(item.claim_id) !== EVIDENCE_LADDER.indexOf(item.evidence_kind))
       return `${item.claim_id} reports evidence_kind ${JSON.stringify(item.evidence_kind)}`;
@@ -1006,16 +1090,43 @@ await check("every section that holds candidates is represented before any is se
   if (reason) return reason;
   // §4.3 fixes the order inside a section; across sections the retention is
   // round-robin, so a truncated response samples every section that has
-  // something rather than emptying the lowest-ranked ones.
-  const truncated = (hotExpanded?.omitted ?? []).some((entry) => entry.reason === "budget");
-  if (!truncated) return "the expanded response was not truncated, so no order was exercised";
+  // something rather than emptying the lowest-ranked ones. Read on the spread
+  // locus, the one fixture here whose eight sections all hold rows.
+  const spread = describeLocus({ locus: "src/spread.ts", sections: SECTIONS });
+  const truncated = (spread?.omitted ?? []).some((entry) => entry.reason === "budget");
+  if (!truncated) return "the spread response was not truncated, so no order was exercised";
   const starved = [];
+  const depths = [];
   for (const name of SECTIONS) {
-    const section = sectionOf(hotExpanded, name);
-    if ((section?.census ?? 0) > 0 && (section?.items ?? []).length === 0) starved.push(name);
+    const section = sectionOf(spread, name);
+    if ((section?.census ?? 0) === 0) return `${name} holds no row on the spread locus`;
+    const served = (section?.items ?? []).length;
+    if (served === 0) starved.push(name);
+    depths.push(`${name}:${served}/${section.census}`);
   }
-  return starved.length
-    ? `a truncated response serves nothing from ${starved.join(", ")} while other sections serve more than one`
+  if (starved.length)
+    return `a truncated response serves nothing from ${starved.join(", ")} while other sections serve more than one`;
+  emit(`  measured  spread retention: ${depths.join(" ")} wire ${wireBytes(spread)} B`);
+  return null;
+});
+
+await check("terms drops in reverse creation order, which no served field states", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const spread = describeLocus({ locus: "src/spread.ts", sections: SECTIONS });
+  const terms = sectionOf(spread, "terms");
+  const served = (terms?.items ?? []).map((item) => item.term);
+  if (served.length === 0) return "the spread response serves no term to order";
+  if (served.length >= terms.census)
+    return `terms serves its whole census of ${terms.census}: no order was exercised`;
+  // fixture.termOrder is creation order; retention keeps the oldest.
+  const expected = fixture.termOrder.slice(0, served.length);
+  if (JSON.stringify([...served].sort()) !== JSON.stringify([...expected].sort()))
+    return `terms serves ${JSON.stringify(served)}, not the ${JSON.stringify(expected)} recorded first`;
+  // And the order is not the alphabetical one the served fields would give.
+  const alphabetical = [...fixture.termOrder].sort().slice(0, served.length);
+  return JSON.stringify([...expected].sort()) === JSON.stringify(alphabetical)
+    ? "the fixture cannot separate creation order from alphabetical order"
     : null;
 });
 
