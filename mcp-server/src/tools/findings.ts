@@ -114,10 +114,7 @@ export const findingTools: ToolDefinition[] = [
         requireWorkspaceCitation(citation, "primary_files"),
       );
       const businessContext = optString(args, "business_context");
-      // Resolved in the bound workspace, and stored resolved: the opening
-      // resolution event is cut by this revision and describe_locus reports
-      // the finding revision-bound on it (F6/codex).
-      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
+      const requestedRefSha = requireString(args, "ref_sha");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 
       if (status === "fixed" || status === "ruled-out") {
@@ -132,6 +129,15 @@ export const findingTools: ToolDefinition[] = [
       // reached the requisite phase.
       const minStatus = passType === "adversarial" ? "adversarial" : "concerns";
       requireSubsystemStatus(ctx.db, subsystemId, minStatus, "add_finding");
+
+      // Resolved in the bound workspace, and stored resolved: the opening
+      // resolution event is cut by this revision and every reader reports the
+      // finding revision-bound on it, so an unresolvable one would publish a
+      // binding the record cannot support (F6/codex). It runs after the
+      // authorization gates because a caller writing to the wrong subsystem is
+      // better told that than told about its revision, and because a refused
+      // write should not spawn a git subprocess first.
+      const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
 
       try {
         ctx.db.transaction(() => {

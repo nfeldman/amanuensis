@@ -222,7 +222,7 @@ run("set_disposition", {
   evidence_quality: "code-verified",
   linchpin_dependent: false,
   rationale: "no cache in this subsystem",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "survey",
 }, (r) => r.ok);
 run("get_dispositions", { subsystem_id: "B-01" }, (r) => r.length === 1);
@@ -238,7 +238,7 @@ run("add_finding", {
   status: "confirmed-bug",
   primary_files: ["scheduler/main.ts:runJob@deadbeef"],
   business_context: "affects throughput under failure",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "survey",
 }, (r) => r.ok);
 run("update_finding_status", {
@@ -288,7 +288,7 @@ run("add_finding", {
   root_cause: "distinct analysis",
   severity: "LOW",
   status: "confirmed-acceptable",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "adversarial",
 }, (r) => r.ok);
 const contra = run("add_contradiction", {
@@ -372,14 +372,14 @@ const ev1 = run("add_evidence", {
   file_path: "scheduler/main.ts",
   symbol: "runJob",
   line_range: "10-42",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   kind: "code-verified",
   note: "defer release covers exception path",
 }, (r) => r.ok && typeof r.id === "number");
 const ev2 = run("add_evidence", {
   file_path: "scheduler/main.ts",
   symbol: "runJob",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   kind: "comment-asserted",
   note: "claim in docstring",
 }, (r) => r.ok);

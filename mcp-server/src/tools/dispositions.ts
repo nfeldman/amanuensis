@@ -59,10 +59,7 @@ export const dispositionTools: ToolDefinition[] = [
       const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITIES);
       const linchpin = optBool(args, "linchpin_dependent", false);
       const rationale = requireString(args, "rationale");
-      // Resolved in the bound workspace, and stored resolved, for the reason
-      // add_claim already resolved its own: an unresolvable revision is
-      // published as a revision-bound reading by every reader (F6/codex).
-      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
+      const requestedRefSha = requireString(args, "ref_sha");
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 
@@ -81,6 +78,13 @@ export const dispositionTools: ToolDefinition[] = [
       if (!concernExists) {
         return { ok: false, error: `concern ${concernCode} does not exist — add it first` };
       }
+
+      // Resolved in the bound workspace, and stored resolved, for the reason
+      // add_claim already resolved its own: an unresolvable revision is
+      // published as a revision-bound reading by every reader (F6/codex). It
+      // runs after the depth and concern gates so a caller who got those wrong
+      // is told that rather than told about its revision.
+      const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
 
       ctx.db
         .prepare(
