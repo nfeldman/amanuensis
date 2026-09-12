@@ -162,10 +162,19 @@ export const findingTools: ToolDefinition[] = [
           ctx.db
             .prepare(
               `INSERT INTO finding_resolution_events
-                 (finding_id, resolution_state, rationale, session_id)
-               VALUES (?, ?, ?, ?)`,
+                 (finding_id, resolution_state, effective_sha, rationale, session_id)
+               VALUES (?, ?, ?, ?, ?)`,
             )
-            .run(findingId, stateForStatus(status), `Finding recorded as ${status}`, sessionId);
+            .run(
+              findingId,
+              stateForStatus(status),
+              // The revision the finding was read at. Without it the opening
+              // event carries no revision at all and every historical cut
+              // counts it as unplaceable (F5/codex).
+              refSha,
+              `Finding recorded as ${status}`,
+              sessionId,
+            );
         })();
       } catch (e) {
         // The PK on findings.finding_id is the only UNIQUE constraint on
@@ -230,20 +239,20 @@ export const findingTools: ToolDefinition[] = [
         fixSha = resolveCommit(ctx, requestedFixSha);
       }
 
-      const evidenceId =
+      const overturnEvidence =
         status === "ruled-out"
-          ? ((
-              ctx.db
-                .prepare(
-                  `SELECT e.id
-                     FROM finding_evidence fe
-                     JOIN evidence e ON e.id = fe.evidence_id
-                    WHERE fe.finding_id = ? AND e.session_id = ?
-                    ORDER BY e.id DESC LIMIT 1`,
-                )
-                .get(findingId, sessionId) as { id: number } | undefined
-            )?.id ?? null)
-          : null;
+          ? (ctx.db
+              .prepare(
+                `SELECT e.id, e.ref_sha
+                   FROM finding_evidence fe
+                   JOIN evidence e ON e.id = fe.evidence_id
+                  WHERE fe.finding_id = ? AND e.session_id = ?
+                  ORDER BY e.id DESC LIMIT 1`,
+              )
+              .get(findingId, sessionId) as { id: number; ref_sha: string | null } | undefined)
+          : undefined;
+      const evidenceId = overturnEvidence?.id ?? null;
+      const overturnSha = overturnEvidence?.ref_sha ?? null;
       const resolutionState =
         status === "fixed" ? "fixed-pending-verification" : stateForStatus(status);
       ctx.db.transaction(() => {
@@ -255,15 +264,18 @@ export const findingTools: ToolDefinition[] = [
         ctx.db
           .prepare(
             `INSERT INTO finding_resolution_events
-               (finding_id, resolution_state, fix_location, fix_sha, evidence_id,
-                rationale, session_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (finding_id, resolution_state, fix_location, fix_sha, effective_sha,
+                evidence_id, rationale, session_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             findingId,
             resolutionState,
             status === "fixed" ? fixLocation : null,
             fixSha,
+            // A repair is read at the commit that carries it; an overturn is
+            // read at the revision its disproving evidence was collected at.
+            fixSha ?? overturnSha,
             evidenceId,
             resolutionNote ?? `Status changed from ${row.status} to ${status}`,
             sessionId,
@@ -346,11 +358,15 @@ export const findingTools: ToolDefinition[] = [
       ctx.db
         .prepare(
           `INSERT INTO finding_resolution_events
-             (finding_id, resolution_state, fix_location, fix_sha, evidence_id,
-              rationale, session_id)
-           VALUES (?, 'verified-fixed', ?, ?, ?, ?, ?)`,
+             (finding_id, resolution_state, fix_location, fix_sha, effective_sha,
+              evidence_id, rationale, session_id)
+           VALUES (?, 'verified-fixed', ?, ?, ?, ?, ?, ?)`,
         )
-        .run(findingId, current.fix_location, fixSha, evidenceId, note, sessionId);
+        // `fix_sha` still names the repair this event confirms; `effective_sha`
+        // is the revision the verification itself was read at — a strict
+        // descendant, by the requireAncestor check above. A replay that cut by
+        // `fix_sha` reported verified-fixed at the repair commit (F5/codex).
+        .run(findingId, current.fix_location, fixSha, evidenceSha, evidenceId, note, sessionId);
       return ok({
         finding_id: findingId,
         resolution_state: "verified-fixed",

@@ -617,6 +617,7 @@ interface ResolutionEventRow {
   finding_id: string;
   resolution_state: string;
   fix_sha: string | null;
+  effective_sha: string | null;
   fix_location: string | null;
   rationale: string;
   recorded_at: string;
@@ -720,8 +721,13 @@ function resolutionAt(
   let state: string | null = null;
   let unplaceable = 0;
   for (const event of events) {
-    if (event.fix_sha && !probe.isAncestor(event.fix_sha, asOf)) break;
-    if (!event.fix_sha) unplaceable += 1;
+    // The revision the event was *read* at, not the revision it names: a
+    // verification is collected at a descendant of the repair it confirms, so
+    // cutting by `fix_sha` reports verified-fixed at the repair commit
+    // (F5/codex). `fix_sha` is the fallback for rows written before the column.
+    const at = event.effective_sha ?? event.fix_sha;
+    if (at && !probe.isAncestor(at, asOf)) break;
+    if (!at) unplaceable += 1;
     state = event.resolution_state;
   }
   // No event had been recorded by then, which is what `open` means: no
@@ -765,7 +771,7 @@ function buildDefects(
   emptyStatement: string,
 ): SectionBuild {
   const eventsFor = db.prepare(
-    `SELECT id, finding_id, resolution_state, fix_sha, fix_location, rationale, recorded_at
+    `SELECT id, finding_id, resolution_state, fix_sha, effective_sha, fix_location, rationale, recorded_at
        FROM finding_resolution_events WHERE finding_id = ? ORDER BY id`,
   );
   const placed = rows.map((row) => {
@@ -1070,16 +1076,21 @@ function buildHistoryPointer(
   const allEvents = findingIds.length
     ? (db
         .prepare(
-          `SELECT id, finding_id, resolution_state, fix_sha, fix_location, rationale, recorded_at
+          `SELECT id, finding_id, resolution_state, fix_sha, effective_sha, fix_location, rationale, recorded_at
              FROM finding_resolution_events WHERE finding_id IN (${placeholders(findingIds)})
             ORDER BY id`,
         )
         .all(...findingIds) as ResolutionEventRow[])
     : [];
   const events = asOf
-    ? allEvents.filter((row) => !row.fix_sha || probe.isAncestor(row.fix_sha, asOf))
+    ? allEvents.filter((row) => {
+        const at = row.effective_sha ?? row.fix_sha;
+        return !at || probe.isAncestor(at, asOf);
+      })
     : allEvents;
-  const unplaceableEvents = asOf ? events.filter((row) => !row.fix_sha).length : 0;
+  const unplaceableEvents = asOf
+    ? events.filter((row) => !(row.effective_sha ?? row.fix_sha)).length
+    : 0;
   // C24's by-citation attribution: a session reaches this locus only through a
   // row that cites it — the evidence it collected here, or a finding it
   // recorded — never through a claim that the session touched the file.
@@ -1127,11 +1138,11 @@ function buildHistoryPointer(
         finding_id: row.finding_id,
         resolution_state: row.resolution_state,
         recorded_at: row.recorded_at,
-        ref_sha: row.fix_sha,
-        revision_bound: row.fix_sha !== null,
+        ref_sha: row.effective_sha ?? row.fix_sha,
+        revision_bound: (row.effective_sha ?? row.fix_sha) !== null,
         authored: "model",
       };
-      if (asOf) item.as_of_placeable = row.fix_sha !== null;
+      if (asOf) item.as_of_placeable = (row.effective_sha ?? row.fix_sha) !== null;
       return item;
     }),
     ...sessions.map((row) => {
