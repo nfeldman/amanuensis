@@ -786,8 +786,8 @@
       "attempts": 1,
       "start_sha": "ae2ffac5a509db32eecbecbac8e03b5b61109d45",
       "red_sha": "ee8038fd140fabef320edb33582353ac34f830ba",
-      "green_sha": "1bcaa43745536ec47b1d1fd95fe6da500b6b133a",
-      "verified_by_launcher": false,
+      "green_sha": "83d28cdce966a41fe39aa7b5803032597f944f80",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Structure selects claims through three arms at a subsystem locus - subject id, evidence citation, and section 9.1's <sid>/ claim_key namespace - because the first two alone miss a seam claim whose evidence lies outside the subsystem's ledger; describe_locus and the subsystem page use the same three, and the gate asserts that parity in both directions. The narrative is a pointer in the tool (artifact_path, content_hash, revision_bound false, label) and prose on the page, per 3.4 and 9.1; 4.2 calls narrative opt-in but 5.1 fixes the sections enum at eight names, so there is no request mechanism and the ~200-byte pointer always attaches when a subsystem locus serves no claim. Touched P6/P7's mcp-server/contracts/locus-account.schema.json to admit that object - without it the response fails its own contract. The promoted survey artifact's ATX headings are demoted three levels so its own H1 does not close the page section; heading level only, no other byte changes. Note for the reviewer: test-finding-partition.mjs (P2's gate) already fails on this branch at the P11 start commit with the same two assertions, unchanged by this packet."
     },
