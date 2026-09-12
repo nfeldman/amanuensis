@@ -852,14 +852,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "6628a01be6ce4fb04eecbc07af9cbbd9a4070534",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "01a613fbe3fd8d2cbdf03542614c62db5f00fe6e",
+      "green_sha": "1d6516aee47fd7be8cc87e94ee6bca93869916ea",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "The rule is requireStructuralClaim in invariants.ts, matched with substr not LIKE because a subsystem id may carry _ or % and an unescaped pattern lets one subsystem's claim satisfy another's gate. Two gaps filled and recorded: 9.1 requires an explicit negative claim but gives it no claim_key shape, so phase-2-structural.md documents it as the category key with the symbol segment dropped (<sid>/state-container) and the subsystem as subject, which keeps it outside P11's file-anchored evidence check since an absence is not read off one symbol; and 9.1 names get_claims(subsystem_id), which does not exist (get_claims has no subsystem filter and sets additionalProperties false), so phase-4-adversarial.md instructs get_claims() plus a <sid>/ prefix filter rather than widening P11's deliverable. test-smoke's two exact-count assertions (get_evidence on scheduler/main.ts, get_claims at claimSha2) were raised to the new exact counts, not relaxed. Pre-existing and unrelated: test-finding-partition.mjs (P2's gate) is already red at 6628a01 on the same two resolved-findings.md link assertions."
     },
     {
       "id": "P13",
