@@ -332,8 +332,18 @@ async function runProcedure() {
   const a = client(workspace);
   try {
     await a.handshake();
-    await a.call("start_session", { intent: "P16 rebuild read-back gate" });
-    await a.call("upsert_subsystem", { id: "P16-PRE", name: PRE_CANARY });
+    const session = await a.call("start_session", { intent: "P16 rebuild read-back gate" });
+    const seeded = await a.call("upsert_subsystem", { id: "P16-PRE", name: PRE_CANARY });
+    // A store the server refused to open leaves nothing to snapshot or discard.
+    // Say so here rather than failing later on a path that was never created.
+    const refused = [session, seeded].find((result) => result.isError);
+    if (refused || !existsSync(storage)) {
+      trace.blocked = `the first server did not open a store to discard — ${
+        refused?.payload?.error ?? "the storage directory was never created"
+      }`;
+      await a.stop();
+      return trace;
+    }
     const snapshot = await a.call("commit_phase_gate", { label: `${SNAPSHOT_PREFIX} (gate)` });
     trace.snapshot = snapshot.payload;
     trace.snapshotErrored = snapshot.isError;
@@ -430,6 +440,11 @@ async function runProcedure() {
   await c.stop();
 
   // --- the snapshot stays reachable from the rebuilt store ------------------
+  if (!existsSync(join(archive, ".git"))) {
+    trace.historyRestoreError = "the archived storage directory carries no Git history to restore";
+    trace.ran = true;
+    return trace;
+  }
   rmSync(join(storage, ".git"), { recursive: true, force: true });
   cpSync(join(archive, ".git"), join(storage, ".git"), { recursive: true });
   const d = client(workspace);
@@ -476,7 +491,19 @@ emit("P16 — snapshot, discard, and reinitialize the self-conspectus store");
 emit("");
 emit("§12.1 steps 1–5, executed against throwaway server processes");
 
-const trace = await runProcedure();
+// Nothing the procedure does may reach stdout as a stack trace: a gate that
+// dies mid-step has not evaluated its assertions, and the launcher is right to
+// refuse that as a red proof. Whatever escapes becomes a blocked trace, which
+// every check below reports as its own failure.
+let trace;
+try {
+  trace = await runProcedure();
+} catch (error) {
+  trace = {
+    ran: false,
+    blocked: `the procedure could not be carried out — ${scrub(error?.message ?? String(error))}`,
+  };
+}
 
 await check("the storage directory is snapshotted before anything is deleted", () => {
   if (trace.blocked) return trace.blocked;
