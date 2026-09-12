@@ -171,6 +171,10 @@ POSITIVE_CORPUS = (
 # measures nothing about its false-alarm rate (VP7).
 NEGATIVE_CORPUS = (
     "The read path serves rows from a memory-mapped page cache.",
+    # The discriminating case for §11.1 rule 1: a survey-status *subject* and a
+    # copula, with the forbidden term reached only through a hyphen.  Dropping
+    # the hyphen exclusion flags this and nothing else in the corpus notices.
+    "This codebase is memory-mapped throughout its read path.",
     "A stale cache is invalidated by the next epoch boundary.",
     "The mapped region is unmapped when the segment is retired.",
     "Compaction re-anchored the B-tree root after the split.",

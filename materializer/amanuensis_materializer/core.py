@@ -151,6 +151,17 @@ class Materializer:
         self.summary = Summary(output_dir=str(output))
 
     # ---------------------------------------------------------------------
+    def _warn(self, message: str) -> None:
+        """Record a renderer's refusal and fail the run.
+
+        A guard that reports and still publishes is prose with better timing
+        (GP25), so every warning routed here also clears `ok`.
+        """
+
+        self.summary.warnings.append(message)
+        self.summary.ok = False
+
+    # ---------------------------------------------------------------------
     def materialize(self) -> dict[str, Any]:
         conn = open_ro(self.storage / "memory.db")
         try:
@@ -218,26 +229,10 @@ class Materializer:
             # drift independently.
             git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
             stale = row(conn, "SELECT COUNT(*) AS n FROM entries WHERE stale=1") or {"n": 0}
-            workspace_record = self.storage / "workspace_path"
-            workspace = self.storage.parent
-            if workspace_record.is_file():
-                recorded_workspace = workspace_record.read_text().strip()
-                if recorded_workspace:
-                    workspace = Path(recorded_workspace)
-            project_name = workspace.name or "Project"
-            onboarding_report = self.storage / "onboarding-report.md"
-            if onboarding_report.is_file():
-                for line in onboarding_report.read_text().splitlines():
-                    if line.startswith("**Codebase**:"):
-                        recorded_name = (
-                            line.partition(":")[2]
-                            .strip()
-                            .split(" — ", 1)[0]
-                            .strip()
-                        )
-                        if recorded_name:
-                            project_name = recorded_name
-                        break
+            # Identity resolution lives beside the renderer that publishes it, so
+            # the HTML shell and the overview cannot name the project differently.
+            workspace = renderers.resolve_workspace(self.storage)
+            project_name = renderers.project_name(self.storage)
             html_context = {
                 **git,
                 "project_name": project_name,
@@ -334,7 +329,7 @@ class Materializer:
         # Static top-level pages.
         plan.extend(
             [
-                PagePlan("index.md", lambda: renderers.render_index(conn, storage), title="Project overview", label="Overview", hint="Start here for the survey's present state, freshness, and highest-signal routes into the codebase.", group="Orientation", kind="overview"),
+                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="Identity, four status dimensions, one count per resolution state, and one route into each lens.", group="Orientation", kind="overview"),
                 PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.", group="Orientation", kind="architecture"),
                 PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystem map", hint="See every architectural region, how deeply it has been surveyed, and where a reader should enter it.", group="Orientation", kind="registry"),
                 PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Review the defects that are open or awaiting verification at the checked revision.", group="Evidence", kind="findings"),

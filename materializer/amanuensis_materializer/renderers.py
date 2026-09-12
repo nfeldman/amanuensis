@@ -10,8 +10,11 @@ orchestrator can call them in any order.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
-from collections.abc import Sequence
+import subprocess
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
@@ -25,10 +28,11 @@ from .diagrams import (
     staleness_map,
     subsystem_dependency_graph,
 )
+from .lint import orientation_violations
 from .manifest import sha256_bytes, sha256_json
-from .readback import FINDING_LENS_PAGES, finding_marker, stale_marker
+from .readback import FINDING_LENS_PAGES, finding_marker, finding_page, stale_marker
 from .slugs import matrix_slug, subsystem_page
-from .vocabulary import labels
+from .vocabulary import OBLIGATION_BEARING_SQL, labels, values_of
 
 RenderResult = tuple[str, dict[str, str]]
 
@@ -71,6 +75,214 @@ def _sev_badge(sev: str) -> str:
     }.get(sev, sev)
 
 
+# ---------------------------------------------------------------------------
+# Orientation: identity, the thesis, and the four status dimensions (§7.2)
+# ---------------------------------------------------------------------------
+
+THESIS_SOURCE = "entry-point.md"
+THESIS_SECTION_PATTERN = re.compile(
+    r"^#{1,6}\s*what is this (?:codebase|project)\??\s*$", re.IGNORECASE
+)
+THESIS_ABSENT = (
+    "No thesis section is recorded; add a 'What is this codebase?' section to "
+    "`entry-point.md`."
+)
+THESIS_REFUSED = (
+    "The recorded thesis carries status vocabulary and was not published; "
+    "correct `entry-point.md`."
+)
+
+
+@dataclass(frozen=True)
+class Thesis:
+    """What the overview's thesis slot holds, and why it holds it."""
+
+    text: str
+    recorded: bool
+    violations: tuple[str, ...] = ()
+
+
+def _thesis_body(prose: str) -> str:
+    """The body of the section headed *What is this codebase?*, or nothing.
+
+    The section ends at the next heading of its own level or higher, so the body
+    can carry sub-headings of its own but can never swallow a sibling section.
+    """
+
+    lines = prose.splitlines()
+    start: int | None = None
+    level = 0
+    for index, line in enumerate(lines):
+        if THESIS_SECTION_PATTERN.match(line):
+            level = len(line) - len(line.lstrip("#"))
+            start = index + 1
+            break
+    if start is None:
+        return ""
+    body: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("#"):
+            depth = len(line) - len(line.lstrip("#"))
+            if 0 < depth <= level:
+                break
+        body.append(line)
+    return "\n".join(body).strip()
+
+
+def read_thesis(storage: Path) -> Thesis:
+    """The thesis taken by heading, from `entry-point.md` and nowhere else.
+
+    The first paragraph is deliberately not a fallback: `entry-point.md` is a
+    dated reading path recorded by an earlier session, and its opening paragraph
+    carries no contract to describe the project. When the named section is
+    absent the page says which section to add, which is a fact about the record
+    rather than a sentence about the codebase that nobody wrote (§7.2).
+    """
+
+    path = storage / THESIS_SOURCE
+    body = _thesis_body(path.read_text()) if path.is_file() else ""
+    if not body:
+        return Thesis(THESIS_ABSENT, recorded=False)
+    violations = tuple(orientation_violations(body))
+    if violations:
+        return Thesis(THESIS_REFUSED, recorded=True, violations=violations)
+    return Thesis(body, recorded=True)
+
+
+def resolve_workspace(storage: Path) -> Path:
+    """The surveyed workspace: the recorded path, else the storage's parent."""
+
+    record = storage / "workspace_path"
+    if record.is_file():
+        recorded = record.read_text().strip()
+        if recorded:
+            return Path(recorded)
+    return storage.parent
+
+
+def project_name(storage: Path) -> str:
+    """The project's own name, which is the projection's primary identity.
+
+    Amanuensis is the producing method and never the title
+    (`reporting-style.md` § "Keep information architecture and interface design
+    separate").
+    """
+
+    report = storage / "onboarding-report.md"
+    if report.is_file():
+        for line in report.read_text().splitlines():
+            if line.startswith("**Codebase**:"):
+                recorded = line.partition(":")[2].strip().split(" — ", 1)[0].strip()
+                if recorded:
+                    return recorded
+                break
+    return resolve_workspace(storage).name or "Project"
+
+
+def _git_output(workspace: Path, *args: str) -> str | None:
+    """One git answer from the workspace, or nothing when git cannot answer."""
+
+    if not workspace.is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), *args],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def ledger_freshness(conn: sqlite3.Connection) -> dict[str, int]:
+    """Scoped-file counts split by survey obligation (§11.2).
+
+    The obligation predicate is the generated one, so this reading, the
+    diagrams, and `get_dashboard` cannot disagree about which classifications
+    carry an obligation. `entries` is not consulted: no code path writes it, so
+    every signal derived from it was a zero-denominator green (finding B03-2).
+    """
+
+    counted = row(
+        conn,
+        "SELECT"
+        f" SUM(CASE WHEN stale=1 AND {OBLIGATION_BEARING_SQL} THEN 1 ELSE 0 END)"
+        " AS stale_obligation,"
+        f" SUM(CASE WHEN stale=1 AND NOT ({OBLIGATION_BEARING_SQL}) THEN 1 ELSE 0 END)"
+        " AS stale_exempt,"
+        f" SUM(CASE WHEN {OBLIGATION_BEARING_SQL} THEN 1 ELSE 0 END) AS obligation_files,"
+        " SUM(CASE WHEN classification='examined' THEN 1 ELSE 0 END) AS examined,"
+        " SUM(CASE WHEN COALESCE(classification,'candidate')='candidate' THEN 1 ELSE 0 END)"
+        " AS candidate,"
+        " COUNT(*) AS scoped_files"
+        " FROM file_ledger",
+    ) or {}
+    return {
+        key: int(counted.get(key) or 0)
+        for key in (
+            "stale_obligation",
+            "stale_exempt",
+            "obligation_files",
+            "examined",
+            "candidate",
+            "scoped_files",
+        )
+    }
+
+
+def source_alignment(conn: sqlite3.Connection, storage: Path) -> dict[str, Any]:
+    """The recorded revision beside the revisions the workspace can resolve."""
+
+    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+    workspace = resolve_workspace(storage)
+    branch = str(git.get("canonical_branch") or "")
+    head = _git_output(workspace, "rev-parse", "HEAD")
+    origin = (
+        _git_output(workspace, "rev-parse", "--verify", f"refs/remotes/origin/{branch}")
+        if branch
+        else None
+    )
+    return {
+        "canonical_branch": branch,
+        "last_checked_sha": str(git.get("last_checked_sha") or ""),
+        "last_checked_at": str(git.get("last_checked_at") or ""),
+        "onboarding_sha": str(git.get("onboarding_sha") or ""),
+        "workspace_head": head or "",
+        "origin_head": origin or "",
+        **ledger_freshness(conn),
+    }
+
+
+def _short(sha: str) -> str:
+    return f"`{sha[:12]}`" if sha else "not recorded"
+
+
+def _relation(recorded: str, other: str) -> str:
+    """How one revision stands to the recorded one, in words, never as a score."""
+
+    if not other:
+        return "not known here"
+    if not recorded:
+        return f"{_short(other)} — no checked revision is recorded to compare it with"
+    if other == recorded:
+        return f"{_short(other)} — the same revision the survey checked"
+    return f"{_short(other)} — a different revision from the one the survey checked"
+
+
+def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
+    """Metric/value facts, which the HTML projection renders as a definition list."""
+
+    out = ["| Metric | Value |", "|---|---|"]
+    out.extend(f"| {metric} | {value} |" for metric, value in pairs)
+    out.append("")
+    return out
+
+
 def _prose_source(storage: Path, rel: str) -> dict[str, str]:
     p = storage / rel
     if not p.is_file():
@@ -87,116 +299,242 @@ def _db_source(name: str, data: Any) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def render_index(conn: sqlite3.Connection, storage: Path) -> RenderResult:
-    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+def render_index(
+    conn: sqlite3.Connection,
+    storage: Path,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult:
+    """The Overview: the entrance to the four lenses, and not a lens (§7.2).
+
+    Five items, first in source order with nothing between them: identity, the
+    thesis taken by heading, four separately named status dimensions, one linked
+    count per resolution state, and one route into each lens. The dimensions are
+    never combined: a single number would let a green publication read as a read
+    repository, and there is no arithmetic that turns four different kinds of
+    ignorance into one (BP26).
+
+    `warn` receives one message per orientation-lint failure so the publish can
+    turn red on it; the thesis slot then carries the refusal rather than the
+    prose (§11.1).
+    """
+
+    name = project_name(storage)
+    thesis = read_thesis(storage)
+    if thesis.violations and warn is not None:
+        warn(
+            f"{THESIS_SOURCE}: the recorded thesis was not published because it "
+            + "; ".join(thesis.violations)
+        )
+
+    alignment = source_alignment(conn, storage)
+    checked = alignment["last_checked_sha"]
+    branch = alignment["canonical_branch"] or "not recorded"
+    obligation = int(alignment["obligation_files"])
+    stale_obligation = int(alignment["stale_obligation"])
+    stale_exempt = int(alignment["stale_exempt"])
+    examined = int(alignment["examined"])
+    scoped = int(alignment["scoped_files"])
+
     subs = rows(conn, "SELECT id, name, status, layer FROM subsystems ORDER BY id")
-    findings_summary = rows(
-        conn,
-        "SELECT COUNT(*) AS total, SUM(CASE WHEN status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs,"
-        " SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) AS crit,"
-        " SUM(CASE WHEN severity='HIGH' THEN 1 ELSE 0 END) AS high"
-        " FROM findings",
-    )[0]
-    stale_rows = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
-    stale = {"n": len(stale_rows)}
-    open_notes = row(
-        conn, "SELECT COUNT(*) AS n FROM field_notes WHERE follow_up='open'"
+    ladder = {
+        status: sum(1 for s in subs if (s["status"] or "unmapped") == status)
+        for status in values_of("subsystem_status")
+    }
+    depth = ", ".join(f"{count} {status}" for status, count in ladder.items() if count)
+    unledgered = row(
+        conn, "SELECT COUNT(*) AS n FROM scope_gaps WHERE kind='unledgered'"
     ) or {"n": 0}
+
+    state_counts = {
+        str(r["resolution_state"]): int(r["n"] or 0)
+        for r in rows(
+            conn,
+            "SELECT resolution_state, COUNT(*) AS n FROM finding_state_current"
+            " GROUP BY resolution_state",
+        )
+    }
     unresolved = row(
-        conn, "SELECT COUNT(*) AS n FROM contradictions WHERE resolution='unresolved'"
+        conn,
+        "SELECT COUNT(*) AS n FROM contradictions"
+        " WHERE COALESCE(resolution,'unresolved')='unresolved'",
+    ) or {"n": 0}
+    decisions = row(
+        conn,
+        "SELECT COUNT(*) AS n FROM open_questions WHERE COALESCE(resolution,'open')='open'",
     ) or {"n": 0}
 
-    mapped = sum(1 for s in subs if s["status"] == "mapped")
-    total = len(subs)
+    verification = row(
+        conn,
+        "SELECT * FROM projection_verification_runs"
+        " ORDER BY verified_at DESC, rowid DESC LIMIT 1",
+    )
 
-    # Prefer the entry-point prose for the quick-orientation paragraph
-    # if present.
-    entry_point_path = storage / "entry-point.md"
-    quick_orient = "_Onboarding has not been run yet — run the Amanuensis coordinator to generate the conspectus foundation._"
-    if entry_point_path.is_file():
-        text = entry_point_path.read_text()
-        # Extract the first non-header paragraph as a quick orientation.
-        in_para = False
-        para: list[str] = []
-        for line in text.splitlines():
-            if line.startswith("#"):
-                if para:
-                    break
-                continue
-            if line.strip() == "":
-                if in_para:
-                    break
-                continue
-            in_para = True
-            para.append(line.strip())
-        if para:
-            quick_orient = " ".join(para)
-
+    stale_rows = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
     latest_session = row(
         conn,
         "SELECT intent, started_at, ended_at FROM sessions ORDER BY started_at DESC LIMIT 1",
     )
 
+    # 1. Identity.  The project is the subject; Amanuensis is the method that
+    #    recorded it (`reporting-style.md`).
     out = [
-        "# Conspectus",
+        f"# {name}",
         "",
-        f"**Canonical branch**: `{git.get('canonical_branch', '—')}`  ",
-        f"**Onboarding SHA**: `{(git.get('onboarding_sha') or '—')[:12]}`  ",
-        f"**Last checked SHA**: `{(git.get('last_checked_sha') or '—')[:12]}`",
+        f"An architecture survey of {name}, recorded by Amanuensis. The durable"
+        " records are authoritative; every page here is derived from them.",
         "",
-        "## Quick orientation",
+        # 2. Thesis — by heading, from entry-point.md, or the named instruction.
+        "## What is this codebase?",
         "",
-        quick_orient,
+        thesis.text,
         "",
-        "## Current state",
+        # 3. Four status dimensions, each a separate named fact.
+        "## Where the record stands",
         "",
-        "| Metric | Value |",
-        "|---|---|",
-        f"| Subsystems mapped | {mapped} / {total} |",
-        f"| Confirmed findings | {findings_summary['total'] or 0} ({findings_summary['crit'] or 0} critical, {findings_summary['high'] or 0} high) |",
-        f"| Open bugs | {findings_summary['open_bugs'] or 0} |",
-        f"| Stale entries | {stale['n']} |",
-        f"| Open field notes | {open_notes['n']} |",
-        f"| Unresolved contradictions | {unresolved['n']} |",
+        "Four dimensions, each read from durable records and each reported on its"
+        " own terms. None of them is combined with another.",
         "",
-        *[stale_marker(str(e["id"]), int(e["tier"])) for e in stale_rows],
-        "" if stale_rows else "",
-        "## Navigation",
+        "### Source alignment",
         "",
-        "New here? Start with [How to read this conspectus](how-to-read.md).",
-        "",
-        "- [Architecture →](architecture.md) — runtime topology, subsystem dependency graph, seam map",
-        "- [Subsystems →](master-plan.md) — what's mapped, what isn't, with status badges",
-        "- [Findings →](findings.md) — confirmed issues by severity",
-        "- [Concerns →](concerns.md) — the calibrated checklist with coverage heatmap",
-        "- [Seams →](seams.md) — inter-subsystem boundaries",
-        "- [Contradictions →](contradictions.md) — unresolved epistemic conflicts",
-        "- [Diagnosticity matrices →](diagnosticity.md) — when concerns compete (ACH)",
-        "- [Glossary →](vocabulary.md) — the codebase's own language",
-        "- [Field notes →](field-notes.md) — patterns, anomalies, tensions, candidate concerns",
-        "- [Open questions →](open-questions.md) — items an autoprogress run logged for human review",
     ]
-    if latest_session:
-        out.extend(
+    out += _metric_table(
+        [
+            (
+                "Checked at",
+                f"{_short(checked)} on `{branch}`"
+                + (
+                    f", {_fmt_time(alignment['last_checked_at'])}"
+                    if alignment["last_checked_at"]
+                    else ""
+                ),
+            ),
+            ("Repository head", _relation(checked, alignment["workspace_head"])),
+            ("Origin head", _relation(checked, alignment["origin_head"])),
+            (
+                "Files carrying a survey obligation marked stale",
+                f"{stale_obligation} of {obligation}"
+                if obligation
+                else "not measured by this projection",
+            ),
+            (
+                "Scoped files exempt from that obligation, marked stale",
+                f"{stale_exempt} of {scoped - obligation}"
+                if scoped > obligation
+                else "none in scope",
+            ),
+        ]
+    )
+    out += ["### Survey coverage", ""]
+    out += _metric_table(
+        [
+            (
+                "Subsystems by survey depth",
+                depth if depth else "no subsystem is registered",
+            ),
+            (
+                "Files read, of those carrying an obligation",
+                f"{examined} of {obligation}"
+                if obligation
+                else "no scoped file carries a survey obligation",
+            ),
+            (
+                "Paths in scope with no ledger row",
+                str(unledgered["n"] or 0),
+            ),
+        ]
+    )
+    out += ["### Open engineering work", ""]
+    out += _metric_table(
+        [
+            ("Findings open", str(state_counts.get("open", 0))),
+            (
+                "Repairs awaiting verification",
+                str(state_counts.get("fixed-pending-verification", 0)),
+            ),
+            ("Contradictions unresolved", str(unresolved["n"] or 0)),
+            ("Decisions open", str(decisions["n"] or 0)),
+        ]
+    )
+    out += ["### Publication integrity", ""]
+    if verification:
+        out += _metric_table(
             [
-                "",
-                "## Latest session",
-                "",
-                f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
-                + (f" · ended {_fmt_time(latest_session['ended_at'])}" if latest_session["ended_at"] else " · **active**"),
+                *(
+                    (
+                        f"{axis.title()} axis",
+                        "green" if int(verification[f"{axis}_ok"] or 0) else "red",
+                    )
+                    for axis in ("state", "coverage", "content")
+                ),
+                ("Verified at", _fmt_time(str(verification["verified_at"]))),
             ]
         )
+    else:
+        out += [
+            "No publication read-back is recorded for this store, so none of the"
+            " three axes has a result to report.",
+            "",
+        ]
+
+    # 4. One linked count per resolution state, generated from the enum source so
+    #    the line cannot drift from the enum (§7.2 step 4, §10).
+    out += ["## Findings by resolution state", ""]
+    out += _metric_table(
+        [
+            (
+                f"[{RESOLUTION_LABELS.get(state, state)}]({finding_page(state)})",
+                str(state_counts.get(state, 0)),
+            )
+            for state in values_of("finding_resolution_state")
+        ]
+    )
+
+    # 5. One route into each lens (§1.1, §7.1).
+    out += [
+        "## The four lenses",
+        "",
+        "- **Codebase** — [Subsystem map](master-plan.md): every region, grouped by"
+        " layer, with the boundaries and terms recorded for it.",
+        "- **Unresolved** — [Open findings](findings.md): defects open or awaiting"
+        " verification at the checked revision.",
+        "- **History** — [Resolved findings](resolved-findings.md): the records that"
+        " reached a terminal state, with the basis each one rests on.",
+        "- **Method** — [How to read the conspectus](how-to-read.md): every recorded"
+        " state, what it authorizes, and what it cannot justify.",
+        "",
+    ]
+
+    # Secondary apparatus.  The `entries`-derived stale markers stay here until
+    # `stale.md` carries the ledger-derived ones (§11.3): read-back requires
+    # exactly one marker per stale `entries` row in each format, and nothing
+    # above may depend on them.
+    if latest_session:
+        out += [
+            "## Latest session",
+            "",
+            f"`{latest_session['intent']}` — started {_fmt_time(latest_session['started_at'])}"
+            + (
+                f" · ended {_fmt_time(latest_session['ended_at'])}"
+                if latest_session["ended_at"]
+                else " · **active**"
+            ),
+            "",
+        ]
+    out += [stale_marker(str(e["id"]), int(e["tier"])) for e in stale_rows]
+
     text = "\n".join(out) + "\n"
     sources = {
-        **_db_source("index:git", git),
+        **_db_source("index:alignment", alignment),
         **_db_source("index:subs", subs),
-        **_db_source("index:findings", findings_summary),
-        **_db_source("index:stale", stale),
-        **_db_source("index:stale-objects", stale_rows),
-        **_db_source("index:notes", open_notes),
+        **_db_source("index:states", state_counts),
+        **_db_source("index:unledgered", unledgered),
         **_db_source("index:unresolved", unresolved),
+        **_db_source("index:decisions", decisions),
+        **_db_source("index:verification", verification or {}),
+        **_db_source("index:stale-objects", stale_rows),
         **_db_source("index:session", latest_session or {}),
-        **_prose_source(storage, "entry-point.md"),
+        **_db_source("index:identity", {"project_name": name}),
+        **_prose_source(storage, THESIS_SOURCE),
     }
     return text, sources
 
