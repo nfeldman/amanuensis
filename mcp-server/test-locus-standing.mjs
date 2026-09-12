@@ -950,6 +950,29 @@ check("defects partition and order follow §3.1", () => {
   return null;
 });
 
+check("an uncited symbol inherits no defect cited to a sibling symbol", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  // Every seeded finding cites `src/examined.ts:readLedger` in primary_files
+  // and hangs off evidence row 1. `writeLedger` is a real symbol of the same
+  // file with its own evidence row and no finding at all, so C13's "never
+  // inherits the file's state silently" makes its defects section empty. The
+  // evidence arm already narrows on symbol; the primary_files arm is what
+  // decides this.
+  const payload = describeLocus({ locus: "src/examined.ts:writeLedger", sections: SECTIONS });
+  if (payload?.locus?.kind !== "symbol") return `the locus kinded ${payload?.locus?.kind}`;
+  const ids = (sectionOf(payload, "defects")?.items ?? []).map((item) => item.finding_id);
+  if (ids.length)
+    return `an uncited symbol inherited ${ids.length} defect(s) cited to another symbol: ${JSON.stringify(ids)}`;
+  // And the cited sibling still gets all five, so the narrowing is not a
+  // blanket refusal to serve symbol loci.
+  const cited = describeLocus({ locus: "src/examined.ts:readLedger", sections: SECTIONS });
+  const citedIds = (sectionOf(cited, "defects")?.items ?? []).map((item) => item.finding_id);
+  return citedIds.length === 5
+    ? null
+    : `the cited symbol serves ${citedIds.length} defect(s), not the five seeded`;
+});
+
 check("purpose renders scope separately and says no purpose statement is recorded", () => {
   const reason = needFixture();
   if (reason) return reason;
