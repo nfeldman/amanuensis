@@ -144,4 +144,4 @@
 - `node dev/test-roadmap.mjs`
 - `ruff check materializer/`
 
-Final review: pending
+Final review: reviewed
