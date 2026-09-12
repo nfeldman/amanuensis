@@ -543,7 +543,7 @@
       "status": "done",
       "attempts": 1,
       "start_sha": "e9a58f5725076fd624ab2ab0312f6b34cbd51229",
-      "red_sha": "b4c86e8",
+      "red_sha": "b4c86e8c2813a6e05d8f6fafccfc68935c271d76",
       "green_sha": "5ed08c812ee53fdea42cad8dc17ac1a22a8672dd",
       "verified_by_launcher": false,
       "blocked_reason": "",
