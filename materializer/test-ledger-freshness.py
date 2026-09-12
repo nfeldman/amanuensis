@@ -128,13 +128,19 @@ STRIP_OBLIGATION = "{n} with a survey obligation"
 STRIP_EXEMPT = "{n} exempt"
 STRIP_SCOPED = "{n} scoped files"
 
-# The seeded ledger.  Every derived count is distinct — 4 obligation-bearing
-# stale, 2 exempt stale, 9 scoped, 6 obligation-bearing, 3 examined, 2
+# The seeded ledger.  Every derived count is distinct — 5 obligation-bearing
+# stale, 2 exempt stale, 10 scoped, 7 obligation-bearing, 4 examined, 2
 # candidate, 1 deferred — so no wrong predicate can coincide with the right
-# answer, and the `entries` table carries a seventh, unrelated count.
+# answer, and the `entries` table carries a further, unrelated count.
+#
+# `src/writer.ts` is owned twice.  The ledger is keyed on
+# `(subsystem_id, file_path)` and the AxiomDB store holds 53 multi-owner paths,
+# so a record keyed on the path alone would collide — one row would lose its
+# record and the other would carry two.
 LEDGER: tuple[tuple[str, str, str, int], ...] = (
     ("B-01", "src/reader.ts", "examined", 0),
     ("B-02", "src/writer.ts", "examined", 1),
+    ("B-03", "src/writer.ts", "examined", 1),
     ("B-02", "src/parser.ts", "examined", 1),
     ("B-02", "src/pending.ts", "candidate", 1),
     ("B-01", "src/queue.ts", "candidate", 0),
@@ -143,6 +149,7 @@ LEDGER: tuple[tuple[str, str, str, int], ...] = (
     ("B-01", "vendor/lib.js", "vendor-ignore", 1),
     ("B-01", "notes.txt", "irrelevant", 0),
 )
+MULTI_OWNER_PATH = "src/writer.ts"
 EXEMPT_CLASSIFICATIONS = ("generated-ignore", "vendor-ignore", "irrelevant")
 OBLIGATION_STALE = tuple(
     (s, p) for s, p, c, stale in LEDGER if stale and c not in EXEMPT_CLASSIFICATIONS
@@ -152,9 +159,10 @@ EXEMPT_STALE = tuple(
 )
 CANDIDATE_STALE = tuple((s, p) for s, p, c, stale in LEDGER if stale and c == "candidate")
 EXAMINED_STALE = tuple((s, p) for s, p, c, stale in LEDGER if stale and c == "examined")
-# The count that must never reach a published freshness reading: seven stale
-# `entries` rows, a table no code path writes (finding B03-2).
-ENTRIES_STALE = 7
+# The count that must never reach a published freshness reading: thirteen stale
+# `entries` rows, a table no code path writes (finding B03-2).  Thirteen is not
+# any ledger count above, so a surface reporting it is unmistakable.
+ENTRIES_STALE = 13
 
 THESIS_SENTENCE = (
     "LedgerFixture appends ledger rows durably and serves them through a "
@@ -640,6 +648,31 @@ def main() -> int:
             "every obligation-bearing stale row has exactly one record per format",
             one_record_per_row,
         )
+
+        def multi_owner_rows_are_distinct() -> str | None:
+            if ledger_mark is None:
+                return "ledger_stale_marker is unavailable, so its keying cannot be checked"
+            owners = [s for s, p in OBLIGATION_STALE if p == MULTI_OWNER_PATH]
+            if len(owners) < 2:
+                return f"the fixture no longer owns {MULTI_OWNER_PATH} twice"
+            markers = {ledger_mark(owner, MULTI_OWNER_PATH) for owner in owners}
+            if len(markers) != len(owners):
+                return (
+                    f"{MULTI_OWNER_PATH} is owned by {owners} but carries"
+                    f" {len(markers)} distinct marker(s); the record is keyed on the"
+                    " path alone, so one owner's row loses its record"
+                )
+            if not stale_md:
+                return f"{STALE_PAGE} was not published"
+            for owner in owners:
+                if f"[{owner}]" not in stale_md and owner not in stale_md:
+                    return (
+                        f"{STALE_PAGE} does not name {owner} as an owner of"
+                        f" {MULTI_OWNER_PATH}"
+                    )
+            return None
+
+        check("a path owned twice carries one record per owner", multi_owner_rows_are_distinct)
 
         def exempt_rows_have_no_record() -> str | None:
             if ledger_mark is None:
