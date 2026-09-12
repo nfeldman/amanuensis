@@ -818,12 +818,17 @@ def _finding_rows(
     )
 
 
-def _finding_table(subsystem_rows: Sequence[dict[str, Any]]) -> list[str]:
-    """One subsystem's findings as full marked records (spec §6.2)."""
+def _finding_table(subsystem_rows: Sequence[dict[str, Any]], level: int = 3) -> list[str]:
+    """One subsystem's findings as full marked records (spec §6.2).
+
+    `level` is where the subsystem sits in the page's own hierarchy: the
+    Unresolved lens nests it under resolution state and then severity, the
+    History lens under resolution state alone.
+    """
     subsystem_id = str(subsystem_rows[0]["subsystem_id"])
     subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
     out = [
-        f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
+        f"{'#' * level} [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
         "",
         "| ID | Status | Symptom | Root cause | Ref SHA |",
         "|---|---|---|---|---|",
@@ -848,21 +853,34 @@ def _by_subsystem(fs: Sequence[dict[str, Any]]) -> list[list[dict[str, Any]]]:
     return list(groups.values())
 
 
+# What each group of the Unresolved lens means, in the reader's terms. Taken
+# from the enum source so the page and the reader's guide cannot drift.
+_STATE_HINTS: dict[str, str] = {
+    "open": "_{n} defect(s) with no recorded repair._",
+    "fixed-pending-verification": (
+        "_{n} repair(s) recorded against a commit, with no evidence yet that they hold._"
+    ),
+}
+
+
 def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens: open defects and repairs awaiting verification.
 
     Resolved records render on `resolved-findings.md` instead, each with its
     marker, so every finding is a full record on exactly one page (spec §6.2).
     """
-    # §6.1 orders the Unresolved lens open-first, then repairs awaiting
-    # verification. The page's own sections stay severity-major, so the state
-    # rank orders the rows inside each severity section.
+    # §6.1 orders the Unresolved lens state-major: every open finding, by
+    # severity, before every repair awaiting verification. Severity cannot be
+    # the outer key. A critical repair someone has already made would then read
+    # as more urgent than an open defect nobody has touched, which inverts what
+    # the page is for, and the two groups would interleave so that neither has
+    # a denominator a reader can see.
     fs = _finding_rows(
         conn,
         FINDING_LENS_STATES["findings.md"],
-        """CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
+        """CASE v.resolution_state WHEN 'open' THEN 0 ELSE 1 END,
+                     CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
                        WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END,
-                     CASE v.resolution_state WHEN 'open' THEN 0 ELSE 1 END,
                      f.subsystem_id, f.finding_id""",
     )
     out = ["# Open findings", ""]
@@ -878,15 +896,26 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             "[resolved-findings.md](resolved-findings.md)._"
         )
     else:
-        # Severity is the primary grouping; the full subsystem name supplies
-        # the human-oriented subheading for the records that follow.
-        for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
-            sev_rows = [f for f in fs if f["severity"] == sev]
-            if not sev_rows:
+        # Resolution state is the primary grouping, and it is a heading rather
+        # than a column so a reader can see which group a record is in without
+        # reading the row. Severity sections nest inside it; the full subsystem
+        # name supplies the human-oriented subheading for the records.
+        for state, heading in (
+            ("open", "Open"),
+            ("fixed-pending-verification", "Awaiting verification"),
+        ):
+            state_rows = [f for f in fs if f["resolution_state"] == state]
+            if not state_rows:
                 continue
-            out += [f"## {sev.title()} findings", ""]
-            for subsystem_rows in _by_subsystem(sev_rows):
-                out += _finding_table(subsystem_rows)
+            out += [f"## {heading}", ""]
+            out += [_STATE_HINTS[state].format(n=len(state_rows)), ""]
+            for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
+                sev_rows = [f for f in state_rows if f["severity"] == sev]
+                if not sev_rows:
+                    continue
+                out += [f"### {sev.title()} findings", ""]
+                for subsystem_rows in _by_subsystem(sev_rows):
+                    out += _finding_table(subsystem_rows, level=4)
     return "\n".join(out) + "\n", _db_source("findings:open", fs)
 
 

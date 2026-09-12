@@ -308,10 +308,16 @@ h1 {
 .content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content > section:last-child { border-bottom: 0; }
 .content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
-.content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
-.content-findings .section-high-findings { --enum-color: var(--severity-high); }
-.content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
-.content-findings .section-low-findings { --enum-color: var(--severity-low); }
+.content-findings .section-open { --enum-color: var(--resolution-open); }
+.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
+.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
+.content-findings .section-ruled-out, .content-findings .section-accepted {
+  --enum-color: var(--resolution-accepted);
+}
+.content-findings section > h3 { --enum-color: var(--rule-strong); }
+.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
+  border-left: .14em solid var(--enum-color); padding-left: .5rem;
+}
 .content-findings section > h2::before {
   content: ""; display: inline-block; width: .14em; height: .72em;
   margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
@@ -2271,7 +2277,12 @@ class MarkdownRenderer:
                     in_section = True
                 anchor_id = self._heading_slug(display_raw)
                 label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
-                finding_group = self.current_html_path == "findings.html" and level == 3
+                # The Unresolved lens nests the subsystem under resolution
+                # state and severity, so its subsystem headings are one level
+                # deeper than the History lens's.
+                finding_group = (self.current_html_path == "findings.html" and level == 4) or (
+                    self.current_html_path == "resolved-findings.html" and level == 3
+                )
                 heading_class = ' class="finding-subsystem-heading"' if finding_group else ""
                 definition_context = " data-identifier-defined" if finding_group else ""
                 body.append(

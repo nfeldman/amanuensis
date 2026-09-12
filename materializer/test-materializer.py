@@ -260,8 +260,8 @@ def main() -> None:
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
-        assert '<h3 class="finding-subsystem-heading"' in html_findings
-        assert '>Auth Service</a></h3>' in html_findings
+        assert '<h4 class="finding-subsystem-heading"' in html_findings
+        assert '>Auth Service</a></h4>' in html_findings
         assert '<span class="status status-resolution status-open">Open</span>' in html_findings
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
@@ -273,8 +273,14 @@ def main() -> None:
         assert 'h1, h2, .brand-mark, .record-primary, .record-lede' in html_findings
         assert 'class="content content-findings"' in html_findings
         assert 'id="high-findings"' in html_findings
-        assert '>High findings</h2>' in html_findings
+        assert '>High findings</h3>' in html_findings
         assert 'Link to High findings' in html_findings
+        # Spec 6.1 groups the Unresolved lens by resolution state first, so the
+        # page's h2 sections are the states and severity nests inside them.
+        assert '<section class="section-open">' in html_findings
+        assert html_findings.index('<section class="section-open">') < html_findings.index(
+            '>High findings</h3>'
+        )
         assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
         assert 'record-fact-subsystem' not in html_findings
