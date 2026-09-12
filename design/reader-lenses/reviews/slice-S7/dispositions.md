@@ -19,7 +19,23 @@ subprocess operations by construction. The new bound is ~31x measured; every oth
 that section sits at 47-154x, so the bound did not go slack. This is the one place a number
 moved, and it moved because the operation did.
 
+## One pre-existing red, not caused by these repairs and not in scope
+
+`node dev/test-activation-evidence.mjs` fails on a source-digest drift in
+`a22-codex-host.json` for `mcp-server/src/project.ts`. That file was last changed by
+6357847, an ancestor of this review's baseline 87b83c6, and no commit in this session
+touches it. It is an A22 activation-evidence receipt from a different workstream, is not in
+P21's regression list, and was not reported by the reviewer. Left alone deliberately;
+refreshing an activation receipt is not a slice-S7 repair.
+
 ## Regression
 
-All 24 commands pass on the final tree: P21's nineteen, plus `gen-vocabulary.mjs --check` and
+The whole suite was run, not only the packet lists: 58 of 58 `mcp-server/test-*.mjs`,
+7 of 7 `materializer/test-*.py`, 15 of 16 `dev/test-*.mjs` (the sixteenth is the
+pre-existing red above), biome, `tsc --noEmit`, ruff, and both `gen-vocabulary` checks.
+That sweep caught one regression the packet lists would have missed: the census reason for
+`xref_relationship` originally spelled the edge-writing tool's name, which registered this
+gate as a caller in P13's whole-file scan. Reworded; P13 is green.
+
+All 24 of P21's commands pass on the final tree: P21's nineteen, plus `gen-vocabulary.mjs --check` and
 `--check-sql`, `tsc --noEmit`, and `test-perf-ceilings.mjs` (14 of 14 within ceiling).

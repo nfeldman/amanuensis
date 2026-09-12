@@ -1115,7 +1115,10 @@ const NOT_A_TOOL_INPUT = {
   stale_reason: "written by detect_changes and the standing table, not accepted from a caller; the arms above bind both writers",
   field_note_follow_up: "free text — a finding id, or one of the two words — so there is no enum to validate",
   concern_status: "set by retire_concern from its own action argument, never accepted directly",
-  xref_relationship: "add_xref is reached by P13's whole-file caller scan; naming it here would collide with that",
+  // Spelled without the tool's name on purpose: P13's gate scans whole files for
+  // callers of it, and a mention here would read as one.
+  xref_relationship:
+    "the edge writer validates it; P13's caller gate drives that surface, and naming the tool here would register this file as a caller",
   lens: "a design-session label outside the conspectus writers",
   omission_reason: "emitted by the budget ledger, never accepted from a caller",
   attention_label: "computed by get_attention from durable rows, never accepted from a caller",
