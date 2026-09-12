@@ -20,7 +20,7 @@
 | P7 | Response budgets and the omission ledger | done (1 attempt) | P6 | `mcp-server/test-locus-compactness.mjs` | C14, C18, C19, C20, C55, C63 |
 | P8 | Page plan, navigation groups, Files, and Not yet surveyed | done (1 attempt) | P2, P4, P5 | `materializer/test-lens-pages.py` | C30, C31, C33, C34, C35, C55, C63 |
 | P9 | Unresolved and History pages; reader's guide from the enum source | done (1 attempt) | P8 | `materializer/test-history-and-disagreements.py` | C28, C36, C37, C38, C58, C61, C55, C63 |
-| P10 | Locus search index and accessible interface enhancement | ready (1 attempt) | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41, C55, C63 |
+| P10 | Locus search index and accessible interface enhancement | done (1 attempt) | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41, C55, C63 |
 
 ## S3 · Documentation from claims (review: pending)
 
