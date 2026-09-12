@@ -38,6 +38,7 @@ import {
   type LocusKind,
   type ResolvedLocus,
   STANDING_AUTHORITY_ORDER,
+  STATUS_ORDER,
   type StandingBlock,
   type StandingState,
   type SymbolStandingBlock,
@@ -314,15 +315,6 @@ interface SectionView {
   session_attribution?: string;
 }
 
-interface EvidenceRow {
-  id: number;
-  file_path: string;
-  symbol: string | null;
-  ref_sha: string;
-  kind: string;
-  session_id: string | null;
-}
-
 /** The strongest attached evidence kind, ranked by the declared ladder. */
 function strongestKind(kinds: string[]): string | null {
   let best: string | null = null;
@@ -342,28 +334,30 @@ function severityRank(severity: string): number {
   return rank < 0 ? SEVERITIES.length : rank;
 }
 
-/** §3.1's evidence arm: which evidence rows cite this locus. */
-function citingEvidence(db: DB, scope: AccountScope): EvidenceRow[] {
-  if (!scope.path) {
-    if (!scope.subsystemId) return [];
-    return db
-      .prepare(
-        `SELECT DISTINCT e.id, e.file_path, e.symbol, e.ref_sha, e.kind, e.session_id
-           FROM evidence e
-           JOIN file_ledger l ON l.file_path = e.file_path
-          WHERE l.subsystem_id = ?
-          ORDER BY e.id`,
-      )
-      .all(scope.subsystemId) as EvidenceRow[];
+/**
+ * §3.1's evidence arm, as a predicate over the `evidence` alias `e` rather
+ * than as a list of ids. A subsystem locus can own hundreds of evidence rows,
+ * and a query that first materializes their ids and then binds one parameter
+ * per id scales with the store rather than with the answer — and eventually
+ * meets SQLite's variable ceiling. Returns null when nothing can cite the
+ * locus (a term), so a caller drops the arm rather than binding a false one.
+ *
+ * A symbol locus is cited only by evidence naming that exact symbol: a file's
+ * citations are never silently inherited by one of its symbols (§2.5).
+ */
+function evidenceMatch(scope: AccountScope): { sql: string; params: unknown[] } | null {
+  if (scope.path) {
+    return scope.symbol
+      ? { sql: "e.file_path = ? AND e.symbol = ?", params: [scope.path, scope.symbol] }
+      : { sql: "e.file_path = ?", params: [scope.path] };
   }
-  const rows = db
-    .prepare(
-      "SELECT id, file_path, symbol, ref_sha, kind, session_id FROM evidence WHERE file_path = ? ORDER BY id",
-    )
-    .all(scope.path) as EvidenceRow[];
-  // A symbol locus is cited only by evidence naming that exact symbol; the
-  // file's citations are not silently inherited by one of its symbols (§2.5).
-  return scope.symbol ? rows.filter((row) => row.symbol === scope.symbol) : rows;
+  if (scope.subsystemId) {
+    return {
+      sql: "e.file_path IN (SELECT file_path FROM file_ledger WHERE subsystem_id = ?)",
+      params: [scope.subsystemId],
+    };
+  }
+  return null;
 }
 
 function buildPurpose(db: DB, scope: AccountScope): SectionBuild {
@@ -418,19 +412,19 @@ interface ClaimRow {
 function buildStructure(
   db: DB,
   scope: AccountScope,
-  evidence: EvidenceRow[],
   authorization: { authorized: boolean; cannot_justify: string },
   probe: CommitProbe,
   asOf: string | null,
 ): SectionBuild {
-  const evidenceIds = evidence.map((row) => row.id);
+  const cites = evidenceMatch(scope);
   const conditions = [`c.subject_id IN (${placeholders(scope.subjectIds)})`];
   const params: unknown[] = [...scope.subjectIds];
-  if (evidenceIds.length) {
+  if (cites) {
     conditions.push(
-      `c.claim_id IN (SELECT claim_id FROM claim_evidence WHERE evidence_id IN (${placeholders(evidenceIds)}))`,
+      `EXISTS (SELECT 1 FROM claim_evidence ce JOIN evidence e ON e.id = ce.evidence_id
+                WHERE ce.claim_id = c.claim_id AND ${cites.sql})`,
     );
-    params.push(...evidenceIds);
+    params.push(...cites.params);
   }
   // Every stored row is a candidate and ancestry alone decides membership: a
   // SQL pre-filter on the validity columns drops exactly the claims opened at
@@ -499,6 +493,8 @@ interface FindingRow {
   symptom: string;
   ref_sha: string | null;
   primary_files: string | null;
+  /** 1 when an evidence row cites the locus; the `primary_files` arm is decided in code. */
+  cited: number;
 }
 
 interface ResolutionEventRow {
@@ -528,49 +524,43 @@ function primaryFilesNames(primaryFiles: string | null, path: string): boolean {
   });
 }
 
-function matchingFindings(db: DB, scope: AccountScope, evidence: EvidenceRow[]): FindingRow[] {
-  const select = `SELECT s.finding_id, s.subsystem_id, s.severity, s.resolution_state,
-                         s.legacy_status, f.symptom, f.ref_sha, f.primary_files
-                    FROM finding_state_current s
-                    JOIN findings f ON f.finding_id = s.finding_id`;
+function matchingFindings(db: DB, scope: AccountScope): FindingRow[] {
+  const columns = `s.finding_id, s.subsystem_id, s.severity, s.resolution_state,
+                   s.legacy_status, f.symptom, f.ref_sha, f.primary_files`;
+  const from = "FROM finding_state_current s JOIN findings f ON f.finding_id = s.finding_id";
   if (scope.subsystemId) {
     return db
-      .prepare(`${select} WHERE s.subsystem_id = ? ORDER BY s.finding_id`)
+      .prepare(
+        `SELECT ${columns}, 1 AS cited ${from} WHERE s.subsystem_id = ? ORDER BY s.finding_id`,
+      )
       .all(scope.subsystemId) as FindingRow[];
   }
   if (!scope.path) return [];
-  const evidenceIds = evidence.map((row) => row.id);
-  const owners = scope.owners;
-  const conditions: string[] = [];
-  const params: unknown[] = [];
-  if (evidenceIds.length) {
+  const cites = evidenceMatch(scope);
+  if (!cites) return [];
+  // Two arms, because §3.1 names two: a finding whose evidence cites the path,
+  // and a finding whose `primary_files` citation names it. `primary_files` is
+  // a JSON array, so that arm is narrowed in SQL to the owning subsystems and
+  // decided in code.
+  const citedSql = `EXISTS (SELECT 1 FROM finding_evidence fe JOIN evidence e ON e.id = fe.evidence_id
+                             WHERE fe.finding_id = f.finding_id AND ${cites.sql})`;
+  const conditions = [citedSql];
+  const params: unknown[] = [...cites.params, ...cites.params];
+  if (scope.owners.length) {
     conditions.push(
-      `f.finding_id IN (SELECT finding_id FROM finding_evidence WHERE evidence_id IN (${placeholders(evidenceIds)}))`,
+      `(f.primary_files IS NOT NULL AND f.subsystem_id IN (${placeholders(scope.owners)}))`,
     );
-    params.push(...evidenceIds);
+    params.push(...scope.owners);
   }
-  if (owners.length) {
-    conditions.push(
-      `(f.primary_files IS NOT NULL AND f.subsystem_id IN (${placeholders(owners)}))`,
-    );
-    params.push(...owners);
-  }
-  if (conditions.length === 0) return [];
   const rows = db
-    .prepare(`${select} WHERE ${conditions.join(" OR ")} ORDER BY s.finding_id`)
+    .prepare(
+      `SELECT ${columns}, ${citedSql} AS cited ${from}
+        WHERE ${conditions.join(" OR ")}
+        ORDER BY s.finding_id`,
+    )
     .all(...params) as FindingRow[];
-  const cited = new Set(
-    (
-      db
-        .prepare(
-          `SELECT DISTINCT finding_id FROM finding_evidence WHERE evidence_id IN (${placeholders(evidenceIds.length ? evidenceIds : [-1])})`,
-        )
-        .all(...(evidenceIds.length ? evidenceIds : [-1])) as { finding_id: string }[]
-    ).map((row) => row.finding_id),
-  );
   return rows.filter(
-    (row) =>
-      cited.has(row.finding_id) || primaryFilesNames(row.primary_files, scope.path as string),
+    (row) => row.cited === 1 || primaryFilesNames(row.primary_files, scope.path as string),
   );
 }
 
@@ -605,15 +595,41 @@ function resolutionAt(
   return { state: state ?? "open", placeable: true, unplaceable };
 }
 
+/**
+ * §2.3's rule, carried to the one section it bears on. "No open findings" is
+ * an assertion about the code, and only a reading of the code can license it.
+ *
+ * The rule is stated for file standing, so the other two kinds need their own
+ * threshold and get one from the ladder they are already on: a subsystem may
+ * report an absence of findings once its survey has reached `concerns`, the
+ * first status at which findings are recorded at all, and a term is not a
+ * locus that findings are recorded against. Below that threshold the section
+ * says what is true — nothing was read — and never reports an absence it
+ * cannot see.
+ */
+function defectsEmptyStatement(locus: ResolvedLocus, state: string): string {
+  if (locus.kind === "file" || locus.kind === "symbol") {
+    return state === "examined"
+      ? "No open findings are recorded for this locus."
+      : "Not examined: nothing was read here, so the record says nothing about defects at this locus.";
+  }
+  if (locus.kind === "subsystem") {
+    const reached = STATUS_ORDER.indexOf(state as (typeof STATUS_ORDER)[number]);
+    const recordsFindings = STATUS_ORDER.indexOf("concerns");
+    return reached >= 0 && reached >= recordsFindings
+      ? "No open findings are recorded for this subsystem."
+      : `Not examined: this subsystem's status is ${state}, which is short of the stage at which findings are recorded.`;
+  }
+  return "Findings are recorded against files and subsystems, not against a term.";
+}
+
 function buildDefects(
   db: DB,
-  scope: AccountScope,
-  evidence: EvidenceRow[],
+  rows: FindingRow[],
   probe: CommitProbe,
   asOf: string | null,
-  standingState: string,
+  emptyStatement: string,
 ): SectionBuild {
-  const rows = matchingFindings(db, scope, evidence);
   const eventsFor = db.prepare(
     `SELECT id, finding_id, resolution_state, fix_sha, fix_location, rationale, recorded_at
        FROM finding_resolution_events WHERE finding_id = ? ORDER BY id`,
@@ -662,34 +678,30 @@ function buildDefects(
       items.push(item);
     }
   }
-  // §2.3: "no open findings" is legal only at `examined`. Anywhere else the
-  // section says what is true — the file was not examined — and never reports
-  // an absence it cannot see.
-  const statement =
-    items.length === 0
-      ? standingState === "examined"
-        ? "No open findings are recorded for this locus."
-        : "Not examined: nothing was read here, so the record says nothing about defects at this locus."
-      : undefined;
-  return { source_rows: rows.length, items, statement };
+  return {
+    source_rows: rows.length,
+    items,
+    statement: items.length === 0 ? emptyStatement : undefined,
+  };
 }
 
-function buildReviews(db: DB, scope: AccountScope, evidence: EvidenceRow[]): SectionBuild {
-  const evidenceIds = evidence.map((row) => row.id);
-  if (evidenceIds.length === 0 && !scope.subsystemId) return { source_rows: 0, items: [] };
+function buildReviews(db: DB, scope: AccountScope): SectionBuild {
+  const cites = evidenceMatch(scope);
   const conditions: string[] = [];
   const params: unknown[] = [];
-  if (evidenceIds.length) {
+  if (cites) {
     conditions.push(
-      `(d.subsystem_id, d.concern_code) IN (SELECT subsystem_id, concern_code FROM disposition_evidence
-         WHERE evidence_id IN (${placeholders(evidenceIds)}))`,
+      `EXISTS (SELECT 1 FROM disposition_evidence de JOIN evidence e ON e.id = de.evidence_id
+                WHERE de.subsystem_id = d.subsystem_id AND de.concern_code = d.concern_code
+                  AND ${cites.sql})`,
     );
-    params.push(...evidenceIds);
+    params.push(...cites.params);
   }
   if (scope.subsystemId) {
     conditions.push("d.subsystem_id = ?");
     params.push(scope.subsystemId);
   }
+  if (conditions.length === 0) return { source_rows: 0, items: [] };
   const rows = db
     .prepare(
       `SELECT d.subsystem_id, d.concern_code, d.classification, d.evidence_quality, d.rationale,
@@ -877,11 +889,7 @@ function buildLeads(db: DB, standing: StandingBlock, locusKind: LocusKind): Sect
   return { source_rows: items.length, items };
 }
 
-function buildHistoryPointer(
-  db: DB,
-  findings: FindingRow[],
-  evidence: EvidenceRow[],
-): SectionBuild {
+function buildHistoryPointer(db: DB, scope: AccountScope, findings: FindingRow[]): SectionBuild {
   const findingIds = findings.map((row) => row.finding_id);
   const events = findingIds.length
     ? (db
@@ -892,11 +900,21 @@ function buildHistoryPointer(
         )
         .all(...findingIds) as ResolutionEventRow[])
     : [];
-  // C24's by-citation attribution: a session reaches this locus through the
-  // rows that cite it, and the citing evidence was already read for the
-  // account's other sections.
+  // C24's by-citation attribution: a session reaches this locus only through a
+  // row that cites it — the evidence it collected here, or a finding it
+  // recorded — never through a claim that the session touched the file.
   const sessionIds = new Set<string>();
-  for (const row of evidence) if (row.session_id) sessionIds.add(row.session_id);
+  const cites = evidenceMatch(scope);
+  if (cites) {
+    for (const row of db
+      .prepare(
+        `SELECT DISTINCT e.session_id FROM evidence e
+          WHERE ${cites.sql} AND e.session_id IS NOT NULL`,
+      )
+      .all(...cites.params) as { session_id: string }[]) {
+      sessionIds.add(row.session_id);
+    }
+  }
   if (findingIds.length) {
     for (const row of db
       .prepare(
@@ -1019,22 +1037,22 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
 
   const { locus, standing } = describeLocusStanding(ctx, value, kind);
   const scope = buildScope(db, locus);
-  const evidence = citingEvidence(db, scope);
   const authorization = contentAuthorization(locus, standing);
-  const findings = matchingFindings(db, scope, evidence);
+  const findings = matchingFindings(db, scope);
 
   const wanted = new Set<AccountSection>(
     (requestedSections as AccountSection[] | null) ?? DEFAULT_SECTIONS,
   );
   const builders: Record<AccountSection, () => SectionBuild> = {
     purpose: () => buildPurpose(db, scope),
-    structure: () => buildStructure(db, scope, evidence, authorization, probe, asOf),
-    defects: () => buildDefects(db, scope, evidence, probe, asOf, authorization.state),
-    reviews: () => buildReviews(db, scope, evidence),
+    structure: () => buildStructure(db, scope, authorization, probe, asOf),
+    defects: () =>
+      buildDefects(db, findings, probe, asOf, defectsEmptyStatement(locus, authorization.state)),
+    reviews: () => buildReviews(db, scope),
     boundaries: () => buildBoundaries(db, scope),
     terms: () => buildTerms(db, scope),
     leads: () => buildLeads(db, standing, locus.kind),
-    history_pointer: () => buildHistoryPointer(db, findings, evidence),
+    history_pointer: () => buildHistoryPointer(db, scope, findings),
   };
 
   // §2.4.4: when the recorded reconciliation is behind the workspace head,
@@ -1108,7 +1126,12 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
     trace: {
       model_calls: 0,
       selection: "registry-exact-v1",
-      budget_bytes: wanted.size > DEFAULT_SECTIONS.length ? 32768 : 8192,
+      // §4.1: 8192 for the default response, 4096 for each optional section
+      // the call asks for, and 32768 as the hard ceiling no request exceeds.
+      budget_bytes: Math.min(
+        32768,
+        8192 + 4096 * [...wanted].filter((name) => !DEFAULT_SECTIONS.includes(name)).length,
+      ),
       payload_bytes: 0,
       // The wire measurement belongs to the emitting helper, not to the
       // handler: it counts the text block and the duplicated

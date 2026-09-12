@@ -50,6 +50,14 @@
 // response size: the byte budgets are P7's gate, and asserting a bound here
 // would duplicate a control without measuring it.
 //
+// One guard is deliberately out of reach. The handler refuses a response whose
+// sections cannot reconcile `selected + omitted == census`; deleting that
+// refusal leaves every response below reconciling anyway, so this gate stays
+// green under it. Turning it red needs a store that forces a drop, which is
+// the over-budget fixture P7's compactness gate builds. What is asserted here
+// is the weaker, independent property: the response as served reconciles, and
+// an omission carries an exact count and one of the two declared reasons.
+//
 // Output protocol: exactly one status line, last, on stdout. Every subprocess
 // is captured and never echoed, and every message is scrubbed, so a missing
 // deliverable reports as an assertion failure rather than as a crash.
@@ -292,6 +300,7 @@ function buildFixture() {
   evidence.run(2, "src/candidate.ts", "parseRow", head, "name-inferred");
   evidence.run(3, "src/examined.ts", "readLedger", base, "doc-asserted");
   evidence.run(4, "src/examined.ts", "readLedger", head, "test-observed");
+  evidence.run(5, "src/examined.ts", "readLedger", head, "pattern-matched");
 
   const claim = db.prepare(
     `INSERT INTO claims
@@ -315,10 +324,13 @@ function buildFixture() {
   const claimEvidence = db.prepare(
     "INSERT INTO claim_evidence (claim_id, evidence_id, role) VALUES (?, ?, 'supports')",
   );
-  // CL-1 carries a weak row and a strong row: the item must report the
-  // strongest, or a reader ranks the claim by whichever row was inserted last.
+  // CL-1 carries three rows whose strongest is neither the lowest nor the
+  // highest evidence id: doc-asserted (3), test-observed (4), pattern-matched
+  // (5). Reporting the first, the last, or the lowest id all give a different
+  // answer than reporting the strongest.
   claimEvidence.run("CL-1", 3);
-  claimEvidence.run("CL-1", 1);
+  claimEvidence.run("CL-1", 5);
+  claimEvidence.run("CL-1", 4);
   claimEvidence.run("CL-0", 3);
   claimEvidence.run("CL-C", 2);
 
@@ -328,9 +340,12 @@ function buildFixture() {
      VALUES (?, 'B-01', ?, 'account fixture', ?, ?, ?, ?, 'p6')`,
   );
   const primary = JSON.stringify([`src/examined.ts:readLedger@${head}`]);
-  finding.run("B01-0", "the reader drops the last row", "HIGH", "confirmed-bug", primary, head);
+  // The seeded severities deliberately disagree with id order: B01-0 is the
+  // lowest id and the lowest severity, so sorting by id alone produces a
+  // different sequence and the ordering assertion below can fail.
+  finding.run("B01-0", "the reader drops the last row", "MEDIUM", "confirmed-bug", primary, head);
   finding.run("B01-1", "the reader double-counts a retry", "HIGH", "confirmed-bug", primary, head);
-  finding.run("B01-4", "the reader logs the wrong cursor", "MEDIUM", "confirmed-bug", primary, head);
+  finding.run("B01-4", "the reader logs the wrong cursor", "HIGH", "confirmed-bug", primary, head);
   // Legacy row: no resolution event at all, so `finding_state_current`'s
   // fallback is what places it.
   finding.run("B01-3", "the reader was thought to deadlock", "CRITICAL", "ruled-out", primary, head);
@@ -800,6 +815,32 @@ check("the default call carries the on-by-default sections and no opt-in section
     : null;
 });
 
+check("every section reconciles its own census against the omission ledger", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  // A default call, so the two opt-in sections are dropped by policy and the
+  // ledger has something to reconcile.
+  const payload = describeLocus({ locus: "src/examined.ts" });
+  const ledger = payload?.omitted ?? [];
+  for (const entry of ledger) {
+    if (entry.reason !== "policy" && entry.reason !== "budget")
+      return `an omission carries the reason ${JSON.stringify(entry.reason)}`;
+    if (typeof entry.count !== "number") return `${entry.section} omits without an exact count`;
+  }
+  for (const name of SECTIONS) {
+    const section = sectionOf(payload, name);
+    if (!section) return `${name} is absent`;
+    const dropped = ledger
+      .filter((entry) => entry.section === name)
+      .reduce((total, entry) => total + entry.count, 0);
+    if ((section.items ?? []).length + dropped !== section.census)
+      return `${name}: ${(section.items ?? []).length} selected + ${dropped} omitted != ${section.census}`;
+    // §4.3: an unrecorded source is declared as census 0, never as an omission.
+    if (section.census === 0 && dropped > 0) return `${name} omits from an empty census`;
+  }
+  return null;
+});
+
 check("an opt-in section is served when it is requested", () => {
   const reason = needFixture();
   if (reason) return reason;
@@ -829,7 +870,7 @@ check("structure serves the current claim, with its strongest evidence kind", ()
   if (item.statement !== "the ledger reader retries under a bound")
     return "the statement is not the stored one";
   if (item.ref_sha !== fixture.base) return `ref_sha is ${JSON.stringify(item.ref_sha)}`;
-  if (item.evidence_kind !== "code-verified")
+  if (item.evidence_kind !== "test-observed")
     return `evidence_kind is ${JSON.stringify(item.evidence_kind)}, not the strongest attached`;
   if (item.revision_bound !== true) return "a revision-bound claim is not marked bound";
   return item.authored === "model" ? null : `authored is ${JSON.stringify(item.authored)}`;
@@ -846,7 +887,7 @@ check("defects partition and order follow §3.1", () => {
   if (JSON.stringify(partitions) !== JSON.stringify(ordered))
     return `the partitions appear as ${JSON.stringify(partitions)}`;
   const byPartition = (name) => items.filter((item) => item.partition === name).map((i) => i.finding_id);
-  if (JSON.stringify(byPartition("open")) !== JSON.stringify(["B01-0", "B01-1", "B01-4"]))
+  if (JSON.stringify(byPartition("open")) !== JSON.stringify(["B01-1", "B01-4", "B01-0"]))
     return `the open partition is ${JSON.stringify(byPartition("open"))}, not severity then id`;
   if (JSON.stringify(byPartition("awaiting-verification")) !== JSON.stringify(["B01-2"]))
     return `awaiting-verification holds ${JSON.stringify(byPartition("awaiting-verification"))}`;
