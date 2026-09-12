@@ -374,6 +374,28 @@ class ProjectionVerifier:
 
         # Content is a byte-for-byte drift check against the post-xref receipt.
         # It proves projection correspondence, not the semantic truth of the DB.
+        #
+        # Membership is checked before the hashes, because hashing the receipt's
+        # own members can only ever prove the receipt agrees with itself. A page
+        # removed from the receipt while its bytes stay on disk shortens the
+        # list this loop walks, and coverage does not see it either — that axis
+        # compares the plan to the files present, and the file is present. Left
+        # unchecked, the receipt is a place to hide a page from custody
+        # (F11/codex).
+        receipt_paths = {str(page["path"]) for page in contract.get("pages", [])}
+        for rel in self.expected_pages:
+            if rel in receipt_paths:
+                continue
+            if not (self.output / rel).is_file():
+                continue  # coverage already owns the missing-page diagnostic
+            mismatches.append(
+                {
+                    "axis": "content",
+                    "object_type": "page",
+                    "object_id": rel,
+                    "detail": "projected page is absent from the publication receipt",
+                }
+            )
         for page in contract.get("pages", []):
             rel = str(page["path"])
             path = self.output / rel
