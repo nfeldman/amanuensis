@@ -22,7 +22,7 @@
 | P9 | Unresolved and History pages; reader's guide from the enum source | done (1 attempt) | P8 | `materializer/test-history-and-disagreements.py` | C28, C36, C37, C38, C58, C61, C55, C63 |
 | P10 | Locus search index and accessible interface enhancement | done (1 attempt) | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41, C55, C63 |
 
-## S3 · Documentation from claims (review: pending)
+## S3 · Documentation from claims (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

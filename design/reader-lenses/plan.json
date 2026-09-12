@@ -44,10 +44,10 @@
         "P12"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "ae2ffac5a509db32eecbecbac8e03b5b61109d45",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "6f025ec9f28009e2139552664c15480136d44334",
+        "findings": 10
       }
     },
     {
