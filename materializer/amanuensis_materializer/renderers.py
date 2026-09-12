@@ -28,7 +28,7 @@ from .diagrams import (
     staleness_map,
     subsystem_dependency_view,
 )
-from .lint import orientation_violations
+from .lint import composite_index_violations, orientation_violations
 from .manifest import sha256_bytes, sha256_json
 from .readback import (
     FINDING_LENS_PAGES,
@@ -196,6 +196,10 @@ THESIS_REFUSED = (
     "The recorded thesis carries status vocabulary and was not published; "
     "correct `entry-point.md`."
 )
+THESIS_REFUSED_COMPOSITE = (
+    "The recorded thesis presents a composite index of the record and was not "
+    "published; correct `entry-point.md`."
+)
 
 
 @dataclass(frozen=True)
@@ -251,6 +255,13 @@ def read_thesis(storage: Path) -> Thesis:
     violations = tuple(orientation_violations(body))
     if violations:
         return Thesis(THESIS_REFUSED, recorded=True, violations=violations)
+    # C32 forbids a composite score in the overview, and the thesis is the one
+    # slot on it a session writes by hand. Refusing it here is what keeps the
+    # figure out of the published bytes; the whole-page lint below is what makes
+    # the publish red whoever put it there (F5/codex, slice-S7).
+    composite = tuple(composite_index_violations(body))
+    if composite:
+        return Thesis(THESIS_REFUSED_COMPOSITE, recorded=True, violations=composite)
     return Thesis(body, recorded=True)
 
 
@@ -827,6 +838,16 @@ def render_index(
     out += [stale_marker(str(e["id"]), int(e["tier"])) for e in stale_rows]
 
     text = "\n".join(out) + "\n"
+    # Over the page as published, not over the thesis alone. C32's rule is about
+    # what the overview carries, so a renderer that grows a composite row is the
+    # same violation as a session that writes one into `entry-point.md`, and
+    # only a lint over the rendered bytes sees both. Until slice-S7 this check
+    # lived in the packet's gate, where it could report on a publish it could
+    # not stop (F5/codex).
+    if warn is not None:
+        for message in composite_index_violations(text):
+            warn(f"index.md: the overview may not publish a composite index — {message}")
+
     sources = {
         **_db_source("index:alignment", alignment),
         **_db_source("index:subs", subs),

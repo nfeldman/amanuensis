@@ -36,8 +36,10 @@
 //     source (F3/codex);
 //   - any source declares a literal copy of a vocabulary instead of importing
 //     the generated array (F4/codex);
-//   - the overview truthfulness lint does not catch a bare percentage or an
-//     `n of m` ratio presented as a health index (F3/claude);
+//   - the production overview lint does not catch a bare percentage or an
+//     `n of m` ratio presented as a health index (F3/claude), or the rule is
+//     not in production at all, or render_index does not consult it, or the
+//     overview gate does not assert it on a publish (F5/codex);
 //   - the gate does not run in CI.
 //
 // False green it cannot exclude: agreement on a wrong definition. If the
@@ -69,6 +71,7 @@ const SUBSYSTEMS_REL = "mcp-server/src/tools/subsystems.ts";
 const FINDINGS_REL = "mcp-server/src/tools/findings.ts";
 const RENDERERS_REL = "materializer/amanuensis_materializer/renderers.py";
 const OVERVIEW_GATE_REL = "materializer/test-overview-truthfulness.py";
+const OVERVIEW_LINT_REL = "materializer/amanuensis_materializer/lint.py";
 const CI_REL = ".github/workflows/test.yml";
 
 // ---------------------------------------------------------------------------
@@ -1231,16 +1234,20 @@ const COMPOSITE_NEGATIVE = [
   "The replay covers `100%` of committed transactions.",
 ];
 
-check("the overview gate exposes a composite-index lint that catches a bare percentage", () => {
-  const gatePath = join(REPO, OVERVIEW_GATE_REL);
-  if (!existsSync(gatePath)) return `${OVERVIEW_GATE_REL} is absent`;
+// Read out of `lint.py`, not out of the overview gate. A rule that lives in a
+// test can grade a publish but cannot refuse one, which is how a thesis
+// carrying `Health: 72%` published green with no warnings (F5/codex, slice-S7).
+check("the production lint refuses a bare percentage presented as health", () => {
+  const lintPath = join(REPO, OVERVIEW_LINT_REL);
+  if (!existsSync(lintPath)) return `${OVERVIEW_LINT_REL} is absent`;
   const probe = pythonProbe(
     [
-      "import importlib.util, json, sys",
-      `spec = importlib.util.spec_from_file_location("p21_overview_gate", ${JSON.stringify(gatePath)})`,
-      "module = importlib.util.module_from_spec(spec)",
-      "spec.loader.exec_module(module)",
-      'fn = getattr(module, "composite_index_violations", None)',
+      "import json, sys",
+      `sys.path.insert(0, ${JSON.stringify(join(REPO, "materializer"))})`,
+      "try:",
+      "    from amanuensis_materializer.lint import composite_index_violations as fn",
+      "except ImportError:",
+      "    fn = None",
       "if fn is None:",
       "    print(json.dumps({'missing': True}))",
       "else:",
@@ -1261,7 +1268,7 @@ check("the overview gate exposes a composite-index lint that catches a bare perc
     return "the overview lint probe returned no verdict";
   }
   if (verdict.missing)
-    return `${OVERVIEW_GATE_REL} exposes no composite_index_violations, so a bare percentage presented as health passes`;
+    return `${OVERVIEW_LINT_REL} exposes no composite_index_violations, so the rule is not in production`;
   if ((verdict.missed ?? []).length)
     return `the lint misses a bare percentage presented as health: ${verdict.missed.join(" | ")}`;
   if ((verdict.false_alarms ?? []).length)
@@ -1269,14 +1276,25 @@ check("the overview gate exposes a composite-index lint that catches a bare perc
   return null;
 });
 
-check("the overview gate runs its composite-index lint over the published overview", () => {
+// The renderer has to consult it, or the rule is exposed and unread.
+check("render_index consults the composite lint so the publish can turn red", () => {
+  const text = readText(join(REPO, RENDERERS_REL));
+  if (text === null) return `${RENDERERS_REL} is absent`;
+  if (!/composite_index_violations\s*\(/.test(text))
+    return `${RENDERERS_REL} never calls composite_index_violations, so nothing refuses a publish`;
+  return /warn\(/.test(text)
+    ? null
+    : `${RENDERERS_REL} calls the lint but routes nothing to warn, so a violation would not clear ok`;
+});
+
+check("the overview gate asserts the composite rule on a publish", () => {
   const text = readText(join(REPO, OVERVIEW_GATE_REL));
   if (text === null) return `${OVERVIEW_GATE_REL} is absent`;
   if (!/composite_index_violations\s*\(/.test(text))
     return `${OVERVIEW_GATE_REL} declares no composite-index lint`;
-  return /check\((\s*)?"[^"]*composite index[^"]*"/i.test(text)
+  return /check\((\s*)?"[^"]*composite index[^"]*turns the publish red"/i.test(text)
     ? null
-    : "the composite-index lint is declared but never asserted as a check";
+    : "the overview gate checks the composite lint but not that it turns a publish red";
 });
 
 // ---------------------------------------------------------------------------

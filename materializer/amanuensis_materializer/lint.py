@@ -84,6 +84,53 @@ def _excerpt(text: str, start: int, end: int, width: int = 72) -> str:
     return span[: width - 1] + "…"
 
 
+# §11.1's sibling rule, from C32: the overview publishes four status dimensions
+# "with no composite score". A single figure standing for a judgement of the
+# record is the shape BP26 names — visible rigor with no decision leverage —
+# and it is worse than useless here, because there is no arithmetic that turns
+# four different kinds of ignorance into one number.
+#
+# What is caught is a *label paired with a figure*, not a figure:
+#
+# 1. a bare percentage anywhere on the line, because every number the four
+#    dimensions publish is a count with its own denominator beside it, so a
+#    percentage in the overview is always a composite standing in for one;
+# 2. an `n of m` or `n/m` ratio whose line carries a composite label before it —
+#    *health*, *readiness*, *maturity*, *grade* — which leaves "12 of 240 ledger
+#    rows" alone, since its label names what was counted rather than a verdict.
+#
+# Code spans are masked first, for the reason §11.1 masks them: a quoted `72%`
+# in a sentence about the subject matter is not a status figure.
+_PERCENTAGE = re.compile(r"\b\d{1,3}(?:\.\d+)?\s*%")
+_RATIO = re.compile(r"\b\d{1,5}\s*(?:of|/)\s*\d{1,5}\b")
+_COMPOSITE_LABEL = re.compile(
+    r"(?i)\b(health|overall|composite|readiness|maturity|completeness"
+    r"|confidence|grade|rating|score)\b"
+)
+
+
+def composite_index_violations(text: str | None) -> list[str]:
+    """Lines presenting a composite judgement of the record as one figure.
+
+    Returns one message per offending line, empty when the text is clean.
+    """
+
+    out: list[str] = []
+    for raw in str(text or "").splitlines():
+        line = _CODE_SPAN.sub(" ", raw).strip()
+        if not line:
+            continue
+        if _PERCENTAGE.search(line):
+            out.append(f"a bare percentage presented as a status figure: {line}")
+            continue
+        ratio = _RATIO.search(line)
+        if ratio is None:
+            continue
+        if _COMPOSITE_LABEL.search(line[: ratio.start()]):
+            out.append(f"a composite ratio presented as a status figure: {line}")
+    return out
+
+
 def orientation_violations(text: str | None) -> list[str]:
     """Every reason this prose may not be published as orientation (§11.1).
 
