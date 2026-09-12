@@ -16,6 +16,8 @@ Turns red when:
     §7.4 fixes;
   - an `evidence` row with a non-null `symbol` is missing from `symbols`, or a
     row whose `symbol` is null contributes an entry;
+  - a page is removed from `.projection-contract.json`'s `pages` while its
+    bytes stay on disk and read-back still reports the content axis green;
   - `search-index.js` is absent from `.projection-contract.json`'s `pages`, from
     `manifest.projection_files`, or its recorded hash is not the file's bytes;
   - removing one path entry from the index leaves the **state** axis green;
@@ -1584,6 +1586,55 @@ def main() -> int:
             return None
 
         check("republishing restores the index and a green read-back", republishing_restores_green)
+
+        def dropping_the_index_from_the_receipt_turns_content_red() -> str | None:
+            """The receipt is the content axis's own list of what to hash.
+
+            Every other sabotage here changes a file the receipt names. This
+            one changes the receipt: the file stays on disk, byte-identical,
+            and only its row is removed. A content axis that iterates the
+            receipt and hashes what it finds cannot see that — it hashes a
+            shorter list and reports agreement — so the receipt becomes a
+            place to hide a page from custody (C41).
+            """
+            receipt_path = docs / ".projection-contract.json"
+            original = read(receipt_path)
+            if original is None:
+                return "the publication receipt is unreadable"
+            try:
+                receipt = json.loads(original)
+            except json.JSONDecodeError as exc:
+                return f"the publication receipt is not valid JSON — {scrub(exc)[:120]}"
+            kept = [
+                page for page in receipt.get("pages", []) if str(page.get("path")) != INDEX_FILE
+            ]
+            if len(kept) == len(receipt.get("pages", [])):
+                return f"{INDEX_FILE} was not in the receipt to begin with"
+            receipt["pages"] = kept
+            receipt_path.write_text(json.dumps(receipt, indent=2) + "\n")
+            try:
+                if not index_path.is_file():
+                    return f"{INDEX_FILE} was removed from disk as well as from the receipt"
+                verified = publish(storage, "--readback-only")
+                content = axis_ok(verified, "content")
+                if content is None:
+                    return "the read-back summary reports no content axis"
+                if content:
+                    return (
+                        f"removing {INDEX_FILE} from the receipt left the content axis"
+                        " green; the receipt is checked against itself, so a page can be"
+                        " dropped from custody without read-back noticing"
+                    )
+                if verified.get("ok"):
+                    return "read-back reported verified with a page missing from the receipt"
+                return None
+            finally:
+                receipt_path.write_text(original)
+
+        check(
+            "dropping a page from the receipt turns the content axis red",
+            dropping_the_index_from_the_receipt_turns_content_red,
+        )
 
         def clean_publish_is_green() -> str | None:
             published = publish(storage, "--clean-publish", "--output", str(clean))
