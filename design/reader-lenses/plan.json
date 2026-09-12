@@ -88,10 +88,10 @@
         "P20"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "55b8b90e78b278a58dbd59bd304f1649f972fd7d",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "9f0daac0b3b91cf73f97a3471f1f7d0e0f810ccb",
+        "findings": 10
       }
     }
   ],
