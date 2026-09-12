@@ -485,7 +485,28 @@ function buildFixture() {
      VALUES ('default', 'main', ?, '2026-09-11 01:30:50', ?)`,
   ).run(base, base);
 
-  return { root, workspace, bare, storageRoot, base, aside, head, project, db, ctx, noGitCtx };
+  const clone = join(root, "tracking-clone");
+  const cloned = spawnSync("git", ["clone", "-q", "--origin", "upstream", workspace, clone], {
+    encoding: "utf8",
+  });
+  const upstreamCtx =
+    cloned.status === 0 ? { ...ctx, project: { ...project, workspacePath: clone } } : null;
+
+  return {
+    root,
+    workspace,
+    bare,
+    clone,
+    storageRoot,
+    base,
+    aside,
+    head,
+    project,
+    db,
+    ctx,
+    noGitCtx,
+    upstreamCtx,
+  };
 }
 
 if (!fixtureError) {
@@ -673,13 +694,23 @@ check("the six inference steps are declared in §2.1's order", () => {
     : `the declared order is ${JSON.stringify(order)}`;
 });
 
-check("a caller-supplied kind overrides inference and says so", () => {
+check("a caller-supplied kind overrides inference and says so, for every kind", () => {
   const gap = needFixture();
   if (gap) return gap;
-  const { locus } = mods.standing.describeLocusStanding(fixture.ctx, "B-01", "term");
-  return locus.kind === "term" && locus.kind_inferred_by === "caller-supplied"
-    ? null
-    : `kind ${locus.kind} decided by ${locus.kind_inferred_by}`;
+  const problems = [];
+  for (const [value, forced] of [
+    ["B-01", "term"],
+    ["B-01", "file"],
+    ["src/ledger.ts", "subsystem"],
+    ["src/ledger.ts:writeRow", "symbol"],
+    ["compaction", "file"],
+  ]) {
+    const { locus } = mods.standing.describeLocusStanding(fixture.ctx, value, forced);
+    if (locus.kind !== forced) problems.push(`${value} as ${forced} kinded ${locus.kind}`);
+    if (locus.kind_inferred_by !== "caller-supplied")
+      problems.push(`${value} as ${forced} reports step ${locus.kind_inferred_by}`);
+  }
+  return problems.length ? problems.join("; ") : null;
 });
 
 // ---------------------------------------------------------------------------
@@ -838,6 +869,22 @@ check("revision reports the checked revision, the head, and their disagreement",
   if (revision.unchecked_since !== fixture.base)
     problems.push(`unchecked_since ${revision.unchecked_since}`);
   return problems.length ? problems.join("; ") : null;
+});
+
+check("origin_head resolves the ref the branch tracks, whatever the remote is named", () => {
+  const gap = needFixture();
+  if (gap) return gap;
+  if (!fixture.upstreamCtx) return "the tracking clone could not be created";
+  // The clone's only remote is `upstream`, so a reader that looks up
+  // refs/remotes/origin/<branch> finds nothing and reports no upstream at all.
+  const tracking = standingOf("src/only.ts", fixture.upstreamCtx).standing.revision ?? {};
+  if (tracking.origin_head !== fixture.head)
+    return `origin_head ${tracking.origin_head}, expected ${fixture.head}`;
+  // And the primary workspace, which tracks nothing, still reports null.
+  const untracked = standingOf("src/only.ts").standing.revision ?? {};
+  return untracked.origin_head === null
+    ? null
+    : `a workspace with no upstream reports ${untracked.origin_head}`;
 });
 
 check("measured.ledger_reconciled is null where the path has owners, with a receipt instead", () => {
