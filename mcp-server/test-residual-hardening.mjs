@@ -27,7 +27,13 @@
 //     stale_reason the vocabulary source does not carry, or either writer
 //     stops reading the generated STALE_REASONS (F4/codex, F2/codex);
 //   - a tool validator accepts a value the vocabulary source does not carry
-//     (F2/claude);
+//     (F2/claude), including the open-question, contradiction, diagnosticity
+//     and subsystem-status validators the probe table used to stop short of;
+//   - a vocabulary the source carries is neither probed nor declared not to be
+//     a tool input, so the probe table can no longer fall silently behind the
+//     source (F3/codex);
+//   - any source declares a literal copy of a vocabulary instead of importing
+//     the generated array (F4/codex);
 //   - the overview truthfulness lint does not catch a bare percentage or an
 //     `n of m` ratio presented as a health index (F3/claude);
 //   - the gate does not run in CI.
@@ -43,7 +49,7 @@
 // is captured and never echoed, and every message is scrubbed, so a missing
 // deliverable reports as an assertion failure rather than as a crashed gate.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -151,7 +157,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus] =
+  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -166,8 +172,11 @@ try {
       import("./dist/tools/dashboard.js"),
       import("./dist/tools/subsystems.js"),
       import("./dist/tools/locus.js"),
+      import("./dist/tools/open-questions.js"),
+      import("./dist/tools/contradictions.js"),
+      import("./dist/tools/diagnosticity.js"),
     ]);
-  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus };
+  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -184,6 +193,9 @@ const TOOL_SETS = () => [
   mods?.dashboard?.dashboardTools,
   mods?.subsystems?.subsystemTools,
   mods?.locus?.locusTools,
+  mods?.openQuestions?.openQuestionTools,
+  mods?.contradictions?.contradictionTools,
+  mods?.diagnosticity?.diagnosticityTools,
 ];
 
 function tool(name) {
@@ -918,6 +930,43 @@ function validatorProbes() {
       },
       enumName: "claim_epistemic_kind",
     },
+    // The four the slice-S7 review found unprobed. Adding an out-of-source
+    // value to any of them left this gate and test-vocabulary-source.mjs green,
+    // because the table above was hand-written and stopped here (F3/codex).
+    {
+      label: "record_open_question.category",
+      tool: "record_open_question",
+      args: {
+        category: OUT_OF_SOURCE,
+        question: "which writer owns the ledger lock?",
+        subsystem_id: "B-01",
+      },
+      enumName: "open_question_category",
+    },
+    {
+      label: "resolve_open_question.resolution",
+      tool: "resolve_open_question",
+      args: { id: 1, resolution: OUT_OF_SOURCE, answer: "the append path owns it" },
+      enumName: "open_question_resolution",
+    },
+    {
+      label: "resolve_contradiction.resolution",
+      tool: "resolve_contradiction",
+      args: { id: 1, resolution: OUT_OF_SOURCE, rationale: "the later reading stands" },
+      enumName: "contradiction_resolution",
+    },
+    {
+      label: "resolve_diagnosticity_matrix.outcome",
+      tool: "resolve_diagnosticity_matrix",
+      args: { matrix_id: 1, outcome: OUT_OF_SOURCE, rationale: "one concern survives" },
+      enumName: "diagnosticity_outcome",
+    },
+    {
+      label: "update_subsystem_status.status",
+      tool: "update_subsystem_status",
+      args: { id: "B-01", status: OUT_OF_SOURCE },
+      enumName: "subsystem_status",
+    },
   ];
 }
 
@@ -997,6 +1046,114 @@ check("every enum a tool schema publishes is exactly the source's list", () => {
       );
   }
   return bad.length ? bad.join("; ") : null;
+});
+
+// Every enum the source carries is accounted for by name. A probe table that a
+// reader must remember to extend is the defect F3/codex found: `bogus` was
+// added to a validator no row named, and both vocabulary gates stayed green.
+// So the coverage is asserted rather than assumed — an enum reaches the source
+// and this gate turns red until it is either probed or declared not to be a
+// tool input, with the reason it is not.
+const NOT_A_TOOL_INPUT = {
+  finding_resolution_state: "resolve_finding validates it through FINDING_RESOLUTION_STATES; the resolution-proof gate drives that surface",
+  standing_state: "a read-surface label computed by standing.ts, never accepted from a caller",
+  stale_reason: "written by detect_changes and the standing table, not accepted from a caller; the arms above bind both writers",
+  field_note_follow_up: "free text — a finding id, or one of the two words — so there is no enum to validate",
+  concern_status: "set by retire_concern from its own action argument, never accepted directly",
+  xref_relationship: "add_xref is reached by P13's whole-file caller scan; naming it here would collide with that",
+  lens: "a design-session label outside the conspectus writers",
+  omission_reason: "emitted by the budget ledger, never accepted from a caller",
+  attention_label: "computed by get_attention from durable rows, never accepted from a caller",
+};
+
+check("every vocabulary the source carries is probed or declared not to be an input", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  if (!source || !source.enums) return `${SOURCE_REL} carries no enums to enumerate`;
+  const probed = new Set(validatorProbes().map((probe) => probe.enumName));
+  for (const entry of SCHEMA_ENFORCED) probed.add(entry.enumName);
+  const bad = [];
+  for (const name of Object.keys(source.enums)) {
+    if (probed.has(name)) continue;
+    const reason = NOT_A_TOOL_INPUT[name];
+    if (!reason) bad.push(`${name} is neither probed nor declared as a non-input`);
+  }
+  // A declaration that no longer names a source enum is stale bookkeeping, and
+  // would hide the next one that matters.
+  for (const name of Object.keys(NOT_A_TOOL_INPUT)) {
+    if (!(name in source.enums)) bad.push(`${name} is declared a non-input but the source no longer carries it`);
+    else if (probed.has(name)) bad.push(`${name} is both probed and declared a non-input`);
+  }
+  return bad.length ? bad.join("; ") : null;
+});
+
+// C48's other half: the tool sources import their arrays from the generated
+// module "instead of declaring literals" (§10.2). A literal that happens to
+// agree today is not a binding — it is a second copy that drifts silently, and
+// four of them were still in the tree when slice-S7 was reviewed (F4/codex).
+// This scans every source rather than a named list, so a new copy anywhere
+// turns it red.
+const TS_SOURCES = () => {
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".ts") && entry.name !== "vocabulary.ts") out.push(full);
+    }
+  };
+  walk(join(REPO, "mcp-server", "src"));
+  return out;
+};
+
+check("no source declares a literal copy of a vocabulary the enum source carries", () => {
+  if (!source || !source.enums) return `${SOURCE_REL} carries no enums to compare against`;
+  const wanted = new Map();
+  for (const [name, definition] of Object.entries(source.enums)) {
+    const values = sourceValues(name);
+    if (values && values.length) wanted.set([...values].sort().join("\u0000"), name);
+    void definition;
+  }
+  const bad = [];
+  let files = [];
+  try {
+    files = TS_SOURCES();
+  } catch (e) {
+    return `the TypeScript sources could not be walked — ${e && e.message ? e.message : e}`;
+  }
+  for (const file of files) {
+    const text = readText(file);
+    if (text === null) continue;
+    for (const match of text.matchAll(/\[([^[\]]*?)\]/g)) {
+      const literals = [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+      if (literals.length < 2) continue;
+      const name = wanted.get([...literals].sort().join("\u0000"));
+      if (!name || literals.length !== new Set(literals).size) continue;
+      const line = text.slice(0, match.index).split("\n").length;
+      const rel = file.slice(REPO.length + 1);
+      bad.push(`${rel}:${line} declares a literal copy of ${name} instead of importing it`);
+    }
+  }
+  return bad.length ? bad.slice(0, 6).join("; ") : null;
+});
+
+// The subsystem ladder carries an ordering the source does not, so it keeps
+// authorship of its order — the same split §10.2 makes for the SQL CHECKs. What
+// it may not carry is a different *set*, which is asserted here.
+check("the subsystem status ladder covers exactly the vocabulary the source carries", () => {
+  const values = sourceValues("subsystem_status");
+  if (!values) return "the source carries no subsystem_status enum";
+  const text = readText(join(REPO, "mcp-server", "src", "invariants.ts"));
+  if (text === null) return "mcp-server/src/invariants.ts is absent";
+  const match = /export const STATUS_ORDER[^=]*=\s*\[([^\]]*)\]/.exec(text);
+  if (!match) return "invariants.ts declares no STATUS_ORDER to compare";
+  const ladder = [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+  if (!ladder.length) return "STATUS_ORDER is empty, so the ladder covers nothing";
+  const missing = values.filter((value) => value !== "deferred" && !ladder.includes(value));
+  const extra = ladder.filter((value) => !values.includes(value));
+  if (missing.length) return `the ladder omits ${missing.join(", ")}, which the source carries`;
+  if (extra.length) return `the ladder carries ${extra.join(", ")}, which the source does not`;
+  return null;
 });
 
 // ---------------------------------------------------------------------------
