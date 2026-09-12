@@ -140,44 +140,6 @@ db.transaction(() => {
 
 console.log("SQLite write / read ceilings:");
 
-let setDispCounter = 0;
-ceiling("set_disposition", 10, () => {
-  const i = setDispCounter++;
-  call(
-    "set_disposition",
-    {
-      subsystem_id: `B-${String(i % 20).padStart(2, "0")}`,
-      concern_code: `CC-${i % 25}`,
-      classification: "ruled-out",
-      evidence: "x",
-      evidence_quality: "code-verified",
-      rationale: "r",
-      ref_sha: seedSha,
-      pass_type: "survey",
-    },
-    ctx,
-  );
-});
-
-let findingCounter = 0;
-ceiling("add_finding", 10, () => {
-  const n = findingCounter++;
-  call(
-    "add_finding",
-    {
-      finding_id: `F-${n}`,
-      subsystem_id: `B-${String(n % 20).padStart(2, "0")}`,
-      symptom: "s",
-      root_cause: "r",
-      severity: "LOW",
-      status: "confirmed-bug",
-      ref_sha: seedSha,
-      pass_type: "survey",
-    },
-    ctx,
-  );
-});
-
 let noteCounter = 0;
 ceiling("add_field_note", 5, () => {
   call("add_field_note", { category: "anomaly", observation: `n${noteCounter++}` }, ctx);
@@ -205,6 +167,59 @@ ceiling("get_finding_summary (all subsystems)", 50, () =>
 );
 
 console.log("\nGit-subprocess ceilings (higher floor — subprocess IO is noisy):");
+
+// `add_finding` and `set_disposition` are measured here rather than above
+// because resolving `ref_sha` is now a live `git rev-parse` on every call.
+// They were SQLite-only while `resolveWorkspaceCommit` memoized object-name-
+// shaped input per workspace; that cache answered for git after the commit it
+// had resolved was collected, and a durable row landed at a revision nothing
+// could resolve (F1/codex, slice-S7). Revalidating a cached answer costs the
+// same subprocess the cache avoided, so the subprocess is paid every time and
+// these two are subprocess operations by construction.
+//
+// Measured 6.35-6.50ms across four quiet local runs. The 200ms ceiling is ~31×
+// that — tighter in multiples than every other entry in this section, whose
+// ceilings run 47-154× their measured cost — so re-filing them here does not
+// slacken the bound, it stops a 10ms bound on a ~6.4ms subprocess from firing
+// on shared-runner jitter.
+
+let setDispCounter = 0;
+ceiling("set_disposition (resolves ref_sha)", 200, () => {
+  const i = setDispCounter++;
+  call(
+    "set_disposition",
+    {
+      subsystem_id: `B-${String(i % 20).padStart(2, "0")}`,
+      concern_code: `CC-${i % 25}`,
+      classification: "ruled-out",
+      evidence: "x",
+      evidence_quality: "code-verified",
+      rationale: "r",
+      ref_sha: seedSha,
+      pass_type: "survey",
+    },
+    ctx,
+  );
+});
+
+let findingCounter = 0;
+ceiling("add_finding (resolves ref_sha)", 200, () => {
+  const n = findingCounter++;
+  call(
+    "add_finding",
+    {
+      finding_id: `F-${n}`,
+      subsystem_id: `B-${String(n % 20).padStart(2, "0")}`,
+      symptom: "s",
+      root_cause: "r",
+      severity: "LOW",
+      status: "confirmed-bug",
+      ref_sha: seedSha,
+      pass_type: "survey",
+    },
+    ctx,
+  );
+});
 
 // A second storage dir for measuring cold init without interfering with
 // the already-initialized `project.storagePath`.

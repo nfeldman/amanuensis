@@ -105,26 +105,30 @@ export function err(message: string, extra: Record<string, unknown> = {}) {
  * as typed, so a later reader comparing revisions by ancestry has a commit to
  * compare rather than a prefix to guess at.
  *
- * Successful resolutions of an object-name-shaped input are memoized per
- * workspace. A commit does not stop existing inside one server process, and a
- * survey session writes hundreds of rows at one revision; symbolic refs
- * (`HEAD`, a branch) are deliberately never cached, because those move.
- * Failures are never cached: a revision can arrive by fetch.
+ * The resolution is **live at every call**, and nothing is memoized. An earlier
+ * revision of this helper cached object-name-shaped input per workspace, on the
+ * reasoning that a commit does not stop existing inside one server process.
+ * That is false by the route a survey session actually takes: rewinding a
+ * branch, an amend, a rebase, or a force-fetch all leave the previously
+ * resolved commit unreachable, and the next collection removes it. The cache
+ * then answered for git, and the writer stored a durable row at a revision
+ * nothing could resolve — `revision_bound: true` over an absent commit, which
+ * is the exact defect resolving at ingress exists to prevent (F1/codex,
+ * slice-S7).
+ *
+ * A cache here cannot be made sound cheaply: the only check that distinguishes
+ * a commit that still exists from one that has been collected is the same
+ * `rev-parse` the cache was introduced to avoid, so revalidating a cached
+ * answer costs exactly what not caching costs. The subprocess is therefore
+ * paid on every durable write, and `test-perf-ceilings.mjs` reads these
+ * writers against the subprocess ceilings rather than the SQLite ones, because
+ * that is now what they are.
  */
-const OBJECT_NAME = /^[0-9a-fA-F]{7,40}$/;
-const resolvedCommits = new Map<string, string>();
-
 export function resolveWorkspaceCommit(
   ctx: ServerContext,
   requested: string,
   label = "ref_sha",
 ): string {
-  const cacheable = OBJECT_NAME.test(requested);
-  const key = `${ctx.project.workspacePath}\u0000${requested}`;
-  if (cacheable) {
-    const memo = resolvedCommits.get(key);
-    if (memo !== undefined) return memo;
-  }
   const result = spawnSync("git", ["rev-parse", "--verify", `${requested}^{commit}`], {
     cwd: ctx.project.workspacePath,
     encoding: "utf8",
@@ -137,7 +141,6 @@ export function resolveWorkspaceCommit(
         `${ctx.project.workspacePath}; record the revision the reading was taken at`,
     );
   }
-  if (cacheable) resolvedCommits.set(key, sha);
   return sha;
 }
 
