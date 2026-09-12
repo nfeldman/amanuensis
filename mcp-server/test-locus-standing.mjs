@@ -282,6 +282,11 @@ function buildFixture() {
   const base = commit("export const row = 1;\n", "base");
   const mid = commit("export const row = 2;\n", "mid");
   const head = commit("export const row = 3;\n", "head");
+  // A fourth commit. The repair lands at `head`; the verification is only
+  // collected at `verified`, a strict descendant. §3.3's replay has to place
+  // the verification event at the revision the *verification* was read at, so
+  // a cut at `head` must still report the finding awaiting verification.
+  const verified = commit("export const row = 3; // verified\n", "verified");
 
   process.env.AMANUENSIS_STORAGE_ROOT = storageRoot;
   const project = mods.project.resolveProject(workspace, {
@@ -409,6 +414,34 @@ function buildFixture() {
        (finding_id, resolution_state, fix_location, fix_sha, rationale, session_id)
      VALUES ('B01-2', 'fixed-pending-verification', 'src/examined.ts:readLedger', ?, 'handle closed on the error path', 'p6')`,
   ).run(head);
+  // B01-6: repaired at `head` and *verified* at `verified`, one commit later.
+  // §3.3's replay must place each event at the revision it was read at, so a
+  // cut at `head` reports fixed-pending-verification and only a cut at
+  // `verified` reports verified-fixed. Without a verification event in the
+  // fixture, a replay that drops every verified-fixed event is invisible here
+  // — the review's sabotage at locus.ts:724 left this gate green (F3/codex).
+  finding.run(
+    "B01-6",
+    "the compactor rewrites a live segment",
+    "HIGH",
+    "confirmed-bug",
+    primary,
+    base,
+  );
+  evidence.run(8, "src/examined.ts", "readLedger", verified, "code-verified");
+  db.prepare(
+    "INSERT INTO finding_evidence (finding_id, evidence_id, role) VALUES ('B01-6', 8, 'fix-verification')",
+  ).run();
+  db.prepare(
+    `INSERT INTO finding_resolution_events
+       (finding_id, resolution_state, fix_location, fix_sha, effective_sha, rationale, session_id)
+     VALUES ('B01-6', 'fixed-pending-verification', 'src/examined.ts:readLedger', ?, ?, 'segment copied before rewrite', 'p6')`,
+  ).run(head, head);
+  db.prepare(
+    `INSERT INTO finding_resolution_events
+       (finding_id, resolution_state, fix_location, fix_sha, effective_sha, evidence_id, rationale, session_id)
+     VALUES ('B01-6', 'verified-fixed', 'src/examined.ts:readLedger', ?, ?, 8, 'the compaction test covers the live segment', 'p6')`,
+  ).run(head, verified);
 
   const concern = db.prepare(
     "INSERT INTO concerns (code, category, origin, notes, status) VALUES (?, ?, 'seeded', ?, 'active')",
@@ -466,7 +499,7 @@ function buildFixture() {
     git(divergent, "config", "user.email", "test@localhost");
     git(divergent, "config", "user.name", "Locus Account Test");
     git(divergent, "config", "commit.gpgsign", "false");
-    writeFileSync(join(divergent, "src", "ledger.ts"), "export const row = 4;\n");
+    writeFileSync(join(divergent, "src", "ledger.ts"), "export const row = 5;\n");
     git(divergent, "add", "src/ledger.ts");
     git(divergent, "commit", "-q", "--no-verify", "-m", "ahead of origin");
     divergentCtx = {
@@ -476,7 +509,7 @@ function buildFixture() {
     };
   }
 
-  return { root, workspace, storageRoot, base, mid, head, project, db, ctx, divergent, divergentCtx };
+  return { root, workspace, storageRoot, base, mid, head, verified, project, db, ctx, divergent, divergentCtx };
 }
 
 if (!fixtureError) {
@@ -963,7 +996,7 @@ check("defects partition and order follow §3.1", () => {
   if (reason) return reason;
   const defects = sectionOf(describeLocus({ locus: "src/examined.ts", sections: SECTIONS }), "defects");
   const items = defects?.items ?? [];
-  if (items.length !== 5) return `defects serves ${items.length} item(s), not the five seeded`;
+  if (items.length !== 6) return `defects serves ${items.length} item(s), not the six seeded`;
   const partitions = [...new Set(items.map((item) => item.partition))];
   const ordered = DEFECT_PARTITIONS.filter((name) => partitions.includes(name));
   if (JSON.stringify(partitions) !== JSON.stringify(ordered))
@@ -975,6 +1008,8 @@ check("defects partition and order follow §3.1", () => {
     return `awaiting-verification holds ${JSON.stringify(byPartition("awaiting-verification"))}`;
   if (JSON.stringify(byPartition("ruled-out")) !== JSON.stringify(["B01-3"]))
     return `ruled-out holds ${JSON.stringify(byPartition("ruled-out"))}`;
+  if (JSON.stringify(byPartition("verified-fixed")) !== JSON.stringify(["B01-6"]))
+    return `verified-fixed holds ${JSON.stringify(byPartition("verified-fixed"))}`;
   return null;
 });
 
@@ -1013,13 +1048,13 @@ check("an uncited symbol inherits no defect cited to a sibling symbol", () => {
   const ids = (sectionOf(payload, "defects")?.items ?? []).map((item) => item.finding_id);
   if (ids.length)
     return `an uncited symbol inherited ${ids.length} defect(s) cited to another symbol: ${JSON.stringify(ids)}`;
-  // And the cited sibling still gets all five, so the narrowing is not a
+  // And the cited sibling still gets all six, so the narrowing is not a
   // blanket refusal to serve symbol loci.
   const cited = describeLocus({ locus: "src/examined.ts:readLedger", sections: SECTIONS });
   const citedIds = (sectionOf(cited, "defects")?.items ?? []).map((item) => item.finding_id);
-  return citedIds.length === 5
+  return citedIds.length === 6
     ? null
-    : `the cited symbol serves ${citedIds.length} defect(s), not the five seeded`;
+    : `the cited symbol serves ${citedIds.length} defect(s), not the six seeded`;
 });
 
 check("purpose renders scope separately and says no purpose statement is recorded", () => {
@@ -1174,6 +1209,71 @@ check("a resolution event at a later commit is not replayed into an earlier read
     : `at mid B01-2 reads ${JSON.stringify(stateOf(then, "B01-2"))}, replaying a repair recorded at head`;
 });
 
+// §3.3's replay, read at four cuts around one finding's whole life. A
+// verification is a *later* reading than the repair it confirms — the evidence
+// is collected at a descendant commit — so an event placed at the repair SHA
+// back-dates the verification to a commit at which nobody had verified
+// anything. `effective_sha` is the revision each event was read at; the replay
+// cuts by it.
+check("a verification is replayed at the revision it was collected at, not at the repair", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const stateAt = (sha) => {
+    const items =
+      sectionOf(
+        describeLocus({
+          locus: "src/examined.ts",
+          sections: SECTIONS,
+          ...(sha ? { as_of_sha: sha } : {}),
+        }),
+        "defects",
+      )?.items ?? [];
+    return items.find((item) => item.finding_id === "B01-6")?.resolution_state;
+  };
+  const want = [
+    [fixture.base, "open", "before the repair"],
+    [fixture.mid, "open", "between the report and the repair"],
+    [fixture.head, "fixed-pending-verification", "at the repair, before verification"],
+    [fixture.verified, "verified-fixed", "at the verification"],
+    [null, "verified-fixed", "at head"],
+  ];
+  const bad = [];
+  for (const [sha, expected, where] of want) {
+    const got = stateAt(sha);
+    if (got !== expected) bad.push(`${where}: ${JSON.stringify(got)}, expected ${expected}`);
+  }
+  return bad.length ? bad.join("; ") : null;
+});
+
+// The same cut, read through the section that publishes the events themselves.
+// A replay that drops verified-fixed events entirely (the review's sabotage)
+// leaves the state assertions above satisfiable from the repair event alone;
+// this one counts the event.
+check("history_pointer carries the verification event only at or after its revision", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const eventsAt = (sha) =>
+    (
+      sectionOf(
+        describeLocus({
+          locus: "src/examined.ts",
+          sections: SECTIONS,
+          ...(sha ? { as_of_sha: sha } : {}),
+        }),
+        "history_pointer",
+      )?.items ?? []
+    ).filter((item) => item.kind === "resolution-event" && item.finding_id === "B01-6");
+  const atRepair = eventsAt(fixture.head);
+  const atVerified = eventsAt(fixture.verified);
+  const bad = [];
+  if (atRepair.some((item) => item.resolution_state === "verified-fixed"))
+    bad.push("the reading at the repair commit already carries the verification event");
+  if (atRepair.length !== 1) bad.push(`the reading at the repair carries ${atRepair.length} event(s), not the repair alone`);
+  if (!atVerified.some((item) => item.resolution_state === "verified-fixed"))
+    bad.push("the reading at the verification commit does not carry the verification event");
+  return bad.length ? bad.join("; ") : null;
+});
+
 check("history_pointer applies the same ancestry cut it declares support for", () => {
   const reason = needFixture();
   if (reason) return reason;
@@ -1299,7 +1399,7 @@ check("an origin head that disagrees with the workspace head is reported", () =>
   const revision = describeLocus({ locus: "src/examined.ts" }, fixture.divergentCtx).standing.revision;
   if (revision.repository_head !== fixture.divergentCtx.divergentHead)
     return "repository_head is not the workspace head";
-  if (revision.origin_head !== fixture.head)
+  if (revision.origin_head !== fixture.verified)
     return `origin_head is ${JSON.stringify(revision.origin_head)}, not the recorded upstream head`;
   if (revision.origin_head === revision.repository_head)
     return "the two heads were reconciled into one";

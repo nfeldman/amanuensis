@@ -134,6 +134,17 @@ function runMigrations(db: DB): void {
       db.exec("ALTER TABLE file_ledger ADD COLUMN stale_reason TEXT");
     }
   }
+  // 3b. finding_resolution_events.effective_sha — the revision each event was
+  // read at, added so §3.3's replay stops cutting a verification at the repair
+  // SHA it confirms. Backfilled from `fix_sha`, which is what the replay used
+  // before the column existed: no historical reading changes.
+  if (
+    hasTable(db, "finding_resolution_events") &&
+    !hasColumn(db, "finding_resolution_events", "effective_sha")
+  ) {
+    db.exec("ALTER TABLE finding_resolution_events ADD COLUMN effective_sha TEXT");
+    db.exec("UPDATE finding_resolution_events SET effective_sha = fix_sha WHERE fix_sha IS NOT NULL");
+  }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
   // schema.sql handle the new index and scope_gaps on the next
   // initializeSchema pass — no explicit add here.

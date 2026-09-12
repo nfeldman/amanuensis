@@ -849,6 +849,14 @@ CREATE TABLE IF NOT EXISTS finding_resolution_events (
                                'fixed-pending-verification','verified-fixed')),
     fix_location       TEXT,
     fix_sha            TEXT,
+    -- The revision this event was *read* at, which is not always the revision
+    -- it names. A repair is read at the commit that carries it; a verification
+    -- is read at the commit its evidence was collected at, a strict descendant
+    -- of the repair. Replaying by `fix_sha` back-dates every verification to
+    -- the repair it confirms, so `describe_locus(as_of_sha=<repair>)` reports
+    -- verified-fixed at a commit where nobody had verified anything. §3.3 cuts
+    -- by this column; it is NULL only on rows written before it existed.
+    effective_sha      TEXT,
     evidence_id        INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
     rationale          TEXT NOT NULL,
     session_id         TEXT,
