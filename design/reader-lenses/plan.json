@@ -81,7 +81,9 @@
       "id": "S6",
       "title": "Dogfood rebuild",
       "packets": [
-        "P16"
+        "P16",
+        "P17",
+        "P18"
       ],
       "review": {
         "status": "pending",
@@ -100,7 +102,9 @@
         "C1",
         "C3",
         "C7",
-        "C48"
+        "C48",
+        "C55",
+        "C63"
       ],
       "depends_on": [],
       "deliverables": [
@@ -113,11 +117,19 @@
         "mcp-server/src/tools/files.ts",
         "materializer/amanuensis_materializer/html_projection.py",
         "mcp-server/scripts/check-evidence-vocabulary.mjs",
-        ".github/workflows/test.yml"
+        ".github/workflows/test.yml",
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/tools/xrefs.ts",
+        "mcp-server/src/tools/notes.ts",
+        "materializer/amanuensis_materializer/diagrams.py"
       ],
       "gate": {
         "test_path": "mcp-server/test-vocabulary-source.mjs",
-        "command": "cd mcp-server && node test-vocabulary-source.mjs"
+        "command": "cd mcp-server && node test-vocabulary-source.mjs",
+        "red_expect": "evidence vocabulary drift|vocabulary source divergence",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -138,7 +150,11 @@
         "node mcp-server/scripts/gen-vocabulary.mjs --check exits 0 on a clean tree and non-zero after editing either generated file by hand",
         "Every enum value in conspectus-vocabulary.json carries value, label, meaning, and cannot_justify",
         "A value added to the JSON and not regenerated turns the check red",
-        "check-evidence-vocabulary.mjs still turns red when SKILL.md's ladder diverges from add_evidence"
+        "check-evidence-vocabulary.mjs is rewritten to compare the JSON source, vocabulary.ts, vocabulary.py, and SKILL.md's ladder independently, and turns red when any one of the four diverges",
+        "The red(P1) commit contains mcp-server/test-vocabulary-source.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "gen-vocabulary.mjs --check-sql compares every CHECK (<col> IN (...)) literal in schema.sql for the columns the source names, and turns red on a divergence",
+        "The obligation-bearing predicate is generated from the file_classification flag into helpers.ts and diagrams.py; no hand-maintained copy remains"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -159,7 +175,9 @@
         "C2",
         "C27",
         "C28",
-        "C29"
+        "C29",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P1"
@@ -168,11 +186,17 @@
         "mcp-server/src/schema.sql",
         "materializer/amanuensis_materializer/renderers.py",
         "materializer/amanuensis_materializer/core.py",
-        "materializer/amanuensis_materializer/readback.py"
+        "materializer/amanuensis_materializer/readback.py",
+        ".github/workflows/test.yml",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/review-session.ts",
+        "mcp-server/src/tools/review.ts"
       ],
       "gate": {
         "test_path": "mcp-server/test-finding-partition.mjs",
-        "command": "cd mcp-server && node test-finding-partition.mjs"
+        "command": "cd mcp-server && node test-finding-partition.mjs",
+        "red_expect": "finding_state_current|marker appears",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -195,7 +219,13 @@
         "finding_state_current returns one row per findings row and agrees with finding_resolution_current wherever an event exists",
         "A fixture with one verified-fixed CRITICAL and one open LOW renders the CRITICAL only on resolved-findings.md",
         "Each finding's opaque marker appears exactly once across the Markdown corpus and exactly once across the HTML corpus",
-        "findings.md renders only open and fixed-pending-verification records"
+        "findings.md renders only open and fixed-pending-verification records",
+        "The red(P2) commit contains mcp-server/test-finding-partition.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "list_findings, get_finding_summary, compile_review_session, and the review historical-findings reader all select from finding_state_current, and a legacy row with no event row reports the same state through all four",
+        "A static check finds no remaining COALESCE(r.resolution_state, CASE f.status ...) expression outside the view",
+        "_build_xref_index routes a finding id by finding_state_current.resolution_state; a resolved finding referenced from a subsystem page resolves to resolved-findings.md and the coverage axis stays green",
+        "An exhaustive census asserts every findings row lands in exactly one lens membership query, and a row in both or neither turns the gate red"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -214,7 +244,9 @@
       "title": "Overview thesis by heading and the orientation lint",
       "claims": [
         "C32",
-        "C49"
+        "C49",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P1",
@@ -223,11 +255,14 @@
       "deliverables": [
         "materializer/amanuensis_materializer/lint.py",
         "materializer/amanuensis_materializer/renderers.py",
-        "materializer/amanuensis_materializer/core.py"
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "materializer/test-overview-truthfulness.py",
-        "command": "cd materializer && python3 test-overview-truthfulness.py"
+        "command": "cd materializer && python3 test-overview-truthfulness.py",
+        "red_expect": "orientation|thesis",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "ruff check materializer/",
@@ -239,7 +274,10 @@
         "The thesis is taken from the entry-point.md section headed 'What is this codebase?' and from nowhere else",
         "An entry-point.md with no such section publishes a named instruction instead of a fallback paragraph",
         "Orientation prose containing '34/34 mapped' sets summary.ok false and does not publish",
-        "The overview carries four separately named status dimensions and one linked count per finding_resolution_state value, with no composite score"
+        "The overview carries four separately named status dimensions and one linked count per finding_resolution_state value, with no composite score",
+        "The red(P3) commit contains materializer/test-overview-truthfulness.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "entries-derived stale markers are still emitted exactly once after render_index is rewritten, so test-projection-custody.mjs stays green"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -258,7 +296,10 @@
       "title": "Ledger-derived freshness and a stale axis with a denominator",
       "claims": [
         "C50",
-        "C51"
+        "C51",
+        "C60",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P1"
@@ -267,11 +308,14 @@
         "materializer/amanuensis_materializer/core.py",
         "materializer/amanuensis_materializer/renderers.py",
         "materializer/amanuensis_materializer/readback.py",
-        "materializer/amanuensis_materializer/html_projection.py"
+        "materializer/amanuensis_materializer/html_projection.py",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "materializer/test-ledger-freshness.py",
-        "command": "cd materializer && python3 test-ledger-freshness.py"
+        "command": "cd materializer && python3 test-ledger-freshness.py",
+        "red_expect": "freshness strip|stale_entries",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "ruff check materializer/",
@@ -286,7 +330,9 @@
         "An empty file_ledger renders 'Freshness not measured by this projection'",
         "Every obligation-bearing stale ledger row has exactly one record on stale.md in each format",
         "Deleting one stale record turns the state read-back axis red",
-        "The entries-derived stale marker check is still present and still red-capable"
+        "The entries-derived stale marker check is still present and still red-capable",
+        "The red(P4) commit contains materializer/test-ledger-freshness.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -312,7 +358,11 @@
         "C10",
         "C11",
         "C12",
-        "C13"
+        "C13",
+        "C56",
+        "C57",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P1",
@@ -321,11 +371,16 @@
       "deliverables": [
         "mcp-server/src/schema.sql",
         "mcp-server/src/standing.ts",
-        "mcp-server/src/db.ts"
+        "mcp-server/src/db.ts",
+        ".github/workflows/test.yml",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/db.py"
       ],
       "gate": {
         "test_path": "mcp-server/test-locus-index-view.mjs",
-        "command": "cd mcp-server && node test-locus-index-view.mjs"
+        "command": "cd mcp-server && node test-locus-index-view.mjs",
+        "red_expect": "file_standing|expected standing_state",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -343,10 +398,15 @@
       ],
       "acceptance": [
         "file_standing returns one row per file_ledger row with the seven-state CASE applied",
-        "A hand-written reference query over the seeded store agrees with the view on every row",
-        "Locus kind inference resolves a subsystem id, a path, a path:symbol pair, and a term in the documented order",
-        "An examined row whose ref_sha is unreachable is downgraded to examined-stale with stale_reason unverifiable-ref",
-        "The five unknown[] sources return exactly the rows their SQL selects on the seeded store"
+        "A declared fixture table of (classification, stale, stale_reason) -> expected standing_state covers all seven states, including candidate with stale=1 and classification IS NULL, and the view is asserted against it rather than against a second copy of its own CASE",
+        "Locus kind inference resolves, in the documented order, a subsystem id, a vocabulary term containing ':', a Rust Type::method symbol split at the first colon, a path present in a table, a path-shaped string in no table (unledgered), and a bare term (not-defined)",
+        "A resolvable non-ancestor ref_sha downgrades to examined-stale with stale_reason unreachable-ref; an unresolvable one downgrades with unverifiable-ref; with git unavailable the row keeps examined but serves the examined-stale authorization text",
+        "The five unknown[] sources return exactly the rows their SQL selects on a fixture seeded with partial coverage: a subsystem missing one active concern's disposition while another subsystem holds it, and a seam with an SC-% disposition on exactly one side. Both must be reported",
+        "The red(P5) commit contains mcp-server/test-locus-index-view.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "measured.ledger_reconciled is null on a path with owner rows and carries the reconciliation receipt instead",
+        "A deferred owning subsystem is excluded from the ceiling rank and listed in deferred_owners[]",
+        "The materializer turns the publish red with the named cause when file_standing or finding_state_current is absent from the store"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -370,7 +430,10 @@
         "C17",
         "C21",
         "C22",
-        "C26"
+        "C26",
+        "C59",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P5"
@@ -379,11 +442,14 @@
         "mcp-server/src/tools/locus.ts",
         "mcp-server/src/index.ts",
         "mcp-server/contracts/locus-account.schema.json",
-        "mcp-server/DEVELOPMENT.md"
+        "mcp-server/DEVELOPMENT.md",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "mcp-server/test-locus-standing.mjs",
-        "command": "cd mcp-server && node test-locus-standing.mjs"
+        "command": "cd mcp-server && node test-locus-standing.mjs",
+        "red_expect": "standing|unknown\\[\\]",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -405,7 +471,11 @@
         "describe_locus on a multi-owner file with disagreeing owners returns state mixed and lists every owner",
         "The response validates against contracts/locus-account.schema.json and reports model_calls 0",
         "tools/list advertises describe_locus with readOnlyHint true and destructiveHint false",
-        "gen-tool-inventory.mjs --check passes with the locus group present"
+        "gen-tool-inventory.mjs --check passes with the locus group present",
+        "The red(P6) commit contains mcp-server/test-locus-standing.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A zero-denominator measured field renders with its denominator and never as health",
+        "An origin head that disagrees with the workspace head is reported, not reconciled"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -426,18 +496,24 @@
         "C14",
         "C18",
         "C19",
-        "C20"
+        "C20",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P6"
       ],
       "deliverables": [
         "mcp-server/src/tools/locus.ts",
-        "mcp-server/contracts/locus-account.schema.json"
+        "mcp-server/contracts/locus-account.schema.json",
+        ".github/workflows/test.yml",
+        "mcp-server/src/helpers.ts"
       ],
       "gate": {
         "test_path": "mcp-server/test-locus-compactness.mjs",
-        "command": "cd mcp-server && node test-locus-compactness.mjs"
+        "command": "cd mcp-server && node test-locus-compactness.mjs",
+        "red_expect": "budget|census",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -452,11 +528,15 @@
         "cd mcp-server && node test-resolution-proof.mjs"
       ],
       "acceptance": [
-        "The default describe_locus response on the pathological fixture is at most 8192 bytes",
+        "JSON.stringify(jsonResult(payload, { compact: true })) -- the whole wire response including structuredContent -- is at most 8192 bytes on the pathological fixture, and the default pretty jsonResult size is measured and printed beside it",
         "selected + omitted equals census for every section, with distinct omitted ids",
-        "Every omission carries exactly one of policy, budget, not-recorded",
+        "Every omission carries policy or budget and no other reason; a section with census 0 carries recorded:false and emits no omission row",
         "The same fixture measured before truncation exceeds the budget, proving the gate can fail",
-        "owners[] is never truncated, whatever the budget"
+        "owners[] is never truncated, whatever the budget",
+        "The red(P7) commit contains mcp-server/test-locus-compactness.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "On a 150-item census fixture the aggregated omitted[] stays inside its 1024-byte per-entry sub-budget, sets ids_truncated, and still reports an exact count",
+        "jsonResult gains a compact option; the three locus tools use it and every other tool's output is byte-identical to before"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -478,20 +558,26 @@
         "C31",
         "C33",
         "C34",
-        "C35"
+        "C35",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P2",
-        "P4"
+        "P4",
+        "P5"
       ],
       "deliverables": [
         "materializer/amanuensis_materializer/core.py",
         "materializer/amanuensis_materializer/renderers.py",
-        "materializer/amanuensis_materializer/html_projection.py"
+        "materializer/amanuensis_materializer/html_projection.py",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "materializer/test-lens-pages.py",
-        "command": "cd materializer && python3 test-lens-pages.py"
+        "command": "cd materializer && python3 test-lens-pages.py",
+        "red_expect": "NAV_GROUPS|not-yet-surveyed",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "ruff check materializer/",
@@ -503,10 +589,12 @@
       "acceptance": [
         "Navigation renders the five groups in NAV_GROUPS order and a page outside them is a render error",
         "Subsystem pages render under the Subsystems subgroup of Codebase",
-        "files.md carries one row per distinct ledger path with every owner and a stable anchor",
-        "not-yet-surveyed.md carries five sections, each with its denominator",
-        "Subsystem pages open with purpose, start here, and structure, with the survey record last",
-        "No previously planned page path is retired"
+        "files.md carries one row per distinct ledger path with every owner, a per-owner examined revision, and a collision-resistant path-hash anchor; three seeded colliding path slugs produce three distinct anchors",
+        "not-yet-surveyed.md carries five sections, each counted over the unit its gap occupies: unassessed (seam, side) pairs over 2*seams and undispositioned (subsystem, active concern) pairs over subsystems*active concerns. A fixture with one-sided seam coverage and partial concern coverage reports non-zero in both",
+        "Subsystem pages open with identity and a Scope heading carrying subsystems.scope verbatim, then start here and structure, with the survey record last; scope is never labelled Purpose",
+        "No previously planned page path is retired",
+        "The red(P8) commit contains materializer/test-lens-pages.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -527,18 +615,25 @@
         "C28",
         "C36",
         "C37",
-        "C38"
+        "C38",
+        "C58",
+        "C61",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P8"
       ],
       "deliverables": [
         "materializer/amanuensis_materializer/renderers.py",
-        "materializer/amanuensis_materializer/core.py"
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "materializer/test-history-and-contested.py",
-        "command": "cd materializer && python3 test-history-and-contested.py"
+        "command": "cd materializer && python3 test-history-and-contested.py",
+        "red_expect": "disagreements|resolved-leads|basis",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "ruff check materializer/",
@@ -548,13 +643,18 @@
         "cd mcp-server && node test-derived-staleness.mjs"
       ],
       "acceptance": [
-        "contested.md carries unresolved contradictions, open matrices, and unresolved-competition dispositions and nothing resolved",
+        "disagreements.md carries unresolved contradictions, open and unresolved-competition matrices, and unresolved-competition dispositions, and nothing resolved",
         "hot-spots.md sorts by open critical+high, then medium+low, then unread fraction, then id, with no composite column",
         "The access heat column is absent when no subsystem has an access_log row",
         "resolution-history.md is newest-first and links every event to its record",
         "sessions.md carries sessions, refresh runs, and projection verification runs",
         "Every empty lens page states scope, basis, and checked revision",
-        "how-to-read.md tables are generated from conspectus-vocabulary.json and list every enum value the server enforces"
+        "how-to-read.md tables are generated from conspectus-vocabulary.json and list every enum value the server enforces",
+        "The red(P9) commit contains materializer/test-history-and-contested.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "resolved-leads.md carries answered, dismissed, and superseded questions ordered by resolved_at and closed field notes ordered by id, each group stating what the store does not record about how they got there",
+        "A seeded accepted finding with an empty rationale renders basis none-recorded and is counted under Terminal without a recorded basis, rather than as resolved-with-proof",
+        "A seeded unresolved-competition matrix appears on disagreements.md and on no History page"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -574,7 +674,9 @@
       "claims": [
         "C39",
         "C40",
-        "C41"
+        "C41",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P5",
@@ -583,11 +685,15 @@
       "deliverables": [
         "materializer/amanuensis_materializer/html_projection.py",
         "materializer/amanuensis_materializer/readback.py",
-        "materializer/amanuensis_materializer/core.py"
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml",
+        "materializer/test-search-index.py"
       ],
       "gate": {
         "test_path": "materializer/test-search-index.py",
-        "command": "cd materializer && python3 test-search-index.py"
+        "command": "cd materializer && python3 test-search-index.py",
+        "red_expect": "search-index|anchor",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "ruff check materializer/",
@@ -602,7 +708,13 @@
         "Removing one path from the index turns the state read-back axis red",
         "Every file's anchor is reachable from files.md with scripts disabled",
         "The search combobox exposes role, aria-expanded, aria-controls, aria-activedescendant, and a polite live region",
-        "The projection references no external host in any script, style, link, or image"
+        "The projection references no external host in any script, style, link, or image",
+        "The red(P10) commit contains materializer/test-search-index.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A clean publish and verify_materialized_docs are both green with search-index.js present, and removing the file turns the coverage axis red",
+        "The projection inventory globs *.js and verify_projection derives expected paths from manifest.projection_files as well as the page plan",
+        "Arrow keys move the active option, Enter activates it, Escape closes the list and restores focus to the prior element, and the live region announces the result count -- driven in a browser, not asserted from static attributes",
+        "With JavaScript disabled every page, every file anchor, and every filtered table row is reachable and visible"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -621,7 +733,9 @@
       "title": "Structure from claims with a labelled narrative fallback",
       "claims": [
         "C42",
-        "C44"
+        "C44",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P6",
@@ -629,11 +743,15 @@
       ],
       "deliverables": [
         "mcp-server/src/tools/locus.ts",
-        "materializer/amanuensis_materializer/renderers.py"
+        "materializer/amanuensis_materializer/renderers.py",
+        ".github/workflows/test.yml",
+        "mcp-server/src/tools/claims.ts"
       ],
       "gate": {
         "test_path": "mcp-server/test-structural-claims.mjs",
-        "command": "cd mcp-server && node test-structural-claims.mjs"
+        "command": "cd mcp-server && node test-structural-claims.mjs",
+        "red_expect": "structure section|narrative",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -656,7 +774,11 @@
         "A claim closed by apply_change_impact no longer appears as current in describe_locus or on the subsystem page",
         "A subsystem with zero claims renders 'Structural inventory not recorded as claims' and the labelled narrative",
         "Narrative attaches only with revision_bound false and the artifact's content_hash",
-        "The structure section is empty for a scoped-unread locus regardless of subsystem claims"
+        "The structure section is empty for a scoped-unread locus regardless of subsystem claims",
+        "The red(P11) commit contains mcp-server/test-structural-claims.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "add_claim refuses a subject_type outside {symbol, subsystem, seam}",
+        "add_claim refuses a <sid>/key-type, /state-container, or /flow claim whose evidence kinds are all outside {code-verified, contract-stated} or whose evidence cites a different file than subject_id, and accepts the concurrency and seam kinds without that requirement"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -675,7 +797,9 @@
       "title": "Phase 2 writes structural claims, and the status gate that requires one",
       "claims": [
         "C42",
-        "C43"
+        "C43",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P11"
@@ -684,11 +808,18 @@
         "mcp-server/src/invariants.ts",
         ".claude/skills/amanuensis/references/phase-2-structural.md",
         "mcp-server/test-invariants.mjs",
-        "mcp-server/test-smoke.mjs"
+        "mcp-server/test-smoke.mjs",
+        ".github/workflows/test.yml",
+        "mcp-server/test-perf-ceilings.mjs",
+        "mcp-server/test-perf-tier2.mjs",
+        "mcp-server/test-cloud-e2e.mjs",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md"
       ],
       "gate": {
         "test_path": "mcp-server/test-phase2-claims-gate.mjs",
-        "command": "cd mcp-server && node test-phase2-claims-gate.mjs"
+        "command": "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "red_expect": "structural|claim_key",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -704,14 +835,20 @@
         "cd mcp-server && node test-temporal-claims.mjs",
         "cd mcp-server && node test-change-impact.mjs",
         "cd mcp-server && node test-cloud-e2e.mjs",
-        "cd mcp-server && node test-autoprogress.mjs"
+        "cd mcp-server && node test-autoprogress.mjs",
+        "cd mcp-server && node test-perf-ceilings.mjs",
+        "cd mcp-server && node test-perf-tier2.mjs"
       ],
       "acceptance": [
         "Advancing a subsystem to structural with no current <sid>/ claim is refused with a named missing deliverable",
         "One claim is sufficient; no per-category quota is enforced",
         "An explicit negative claim satisfies the gate",
         "phase-2-structural.md documents the five claim kinds, their claim_key shapes, and their evidence requirements",
-        "Every existing test that advances a subsystem to structural still passes"
+        "Every existing test that advances a subsystem to structural still passes",
+        "The red(P12) commit contains mcp-server/test-phase2-claims-gate.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "test-perf-ceilings.mjs, test-perf-tier2.mjs, and test-cloud-e2e.mjs seed one commit, one evidence row, and one claim per subsystem, and still pass; without the fixture change add_claim cannot resolve a ref_sha in a repo with no commits",
+        "phase-4-adversarial.md pulls every current <sid>/ claim as a target and records each challenge outcome before the subsystem may advance to mapped"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -729,22 +866,30 @@
       "slice": "S4",
       "title": "Cited edges and topology from recorded rows only",
       "claims": [
-        "C45"
+        "C45",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P6",
-        "P8"
+        "P8",
+        "P12"
       ],
       "deliverables": [
         "mcp-server/src/tools/xrefs.ts",
         "mcp-server/src/tools/locus.ts",
         "materializer/amanuensis_materializer/renderers.py",
         "materializer/amanuensis_materializer/diagrams.py",
-        ".claude/skills/amanuensis/references/phase-2-structural.md"
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".github/workflows/test.yml",
+        "mcp-server/src/helpers.ts",
+        "mcp-server/test-smoke.mjs"
       ],
       "gate": {
         "test_path": "mcp-server/test-edge-contract.mjs",
-        "command": "cd mcp-server && node test-edge-contract.mjs"
+        "command": "cd mcp-server && node test-edge-contract.mjs",
+        "red_expect": "add_xref|context",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -762,11 +907,14 @@
         "cd materializer && python3 test-readback.py"
       ],
       "acceptance": [
-        "add_xref refuses an absent, empty, or uncited context",
-        "add_xref accepts a context containing a file:symbol@sha citation",
+        "add_xref refuses an absent or empty context, one with no token matching the citation grammar, and one whose token's revision does not resolve in the workspace",
+        "add_xref accepts prose containing a well-formed citation token, stores the prose verbatim, and returns the validated token in citations[]; symbol reachability is not checked and the contract says so",
         "A store with zero xrefs renders the layer atlas and says so",
         "Every rendered edge corresponds to an xrefs row; none is inferred from names or seams",
-        "describe_locus boundaries carries recorded edges for the owning subsystems"
+        "describe_locus boundaries carries recorded edges for the owning subsystems",
+        "The red(P13) commit contains mcp-server/test-edge-contract.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "test-smoke.mjs:254 passes a context; it is the only existing add_xref caller"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -785,7 +933,9 @@
       "title": "get_attention and get_history",
       "claims": [
         "C23",
-        "C24"
+        "C24",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P7",
@@ -795,11 +945,14 @@
         "mcp-server/src/tools/locus.ts",
         "mcp-server/contracts/attention.schema.json",
         "mcp-server/contracts/locus-history.schema.json",
-        "mcp-server/DEVELOPMENT.md"
+        "mcp-server/DEVELOPMENT.md",
+        ".github/workflows/test.yml"
       ],
       "gate": {
         "test_path": "mcp-server/test-attention-history.mjs",
-        "command": "cd mcp-server && node test-attention-history.mjs"
+        "command": "cd mcp-server && node test-attention-history.mjs",
+        "red_expect": "get_attention|get_history|label",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -816,11 +969,14 @@
         "cd mcp-server && node test-derived-staleness.mjs"
       ],
       "acceptance": [
-        "get_attention item labels equal ADR-0010's definitions for regression, latent-defect, unverified-suspicion, unknown, and stale-knowledge",
+        "Per-label fixture assertions hold: a finding with a prior verified-fixed event is regression, an open candidate-concern note is unverified-suspicion, an open question is unknown, a closed claim interval is stale-knowledge with source claim. Neither latent-defect nor contested appears as a label",
         "stale-knowledge items carry source claim or source ledger and are never summed together",
-        "get_attention's open and awaiting-verification id sets equal the finding_state_current query exactly on the seeded store",
+        "get_attention's selected open and awaiting-verification ids, unioned with the ids its omitted[] records under reason budget, equal the finding_state_current query exactly on the seeded store, and omitted[].count reconciles",
         "get_history returns resolution events, supersessions, contradiction resolutions, closed questions, and sessions, newest first",
-        "Both responses honour their byte budgets and carry an omission ledger"
+        "Both responses honour their byte budgets and carry an omission ledger",
+        "The red(P14) commit contains mcp-server/test-attention-history.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A seeded unresolved-competition matrix is labelled undiscriminated"
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
@@ -840,7 +996,10 @@
       "claims": [
         "C25",
         "C46",
-        "C47"
+        "C47",
+        "C64",
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P14"
@@ -849,11 +1008,15 @@
         "mcp-server/src/index.ts",
         ".claude/skills/amanuensis/SKILL.md",
         ".claude/skills/amanuensis/references/notes.md",
-        "mcp-server/src/installer.ts"
+        ".github/workflows/test.yml",
+        "mcp-server/src/cli.ts",
+        "design/reader-lenses/routing-measurement.md"
       ],
       "gate": {
         "test_path": "mcp-server/test-consumer-route.mjs",
-        "command": "cd mcp-server && node test-consumer-route.mjs"
+        "command": "cd mcp-server && node test-consumer-route.mjs",
+        "red_expect": "SERVER_INSTRUCTIONS|readOnlyHint|inventory",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -871,10 +1034,13 @@
       ],
       "acceptance": [
         "SERVER_INSTRUCTIONS names describe_locus in its first sentence and still names get_project_info for producers",
-        "A harness given only the server instructions reaches describe_locus for a file question in one call",
+        "The generated tool inventory reports the baseline count plus three; the baseline is read from gen-tool-inventory.mjs output, not from a literal",
         "SKILL.md carries the consumer routing row and notes.md states the standing-first answer shape",
-        "The installer offers the agent-instructions paragraph as opt-in and writes nothing when declined",
-        "check-evidence-vocabulary.mjs still parses SKILL.md's ladder"
+        "The installer path in mcp-server/src/cli.ts -- there is no src/installer.ts -- offers the agent-instructions paragraph as opt-in and writes nothing when declined",
+        "The rewritten vocabulary check still reads SKILL.md's ladder independently",
+        "The red(P15) commit contains mcp-server/test-consumer-route.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "routing-measurement.md records 20 file questions, two arms (with and without the describe_locus route), two runs per arm, tool-call counts reported per question and never pooled across arms. It gates nothing and a null result is reported as a null result"
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
@@ -890,12 +1056,11 @@
     {
       "id": "P16",
       "slice": "S6",
-      "title": "Discard and rebuild the self-conspectus; dogfood gate",
+      "title": "Snapshot, discard, and reinitialize the self-conspectus store",
       "claims": [
         "C52",
-        "C53",
-        "C54",
-        "C55"
+        "C55",
+        "C63"
       ],
       "depends_on": [
         "P10",
@@ -904,13 +1069,14 @@
         "P15"
       ],
       "deliverables": [
-        "docs/",
-        "dev/test-reader-lenses-dogfood.mjs",
-        "design/reader-lenses/dogfood-receipt.md"
+        "dev/test-rebuild-readback.mjs",
+        ".github/workflows/test.yml"
       ],
       "gate": {
-        "test_path": "dev/test-reader-lenses-dogfood.mjs",
-        "command": "node dev/test-reader-lenses-dogfood.mjs"
+        "test_path": "dev/test-rebuild-readback.mjs",
+        "command": "node dev/test-rebuild-readback.mjs",
+        "red_expect": "storage marker|empty store|reinitialized",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",
@@ -930,11 +1096,141 @@
         "node dev/test-living-conspectus.mjs"
       ],
       "acceptance": [
+        "commit_phase_gate captures a Pre-rebuild snapshot of the storage directory's Git history before anything is deleted",
+        "The MCP server process is stopped before memory.db, memory.db-wal, and memory.db-shm are removed; nothing holds a handle across the deletion",
+        "A new server process opens the storage, initializeSchema creates file_standing and finding_state_current, and the storage marker validates",
+        "get_project_info and get_dashboard answer against the empty store, proving step 4 produced a live store rather than a stale handle",
+        "dev/conspectus/ fixture files are unchanged",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P16) commit contains dev/test-rebuild-readback.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P17",
+      "slice": "S6",
+      "title": "Rebuild the conspectus through the skill with claims-backed Phase 2",
+      "claims": [
+        "C52",
+        "C42",
+        "C43",
+        "C45",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P16"
+      ],
+      "deliverables": [
+        "dev/test-rebuild-coverage.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-coverage.mjs",
+        "command": "node dev/test-rebuild-coverage.mjs",
+        "red_expect": "subsystem|claim|edge",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "Onboarding runs through the skill and records the repository boundary and the initial decomposition",
+        "Every subsystem is surveyed in priority order, in batches with a checkpoint commit per batch, so a failure resumes from the last batch rather than from the start",
+        "Every subsystem that reached structural carries at least one current <sid>/ claim with code-grade evidence",
+        "Every cross-subsystem data flow or dependency is recorded as an xrefs row with a validated citation token",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P17) commit contains dev/test-rebuild-coverage.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 240,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "P18",
+      "slice": "S6",
+      "title": "Publish, promote to the tracked docs/, and gate the dogfood receipt",
+      "claims": [
+        "C53",
+        "C54",
+        "C62",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P17"
+      ],
+      "deliverables": [
+        "dev/promote-docs.mjs",
+        "dev/test-reader-lenses-dogfood.mjs",
+        "design/reader-lenses/dogfood-receipt.json",
+        "docs/",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-reader-lenses-dogfood.mjs",
+        "command": "node dev/test-reader-lenses-dogfood.mjs",
+        "red_expect": "dogfood|receipt|byte-match",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "materialize_docs(clean_publish=true) renders and reads back into .amanuensis/docs; a red read-back leaves the previous contents untouched and promotes nothing",
+        "dev/promote-docs.mjs refuses to run unless the source carries a .projection-contract.json whose three axes are green",
+        "After promotion, verify_materialized_docs pointed at the root docs/ re-reads the promoted tree and every file's hash matches the contract at that path",
+        "dogfood-receipt.json carries the three describe_locus responses, the get_attention id sets, the finding_state_current query result, and the store's last_checked_sha, and is committed",
+        "The gate runs against the committed receipt, reports which mode it ran in, and passes in CI where .amanuensis/ does not exist",
         "describe_locus returns examined standing with at least one structural claim for mcp-server/src/index.ts, mcp-server/src/tools/findings.ts, and materializer/amanuensis_materializer/core.py",
-        "get_attention's open and awaiting-verification id sets equal finding_state_current exactly on the rebuilt store",
-        "A clean publish read-back is green on state, coverage, and content, and docs/ byte-matches the receipt",
-        "dev/conspectus/ fixture files are unchanged by the rebuild",
-        "docs/ is committed with its .manifest.json and .projection-contract.json"
+        "get_attention's selected open and awaiting-verification ids unioned with its budget-omitted ids equal finding_state_current exactly on the rebuilt store",
+        "docs/ is committed with its .manifest.json and .projection-contract.json",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P18) commit contains dev/test-reader-lenses-dogfood.mjs and its red output matches gate.red_expect, not a module-not-found error"
       ],
       "needs_mcp": true,
       "budget_minutes": 150,
@@ -1034,7 +1330,9 @@
       "cd mcp-server && node test-edge-contract.mjs",
       "cd mcp-server && node test-attention-history.mjs",
       "cd mcp-server && node test-consumer-route.mjs",
-      "node dev/test-reader-lenses-dogfood.mjs"
+      "node dev/test-reader-lenses-dogfood.mjs",
+      "node dev/test-rebuild-readback.mjs",
+      "node dev/test-rebuild-coverage.mjs"
     ]
   },
   "final_review": {

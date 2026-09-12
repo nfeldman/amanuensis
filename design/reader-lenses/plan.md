@@ -6,47 +6,49 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P1 | Single enum source for every vocabulary surface | ready | — | `mcp-server/test-vocabulary-source.mjs` | C1, C3, C7, C48 |
-| P2 | Partition findings by resolution state | ready | P1 | `mcp-server/test-finding-partition.mjs` | C2, C27, C28, C29 |
-| P3 | Overview thesis by heading and the orientation lint | ready | P1, P2 | `materializer/test-overview-truthfulness.py` | C32, C49 |
-| P4 | Ledger-derived freshness and a stale axis with a denominator | ready | P1 | `materializer/test-ledger-freshness.py` | C50, C51 |
+| P1 | Single enum source for every vocabulary surface | ready | — | `mcp-server/test-vocabulary-source.mjs` | C1, C3, C7, C48, C55, C63 |
+| P2 | Partition findings by resolution state | ready | P1 | `mcp-server/test-finding-partition.mjs` | C2, C27, C28, C29, C55, C63 |
+| P3 | Overview thesis by heading and the orientation lint | ready | P1, P2 | `materializer/test-overview-truthfulness.py` | C32, C49, C55, C63 |
+| P4 | Ledger-derived freshness and a stale axis with a denominator | ready | P1 | `materializer/test-ledger-freshness.py` | C50, C51, C60, C55, C63 |
 
 ## S2 · Standing (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P5 | Standing views and deterministic locus resolution | ready | P1, P2 | `mcp-server/test-locus-index-view.mjs` | C4, C5, C6, C8, C9, C10, C11, C12, C13 |
-| P6 | describe_locus, its contract, and read-only annotations | ready | P5 | `mcp-server/test-locus-standing.mjs` | C7, C15, C16, C17, C21, C22, C26 |
-| P7 | Response budgets and the omission ledger | ready | P6 | `mcp-server/test-locus-compactness.mjs` | C14, C18, C19, C20 |
-| P8 | Page plan, navigation groups, Files, and Not yet surveyed | ready | P2, P4 | `materializer/test-lens-pages.py` | C30, C31, C33, C34, C35 |
-| P9 | Unresolved and History pages; reader's guide from the enum source | ready | P8 | `materializer/test-history-and-contested.py` | C28, C36, C37, C38 |
-| P10 | Locus search index and accessible interface enhancement | ready | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41 |
+| P5 | Standing views and deterministic locus resolution | ready | P1, P2 | `mcp-server/test-locus-index-view.mjs` | C4, C5, C6, C8, C9, C10, C11, C12, C13, C56, C57, C55, C63 |
+| P6 | describe_locus, its contract, and read-only annotations | ready | P5 | `mcp-server/test-locus-standing.mjs` | C7, C15, C16, C17, C21, C22, C26, C59, C55, C63 |
+| P7 | Response budgets and the omission ledger | ready | P6 | `mcp-server/test-locus-compactness.mjs` | C14, C18, C19, C20, C55, C63 |
+| P8 | Page plan, navigation groups, Files, and Not yet surveyed | ready | P2, P4, P5 | `materializer/test-lens-pages.py` | C30, C31, C33, C34, C35, C55, C63 |
+| P9 | Unresolved and History pages; reader's guide from the enum source | ready | P8 | `materializer/test-history-and-contested.py` | C28, C36, C37, C38, C58, C61, C55, C63 |
+| P10 | Locus search index and accessible interface enhancement | ready | P5, P8 | `materializer/test-search-index.py` | C39, C40, C41, C55, C63 |
 
 ## S3 · Documentation from claims (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P11 | Structure from claims with a labelled narrative fallback | ready | P6, P8 | `mcp-server/test-structural-claims.mjs` | C42, C44 |
-| P12 | Phase 2 writes structural claims, and the status gate that requires one | ready | P11 | `mcp-server/test-phase2-claims-gate.mjs` | C42, C43 |
+| P11 | Structure from claims with a labelled narrative fallback | ready | P6, P8 | `mcp-server/test-structural-claims.mjs` | C42, C44, C55, C63 |
+| P12 | Phase 2 writes structural claims, and the status gate that requires one | ready | P11 | `mcp-server/test-phase2-claims-gate.mjs` | C42, C43, C55, C63 |
 
 ## S4 · Connective view (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P13 | Cited edges and topology from recorded rows only | ready | P6, P8 | `mcp-server/test-edge-contract.mjs` | C45 |
+| P13 | Cited edges and topology from recorded rows only | ready | P6, P8, P12 | `mcp-server/test-edge-contract.mjs` | C45, C55, C63 |
 
 ## S5 · Consumer routing (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P14 | get_attention and get_history | ready | P7, P9 | `mcp-server/test-attention-history.mjs` | C23, C24 |
-| P15 | Consumer routing: server instructions, skill route, installer opt-in | ready | P14 | `mcp-server/test-consumer-route.mjs` | C25, C46, C47 |
+| P14 | get_attention and get_history | ready | P7, P9 | `mcp-server/test-attention-history.mjs` | C23, C24, C55, C63 |
+| P15 | Consumer routing: server instructions, skill route, installer opt-in | ready | P14 | `mcp-server/test-consumer-route.mjs` | C25, C46, C47, C64, C55, C63 |
 
 ## S6 · Dogfood rebuild (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P16 | Discard and rebuild the self-conspectus; dogfood gate | ready | P10, P12, P13, P15 | `dev/test-reader-lenses-dogfood.mjs` | C52, C53, C54, C55 |
+| P16 | Snapshot, discard, and reinitialize the self-conspectus store | ready | P10, P12, P13, P15 | `dev/test-rebuild-readback.mjs` | C52, C55, C63 |
+| P17 | Rebuild the conspectus through the skill with claims-backed Phase 2 | ready | P16 | `dev/test-rebuild-coverage.mjs` | C52, C42, C43, C45, C55, C63 |
+| P18 | Publish, promote to the tracked docs/, and gate the dogfood receipt | ready | P17 | `dev/test-reader-lenses-dogfood.mjs` | C53, C54, C62, C55, C63 |
 
 ## Completion
 
@@ -135,5 +137,7 @@
 - `cd mcp-server && node test-attention-history.mjs`
 - `cd mcp-server && node test-consumer-route.mjs`
 - `node dev/test-reader-lenses-dogfood.mjs`
+- `node dev/test-rebuild-readback.mjs`
+- `node dev/test-rebuild-coverage.mjs`
 
 Final review: pending
