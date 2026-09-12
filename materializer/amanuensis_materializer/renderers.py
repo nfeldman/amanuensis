@@ -30,7 +30,15 @@ from .diagrams import (
 )
 from .lint import orientation_violations
 from .manifest import sha256_bytes, sha256_json
-from .readback import FINDING_LENS_PAGES, finding_marker, finding_page, stale_marker
+from .readback import (
+    FINDING_LENS_PAGES,
+    LEDGER_STALE_SECTIONS,
+    finding_marker,
+    finding_page,
+    ledger_stale_anchor,
+    ledger_stale_marker,
+    stale_marker,
+)
 from .slugs import matrix_slug, subsystem_page
 from .vocabulary import OBLIGATION_BEARING_SQL, labels, values_of
 
@@ -1204,6 +1212,181 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 )
             out.append("")
     return "\n".join(out) + "\n", _db_source("notes:all", notes)
+
+
+
+# What each stale section says about its own rows (§6.1, §11.3). Written per
+# classification because the three readings differ: an examined file's drift
+# invalidates a reading that was taken, a candidate's drift happened before
+# anyone read it, and a deferred file's drift happened after the survey decided
+# not to read it yet. One shared sentence would have to be vague enough to be
+# true of all three, which is how "stale" came to mean four things.
+#
+# `revision` names the column too, because `file_ledger.ref_sha` means something
+# different in each: the revision a file was read at, scoped at, or deferred at.
+# Heading a candidate's revision "Read at" would assert a reading nobody took.
+LEDGER_STALE_SECTION_COPY: dict[str, dict[str, str]] = {
+    "examined": {
+        "measured": (
+            "{stale} of {total} examined {files} {have} changed since the revision"
+            " {they_were} read at."
+        ),
+        "absent": "No file in this ledger is classified examined.",
+        "revision": "Read at",
+    },
+    "candidate": {
+        "measured": (
+            "{stale} of {total} {files} in scope but not yet read {have} changed"
+            " since {they_were} scoped."
+        ),
+        "absent": "No file in this ledger is scoped and still unread.",
+        "revision": "Scoped at",
+    },
+    "deferred-with-reason": {
+        "measured": (
+            "{stale} of {total} {files} deferred with a recorded reason {have}"
+            " changed since {they_were} set aside."
+        ),
+        "absent": "No file in this ledger is deferred with a recorded reason.",
+        "revision": "Deferred at",
+    },
+}
+
+LEDGER_STALE_FALLBACK_COPY: dict[str, str] = {
+    "measured": "{stale} of {total} {files} carrying this classification {have} changed.",
+    "absent": "No file in this ledger carries this classification.",
+    "revision": "Recorded at",
+}
+
+
+def _denominator_sentence(template: str, stale: int, total: int) -> str:
+    """Fill a section's sentence, agreeing in number with what it counts.
+
+    The noun follows the denominator and the verb follows the numerator, which
+    is what English does: *1 of 3 files has changed*, *1 of 1 file has changed*.
+    """
+
+    return template.format(
+        stale=stale,
+        total=total,
+        files="file" if total == 1 else "files",
+        have="has" if stale == 1 else "have",
+        they_were="it was" if stale == 1 else "they were",
+    )
+
+
+def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The freshness page: one marked record per obligation-bearing stale row.
+
+    Membership is partitioned by classification rather than by staleness
+    (§6.1). `detect_changes` marks drift on every ledger row carrying a
+    `ref_sha` regardless of classification, so a file nobody has read can be
+    stale; reporting it under "Examined files the repository has changed under"
+    would assert a reading that was never taken. Each section therefore carries
+    its own denominator, and the sections together claim every
+    obligation-bearing classification exactly once, which the state read-back
+    axis checks (§11.3).
+
+    Rows exempt from the survey obligation — generated, vendored, and
+    irrelevant paths — are counted on the overview and are deliberately not
+    recorded here: their drift is not survey staleness.
+    """
+
+    del storage  # the ledger is the only source this page reads
+
+    ledger = rows(
+        conn,
+        "SELECT subsystem_id, file_path, why_in_scope,"
+        " COALESCE(classification,'candidate') AS classification,"
+        " ref_sha, stale, stale_since, stale_reason"
+        " FROM file_ledger ORDER BY subsystem_id, file_path",
+    )
+    freshness = ledger_freshness(conn)
+    names = {
+        str(s["id"]): str(s["name"])
+        for s in rows(conn, "SELECT id, name FROM subsystems")
+    }
+
+    out = ["# Stale knowledge", ""]
+    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+    checked = str(git.get("last_checked_sha") or "")
+    branch = str(git.get("canonical_branch") or "not recorded")
+    if not freshness["scoped_files"]:
+        out += [
+            "No file is recorded in the ledger, so this projection does not measure"
+            " freshness. Nothing below is a claim that the survey is current; it is"
+            " a statement that nothing was measured.",
+            "",
+        ]
+    else:
+        out += [
+            f"{freshness['stale_obligation']} of {freshness['obligation_files']} files"
+            f" carrying a survey obligation are recorded as changed since the revision"
+            f" the ledger names, checked at {_short(checked)} on `{branch}`."
+            f" {freshness['stale_exempt']} of"
+            f" {freshness['scoped_files'] - freshness['obligation_files']} scoped files"
+            " exempt from that obligation have also changed; they are counted on the"
+            " [overview](index.md) and are not recorded here, because drift in"
+            " generated or vendored territory is not survey staleness.",
+            "",
+        ]
+
+    for heading, classifications in LEDGER_STALE_SECTIONS:
+        out += [f"## {heading}", ""]
+        for classification in classifications:
+            in_class = [r for r in ledger if r["classification"] == classification]
+            stale_rows = [r for r in in_class if int(r["stale"] or 0)]
+            copy = LEDGER_STALE_SECTION_COPY.get(classification, LEDGER_STALE_FALLBACK_COPY)
+            out += [
+                _denominator_sentence(copy["measured"], len(stale_rows), len(in_class))
+                if in_class
+                else copy["absent"],
+                "",
+            ]
+            if stale_rows:
+                out += _ledger_stale_table(stale_rows, names, copy["revision"])
+
+    text = "\n".join(out) + "\n"
+    sources = {
+        **_db_source("stale:ledger", ledger),
+        **_db_source("stale:freshness", freshness),
+        **_db_source("stale:git", git),
+        **_db_source("stale:names", names),
+    }
+    return text, sources
+
+
+def _ledger_stale_table(
+    stale_rows: Sequence[dict[str, Any]], names: dict[str, str], revision_column: str
+) -> list[str]:
+    """One section's stale rows as full marked records (§6.2).
+
+    The ledger is a register: the path and the account of why it is in scope
+    carry the reading, and the revision and drift facts stay subordinate
+    (`reporting-style.md`). `revision_column` names what the row's `ref_sha`
+    actually records for this classification.
+    """
+
+    out = [
+        f"| File | Owner | {revision_column} | Drift recorded | Reason | Why in scope |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in stale_rows:
+        subsystem_id = str(r["subsystem_id"])
+        file_path = str(r["file_path"])
+        name = names.get(subsystem_id, subsystem_id)
+        anchor = ledger_stale_anchor(subsystem_id, file_path)
+        out.append(ledger_stale_marker(subsystem_id, file_path))
+        out.append(
+            f'| <a id="{anchor}"></a>`{file_path}` |'
+            f" [{name}]({subsystem_page(subsystem_id, name)}) |"
+            f" `{(str(r['ref_sha'] or '—'))[:8]}` |"
+            f" {_fmt_time(r['stale_since']) if r['stale_since'] else '—'} |"
+            f" {str(r['stale_reason'] or 'not recorded').replace('|', '/')} |"
+            f" {str(r['why_in_scope'] or '—').replace('|', '/')} |"
+        )
+    out.append("")
+    return out
 
 
 def render_how_to_read(conn: sqlite3.Connection, storage: Path) -> RenderResult:

@@ -302,6 +302,9 @@ jobs:
       - name: Overview truthfulness — thesis by heading and the orientation lint
         working-directory: materializer
         run: python3 test-overview-truthfulness.py
+      - name: Ledger-derived freshness and the stale read-back axis
+        working-directory: materializer
+        run: python3 test-ledger-freshness.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor

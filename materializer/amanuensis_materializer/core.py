@@ -228,7 +228,11 @@ class Materializer:
             # the complete page plan so names, statuses, and routes cannot
             # drift independently.
             git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
-            stale = row(conn, "SELECT COUNT(*) AS n FROM entries WHERE stale=1") or {"n": 0}
+            # The freshness strip reads `file_ledger`, under the same names
+            # `get_dashboard` returns, so the two readings cannot disagree about
+            # the same store (§11.2). The `entries`-derived count it replaced was
+            # a zero-denominator green: no code path writes that table (B03-2).
+            freshness = renderers.ledger_freshness(conn)
             # Identity resolution lives beside the renderer that publishes it, so
             # the HTML shell and the overview cannot name the project differently.
             workspace = renderers.resolve_workspace(self.storage)
@@ -236,7 +240,10 @@ class Materializer:
             html_context = {
                 **git,
                 "project_name": project_name,
-                "stale_entry_count": int(stale["n"] or 0),
+                "stale_entries": freshness["stale_obligation"],
+                "stale_exempt": freshness["stale_exempt"],
+                "scoped_files": freshness["scoped_files"],
+                "staleness_measured": freshness["scoped_files"] > 0,
                 "repository_url": _github_repository_url(workspace),
                 "identifier_definitions": {
                     identifier: definition
@@ -340,6 +347,7 @@ class Materializer:
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Follow evidence matrices used when more than one concern could explain the same observed symptom.", group="Evidence", kind="diagnosticity"),
                 PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving.", group="Working record", kind="questions"),
                 PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Field notes", label="Field notes", hint="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings.", group="Working record", kind="notes"),
+                PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", group="Working record", kind="stale"),
                 PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="Translate project-native names into the meanings Amanuensis observed in context.", group="Reference", kind="glossary"),
                 PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes.", group="Reference", kind="guide"),
             ]

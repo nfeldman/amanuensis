@@ -302,6 +302,7 @@ h1 {
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
 .freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
 .freshness.stale::before { background: var(--source-stale); }
+.freshness.unmeasured::before { background: var(--rule-strong); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
@@ -979,7 +980,7 @@ def _inline(text: str) -> str:
     # Durable projection markers and explicit xref anchors are the only raw
     # HTML accepted.  All record-authored prose is escaped below.
     text = re.sub(
-        r"<!--\s*amanuensis:(?:finding|stale-entry):[0-9a-f]+\s*-->",
+        r"<!--\s*amanuensis:(?:finding|stale-entry|ledger-stale):[0-9a-f]+\s*-->",
         lambda m: stash(m.group(0)),
         text,
     )
@@ -2432,12 +2433,26 @@ def _shell(
     project_name = str(context.get("project_name") or "Project")
     checked = str(context.get("last_checked_sha") or "")
     checked_at = str(context.get("last_checked_at") or "not recorded")
-    stale_count = int(context.get("stale_entry_count") or 0)
-    source_aligned = bool(checked and stale_count == 0)
-    freshness_label = "No recorded stale entries" if source_aligned else (
-        f"{stale_count} stale record{'s' if stale_count != 1 else ''}" if stale_count else "Source check not recorded"
-    )
-    freshness_class = "freshness" if source_aligned else "freshness stale"
+    # Freshness is read from `file_ledger`, under the names `get_dashboard`
+    # returns, so the strip and the tool cannot disagree about one store
+    # (§11.2).  An empty ledger is reported as absent measurement: a projection
+    # cannot tell a conspectus with nothing stale from one where nothing ever
+    # recorded staleness, and must not assert the stronger of the two (B03-2).
+    stale_entries = int(context.get("stale_entries") or 0)
+    stale_exempt = int(context.get("stale_exempt") or 0)
+    scoped_files = int(context.get("scoped_files") or 0)
+    if not context.get("staleness_measured"):
+        freshness_label = "Freshness not measured by this projection"
+        freshness_class = "freshness unmeasured"
+    else:
+        freshness_label = (
+            f"Stale: {stale_entries} with a survey obligation,"
+            f" {stale_exempt} exempt, of {scoped_files} scoped files"
+        )
+        # Source alignment is a relationship between the record and the
+        # repository, so only a file the survey owes a reading breaks it; drift
+        # in generated or vendored territory is reported, not counted against it.
+        freshness_class = "freshness stale" if stale_entries else "freshness"
     display_title = page.title or source_title
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
