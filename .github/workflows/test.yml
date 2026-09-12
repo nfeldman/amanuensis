@@ -251,6 +251,12 @@ jobs:
       # reason it reads a committed receipt, and the same live-store arm.
       - name: Rebuild depth — concern dispositions, adversarial outcomes, seam assessment
         run: node dev/test-rebuild-depth.mjs
+      # The last arm: what the rebuilt conspectus answers, and the projection
+      # promoted out of it. `docs/` is tracked, so the byte-match runs here for
+      # real; the three §12.4 assertions run against the committed receipt,
+      # because the store they were made against is not.
+      - name: Dogfood — the committed receipt, the attention fan-in, and the promoted docs/
+        run: node dev/test-reader-lenses-dogfood.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs

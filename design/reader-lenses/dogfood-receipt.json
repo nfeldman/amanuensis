@@ -1,0 +1,1666 @@
+{
+  "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
+  "packet": "P18",
+  "recorded_at": "2026-09-12T13:32:16.346Z",
+  "repository_sha": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
+  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+  "produced_by": "dev/record-dogfood-receipt.mjs",
+  "store": {
+    "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+    "canonical_branch": "reader-lenses",
+    "onboarding_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+  },
+  "loci": [
+    {
+      "locus": "mcp-server/src/index.ts",
+      "kind": "file",
+      "sections_requested": [
+        "structure",
+        "reviews",
+        "leads",
+        "history_pointer"
+      ],
+      "wire_bytes": 19412,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "mcp-server/src/index.ts",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "mcp-server/src/index.ts",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-01",
+              "subsystem_name": "Server runtime and tool dispatch",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "mapped",
+              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+              "examined_at": "2026-09-12 12:06:30",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "mapped",
+            "label": "Mapped",
+            "authorizes": "the recorded survey through structural analysis, concern review, and adversarial challenge",
+            "cannot_justify": "that the reading is current at the repository head",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "checked_at": "2026-09-12 13:14:57",
+            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "last_checked_at": "2026-09-12 13:14:57"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 8,
+            "claims_recorded": 7
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "structure": {
+            "census": 7,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "claim_id": "B-01-C03",
+                "claim_key": "B-01/state-container/mcp-server-src-index-ts-main",
+                "subject_type": "symbol",
+                "subject_id": "mcp-server/src/index.ts:main",
+                "statement": "main holds the process's only mutable state: a `db` binding that ensureDatabase opens on first use and returns thereafter, reached through a getter on ServerContext. Lifetime is per-process; it is never invalidated or reopened, so a store replaced underneath a running server would be written through a stale handle.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              },
+              {
+                "claim_id": "B-01-C04",
+                "claim_key": "B-01/flow/tool-call/01",
+                "subject_type": "symbol",
+                "subject_id": "mcp-server/src/index.ts:main",
+                "statement": "Step 1 of a tool call: the advertised list and the dispatch table are both built from one concatenation of the per-module ToolDefinition arrays, with the reader-lens tools first, and a Map keyed by tool name is what dispatch resolves against.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              }
+            ],
+            "source_rows": 8,
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "defects": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "reviews": {
+            "census": 10,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "subsystem_id": "B-01",
+                "concern_code": "BV-1",
+                "classification": "confirmed-acceptable",
+                "evidence_quality": "code-verified",
+                "rationale": "The dispatcher validates each call against the tool's own inputSchema with an Ajv validator compiled once at strict: true and deliberately does not re-check paths, leaving containment to one guard at durable ingress; a second copy in the dispatcher is what would let the two definitions diverge.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "subsystem_id": "B-01",
+                "concern_code": "CC-1",
+                "classification": "ruled-out",
+                "evidence_quality": "code-verified",
+                "rationale": "Nothing in the dispatch path reads derived state: index.ts, helpers.ts and session.ts issue no query against findings, file_ledger, finding_state_current or file_standing, so there is no second copy of a view's predicate here to drift from the view.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "boundaries": {
+            "census": 7,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "terms": {
+            "census": 0,
+            "recorded": false,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "leads": {
+            "census": 9,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "kind": "lead",
+                "note_id": 3,
+                "category": "anomaly",
+                "observation": "adversarial probe for claim B-01/key-type/mcp-server-src-helpers-ts-tooldefinition overturned it: the Phase 2 reading recorded a four-member shape with a handler taking (ctx, args), and the declaration has five members with the handler taking (args, ctx). B-01-C01 is invalidated at 0fee11b and B-01-C08 re-asserts the key with the corrected reading, which names the `compact` flag the wire budget depends on.",
+                "location": "B-01",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "kind": "lead",
+                "note_id": 4,
+                "category": "pattern",
+                "observation": "adversarial probe for claim B-01/key-type/mcp-server-src-helpers-ts-servercontext did not overturn it: ServerContext declares exactly project, db and sessionId, and index.ts builds the single instance with db as a getter over ensureDatabase, so no handler reaches the store or the workspace through module state.",
+                "location": "B-01",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "history_pointer": {
+            "census": 3,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "kind": "resolution-event",
+                "event_id": 1,
+                "finding_id": "B01-1",
+                "resolution_state": "open",
+                "recorded_at": "2026-09-12 12:45:14",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "model"
+              },
+              {
+                "kind": "session",
+                "session_id": "mtydkog0-axpv7at9",
+                "intent": "P19 depth pass: carry B-01 through B-11 from structural to mapped via Phase 3 concern review, Phase 4 adversarial review, and Phase 5 packaging",
+                "started_at": "2026-09-12 12:42:27",
+                "ended_at": "2026-09-12 13:14:57",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "code"
+              }
+            ],
+            "counts": {
+              "finding_resolution_events": 1,
+              "sessions": 2
+            },
+            "session_attribution": "by-citation",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          }
+        },
+        "census": {
+          "total": 54,
+          "by_section": {
+            "purpose": 1,
+            "structure": 7,
+            "defects": 1,
+            "reviews": 10,
+            "boundaries": 7,
+            "terms": 0,
+            "leads": 9,
+            "history_pointer": 3,
+            "unknown": 16
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 16,
+            "ids": [
+              "unknown:concern/B-01/SC-2",
+              "unknown:concern/B-01/SC-4",
+              "unknown:concern/B-01/SC-5",
+              "unknown:concern/B-01/SC-6",
+              "unknown:concern/B-01/SC-7",
+              "unknown:concern/B-01/SC-8",
+              "unknown:candidate-siblings/1",
+              "unknown:lead/3",
+              "unknown:lead/4",
+              "unknown:lead/5",
+              "unknown:lead/6",
+              "unknown:lead/7",
+              "unknown:lead/8",
+              "unknown:lead/9",
+              "unknown:lead/10",
+              "unknown:lead/23"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "purpose",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "purpose:B-01"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "structure",
+            "reason": "budget",
+            "count": 5,
+            "ids": [
+              "structure:B-01-C05",
+              "structure:B-01-C06",
+              "structure:B-01-C07",
+              "structure:B-01-C08",
+              "structure:B-02-C05"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "defects",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "defects:B01-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "reviews",
+            "reason": "budget",
+            "count": 8,
+            "ids": [
+              "reviews:B-01/EV-1",
+              "reviews:B-01/GT-1",
+              "reviews:B-01/RC-1",
+              "reviews:B-01/SC-1",
+              "reviews:B-01/SC-3",
+              "reviews:B-01/SC-9",
+              "reviews:B-01/ZD-1",
+              "reviews:B-10/RC-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "boundaries",
+            "reason": "policy",
+            "count": 7,
+            "ids": [
+              "boundaries:seam/SM-01",
+              "boundaries:seam/SM-03",
+              "boundaries:seam/SM-09",
+              "boundaries:xref/B-01>B-02/dependency",
+              "boundaries:xref/B-01>B-04/dependency",
+              "boundaries:xref/B-04>B-01/dependency",
+              "boundaries:xref/B-11>B-01/dependency"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "leads",
+            "reason": "budget",
+            "count": 7,
+            "ids": [
+              "leads:note/5",
+              "leads:note/6",
+              "leads:note/7",
+              "leads:note/8",
+              "leads:note/9",
+              "leads:note/10",
+              "leads:note/23"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "history_pointer",
+            "reason": "budget",
+            "count": 1,
+            "ids": [
+              "history:session/mtyc4dcu-04ike3jr"
+            ],
+            "ids_truncated": false
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 20480,
+          "payload_bytes": 9257,
+          "response_bytes": 19412,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": true,
+          "over_budget_reason": null
+        },
+        "current": true,
+        "as_of_sha": null
+      },
+      "evidence_citations": {
+        "B-01-C03": [
+          "mcp-server/src/index.ts"
+        ],
+        "B-01-C04": [
+          "mcp-server/src/index.ts"
+        ]
+      }
+    },
+    {
+      "locus": "mcp-server/src/tools/findings.ts",
+      "kind": "file",
+      "sections_requested": [
+        "structure",
+        "reviews",
+        "leads",
+        "history_pointer"
+      ],
+      "wire_bytes": 20122,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "mcp-server/src/tools/findings.ts",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "mcp-server/src/tools/findings.ts",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-05",
+              "subsystem_name": "Findings, dispositions, and resolution custody",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "mapped",
+              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+              "examined_at": "2026-09-12 12:11:39",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "mapped",
+            "label": "Mapped",
+            "authorizes": "the recorded survey through structural analysis, concern review, and adversarial challenge",
+            "cannot_justify": "that the reading is current at the repository head",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "checked_at": "2026-09-12 13:14:57",
+            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "last_checked_at": "2026-09-12 13:14:57"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 5,
+            "claims_recorded": 3
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "structure": {
+            "census": 3,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "claim_id": "B-05-C02",
+                "claim_key": "B-05/state-container/mcp-server-src-tools-findings-ts-findingtools",
+                "subject_type": "symbol",
+                "subject_id": "mcp-server/src/tools/findings.ts:findingTools",
+                "statement": "The durable state these tools hold is the append-only finding_resolution_events table. Creating a finding inserts its first event in the same transaction, so a finding has a state from the moment it exists; nothing here updates or deletes an event, and a state change is another row. Lifetime is the store's; invalidation is by appending, never by rewriting.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              },
+              {
+                "claim_id": "B-05-C03",
+                "claim_key": "B-05/flow/read-a-findings-state/01",
+                "subject_type": "symbol",
+                "subject_id": "mcp-server/src/tools/findings.ts:findingTools",
+                "statement": "Step 1 of reading a finding's state: the reader joins finding_state_current rather than selecting findings.status, so the derived view is the single definition of the predicate and not one of two that can drift apart.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              },
+              {
+                "claim_id": "B-05-C04",
+                "claim_key": "B-05/concurrency",
+                "subject_type": "subsystem",
+                "subject_id": "B-05",
+                "statement": "There is no locking around a finding's state because there is nothing to lock: the state is derived from an append-only table, so two writers produce two events and the view reports the later one rather than a lost update. Ordering is the insertion order of the events, within one synchronous connection.",
+                "epistemic_kind": "inference",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "defects": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "reviews": {
+            "census": 6,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "subsystem_id": "B-05",
+                "concern_code": "BV-1",
+                "classification": "confirmed-acceptable",
+                "evidence_quality": "code-verified",
+                "rationale": "Every path these tools store is guarded — fix_location through requireWorkspaceSourcePath and each primary_files entry through requireWorkspaceCitation — and the one unguarded string, a disposition's free-text evidence field, is never opened, joined on, or resolved: it is displayed, and non-strict parsing still refuses a value pointing into reserved tool state.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "subsystem_id": "B-05",
+                "concern_code": "CC-1",
+                "classification": "confirmed-acceptable",
+                "evidence_quality": "code-verified",
+                "rationale": "Both readers in this subsystem join finding_state_current and return its resolution_state beside the coarse column rather than instead of it, and the verification path reads finding_resolution_current directly, so nothing here holds a second mapping of findings.status.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "boundaries": {
+            "census": 2,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "terms": {
+            "census": 0,
+            "recorded": false,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "leads": {
+            "census": 5,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "kind": "lead",
+                "note_id": 31,
+                "category": "pattern",
+                "observation": "adversarial probe for claim B-05/key-type/mcp-server-src-schema-sql-finding-state-current did not overturn it: the view LEFT JOINs finding_resolution_current, so every findings row appears exactly once and the CASE supplies a state for one that never received an event — the claim's \"exactly one state\" is a property of the join, not of the writers.",
+                "location": "B-05",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "kind": "lead",
+                "note_id": 32,
+                "category": "pattern",
+                "observation": "adversarial probe for claim B-05/state-container/mcp-server-src-tools-findings-ts-findingtools did not overturn it: no UPDATE or DELETE touches finding_resolution_events anywhere in the server or the materializer, add_finding inserts the finding and its first event in one transaction, and verify_finding_fix appends rather than amending — with a trigger refusing a verified-fixed event whose evidence is not attached as fix-verification.",
+                "location": "B-05",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "history_pointer": {
+            "census": 3,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "kind": "resolution-event",
+                "event_id": 5,
+                "finding_id": "B05-1",
+                "resolution_state": "open",
+                "recorded_at": "2026-09-12 12:55:20",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "model"
+              },
+              {
+                "kind": "session",
+                "session_id": "mtydkog0-axpv7at9",
+                "intent": "P19 depth pass: carry B-01 through B-11 from structural to mapped via Phase 3 concern review, Phase 4 adversarial review, and Phase 5 packaging",
+                "started_at": "2026-09-12 12:42:27",
+                "ended_at": "2026-09-12 13:14:57",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "code"
+              }
+            ],
+            "counts": {
+              "finding_resolution_events": 1,
+              "sessions": 2
+            },
+            "session_attribution": "by-citation",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          }
+        },
+        "census": {
+          "total": 35,
+          "by_section": {
+            "purpose": 1,
+            "structure": 3,
+            "defects": 1,
+            "reviews": 6,
+            "boundaries": 2,
+            "terms": 0,
+            "leads": 5,
+            "history_pointer": 3,
+            "unknown": 14
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 14,
+            "ids": [
+              "unknown:concern/B-05/SC-1",
+              "unknown:concern/B-05/SC-2",
+              "unknown:concern/B-05/SC-3",
+              "unknown:concern/B-05/SC-4",
+              "unknown:concern/B-05/SC-6",
+              "unknown:concern/B-05/SC-7",
+              "unknown:concern/B-05/SC-8",
+              "unknown:concern/B-05/SC-9",
+              "unknown:candidate-siblings/4",
+              "unknown:lead/31",
+              "unknown:lead/32",
+              "unknown:lead/33",
+              "unknown:lead/34",
+              "unknown:lead/42"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "purpose",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "purpose:B-05"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "defects",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "defects:B05-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "reviews",
+            "reason": "budget",
+            "count": 4,
+            "ids": [
+              "reviews:B-05/EV-1",
+              "reviews:B-05/RC-1",
+              "reviews:B-05/SC-5",
+              "reviews:B-05/ZD-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "boundaries",
+            "reason": "policy",
+            "count": 2,
+            "ids": [
+              "boundaries:seam/SM-05",
+              "boundaries:xref/B-05>B-06/data-flow"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "leads",
+            "reason": "budget",
+            "count": 3,
+            "ids": [
+              "leads:note/33",
+              "leads:note/34",
+              "leads:note/42"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "history_pointer",
+            "reason": "budget",
+            "count": 1,
+            "ids": [
+              "history:session/mtyc4dcu-04ike3jr"
+            ],
+            "ids_truncated": false
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 20480,
+          "payload_bytes": 9618,
+          "response_bytes": 20122,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": true,
+          "over_budget_reason": null
+        },
+        "current": true,
+        "as_of_sha": null
+      },
+      "evidence_citations": {
+        "B-05-C02": [
+          "mcp-server/src/tools/findings.ts"
+        ],
+        "B-05-C03": [
+          "mcp-server/src/tools/findings.ts"
+        ],
+        "B-05-C04": [
+          "mcp-server/src/schema.sql",
+          "mcp-server/src/tools/findings.ts"
+        ]
+      }
+    },
+    {
+      "locus": "materializer/amanuensis_materializer/core.py",
+      "kind": "file",
+      "sections_requested": [
+        "structure",
+        "reviews",
+        "leads",
+        "history_pointer"
+      ],
+      "wire_bytes": 20250,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "materializer/amanuensis_materializer/core.py",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "materializer/amanuensis_materializer/core.py",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-08",
+              "subsystem_name": "Materializer rendering pipeline",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "mapped",
+              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+              "examined_at": "2026-09-12 12:14:33",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "mapped",
+            "label": "Mapped",
+            "authorizes": "the recorded survey through structural analysis, concern review, and adversarial challenge",
+            "cannot_justify": "that the reading is current at the repository head",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+            "checked_at": "2026-09-12 13:14:57",
+            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "last_checked_at": "2026-09-12 13:14:57"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 2,
+            "claims_recorded": 4
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "structure": {
+            "census": 4,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "claim_id": "B-08-C02",
+                "claim_key": "B-08/flow/publish/01",
+                "subject_type": "symbol",
+                "subject_id": "materializer/amanuensis_materializer/core.py:Materializer.materialize",
+                "statement": "Step 1 of a publish: the required views are probed before anything is rendered, and a non-empty result refuses the publish naming the views that are absent. The refusal is explicit about not falling back to an inline copy of the predicate — two copies of one definition being the drift the views exist to remove.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              },
+              {
+                "claim_id": "B-08-C03",
+                "claim_key": "B-08/state-container/materializer-amanuensis-materializer-core-py-materializer",
+                "subject_type": "symbol",
+                "subject_id": "materializer/amanuensis_materializer/core.py:Materializer",
+                "statement": "The Materializer holds the per-run state of a publish — the opened read-only connection, the page plan, and the summary of what was written. Lifetime is one invocation of the CLI; nothing is cached between runs, so a projection is always derived from the store as it stands when the process starts.",
+                "epistemic_kind": "observation",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              },
+              {
+                "claim_id": "B-08-C04",
+                "claim_key": "B-08/concurrency",
+                "subject_type": "subsystem",
+                "subject_id": "B-08",
+                "statement": "The projection runs in its own process and reads a WAL store read-only, so it does not block a writing server and is not blocked by one. What it cannot do is see a consistent moment across a long publish: a writer that commits mid-run is visible to later queries and not to earlier ones, which is why the read-back compares finished bytes against a receipt rather than re-querying.",
+                "epistemic_kind": "inference",
+                "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model",
+                "current": true
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "defects": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "reviews": {
+            "census": 4,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "subsystem_id": "B-08",
+                "concern_code": "CC-1",
+                "classification": "confirmed-bug",
+                "evidence_quality": "code-verified",
+                "rationale": "The subsystem map's open-bug column is computed inline from findings.status while render_subsystem, twelve lines below in the same module, joins finding_state_current for the same findings — so one publish carries two definitions of open, in a module whose own publish gate refuses to start when the views are absent precisely so that no renderer has to keep a copy of the predicate.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "subsystem_id": "B-08",
+                "concern_code": "GT-1",
+                "classification": "confirmed-acceptable",
+                "evidence_quality": "code-verified",
+                "rationale": "The Python half of the vocabulary is generated from the same source as the TypeScript half and compared against it value by value in CI, which is what makes a projection label and a tool validator two renderings of one enum rather than two lists that happen to agree.",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "evidence_kind": "code-verified",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "boundaries": {
+            "census": 5,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "terms": {
+            "census": 0,
+            "recorded": false,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "leads": {
+            "census": 5,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [
+              {
+                "kind": "lead",
+                "note_id": 47,
+                "category": "pattern",
+                "observation": "adversarial probe for claim B-08/key-type/materializer-amanuensis-materializer-db-py-open-ro did not overturn it: the URI carries mode=ro, which SQLite enforces at the connection rather than by convention, so the process cannot create a view even if a renderer tried — which is what makes the view probe a statement about the store.",
+                "location": "B-08",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "kind": "lead",
+                "note_id": 48,
+                "category": "pattern",
+                "observation": "adversarial probe for claim B-08/flow/publish/01 did not overturn it: missing_views runs before _plan and its non-empty result returns a refusal, so no page is rendered and nothing is written when a view is absent.",
+                "location": "B-08",
+                "location_match": "owner",
+                "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ],
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          },
+          "history_pointer": {
+            "census": 3,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [
+              {
+                "kind": "resolution-event",
+                "event_id": 7,
+                "finding_id": "B08-1",
+                "resolution_state": "open",
+                "recorded_at": "2026-09-12 13:01:24",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "model"
+              },
+              {
+                "kind": "session",
+                "session_id": "mtydkog0-axpv7at9",
+                "intent": "P19 depth pass: carry B-01 through B-11 from structural to mapped via Phase 3 concern review, Phase 4 adversarial review, and Phase 5 packaging",
+                "started_at": "2026-09-12 12:42:27",
+                "ended_at": "2026-09-12 13:14:57",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "code"
+              }
+            ],
+            "counts": {
+              "finding_resolution_events": 1,
+              "sessions": 2
+            },
+            "session_attribution": "by-citation",
+            "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          }
+        },
+        "census": {
+          "total": 36,
+          "by_section": {
+            "purpose": 1,
+            "structure": 4,
+            "defects": 1,
+            "reviews": 4,
+            "boundaries": 5,
+            "terms": 0,
+            "leads": 5,
+            "history_pointer": 3,
+            "unknown": 13
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 13,
+            "ids": [
+              "unknown:concern/B-08/SC-1",
+              "unknown:concern/B-08/SC-2",
+              "unknown:concern/B-08/SC-3",
+              "unknown:concern/B-08/SC-4",
+              "unknown:concern/B-08/SC-5",
+              "unknown:concern/B-08/SC-8",
+              "unknown:concern/B-08/SC-9",
+              "unknown:candidate-siblings/3",
+              "unknown:lead/47",
+              "unknown:lead/48",
+              "unknown:lead/49",
+              "unknown:lead/50",
+              "unknown:lead/56"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "purpose",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "purpose:B-08"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "structure",
+            "reason": "budget",
+            "count": 1,
+            "ids": [
+              "structure:B-09-C04"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "defects",
+            "reason": "policy",
+            "count": 1,
+            "ids": [
+              "defects:B08-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "reviews",
+            "reason": "budget",
+            "count": 2,
+            "ids": [
+              "reviews:B-08/SC-7",
+              "reviews:B-08/ZD-1"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "boundaries",
+            "reason": "policy",
+            "count": 5,
+            "ids": [
+              "boundaries:seam/SM-06",
+              "boundaries:seam/SM-07",
+              "boundaries:xref/B-08>B-02/data-flow",
+              "boundaries:xref/B-08>B-04/data-flow",
+              "boundaries:xref/B-08>B-09/data-flow"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "leads",
+            "reason": "budget",
+            "count": 3,
+            "ids": [
+              "leads:note/49",
+              "leads:note/50",
+              "leads:note/56"
+            ],
+            "ids_truncated": false
+          },
+          {
+            "section": "history_pointer",
+            "reason": "budget",
+            "count": 1,
+            "ids": [
+              "history:session/mtyc4dcu-04ike3jr"
+            ],
+            "ids_truncated": false
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 20480,
+          "payload_bytes": 9676,
+          "response_bytes": 20250,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": true,
+          "over_budget_reason": null
+        },
+        "current": true,
+        "as_of_sha": null
+      },
+      "evidence_citations": {
+        "B-08-C02": [
+          "materializer/amanuensis_materializer/core.py"
+        ],
+        "B-08-C03": [
+          "materializer/amanuensis_materializer/core.py",
+          "materializer/amanuensis_materializer/db.py"
+        ],
+        "B-08-C04": [
+          "materializer/amanuensis_materializer/core.py",
+          "materializer/amanuensis_materializer/db.py"
+        ]
+      }
+    }
+  ],
+  "attention": {
+    "arguments": {},
+    "wire_bytes": 12260,
+    "response": {
+      "contract_version": "1.0.0",
+      "scope": {
+        "requested": null,
+        "kind": "project",
+        "subsystems": [
+          "B-01",
+          "B-02",
+          "B-03",
+          "B-04",
+          "B-05",
+          "B-06",
+          "B-07",
+          "B-08",
+          "B-09",
+          "B-10",
+          "B-11",
+          "B-12"
+        ],
+        "path_prefix": null,
+        "resolved": true
+      },
+      "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "sections": {
+        "open": {
+          "census": 10,
+          "recorded": true,
+          "requested": true,
+          "items": [
+            {
+              "finding_id": "B01-1",
+              "label": "open",
+              "severity": "MEDIUM",
+              "subsystem_id": "B-01",
+              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "revision_bound": true,
+              "authored": "code"
+            },
+            {
+              "finding_id": "B04-4",
+              "label": "open",
+              "severity": "MEDIUM",
+              "subsystem_id": "B-04",
+              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "revision_bound": true,
+              "authored": "code"
+            }
+          ],
+          "ordering_basis": "severity-then-subsystem-then-id"
+        },
+        "awaiting_verification": {
+          "census": 0,
+          "recorded": false,
+          "requested": true,
+          "items": [],
+          "statement": "No repair is awaiting verification in scope.",
+          "ordering_basis": "severity-then-subsystem-then-id"
+        },
+        "undiscriminated": {
+          "census": 0,
+          "recorded": false,
+          "requested": true,
+          "items": [],
+          "statement": "No record in scope holds two accounts the evidence does not pick between.",
+          "counts": {
+            "contradictions": 0,
+            "matrices": 0,
+            "dispositions": 0
+          },
+          "ordering_basis": "contradictions-then-matrices-then-dispositions-each-by-id"
+        },
+        "decisions": {
+          "census": 5,
+          "recorded": true,
+          "requested": true,
+          "items": [
+            {
+              "question_id": 2,
+              "label": "unknown",
+              "category": "priority-ranking",
+              "subsystem_id": null,
+              "question": "B-11 (development harness and gates) carries the repository's highest concentration of red-provable guarantees but is ranked 4. Should a subsystem that verifies the others be surveyed before them?",
+              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+              "revision_bound": true,
+              "authored": "model"
+            },
+            {
+              "question_id": 1,
+              "label": "unknown",
+              "category": "scope-judgment",
+              "subsystem_id": null,
+              "question": "Should scholiast/ (103 tracked files of a checked-in Scholiast research survey) be surveyed as part of this repository's conspectus, or treated as vendored corpus?",
+              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+              "revision_bound": true,
+              "authored": "model"
+            }
+          ],
+          "ordering_basis": "category-then-id"
+        },
+        "leads": {
+          "census": 68,
+          "recorded": true,
+          "requested": true,
+          "items": [],
+          "statement": "Open leads of other categories are in the omission ledger under policy: unverified-suspicion is an open candidate-concern note, and no label here covers the rest.",
+          "counts": {
+            "unverified_suspicion": 0,
+            "pattern": 63,
+            "tension": 2,
+            "anomaly": 2,
+            "connection": 1
+          },
+          "ordering_basis": "id"
+        },
+        "stale": {
+          "census": 1,
+          "recorded": true,
+          "requested": true,
+          "items": [
+            {
+              "source": "claim",
+              "label": "stale-knowledge",
+              "claim_id": "B-01-C01",
+              "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-tooldefinition",
+              "subject_type": "symbol",
+              "subject_id": "mcp-server/src/helpers.ts:ToolDefinition",
+              "closed_at_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+              "revision_bound": true,
+              "authored": "code"
+            }
+          ],
+          "statement": "The two sources are counted apart and never summed.",
+          "counts": {
+            "claim": 1,
+            "ledger": 0,
+            "drifted_unread": 0,
+            "drifted_deferred": 0
+          },
+          "ordering_basis": "claims-then-ledger-rows-by-subsystem-and-path"
+        },
+        "hot_spots": {
+          "census": 12,
+          "recorded": true,
+          "requested": true,
+          "items": [
+            {
+              "subsystem_id": "B-04",
+              "open_critical_high": 0,
+              "open_medium_low": 2,
+              "awaiting_verification": 0,
+              "undiscriminated": 0,
+              "weakest_confirmed_bug_evidence": "code-verified",
+              "unread": {
+                "candidate": 5,
+                "obligation_bearing": 8
+              },
+              "stale_files": 0,
+              "unassessed_seam_sides": {
+                "sides": 0,
+                "of": 2
+              },
+              "ref_sha": null,
+              "revision_bound": false,
+              "authored": "code"
+            },
+            {
+              "subsystem_id": "B-11",
+              "open_critical_high": 0,
+              "open_medium_low": 2,
+              "awaiting_verification": 0,
+              "undiscriminated": 0,
+              "weakest_confirmed_bug_evidence": "code-verified",
+              "unread": {
+                "candidate": 2,
+                "obligation_bearing": 7
+              },
+              "stale_files": 0,
+              "unassessed_seam_sides": {
+                "sides": 0,
+                "of": 2
+              },
+              "ref_sha": null,
+              "revision_bound": false,
+              "authored": "code"
+            }
+          ],
+          "statement": "Access heat is not measured: no access_log row reaches a subsystem through entries.",
+          "ordering_basis": "open-critical-high-then-open-medium-low-then-unread-fraction-then-id",
+          "seam_binding": "per-party-proxy"
+        }
+      },
+      "census": {
+        "total": 96,
+        "by_section": {
+          "open": 10,
+          "awaiting_verification": 0,
+          "undiscriminated": 0,
+          "decisions": 5,
+          "leads": 68,
+          "stale": 1,
+          "hot_spots": 12
+        }
+      },
+      "omitted": [
+        {
+          "section": "open",
+          "reason": "budget",
+          "count": 8,
+          "ids": [
+            "finding:B05-1",
+            "finding:B07-1",
+            "finding:B10-1",
+            "finding:B03-4",
+            "finding:B04-5",
+            "finding:B08-1",
+            "finding:B11-1",
+            "finding:B11-2"
+          ],
+          "ids_truncated": false
+        },
+        {
+          "section": "decisions",
+          "reason": "budget",
+          "count": 3,
+          "ids": [
+            "question:4",
+            "question:5",
+            "question:3"
+          ],
+          "ids_truncated": false
+        },
+        {
+          "section": "leads",
+          "reason": "policy",
+          "count": 68,
+          "ids": [
+            "lead:1",
+            "lead:2",
+            "lead:3",
+            "lead:4",
+            "lead:5",
+            "lead:6",
+            "lead:7",
+            "lead:8",
+            "lead:9",
+            "lead:10",
+            "lead:11",
+            "lead:12",
+            "lead:13",
+            "lead:14",
+            "lead:15",
+            "lead:16",
+            "lead:17",
+            "lead:18",
+            "lead:19",
+            "lead:20",
+            "lead:21",
+            "lead:22",
+            "lead:23",
+            "lead:24",
+            "lead:25",
+            "lead:26",
+            "lead:27",
+            "lead:28",
+            "lead:29",
+            "lead:30",
+            "lead:31",
+            "lead:32",
+            "lead:33",
+            "lead:34",
+            "lead:35",
+            "lead:36",
+            "lead:37",
+            "lead:38",
+            "lead:39",
+            "lead:40",
+            "lead:41",
+            "lead:42",
+            "lead:43",
+            "lead:44",
+            "lead:45",
+            "lead:46",
+            "lead:47",
+            "lead:48",
+            "lead:49",
+            "lead:50",
+            "lead:51",
+            "lead:52",
+            "lead:53",
+            "lead:54",
+            "lead:55",
+            "lead:56",
+            "lead:57",
+            "lead:58",
+            "lead:59",
+            "lead:60",
+            "lead:61",
+            "lead:62",
+            "lead:63",
+            "lead:64",
+            "lead:65",
+            "lead:66",
+            "lead:67",
+            "lead:68"
+          ],
+          "ids_truncated": false
+        },
+        {
+          "section": "hot_spots",
+          "reason": "budget",
+          "count": 10,
+          "ids": [
+            "subsystem:B-05",
+            "subsystem:B-07",
+            "subsystem:B-08",
+            "subsystem:B-10",
+            "subsystem:B-03",
+            "subsystem:B-01",
+            "subsystem:B-09",
+            "subsystem:B-02",
+            "subsystem:B-06",
+            "subsystem:B-12"
+          ],
+          "ids_truncated": false
+        }
+      ],
+      "trace": {
+        "model_calls": 0,
+        "selection": "registry-exact-v1",
+        "budget_bytes": 12288,
+        "payload_bytes": 5750,
+        "response_bytes": 12260,
+        "truncation_order": "round-robin-sections-then-ledger-ids-v1",
+        "truncated": true,
+        "within_budget": true,
+        "over_budget_reason": null,
+        "limit": null
+      }
+    }
+  },
+  "finding_state_current": [
+    {
+      "finding_id": "B01-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B03-4",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-4",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-5",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B05-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B07-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B08-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B10-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B11-1",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B11-2",
+      "resolution_state": "open"
+    }
+  ],
+  "publication": {
+    "clean_publish": {
+      "mode": "clean-publish",
+      "ok": true,
+      "published": true,
+      "output_dir": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis/docs",
+      "axes": {
+        "state": {
+          "ok": true
+        },
+        "coverage": {
+          "ok": true
+        },
+        "content": {
+          "ok": true
+        }
+      },
+      "mismatch_count": 0,
+      "projection_run_id": "projection-602ac79e-4cec-4efd-9fb0-61f5ee137a45",
+      "pages_rendered": 36,
+      "html_pages_rendered": 36,
+      "summary": {
+        "ok": true,
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis/docs",
+        "html_entrypoint": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis/docs/index.html",
+        "pages_total": 36,
+        "pages_rendered": 36,
+        "pages_unchanged": 0,
+        "pages_retired": [],
+        "xref_updates": 23,
+        "html_pages_total": 36,
+        "html_pages_rendered": 36,
+        "html_pages_unchanged": 0,
+        "html_pages_retired": [],
+        "warnings": [],
+        "readback": {
+          "ok": true,
+          "axes": {
+            "state": {
+              "ok": true
+            },
+            "coverage": {
+              "ok": true
+            },
+            "content": {
+              "ok": true
+            }
+          },
+          "mismatch_count": 0,
+          "mismatches": []
+        },
+        "mode": "clean-publish",
+        "published": true,
+        "exit_status": 0,
+        "projection_run_id": "projection-602ac79e-4cec-4efd-9fb0-61f5ee137a45"
+      }
+    },
+    "source_artifacts": {
+      "projection_contract_sha256": "40b59364b414f349a81b3df177eb23252f21137c509072e61747550966f21965",
+      "manifest_sha256": "61a71094122f077b7f051d5e8d3d95fa367c8a2fe4052632e338057255ba1cf8",
+      "page_count": 73,
+      "contract_version": "2"
+    },
+    "promotion": {
+      "promoted_at": "2026-09-12T13:31:11.427Z",
+      "source": ".amanuensis/docs",
+      "destination": "docs",
+      "storage": ".amanuensis",
+      "files_promoted": 75,
+      "source_readback": {
+        "ok": true,
+        "axes": {
+          "state": {
+            "ok": true
+          },
+          "coverage": {
+            "ok": true
+          },
+          "content": {
+            "ok": true
+          }
+        },
+        "mismatch_count": 0,
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis/docs",
+        "mode": "readback"
+      },
+      "readback": {
+        "ok": true,
+        "axes": {
+          "state": {
+            "ok": true
+          },
+          "coverage": {
+            "ok": true
+          },
+          "content": {
+            "ok": true
+          }
+        },
+        "mismatch_count": 0,
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/docs",
+        "mode": "readback"
+      }
+    }
+  }
+}

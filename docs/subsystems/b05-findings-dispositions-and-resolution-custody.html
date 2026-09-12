@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Amanuensis HTML projection 1.14.0">
+<meta name="description" content="Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody.">
+<title>Findings, dispositions, and resolution custody · amanuensis-reader-lenses · Amanuensis</title>
+<script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --canvas: #f3f4ef;
+  --canvas-subtle: #eaeae6;
+  --surface: #fbfcf7;
+  --text: #1d261b;
+  --text-muted: #596153;
+  --text-subtle: #7a8273;
+  --rule: #cdd1c5;
+  --rule-strong: #a4ac9d;
+  --accent: #48651f;
+  --accent-strong: #314a16;
+  --accent-soft: #e4ebd3;
+  --signal: #9b5b27;
+  --quiet: #697263;
+  --survey-unmapped: #858b81;
+  --survey-scoping: #75836d;
+  --survey-structural: #637a55;
+  --survey-concerns: #536f3f;
+  --survey-adversarial: #42672a;
+  --survey-mapped: #315c18;
+  --survey-deferred: #7a7e75;
+  --severity-low: #767b75;
+  --severity-medium: #b07b00;
+  --severity-high: #bd5217;
+  --severity-critical: #aa2438;
+  --evidence-code: #3f611f;
+  --evidence-contract: #4d6a31;
+  --evidence-test: #5b7343;
+  --evidence-config: #687a56;
+  --evidence-doc: #737f65;
+  --evidence-comment: #7b8471;
+  --evidence-name: #82887a;
+  --evidence-pattern: #878b83;
+  --disposition-defect: #aa2438;
+  --disposition-acceptable: #4b6b2e;
+  --disposition-ruled-out: #616b5c;
+  --disposition-out-of-scope: #7d8380;
+  --disposition-ambiguous: #6f5b76;
+  --resolution-open: #98532f;
+  --resolution-pending: #806c27;
+  --resolution-closed: #3f6428;
+  --resolution-accepted: #5a7043;
+  --source-aligned: #607446;
+  --source-stale: #98532f;
+  --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --rail: 17.25rem;
+  --measure: 120ch;
+  --page: 128rem;
+  --baseline: .25rem;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #171a15;
+  --canvas-subtle: #131510;
+  --surface: #20231d;
+  --text: #edf0e6;
+  --text-muted: #b7bdac;
+  --text-subtle: #929989;
+  --rule: #3b4234;
+  --rule-strong: #5d6651;
+  --accent: #b4d35d;
+  --accent-strong: #d5e88b;
+  --accent-soft: #35431f;
+  --signal: #d5a064;
+  --quiet: #a3aa98;
+  --survey-unmapped: #9ba093;
+  --survey-scoping: #a0ad83;
+  --survey-structural: #a5b977;
+  --survey-concerns: #aac56a;
+  --survey-adversarial: #b1d05e;
+  --survey-mapped: #b8dc55;
+  --survey-deferred: #9a9e95;
+  --severity-low: #a0a8a3;
+  --severity-medium: #e2bf4f;
+  --severity-high: #f09a58;
+  --severity-critical: #f27b88;
+  --evidence-code: #b4d171;
+  --evidence-contract: #afc775;
+  --evidence-test: #abc078;
+  --evidence-config: #a6b67c;
+  --evidence-doc: #a3ae82;
+  --evidence-comment: #a0a789;
+  --evidence-name: #9ea18f;
+  --evidence-pattern: #9b9d94;
+  --disposition-defect: #f27b88;
+  --disposition-acceptable: #afd378;
+  --disposition-ruled-out: #a6ae9c;
+  --disposition-out-of-scope: #8e9692;
+  --disposition-ambiguous: #b7a0bd;
+  --resolution-open: #d99468;
+  --resolution-pending: #c6ad61;
+  --resolution-closed: #b0d775;
+  --resolution-accepted: #bdcf98;
+  --source-aligned: #b3c581;
+  --source-stale: #d99468;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #171a15; --canvas-subtle: #131510; --surface: #20231d;
+    --text: #edf0e6; --text-muted: #b7bdac; --text-subtle: #929989;
+    --rule: #3b4234; --rule-strong: #5d6651;
+    --accent: #b4d35d; --accent-strong: #d5e88b; --accent-soft: #35431f;
+    --signal: #d5a064; --quiet: #a3aa98;
+    --survey-unmapped: #9ba093; --survey-scoping: #a0ad83;
+    --survey-structural: #a5b977; --survey-concerns: #aac56a;
+    --survey-adversarial: #b1d05e; --survey-mapped: #b8dc55; --survey-deferred: #9a9e95;
+    --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
+    --severity-high: #f09a58; --severity-critical: #f27b88;
+    --evidence-code: #b4d171; --evidence-contract: #afc775; --evidence-test: #abc078;
+    --evidence-config: #a6b67c; --evidence-doc: #a3ae82; --evidence-comment: #a0a789;
+    --evidence-name: #9ea18f; --evidence-pattern: #9b9d94;
+    --disposition-defect: #f27b88; --disposition-acceptable: #afd378;
+    --disposition-ruled-out: #a6ae9c; --disposition-out-of-scope: #8e9692;
+    --disposition-ambiguous: #b7a0bd;
+    --resolution-open: #d99468; --resolution-pending: #c6ad61;
+    --resolution-closed: #b0d775; --resolution-accepted: #bdcf98;
+    --source-aligned: #b3c581; --source-stale: #d99468;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--canvas-subtle); }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--canvas);
+  font-family: var(--body);
+  font-size: 1rem;
+  line-height: 1.58;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  font-variant-ligatures: common-ligatures contextual;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-strong); text-decoration-thickness: .08em; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .14em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed; left: 1rem; top: -5rem; z-index: 100;
+  padding: .55rem .8rem; background: var(--text); color: var(--canvas);
+}
+.skip-link:focus { top: 1rem; }
+.shell { min-height: 100vh; }
+.nav-rail {
+  position: fixed; inset: 0 auto 0 0; width: var(--rail); z-index: 20;
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding: 2rem 1.35rem 1.5rem;
+  background: var(--canvas-subtle); border-right: 1px solid var(--rule);
+}
+.brand { display: block; color: var(--text); text-decoration: none; margin: 0 0 1.6rem; }
+.brand-mark {
+  display: block; font: 600 1.35rem/1.05 var(--heading); letter-spacing: -.015em;
+}
+.brand-sub { display: block; margin-top: .32rem; color: var(--text-muted); font: .73rem/1.4 var(--body); }
+.search-label { display: block; margin-bottom: .35rem; color: var(--text-muted); font: .67rem/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.nav-search {
+  width: 100%; padding: .55rem .65rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--rule-strong); border-radius: 0; font: .82rem/1.3 var(--body);
+}
+.nav-search::placeholder { color: var(--text-subtle); }
+.rail-nav { margin-top: 1.5rem; }
+.nav-group { margin: 0 0 1.35rem; }
+.nav-group-title {
+  margin: 0 0 .32rem; color: var(--text-subtle);
+  font: 600 .64rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-item { margin: .08rem 0; }
+.nav-subgroup { margin: .5rem 0 0; }
+.nav-subgroup-title {
+  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
+  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
+.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
+.nav-link:hover { color: var(--text); background: var(--surface); }
+.nav-link[aria-current="page"] { color: var(--accent-strong); }
+.nav-link[aria-current="page"] .nav-name { font-weight: 700; }
+.nav-tick { width: .34rem; height: .34rem; margin-top: .44rem; border: 1px solid var(--rule-strong); background: transparent; }
+.nav-link[aria-current="page"] .nav-tick { border-color: var(--accent); background: var(--accent); }
+.nav-tick.status-unmapped { border-color: var(--survey-unmapped); }
+.nav-tick.status-scoping { background: var(--survey-scoping); border-color: var(--survey-scoping); }
+.nav-tick.status-structural { background: var(--survey-structural); border-color: var(--survey-structural); }
+.nav-tick.status-concerns { background: var(--survey-concerns); border-color: var(--survey-concerns); }
+.nav-tick.status-adversarial { background: var(--survey-adversarial); border-color: var(--survey-adversarial); }
+.nav-tick.status-mapped { background: var(--survey-mapped); border-color: var(--survey-mapped); }
+.nav-tick.status-deferred { border-color: var(--survey-deferred); border-style: dashed; }
+.nav-name { display: block; font-size: .82rem; line-height: 1.3; }
+.nav-id { display: block; margin-top: .12rem; color: var(--text-subtle); font: .64rem/1.3 var(--mono); }
+.rail-foot { margin-top: auto; padding-top: 1.5rem; }
+.rail-actions { display: flex; gap: .5rem; align-items: center; }
+.quiet-button {
+  border: 1px solid var(--rule); padding: .36rem .5rem; color: var(--text-muted);
+  background: transparent; border-radius: 0; cursor: pointer; font: .68rem/1 var(--mono);
+}
+.quiet-button:hover { border-color: var(--accent); color: var(--accent-strong); }
+.rail-note { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.45 var(--mono); }
+
+.document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
+.mobile-bar { display: none; }
+.document-inner { width: min(100%, var(--page)); margin: 0 auto; padding: 4.5rem clamp(2rem, 5vw, 6.5rem) 5.5rem; }
+.page-head { padding: 0 0 2.25rem; border-bottom: 1px solid var(--rule); }
+.eyebrow { margin: 0 0 1rem; color: var(--accent); font: 650 .69rem/1.3 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+h1 {
+  margin: 0; font: 600 clamp(2.8rem, 4.8vw, 5.2rem)/.98 var(--heading);
+  letter-spacing: -.042em; text-wrap: balance;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+}
+.page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
+.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
+.snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
+.snapshot-item b { color: var(--text); font-weight: 650; }
+.freshness { display: inline-flex; gap: .38rem; align-items: center; }
+.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
+.freshness.stale::before { background: var(--source-stale); }
+.freshness.unmeasured::before { background: var(--rule-strong); }
+
+.content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
+.content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
+.content > section:last-child { border-bottom: 0; }
+.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content-findings .section-open { --enum-color: var(--resolution-open); }
+.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
+.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
+.content-findings .section-ruled-out, .content-findings .section-accepted {
+  --enum-color: var(--resolution-accepted);
+}
+.content-findings section > h3 { --enum-color: var(--rule-strong); }
+.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
+  border-left: .14em solid var(--enum-color); padding-left: .5rem;
+}
+.content-findings section > h2::before {
+  content: ""; display: inline-block; width: .14em; height: .72em;
+  margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
+}
+.finding-subsystem-heading {
+  margin: 2rem 0 .55rem;
+  color: var(--text);
+  font: 600 clamp(1.25rem, 1.6vw, 1.6rem)/1.25 var(--heading);
+}
+.finding-subsystem-heading a { color: inherit; text-decoration-color: var(--rule-strong); }
+.finding-subsystem-heading + .record-list-finding { margin-top: 0; }
+.content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
+h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
+h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
+h3 { margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
+h4 { margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
+h5, h6 { margin: 1.4rem 0 .5rem; font-size: .85rem; }
+.heading-anchor { position: absolute; left: -1.2rem; color: var(--text-subtle); text-decoration: none; opacity: 0; font-family: var(--mono); }
+:is(h2,h3,h4,h5,h6):hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
+p { max-width: var(--measure); margin: 0 0 1rem; }
+strong { font-weight: 680; }
+em { font-family: var(--heading); }
+code {
+  padding: .08rem .25rem; color: var(--accent-strong); background: var(--accent-soft);
+  font: .82em/1.4 var(--mono); overflow-wrap: anywhere;
+}
+ul, ol { max-width: var(--measure); margin: .4rem 0 1.2rem; padding-left: 1.35rem; }
+li { padding-left: .25rem; margin: 0 0 .48rem; }
+li::marker { color: var(--accent); }
+blockquote { max-width: var(--measure); margin: 1.2rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 3px solid var(--accent); color: var(--text-muted); }
+blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
+.raw-prose-note { border-left-color: var(--signal); }
+
+.prose-flow {
+  max-width: var(--measure);
+  margin: 1rem 0 1.5rem;
+  orphans: 3;
+  widows: 3;
+}
+.prose-flow > p {
+  max-width: none;
+  margin: 0 0 1em;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+.prose-flow > p:last-child { margin-bottom: 0; }
+
+.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.48; }
+caption { padding: .55rem 0; color: var(--text-subtle); text-align: left; font: .65rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+th { padding: .6rem .7rem; color: var(--text-muted); border-bottom: 1px solid var(--rule-strong); text-align: left; vertical-align: bottom; font: 650 .65rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+td { padding: .7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+td:first-child, th:first-child { padding-left: .7rem; }
+.section-current-state .table-wrap { max-width: 54rem; }
+.section-current-state table { font-size: .92rem; }
+.section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.coverage-index { margin: 1.1rem 0 1.8rem; }
+.coverage-summary {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+}
+.coverage-summary-item { min-width: 0; padding: .85rem 1rem; border-right: 1px solid var(--rule); }
+.coverage-summary-item:last-child { border-right: 0; }
+.coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
+.coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.coverage-intro { max-width: var(--measure); margin: 1rem 0 1.25rem; color: var(--text-muted); }
+.coverage-subsystem-list {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
+}
+.coverage-subsystem {
+  display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
+  gap: .7rem 1rem; align-content: start; min-width: 0; padding: .8rem 1rem;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.coverage-subsystem-head { min-width: 0; }
+.coverage-subsystem-title { margin: 0; font: 650 .9rem/1.32 var(--body); text-wrap: pretty; }
+.coverage-subsystem-title a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-subsystem-id { display: block; margin-top: .22rem; color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.coverage-measure { min-width: 0; }
+.coverage-review-count { margin: 0; color: var(--text-muted); font: .67rem/1.35 var(--mono); }
+.coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
+.coverage-progress > span { display: block; height: 100%; background: var(--accent); }
+.coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
+.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: var(--enum-color); }
+.coverage-state-confirmed-bug { --enum-color: var(--disposition-defect); }
+.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.coverage-state-out-of-scope { --enum-color: var(--disposition-out-of-scope); }
+.coverage-state-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.coverage-state-unknown { --enum-color: var(--quiet); }
+.coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
+.coverage-token {
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
+  padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
+  background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
+}
+.coverage-token:hover, .coverage-token:focus-visible { border-color: var(--enum-color); color: var(--text); }
+.coverage-token-mark, .coverage-matrix-mark {
+  display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
+  color: var(--enum-color); border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
+}
+.coverage-linchpin { color: var(--accent); font-size: .58rem; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
+.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
+.coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
+.coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
+.coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
+.coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
+.coverage-matrix th, .coverage-matrix td { text-align: center; }
+.coverage-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 2.65rem; padding: .5rem .35rem; background: var(--canvas); }
+.coverage-matrix thead th:first-child { left: 0; z-index: 5; min-width: 18rem; text-align: left; }
+.coverage-matrix tbody th { position: sticky; left: 0; z-index: 2; width: 18rem; max-width: 18rem; padding: .5rem .65rem; background: var(--surface); text-align: left; text-transform: none; letter-spacing: 0; font: 650 .75rem/1.3 var(--body); }
+.coverage-matrix tbody th a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-matrix-subsystem-id { display: block; margin-top: .12rem; color: var(--text-subtle); font-size: .58rem; }
+.coverage-matrix td { width: 2.65rem; height: 2.25rem; padding: .25rem; }
+.coverage-matrix td > a { display: inline-grid; place-items: center; color: inherit; text-decoration: none; }
+.coverage-matrix-empty { color: var(--rule-strong); font-family: var(--mono); }
+
+.record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.record {
+  display: grid; grid-template-columns: minmax(11.5rem, .34fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule);
+}
+.record:last-child { border-bottom: 0; }
+.record-meta { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
+.record-primary code { font-size: .75rem; }
+.record-facts { margin: .7rem 0 0; }
+.record-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55rem; align-items: center; padding: .23rem 0; }
+.record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
+.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
+.record-field:last-child { border-right: 0; }
+.record-field:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+.record-label { margin: 0 0 .48rem; }
+.record-copy { color: var(--text); line-height: 1.55; }
+.record-copy code { overflow-wrap: anywhere; }
+.record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
+.record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+h1, h2, .brand-mark, .record-primary, .record-lede {
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  font-feature-settings: "kern" 1, "liga" 1, "clig" 1;
+  text-rendering: optimizeLegibility;
+}
+.record-finding { display: block; }
+.record-finding .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .65rem 1.25rem; align-items: center;
+  padding: .85rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-finding .record-primary { align-self: start; margin-top: .08rem; }
+.record-finding .record-facts {
+  display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem;
+  align-items: center; min-width: 0; margin: 0;
+}
+.record-finding .record-facts > div {
+  display: flex; gap: .35rem; align-items: center;
+  min-width: 0; padding: 0;
+}
+.record-finding .record-facts dd { overflow-wrap: normal; }
+.record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
+.record-finding .record-fact-status { justify-self: start; }
+.record-finding .record-fact-ref-sha { justify-self: end; }
+.record-finding .record-fact-status dt,
+.record-finding .record-fact-ref-sha dt {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.record-finding .record-fields { display: block; }
+.record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
+.record-finding .record-field + .record-field { margin-top: 1rem; }
+.record-file-ledger { grid-template-columns: minmax(14rem, .42fr) minmax(0, 1fr); }
+.record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
+.record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern-disposition { display: block; }
+.record-concern-disposition .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .8rem 1.5rem; align-items: start;
+  padding: .9rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-disposition .record-primary { margin-top: .1rem; }
+.record-concern-disposition .record-facts {
+  display: flex; flex-wrap: wrap; gap: .48rem 1.35rem; align-items: center;
+  min-width: 0; margin: 0;
+}
+.record-concern-disposition .record-facts > div {
+  display: grid; grid-template-columns: auto auto; gap: .45rem;
+  align-items: center; min-width: max-content; padding: 0;
+}
+.record-concern-disposition .record-facts dd { overflow-wrap: normal; }
+.concern-family { margin: 2rem 0 2.6rem; }
+.concern-family-heading {
+  display: flex; flex-wrap: wrap; gap: .45rem .8rem; align-items: baseline;
+  margin: 0 0 .55rem; color: var(--text); font: 600 1.35rem/1.25 var(--heading);
+}
+.concern-territory { color: var(--text-subtle); font: .62rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.record-list-concern-checklist { margin-top: 0; }
+.record-concern-checklist { display: block; }
+.record-concern-checklist .record-meta {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: .6rem 1.25rem; align-items: center;
+  padding: .72rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-checklist .record-primary { font-size: 1rem; }
+.record-concern-checklist .record-facts { min-width: 0; margin: 0; }
+.record-concern-checklist .record-facts > div {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem .5rem;
+  align-items: baseline; min-width: 0; padding: 0;
+}
+.record-concern-checklist .record-facts dd { overflow-wrap: normal; }
+.record-concern-checklist .record-body { padding: 1rem 1.1rem 1.15rem; }
+.record-probe { max-width: var(--measure); color: var(--text); font-size: .86rem; line-height: 1.58; }
+.record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
+.file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
+.identifier-definition {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: .06em;
+  text-underline-offset: .2em;
+  cursor: help;
+}
+a .identifier-definition { text-decoration-color: currentColor; }
+.record-subsystem { display: block; }
+.record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
+.record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
+.record-primary-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.record-subsystem .record-facts { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center; margin-top: .55rem; }
+.record-subsystem .record-facts > div { display: flex; grid-template-columns: none; gap: .35rem; align-items: baseline; padding: 0; }
+.record-subsystem .record-facts dt { font-size: .58rem; }
+.record-subsystem .record-facts dd { font-size: .7rem; }
+.record-subsystem .record-fact-id dt, .record-subsystem .record-fact-status dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.record-subsystem .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.summary-list { max-width: 54rem; margin: 1rem 0 1.5rem; border-top: 1px solid var(--rule-strong); }
+.summary-list > div { display: grid; grid-template-columns: minmax(10rem, .42fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.summary-list dt, .summary-list dd { margin: 0; padding: .65rem .75rem; }
+.summary-list dt { color: var(--text-muted); font-weight: 650; }
+.summary-list dd { border-left: 1px solid var(--rule); }
+
+.runtime-boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.runtime-boundary-diagram { margin: 0; }
+.runtime-diagram-caption {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.runtime-diagram-caption strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.runtime-svg-scroll { max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--rule); }
+.runtime-boundary-svg { display: block; width: 100%; min-width: 52rem; height: auto; background: var(--surface); }
+.runtime-svg-lane { fill: color-mix(in srgb, var(--canvas-subtle) 44%, transparent); }
+.runtime-svg-lane-even { fill: color-mix(in srgb, var(--canvas-subtle) 72%, transparent); }
+.runtime-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-target { fill: var(--canvas-subtle); }
+.runtime-svg-edge { stroke: var(--accent); stroke-width: 1.5; }
+.runtime-svg-arrow { fill: var(--accent); }
+.runtime-svg-edge-label { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-column-label {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.runtime-svg-title { fill: var(--text); font: 600 14px/1.3 var(--heading); }
+.runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
+.runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
+.runtime-boundary-details { display: grid; }
+.runtime-detail {
+  display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
+  min-width: 0; border-bottom: 1px solid var(--rule);
+}
+.runtime-detail:last-child { border-bottom: 0; }
+.runtime-detail:focus-within, .runtime-detail:hover { background: color-mix(in srgb, var(--accent-soft) 24%, transparent); }
+.runtime-detail-head { min-width: 0; padding: .72rem .85rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.runtime-detail-head h3 { margin: 0; color: var(--text); font: 600 .88rem/1.35 var(--heading); }
+.runtime-detail-language { display: block; margin-top: .28rem; color: var(--text-muted); font: .64rem/1.35 var(--mono); }
+.runtime-detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.runtime-detail-body p { min-width: 0; margin: 0; padding: .66rem .78rem; border-right: 1px solid var(--rule); }
+.runtime-detail-body p:nth-child(2) { border-right: 0; }
+.runtime-detail-body .runtime-detail-note { grid-column: 1 / -1; border-top: 1px solid var(--rule); border-right: 0; }
+.runtime-detail-label {
+  display: block; margin-bottom: .2rem; color: var(--text-subtle);
+  font: 600 .58rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+
+.subsystem-atlas { margin: 1.2rem 0 1.7rem; }
+.atlas-summary, .topology-summary {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; border-left: 1px solid var(--rule); }
+.atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.atlas-region-head {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  padding: .7rem .8rem; background: var(--canvas-subtle); border-bottom: 1px solid var(--rule);
+}
+.atlas-region-head h3 { margin: 0; color: var(--text); font: 600 .86rem/1.3 var(--heading); }
+.atlas-region-count { color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.atlas-list { max-width: none; margin: 0; padding: 0; list-style: none; }
+.atlas-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; align-items: start;
+  min-height: 3.25rem; margin: 0; padding: .68rem .8rem; border-bottom: 1px solid var(--rule);
+}
+.atlas-item:last-child { border-bottom: 0; }
+.atlas-item:focus-within, .atlas-item:hover { background: color-mix(in srgb, var(--accent-soft) 32%, transparent); }
+.atlas-subsystem { min-width: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
+.atlas-subsystem strong { display: block; margin-bottom: .13rem; font: 650 .7rem/1.25 var(--mono); }
+.atlas-depth .status { padding: .08rem .28rem; font-size: .58rem; }
+
+.topology { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.topology-component {
+  display: grid; grid-template-columns: minmax(13rem, .32fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.topology-component:last-child { border-bottom: 0; }
+.topology-hub { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.topology-hub-label, .topology-cross-label {
+  margin: 0 0 .48rem; color: var(--text-subtle);
+  font: 600 .61rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.topology-hub-title { margin: 0; color: var(--text-muted); font: .83rem/1.42 var(--body); }
+.topology-hub-title strong { display: block; margin-bottom: .2rem; font: 650 .78rem/1.25 var(--mono); }
+.topology-hub-count { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.4 var(--mono); }
+.topology-spokes { min-width: 0; }
+.topology-spoke {
+  display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); min-width: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.topology-spoke:last-child { border-bottom: 0; }
+.topology-spoke:focus-within, .topology-spoke:hover { background: color-mix(in srgb, var(--accent-soft) 28%, transparent); }
+.topology-edge-mark {
+  display: flex; align-items: center; justify-content: center; min-height: 5.1rem;
+  color: var(--accent); border-right: 1px solid var(--rule); font: 1.2rem/1 var(--heading);
+}
+.topology-edge-body { min-width: 0; padding: .78rem .9rem .85rem; }
+.topology-edge-head { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; margin: 0 0 .25rem; }
+.topology-edge-key { color: var(--accent-strong); font: 650 .7rem/1.3 var(--mono); }
+.topology-qualifier { color: var(--text-subtle); font: .61rem/1.3 var(--mono); }
+.topology-peer { margin: 0 0 .32rem; color: var(--text-muted); font-size: .8rem; }
+.topology-peer-label { margin-right: .28rem; color: var(--text-subtle); font: .61rem/1.3 var(--mono); text-transform: uppercase; }
+.topology-peer strong { font-family: var(--mono); font-size: .72rem; }
+.topology-object { max-width: 64ch; margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; }
+.topology-cross { grid-column: 1 / -1; padding: .8rem 1rem 1rem; background: color-mix(in srgb, var(--canvas-subtle) 55%, transparent); border-top: 1px solid var(--rule); }
+.topology-cross-list { display: grid; gap: .55rem; }
+.topology-cross-edge { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .7rem; align-items: center; }
+.topology-cross-edge .topology-node:last-child { text-align: right; }
+.topology-cross-relation { min-width: 7rem; color: var(--text-subtle); text-align: center; font: .62rem/1.35 var(--mono); }
+.topology-cross-relation strong { display: block; color: var(--accent-strong); }
+.topology-cross-object { display: block; max-width: 42ch; margin-top: .18rem; color: var(--text-muted); font-family: var(--body); font-size: .72rem; }
+
+.table-key { display: block; color: var(--text); font: 650 .76rem/1.35 var(--mono); letter-spacing: 0; text-transform: none; }
+.table-detail { display: block; margin-top: .28rem; color: var(--text-subtle); font: .68rem/1.4 var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.status, .evidence-label, .severity {
+  --enum-color: var(--quiet);
+  display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
+  color: color-mix(in srgb, var(--enum-color) 72%, var(--text));
+  background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--enum-color) 68%, var(--rule));
+  border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
+}
+.status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }
+.status-unmapped { --enum-color: var(--survey-unmapped); }
+.status-scoping { --enum-color: var(--survey-scoping); }
+.status-structural { --enum-color: var(--survey-structural); }
+.status-concerns { --enum-color: var(--survey-concerns); }
+.status-adversarial { --enum-color: var(--survey-adversarial); }
+.status-mapped { --enum-color: var(--survey-mapped); }
+.status-deferred { --enum-color: var(--survey-deferred); border-style: dashed; }
+.status-confirmed-bug { --enum-color: var(--disposition-defect); }
+.status-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.status-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.status-out-of-scope { --enum-color: var(--disposition-out-of-scope); border-style: dashed; }
+.status-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.status-open { --enum-color: var(--resolution-open); }
+.status-fixed-pending-verification { --enum-color: var(--resolution-pending); }
+.status-fixed, .status-resolved, .status-verified-fixed { --enum-color: var(--resolution-closed); }
+.status-accepted { --enum-color: var(--resolution-accepted); }
+.severity-critical { --enum-color: var(--severity-critical); }
+.severity-high { --enum-color: var(--severity-high); }
+.severity-medium { --enum-color: var(--severity-medium); }
+.severity-low { --enum-color: var(--severity-low); }
+.evidence-label { border-style: dotted; }
+.evidence-code-verified { --enum-color: var(--evidence-code); }
+.evidence-contract-stated { --enum-color: var(--evidence-contract); }
+.evidence-test-observed { --enum-color: var(--evidence-test); }
+.evidence-config-asserted { --enum-color: var(--evidence-config); }
+.evidence-doc-asserted { --enum-color: var(--evidence-doc); }
+.evidence-comment-asserted { --enum-color: var(--evidence-comment); }
+.evidence-name-inferred { --enum-color: var(--evidence-name); }
+.evidence-pattern-matched { --enum-color: var(--evidence-pattern); }
+
+.figure { margin: 1.4rem 0 1.7rem; padding: 1rem 0 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.figure-label { margin: 0 0 .9rem; color: var(--text-subtle); font: .65rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.relationship-map { display: grid; gap: .55rem; }
+.relationship { display: grid; grid-template-columns: minmax(8rem, 1fr) 3.5rem minmax(8rem, 1fr); gap: .65rem; align-items: center; }
+.relationship-node { display: block; min-width: 0; padding: .65rem .75rem; border-left: 3px solid var(--accent); background: var(--canvas-subtle); text-decoration: none; }
+.relationship-node strong { display: block; color: var(--accent-strong); font: .74rem/1.3 var(--mono); }
+.relationship-node span { display: block; margin-top: .16rem; color: var(--text-muted); font-size: .78rem; overflow-wrap: anywhere; }
+.relationship-edge { color: var(--text-subtle); text-align: center; font: .62rem/1.15 var(--mono); }
+.relationship-edge b { display: block; color: var(--accent); font-size: 1.1rem; font-weight: 400; }
+.bar-chart { display: grid; gap: .6rem; }
+.bar-row { display: grid; grid-template-columns: minmax(7rem, 12rem) 1fr 3rem; gap: .7rem; align-items: center; }
+.bar-label, .bar-value { font: .7rem/1.3 var(--mono); }
+.bar-track { height: .5rem; background: var(--canvas-subtle); }
+.bar-fill { height: 100%; background: var(--accent); }
+.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
+
+.page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
+.page-foot p { margin: 0; max-width: 52rem; }
+.page-foot a { color: inherit; }
+[hidden] { display: none !important; }
+
+/* Search results and the in-page filters. Ruled registers, not cards: a row
+   per result, one rule between them, no icon and no badge (§8.3). Every one of
+   these elements is built by script; nothing here is served hidden. */
+.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+.search-status:empty { display: none; }
+.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
+.search-results:empty { display: none; border-top: 0; }
+.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
+.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
+.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
+.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
+.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+
+@media (max-width: 900px) {
+  .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
+  .js .nav-rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
+  .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
+  .document { margin-left: 0; }
+  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  :is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }
+  .mobile-brand { font: 600 1rem/1 var(--heading); }
+  .document-inner { padding: 2.5rem 1.35rem 4rem; }
+  .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container report (min-width: 120ch) {
+  .prose-flow {
+    max-width: none;
+    column-count: 2;
+    column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
+    column-rule: 1px solid var(--rule);
+  }
+}
+
+@container report (min-width: 190ch) {
+  .prose-flow { column-count: 3; }
+}
+
+@container report (min-width: 165ch) {
+  .coverage-subsystem-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container report (max-width: 92ch) {
+  .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container report (max-width: 52ch) {
+  .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-facts > div { justify-content: flex-start; }
+}
+
+@media (max-width: 620px) {
+  h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
+  .runtime-detail { grid-template-columns: 1fr; }
+  .runtime-detail-head { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body { grid-template-columns: 1fr; }
+  .runtime-detail-body p { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body p:nth-child(2) { border-bottom: 0; }
+  .runtime-detail-body .runtime-detail-note { grid-column: auto; border-bottom: 0; }
+  .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+  .relationship-edge { text-align: left; }
+  .relationship-edge b { display: inline; margin-right: .4rem; }
+  .bar-row { grid-template-columns: 7rem 1fr 2.5rem; }
+  .heading-anchor { display: none; }
+  .record { grid-template-columns: 1fr; }
+  .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-concern-disposition .record-meta { grid-template-columns: 1fr; }
+  .record-fields { grid-template-columns: 1fr; }
+  .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-field:last-child { border-bottom: 0; }
+  .summary-list > div { grid-template-columns: 1fr; }
+  .summary-list dd { padding-top: 0; border-left: 0; }
+  .atlas-regions { grid-template-columns: 1fr; }
+  .topology-component { grid-template-columns: 1fr; }
+  .topology-hub { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .topology-cross-edge { grid-template-columns: 1fr; }
+  .topology-cross-edge .topology-node:last-child { text-align: left; }
+  .topology-cross-relation { text-align: left; }
+  .coverage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-summary-item:nth-child(2) { border-right: 0; }
+  .coverage-summary-item:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+  .coverage-subsystem { grid-template-columns: 1fr; }
+  .coverage-tokens { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+@media print {
+  :root { --canvas: #fff; --surface: #fff; --text: #171b19; --text-muted: #4c5551; --rule: #c7ccc9; }
+  .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
+  .document { margin: 0; }
+  .document-inner { width: auto; padding: 0; }
+  .runtime-svg-scroll { overflow: visible; }
+  .runtime-boundary-svg { min-width: 0; }
+  .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body data-root="../">
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="shell">
+  <aside class="nav-rail" aria-label="amanuensis-reader-lenses report navigation">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">amanuensis-reader-lenses</span>
+      <span class="brand-sub">Architecture survey · Amanuensis</span>
+    </a>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title" id="nav-group-overview">Overview</h2><ul class="nav-list" aria-labelledby="nav-group-overview"><li class="nav-item" data-search="overview identity, four status dimensions, and one route into each lens."><a class="nav-link" href="../index.html" title="Identity, four status dimensions, and one route into each lens."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-codebase">Codebase</h2><ul class="nav-list" aria-labelledby="nav-group-codebase"><li class="nav-item" data-search="architecture runtime shape, recorded edges, and boundaries, read as one connected system."><a class="nav-link" href="../architecture.html" title="Runtime shape, recorded edges, and boundaries, read as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystems every region, grouped by layer, with the scope recorded for it."><a class="nav-link" href="../master-plan.html" title="Every region, grouped by layer, with the scope recorded for it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystems</span></span></a></li><li class="nav-item" data-search="files one row per ledger file with owners, standing, and open defects."><a class="nav-link" href="../files.html" title="One row per ledger file with owners, standing, and open defects."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Files</span></span></a></li><li class="nav-item" data-search="not yet surveyed the recorded edge of the map, each gap counted over the unit it occupies."><a class="nav-link" href="../not-yet-surveyed.html" title="The recorded edge of the map, each gap counted over the unit it occupies."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Not yet surveyed</span></span></a></li><li class="nav-item" data-search="system boundaries shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="../seams.html" title="Shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="codebase glossary the project&#x27;s own names, with the meanings amanuensis observed in context."><a class="nav-link" href="../vocabulary.html" title="The project&#x27;s own names, with the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li></ul><div class="nav-subgroup"><h3 class="nav-subgroup-title" id="nav-group-codebase-subsystems">Subsystems</h3><ul class="nav-list" aria-labelledby="nav-group-codebase-subsystems"><li class="nav-item" data-search="server runtime and tool dispatch b-01 scope, structure, boundaries, defects, and the survey record for server runtime and tool dispatch. mapped subsystems"><a class="nav-link" href="b01-server-runtime-and-tool-dispatch.html" title="Scope, structure, boundaries, defects, and the survey record for Server runtime and tool dispatch."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Server runtime and tool dispatch</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="repository binding and storage custody b-02 scope, structure, boundaries, defects, and the survey record for repository binding and storage custody. mapped subsystems"><a class="nav-link" href="b02-repository-binding-and-storage-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Repository binding and storage custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Repository binding and storage custody</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="conspectus schema, vocabulary, and invariants b-03 scope, structure, boundaries, defects, and the survey record for conspectus schema, vocabulary, and invariants. mapped subsystems"><a class="nav-link" href="b03-conspectus-schema-vocabulary-and-invariants.html" title="Scope, structure, boundaries, defects, and the survey record for Conspectus schema, vocabulary, and invariants."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Conspectus schema, vocabulary, and invariants</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="survey record tools b-04 scope, structure, boundaries, defects, and the survey record for survey record tools. mapped subsystems"><a class="nav-link" href="b04-survey-record-tools.html" title="Scope, structure, boundaries, defects, and the survey record for Survey record tools."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey record tools</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="findings, dispositions, and resolution custody b-05 scope, structure, boundaries, defects, and the survey record for findings, dispositions, and resolution custody. mapped subsystems"><a class="nav-link" href="b05-findings-dispositions-and-resolution-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody." aria-current="page"><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Findings, dispositions, and resolution custody</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="locus standing and the reader lenses b-06 scope, structure, boundaries, defects, and the survey record for locus standing and the reader lenses. mapped subsystems"><a class="nav-link" href="b06-locus-standing-and-the-reader-lenses.html" title="Scope, structure, boundaries, defects, and the survey record for Locus standing and the reader lenses."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Locus standing and the reader lenses</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="git state, staleness, and refresh b-07 scope, structure, boundaries, defects, and the survey record for git state, staleness, and refresh. mapped subsystems"><a class="nav-link" href="b07-git-state-staleness-and-refresh.html" title="Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Git state, staleness, and refresh</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="materializer rendering pipeline b-08 scope, structure, boundaries, defects, and the survey record for materializer rendering pipeline. mapped subsystems"><a class="nav-link" href="b08-materializer-rendering-pipeline.html" title="Scope, structure, boundaries, defects, and the survey record for Materializer rendering pipeline."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Materializer rendering pipeline</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li><li class="nav-item" data-search="projection read-back and publication custody b-09 scope, structure, boundaries, defects, and the survey record for projection read-back and publication custody. mapped subsystems"><a class="nav-link" href="b09-projection-read-back-and-publication-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Projection read-back and publication custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Projection read-back and publication custody</span><span class="nav-id" data-identifier-defined>B-09</span></span></a></li><li class="nav-item" data-search="the amanuensis skill b-10 scope, structure, boundaries, defects, and the survey record for the amanuensis skill. mapped subsystems"><a class="nav-link" href="b10-the-amanuensis-skill.html" title="Scope, structure, boundaries, defects, and the survey record for The Amanuensis skill."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">The Amanuensis skill</span><span class="nav-id" data-identifier-defined>B-10</span></span></a></li><li class="nav-item" data-search="development harness and gates b-11 scope, structure, boundaries, defects, and the survey record for development harness and gates. mapped subsystems"><a class="nav-link" href="b11-development-harness-and-gates.html" title="Scope, structure, boundaries, defects, and the survey record for Development harness and gates."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Development harness and gates</span><span class="nav-id" data-identifier-defined>B-11</span></span></a></li><li class="nav-item" data-search="vendored research corpus b-12 scope, structure, boundaries, defects, and the survey record for vendored research corpus. deferred subsystems"><a class="nav-link" href="b12-vendored-research-corpus.html" title="Scope, structure, boundaries, defects, and the survey record for Vendored research corpus."><span class="nav-tick status-deferred" aria-hidden="true"></span><span><span class="nav-name">Vendored research corpus</span><span class="nav-id" data-identifier-defined>B-12</span></span></a></li></ul></div></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-unresolved">Unresolved</h2><ul class="nav-list" aria-labelledby="nav-group-unresolved"><li class="nav-item" data-search="open findings defects open or awaiting verification at the checked revision."><a class="nav-link" href="../findings.html" title="Defects open or awaiting verification at the checked revision."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Open findings</span></span></a></li><li class="nav-item" data-search="disagreements where credible records disagree or the evidence does not discriminate between them."><a class="nav-link" href="../disagreements.html" title="Where credible records disagree or the evidence does not discriminate between them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Disagreements</span></span></a></li><li class="nav-item" data-search="decisions needed questions the survey could not settle, with the assumption used to keep moving."><a class="nav-link" href="../open-questions.html" title="Questions the survey could not settle, with the assumption used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="leads open observations that are not yet findings."><a class="nav-link" href="../field-notes.html" title="Open observations that are not yet findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Leads</span></span></a></li><li class="nav-item" data-search="stale knowledge examined files the repository has changed under, and scoped files that changed before anyone read them."><a class="nav-link" href="../stale.html" title="Examined files the repository has changed under, and scoped files that changed before anyone read them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Stale knowledge</span></span></a></li><li class="nav-item" data-search="hot spots where unresolved work and unread territory concentrate, as separate measures."><a class="nav-link" href="../hot-spots.html" title="Where unresolved work and unread territory concentrate, as separate measures."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Hot spots</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-history">History</h2><ul class="nav-list" aria-labelledby="nav-group-history"><li class="nav-item" data-search="resolved findings verified, ruled out, and accepted, each with the basis its resolution rests on."><a class="nav-link" href="../resolved-findings.html" title="Verified, ruled out, and accepted, each with the basis its resolution rests on."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved findings</span></span></a></li><li class="nav-item" data-search="resolution history the append-only account of how records reached their state."><a class="nav-link" href="../resolution-history.html" title="The append-only account of how records reached their state."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolution history</span></span></a></li><li class="nav-item" data-search="resolved leads and questions questions that were answered or dismissed, and leads that were closed."><a class="nav-link" href="../resolved-leads.html" title="Questions that were answered or dismissed, and leads that were closed."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved leads and questions</span></span></a></li><li class="nav-item" data-search="sessions and publications what ran, when, and what it produced."><a class="nav-link" href="../sessions.html" title="What ran, when, and what it produced."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Sessions and publications</span></span></a></li><li class="nav-item" data-search="conflicting evidence resolved disagreements and the evidence that settled them."><a class="nav-link" href="../contradictions.html" title="Resolved disagreements and the evidence that settled them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-method">Method</h2><ul class="nav-list" aria-labelledby="nav-group-method"><li class="nav-item" data-search="reader&#x27;s guide every enum, what it authorizes, and what it cannot justify."><a class="nav-link" href="../how-to-read.html" title="Every enum, what it authorizes, and what it cannot justify."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="review coverage which failure modes were tested where, and the disposition each one reached."><a class="nav-link" href="../concerns.html" title="Which failure modes were tested where, and the disposition each one reached."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="review checklist the concern set and its provenance."><a class="nav-link" href="../concern-checklist.html" title="The concern set and its provenance."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li><li class="nav-item" data-search="competing explanations index of evidence matrices and their outcomes."><a class="nav-link" href="../diagnosticity.html" title="Index of evidence matrices and their outcomes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li><li class="nav-item" data-search="onboarding record the repository boundary and initial decomposition that established this conspectus."><a class="nav-link" href="../onboarding-report.html" title="The repository boundary and initial decomposition that established this conspectus."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin a dated reading path recorded by an earlier session; it is survey history, not a current index."><a class="nav-link" href="../entry-point.html" title="A dated reading path recorded by an earlier session; it is survey history, not a current index."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li></ul></section></nav>
+    <div class="rail-foot">
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="b05-findings-dispositions-and-resolution-custody.md">Markdown source</a></div>
+      <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
+    </div>
+  </aside>
+  <main class="document" id="content">
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis-reader-lenses</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="document-inner">
+      <header class="page-head">
+        <p class="eyebrow">Subsystem · <span data-identifier-defined>B-05</span></p>
+        <h1>Findings, dispositions, and resolution custody</h1>
+        <p class="page-hint">Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody.</p>
+        <div class="snapshot-strip">
+          <span class="snapshot-item"><b>Branch</b>&nbsp; reader-lenses</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 0fee11b0fea1</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-09-12 13:14:57</span>
+          <span class="snapshot-item"><span class="freshness">Stale: 0 with a survey obligation, 0 exempt, of 58 scoped files</span></span>
+          <span class="snapshot-item">Survey depth&nbsp; <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></span>
+        </div>
+      </header>
+      <article class="content content-subsystem"><p><strong>Status</strong>: <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span> <strong>Layer</strong>: mcp-server</p>
+<section class="section-scope">
+<h2 id="scope"><a class="heading-anchor" href="#scope" aria-label="Link to Scope">§</a>Scope</h2>
+<p>No purpose statement is recorded for this subsystem; the scope below states what it covers.</p>
+<p>mcp-server/src/tools/{findings,resolution,dispositions,concerns,contradictions}.ts — concern review, findings and their severity, the append-only resolution event spine, and the current-state views read from it.</p>
+</section>
+<section class="section-start-here">
+<h2 id="start-here"><a class="heading-anchor" href="#start-here" aria-label="Link to Start here">§</a>Start here</h2>
+<p>mcp-server/src/tools/findings.ts, then mcp-server/src/tools/resolution.ts</p>
+</section>
+<section class="section-structure">
+<h2 id="structure"><a class="heading-anchor" href="#structure" aria-label="Link to Structure">§</a>Structure</h2>
+<p>What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.</p>
+<h3 id="key-types"><a class="heading-anchor" href="#key-types" aria-label="Link to Key types">§</a>Key types</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/key-type/mcp-server-src-schema-sql-finding-state-current</code></td><td data-label="Subject"><code>mcp-server/src/schema.sql:finding_state_current</code></td><td data-label="Statement">A finding's resolution state is a view, not a column: COALESCE over finding_resolution_current with a CASE fallback from the legacy findings.status. Every finding therefore has exactly one state, and the legacy column survives only as the default for findings that never received an event.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>258ccd28fc19</code></td></tr></tbody></table></div>
+<h3 id="state-containers"><a class="heading-anchor" href="#state-containers" aria-label="Link to State containers">§</a>State containers</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/state-container/mcp-server-src-tools-findings-ts-findingtools</code></td><td data-label="Subject"><code>mcp-server/src/tools/findings.ts:findingTools</code></td><td data-label="Statement">The durable state these tools hold is the append-only finding_resolution_events table. Creating a finding inserts its first event in the same transaction, so a finding has a state from the moment it exists; nothing here updates or deletes an event, and a state change is another row. Lifetime is the store's; invalidation is by appending, never by rewriting.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>258ccd28fc19</code></td></tr></tbody></table></div>
+<h3 id="flow-steps"><a class="heading-anchor" href="#flow-steps" aria-label="Link to Flow steps">§</a>Flow steps</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/flow/read-a-findings-state/01</code></td><td data-label="Subject"><code>mcp-server/src/tools/findings.ts:findingTools</code></td><td data-label="Statement">Step 1 of reading a finding's state: the reader joins finding_state_current rather than selecting findings.status, so the derived view is the single definition of the predicate and not one of two that can drift apart.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>258ccd28fc19</code></td></tr></tbody></table></div>
+<h3 id="concurrency-invariants"><a class="heading-anchor" href="#concurrency-invariants" aria-label="Link to Concurrency invariants">§</a>Concurrency invariants</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/concurrency</code></td><td data-label="Subject"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr></code></td><td data-label="Statement">There is no locking around a finding's state because there is nothing to lock: the state is derived from an append-only table, so two writers produce two events and the view reports the later one rather than a lost update. Ordering is the insertion order of the events, within one synchronous connection.</td><td data-label="Epistemic kind">Inference</td><td data-label="Asserted at"><code>258ccd28fc19</code></td></tr></tbody></table></div>
+</section>
+<section class="section-boundaries">
+<h2 id="boundaries"><a class="heading-anchor" href="#boundaries" aria-label="Link to Boundaries">§</a>Boundaries</h2>
+<h3 id="seams"><a class="heading-anchor" href="#seams" aria-label="Link to Seams">§</a>Seams</h3>
+<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">Seam</th><th scope="col">Shared object</th><th scope="col">Other party</th><th scope="col">Assessable</th></tr></thead><tbody><tr><td data-label="Seam"><strong><a href="../seams.html#sm-05"><abbr class="identifier-definition" title="SM-05 — Findings, dispositions, and resolution custody ↔ Locus standing and the reader lenses: Findingresolutionevents and the current-state view over it" aria-label="SM-05 — Findings, dispositions, and resolution custody ↔ Locus standing and the reader lenses: Findingresolutionevents and the current-state view over it">SM-05</abbr></a></strong></td><td data-label="Shared object">finding_resolution_events and the current-state view over it</td><td data-label="Other party"><strong><a href="b06-locus-standing-and-the-reader-lenses.html"><abbr class="identifier-definition" title="B-06 — Locus standing and the reader lenses" aria-label="B-06 — Locus standing and the reader lenses">B-06</abbr></a></strong></td><td data-label="Assessable">both parties are <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></td></tr></tbody></table></div>
+<h3 id="recorded-edges"><a class="heading-anchor" href="#recorded-edges" aria-label="Link to Recorded edges">§</a>Recorded edges</h3>
+<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">From</th><th scope="col">→</th><th scope="col">To</th><th scope="col">Relationship</th><th scope="col">Strength</th><th scope="col">Context</th></tr></thead><tbody><tr><td data-label="From"><strong><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr></strong></td><td data-label="→">→</td><td data-label="To"><strong><a href="b06-locus-standing-and-the-reader-lenses.html"><abbr class="identifier-definition" title="B-06 — Locus standing and the reader lenses" aria-label="B-06 — Locus standing and the reader lenses">B-06</abbr></a></strong></td><td data-label="Relationship">data-flow</td><td data-label="Strength">observed</td><td data-label="Context">the resolution state the findings tools append is what the attention lens partitions on, so an event written here changes which lens a finding appears in, read at mcp-server/src/schema.sql:finding_state_current@258ccd2</td></tr></tbody></table></div>
+</section>
+<section class="section-known-defects-here">
+<h2 id="known-defects-here"><a class="heading-anchor" href="#known-defects-here" aria-label="Link to Known defects here">§</a>Known defects here</h2>
+<p>1 defect here is open or awaiting verification. Each one's full record, with its evidence, is on <a href="../findings.html">Open findings</a>.</p>
+<ul><li>A concern verdict and a confirmed bug are both stored with a ref_sha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints the binding repeats the claim. — <a href="../findings.html#b05-1"><abbr class="identifier-definition" title="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…" aria-label="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…">B05-1</abbr></a> · <span class="severity severity-medium" title="Incorrect edge-case behavior or a correctness issue with a known workaround.">Medium</span> · Open</li></ul>
+</section>
+<section class="section-standing">
+<h2 id="standing"><a class="heading-anchor" href="#standing" aria-label="Link to Standing">§</a>Standing</h2>
+<p><strong>Mapped</strong> — Survey complete through structural analysis, concern review, and adversarial challenge. It cannot justify that the reading is current at the repository head.</p>
+<dl class="summary-list" aria-label="standing"><div><dt>Files read</dt><dd>1 of 5 ledger rows</dd></div><div><dt>Files in scope, not yet read</dt><dd>4 of 5</dd></div><div><dt>Files excluded from the survey obligation</dt><dd>0 of 5</dd></div><div><dt>Ledger rows the repository has changed under</dt><dd>0 of 5</dd></div><div><dt>Active concerns with a disposition recorded here</dt><dd>7 of 15 — 1 confirmed-bug, 5 confirmed-acceptable, 1 out-of-scope</dd></div><div><dt>Findings by resolution state</dt><dd>1 open</dd></div><div><dt>Seams assessable from both sides</dt><dd>1 of 1</dd></div></dl>
+</section>
+<section class="section-survey-record">
+<h2 id="survey-record"><a class="heading-anchor" href="#survey-record" aria-label="Link to Survey record">§</a>Survey record</h2>
+<h3 id="file-ledger"><a class="heading-anchor" href="#file-ledger" aria-label="Link to File ledger">§</a>File ledger</h3>
+<div class="table-wrap"><table><caption>survey record</caption><thead><tr><th scope="col">Path</th><th scope="col">Classification</th><th scope="col">Why in scope</th><th scope="col">Examined at</th></tr></thead><tbody><tr><td data-label="Path"><span id="le-7ce6ef22ff" class="record-anchor"></span><code>mcp-server/src/tools/concerns.ts</code></td><td data-label="Classification">candidate</td><td data-label="Why in scope">add_concern and the coverage view the checklist is read back through.</td><td data-label="Examined at"><code>258ccd28</code></td></tr><tr><td data-label="Path"><span id="le-c6de90fef6" class="record-anchor"></span><code>mcp-server/src/tools/contradictions.ts</code></td><td data-label="Classification">candidate</td><td data-label="Why in scope">The second record family with its own resolution event table, which the History lens reads beside findings.</td><td data-label="Examined at"><code>258ccd28</code></td></tr><tr><td data-label="Path"><span id="le-9736e1d219" class="record-anchor"></span><code>mcp-server/src/tools/dispositions.ts</code></td><td data-label="Classification">candidate</td><td data-label="Why in scope">set_disposition is the concerns phase's deliverable and the prerequisite for the adversarial advance.</td><td data-label="Examined at"><code>258ccd28</code></td></tr><tr><td data-label="Path"><span id="le-e0b8f662c1" class="record-anchor"></span><code>mcp-server/src/tools/resolution.ts</code></td><td data-label="Classification">candidate</td><td data-label="Why in scope">verify_finding_fix and the audit tool: post-fix evidence at the repaired revision, with ancestry checked.</td><td data-label="Examined at"><code>258ccd28</code></td></tr><tr><td data-label="Path"><span id="le-61c74bed77" class="record-anchor"></span><code>mcp-server/src/tools/findings.ts</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">add_finding, update_finding_status and the readers; every state change writes a finding_resolution_events row and every reader joins the derived view.</td><td data-label="Examined at"><code>258ccd28</code></td></tr></tbody></table></div>
+<h3 id="concern-review"><a class="heading-anchor" href="#concern-review" aria-label="Link to Concern review">§</a>Concern review</h3>
+<div class="record-list record-list-concern-disposition" role="list" aria-label="survey record"><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-bv-1" data-record-label="concern disposition BV-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-bv-1"><strong><a href="../concerns.html#bv-1"><abbr class="identifier-definition" title="BV-1 — Boundary Validation: Tool arguments carry workspace-relative paths, revisions, and output directories supplied by an agent." aria-label="BV-1 — Boundary Validation: Tool arguments carry workspace-relative paths, revisions, and output directories supplied by an agent.">BV-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Every path these tools store is guarded — fix_location through requireWorkspaceSourcePath and each primary_files entry through requireWorkspaceCitation — and the one unguarded string, a disposition's free-text evidence field, is never opened, joined on, or resolved: it is displayed, and non-strict parsing still refuses a value pointing into reserved tool state.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cc-1" data-record-label="concern disposition CC-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cc-1"><strong><a href="../concerns.html#cc-1"><abbr class="identifier-definition" title="CC-1 — Cache Coherence: Derived state is served from SQL views over append-only event tables (findingstatecurrent, filestanding)." aria-label="CC-1 — Cache Coherence: Derived state is served from SQL views over append-only event tables (findingstatecurrent, filestanding).">CC-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Both readers in this subsystem join finding_state_current and return its resolution_state beside the coarse column rather than instead of it, and the verification path reads finding_resolution_current directly, so nothing here holds a second mapping of findings.status.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-ev-1" data-record-label="concern disposition EV-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-ev-1"><strong><a href="../concerns.html#ev-1"><abbr class="identifier-definition" title="EV-1 — Evidence Integrity: Claims and evidence are bound to git revisions." aria-label="EV-1 — Evidence Integrity: Claims and evidence are bound to git revisions.">EV-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-bug" title="A defect supported by evidence and retained after adversarial review.">Confirmed defect</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">set_disposition and add_finding both take ref_sha as an unvalidated string, and the disposition's free-text citation is parsed in non-strict mode, so a verdict can be bound to a revision that resolves nowhere; verify_finding_fix in the same module resolves both its revisions and checks ancestry, which shows the resolution is available and simply not applied where a reading is recorded.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-gt-1" data-record-label="concern disposition GT-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-gt-1"><strong><a href="../concerns.html#gt-1"><abbr class="identifier-definition" title="GT-1 — Generated Artifact Drift: One vocabulary source feeds generated TypeScript and Python enum modules, SQL CHECK literals, tool validators, and hand-written SKILL.md prose." aria-label="GT-1 — Generated Artifact Drift: One vocabulary source feeds generated TypeScript and Python enum modules, SQL CHECK literals, tool validators, and hand-written SKILL.md prose.">GT-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">This subsystem is where the drift the whole contract was built for was found — a tool accepting nine evidence qualities over a CHECK admitting five — and it now validates every enum argument against the generated arrays rather than a local list, so the tool side and the SQL side are two renderings of one source with parity asserted in CI.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-rc-1" data-record-label="concern disposition RC-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-rc-1"><strong><a href="../concerns.html#rc-1"><abbr class="identifier-definition" title="RC-1 — Resource Lifecycle: The server holds one SQLite handle for the life of the process and the storage directory is a git repository it also writes." aria-label="RC-1 — Resource Lifecycle: The server holds one SQLite handle for the life of the process and the storage directory is a git repository it also writes.">RC-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Nothing here owns a resource: the durable state is an append-only table written through the connection <a href="b02-repository-binding-and-storage-custody.html"><abbr class="identifier-definition" title="B-02 — Repository binding and storage custody" aria-label="B-02 — Repository binding and storage custody">B-02</abbr></a> holds, and the writes that must not interleave are wrapped in db.transaction rather than held under a handle of this subsystem's own.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-5" data-record-label="concern disposition SC-5"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-5"><strong><a href="../concerns.html#sc-5"><abbr class="identifier-definition" title="SC-5 — Seam Contract: SM-05, the event spine and its view between B-05 and B-06." aria-label="SC-5 — Seam Contract: SM-05, the event spine and its view between B-05 and B-06.">SC-5</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">From the appender's side: every state change is a row on finding_resolution_events written in the same transaction as the change that caused it, and this party's own readers go through the view rather than the column, so what it publishes to the partitioner is one state per finding with no second opinion behind it.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-zd-1" data-record-label="concern disposition ZD-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-zd-1"><strong><a href="../concerns.html#zd-1"><abbr class="identifier-definition" title="ZD-1 — Zero Denominator Verification: Several gates assert over records that may not exist." aria-label="ZD-1 — Zero Denominator Verification: Several gates assert over records that may not exist.">ZD-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The guards here cannot be satisfied by an absent subject: add_finding inserts the first resolution event in the same transaction as the finding, so no finding exists without a state to read, and the overturn guard requires evidence attached in the current session — a condition an empty evidence table fails rather than passes.</div></div></div></article></div>
+<h3 id="survey-artifact"><a class="heading-anchor" href="#survey-artifact" aria-label="Link to Survey artifact">§</a>Survey artifact</h3>
+<h4 id="b-05-findings-dispositions-and-resolution-custody"><a class="heading-anchor" href="#b-05-findings-dispositions-and-resolution-custody" aria-label="Link to B-05 · Findings, dispositions, and resolution custody">§</a><strong><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr></strong> · Findings, dispositions, and resolution custody</h4>
+<p>Structural inventory at <code>258ccd2</code>.</p>
+<h5 id="key-types-2"><a class="heading-anchor" href="#key-types-2" aria-label="Link to Key types">§</a>Key types</h5>
+<div class="record-list record-list-structural-inventory" role="list" aria-label="survey record"><article class="record record-structural-inventory" role="listitem" aria-labelledby="structural-inventory-finding-state-current" data-record-label="structural inventory finding_state_current"><header class="record-meta"><h3 class="record-primary" id="structural-inventory-finding-state-current"><code>finding_state_current</code></h3><dl class="record-facts"><div class="record-fact record-fact-source"><dt>Source</dt><dd><code>mcp-server/src/schema.sql:finding_state_current@258ccd2</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Role</p><div class="record-copy">resolution state as a view: COALESCE over the event spine with a legacy fallback</div></div></div></article><article class="record record-structural-inventory" role="listitem" aria-labelledby="structural-inventory-findingtools" data-record-label="structural inventory findingTools"><header class="record-meta"><h3 class="record-primary" id="structural-inventory-findingtools"><code>findingTools</code></h3><dl class="record-facts"><div class="record-fact record-fact-source"><dt>Source</dt><dd><code>mcp-server/src/tools/findings.ts:findingTools@258ccd2</code></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Role</p><div class="record-copy">the writes and the readers; every state change is an appended event</div></div></div></article></div>
+<h5 id="state-containers-2"><a class="heading-anchor" href="#state-containers-2" aria-label="Link to State containers">§</a>State containers</h5>
+<div class="table-wrap lifecycle-table"><table><caption>survey record</caption><thead><tr><th scope="col">Name</th><th scope="col">Stores</th><th scope="col">Lifetime</th><th scope="col">Populated by</th><th scope="col">Invalidated by</th></tr></thead><tbody><tr><th scope="row" data-label="Name"><span class="table-key"><code>finding_resolution_events</code></span><span class="table-detail"><span class="visually-hidden">Location: </span>the store</span></th><td data-label="Stores">one row per state transition</td><td data-label="Lifetime">persistent</td><td data-label="Populated by"><code>add_finding</code> in the same transaction as the finding, then every transition tool</td><td data-label="Invalidated by">nothing — invalidation is by appending</td></tr></tbody></table></div>
+<h5 id="data-flow-reading-a-finding-s-state"><a class="heading-anchor" href="#data-flow-reading-a-finding-s-state" aria-label="Link to Data flow · reading a finding&#x27;s state">§</a>Data flow · reading a finding's state</h5>
+<ol><li>The reader joins <code>finding_state_current</code> rather than selecting <code>findings.status</code>, so the view is the single definition of the predicate (<code>mcp-server/src/tools/findings.ts:findingTools@258ccd2</code>).</li></ol>
+<h5 id="concurrency-model"><a class="heading-anchor" href="#concurrency-model" aria-label="Link to Concurrency model">§</a>Concurrency model</h5>
+<p>Nothing is locked because nothing is updated: two writers produce two events and the view reports the later one rather than a lost update. Ordering is the insertion order of the events. Recorded as an inference.</p>
+<h5 id="seam-contracts"><a class="heading-anchor" href="#seam-contracts" aria-label="Link to Seam contracts">§</a>Seam contracts</h5>
+<ul><li><strong><a href="../seams.html#sm-05"><abbr class="identifier-definition" title="SM-05 — Findings, dispositions, and resolution custody ↔ Locus standing and the reader lenses: Findingresolutionevents and the current-state view over it" aria-label="SM-05 — Findings, dispositions, and resolution custody ↔ Locus standing and the reader lenses: Findingresolutionevents and the current-state view over it">SM-05</abbr></a> · the event spine and its view, with <a href="b06-locus-standing-and-the-reader-lenses.html"><abbr class="identifier-definition" title="B-06 — Locus standing and the reader lenses" aria-label="B-06 — Locus standing and the reader lenses">B-06</abbr></a>.</strong> This side appends; the reader partitions on the result. A finding in both lenses or in neither is the defect the partition gate exists to catch.</li></ul>
+<h5 id="concern-review-2"><a class="heading-anchor" href="#concern-review-2" aria-label="Link to Concern review">§</a>Concern review</h5>
+<p>Six active concerns, all terminal at <code>0fee11b</code>. One confirmed bug.</p>
+<div class="table-wrap"><table><caption>survey record</caption><thead><tr><th scope="col">Concern</th><th scope="col">Disposition</th><th scope="col">Reading</th></tr></thead><tbody><tr><td data-label="Concern"><a href="../concerns.html#cc-1"><abbr class="identifier-definition" title="CC-1 — Cache Coherence: Derived state is served from SQL views over append-only event tables (findingstatecurrent, filestanding)." aria-label="CC-1 — Cache Coherence: Derived state is served from SQL views over append-only event tables (findingstatecurrent, filestanding).">CC-1</abbr></a></td><td data-label="Disposition"><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></td><td data-label="Reading">Both readers join <code>finding_state_current</code>; the verification path reads the event spine directly.</td></tr><tr><td data-label="Concern"><a href="../concerns.html#rc-1"><abbr class="identifier-definition" title="RC-1 — Resource Lifecycle: The server holds one SQLite handle for the life of the process and the storage directory is a git repository it also writes." aria-label="RC-1 — Resource Lifecycle: The server holds one SQLite handle for the life of the process and the storage directory is a git repository it also writes.">RC-1</abbr></a></td><td data-label="Disposition"><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></td><td data-label="Reading">The durable state is an append-only table written through <a href="b02-repository-binding-and-storage-custody.html"><abbr class="identifier-definition" title="B-02 — Repository binding and storage custody" aria-label="B-02 — Repository binding and storage custody">B-02</abbr></a>'s connection.</td></tr><tr><td data-label="Concern"><a href="../concerns.html#bv-1"><abbr class="identifier-definition" title="BV-1 — Boundary Validation: Tool arguments carry workspace-relative paths, revisions, and output directories supplied by an agent." aria-label="BV-1 — Boundary Validation: Tool arguments carry workspace-relative paths, revisions, and output directories supplied by an agent.">BV-1</abbr></a></td><td data-label="Disposition"><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></td><td data-label="Reading">Every stored path is guarded; the one unguarded string is displayed, never opened or joined on.</td></tr><tr><td data-label="Concern"><a href="../concerns.html#ev-1"><abbr class="identifier-definition" title="EV-1 — Evidence Integrity: Claims and evidence are bound to git revisions." aria-label="EV-1 — Evidence Integrity: Claims and evidence are bound to git revisions.">EV-1</abbr></a></td><td data-label="Disposition"><strong>confirmed-bug</strong> (<a href="../findings.html#b05-1"><abbr class="identifier-definition" title="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…" aria-label="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…">B05-1</abbr></a>)</td><td data-label="Reading"><code>set_disposition</code> and <code>add_finding</code> bind a reading to an unresolved revision.</td></tr><tr><td data-label="Concern"><a href="../concerns.html#gt-1"><abbr class="identifier-definition" title="GT-1 — Generated Artifact Drift: One vocabulary source feeds generated TypeScript and Python enum modules, SQL CHECK literals, tool validators, and hand-written SKILL.md prose." aria-label="GT-1 — Generated Artifact Drift: One vocabulary source feeds generated TypeScript and Python enum modules, SQL CHECK literals, tool validators, and hand-written SKILL.md prose.">GT-1</abbr></a></td><td data-label="Disposition"><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></td><td data-label="Reading">Where the drift the contract was built for was found; every enum argument now validates against the generated arrays.</td></tr><tr><td data-label="Concern"><a href="../concerns.html#zd-1"><abbr class="identifier-definition" title="ZD-1 — Zero Denominator Verification: Several gates assert over records that may not exist." aria-label="ZD-1 — Zero Denominator Verification: Several gates assert over records that may not exist.">ZD-1</abbr></a></td><td data-label="Disposition"><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></td><td data-label="Reading">A finding has a state from the moment it exists, and the overturn guard is failed by an empty evidence table, not passed by one.</td></tr></tbody></table></div>
+<h5 id="adversarial-review"><a class="heading-anchor" href="#adversarial-review" aria-label="Link to Adversarial review">§</a>Adversarial review</h5>
+<p><strong>Finding <a href="../findings.html#b05-1"><abbr class="identifier-definition" title="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…" aria-label="B05-1 — Finding in Findings, dispositions, and resolution custody: A concern verdict and a confirmed bug are both stored with a refsha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints…">B05-1</abbr></a> — upheld.</strong> Claim A: a verdict can be bound to a revision that resolves nowhere. Claim B: the schema constrains it. Evidence for Claim B: <code>dispositions.ref_sha</code> and <code>findings.ref_sha</code> are both plain nullable <code>TEXT</code> — nothing below the handler asks whether the revision exists. Verdict: <strong>upheld</strong>.</p>
+<p><strong>Claims.</strong> Four targets, all survived.</p>
+<div class="table-wrap"><table><caption>survey record</caption><thead><tr><th scope="col">Claim</th><th scope="col">Challenge</th><th scope="col">Outcome</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/key-type/…finding-state-current</code></td><td data-label="Challenge">Can a finding have two states, or none?</td><td data-label="Outcome">survived — the LEFT JOIN gives exactly one row and the CASE supplies a state for an eventless finding.</td></tr><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/state-container/…findingtools</code></td><td data-label="Challenge">Is any event ever updated or deleted?</td><td data-label="Outcome">survived</td></tr><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/flow/read-a-findings-state/01</code></td><td data-label="Challenge">Does any reader select <code>findings.status</code> instead?</td><td data-label="Outcome">survived here; two readers elsewhere do, which is <a href="../findings.html#b04-5"><abbr class="identifier-definition" title="B04-5 — Finding in Survey record tools: The confirmedbugs rollup on every row listsubsystems returns is computed from findings.status, not from findingstatecurrent, so the dashboard&#x27;s count of open bugs and a subsystem page&#x27;s list of them are produced by two…" aria-label="B04-5 — Finding in Survey record tools: The confirmedbugs rollup on every row listsubsystems returns is computed from findings.status, not from findingstatecurrent, so the dashboard&#x27;s count of open bugs and a subsystem page&#x27;s list of them are produced by two…">B04-5</abbr></a> and <a href="../findings.html#b08-1"><abbr class="identifier-definition" title="B08-1 — Finding in Materializer rendering pipeline: The subsystem map prints each subsystem&#x27;s finding count as &quot;N (M open)&quot; where M is computed from findings.status, while the subsystem page for the same subsystem lists those findings with a resolutionstate read from…" aria-label="B08-1 — Finding in Materializer rendering pipeline: The subsystem map prints each subsystem&#x27;s finding count as &quot;N (M open)&quot; where M is computed from findings.status, while the subsystem page for the same subsystem lists those findings with a resolutionstate read from…">B08-1</abbr></a>.</td></tr><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-05 — Findings, dispositions, and resolution custody" aria-label="B-05 — Findings, dispositions, and resolution custody">B-05</abbr>/concurrency</code></td><td data-label="Challenge">Is there a read-modify-write two writers could interleave?</td><td data-label="Outcome">survived</td></tr></tbody></table></div>
+</section></article>
+      <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="b05-findings-dispositions-and-resolution-custody.md">Inspect Markdown</a></p></footer>
+    </div>
+  </main>
+</div>
+<script src="../search-index.js"></script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const themeButton = document.querySelector('[data-theme-toggle]');
+  const themeStorageKey = 'amanuensis-theme';
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+  let storedTheme = null;
+  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
+  if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
+
+  const updateThemeLabel = () => {
+    if (!themeButton) return;
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
+    themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
+  };
+  const applyTheme = (theme) => {
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    updateThemeLabel();
+  };
+  updateThemeLabel();
+  themeButton?.addEventListener('click', () => {
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    const theme = dark ? 'light' : 'dark';
+    applyTheme(theme);
+    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== themeStorageKey) return;
+    applyTheme(event.newValue);
+  });
+  systemTheme.addEventListener?.('change', updateThemeLabel);
+
+  const menuButton = document.querySelector('[data-nav-toggle]');
+  const navRail = document.querySelector('.nav-rail');
+  const documentInner = document.querySelector('.document-inner');
+  const narrow = matchMedia('(max-width: 900px)');
+  const setMenuOpen = (open, restoreFocus = false) => {
+    const effectiveOpen = Boolean(open && narrow.matches);
+    body.classList.toggle('nav-open', effectiveOpen);
+    menuButton?.setAttribute('aria-expanded', String(effectiveOpen));
+    if (navRail) navRail.inert = narrow.matches && !effectiveOpen;
+    if (documentInner) documentInner.inert = effectiveOpen;
+    if (effectiveOpen) navRail?.querySelector('a, input, button')?.focus();
+    else if (restoreFocus) menuButton?.focus();
+  };
+  setMenuOpen(false);
+  menuButton?.addEventListener('click', () => setMenuOpen(!body.classList.contains('nav-open')));
+  navRail?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+  narrow.addEventListener?.('change', () => setMenuOpen(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
+  });
+
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
+  const search = document.querySelector('[data-nav-search]');
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
+    });
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
+  };
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault(); search?.focus(); search?.select();
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
+})();
+</script>
+</body>
+</html>
