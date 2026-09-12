@@ -246,6 +246,11 @@ jobs:
       # receipt here and over the live store wherever one exists.
       - name: Rebuild coverage — onboarding, batched subsystems, claims, cited edges
         run: node dev/test-rebuild-coverage.mjs
+      # Third arm of the same rebuild: what P17 left at `structural`, carried to
+      # `mapped` through the concern, adversarial and packaging phases. Same
+      # reason it reads a committed receipt, and the same live-store arm.
+      - name: Rebuild depth — concern dispositions, adversarial outcomes, seam assessment
+        run: node dev/test-rebuild-depth.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
