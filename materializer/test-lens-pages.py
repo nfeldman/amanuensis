@@ -29,6 +29,8 @@ Turns red when:
     pairs. The fixture is built so both global predicates report **zero** while
     the pair predicates report 5 of 6 and 15 of 20 (VP4);
   - an unassessed-seam entry drops §2.4.6's `per-party-proxy` sentence;
+  - a subsystem page renders Scope without saying that no purpose statement
+    is recorded, leaving a file-and-boundary list to read as a purpose;
   - a subsystem page does not open with identity and Scope, labels the scope
     Purpose, renders its sections out of §7.3's order, does not end with the
     survey record, or re-records a finding instead of linking to it (§6.2);
@@ -1320,6 +1322,36 @@ def main() -> int:
             return None
 
         check("subsystem pages open with identity and Scope, verbatim", opens_with_scope)
+
+        def scope_says_no_purpose_is_recorded() -> str | None:
+            """§3.1 and §7.3: the page says no purpose statement is recorded.
+
+            `subsystems` has no purpose column at all, so this holds for every
+            subsystem, not only for one whose `scope` is empty. Rendering scope
+            alone leaves a reader to read a file-and-boundary list as the
+            statement of what the subsystem is *for*, which is the relabelling
+            §3.1 forbids and BP6 names.
+            """
+            missing = []
+            for sid, page in subsystem_md.items():
+                if not page:
+                    return f"the {sid} subsystem page could not be read"
+                body = section(page, "Scope")
+                if not re.search(r"no purpose statement is recorded", body, re.IGNORECASE):
+                    missing.append(sid)
+            if missing:
+                shown = subsystem_md.get(missing[0], "")
+                return (
+                    f"{len(missing)} subsystem page(s) render Scope without saying that no"
+                    f" purpose statement is recorded; {missing[0]}'s section reads"
+                    f" {section(shown, 'Scope').strip()[:160]!r}"
+                )
+            return None
+
+        check(
+            "every Scope section says no purpose statement is recorded",
+            scope_says_no_purpose_is_recorded,
+        )
 
         def absent_scope_says_so() -> str | None:
             page = subsystem_md.get("B-03", "")
