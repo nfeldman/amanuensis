@@ -301,6 +301,9 @@ function buildFixture() {
   evidence.run(3, "src/examined.ts", "readLedger", base, "doc-asserted");
   evidence.run(4, "src/examined.ts", "readLedger", head, "test-observed");
   evidence.run(5, "src/examined.ts", "readLedger", head, "pattern-matched");
+  // Same file, a different symbol. A symbol locus must not inherit it, and the
+  // file locus must (§2.5, §3.1's evidence arm).
+  evidence.run(6, "src/examined.ts", "writeLedger", head, "code-verified");
 
   const claim = db.prepare(
     `INSERT INTO claims
@@ -317,6 +320,8 @@ function buildFixture() {
   // carry it, and a reading at `mid` must not.
   claim.run("CL-0", "ledger/readLedger/unbounded", "src/examined.ts:readLedger",
     "the ledger reader retries without a bound", base, base, mid);
+  claim.run("CL-W", "ledger/writeLedger/fsyncs", "src/examined.ts:writeLedger",
+    "the ledger writer fsyncs before it acknowledges", base, base, null);
   // A content claim at a path the ledger classifies `candidate`. §2.3 forbids
   // serving it there; the store holds it all the same.
   claim.run("CL-C", "candidate/parseRow/validates", "src/candidate.ts:parseRow",
@@ -333,6 +338,7 @@ function buildFixture() {
   claimEvidence.run("CL-1", 4);
   claimEvidence.run("CL-0", 3);
   claimEvidence.run("CL-C", 2);
+  claimEvidence.run("CL-W", 6);
 
   const finding = db.prepare(
     `INSERT INTO findings
@@ -859,12 +865,16 @@ check("an opt-in section is served when it is requested", () => {
     : "an explicit section list still served purpose";
 });
 
-check("structure serves the current claim, with its strongest evidence kind", () => {
+check("structure serves the current claims, with the strongest evidence kind", () => {
   const reason = needFixture();
   if (reason) return reason;
   const payload = describeLocus({ locus: "src/examined.ts" });
   const items = sectionOf(payload, "structure")?.items ?? [];
-  if (items.length !== 1) return `structure serves ${items.length} item(s), not the one current claim`;
+  const ids = items.map((entry) => entry.claim_id);
+  // CL-1 by subject, CL-W only through evidence citing the file; CL-0 is
+  // superseded and CL-C belongs to another path.
+  if (JSON.stringify(ids) !== JSON.stringify(["CL-1", "CL-W"]))
+    return `structure serves ${JSON.stringify(ids)}`;
   const item = items[0];
   if (item.claim_id !== "CL-1") return `the item is ${JSON.stringify(item.claim_id)}`;
   if (item.statement !== "the ledger reader retries under a bound")
@@ -874,6 +884,20 @@ check("structure serves the current claim, with its strongest evidence kind", ()
     return `evidence_kind is ${JSON.stringify(item.evidence_kind)}, not the strongest attached`;
   if (item.revision_bound !== true) return "a revision-bound claim is not marked bound";
   return item.authored === "model" ? null : `authored is ${JSON.stringify(item.authored)}`;
+});
+
+check("a symbol locus does not inherit the file's other citations", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  const payload = describeLocus({ locus: "src/examined.ts:readLedger" });
+  if (payload?.locus?.kind !== "symbol") return `the locus kinded ${payload?.locus?.kind}`;
+  const ids = (sectionOf(payload, "structure")?.items ?? []).map((item) => item.claim_id);
+  // The file carries a claim about a second symbol, cited by its own evidence
+  // row. Widening the symbol's evidence arm to the whole file pulls it in.
+  if (ids.includes("CL-W")) return `the symbol served a claim about another symbol: ${JSON.stringify(ids)}`;
+  return JSON.stringify(ids) === JSON.stringify(["CL-1"])
+    ? null
+    : `the symbol serves ${JSON.stringify(ids)}`;
 });
 
 check("defects partition and order follow §3.1", () => {
