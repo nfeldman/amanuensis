@@ -15,11 +15,11 @@
 //     revision_bound (F6/codex, high);
 //   - one of those writers stores something other than the resolved
 //     revision, so revision_bound is a claim the record cannot support;
-//   - the open-finding count is derived from findings.status anywhere — a
-//     duplicate predicate beside finding_state_current — or the master
-//     plan, get_dashboard, and list_subsystems disagree on a store holding a
-//     legacy-only finding and a finding whose event log has overtaken its
-//     coarse status (F9/codex);
+//   - the open-finding count is derived from findings.status in any of the
+//     four surfaces that publish one — a duplicate predicate beside
+//     finding_state_current — or the master plan, get_dashboard, and
+//     list_subsystems disagree on a store holding a legacy-only finding and
+//     a finding whose event log has overtaken its coarse status (F9/codex);
 //   - detect_changes or the standing reachability table writes a literal
 //     stale_reason the vocabulary source does not carry, or either writer
 //     stops reading the generated STALE_REASONS (F4/codex, F2/codex);
@@ -485,7 +485,7 @@ check("the three writers store the resolved revision, so revision_bound is backe
 // F9/codex — one open-finding predicate over finding_state_current.
 // ---------------------------------------------------------------------------
 emit("");
-emit("F9/codex — one open-finding predicate, three readers");
+emit("F9/codex — one open-finding predicate, every reader that publishes a count");
 
 check("no reader derives an open count from findings.status", () => {
   const bad = [];
