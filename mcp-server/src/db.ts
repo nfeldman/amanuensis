@@ -143,7 +143,9 @@ function runMigrations(db: DB): void {
     !hasColumn(db, "finding_resolution_events", "effective_sha")
   ) {
     db.exec("ALTER TABLE finding_resolution_events ADD COLUMN effective_sha TEXT");
-    db.exec("UPDATE finding_resolution_events SET effective_sha = fix_sha WHERE fix_sha IS NOT NULL");
+    db.exec(
+      "UPDATE finding_resolution_events SET effective_sha = fix_sha WHERE fix_sha IS NOT NULL",
+    );
   }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
   // schema.sql handle the new index and scope_gaps on the next
