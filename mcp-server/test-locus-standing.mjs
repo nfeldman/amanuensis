@@ -37,6 +37,14 @@
 //     dropped, or written over the workspace head;
 //   - the gate does not run in CI.
 //
+// Eight item-level checks below request their sections explicitly rather than
+// taking the default set. P7's byte budget (§4.1) leaves a default response on
+// this fixture with standing, every census, and no item at all, so an item-level
+// assertion on a default call would be vacuous; the same rows are read at the
+// every-section budget and the census reconciliation still reads the default
+// call. What this gate no longer witnesses is item *selection* in the default
+// mode, which is P7's gate's subject.
+//
 // False greens it cannot exclude. The account's *labels* are asserted against
 // this file's own constants, so a consistent rename of a section key here and
 // in the implementation would pass — the enum source and the spec table are
@@ -868,7 +876,12 @@ check("an opt-in section is served when it is requested", () => {
 check("structure serves the current claims, with the strongest evidence kind", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const payload = describeLocus({ locus: "src/examined.ts" });
+  // P7's budget: on this fixture a default call fits standing and the census
+  // and no item at all (§4.1), so the sections are requested explicitly and the
+  // assertion reads the same rows at the expanded budget. What the default call
+  // does instead — declare every unserved row in omitted[] — is asserted by the
+  // census reconciliation above.
+  const payload = describeLocus({ locus: "src/examined.ts", sections: SECTIONS });
   const items = sectionOf(payload, "structure")?.items ?? [];
   const ids = items.map((entry) => entry.claim_id);
   // CL-1 by subject, CL-W only through evidence citing the file; CL-0 is
@@ -889,7 +902,7 @@ check("structure serves the current claims, with the strongest evidence kind", (
 check("a symbol locus does not inherit the file's other citations", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const payload = describeLocus({ locus: "src/examined.ts:readLedger" });
+  const payload = describeLocus({ locus: "src/examined.ts:readLedger", sections: SECTIONS });
   if (payload?.locus?.kind !== "symbol") return `the locus kinded ${payload?.locus?.kind}`;
   const ids = (sectionOf(payload, "structure")?.items ?? []).map((item) => item.claim_id);
   // The file carries a claim about a second symbol, cited by its own evidence
@@ -903,7 +916,7 @@ check("a symbol locus does not inherit the file's other citations", () => {
 check("defects partition and order follow §3.1", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const defects = sectionOf(describeLocus({ locus: "src/examined.ts" }), "defects");
+  const defects = sectionOf(describeLocus({ locus: "src/examined.ts", sections: SECTIONS }), "defects");
   const items = defects?.items ?? [];
   if (items.length !== 5) return `defects serves ${items.length} item(s), not the five seeded`;
   const partitions = [...new Set(items.map((item) => item.partition))];
@@ -923,7 +936,10 @@ check("defects partition and order follow §3.1", () => {
 check("purpose renders scope separately and says no purpose statement is recorded", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const purpose = sectionOf(describeLocus({ locus: "src/examined.ts" }), "purpose");
+  const purpose = sectionOf(
+    describeLocus({ locus: "src/examined.ts", sections: SECTIONS }),
+    "purpose",
+  );
   const items = purpose?.items ?? [];
   if (items.length !== 1) return `purpose serves ${items.length} item(s)`;
   const item = items[0];
@@ -940,7 +956,7 @@ check("purpose renders scope separately and says no purpose statement is recorde
 check("boundaries and terms carry unbound rows as revision_bound false", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const payload = describeLocus({ locus: "src/examined.ts" });
+  const payload = describeLocus({ locus: "src/examined.ts", sections: SECTIONS });
   const boundaries = sectionOf(payload, "boundaries")?.items ?? [];
   if (boundaries.length !== 2)
     return `boundaries serves ${boundaries.length} item(s), not the seam and the xref`;
@@ -1030,12 +1046,20 @@ check("only the three sourceable sections support a historical reading", () => {
 check("a claim opened at a strict ancestor and still open survives the cut", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const atMid = describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.mid });
+  const atMid = describeLocus({
+    locus: "src/examined.ts",
+    sections: SECTIONS,
+    as_of_sha: fixture.mid,
+  });
   const ids = (sectionOf(atMid, "structure")?.items ?? []).map((item) => item.claim_id);
   if (!ids.includes("CL-1"))
     return `the reading at mid dropped the open claim: ${JSON.stringify(ids)}`;
   if (ids.includes("CL-0")) return "a claim invalidated at mid was served by the reading at mid";
-  const atBase = describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.base });
+  const atBase = describeLocus({
+    locus: "src/examined.ts",
+    sections: SECTIONS,
+    as_of_sha: fixture.base,
+  });
   const baseIds = (sectionOf(atBase, "structure")?.items ?? []).map((item) => item.claim_id);
   return baseIds.includes("CL-0")
     ? null
@@ -1045,9 +1069,14 @@ check("a claim opened at a strict ancestor and still open survives the cut", () 
 check("a resolution event at a later commit is not replayed into an earlier reading", () => {
   const reason = needFixture();
   if (reason) return reason;
-  const now = sectionOf(describeLocus({ locus: "src/examined.ts" }), "defects")?.items ?? [];
+  const now =
+    sectionOf(describeLocus({ locus: "src/examined.ts", sections: SECTIONS }), "defects")?.items ??
+    [];
   const then =
-    sectionOf(describeLocus({ locus: "src/examined.ts", as_of_sha: fixture.mid }), "defects")?.items ?? [];
+    sectionOf(
+      describeLocus({ locus: "src/examined.ts", sections: SECTIONS, as_of_sha: fixture.mid }),
+      "defects",
+    )?.items ?? [];
   const stateOf = (items, id) => items.find((item) => item.finding_id === id)?.resolution_state;
   if (stateOf(now, "B01-2") !== "fixed-pending-verification")
     return `at head B01-2 reads ${JSON.stringify(stateOf(now, "B01-2"))}`;

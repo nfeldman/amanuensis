@@ -1040,9 +1040,6 @@ const SECTION_RETENTION: readonly AccountSection[] = [
   "history_pointer", // detail behind a pointer whose counts are always served
 ];
 
-/** §3.1's terminal resolution states, which §4.3 drops before the others. */
-const TERMINAL_PARTITIONS: readonly string[] = ["verified-fixed", "ruled-out", "accepted"];
-
 /**
  * A stable id for every candidate, distinct across the whole response: the
  * ledger reconciles against the census by id (§4.3), so two rows that share an
@@ -1130,9 +1127,7 @@ function retentionOrder(section: AccountSection, build: SectionBuild): number[] 
       build.items[index]?.kind === "resolution-event" ? 0 : 1;
     const recency = (index: number): string =>
       String(build.items[index]?.event_id ?? build.items[index]?.started_at ?? "");
-    return indices.sort(
-      (a, b) => rank(a) - rank(b) || recency(b).localeCompare(recency(a)),
-    );
+    return indices.sort((a, b) => rank(a) - rank(b) || recency(b).localeCompare(recency(a)));
   }
   // The remaining five sections are already presented in retention order:
   //   defects      §3.1's partition order leads with the two non-terminal
@@ -1192,9 +1187,9 @@ function buildLedger(groups: readonly DroppedGroup[], idBudget: number): Omissio
 
 /** The array standing keeps its unknown[] in, or null for a kind that has none. */
 function standingUnknown(standing: StandingBlock, kind: LocusKind): UnknownEntry[] | null {
-  const block = (
-    kind === "symbol" ? (standing as SymbolStandingBlock).file : standing
-  ) as { unknown?: unknown } | undefined;
+  const block = (kind === "symbol" ? (standing as SymbolStandingBlock).file : standing) as
+    | { unknown?: unknown }
+    | undefined;
   return Array.isArray(block?.unknown) ? (block.unknown as UnknownEntry[]) : null;
 }
 
@@ -1389,7 +1384,8 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
     }
     if (unknownArray) {
       const kept = new Set<UnknownEntry>();
-      for (const group of unknownGroups) for (const entry of group.entries.slice(0, group.keep)) kept.add(entry);
+      for (const group of unknownGroups)
+        for (const entry of group.entries.slice(0, group.keep)) kept.add(entry);
       unknownArray.splice(0, unknownArray.length, ...unknownAll.filter((entry) => kept.has(entry)));
     }
     const groups: DroppedGroup[] = [];
@@ -1405,10 +1401,10 @@ function describeLocusHandler(args: Record<string, unknown>, ctx: ServerContext)
       // section it did ask for gives up its least-retained items, by budget.
       // The two reasons are exclusive by construction (§4.3).
       const reason: "policy" | "budget" = state.requested ? "budget" : "policy";
-      const droppedIndices = state.requested
-        ? state.retention.slice(state.keep)
-        : state.retention;
-      const ids = droppedIndices.map((index) => itemId(state.name, state.build.items[index] as Item));
+      const droppedIndices = state.requested ? state.retention.slice(state.keep) : state.retention;
+      const ids = droppedIndices.map((index) =>
+        itemId(state.name, state.build.items[index] as Item),
+      );
       if (ids.length) groups.push({ section: state.name, reason, ids });
     }
     omitted.splice(0, omitted.length, ...buildLedger(groups, idBudget));

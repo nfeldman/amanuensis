@@ -35,6 +35,18 @@
 //     weaker evidence is served while a stronger one is dropped;
 //   - the gate does not run in CI.
 //
+// What the measurements below show, and the gate does not judge: §4.1's 8192
+// bytes are the *whole* wire response, and the emitted envelope measures 2.13x
+// the compact payload it carries (the JSON-escaped text block plus the
+// duplicated structuredContent). The floor — standing, the eight section views,
+// the census, the ledger, the trace, and no item at all — is 3467 bytes on a
+// one-owner file with an empty store and 3695 on §4.4's pathological locus, so
+// the default response has room for nought to two items and a second owner puts
+// the floor alone past the budget. The assertions here therefore bind the floor
+// and the declaration; the account's content under pressure is asserted on the
+// every-section budget, where there is room to serve some of it. Whether 8192 is
+// the right number is decision 5's to revisit, not this gate's.
+//
 // False greens it cannot exclude. The budget *numbers* are this file's own
 // constants read against §4.1's table; a consistent change to both the spec
 // table and the implementation would pass, which is what §13's static

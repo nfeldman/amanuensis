@@ -446,7 +446,7 @@ _197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `describe_locus` | Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. |
+| `describe_locus` | Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
 
 ### `logging` (3)
 
