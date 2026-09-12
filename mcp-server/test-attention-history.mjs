@@ -1213,6 +1213,7 @@ await check("a caller cannot inflate either response past its own §4.1 budget",
   }
   // The bound must be advertised, not only enforced, or a host that validates
   // its calls cannot tell a refusal from a server fault.
+  const bounds = {};
   for (const [name, fields] of [
     ["get_history", ["locus", "finding_id"]],
     ["get_attention", ["scope"]],
@@ -1224,7 +1225,27 @@ await check("a caller cannot inflate either response past its own §4.1 budget",
       if (!property) return `${name} advertises no ${field} property`;
       if (typeof property.maxLength !== "number")
         return `${name}.${field} advertises no maxLength, so an unbounded string is schema-valid`;
+      bounds[`${name}.${field}`] = property.maxLength;
     }
+  }
+  // The bound has to be *compatible* with the budget, not merely present: a
+  // subject at the longest length the schema accepts must still leave a
+  // response its tool can serve. Raising one number without re-reading the
+  // other is what this turns red on.
+  for (const [name, args, budget] of [
+    ["get_history", (value) => ({ locus: value }), HISTORY_BUDGET],
+    ["get_attention", (value) => ({ scope: value }), ATTENTION_BUDGET],
+  ]) {
+    const longest = bounds[`${name}.${name === "get_history" ? "locus" : "scope"}`];
+    let payload = null;
+    try {
+      payload = call(name, args("a".repeat(longest)));
+    } catch (e) {
+      return `${name} refuses a subject of the length it advertises — ${e && e.message ? e.message : e}`;
+    }
+    const wire = wireBytes(payload);
+    if (wire > budget)
+      return `${name} serves ${wire} bytes for a subject of the ${longest}-byte length it advertises, over its ${budget}-byte budget`;
   }
   return null;
 });
