@@ -284,8 +284,8 @@
       "status": "done",
       "attempts": 1,
       "start_sha": "8f0db681161175a831f07bf68bd46e7aa7410a69",
-      "red_sha": "595165a",
-      "green_sha": "3f8b7f3",
+      "red_sha": "595165aa0c1468e7b9bab8829ceedc30778a5b81",
+      "green_sha": "3f8b7f39ee85a532ce607ea9bad033f416fe6279",
       "verified_by_launcher": false,
       "blocked_reason": "",
       "notes": "The lint is wired at the overview thesis only; the subsystem purpose sentence is C33/P8's slot, and orientation_violations is ready for it. The obligation-bearing stale counts live in one new helper, renderers.ledger_freshness, written as SUM(CASE ...) rather than §11.2's COUNT(*) FILTER — same rows, no SQLite version floor — so P4 should point the HTML strip at that helper instead of adding a second copy. Left for whoever owns html_projection.py: its table caption tracks level-2 headings only, so the four dimension definition lists share one aria-label; each is still named by its own h3."
