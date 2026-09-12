@@ -513,6 +513,55 @@ check("the tool's own contract says reachability is unchecked", () => {
   return null;
 });
 
+// One table read twice: by the published schema's `pattern` and, above, by the
+// handler. A grammar widened in one place and not the other lets a validating
+// host send a call the server then refuses, or refuse one it would accept.
+const GRAMMAR_CASES = [
+  ["one-line: why this link matters", false, "prose with no token"],
+  ["B-01 reads src/a.ts:writeQueue", false, "a token with no revision"],
+  ["B-01 reads src/a.ts:writeQueue@abc12", false, "a five-character revision"],
+  ["B-01 reads src/a.ts:writeQueue@NOT_A_SHA", false, "a non-hex revision"],
+  ["see (src/a.ts:writeQueue@abc1234) here", false, "a token wrapped in punctuation"],
+  ["B-01 reads src/a.ts:writeQueue@abc1234", true, "a token inside prose"],
+  ["src/a.ts:writeQueue@abc1234", true, "a token that is the whole context"],
+  [`src/a.ts:writeQueue@${"a".repeat(40)} first`, true, "a token at the start"],
+];
+
+check("the published schema carries the grammar the handler enforces", () => {
+  if (loadError) return `the xref tools could not be loaded — ${loadError}`;
+  const tool = toolNamed("add_xref");
+  if (!tool) return "add_xref is not exported by the built tools";
+  const source = tool.inputSchema?.properties?.context?.pattern;
+  if (typeof source !== "string" || source.length === 0) {
+    return "the published context schema carries no pattern, so a validating host cannot see the grammar";
+  }
+  let pattern = null;
+  try {
+    pattern = new RegExp(source);
+  } catch (e) {
+    return `the published pattern is not a usable regular expression — ${e && e.message ? e.message : e}`;
+  }
+  const wrong = GRAMMAR_CASES.filter(([context, accepted]) => pattern.test(context) !== accepted).map(
+    ([, accepted, label]) => `${label} is ${accepted ? "refused" : "accepted"}`,
+  );
+  return wrong.length ? `the published pattern disagrees with the grammar: ${wrong.join("; ")}` : null;
+});
+
+check("the handler agrees with the published grammar case for case", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  const wrong = [];
+  for (const [template, accepted, label] of GRAMMAR_CASES) {
+    // The fixture's own HEAD, so an accepted case has a revision that resolves.
+    const context = template.replace(/@[0-9a-fA-F]{7,40}/g, `@${fixture.head}`);
+    const pair = nextPair();
+    const message = refusal("add_xref", { ...pair, context }, fixture.ctx);
+    if (accepted && message !== null) wrong.push(`${label} was refused — ${message}`);
+    if (!accepted && message === null) wrong.push(`${label} was accepted`);
+  }
+  return wrong.length ? wrong.join("; ") : null;
+});
+
 check("context is required by the published input schema", () => {
   if (loadError) return `the xref tools could not be loaded — ${loadError}`;
   const tool = toolNamed("add_xref");
@@ -880,14 +929,20 @@ check("phase-2-structural.md tells Phase 2 to record crossing edges with a citat
   const text = readText(join(REPO, PHASE_2_REL));
   if (text === null) return `${PHASE_2_REL} is absent`;
   if (!/add_xref/.test(text)) return "the document never names add_xref";
-  const sentences = text
+  // Read the step that names add_xref, not the rest of the document: the file
+  // already says "cite everything" about claims, and a citation obligation
+  // borrowed from a later section is not one this step carries.
+  const at = text.indexOf("add_xref");
+  const before = text.lastIndexOf("\n### ", at);
+  const after = text.indexOf("\n### ", at);
+  const section = text.slice(before === -1 ? 0 : before + 1, after === -1 ? text.length : after);
+  const sentences = section
     .replace(/\n+/g, " ")
     .split(/(?<=\.)\s+/)
     .filter((sentence) => /add_xref/.test(sentence));
   if (!sentences.some((sentence) => /\bmust\b|\brecord\b|\bone row\b/i.test(sentence))) {
     return "add_xref is mentioned but never as an obligation on the phase";
   }
-  const section = text.slice(text.indexOf("add_xref"));
   if (!/cross(?:es|ing|-)?\s*(?:a\s+)?(?:subsystem\s+)?boundar/i.test(section)) {
     return "the instruction does not say which relationships are recorded — the ones that cross a subsystem boundary";
   }
