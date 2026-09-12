@@ -354,6 +354,12 @@ function buildFixture() {
     otherCode: evidenceId("src/other.ts", "code-verified", "Cache", base),
     otherNamed: evidenceId("src/other.ts", "name-inferred", "lock", base),
     externalDoc: evidenceId("src/external.ts", "doc-asserted", "contract", base),
+    // Rows on the file no ledger names, so a claim built from them reaches no
+    // subsystem through §3.1's subject or evidence arms and cannot disturb the
+    // selection assertions below.
+    externalCode: evidenceId("src/external.ts", "code-verified", "Probe", base),
+    externalContract: evidenceId("src/external.ts", "contract-stated", "Probe", base),
+    externalNamed: evidenceId("src/external.ts", "name-inferred", "probe", base),
     candidateCode: evidenceId("src/candidate.ts", "code-verified", "parseRow", base),
   };
 
@@ -963,6 +969,130 @@ check("the subsystem page drops the claim apply_change_impact closed", () => {
   return section.includes("Key types")
     ? "the closed claim's group is still rendered, so the page reads a superseded claim as current"
     : null;
+});
+
+// ---------------------------------------------------------------------------
+// §9.1's second check on the *other* door into a claim_key: supersession.
+// A successor inherits its predecessor's `claim_key` and `subject_id`, so it
+// asserts the same file-anchored thing about the same symbol. A check that
+// only `add_claim` runs leaves the invariant reachable by writing a sound
+// claim and then replacing its content — the claim_key stays satisfied and the
+// gate on `structural` keeps counting it. These run last, and in the `B-09/`
+// namespace over the one file no ledger row names, so the claims they write
+// reach no subsystem through any of §3.1's three arms and cannot perturb the
+// selection and change-impact assertions above.
+// ---------------------------------------------------------------------------
+
+check("supersede_claim refuses a successor whose evidence is not file-anchored", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  try {
+    fixture.addClaim({
+      claim_id: "b09-probe-refuse",
+      claim_key: "B-09/key-type/probe-refuse",
+      subject_type: "symbol",
+      subject_id: "src/external.ts:Probe",
+      statement: "Probe is a key type.",
+      evidence_ids: [fixture.ev.externalCode],
+    });
+  } catch (e) {
+    return `the predecessor could not be seeded — ${e && e.message ? e.message : e}`;
+  }
+  const message = fixture.refuse("supersede_claim", {
+    predecessor_claim_id: "b09-probe-refuse",
+    successor_claim_id: "b09-probe-refuse-2",
+    statement: "Probe is something else entirely.",
+    epistemic_kind: "observation",
+    at_sha: fixture.head,
+    rationale: "a re-reading",
+    // Both halves wrong at once: name-inferred, and on a file subject_id does
+    // not name. `add_claim` refuses exactly this.
+    evidence_ids: [fixture.ev.ledgerNamed],
+  });
+  if (message === null) {
+    return "a successor backed only by name-inferred evidence on another file was accepted";
+  }
+  if (!message.includes("src/external.ts")) {
+    return `the refusal does not name the file subject_id points at — ${message}`;
+  }
+  const successor = fixture.db
+    .prepare("SELECT claim_id FROM claims WHERE claim_id = 'b09-probe-refuse-2'")
+    .get();
+  if (successor) return "the refused successor was written anyway";
+  const predecessor = fixture.db
+    .prepare("SELECT valid_until_sha FROM claims WHERE claim_id = 'b09-probe-refuse'")
+    .get();
+  return predecessor && predecessor.valid_until_sha === null
+    ? null
+    : "the predecessor was closed even though its successor was refused, so the claim_key has no current version";
+});
+
+check("supersede_claim accepts a successor that satisfies the rule", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // VP4's other side: the guard must still admit the legitimate re-reading, or
+  // it has made the claim_key immutable rather than evidence-bound.
+  try {
+    fixture.addClaim({
+      claim_id: "b09-probe-accept",
+      claim_key: "B-09/key-type/probe-accept",
+      subject_type: "symbol",
+      subject_id: "src/ledger.ts:Probe",
+      statement: "Probe is a key type.",
+      evidence_ids: [fixture.ev.ledgerCode],
+    });
+  } catch (e) {
+    return `the predecessor could not be seeded — ${e && e.message ? e.message : e}`;
+  }
+  const message = fixture.refuse("supersede_claim", {
+    predecessor_claim_id: "b09-probe-accept",
+    successor_claim_id: "b09-probe-accept-2",
+    statement: "Probe is external.ts's key type, read again.",
+    epistemic_kind: "observation",
+    at_sha: fixture.head,
+    rationale: "a re-reading on the same file",
+    evidence_ids: [fixture.ev.externalContract],
+  });
+  if (message !== null) return `a sound supersession was refused — ${message}`;
+  const successor = fixture.db
+    .prepare("SELECT valid_until_sha FROM claims WHERE claim_id = 'b09-probe-accept-2'")
+    .get();
+  return successor && successor.valid_until_sha === null
+    ? null
+    : "the successor is not current after an accepted supersession";
+});
+
+check("supersede_claim keeps the weaker requirement for concurrency and seam claims", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // §9.1 exempts these two categories on purpose — they are derived rather than
+  // read, and forcing a kind they cannot honestly carry is BP4's fabrication
+  // hazard. The supersession door must inherit the exemption, not just the rule.
+  try {
+    fixture.addClaim({
+      claim_id: "b09-concurrency",
+      claim_key: "B-09/concurrency",
+      subject_type: "subsystem",
+      subject_id: "B-09",
+      statement: "B-09 serialises its writers.",
+      epistemic_kind: "inference",
+      evidence_ids: [fixture.ev.externalDoc],
+    });
+  } catch (e) {
+    return `the predecessor could not be seeded — ${e && e.message ? e.message : e}`;
+  }
+  const message = fixture.refuse("supersede_claim", {
+    predecessor_claim_id: "b09-concurrency",
+    successor_claim_id: "b09-concurrency-2",
+    statement: "B-09 serialises its writers through one lock.",
+    epistemic_kind: "inference",
+    at_sha: fixture.head,
+    rationale: "a sharper reading of the same derivation",
+    evidence_ids: [fixture.ev.externalNamed],
+  });
+  return message === null
+    ? null
+    : `a derived concurrency claim's supersession was refused — ${message}`;
 });
 
 // ---------------------------------------------------------------------------

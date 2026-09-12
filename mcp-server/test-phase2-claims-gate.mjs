@@ -629,6 +629,150 @@ check("reset_subsystem can still regress a claimless subsystem to structural", (
     : `reset_subsystem left B-11 at '${statusOf("B-11")}'`;
 });
 
+check("upsert_subsystem cannot carry a subsystem to structural without a claim", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // F3/codex. `upsert_subsystem` writes `status` directly and calls only
+  // `enforceMonotonicTransition`, so it is a second forward status writer.
+  // C43 binds the *status*, not one tool: a rule that one door honours and
+  // another ignores is not enforced. Both doors are exercised — a fresh insert
+  // that opens at `structural`, and an update over an already-scoped row.
+  scopedSubsystem("B-20");
+  const updated = refusal(
+    "upsert_subsystem",
+    { id: "B-20", name: "Upserted", status: "structural" },
+    fixture.ctx,
+  );
+  if (updated === null) {
+    return `upsert_subsystem advanced a claimless B-20 to '${statusOf("B-20")}' without refusal`;
+  }
+  if (!updated.includes("claim_key")) {
+    return `the refusal on the update path does not name claim_key — ${updated}`;
+  }
+  if (statusOf("B-20") === "structural") return "the refused upsert was written anyway";
+
+  const fresh = refusal(
+    "upsert_subsystem",
+    { id: "B-21", name: "Fresh at structural", status: "structural" },
+    fixture.ctx,
+  );
+  if (fresh === null) {
+    return `upsert_subsystem created B-21 straight at '${statusOf("B-21")}' with no ledger and no claim`;
+  }
+  return statusOf("B-21") === "structural" ? "the refused insert was written anyway" : null;
+});
+
+check("a claim satisfies upsert_subsystem's prerequisite exactly as it does the status tool", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // The other half of F3/codex: the guard must admit the legitimate advance,
+  // or it is a blanket refusal rather than a prerequisite (VP4 — a gate that
+  // cannot go green measures nothing either).
+  scopedSubsystem("B-22");
+  seedClaim({
+    claimKey: "B-22/concurrency",
+    subjectType: "subsystem",
+    subjectId: "B-22",
+    statement: "B-22 runs on one thread.",
+    evidenceId: seedEvidence("src/B-22.ts"),
+  });
+  const message = refusal(
+    "upsert_subsystem",
+    { id: "B-22", name: "Upserted with a claim", status: "structural" },
+    fixture.ctx,
+  );
+  if (message !== null) return `a claimed subsystem was refused anyway — ${message}`;
+  return statusOf("B-22") === "structural"
+    ? null
+    : `B-22 is at '${statusOf("B-22")}' after an accepted upsert`;
+});
+
+check("resetting below structural discards the claims that satisfied the gate", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // F6/codex. `reset_subsystem` discards the survey output of every phase it
+  // regresses past — dispositions, findings, artifacts, and the ledger when it
+  // drops to `scoping`. Structural claims are that phase's output too, so a
+  // reset below `structural` that leaves them current lets the re-advance be
+  // satisfied by the reading the reset just discarded, and C43's "requires at
+  // least one current claim" stops meaning the phase ran.
+  scopedSubsystem("B-23");
+  seedClaim({
+    claimKey: "B-23/key-type/row",
+    subjectType: "symbol",
+    subjectId: "src/unit.ts:Row",
+    statement: "Row is B-23's unit of storage.",
+    evidenceId: seedEvidence("src/unit.ts"),
+  });
+  call("update_subsystem_status", { id: "B-23", status: "structural" }, fixture.ctx);
+  const result = call(
+    "reset_subsystem",
+    { id: "B-23", to_status: "scoping", reason: "redo the structural pass from scratch" },
+    fixture.ctx,
+  );
+  if (result && result.ok === false) return `reset_subsystem was refused: ${result.error}`;
+  const live = fixture.db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM claims WHERE valid_until_sha IS NULL AND substr(claim_key, 1, 5) = 'B-23/'",
+    )
+    .get();
+  if ((live?.n ?? 0) !== 0) {
+    return `${live.n} current B-23/ claim(s) survived a reset to scoping, so the discarded reading still satisfies the gate`;
+  }
+  if (typeof result?.deleted?.claims !== "number") {
+    return "reset_subsystem does not report how many claims it discarded, so the loss is silent";
+  }
+  const message = refusal(
+    "update_subsystem_status",
+    { id: "B-23", status: "structural" },
+    fixture.ctx,
+  );
+  if (message === null) {
+    return "B-23 re-advanced to structural with no claim recorded since the reset";
+  }
+  return message.includes("claim_key")
+    ? null
+    : `the re-advance was refused for some other reason — ${message}`;
+});
+
+check("a reset that stops at structural keeps the claims it did not regress past", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  // The bound on F6/codex's fix. `reset_subsystem` to `structural` discards the
+  // concerns pass, not the structural one, so its claims must survive — exactly
+  // as the file ledger survives a reset that stops above `scoping`. A fix that
+  // cleared claims on every reset would break the legitimate re-run.
+  scopedSubsystem("B-24");
+  seedClaim({
+    claimKey: "B-24/concurrency",
+    subjectType: "subsystem",
+    subjectId: "B-24",
+    statement: "B-24 holds no lock.",
+    evidenceId: seedEvidence("src/B-24.ts"),
+  });
+  call("update_subsystem_status", { id: "B-24", status: "structural" }, fixture.ctx);
+  call(
+    "register_artifact",
+    { path: "B-24-survey.md", kind: "subsystem-survey", subsystem_id: "B-24" },
+    fixture.ctx,
+  );
+  call("update_subsystem_status", { id: "B-24", status: "concerns" }, fixture.ctx);
+  const result = call(
+    "reset_subsystem",
+    { id: "B-24", to_status: "structural", reason: "redo the concerns pass only" },
+    fixture.ctx,
+  );
+  if (result && result.ok === false) return `reset_subsystem was refused: ${result.error}`;
+  const live = fixture.db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM claims WHERE valid_until_sha IS NULL AND substr(claim_key, 1, 5) = 'B-24/'",
+    )
+    .get();
+  return (live?.n ?? 0) === 1
+    ? null
+    : `a reset to structural left ${live?.n ?? 0} current B-24/ claim(s), not the one it never regressed past`;
+});
+
 // ---------------------------------------------------------------------------
 // §9.1's Phase 2 step and §9.1's Phase 4 obligation
 // ---------------------------------------------------------------------------
