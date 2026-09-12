@@ -99,6 +99,13 @@ def _sev_badge(sev: str) -> str:
 # Orientation: identity, the thesis, and the four status dimensions (§7.2)
 # ---------------------------------------------------------------------------
 
+# §3.1: `subsystems` has no purpose column, so no page can carry a purpose
+# statement and every page has to say so. The trailing clause is dropped when
+# there is no recorded scope either, because it would then be false.
+NO_PURPOSE_SENTENCE = "No purpose statement is recorded for this subsystem"
+NO_PURPOSE_WITH_SCOPE = f"{NO_PURPOSE_SENTENCE}; the scope below states what it covers."
+NO_PURPOSE_ALONE = f"{NO_PURPOSE_SENTENCE}."
+
 THESIS_SOURCE = "entry-point.md"
 THESIS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s*what is this (?:codebase|project)\??\s*$", re.IGNORECASE
@@ -860,7 +867,14 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     ]
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
+    #
+    # `subsystems` carries no purpose column, so the disclaimer is not
+    # conditional on this row: every page says it (§3.1, §7.3). Without it the
+    # recorded scope — a file-and-boundary list — sits alone under the first
+    # heading and reads as a statement of what the subsystem is for, which is
+    # the relabelling §3.1 forbids and BP6 names (F10/codex).
     out += ["## Scope", ""]
+    out += [NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE, ""]
     if s.get("scope"):
         out += [str(s["scope"]), ""]
     elif files:
