@@ -510,8 +510,8 @@ function buildFixture() {
     cloned.status === 0 ? { ...ctx, project: { ...project, workspacePath: clone } } : null;
 
   // A clone with the conventional `origin` remote whose branch records no
-  // upstream at all: only the refs/remotes/origin/<branch> fallback can
-  // resolve a head here.
+  // upstream at all. §2.4.4 requires `origin_head: null` here: the
+  // conventional ref exists, but nothing records that this branch tracks it.
   const conventional = join(root, "conventional-clone");
   const clonedConventional = spawnSync("git", ["clone", "-q", workspace, conventional], {
     encoding: "utf8",
@@ -947,11 +947,15 @@ check("origin_head resolves the ref the branch tracks, whatever the remote is na
   if (tracking.origin_head !== fixture.head)
     return `origin_head ${tracking.origin_head}, expected ${fixture.head}`;
   if (!fixture.conventionalCtx) return "the conventional clone could not be created";
-  // A clone that records no upstream but does carry refs/remotes/origin/main:
-  // the fallback is the only thing that can resolve a head here.
-  const fallback = standingOf("src/only.ts", fixture.conventionalCtx).standing.revision ?? {};
-  if (fallback.origin_head !== fixture.head)
-    return `the origin/<branch> fallback reported ${fallback.origin_head}`;
+  // A clone that records no upstream but does carry refs/remotes/origin/main.
+  // §2.4.4 says `origin_head` is the tracked ref "when an upstream is
+  // recorded, otherwise null" — so the conventional ref is not an answer
+  // here, it is a guess, and this field carries no room to say which ref it
+  // resolved. The projection's Upstream head row may name a fallback because
+  // it prints the resolving ref beside the value; this field cannot.
+  const conventional = standingOf("src/only.ts", fixture.conventionalCtx).standing.revision ?? {};
+  if (conventional.origin_head !== null)
+    return `a branch with no recorded upstream reported origin_head ${conventional.origin_head}`;
   // And the primary workspace, which has no remote at all, still reports null.
   const untracked = standingOf("src/only.ts").standing.revision ?? {};
   return untracked.origin_head === null
