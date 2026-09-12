@@ -202,6 +202,26 @@ function symbolSlug(subjectId) {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * phase-2-structural.md's two file-anchored key shapes. A key type and a state
+ * container are one symbol each, so their key is the subject's own slug and the
+ * unique index on `claim_key` makes the next reading supersede this one. A flow
+ * step is `<sid>/flow/<flow-slug>/<nn>`: several steps of one flow share a slug
+ * and are ordered by the number, so the subject's slug is not the key and
+ * requiring it would refuse every flow after the first.
+ */
+function keyShapeFailure(sid, category, key, subjectId) {
+  if (category === "flow") {
+    return new RegExp(`^${sid}/flow/[a-z0-9]+(?:-[a-z0-9]+)*/[0-9]{2,}$`).test(key)
+      ? null
+      : `claim ${key} is a flow step whose key is not <sid>/flow/<flow-slug>/<nn>, so its steps have no recorded order`;
+  }
+  const expected = `${sid}/${category}/${symbolSlug(subjectId)}`;
+  return key === expected
+    ? null
+    : `claim ${key} names subject ${subjectId}, whose stable key is ${expected}; an unstable key duplicates rather than supersedes`;
+}
+
 /** Files are checked against the tree, so a cited path that moved turns red. */
 function inTree(relPath) {
   if (typeof relPath !== "string" || !relPath || relPath.startsWith("/") || relPath.includes("..")) {
@@ -216,8 +236,19 @@ function citationTokens(context) {
     .filter((token) => CITATION_TOKEN.test(token));
 }
 
+/**
+ * `deferred` is orthogonal to the progression (`update_subsystem_status`'s own
+ * words) — it is a subsystem the survey decided not to walk. It ranks at the
+ * bottom so it can never satisfy `structural`, and it is a recognised status so
+ * that a deferral is read as a decision that owes a reason, not as a corrupt row.
+ */
 function statusRank(status) {
+  if (status === "deferred") return 0;
   return STATUS_ORDER.indexOf(String(status ?? ""));
+}
+
+function isKnownStatus(status) {
+  return status === "deferred" || STATUS_ORDER.includes(String(status ?? ""));
 }
 
 function pairKey(a, b) {
@@ -353,7 +384,19 @@ check("every decomposed subsystem was surveyed exactly once, in one batch", () =
   const batched = [];
   for (const batch of batches) {
     const ids = Array.isArray(batch?.subsystems) ? batch.subsystems : [];
-    if (!ids.length) return `batch ${JSON.stringify(batch?.n ?? null)} surveyed no subsystem`;
+    if (!ids.length) {
+      // §12.1 makes onboarding step 6's first unit; it surveys no subsystem and
+      // still owes a checkpoint, because a rebuild that fails after it should
+      // resume from the decomposition rather than re-derive it. Nothing else may
+      // be empty: an empty survey batch is a batch that did no work.
+      if (batch?.kind !== "onboarding" || batch?.n !== 1) {
+        return `batch ${JSON.stringify(batch?.n ?? null)} surveyed no subsystem and is not the onboarding pass`;
+      }
+      continue;
+    }
+    if (batch?.kind === "onboarding") {
+      return `batch ${JSON.stringify(batch?.n ?? null)} is the onboarding pass and also surveyed ${ids.join(", ")}`;
+    }
     batched.push(...ids);
   }
   const duplicated = batched.filter((id, index) => batched.indexOf(id) !== index);
@@ -384,16 +427,18 @@ check("the batches ran in priority order, each behind a checkpoint commit", () =
       return `batch ${index + 1} is numbered ${JSON.stringify(batch?.n ?? null)}; batches are consecutive from 1`;
     }
     const ids = Array.isArray(batch.subsystems) ? batch.subsystems : [];
-    const ranks = ids.map((id) => priority.get(id));
-    if (ranks.some((rank) => !Number.isInteger(rank))) {
-      return `batch ${batch.n} surveyed a subsystem with no priority`;
+    if (ids.length) {
+      const ranks = ids.map((id) => priority.get(id));
+      if (ranks.some((rank) => !Number.isInteger(rank))) {
+        return `batch ${batch.n} surveyed a subsystem with no priority`;
+      }
+      const low = Math.min(...ranks);
+      const high = Math.max(...ranks);
+      if (low < previousHigh) {
+        return `batch ${batch.n} surveyed priority ${low} after batch ${index} reached priority ${previousHigh}: the batches did not run in priority order`;
+      }
+      previousHigh = high;
     }
-    const low = Math.min(...ranks);
-    const high = Math.max(...ranks);
-    if (low < previousHigh) {
-      return `batch ${batch.n} surveyed priority ${low} after batch ${index} reached priority ${previousHigh}: the batches did not run in priority order`;
-    }
-    previousHigh = high;
     if (!isHex(batch.storage_commit, 7, 40)) {
       return `batch ${batch.n} records no checkpoint commit, so a failure there resumes from the start`;
     }
@@ -407,6 +452,9 @@ check("the batches ran in priority order, each behind a checkpoint commit", () =
     }
     if (String(commit.message ?? "") !== String(batch.label ?? " ")) {
       return `batch ${batch.n}'s checkpoint commit says ${JSON.stringify(commit.message ?? null)}, not the batch label ${JSON.stringify(batch.label ?? null)}`;
+    }
+    if (batch.kind === "onboarding" && !/onboarding/i.test(String(batch.label ?? ""))) {
+      return `batch ${batch.n} is the onboarding pass and its checkpoint label does not say so`;
     }
     for (const id of ids) {
       if (!String(batch.label ?? "").includes(id)) {
@@ -422,7 +470,7 @@ check("a subsystem that stopped short of structural says why", () => {
   if (missing) return missing;
   const rows = subsystemsOf();
   if (!rows.length) return "the receipt records no surveyed subsystem";
-  const unknown = rows.filter((row) => statusRank(row?.status) < 0);
+  const unknown = rows.filter((row) => !isKnownStatus(row?.status));
   if (unknown.length) {
     return `subsystem(s) ${unknown.map((row) => `${row?.id}=${row?.status}`).join(", ")} carry a status outside the survey progression`;
   }
@@ -497,10 +545,8 @@ check("every claim is evidence-backed, and the file-anchored ones cite their own
           const found = evidence.map((row2) => `${row2?.kind} on ${row2?.file_path}`).join(", ");
           return `claim ${key} is a ${category} read off ${path}, and its evidence is ${found || "nothing"}: none of it is ${STRONG_EVIDENCE.join(" or ")} on that file`;
         }
-        const expected = `${row.id}/${category}/${symbolSlug(claim.subject_id)}`;
-        if (key !== expected) {
-          return `claim ${key} names subject ${claim.subject_id}, whose stable key is ${expected}; an unstable key duplicates rather than supersedes`;
-        }
+        const shapeFailure = keyShapeFailure(row.id, category, key, claim.subject_id);
+        if (shapeFailure) return shapeFailure;
       }
     }
   }
@@ -732,8 +778,8 @@ if (existsSync(storeAbs)) {
         const found = evidence.map((row) => `${row.kind} on ${row.file_path}`).join(", ");
         return `live claim ${key} is a ${category} read off ${path}, and its evidence is ${found || "nothing"}`;
       }
-      const expected = `${key.split("/")[0]}/${category}/${symbolSlug(claim.subject_id)}`;
-      if (key !== expected) return `live claim ${key} does not carry the stable key ${expected}`;
+      const shapeFailure = keyShapeFailure(key.split("/")[0], category, key, claim.subject_id);
+      if (shapeFailure) return `in the live store: ${shapeFailure}`;
     }
     if (!anchoredCount) {
       return "the live store holds no key-type, state-container or flow claim, so the inventory is not claims-backed";
