@@ -126,6 +126,15 @@ class PagePlan:
     subgroup: str = ""
 
 
+# The route table on the reader's guide is generated from the page plan (§7.8).
+# One tuple per planned page, in plan order, carrying only what the guide
+# renders — so the guide never reaches into the plan's build closures.
+def _routes(plan: list[PagePlan]) -> list[tuple[str, str, str, str, str]]:
+    return [
+        (p.path, p.label or p.title, p.hint, p.group, p.subgroup) for p in plan
+    ]
+
+
 @dataclass
 class Summary:
     ok: bool = True
@@ -424,16 +433,21 @@ class Materializer:
                 PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", group="Codebase", kind="seams"),
                 PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="The project's own names, with the meanings Amanuensis observed in context.", group="Codebase", kind="glossary"),
                 PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Defects open or awaiting verification at the checked revision.", group="Unresolved", kind="findings"),
+                PagePlan("disagreements.md", lambda: renderers.render_disagreements(conn, storage), title="Records that disagree", label="Disagreements", hint="Where credible records disagree or the evidence does not discriminate between them.", group="Unresolved", kind="undiscriminated"),
                 PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Questions the survey could not settle, with the assumption used to keep moving.", group="Unresolved", kind="questions"),
-                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings, with the closed ones beside them until they have a page of their own.", group="Unresolved", kind="notes"),
+                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings.", group="Unresolved", kind="notes"),
                 PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", group="Unresolved", kind="stale"),
+                PagePlan("hot-spots.md", lambda: renderers.render_hot_spots(conn, storage), title="Hot spots", label="Hot spots", hint="Where unresolved work and unread territory concentrate, as separate measures.", group="Unresolved", kind="hotspots"),
                 PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Verified, ruled out, and accepted, each with the basis its resolution rests on.", group="History", kind="findings"),
-                # §7.1 re-homes this page to History and moves its unresolved
-                # rows to `disagreements.md`. That page is P9's; until it exists
-                # the hint says what this one actually still carries rather than
-                # promising a narrowing that has not happened yet.
-                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Records that disagree, and the evidence that settled the ones now resolved.", group="History", kind="contradictions"),
-                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Every enum, what it authorizes, and what it cannot justify.", group="Method", kind="guide"),
+                PagePlan("resolution-history.md", lambda: renderers.render_resolution_history(conn, storage), title="Resolution history", label="Resolution history", hint="The append-only account of how records reached their state.", group="History", kind="timeline"),
+                PagePlan("resolved-leads.md", lambda: renderers.render_resolved_leads(conn, storage), title="Resolved leads and questions", label="Resolved leads and questions", hint="Questions that were answered or dismissed, and leads that were closed.", group="History", kind="resolved-leads"),
+                PagePlan("sessions.md", lambda: renderers.render_sessions(conn, storage), title="Sessions and publications", label="Sessions and publications", hint="What ran, when, and what it produced.", group="History", kind="sessions"),
+                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Resolved disagreements and the evidence that settled them.", group="History", kind="contradictions"),
+                # The reader's guide is generated from the vocabulary contract
+                # and from this plan (§7.8), so it reads `plan` — complete by the
+                # time any page is built — rather than a hand-written route list
+                # a new page could be left out of.
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read the conspectus", label="Reader's guide", hint="Every enum, what it authorizes, and what it cannot justify.", group="Method", kind="guide"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", group="Method", kind="coverage"),
                 passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", group="Method", kind="diagnosticity"),

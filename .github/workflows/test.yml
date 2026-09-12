@@ -317,6 +317,9 @@ jobs:
       - name: Page plan, navigation groups, Files, and Not yet surveyed
         working-directory: materializer
         run: python3 test-lens-pages.py
+      - name: Unresolved and History pages, the resolution basis, and the reader's guide
+        working-directory: materializer
+        run: python3 test-history-and-disagreements.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor

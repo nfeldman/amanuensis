@@ -455,9 +455,13 @@ def main() -> None:
         checklist = (docs / "concern-checklist.md").read_text()
         assert "## Active concerns (3)" in checklist
         assert "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |" in checklist
-        # Contradictions page should exist but note there are none currently.
+        # The contradictions page should exist and say what it now carries.
+        # §7.1 titles it Conflicting evidence and narrows it to the
+        # disagreements the evidence settled; the unresolved ones are on
+        # disagreements.md.
         contradictions = (docs / "contradictions.md").read_text()
-        assert "# Contradictions" in contradictions
+        assert "# Conflicting evidence" in contradictions
+        assert "disagreements.md" in contradictions
         # Diagnosticity matrix page should exist and contain the cell legend.
         matrix_files = list((docs / "diagnosticity").glob("dm-*.md")) if (docs / "diagnosticity").is_dir() else []
         assert matrix_files, "expected at least one diagnosticity matrix page"

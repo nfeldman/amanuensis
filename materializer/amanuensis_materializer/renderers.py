@@ -39,9 +39,11 @@ from .readback import (
     ledger_stale_marker,
     stale_marker,
 )
-from .slugs import matrix_slug, subsystem_page
+from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
     OBLIGATION_BEARING_SQL,
+    VOCABULARY,
+    VOCABULARY_CONTRACT_VERSION,
     cannot_justify,
     labels,
     meanings,
@@ -340,6 +342,77 @@ def _prose_source(storage: Path, rel: str) -> dict[str, str]:
 
 def _db_source(name: str, data: Any) -> dict[str, str]:
     return {f"db:{name}": sha256_json(data)}
+
+
+# ---------------------------------------------------------------------------
+# The honest empty state, and where a record that is not a finding lives
+# ---------------------------------------------------------------------------
+
+# §6.1 partitions contradictions by whether the evidence settled them, exactly
+# as `finding_state_current` partitions findings. The page a contradiction's
+# record renders on is read from that one predicate, so the record, the
+# timeline that links to it, and the reader all agree about where it is.
+DISAGREEMENTS_PAGE = "disagreements.md"
+CONTRADICTIONS_PAGE = "contradictions.md"
+
+
+def contradiction_page(resolution: str | None) -> str:
+    """The page one contradiction's full record renders on (§6.1, §7.1)."""
+
+    return (
+        CONTRADICTIONS_PAGE
+        if resolution and resolution != "unresolved"
+        else DISAGREEMENTS_PAGE
+    )
+
+
+def contradiction_anchor(contradiction_id: Any) -> str:
+    return f"contradiction-{contradiction_id}"
+
+
+def question_anchor(question_id: Any) -> str:
+    return f"question-{question_id}"
+
+
+def lead_anchor(note_id: Any) -> str:
+    return f"lead-{note_id}"
+
+
+def checked_revision(conn: sqlite3.Connection) -> str:
+    """The revision the survey last checked, in words, or that none is recorded."""
+
+    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+    checked = str(git.get("last_checked_sha") or "")
+    if not checked:
+        return "not recorded"
+    branch = str(git.get("canonical_branch") or "not recorded")
+    at = str(git.get("last_checked_at") or "")
+    return f"{_short(checked)} on `{branch}`" + (
+        f", recorded {_fmt_time(at)}" if at else ""
+    )
+
+
+def _empty_lens(
+    conn: sqlite3.Connection, nothing: str, scope: str, basis: str
+) -> list[str]:
+    """What a lens page with no rows says instead of "none" (§6.1, C28).
+
+    An empty page is the one place a reader cannot check the record against
+    itself. *No open findings* alone is indistinguishable from a survey that
+    never ran, from one whose store was never written to, and from one whose
+    predicate is wrong. So the page states what it would have carried, which
+    records it read, and the revision it read them at, and the absence becomes
+    a reading rather than a silence.
+    """
+
+    return [
+        nothing,
+        "",
+        f"- **Scope** — {scope}",
+        f"- **Basis** — {basis}",
+        f"- **Checked revision** — {checked_revision(conn)}.",
+        "",
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -1136,10 +1209,19 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             "SELECT COUNT(*) AS n FROM finding_state_current"
             " WHERE resolution_state NOT IN ('open','fixed-pending-verification')",
         ) or {"n": 0}
-        out.append(
-            "_No finding is open or awaiting verification. "
-            f"{resolved['n'] or 0} resolved record(s) are on "
-            "[resolved-findings.md](resolved-findings.md)._"
+        examined = row(
+            conn,
+            "SELECT COUNT(*) AS n FROM file_ledger WHERE classification='examined'",
+        ) or {"n": 0}
+        out += _empty_lens(
+            conn,
+            "No finding is open or awaiting verification."
+            f" {_count(int(resolved['n'] or 0), 'resolved record')} are on"
+            " [Resolved findings](resolved-findings.md).",
+            "defects with no terminal resolution event, and repairs recorded against a"
+            " commit with no evidence yet that they hold.",
+            f"`finding_state_current` over `findings`, read across"
+            f" {_count(int(examined['n'] or 0), 'examined file')}.",
         )
     else:
         # Resolution state is the primary grouping, and it is a heading rather
@@ -1165,29 +1247,222 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     return "\n".join(out) + "\n", _db_source("findings:open", fs)
 
 
+# §7.7's three bases. `schema.sql:813` requires `evidence_id` only for
+# `verified-fixed`; `accepted` and `ruled-out` rest on an explicit authorized
+# dismissal, which ADR-0001 § Resolved licenses, and `findings.ts` accepts them
+# that way. Labelling all three "proof" would claim for two of them something
+# the schema never asked for — and a terminal row carrying neither says so.
+BASIS_EVIDENCE = "evidence"
+BASIS_DISMISSAL = "authorized-dismissal"
+BASIS_NONE = "none-recorded"
+NO_BASIS_SENTENCE = "No basis is recorded for this resolution."
+NO_BASIS_HEADING = "Terminal without a recorded basis"
+
+_RESOLVED_STATE_HINTS: dict[str, str] = {
+    "verified-fixed": "_{n} with verification evidence attached to the repair._",
+    "ruled-out": "_{n} an adversarial pass overturned; the argument is kept on record._",
+    "accepted": "_{n} where the behaviour is the intended design rather than a defect._",
+}
+
+
+def _resolution_events(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    """The current resolution event per finding, by id.
+
+    `finding_state_current` carries the state and the repair coordinates but
+    not the rationale or the session that recorded them, and the basis needs
+    both.
+    """
+
+    return {
+        str(r["finding_id"]): r
+        for r in rows(conn, "SELECT * FROM finding_resolution_current")
+    }
+
+
+def _evidence_by_id(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
+    return {int(r["id"]): r for r in rows(conn, "SELECT * FROM evidence")}
+
+
+def _ledgered_paths(conn: sqlite3.Connection) -> set[str]:
+    return {
+        str(r["file_path"])
+        for r in rows(conn, "SELECT DISTINCT file_path FROM file_ledger")
+    }
+
+
+def _cited_path(path: str, ledgered: set[str]) -> str:
+    """One cited path, linked into the Files index when the ledger names it.
+
+    A path the ledger does not carry has no anchor to link to, and inventing
+    one would break the cross-link read-back rather than help the reader.
+    """
+
+    if path in ledgered:
+        return f"[`{path}`](files.md#{file_anchor(path)})"
+    return f"`{path}`"
+
+
+def _resolution_basis(
+    finding: dict[str, Any],
+    event: dict[str, Any] | None,
+    evidence: dict[int, dict[str, Any]],
+    ledgered: set[str],
+) -> tuple[str, str]:
+    """What one resolved finding's resolution rests on, labelled by kind (§7.7)."""
+
+    evidence_id = finding.get("resolution_evidence_id")
+    if evidence_id is not None:
+        e = evidence.get(int(evidence_id))
+        if e is not None:
+            locus = _cited_path(str(e["file_path"]), ledgered)
+            if e["symbol"]:
+                locus += f" `{e['symbol']}`"
+            if e["line_range"]:
+                locus += f" lines `{e['line_range']}`"
+            note = str(e["note"] or "").strip()
+            detail = (
+                f"the verification evidence recorded at {_short(str(e['ref_sha'] or ''))}"
+                f" — {locus}, kind `{e['kind']}`."
+            )
+            return BASIS_EVIDENCE, detail + (f" {note}" if note else "")
+    rationale = str((event or {}).get("rationale") or "").strip()
+    if rationale:
+        session = str((event or {}).get("session_id") or "")
+        recorded = str(finding.get("ref_sha") or "")
+        provenance = f" Recorded by session `{session}`." if session else ""
+        if recorded:
+            provenance += (
+                " No revision is recorded for the dismissal itself; the finding was"
+                f" recorded at {_short(recorded)}."
+            )
+        return BASIS_DISMISSAL, rationale + provenance
+    return BASIS_NONE, NO_BASIS_SENTENCE
+
+
+def _resolved_records(
+    subsystem_rows: Sequence[dict[str, Any]], bases: dict[str, tuple[str, str]]
+) -> list[str]:
+    """One subsystem's resolved findings as full marked records (§6.2, §7.7).
+
+    A register rather than a table: the basis is a sentence, not a peer column,
+    and `reporting-style.md` keeps the identifier and the revision subordinate
+    to the language that explains what happened.
+    """
+
+    subsystem_id = str(subsystem_rows[0]["subsystem_id"])
+    subsystem_name = str(subsystem_rows[0].get("subsystem_name") or subsystem_id)
+    out = [
+        f"### [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
+        "",
+    ]
+    for f in subsystem_rows:
+        fid = str(f["finding_id"])
+        kind, detail = bases[fid]
+        out.append(finding_marker(fid))
+        out.append(f'<a id="{fid.lower()}"></a>')
+        out += [f"#### {fid} · `{f['severity']}`", ""]
+        out += [str(f["symptom"]).strip(), ""]
+        out.append(f"- **Root cause** — {str(f['root_cause']).strip()}")
+        recorded = str(f["resolution_recorded_at"] or "")
+        out.append(
+            f"- **Resolution** — `{f['resolution_state']}`"
+            + (
+                f", recorded {_fmt_time(recorded)}."
+                if recorded
+                else ", carried by the legacy status with no resolution event recorded."
+            )
+        )
+        if f["fix_sha"] or f["fix_location"]:
+            out.append(
+                f"- **Repair** — {_short(str(f['fix_sha'] or ''))} at"
+                f" `{f['fix_location'] or 'no location recorded'}`."
+            )
+        out.append(f"- **Basis** — `{kind}`: {detail}")
+        out.append("")
+    return out
+
+
 def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The History lens for findings: verified, ruled out, and accepted.
 
-    One section per resolution state, newest resolution first within it. A row
-    whose state came from the legacy-status fallback has no recorded resolution
-    time and sorts last in its section, which is what the store knows.
+    One section per resolution state, newest resolution first within it, each
+    record carrying the basis its resolution rests on. A row whose state came
+    from the legacy-status fallback has no recorded resolution time and sorts
+    last in its section, which is what the store knows.
+
+    The page refuses to present a terminal state as proven when nothing proves
+    it. `verified-fixed` must carry evidence; the other two need only a
+    rationale, and a row carrying neither is `none-recorded` and is counted at
+    the top of the page rather than reading as resolved-with-proof (§7.7).
     """
+
+    del storage  # the findings and their resolution events are the only source
+
     fs = _finding_rows(
         conn,
         FINDING_LENS_STATES["resolved-findings.md"],
         "v.resolution_recorded_at DESC, f.subsystem_id, f.finding_id",
     )
+    events = _resolution_events(conn)
+    evidence = _evidence_by_id(conn)
+    ledgered = _ledgered_paths(conn)
+    bases = {
+        str(f["finding_id"]): _resolution_basis(
+            f, events.get(str(f["finding_id"])), evidence, ledgered
+        )
+        for f in fs
+    }
+
     out = ["# Resolved findings", ""]
     if not fs:
-        out.append("_No resolution is recorded for any finding._")
+        out += _empty_lens(
+            conn,
+            "No finding has reached a terminal state.",
+            "findings recorded verified-fixed, ruled out, or accepted, each with the"
+            " basis its resolution rests on.",
+            "`finding_state_current` over `findings` and `finding_resolution_events`.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("findings:resolved", fs),
+            **_db_source("findings:resolved-basis", bases),
+        }
+
+    out += [
+        "_Each record carries the basis its resolution rests on, labelled by kind."
+        " A verified repair rests on evidence; a claim ruled out or a behaviour"
+        " accepted rests on an argument someone authorized to make it recorded._",
+        "",
+    ]
+
+    unbacked = [f for f in fs if bases[str(f["finding_id"])][0] == BASIS_NONE]
+    if unbacked:
+        ids = ", ".join(
+            f"[**{f['finding_id']}**](#{str(f['finding_id']).lower()})" for f in unbacked
+        )
+        out += [
+            f"## {NO_BASIS_HEADING}",
+            "",
+            f"{_count(len(unbacked), 'record')} below reached a terminal state with"
+            " neither verification evidence nor a recorded rationale. The store says"
+            f" they are closed and does not say on what: {ids}.",
+            "",
+        ]
+
     for state in FINDING_LENS_STATES["resolved-findings.md"]:
         state_rows = [f for f in fs if f["resolution_state"] == state]
         if not state_rows:
             continue
         out += [f"## {RESOLUTION_LABELS.get(state, state)}", ""]
+        hint = _RESOLVED_STATE_HINTS.get(state)
+        if hint:
+            out += [hint.format(n=_count(len(state_rows), "record")), ""]
         for subsystem_rows in _by_subsystem(state_rows):
-            out += _finding_table(subsystem_rows)
-    return "\n".join(out) + "\n", _db_source("findings:resolved", fs)
+            out += _resolved_records(subsystem_rows, bases)
+
+    return "\n".join(out) + "\n", {
+        **_db_source("findings:resolved", fs),
+        **_db_source("findings:resolved-basis", bases),
+    }
 
 
 def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -1240,50 +1515,97 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     return "\n".join(out) + "\n", _db_source("seams:all", seams) | _db_source("seams:assess", assess)
 
 
+def _contradiction_records(
+    cs: Sequence[dict[str, Any]], columns: Sequence[str], cell: Any
+) -> list[str]:
+    """One contradiction per row, anchored so an event can link back to it."""
+
+    out = [f"| {' | '.join(columns)} |", "|" + "---|" * len(columns)]
+    for c in cs:
+        anchor = contradiction_anchor(c["id"])
+        out.append(
+            f'| <a id="{anchor}"></a>**#{c["id"]}** | ' + " | ".join(cell(c)) + " |"
+        )
+    out.append("")
+    return out
+
+
 def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The History lens for contradictions: the ones the evidence settled.
+
+    Rows still standing move to `disagreements.md` (§6.1, §7.1). Keeping a copy
+    here would put one record in two lenses, and an event linking back to "the
+    contradiction" would have two places to land.
+    """
+
+    del storage  # the contradictions and their resolution events are the source
+
     cs = rows(
         conn,
-        "SELECT * FROM contradictions ORDER BY CASE resolution WHEN 'unresolved' THEN 0 ELSE 1 END, detected_at DESC",
+        "SELECT * FROM contradictions"
+        " WHERE resolution IS NOT NULL AND resolution <> 'unresolved'"
+        " ORDER BY COALESCE(resolved_at, detected_at) DESC, id DESC",
     )
-    out = ["# Contradictions", ""]
-    unresolved = [c for c in cs if c["resolution"] == "unresolved"]
-    resolved = [c for c in cs if c["resolution"] != "unresolved"]
-    out.append(
-        "_Contradictions are the conspectus's epistemic honesty surface — when two findings "
-        "about the same code disagree, we record the disagreement explicitly instead of silently "
-        "choosing one. Unresolved contradictions are a priority signal for the adversarial pass._"
-    )
-    out.append("")
-    if unresolved:
-        out += [
-            "## Unresolved",
-            "",
-            "| Finding A | Finding B | Shared location | Conflict type | Detected |",
-            "|---|---|---|---|---|",
-        ]
-        for c in unresolved:
-            out.append(
-                f"| **{c['finding_a']}** | **{c['finding_b']}** | "
-                f"`{c['shared_location'] or '—'}` | {c['conflict_type']} | "
-                f"{_fmt_time(c['detected_at'])} |"
-            )
-        out.append("")
-    if resolved:
-        out += [
-            "## Resolved",
-            "",
-            "| Finding A | Finding B | Resolution | Scope note |",
-            "|---|---|---|---|",
-        ]
-        for c in resolved:
-            out.append(
-                f"| **{c['finding_a']}** | **{c['finding_b']}** | {c['resolution']} | "
-                f"{(c['scope_note'] or '—').replace('|', '/')} |"
-            )
-        out.append("")
+    events = {
+        int(e["contradiction_id"]): e
+        for e in rows(
+            conn,
+            "SELECT * FROM contradiction_resolution_events ORDER BY id",
+        )
+    }
+    standing = row(
+        conn,
+        "SELECT COUNT(*) AS n FROM contradictions"
+        " WHERE COALESCE(resolution,'unresolved')='unresolved'",
+    ) or {"n": 0}
+    out = ["# Conflicting evidence", ""]
     if not cs:
-        out.append("_No contradictions recorded._")
-    return "\n".join(out) + "\n", _db_source("contradictions:all", cs)
+        out += _empty_lens(
+            conn,
+            "No disagreement between findings has been settled."
+            f" {_count(int(standing['n'] or 0), 'pair')} still stand"
+            " undiscriminated, on [Records that disagree](disagreements.md).",
+            "pairs of findings that made incompatible claims about one locus, and the"
+            " evidence or argument that chose between them.",
+            "`contradictions` whose resolution is recorded, with"
+            " `contradiction_resolution_events` for the account of how.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("contradictions:resolved", cs),
+            **_db_source("contradictions:events", sorted(events)),
+            **_db_source("contradictions:standing", standing),
+        }
+
+    out += [
+        "_Two findings made incompatible claims about the same locus and the record"
+        " now says which one holds. The disagreement is kept rather than smoothed"
+        " away, so a reader who forms the overturned reading again meets the"
+        " argument that settled it. Disagreements still standing are on"
+        " [Records that disagree](disagreements.md)._",
+        "",
+    ]
+
+    def cell(c: dict[str, Any]) -> list[str]:
+        event = events.get(int(c["id"]))
+        rationale = str((event or {}).get("rationale") or "").replace("|", "/").strip()
+        scope_note = str(c["scope_note"] or "").replace("|", "/").strip()
+        return [
+            f"**{c['finding_a']}** / **{c['finding_b']}**",
+            f"`{c['resolution']}`",
+            f"`{c['shared_location']}`" if c["shared_location"] else "—",
+            _fmt_time(c["resolved_at"]) if c["resolved_at"] else "—",
+            rationale or scope_note or "No account of the resolution is recorded.",
+        ]
+
+    out += _contradiction_records(
+        cs,
+        ("Record", "Findings", "Resolution", "Shared locus", "Settled", "On what"),
+        cell,
+    )
+    return "\n".join(out) + "\n", {
+        **_db_source("contradictions:resolved", cs),
+        **_db_source("contradictions:events", sorted(events)),
+    }
 
 
 def render_diagnosticity(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -1455,44 +1777,69 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 
 
 def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The Unresolved lens for leads: observations still open (§6.1, §7.1).
+
+    Closed leads move to `resolved-leads.md`, where the page states what the
+    store does not record about how they got there. `field_notes.follow_up` is
+    free text whose one reserved value is `open`, so membership is the negation
+    of that value rather than a list of terminal ones.
+    """
+
+    del storage  # the notes are the only source this page reads
+
     notes = rows(
         conn,
-        "SELECT * FROM field_notes ORDER BY created_at DESC",
+        "SELECT * FROM field_notes WHERE COALESCE(follow_up,'open')='open'"
+        " ORDER BY created_at DESC, id DESC",
     )
-    # §7.1 titles this page Leads. Its membership narrows to open notes when
-    # `resolved-leads.md` exists to receive the closed ones; until then the
-    # closed notes stay here rather than leaving the projection, and the lede
-    # says so instead of promising a page that is not published yet.
+    closed = row(
+        conn,
+        "SELECT COUNT(*) AS n FROM field_notes WHERE COALESCE(follow_up,'open')<>'open'",
+    ) or {"n": 0}
     out = [
         "# Leads",
         "",
         "_Observations from every survey pass that are not yet findings: patterns, "
         "anomalies, connections, tensions, and candidate concerns recorded when a "
-        "reader noticed something the phase structure did not ask for. Each one "
-        "carries its own follow-up state; closed leads are listed here beside the "
-        "open ones._",
+        "reader noticed something the phase structure did not ask for. Closed leads "
+        "are on [Resolved leads and questions](resolved-leads.md)._",
         "",
     ]
     if not notes:
-        out.append("_No lead is recorded._")
+        out += _empty_lens(
+            conn,
+            "No lead is open."
+            f" {_count(int(closed['n'] or 0), 'closed lead')} are on"
+            " [Resolved leads and questions](resolved-leads.md).",
+            "observations a survey pass recorded that are not yet findings and have"
+            " not been closed.",
+            "`field_notes` whose `follow_up` is still `open`.",
+        )
     else:
         by_cat: dict[str, list[dict[str, Any]]] = {}
         for n in notes:
             by_cat.setdefault(n["category"], []).append(n)
-        for cat in ("tension", "anomaly", "candidate-concern", "connection", "pattern"):
+        # Candidate concerns first: a lead that names a failure mode is the one
+        # a reader can act on, and the rest are ordered by how much they
+        # constrain a later reading (§6.1).
+        for cat in ("candidate-concern", "tension", "anomaly", "connection", "pattern"):
             items = by_cat.get(cat, [])
             if not items:
                 continue
-            out += [f"## {cat.replace('-', ' ').title()} ({len(items)})", ""]
+            out += [f"## {cat.replace('-', ' ').capitalize()}", ""]
+            out += [f"_{_count(len(items), 'open lead')}._", ""]
             for n in items:
-                state = "**OPEN**" if n["follow_up"] == "open" else f"→ {n['follow_up']}"
+                anchor = lead_anchor(n["id"])
                 loc = f" @ `{n['location']}`" if n["location"] else ""
                 out.append(
-                    f"- [{state}] {n['observation']}{loc} · _{_fmt_time(n['created_at'])}_"
+                    f'- <a id="{anchor}"></a>{n["observation"]}{loc}'
+                    f" · _recorded {_fmt_time(n['created_at'])}_"
                 )
             out.append("")
-    return "\n".join(out) + "\n", _db_source("notes:all", notes)
-
+    return "\n".join(out) + "\n", {
+        **_db_source("notes:open", notes),
+        **_db_source("notes:closed-count", closed),
+    }
 
 
 # What each stale section says about its own rows (§6.1, §11.3). Written per
@@ -1592,12 +1939,15 @@ def render_stale(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     checked = str(git.get("last_checked_sha") or "")
     branch = str(git.get("canonical_branch") or "not recorded")
     if not freshness["scoped_files"]:
-        out += [
+        out += _empty_lens(
+            conn,
             "No file is recorded in the ledger, so this projection does not measure"
             " freshness. Nothing below is a claim that the survey is current; it is"
             " a statement that nothing was measured.",
-            "",
-        ]
+            "ledger rows carrying a survey obligation that the repository has changed"
+            " under, partitioned by what the row's revision records.",
+            "`file_ledger`, read for rows marked stale by `detect_changes`.",
+        )
     else:
         out += [
             f"{freshness['stale_obligation']} of {freshness['obligation_files']} files"
@@ -1669,303 +2019,250 @@ def _ledger_stale_table(
     return out
 
 
-def render_how_to_read(conn: sqlite3.Connection, storage: Path) -> RenderResult:
-    """The reader's guide. Identical for every conspectus — Amanuensis
-    explains how to read its own output so a stranger landing on the
-    site understands the vocabulary and the epistemic guarantees
-    without having to read the methodology upstream.
-
-    This page is intentionally static (not DB-derived). It is declared
-    as a synthetic source so the materializer's diff-aware re-render
-    won't touch it unless the renderer itself changes — which is what
-    we want.
-    """
-    del conn  # unused — content is static apart from optional provenance
-    body = HOW_TO_READ_BODY
-    for optional in ("provenance.md", "entry-point.md"):
-        if not (storage / optional).is_file():
-            body = body.replace(f"[`{optional}`]({optional})", f"`{optional}`")
-    return body, {
-        "synthetic:how-to-read": _hash_text(body),
-        **_prose_source(storage, "provenance.md"),
-        **_prose_source(storage, "entry-point.md"),
-    }
-
-
-HOW_TO_READ_BODY = """\
+# The reader's guide is generated, not written (§7.8, §10.2). Every table below
+# comes from `mcp-server/contracts/conspectus-vocabulary.json` by way of the
+# generated `vocabulary.py`, and the route table comes from the page plan, so a
+# value the server enforces or a page the projection publishes cannot be
+# missing from the guide without the generator changing.
+HOW_TO_READ_INTRO = """\
 # How to read this conspectus
 
-An Amanuensis conspectus is a **persistent, evidence-driven
-architectural record** of a codebase. This site is the human-facing
-view; behind it sits a SQLite database every claim on the site was
-generated from. Every assertion carries provenance: who said it, when,
-against what commit, with what evidence, at what depth of survey.
+An Amanuensis conspectus is a **persistent, evidence-driven architectural
+record** of a codebase. This site is the human-facing view; behind it sits a
+SQLite database that every claim on the site was generated from. Every
+assertion carries provenance: who recorded it, when, against which revision,
+with what evidence, and at what depth of survey.
 
-This page is shipped automatically with every conspectus. Read it
-once; you won't need to read it again.
+The record is organized as four lenses and an entrance. **Codebase** is the
+account of what the project is and which of its territory no one has read.
+**Unresolved** is what has not reached a terminal, evidence-backed state at the
+checked revision. **History** is what has, plus the append-only account of how,
+for the two record families that keep one. **Method** — these pages — is the
+apparatus by which you judge how far the rest of the record can be trusted.
 
-## What to look at first
+Two habits make the rest of it readable. Read a claim against the survey depth
+of the subsystem it is about: survey depth is the knowledge-depth contract, and
+it fixes what claims about that region you should accept at all. And read every
+state below for what it *cannot* justify as much as for what it can — that
+column is the whole point of the vocabulary.
+"""
 
-| If you're here because… | Start here |
-|---|---|
-| You've never seen this project before | [`entry-point.md`](entry-point.md) → [`master-plan.md`](master-plan.md) |
-| You're investigating a specific bug | [`findings.md`](findings.md), filtered by severity |
-| You want to understand the architecture | [`architecture.md`](architecture.md), then a subsystem page |
-| You're evaluating how trustworthy this is | [`open-questions.md`](open-questions.md), [`contradictions.md`](contradictions.md), [`diagnosticity.md`](diagnosticity.md) |
-| You want to reproduce or extend the survey | [`provenance.md`](provenance.md) (if present) + the repo's git log |
+HOW_TO_READ_CLOSING = """\
+## Reproducing what you are reading
 
-## Reading the status badges
-
-Every subsystem carries a **status** that defines what claims about
-it you should accept. This is the knowledge-depth contract — the
-methodology's most important epistemic guardrail.
-
-| Status | What claims are authorized |
-|---|---|
-| `unmapped` | **None.** No assertions about behavior. |
-| `scoping` | File scope only: "F is in scope for S." No behavioral claims. |
-| `structural` | Types, state containers, data flows, concurrency model. **No correctness claims.** |
-| `concerns` | Concern review with evidence. Findings at evidence_quality ≥ code-verified. |
-| `adversarial` | As above, plus findings survived attempted refutation. **Highest confidence.** |
-| `mapped` | Complete. Seam contracts filled in. Ready for composition with mapped peers. |
-| `deferred` | Orthogonal flag: "do not survey yet." Not a knowledge level. |
-
-If you see a confident-sounding claim about a subsystem that is still
-`structural`, that's a methodology violation — treat the claim as
-speculation. The server enforces this at write time, but readers are
-the final check.
-
-## Reading evidence quality
-
-Every disposition and every finding carries an `evidence_quality`
-tag that describes how solid the underlying observation is. Higher
-quality supports stronger claims.
-
-| Quality | What it means |
-|---|---|
-| `code-verified` | The reviewer read the code and confirmed the behavior. Strongest. |
-| `contract-stated` | An explicit contract (type signature, schema, docstring with semantics) asserts the behavior. |
-| `comment-asserted` | A code comment claims the behavior, but the code was not verified against the claim. |
-| `name-inferred` | Inferred from a symbol's name (e.g. `sanitizeInput` must sanitize). Weak; needs adversarial review. |
-| `pattern-matched` | Fits a pattern we've seen elsewhere. Weakest; used only as a scoping signal. |
-
-Any finding classified `confirmed-bug` should rest on
-`code-verified` or `contract-stated` evidence. If you see a
-confirmed-bug with `name-inferred` evidence that survived adversarial
-review, that's a flag to look closely — either the adversarial pass
-was inadequate or the reviewer genuinely had no better evidence and
-flagged the finding as linchpin-dependent.
-
-## Reading finding severity
-
-Severity reflects impact, not confidence.
-
-| Severity | Typical shape |
-|---|---|
-| `CRITICAL` | Data loss, security hole, privilege escalation, production outage path. |
-| `HIGH` | Incorrect behavior on a common code path; corrupt state; wedged queues. |
-| `MEDIUM` | Incorrect behavior on an edge case; correctness issue with a known workaround. |
-| `LOW` | Readability/maintainability; defensive-coding gaps; would bite a future change. |
-
-## Reading finding status
-
-After adversarial review, each finding carries one of:
-
-| Status | What it means |
-|---|---|
-| `confirmed-bug` | The bug is real at the surveyed commit, survived refutation. |
-| `confirmed-acceptable` | The behavior exists but is the intended design — documented as such. |
-| `ruled-out` | Claim was made but adversarial review overturned it. Record preserved so future analysts don't re-tread the same ground. |
-| `fixed` | Confirmed at the surveyed commit; a later commit has addressed it. |
-
-Note that `ruled-out` findings stay in the record. That's a feature,
-not dead wood — if somebody reads a later version of the code and
-starts to form the same suspicion, the overturn argument is already
-written down.
-
-## Reading open questions
-
-If the conspectus was produced by the autoprogress coordinator
-(cloud mode), [`open-questions.md`](open-questions.md) is the queue
-of things the agent could not answer without human input. Each entry
-records:
-
-- the **question** (what the agent couldn't decide)
-- **what it blocked** (the classification or decision that was held up)
-- **what the agent assumed** (the best-available interpretation it
-  proceeded with)
-
-A small open-question queue, mostly in the `priority-ranking` or
-`scope-judgment` categories, means the run was confident. A large
-queue weighted toward `domain-knowledge` or `contradiction` means
-the survey is walking on thin ice — treat its findings with more
-skepticism and plan a focused human pass on those subsystems.
-
-## Reading contradictions
-
-[`contradictions.md`](contradictions.md) pairs findings that make
-incompatible claims about the same `file:symbol@sha`. The conspectus
-preserves these rather than smoothing them away; an unresolved
-contradiction is the most honest thing a survey can say about a
-genuinely ambiguous situation.
-
-Resolutions:
-
-- `a-supersedes-b` / `b-supersedes-a` — one claim is now considered
-  correct; the other stays on record for traceability.
-- `scope-distinction` — both claims are right, about different
-  scopes (different inputs, different code paths). The `scope_note`
-  explains.
-- `unresolved` — the evidence genuinely does not disambiguate.
-
-If you see `unresolved`, that's the survey telling you: "two
-credible readings, no way to choose between them yet." That is
-information.
-
-## Reading diagnosticity matrices
-
-When two or more concerns could independently explain the same
-observable symptom in a subsystem, the coordinator opens a matrix
-(the Analysis of Competing Hypotheses pattern). The matrix's columns
-are the competing concerns; its rows are pieces of evidence; each
-cell records whether that evidence is `consistent`, `contradicts`,
-`irrelevant`, or `ambiguous` for that concern.
-
-The methodology ranks concerns by **inconsistency** — the one with
-the most contradicting evidence is rejected first — rather than by
-supporting evidence, because an evidence base consistent with all
-competing explanations tells you nothing. The `leading_concern` on
-a resolved matrix is the surviving best explanation; the
-`linchpin_note` identifies the single piece of evidence the
-resolution most depends on (and therefore the one a reviewer should
-re-verify first).
-
-Matrices that resolve to `unresolved-competition` are analogous to
-unresolved contradictions: a legitimate terminal state when the
-evidence does not disambiguate.
-
-## Provenance
-
-If the conspectus ships with a [`provenance.md`](provenance.md)
-page, that is the chronological event log: sessions in order,
-findings within sessions in order, with commit SHAs and timestamps.
-It's the evidence that the survey was run in the order it claims —
-not retroactively curated.
-
-Combined with the git log of the conspectus repo itself (every
-phase gate is a commit; every commit is timestamped), provenance is
-the strongest claim the methodology can make about its own honesty.
-
-## Reproducing what you're reading
-
-Anyone with:
-
-- the surveyed codebase's commit SHA (the `ref_sha` on findings and
-  evidence),
-- the Amanuensis version that ran the survey (captured in commit
-  messages on the conspectus repo), and
-- sufficient API budget to drive an LLM through the same phases
-
-…can replay the survey and see whether their conclusions overlap
-with these. Non-determinism in the LLM means the two runs won't be
-identical; structural overlap is the expected property, and the
-[`compare_conspectuses`](https://github.com/search?q=compare_conspectuses)
-tool in the Amanuensis server measures it.
+Anyone with the surveyed revision (the `ref_sha` on findings and evidence), the
+Amanuensis version that ran the survey, and enough budget to drive a model
+through the same phases can replay it and see whether their conclusions
+overlap. Non-determinism means the two runs will not be identical; structural
+overlap is the expected property, and the `compare_conspectuses` tool measures
+it.
 
 ## If something here looks wrong
 
-Say so. The conspectus treats reader-surfaced disagreement as a
-first-class signal: a reviewer who disagrees with a finding should
-open an issue against this conspectus repo; the next survey session
-records the disagreement as a field note or converts it into a
-diagnosticity matrix if the reviewer's argument looks credible
-enough to compete with the existing finding.
-
-A methodology that refuses to hear its readers is one that should
+Say so. Reader-surfaced disagreement is a first-class signal: a reviewer who
+disagrees with a finding should open an issue against this conspectus, and the
+next survey session records the disagreement as a lead or converts it into an
+evidence matrix if the argument looks strong enough to compete with the
+existing finding. A record that refuses to hear its readers is one that should
 not be trusted.
 """
+
+
+def _enum_heading(name: str) -> str:
+    """A reader-facing name for one enum, with the stored name beside it."""
+
+    return name.replace("_", " ").capitalize()
+
+
+def _vocabulary_tables() -> list[str]:
+    """One table per enum the contract carries, in its declared order (§7.8)."""
+
+    out: list[str] = [
+        "## The vocabulary this record uses",
+        "",
+        "Every value below is generated from the vocabulary contract, version"
+        f" `{VOCABULARY_CONTRACT_VERSION}` — the same source the server validates"
+        " writes against and the same source this site's labels come from. A value"
+        " the server accepts and this page did not carry would be a drift, so the"
+        " generator produces both from one definition.",
+        "",
+    ]
+    for name, definition in VOCABULARY.items():
+        axis = str(definition.get("axis") or "")
+        out += [
+            f"### {_enum_heading(name)}",
+            "",
+            f"`{name}`" + (f" · {axis} axis" if axis else ""),
+            "",
+            "| Value | Label | What it means | What it cannot justify |",
+            "|---|---|---|---|",
+        ]
+        for entry in definition.get("values") or ():  # type: ignore[union-attr]
+            out.append(
+                f"| `{entry['value']}` | {str(entry['label']).replace('|', '/')}"
+                f" | {str(entry['meaning']).replace('|', '/')}"
+                f" | {str(entry['cannot_justify']).replace('|', '/')} |"
+            )
+        out.append("")
+    return out
+
+
+def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]:
+    """The "what to look at first" table, generated from the page plan (§7.8).
+
+    Written from the plan rather than by hand so a page cannot be published and
+    left unroutable: the guide is the one page a stranger is told to read, and a
+    site index that silently omits a lens is worse than none.
+    """
+
+    out: list[str] = [
+        "## What to look at first",
+        "",
+        "Every page this conspectus publishes, in the order the record presents"
+        " them. The lens a page sits under says what kind of claim it carries.",
+        "",
+    ]
+    groups: dict[str, list[tuple[str, str, str, str, str]]] = {}
+    for route in routes:
+        groups.setdefault(route[3], []).append(route)
+    for group, members in groups.items():
+        out += [
+            f"### {group}",
+            "",
+            "| Page | What it carries |",
+            "|---|---|",
+        ]
+        for path, label, hint, _group, subgroup in members:
+            prefix = f"{subgroup} · " if subgroup else ""
+            out.append(
+                f"| {prefix}[{label}]({path}) | {str(hint).replace('|', '/')} |"
+            )
+        out.append("")
+    return out
+
+
+def render_how_to_read(
+    conn: sqlite3.Connection,
+    storage: Path,
+    routes: Sequence[tuple[str, str, str, str, str]] | None = None,
+) -> RenderResult:
+    """The reader's guide, generated from the enum source and the page plan.
+
+    It was a static string constant, which is how its evidence-quality table
+    came to list five of the nine kinds the schema accepts and its finding-status
+    table came to carry neither `fixed-pending-verification` nor
+    `verified-fixed`. Nothing kept them in step, so nothing did.
+    """
+
+    del conn, storage  # the contract and the page plan are the whole source
+
+    body = [HOW_TO_READ_INTRO, ""]
+    body += _route_tables(routes or ())
+    body += _vocabulary_tables()
+    body += [HOW_TO_READ_CLOSING]
+    text = "\n".join(body)
+    return text, {
+        "synthetic:how-to-read": _hash_text(text),
+        "synthetic:how-to-read-contract": _hash_text(VOCABULARY_CONTRACT_VERSION),
+    }
 
 
 def _hash_text(s: str) -> str:
     return sha256(s.encode("utf-8")).hexdigest()[:16]
 
 
+# §6.1 orders the decision docket by consequence: a question whose two answers
+# disagree about the record itself blocks the most, and one that only ranks
+# work blocks the least. The order is declared here rather than taken from the
+# CHECK's declaration order, which is not a consequence ranking.
+OPEN_QUESTION_ORDER: tuple[str, ...] = (
+    "contradiction",
+    "domain-knowledge",
+    "ambiguous-evidence",
+    "scope-judgment",
+    "tooling-limit",
+    "priority-ranking",
+    "other",
+)
+
+
 def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
-    """Queue of items the autoprogress coordinator could not decide
-    without human input. In cloud runs this page IS the human's
-    intervention point — a reviewer works through the open entries,
-    answers what they can, and dismisses what's no longer relevant.
+    """The Unresolved lens for decisions: questions still open (§6.1, §7.1).
+
+    Answered, dismissed, and superseded questions move to `resolved-leads.md`.
+    This page is the decision docket: what is still unsettled, what each
+    question blocked, and the assumption the survey proceeded with so a reader
+    can tell how much of the record rests on it.
     """
+
     del storage  # unused — kept for renderer signature uniformity
-    # Include resolved rows too, grouped separately, so the page serves
-    # as an audit trail after review.
+
     questions = rows(
         conn,
-        "SELECT * FROM open_questions ORDER BY resolution = 'open' DESC, created_at DESC",
+        "SELECT * FROM open_questions WHERE COALESCE(resolution,'open')='open'"
+        " ORDER BY created_at DESC, id DESC",
     )
+    closed = row(
+        conn,
+        "SELECT COUNT(*) AS n FROM open_questions"
+        " WHERE COALESCE(resolution,'open')<>'open'",
+    ) or {"n": 0}
     out = [
-        "# Open questions",
+        "# Decisions needed",
         "",
-        "_Items the autoprogress coordinator could not decide without human input. "
-        "Each entry records the question, what the agent could not do because of it, "
-        "and what assumption (if any) the agent proceeded with. Close out via "
-        "`resolve_open_question` once answered; the reviewer's answers can feed back "
-        "into a `reset_subsystem` + re-survey if the assumption turned out wrong._",
+        "_Questions the survey could not settle on its own. Each records what it "
+        "blocked and the assumption the survey proceeded with, so a reader can see "
+        "which readings would change if the assumption turns out wrong. Questions "
+        "already settled are on "
+        "[Resolved leads and questions](resolved-leads.md)._",
         "",
     ]
     if not questions:
-        out.append("_No open questions recorded. Either the survey is pristine, or it hasn't run yet._")
-        return "\n".join(out) + "\n", _db_source("open_questions:all", questions)
-
-    by_state: dict[str, list[dict[str, Any]]] = {"open": [], "other": []}
-    for q in questions:
-        by_state["open" if q["resolution"] == "open" else "other"].append(q)
-
-    if by_state["open"]:
-        out += [f"## Open ({len(by_state['open'])})", ""]
-        # Group by category within open — the reviewer usually wants to
-        # batch similar questions.
-        by_cat: dict[str, list[dict[str, Any]]] = {}
-        for q in by_state["open"]:
-            by_cat.setdefault(q["category"], []).append(q)
-        category_order = (
-            "contradiction",
-            "domain-knowledge",
-            "scope-judgment",
-            "ambiguous-evidence",
-            "priority-ranking",
-            "tooling-limit",
-            "other",
+        out += _empty_lens(
+            conn,
+            "No question is open."
+            f" {_count(int(closed['n'] or 0), 'settled question')} are on"
+            " [Resolved leads and questions](resolved-leads.md).",
+            "questions the survey could not settle, with what each one blocked and"
+            " the assumption used to keep moving.",
+            "`open_questions` whose resolution is still `open`.",
         )
-        for cat in category_order:
-            items = by_cat.get(cat, [])
-            if not items:
-                continue
-            out += [f"### {cat.replace('-', ' ').title()} ({len(items)})", ""]
-            for q in items:
-                loc = f" · subsystem `{q['subsystem_id']}`" if q["subsystem_id"] else ""
-                phase = f" · phase `{q['phase']}`" if q["phase"] else ""
-                out.append(f"#### #{q['id']}{loc}{phase}")
-                out.append("")
-                out.append(f"> {q['question']}")
-                out.append("")
-                if q["what_blocked"]:
-                    out.append(f"- **What this blocked:** {q['what_blocked']}")
-                if q["what_assumed"]:
-                    out.append(f"- **Assumption the agent proceeded with:** {q['what_assumed']}")
-                out.append(f"- _recorded {_fmt_time(q['created_at'])}_")
-                out.append("")
+        return "\n".join(out) + "\n", {
+            **_db_source("open_questions:open", questions),
+            **_db_source("open_questions:closed-count", closed),
+        }
 
-    if by_state["other"]:
-        out += [f"## Resolved ({len(by_state['other'])})", ""]
-        out += ["| # | Category | Question | Resolution | Answer |", "|---|---|---|---|---|"]
-        for q in by_state["other"]:
-            answer = (q["answer"] or "").replace("|", "\\|").replace("\n", " ") if q["answer"] else ""
-            qtxt = q["question"].replace("|", "\\|").replace("\n", " ")
-            out.append(f"| #{q['id']} | {q['category']} | {qtxt} | {q['resolution']} | {answer} |")
-        out.append("")
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for q in questions:
+        by_cat.setdefault(str(q["category"]), []).append(q)
+    ordered = list(OPEN_QUESTION_ORDER) + sorted(
+        cat for cat in by_cat if cat not in OPEN_QUESTION_ORDER
+    )
+    for cat in ordered:
+        items = by_cat.get(cat, [])
+        if not items:
+            continue
+        out += [f"## {cat.replace('-', ' ').capitalize()}", ""]
+        out += [f"_{_count(len(items), 'open question')}._", ""]
+        for q in items:
+            loc = f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
+            phase = f" · phase `{q['phase']}`" if q["phase"] else ""
+            out.append(f'<a id="{question_anchor(q["id"])}"></a>')
+            out += [f"### #{q['id']}{loc}{phase}", ""]
+            out += [f"> {q['question']}", ""]
+            if q["what_blocked"]:
+                out.append(f"- **What this blocked** — {q['what_blocked']}")
+            if q["what_assumed"]:
+                out.append(
+                    f"- **Assumption the survey proceeded with** — {q['what_assumed']}"
+                )
+            out.append(f"- **Recorded** — {_fmt_time(q['created_at'])}.")
+            out.append("")
 
-    return "\n".join(out) + "\n", _db_source("open_questions:all", questions)
+    return "\n".join(out) + "\n", {
+        **_db_source("open_questions:open", questions),
+        **_db_source("open_questions:closed-count", closed),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2397,3 +2694,763 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         **_db_source("gaps:git", git),
     }
     return "\n".join(out) + "\n", sources
+
+
+# ---------------------------------------------------------------------------
+# Unresolved: where credible records disagree (§6.1, §7.1)
+# ---------------------------------------------------------------------------
+
+
+def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """Records that stand undiscriminated at the checked revision.
+
+    Three families reach this page, and they are three different failures to
+    choose: two findings that cannot both be right, a matrix whose evidence
+    does not separate the competing explanations, and a concern review that
+    recorded the competition instead of resolving it.
+
+    `diagnosticity_sessions.outcome` admits `unresolved-competition`
+    (`schema.sql:4478-4479`), and History selects nothing from that table, so a
+    matrix that ended in acknowledged competition would otherwise vanish from
+    the projection entirely. ADR-0001 § Fully surveyed calls that state visible
+    debt, not hidden success.
+    """
+
+    del storage  # every record here is a property of the durable tables
+
+    contradictions = rows(
+        conn,
+        "SELECT * FROM contradictions"
+        " WHERE COALESCE(resolution,'unresolved')='unresolved'"
+        " ORDER BY detected_at DESC, id DESC",
+    )
+    matrices = rows(
+        conn,
+        "SELECT id, subsystem_id, symptom, outcome, leading_concern, created_at"
+        "  FROM diagnosticity_sessions"
+        " WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')"
+        " ORDER BY CASE COALESCE(outcome,'open')"
+        "            WHEN 'unresolved-competition' THEN 0 ELSE 1 END, id",
+    )
+    competing = rows(
+        conn,
+        "SELECT d.subsystem_id, d.concern_code, d.evidence_quality, d.rationale,"
+        "       d.assessed_at, d.linchpin_dependent"
+        "  FROM dispositions d"
+        " WHERE d.classification='unresolved-competition'"
+        " ORDER BY d.subsystem_id, d.concern_code",
+    )
+    names = {
+        str(s["id"]): str(s["name"])
+        for s in rows(conn, "SELECT id, name FROM subsystems")
+    }
+
+    out = ["# Records that disagree", ""]
+    if not (contradictions or matrices or competing):
+        out += _empty_lens(
+            conn,
+            "No record stands undiscriminated.",
+            "findings that cannot both be right, evidence matrices the evidence does"
+            " not separate, and concern reviews that recorded a competition rather"
+            " than a verdict.",
+            "`contradictions`, `diagnosticity_sessions`, and `dispositions`, each read"
+            " for the state that means *the record does not say which*.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("disagreements:contradictions", contradictions),
+            **_db_source("disagreements:matrices", matrices),
+            **_db_source("disagreements:dispositions", competing),
+        }
+
+    out += [
+        "_Each record below is a place where the survey could have written one"
+        " reading and did not, because the evidence it had does not choose. That is"
+        " information: it says where a further pass would change the record, and"
+        " what kind of evidence it would take. Records the evidence did settle are"
+        " on [Conflicting evidence](contradictions.md)._",
+        "",
+    ]
+
+    out += ["## Findings that cannot both be right", ""]
+    if contradictions:
+        out += [f"_{_count(len(contradictions), 'pair')} with no recorded resolution._", ""]
+        out += [
+            "| Record | Findings | Shared locus | Conflict | Detected |",
+            "|---|---|---|---|---|",
+        ]
+        for c in contradictions:
+            anchor = contradiction_anchor(c["id"])
+            locus = f"`{c['shared_location']}`" if c["shared_location"] else "—"
+            conflict = str(c["conflict_type"]).replace("|", "/")
+            out.append(
+                f'| <a id="{anchor}"></a>**#{c["id"]}** |'
+                f" **{c['finding_a']}** / **{c['finding_b']}** | {locus} |"
+                f" {conflict} | {_fmt_time(c['detected_at'])} |"
+            )
+        out.append("")
+    else:
+        out += ["No pair of findings is recorded as disagreeing.", ""]
+
+    out += ["## Competing explanations the evidence has not chosen between", ""]
+    if matrices:
+        out += [
+            f"_{_count(len(matrices), 'matrix', 'matrices')} still open or recorded as"
+            " unresolved competition. The full matrix is on its own page._",
+            "",
+        ]
+        out += ["| Matrix | Subsystem | Symptom | Outcome | Opened |", "|---|---|---|---|---|"]
+        for m in matrices:
+            subsystem_id = str(m["subsystem_id"] or "")
+            subsystem = (
+                f"[{names.get(subsystem_id, subsystem_id)}]"
+                f"({subsystem_page(subsystem_id, names.get(subsystem_id, subsystem_id))})"
+                if subsystem_id
+                else "—"
+            )
+            out.append(
+                f"| [DM-{m['id']}]({matrix_page(int(m['id']))}) | {subsystem} |"
+                f" {str(m['symptom'] or '').replace('|', '/')} |"
+                f" `{m['outcome'] or 'open'}` | {_fmt_time(m['created_at'])} |"
+            )
+        out.append("")
+    else:
+        out += ["No evidence matrix is open or recorded as unresolved competition.", ""]
+
+    out += ["## Concern reviews that recorded a competition", ""]
+    if competing:
+        out += [
+            f"_{_count(len(competing), 'review')} where two or more concerns each"
+            " explain what was observed and the evidence does not separate them._",
+            "",
+        ]
+        out += [
+            "| Subsystem | Concern | Strongest evidence | Linchpin | Recorded | Rationale |",
+            "|---|---|---|---|---|---|",
+        ]
+        for d in competing:
+            subsystem_id = str(d["subsystem_id"])
+            name = names.get(subsystem_id, subsystem_id)
+            quality = f"`{d['evidence_quality']}`" if d["evidence_quality"] else "not recorded"
+            linchpin = "yes" if int(d["linchpin_dependent"] or 0) else "no"
+            rationale = str(d["rationale"] or "No rationale is recorded.").replace("|", "/")
+            out.append(
+                f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
+                f" **{d['concern_code']}** | {quality} | {linchpin} |"
+                f" {_fmt_time(d['assessed_at'])} | {rationale} |"
+            )
+        out.append("")
+    else:
+        out += ["No concern review recorded an unresolved competition.", ""]
+
+    return "\n".join(out) + "\n", {
+        **_db_source("disagreements:contradictions", contradictions),
+        **_db_source("disagreements:matrices", matrices),
+        **_db_source("disagreements:dispositions", competing),
+        **_db_source("disagreements:names", names),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Unresolved: where unresolved work and unread territory concentrate (§7.6)
+# ---------------------------------------------------------------------------
+
+# §7.6's columns, each a separate measure. There is no composite column and no
+# total row: the nine things below are not commensurable, and a subsystem with
+# two critical defects and a read ledger is not the same object as one with no
+# defects and no one having looked (BP26).
+HOT_SPOT_COLUMNS: tuple[str, ...] = (
+    "Subsystem",
+    "Open critical + high",
+    "Open medium + low",
+    "Awaiting verification",
+    "Undiscriminated",
+    "Weakest evidence quality",
+    "Unread files",
+    "Stale files",
+    "Unassessed seam sides",
+)
+ACCESS_COLUMN = "Access heat"
+
+HOT_SPOT_COLUMN_NOTES: tuple[str, ...] = (
+    "**Open critical + high** and **Open medium + low** are kept apart because"
+    " severity is an ordinal ramp of consequence and adding the two ends of it"
+    " together would let four readability defects outweigh one data-loss path.",
+    "**Awaiting verification** counts repairs recorded against a commit with no"
+    " evidence yet that they hold. It is not progress and it is not an open"
+    " defect; it is a claim nobody has checked.",
+    "**Undiscriminated** counts unresolved contradictions, open and"
+    " unresolved-competition matrices, and concern reviews that recorded a"
+    " competition. A contradiction between findings in two subsystems is"
+    " counted in both, because it is undiscriminated territory in both.",
+    "**Weakest evidence quality** is the weakest rung any `confirmed-bug`"
+    " review here rests on, not an average: the weakest link is what a reader"
+    " should re-verify first.",
+    "**Unread files** and **Stale files** are counted over ledger rows that"
+    " carry a survey obligation; generated, vendored, and irrelevant paths are"
+    " outside the denominator.",
+)
+
+
+def _hot_spot_access(conn: sqlite3.Connection) -> dict[str, int]:
+    """Recorded accesses per subsystem, by way of the entry each one names.
+
+    `access_log` records an entry, not a subsystem, so an access reaches a
+    subsystem only through an `entries` row that carries one. When none does,
+    §7.6 omits the column rather than printing a column of zeros: zero recorded
+    accesses and no access recording at all are different claims (VP4).
+    """
+
+    return {
+        str(r["subsystem_id"]): int(r["n"] or 0)
+        for r in rows(
+            conn,
+            "SELECT e.subsystem_id, COUNT(*) AS n"
+            "  FROM access_log a"
+            "  JOIN entries e ON e.id = a.entry_id AND e.tier = a.entry_tier"
+            " WHERE e.subsystem_id IS NOT NULL"
+            " GROUP BY e.subsystem_id",
+        )
+    }
+
+
+def _weakest_quality(qualities: Sequence[str | None]) -> str:
+    """The weakest rung recorded among some confirmed-bug reviews, or `—`.
+
+    A review that records no quality at all is weaker than any recorded rung —
+    there is nothing to read the claim against — so it wins the comparison.
+    """
+
+    if not qualities:
+        return "—"
+    ladder = values_of("evidence_quality")
+    if any(not quality for quality in qualities):
+        return "not recorded"
+    return max(
+        (str(q) for q in qualities),
+        key=lambda q: ladder.index(q) if q in ladder else len(ladder),
+    )
+
+
+def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """One row per subsystem, nine separate measures, one declared sort (§7.6).
+
+    The sort is open critical+high, then open medium+low, then the unread
+    fraction, then subsystem id. Each key is read on its own; none of them is
+    combined with another, and the table carries no rank column, because a rank
+    is a composite wearing an ordinal's clothes.
+    """
+
+    del storage  # every measure is a property of the durable tables
+
+    subs = rows(conn, "SELECT id, name, layer FROM subsystems ORDER BY id")
+    findings = rows(
+        conn,
+        "SELECT v.subsystem_id, f.severity, v.resolution_state"
+        "  FROM finding_state_current v"
+        "  JOIN findings f ON f.finding_id = v.finding_id"
+        " WHERE v.resolution_state IN ('open','fixed-pending-verification')",
+    )
+    contradiction_parties = rows(
+        conn,
+        "SELECT DISTINCT c.id, f.subsystem_id"
+        "  FROM contradictions c"
+        "  JOIN findings f ON f.finding_id IN (c.finding_a, c.finding_b)"
+        " WHERE COALESCE(c.resolution,'unresolved')='unresolved'"
+        "   AND f.subsystem_id IS NOT NULL",
+    )
+    competing_matrices = rows(
+        conn,
+        "SELECT subsystem_id, COUNT(*) AS n FROM diagnosticity_sessions"
+        " WHERE COALESCE(outcome,'open') IN ('open','unresolved-competition')"
+        "   AND subsystem_id IS NOT NULL GROUP BY subsystem_id",
+    )
+    competing_reviews = rows(
+        conn,
+        "SELECT subsystem_id, COUNT(*) AS n FROM dispositions"
+        " WHERE classification='unresolved-competition' GROUP BY subsystem_id",
+    )
+    bug_reviews = rows(
+        conn,
+        "SELECT subsystem_id, evidence_quality FROM dispositions"
+        " WHERE classification='confirmed-bug'",
+    )
+    ledger = rows(
+        conn,
+        "SELECT subsystem_id, COALESCE(classification,'candidate') AS classification,"
+        f" COALESCE(stale,0) AS stale FROM file_ledger WHERE {OBLIGATION_BEARING_SQL}",
+    )
+    seams = rows(
+        conn,
+        "SELECT seam_id, party_a, party_b, assessable FROM seam_assessability"
+        " ORDER BY seam_id",
+    )
+    seam_concern_parties = {
+        str(d["subsystem_id"])
+        for d in rows(
+            conn,
+            "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
+        )
+    }
+    access = _hot_spot_access(conn)
+
+    out = ["# Hot spots", ""]
+    if not subs:
+        out += _empty_lens(
+            conn,
+            "No subsystem is recorded, so there is nothing to compare.",
+            "one row per subsystem, each column a separate measure of unresolved work"
+            " or unread territory.",
+            "`findings`, `contradictions`, `diagnosticity_sessions`, `dispositions`,"
+            " `file_ledger`, and `seam_assessability`.",
+        )
+        return "\n".join(out) + "\n", _db_source("hotspots:subsystems", subs)
+
+    measures: list[dict[str, Any]] = []
+    for s in subs:
+        sid = str(s["id"])
+        owned = [f for f in findings if str(f["subsystem_id"]) == sid]
+        open_rows = [f for f in owned if f["resolution_state"] == "open"]
+        crit_high = sum(1 for f in open_rows if f["severity"] in ("CRITICAL", "HIGH"))
+        med_low = sum(1 for f in open_rows if f["severity"] in ("MEDIUM", "LOW"))
+        awaiting = sum(
+            1 for f in owned if f["resolution_state"] == "fixed-pending-verification"
+        )
+        undiscriminated = (
+            sum(1 for c in contradiction_parties if str(c["subsystem_id"]) == sid)
+            + sum(int(m["n"] or 0) for m in competing_matrices if str(m["subsystem_id"]) == sid)
+            + sum(int(r["n"] or 0) for r in competing_reviews if str(r["subsystem_id"]) == sid)
+        )
+        quality = _weakest_quality(
+            [r["evidence_quality"] for r in bug_reviews if str(r["subsystem_id"]) == sid]
+        )
+        owned_rows = [r for r in ledger if str(r["subsystem_id"]) == sid]
+        unread = sum(1 for r in owned_rows if r["classification"] == "candidate")
+        stale = sum(1 for r in owned_rows if int(r["stale"] or 0))
+        party_seams = [
+            seam for seam in seams if sid in (str(seam["party_a"]), str(seam["party_b"]))
+        ]
+        unassessed = 0
+        for seam in party_seams:
+            assessable = int(seam["assessable"] or 0)
+            for side in (str(seam["party_a"]), str(seam["party_b"])):
+                if not assessable or side not in seam_concern_parties:
+                    unassessed += 1
+        measures.append(
+            {
+                "id": sid,
+                "name": str(s["name"] or sid),
+                "crit_high": crit_high,
+                "med_low": med_low,
+                "awaiting": awaiting,
+                "undiscriminated": undiscriminated,
+                "quality": quality,
+                "unread": unread,
+                "obligation": len(owned_rows),
+                "unread_fraction": (unread / len(owned_rows)) if owned_rows else 0.0,
+                "stale": stale,
+                "unassessed_sides": unassessed,
+                "seam_sides": 2 * len(party_seams),
+                "access": access.get(sid),
+            }
+        )
+
+    measures.sort(
+        key=lambda m: (-m["crit_high"], -m["med_low"], -m["unread_fraction"], m["id"])
+    )
+
+    out += [
+        "_Each column is one measure, read on its own. The rows are ordered by open"
+        " critical and high defects, then by open medium and low, then by the"
+        " fraction of this region no one has read, then by identifier — four keys"
+        " applied in turn, not one number. There is no combined score, because"
+        " unresolved work and unread territory are different kinds of not-done and"
+        " no arithmetic turns them into one._",
+        "",
+    ]
+
+    headers = list(HOT_SPOT_COLUMNS) + ([ACCESS_COLUMN] if access else [])
+    out += [f"| {' | '.join(headers)} |", "|" + "---|" * len(headers)]
+    for m in measures:
+        cells = [
+            f"[{m['name']}]({subsystem_page(m['id'], m['name'])}) **{m['id']}**",
+            str(m["crit_high"]),
+            str(m["med_low"]),
+            str(m["awaiting"]),
+            str(m["undiscriminated"]),
+            f"`{m['quality']}`" if m["quality"] not in ("—", "not recorded") else m["quality"],
+            f"{m['unread']}/{m['obligation']}",
+            str(m["stale"]),
+            f"{m['unassessed_sides']}/{m['seam_sides']}",
+        ]
+        if access:
+            cells.append(str(m["access"] or 0))
+        out.append(f"| {' | '.join(cells)} |")
+    out.append("")
+
+    out += ["## What each column measures", ""]
+    for note in HOT_SPOT_COLUMN_NOTES:
+        out += [note, ""]
+    out += [
+        "**Unassessed seam sides** counts `(seam, side)` pairs over twice the seams"
+        " this subsystem is party to: a seam assessed from one side only is"
+        " half-known, and counting seams would report it as covered."
+        f" {PER_PARTY_PROXY}",
+        "",
+    ]
+    if access:
+        out += [
+            f"**{ACCESS_COLUMN}** counts the accesses recorded against entries this"
+            " subsystem owns. It measures what the survey read, not what the"
+            " repository runs.",
+            "",
+        ]
+    else:
+        out += [
+            f"No **{ACCESS_COLUMN}** column is shown: no recorded access reaches a"
+            " subsystem, and a column of zeros would read as a measurement that was"
+            " taken.",
+            "",
+        ]
+
+    return "\n".join(out) + "\n", {
+        **_db_source("hotspots:measures", measures),
+        **_db_source("hotspots:access", access),
+    }
+
+
+# ---------------------------------------------------------------------------
+# History: the append-only account of how records reached their state (§7.7)
+# ---------------------------------------------------------------------------
+
+
+def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """One newest-first timeline over the two tables that keep an event trail.
+
+    Findings and contradictions are the only record families whose history is
+    append-only: no code path in `mcp-server/src` or `materializer` updates or
+    deletes either event table. Every other family carries a mutable terminal
+    column and is reported on `resolved-leads.md`, which says so (§1.1, C58).
+    """
+
+    del storage  # the two event tables are the only source
+
+    finding_events = rows(
+        conn,
+        "SELECT e.id, e.finding_id, e.resolution_state, e.fix_location, e.fix_sha,"
+        "       e.rationale, e.session_id, e.recorded_at,"
+        "       v.resolution_state AS current_state"
+        "  FROM finding_resolution_events e"
+        "  LEFT JOIN finding_state_current v ON v.finding_id = e.finding_id"
+        " ORDER BY e.id DESC",
+    )
+    contradiction_events = rows(
+        conn,
+        "SELECT e.id, e.contradiction_id, e.resolution, e.scope_note, e.rationale,"
+        "       e.session_id, e.recorded_at, c.resolution AS current_resolution"
+        "  FROM contradiction_resolution_events e"
+        "  LEFT JOIN contradictions c ON c.id = e.contradiction_id"
+        " ORDER BY e.id DESC",
+    )
+
+    out = ["# Resolution history", ""]
+    if not (finding_events or contradiction_events):
+        out += _empty_lens(
+            conn,
+            "No resolution event is recorded.",
+            "every state a finding or a contradiction was recorded in, newest first,"
+            " with the account given at the time.",
+            "`finding_resolution_events` and `contradiction_resolution_events`, the"
+            " two tables nothing updates or deletes.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("history:finding-events", finding_events),
+            **_db_source("history:contradiction-events", contradiction_events),
+        }
+
+    timeline: list[tuple[str, int, int, list[str]]] = []
+    for e in finding_events:
+        fid = str(e["finding_id"])
+        page = finding_page(e["current_state"]) or FINDING_LENS_PAGES[0][1]
+        account = str(e["rationale"] or "").replace("|", "/").strip()
+        if e["fix_sha"] or e["fix_location"]:
+            repair = f"Repair at `{e['fix_location'] or 'no location recorded'}`"
+            account = f"{repair}, {_short(str(e['fix_sha'] or ''))}. {account}".strip()
+        timeline.append(
+            (
+                str(e["recorded_at"] or ""),
+                0,
+                int(e["id"]),
+                [
+                    _fmt_time(e["recorded_at"]),
+                    f"[{fid}]({page}#{fid.lower()})",
+                    f"`{e['resolution_state']}`",
+                    f"`{e['session_id']}`" if e["session_id"] else "not recorded",
+                    account or "No account was recorded with this event.",
+                ],
+            )
+        )
+    for e in contradiction_events:
+        cid = e["contradiction_id"]
+        page = contradiction_page(e["current_resolution"])
+        account = str(e["rationale"] or "").replace("|", "/").strip()
+        if e["scope_note"]:
+            account = f"{account} Scopes: {str(e['scope_note']).replace('|', '/')}".strip()
+        timeline.append(
+            (
+                str(e["recorded_at"] or ""),
+                1,
+                int(e["id"]),
+                [
+                    _fmt_time(e["recorded_at"]),
+                    f"[#{cid}]({page}#{contradiction_anchor(cid)})",
+                    f"`{e['resolution']}`",
+                    f"`{e['session_id']}`" if e["session_id"] else "not recorded",
+                    account or "No account was recorded with this event.",
+                ],
+            )
+        )
+    timeline.sort(key=lambda entry: (entry[0], entry[1], entry[2]), reverse=True)
+
+    out += [
+        "_Every state a finding or a contradiction was recorded in, newest first,"
+        " with the account given at the time. Nothing here is rewritten when a"
+        " record moves on: a repair that was later defeated keeps the event that"
+        " recorded it, which is how a regression is visible at all. Each row links"
+        " to where that record is written in full today._",
+        "",
+    ]
+    out += [
+        "| Recorded | Record | State | Session | Account |",
+        "|---|---|---|---|---|",
+    ]
+    out += [f"| {' | '.join(cells)} |" for _at, _rank, _id, cells in timeline]
+    out.append("")
+
+    return "\n".join(out) + "\n", {
+        **_db_source("history:finding-events", finding_events),
+        **_db_source("history:contradiction-events", contradiction_events),
+    }
+
+
+# §1.1's two statements about what the store keeps for the record families that
+# have no event table. They are the point of C58: `open_questions.resolution`
+# and `field_notes.follow_up` are mutable columns, so History carries the
+# terminal state and, for one of the two, the time — and nothing about how.
+QUESTION_TERMINAL_LIMIT = "When this reached its state is recorded; how it did is not."
+LEAD_TERMINAL_LIMIT = (
+    "Neither when nor how this lead reached its state is recorded, only that it"
+    " did; the order below is the order the leads were opened."
+)
+
+
+def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The History lens for the two families with no event trail (§7.7, C58, C61).
+
+    Questions record a resolution time and order by it. Leads record no
+    resolution time at all and order by `id`, which is when they were opened.
+    Both say so in one line rather than letting the order imply an account of
+    how they were closed.
+    """
+
+    del storage  # the two mutable-terminal tables are the only source
+
+    questions = rows(
+        conn,
+        "SELECT * FROM open_questions"
+        " WHERE resolution IN ('answered','dismissed','superseded')"
+        " ORDER BY resolved_at DESC, id DESC",
+    )
+    notes = rows(
+        conn,
+        "SELECT * FROM field_notes WHERE COALESCE(follow_up,'open')<>'open'"
+        " ORDER BY id DESC",
+    )
+
+    out = ["# Resolved leads and questions", ""]
+    if not (questions or notes):
+        out += _empty_lens(
+            conn,
+            "No question has been settled and no lead has been closed.",
+            "questions answered, dismissed, or superseded, and leads closed either by"
+            " becoming a finding or by being dismissed.",
+            "`open_questions.resolution` and `field_notes.follow_up`, both mutable"
+            " columns with no event table behind them.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("resolved-leads:questions", questions),
+            **_db_source("resolved-leads:notes", notes),
+        }
+
+    out += [
+        "_These two families reach a terminal state in a column, not in an event"
+        " table. The record says what state they are in; for how they got there it"
+        " says only what is written below. Findings and contradictions do keep an"
+        " event trail, on [Resolution history](resolution-history.md)._",
+        "",
+    ]
+
+    out += ["## Questions", ""]
+    if questions:
+        out += [
+            f"_{_count(len(questions), 'question')} settled, newest first by the time"
+            f" recorded. {QUESTION_TERMINAL_LIMIT}_",
+            "",
+        ]
+        for q in questions:
+            settled = (
+                _fmt_time(q["resolved_at"]) if q["resolved_at"] else "not recorded"
+            )
+            subsystem = (
+                f" · subsystem **{q['subsystem_id']}**" if q["subsystem_id"] else ""
+            )
+            out.append(f'<a id="{question_anchor(q["id"])}"></a>')
+            out += [f"### #{q['id']} · {q['category']}{subsystem}", ""]
+            out += [f"> {q['question']}", ""]
+            out.append(f"- **Settled** — `{q['resolution']}`, {settled}.")
+            out.append(
+                f"- **Answer** — {q['answer']}"
+                if q["answer"]
+                else "- **Answer** — No answer is recorded."
+            )
+            if q["what_blocked"]:
+                out.append(f"- **What it blocked** — {q['what_blocked']}")
+            out.append("")
+    else:
+        out += ["No question has been answered, dismissed, or superseded.", ""]
+
+    out += ["## Leads", ""]
+    if notes:
+        out += [
+            f"_{_count(len(notes), 'lead')} closed. {LEAD_TERMINAL_LIMIT}_",
+            "",
+        ]
+        out += [
+            "| Lead | Category | Opened | Closed as | Observation |",
+            "|---|---|---|---|---|",
+        ]
+        for n in notes:
+            anchor = lead_anchor(n["id"])
+            observation = str(n["observation"]).replace("|", "/").replace("\n", " ")
+            location = f" @ `{n['location']}`" if n["location"] else ""
+            out.append(
+                f'| <a id="{anchor}"></a>**#{n["id"]}** | {n["category"]} |'
+                f" {_fmt_time(n['created_at'])} | {n['follow_up']} |"
+                f" {observation}{location} |"
+            )
+        out.append("")
+    else:
+        out += ["No lead has been closed.", ""]
+
+    return "\n".join(out) + "\n", {
+        **_db_source("resolved-leads:questions", questions),
+        **_db_source("resolved-leads:notes", notes),
+    }
+
+
+def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """What ran, when, and what it produced (§7.7).
+
+    Three registers that answer three different questions: which survey passes
+    were opened, which refresh runs were dispatched against which revisions,
+    and whether the last publication's three read-back axes held.
+    """
+
+    del storage  # the run tables are the only source
+
+    sessions = rows(
+        conn, "SELECT * FROM sessions ORDER BY started_at DESC, session_id DESC"
+    )
+    refreshes = rows(
+        conn,
+        "SELECT run_id, status, base_sha, head_sha, selected_provider, model,"
+        "       determinism_mode, created_at, completed_at, projection_run_id, error"
+        "  FROM refresh_runs ORDER BY created_at DESC, run_id DESC",
+    )
+    verifications = rows(
+        conn,
+        "SELECT run_id, mode, source_sha, state_ok, coverage_ok, content_ok, ok,"
+        "       verified_at FROM projection_verification_runs"
+        " ORDER BY verified_at DESC, run_id DESC",
+    )
+
+    out = ["# Sessions and publications", ""]
+    if not (sessions or refreshes or verifications):
+        out += _empty_lens(
+            conn,
+            "Nothing is recorded as having run against this conspectus.",
+            "the survey sessions that were opened, the refresh runs that were"
+            " dispatched, and the publications whose read-back was verified.",
+            "`sessions`, `refresh_runs`, and `projection_verification_runs`.",
+        )
+        return "\n".join(out) + "\n", {
+            **_db_source("sessions:sessions", sessions),
+            **_db_source("sessions:refreshes", refreshes),
+            **_db_source("sessions:verifications", verifications),
+        }
+
+    out += [
+        "_What ran against this conspectus, and what each run produced. A session"
+        " still without an end is one that was never closed, which is a fact about"
+        " the record rather than about the work._",
+        "",
+    ]
+
+    out += ["## Survey sessions", ""]
+    if sessions:
+        out += ["| Session | Intent | Started | Ended | Outcome |", "|---|---|---|---|---|"]
+        for s in sessions:
+            intent = str(s["intent"] or "").replace("|", "/")
+            out.append(
+                f"| `{s['session_id']}` | `{intent}` | {_fmt_time(s['started_at'])} |"
+                f" {_fmt_time(s['ended_at']) if s['ended_at'] else 'not closed'} |"
+                f" {str(s['outcome'] or 'not recorded').replace('|', '/')} |"
+            )
+        out.append("")
+    else:
+        out += ["No survey session is recorded.", ""]
+
+    out += ["## Refresh runs", ""]
+    if refreshes:
+        out += [
+            "| Run | Status | Base | Head | Provider | Model | Completed |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for r in refreshes:
+            out.append(
+                f"| `{r['run_id']}` | `{r['status']}` | {_short(str(r['base_sha'] or ''))} |"
+                f" {_short(str(r['head_sha'] or ''))} | {r['selected_provider']} |"
+                f" `{r['model']}` |"
+                f" {_fmt_time(r['completed_at']) if r['completed_at'] else 'not completed'} |"
+            )
+        out.append("")
+    else:
+        out += ["No refresh run is recorded.", ""]
+
+    out += ["## Publication read-back", ""]
+    if verifications:
+        out += [
+            "| Run | Mode | State | Coverage | Content | Verified |",
+            "|---|---|---|---|---|---|",
+        ]
+        for v in verifications:
+            axes = " | ".join(
+                "green" if int(v[f"{axis}_ok"] or 0) else "red"
+                for axis in ("state", "coverage", "content")
+            )
+            out.append(
+                f"| `{v['run_id']}` | `{v['mode']}` | {axes} |"
+                f" {_fmt_time(v['verified_at'])} |"
+            )
+        out.append("")
+    else:
+        out += [
+            "No publication read-back is recorded, so none of the three axes has a"
+            " result to report.",
+            "",
+        ]
+
+    return "\n".join(out) + "\n", {
+        **_db_source("sessions:sessions", sessions),
+        **_db_source("sessions:refreshes", refreshes),
+        **_db_source("sessions:verifications", verifications),
+    }

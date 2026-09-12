@@ -199,6 +199,7 @@ EMPTY_LENS_PAGES: tuple[str, ...] = (
     OPEN_QUESTIONS,
     FIELD_NOTES,
     HOT_SPOTS,
+    "stale.md",
     RESOLVED_FINDINGS,
     RESOLUTION_HISTORY,
     RESOLVED_LEADS,
@@ -216,13 +217,20 @@ SHA_FIX = "cccccccccccc3333cccccccccccc3333cccccccc"
 # at each of its first three keys, so no wrong sort key can coincide with the
 # right answer.
 # ---------------------------------------------------------------------------
+# The subsystems are read in id order, so the expected hot-spot order below is
+# deliberately *not* id order at any level: the highest open critical+high count
+# is on the last id, each tie is broken against id order, and the two subsystems
+# that tie on everything carry names in the opposite order to their ids. A sort
+# that drops any one of §7.6's four keys therefore produces a different table,
+# rather than the same one by the accident of a stable sort (VP4).
 SUBSYSTEMS: tuple[tuple[str, str, str, str, str], ...] = (
     ("B-01", "Read path", "mapped", "backend", "src/read and the files it re-exports"),
     ("B-02", "Write path", "mapped", "backend", "src/write"),
     ("B-03", "Queue", "concerns", "backend", "src/queue"),
     ("C-01", "Cache", "mapped", "backend", "src/cache"),
+    ("D-01", "Zephyr", "scoping", "backend", "src/zephyr"),
+    ("E-01", "Aqueduct", "scoping", "backend", "src/aqueduct"),
     ("F-01", "Console", "mapped", "frontend", "ui/console"),
-    ("F-02", "Widgets", "scoping", "frontend", "ui/widgets"),
 )
 SUBSYSTEM_IDS = tuple(s[0] for s in SUBSYSTEMS)
 SUBSYSTEM_NAMES = {s[0]: s[1] for s in SUBSYSTEMS}
@@ -238,11 +246,11 @@ LEDGER: tuple[tuple[str, str, str, int], ...] = (
     ("B-02", "src/write/w2.ts", "examined", 0),
     ("B-03", "src/queue/q1.ts", "examined", 0),
     ("B-03", "src/queue/q2.ts", "examined", 0),
-    ("B-03", "src/queue/q3.ts", "candidate", 0),
+    ("B-03", "src/queue/q3.ts", "examined", 0),
     ("B-03", "src/queue/q4.ts", "candidate", 0),
     ("C-01", "src/cache/k1.ts", "examined", 0),
-    ("C-01", "src/cache/k2.ts", "examined", 0),
-    ("C-01", "src/cache/k3.ts", "examined", 0),
+    ("C-01", "src/cache/k2.ts", "candidate", 0),
+    ("C-01", "src/cache/k3.ts", "candidate", 0),
     ("C-01", "src/cache/k4.ts", "candidate", 0),
     ("F-01", "ui/console/u1.ts", "examined", 0),
     ("F-01", "ui/console/u2.ts", "examined", 0),
@@ -284,24 +292,27 @@ FINDINGS: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("B01-4", "B-01", "HIGH", "fixed", "fixed-pending-verification", "2026-09-02T01:00:00Z"),
     ("B02-1", "B-02", "CRITICAL", "confirmed-bug", "open", "2026-09-01T04:00:00Z"),
     ("B02-2", "B-02", "HIGH", "confirmed-bug", "open", "2026-09-01T05:00:00Z"),
-    ("B02-3", "B-02", "HIGH", "fixed", "verified-fixed", "2026-09-03T01:00:00Z"),
-    ("B02-4", "B-02", "MEDIUM", "ruled-out", "ruled-out", "2026-09-03T02:00:00Z"),
+    ("B02-3", "B-02", "MEDIUM", "confirmed-bug", "open", "2026-09-01T12:00:00Z"),
+    ("B02-4", "B-02", "LOW", "confirmed-bug", "open", "2026-09-01T13:00:00Z"),
+    ("B02-5", "B-02", "HIGH", "fixed", "verified-fixed", "2026-09-03T01:00:00Z"),
+    ("B02-6", "B-02", "MEDIUM", "ruled-out", "ruled-out", "2026-09-03T02:00:00Z"),
     ("B03-1", "B-03", "MEDIUM", "confirmed-bug", "open", "2026-09-01T06:00:00Z"),
     ("B03-2", "B-03", "LOW", "confirmed-bug", "open", "2026-09-01T07:00:00Z"),
     ("B03-3", "B-03", "LOW", "confirmed-acceptable", "accepted", "2026-09-04T01:00:00Z"),
     ("C01-1", "C-01", "MEDIUM", "confirmed-bug", "open", "2026-09-01T08:00:00Z"),
     ("C01-2", "C-01", "LOW", "confirmed-bug", "open", "2026-09-01T09:00:00Z"),
     ("C01-3", "C-01", "LOW", "confirmed-acceptable", "accepted", "2026-09-04T02:00:00Z"),
-    ("F01-1", "F-01", "MEDIUM", "confirmed-bug", "open", "2026-09-01T10:00:00Z"),
-    ("F01-2", "F-01", "LOW", "confirmed-bug", "open", "2026-09-01T11:00:00Z"),
-    ("F01-3", "F-01", "LOW", "confirmed-acceptable", "", ""),
+    ("F01-1", "F-01", "CRITICAL", "confirmed-bug", "open", "2026-09-01T10:00:00Z"),
+    ("F01-2", "F-01", "HIGH", "confirmed-bug", "open", "2026-09-01T11:00:00Z"),
+    ("F01-3", "F-01", "HIGH", "confirmed-bug", "open", "2026-09-01T14:00:00Z"),
+    ("F01-4", "F-01", "LOW", "confirmed-acceptable", "", ""),
 )
 FINDING_IDS = tuple(f[0] for f in FINDINGS)
-EVIDENCE_BACKED = "B02-3"           # verified-fixed: basis is the evidence row
-DISMISSAL_BACKED = "B02-4"          # ruled-out: basis is an authorized dismissal
+EVIDENCE_BACKED = "B02-5"           # verified-fixed: basis is the evidence row
+DISMISSAL_BACKED = "B02-6"          # ruled-out: basis is an authorized dismissal
 ACCEPTED_WITH_RATIONALE = "C01-3"   # accepted, rationale recorded
 EMPTY_RATIONALE = "B03-3"           # accepted, rationale recorded empty
-LEGACY_TERMINAL = "F01-3"           # accepted by fallback, no event at all
+LEGACY_TERMINAL = "F01-4"           # accepted by fallback, no event at all
 NO_BASIS_FINDINGS: tuple[str, ...] = (EMPTY_RATIONALE, LEGACY_TERMINAL)
 DISMISSAL_RATIONALE = "Adversarial review overturned the claim at the fixed revision."
 ACCEPTED_RATIONALE = "The behaviour is the recorded design and is documented as such."
@@ -363,21 +374,23 @@ ACCESS_ENTRY = "E-1"
 # (id, crit+high, med+low, awaiting, undiscriminated, weakest quality, unread,
 #  stale, seam sides)
 EXPECTED_HOT_SPOTS: tuple[tuple[str, str, str, str, str, str, str, str, str], ...] = (
+    ("F-01", "3", "0", "0", "1", "—", "1/4", "0", "2/2"),
+    ("B-02", "2", "2", "0", "1", "pattern-matched", "0/2", "0", "3/4"),
     ("B-01", "2", "1", "1", "2", "name-inferred", "1/4", "1", "1/2"),
-    ("B-02", "2", "0", "0", "1", "pattern-matched", "0/2", "0", "3/4"),
-    ("B-03", "0", "2", "0", "1", "—", "2/4", "0", "2/2"),
-    ("C-01", "0", "2", "0", "1", "—", "1/4", "0", "2/2"),
-    ("F-01", "0", "2", "0", "1", "—", "1/4", "0", "2/2"),
-    ("F-02", "0", "0", "0", "0", "—", "0/0", "0", "0/0"),
+    ("C-01", "0", "2", "0", "1", "—", "3/4", "0", "2/2"),
+    ("B-03", "0", "2", "0", "1", "—", "1/4", "0", "2/2"),
+    ("D-01", "0", "0", "0", "0", "—", "0/0", "0", "0/0"),
+    ("E-01", "0", "0", "0", "0", "—", "0/0", "0", "0/0"),
 )
 ACCESS_HEAT_SUBSYSTEM = "B-01"
 
 # §7.7's timeline, newest first across both event tables. `f:` is a finding
 # event and `c:` a contradiction event.
 EXPECTED_TIMELINE: tuple[str, ...] = (
-    "c:3", "f:C01-3", "f:B03-3", "f:B02-4", "f:B02-3", "c:1", "f:B01-4",
-    "f:F01-2", "f:F01-1", "f:C01-2", "f:C01-1", "f:B03-2", "f:B03-1",
-    "f:B02-2", "f:B02-1", "f:B01-3", "f:B01-2", "f:B01-1",
+    "c:3", "f:C01-3", "f:B03-3", "f:B02-6", "f:B02-5", "c:1", "f:B01-4",
+    "f:F01-3", "f:B02-4", "f:B02-3", "f:F01-2", "f:F01-1", "f:C01-2",
+    "f:C01-1", "f:B03-2", "f:B03-1", "f:B02-2", "f:B02-1", "f:B01-3",
+    "f:B01-2", "f:B01-1",
 )
 # Where each record's full record lives, so the timeline's link is checkable.
 EXPECTED_EVENT_TARGET: dict[str, str] = {
