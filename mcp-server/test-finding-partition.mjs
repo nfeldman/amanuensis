@@ -271,7 +271,9 @@ function buildFixture() {
   db.prepare("INSERT INTO sessions (session_id, intent) VALUES ('partition', 'p2-gate')").run();
   ctx.sessionId = "partition";
   db.prepare(
-    "INSERT INTO subsystems (id, name, status, layer, scope) VALUES ('B-01', 'Partition', 'adversarial', 'core', 'src/**')",
+    `INSERT INTO subsystems (id, name, status, layer, scope, jump_in_reading)
+       VALUES ('B-01', 'Partition', 'adversarial', 'core', 'src/**',
+               'Read the guard first; the stale-revision defect [[B01-1]] was repaired there, and [[B01-2]] is still open.')`,
   ).run();
   db.prepare(
     `INSERT INTO file_ledger
@@ -822,28 +824,61 @@ check(
   },
 );
 
-check(
-  "a resolved finding referenced from a subsystem page resolves to resolved-findings.md",
-  () => {
-    const blocked = needDocs();
-    if (blocked) return blocked;
-    const pages = walk(join(docs, "subsystems"), [".md"]);
-    if (pages.length === 0) return "no subsystem page was rendered";
-    const text = pages.map((p) => readText(p) ?? "").join("\n");
-    const bad = [];
-    for (const [id, page] of [
-      ["B01-1", RESOLVED_PAGE],
-      ["B01-3", RESOLVED_PAGE],
-      ["B01-2", OPEN_PAGE],
-    ]) {
-      const wanted = `](../${page}#${id.toLowerCase()})`;
-      if (!text.includes(wanted)) bad.push(`${id} does not link to ../${page}`);
-      const other = `](../${page === RESOLVED_PAGE ? OPEN_PAGE : RESOLVED_PAGE}#${id.toLowerCase()})`;
-      if (text.includes(other)) bad.push(`${id} still links to ${other}`);
-    }
-    return bad.length ? bad.join("; ") : null;
-  },
-);
+// §6.2's last bullet and §7.3 item 6: the subsystem page lists open and
+// awaiting-verification defects as links and collapses the resolved ones into
+// a *count* linking to the page, never to a per-finding anchor. So the
+// subsystem page is not where `_build_xref_index`'s routing can be read — it
+// is read on a surface that actually references the finding, which is what
+// the `[[B01-1]]` reference seeded into this subsystem's `jump_in_reading`
+// gives us. Asserting a per-finding anchor here instead would demand a
+// rendering the binding spec forbids.
+check("the subsystem page collapses resolved defects into a count linking to the page", () => {
+  const blocked = needDocs();
+  if (blocked) return blocked;
+  const pages = walk(join(docs, "subsystems"), [".md"]);
+  if (pages.length === 0) return "no subsystem page was rendered";
+  const text = pages.map((p) => readText(p) ?? "").join("\n");
+  const bad = [];
+  if (!text.includes(`](../${RESOLVED_PAGE})`))
+    bad.push(`no subsystem page carries the collapsed link to ../${RESOLVED_PAGE}`);
+  // The open ones stay per-finding links to the open page.
+  for (const id of ["B01-2", "B01-4"]) {
+    if (!text.includes(`](../${OPEN_PAGE}#${id.toLowerCase()})`))
+      bad.push(`${id} is not linked from a subsystem page to ../${OPEN_PAGE}`);
+  }
+  // A resolved finding must not be rendered here as a full marked record.
+  for (const id of ["B01-1", "B01-3"]) {
+    if (text.includes(findingMarker(id)))
+      bad.push(`${id}'s marker is emitted on a subsystem page`);
+  }
+  return bad.length ? bad.join("; ") : null;
+});
+
+// The P2 acceptance the check above cannot carry: `_build_xref_index` routes a
+// finding id by `finding_state_current.resolution_state`. A `[[B01-1]]`
+// reference in the subsystem's recorded prose is the surface that exercises
+// it — a resolved id must resolve to resolved-findings.md, an open one to
+// findings.md, and neither may resolve to the other page's anchor.
+check("a [[finding]] reference in subsystem prose routes by resolution state", () => {
+  const blocked = needDocs();
+  if (blocked) return blocked;
+  const pages = walk(join(docs, "subsystems"), [".md"]);
+  if (pages.length === 0) return "no subsystem page was rendered";
+  const text = pages.map((p) => readText(p) ?? "").join("\n");
+  const bad = [];
+  for (const [id, page] of [
+    ["B01-1", RESOLVED_PAGE],
+    ["B01-2", OPEN_PAGE],
+  ]) {
+    const wanted = `](../${page}#${id.toLowerCase()})`;
+    if (!text.includes(wanted)) bad.push(`the [[${id}]] reference did not resolve to ${wanted}`);
+    const other = `](../${page === RESOLVED_PAGE ? OPEN_PAGE : RESOLVED_PAGE}#${id.toLowerCase()})`;
+    if (text.includes(other)) bad.push(`the [[${id}]] reference resolved to ${other}`);
+  }
+  if (text.includes("[[B01-1]]") || text.includes("[[B01-2]]"))
+    bad.push("a [[finding]] reference was left unresolved in the rendered prose");
+  return bad.length ? bad.join("; ") : null;
+});
 
 // ---------------------------------------------------------------------------
 // 4. The census must be able to turn red (VP4).
