@@ -51,6 +51,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | **[B-08](b08-materializer-rendering-pipeline.md)** | → | **B-09** | data-flow | structural | the rendered page list is what the contract is written over, so the render decides the denominator the read-back then verifies, read at materializer/amanuensis_materializer/readback.py:write_contract@258ccd2 |
 | **[B-11](b11-development-harness-and-gates.md)** | → | **B-09** | data-flow | observed | the living-conspectus gate reads the committed projection receipts as its denominator, so a publish that recorded nothing gives that gate nothing to check, read at dev/check-living-conspectus.mjs:main@258ccd2 |
 | **B-09** | → | **[B-03](b03-conspectus-schema-vocabulary-and-invariants.md)** | dependency | observed | the state axis's denominator is the stale ledger rows the schema defines, split by the classification column rather than pooled, read at materializer/amanuensis_materializer/readback.py:LEDGER_STALE_SECTIONS@258ccd2 |
+| **[B-01](b01-server-runtime-and-tool-dispatch.md)** | → | **B-09** | dependency | structural | materialize_docs and verify_materialized_docs are dispatched through this registry, so the publication and read-back custody path is entered through the same validator and annotation rules every other tool call is, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3 |
 
 ## Known defects here
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Amanuensis HTML projection 1.14.0">
 <meta name="description" content="Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh.">
-<title>Git state, staleness, and refresh · amanuensis-reader-lenses · Amanuensis</title>
+<title>Git state, staleness, and refresh · amanuensis · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root {
@@ -785,9 +785,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
 <body data-root="../">
 <a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
-  <aside class="nav-rail" aria-label="amanuensis-reader-lenses report navigation">
+  <aside class="nav-rail" aria-label="amanuensis report navigation">
     <a class="brand" href="../index.html">
-      <span class="brand-mark">amanuensis-reader-lenses</span>
+      <span class="brand-mark">amanuensis</span>
       <span class="brand-sub">Architecture survey · Amanuensis</span>
     </a>
     <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
@@ -800,7 +800,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
     </div>
   </aside>
   <main class="document" id="content">
-    <div class="mobile-bar"><span class="mobile-brand">amanuensis-reader-lenses</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
         <p class="eyebrow">Subsystem · <span data-identifier-defined>B-07</span></p>
@@ -837,7 +837,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
 <section class="section-boundaries">
 <h2 id="boundaries"><a class="heading-anchor" href="#boundaries" aria-label="Link to Boundaries">§</a>Boundaries</h2>
 <h3 id="recorded-edges"><a class="heading-anchor" href="#recorded-edges" aria-label="Link to Recorded edges">§</a>Recorded edges</h3>
-<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">From</th><th scope="col">→</th><th scope="col">To</th><th scope="col">Relationship</th><th scope="col">Strength</th><th scope="col">Context</th></tr></thead><tbody><tr><td data-label="From"><strong><abbr class="identifier-definition" title="B-07 — Git state, staleness, and refresh" aria-label="B-07 — Git state, staleness, and refresh">B-07</abbr></strong></td><td data-label="→">→</td><td data-label="To"><strong><a href="b06-locus-standing-and-the-reader-lenses.html"><abbr class="identifier-definition" title="B-06 — Locus standing and the reader lenses" aria-label="B-06 — Locus standing and the reader lenses">B-06</abbr></a></strong></td><td data-label="Relationship">data-flow</td><td data-label="Strength"><span class="status status-survey status-structural" title="Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.">Structural</span></td><td data-label="Context">the stale flag and reason this pass writes are what turn an examined standing into examined-stale for every later answer, read at mcp-server/src/tools/git.ts:gitTools@258ccd2</td></tr></tbody></table></div>
+<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">From</th><th scope="col">→</th><th scope="col">To</th><th scope="col">Relationship</th><th scope="col">Strength</th><th scope="col">Context</th></tr></thead><tbody><tr><td data-label="From"><strong><abbr class="identifier-definition" title="B-07 — Git state, staleness, and refresh" aria-label="B-07 — Git state, staleness, and refresh">B-07</abbr></strong></td><td data-label="→">→</td><td data-label="To"><strong><a href="b06-locus-standing-and-the-reader-lenses.html"><abbr class="identifier-definition" title="B-06 — Locus standing and the reader lenses" aria-label="B-06 — Locus standing and the reader lenses">B-06</abbr></a></strong></td><td data-label="Relationship">data-flow</td><td data-label="Strength"><span class="status status-survey status-structural" title="Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.">Structural</span></td><td data-label="Context">the stale flag and reason this pass writes are what turn an examined standing into examined-stale for every later answer, read at mcp-server/src/tools/git.ts:gitTools@258ccd2</td></tr><tr><td data-label="From"><strong><a href="b01-server-runtime-and-tool-dispatch.html"><abbr class="identifier-definition" title="B-01 — Server runtime and tool dispatch" aria-label="B-01 — Server runtime and tool dispatch">B-01</abbr></a></strong></td><td data-label="→">→</td><td data-label="To"><strong><abbr class="identifier-definition" title="B-07 — Git state, staleness, and refresh" aria-label="B-07 — Git state, staleness, and refresh">B-07</abbr></strong></td><td data-label="Relationship">dependency</td><td data-label="Strength"><span class="status status-survey status-structural" title="Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.">Structural</span></td><td data-label="Context">the git-state, staleness, change-impact and refresh tools are registered by this module and by nothing else, so the freshness surface a host can call is whatever the registry admits, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3</td></tr></tbody></table></div>
 </section>
 <section class="section-known-defects-here">
 <h2 id="known-defects-here"><a class="heading-anchor" href="#known-defects-here" aria-label="Link to Known defects here">§</a>Known defects here</h2>

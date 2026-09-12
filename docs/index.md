@@ -1,6 +1,6 @@
-# amanuensis-reader-lenses
+# amanuensis
 
-An architecture survey of amanuensis-reader-lenses, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.
+An architecture survey of amanuensis, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.
 
 ## What is this codebase?
 
@@ -29,7 +29,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | Metric | Value |
 |---|---|
 | Checked at | `0fee11b0fea1` on `reader-lenses`, 2026-09-12 13:14 UTC |
-| Repository head | `668af2f0ec58` — a different revision from the one the survey checked |
+| Repository head | `8c0600a9a516` — a different revision from the one the survey checked |
 | Upstream head | not known here |
 | Files carrying a survey obligation marked stale | 0 of 58 |
 | Scoped files exempt from that obligation, marked stale | none in scope |
@@ -58,7 +58,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-12 13:17 UTC |
+| Verified at | 2026-09-12 14:51 UTC |
 
 ## Findings by resolution state
 
@@ -79,5 +79,5 @@ Four dimensions, each read from durable records and each reported on its own ter
 
 ## Latest session
 
-`P19 Phase 5 follow-up: correct the finding counts in the packaged artifacts and republish` — started 2026-09-12 13:17 UTC · ended 2026-09-12 13:17 UTC
+`P20 regeneration: clean publish and promotion of the regenerated projection` — started 2026-09-12 14:52 UTC · **active**
 

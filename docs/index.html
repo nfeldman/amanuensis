@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Amanuensis HTML projection 1.14.0">
 <meta name="description" content="Identity, four status dimensions, and one route into each lens.">
-<title>Project overview · amanuensis-reader-lenses · Amanuensis</title>
+<title>Project overview · amanuensis · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root {
@@ -785,9 +785,9 @@ a .identifier-definition { text-decoration-color: currentColor; }
 <body data-root="">
 <a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
-  <aside class="nav-rail" aria-label="amanuensis-reader-lenses report navigation">
+  <aside class="nav-rail" aria-label="amanuensis report navigation">
     <a class="brand" href="index.html">
-      <span class="brand-mark">amanuensis-reader-lenses</span>
+      <span class="brand-mark">amanuensis</span>
       <span class="brand-sub">Architecture survey · Amanuensis</span>
     </a>
     <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
@@ -800,7 +800,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
     </div>
   </aside>
   <main class="document" id="content">
-    <div class="mobile-bar"><span class="mobile-brand">amanuensis-reader-lenses</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
         <p class="eyebrow">Overview</p>
@@ -814,7 +814,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
           
         </div>
       </header>
-      <article class="content content-overview"><p>An architecture survey of amanuensis-reader-lenses, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.</p>
+      <article class="content content-overview"><p>An architecture survey of amanuensis, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.</p>
 <section class="section-what-is-this-codebase">
 <h2 id="what-is-this-codebase"><a class="heading-anchor" href="#what-is-this-codebase" aria-label="Link to What is this codebase?">§</a>What is this codebase?</h2>
 <div class="prose-flow"><p>Amanuensis gives a coding agent a durable, evidence-backed account of a repository. It has three parts. An MCP server (<code>mcp-server/</code>, TypeScript, ~38k lines of <code>src/</code>) holds the account in a SQLite database beside the repository and exposes it as tools: record a subsystem, a file's place in scope, a piece of structured evidence, a revision-bound claim, a concern's disposition, a finding and the events that resolve it. A Python materializer (<code>materializer/</code>) opens that database read-only and projects it into Markdown pages and a self-contained HTML index for people. A skill (<code>.claude/skills/amanuensis/</code>) is the methodology the agent follows: a phased survey in which each phase has a deliverable, and each status a subsystem reaches authorizes a narrower or wider set of claims than the one before.</p><p>The organising idea is that an assertion about code is only worth carrying forward if the record says how it was reached. Every claim cites structured evidence; every piece of evidence names a file, a symbol, and the git revision it was read at; a status advance is refused unless the phase before it left the deliverable it owes.</p></div>
@@ -823,13 +823,13 @@ a .identifier-definition { text-decoration-color: currentColor; }
 <h2 id="where-the-record-stands"><a class="heading-anchor" href="#where-the-record-stands" aria-label="Link to Where the record stands">§</a>Where the record stands</h2>
 <p>Four dimensions, each read from durable records and each reported on its own terms. None of them is combined with another.</p>
 <h3 id="source-alignment"><a class="heading-anchor" href="#source-alignment" aria-label="Link to Source alignment">§</a>Source alignment</h3>
-<dl class="summary-list" aria-label="where the record stands"><div><dt>Checked at</dt><dd><code>0fee11b0fea1</code> on <code>reader-lenses</code>, 2026-09-12 13:14 UTC</dd></div><div><dt>Repository head</dt><dd><code>668af2f0ec58</code> — a different revision from the one the survey checked</dd></div><div><dt>Upstream head</dt><dd>not known here</dd></div><div><dt>Files carrying a survey obligation marked stale</dt><dd>0 of 58</dd></div><div><dt>Scoped files exempt from that obligation, marked stale</dt><dd>none in scope</dd></div></dl>
+<dl class="summary-list" aria-label="where the record stands"><div><dt>Checked at</dt><dd><code>0fee11b0fea1</code> on <code>reader-lenses</code>, 2026-09-12 13:14 UTC</dd></div><div><dt>Repository head</dt><dd><code>8c0600a9a516</code> — a different revision from the one the survey checked</dd></div><div><dt>Upstream head</dt><dd>not known here</dd></div><div><dt>Files carrying a survey obligation marked stale</dt><dd>0 of 58</dd></div><div><dt>Scoped files exempt from that obligation, marked stale</dt><dd>none in scope</dd></div></dl>
 <h3 id="survey-coverage"><a class="heading-anchor" href="#survey-coverage" aria-label="Link to Survey coverage">§</a>Survey coverage</h3>
 <dl class="summary-list" aria-label="where the record stands"><div><dt>Subsystems by survey depth</dt><dd>11 mapped, 1 deferred</dd></div><div><dt>Files read, of those carrying an obligation</dt><dd>29 of 58</dd></div><div><dt>Paths in scope with no ledger row</dt><dd>0</dd></div></dl>
 <h3 id="open-engineering-work"><a class="heading-anchor" href="#open-engineering-work" aria-label="Link to Open engineering work">§</a>Open engineering work</h3>
 <dl class="summary-list" aria-label="where the record stands"><div><dt>Findings open</dt><dd>10</dd></div><div><dt>Repairs awaiting verification</dt><dd>0</dd></div><div><dt>Contradictions unresolved</dt><dd>0</dd></div><div><dt>Decisions open</dt><dd>5</dd></div></dl>
 <h3 id="publication-integrity"><a class="heading-anchor" href="#publication-integrity" aria-label="Link to Publication integrity">§</a>Publication integrity</h3>
-<dl class="summary-list" aria-label="where the record stands"><div><dt>State axis</dt><dd>green</dd></div><div><dt>Coverage axis</dt><dd>green</dd></div><div><dt>Content axis</dt><dd>green</dd></div><div><dt>Verified at</dt><dd>2026-09-12 13:17 UTC</dd></div></dl>
+<dl class="summary-list" aria-label="where the record stands"><div><dt>State axis</dt><dd>green</dd></div><div><dt>Coverage axis</dt><dd>green</dd></div><div><dt>Content axis</dt><dd>green</dd></div><div><dt>Verified at</dt><dd>2026-09-12 14:51 UTC</dd></div></dl>
 </section>
 <section class="section-findings-by-resolution-state">
 <h2 id="findings-by-resolution-state"><a class="heading-anchor" href="#findings-by-resolution-state" aria-label="Link to Findings by resolution state">§</a>Findings by resolution state</h2>
@@ -841,7 +841,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
 </section>
 <section class="section-latest-session">
 <h2 id="latest-session"><a class="heading-anchor" href="#latest-session" aria-label="Link to Latest session">§</a>Latest session</h2>
-<p><code>P19 Phase 5 follow-up: correct the finding counts in the packaged artifacts and republish</code> — started 2026-09-12 13:17 UTC · ended 2026-09-12 13:17 UTC</p>
+<p><code>P20 regeneration: clean publish and promotion of the regenerated projection</code> — started 2026-09-12 14:52 UTC · <strong>active</strong></p>
 </section></article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="index.md">Inspect Markdown</a></p></footer>
     </div>

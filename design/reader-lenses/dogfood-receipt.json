@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-12T13:32:16.346Z",
-  "repository_sha": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+  "recorded_at": "2026-09-12T14:52:31.661Z",
+  "repository_sha": "8c0600a9a516a54639dfc590da74a92a05956cd5",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
@@ -21,7 +21,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 19412,
+      "wire_bytes": 19738,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -65,7 +65,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -173,7 +173,7 @@
             "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
           },
           "boundaries": {
-            "census": 7,
+            "census": 11,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
@@ -255,13 +255,13 @@
           }
         },
         "census": {
-          "total": 54,
+          "total": 58,
           "by_section": {
             "purpose": 1,
             "structure": 7,
             "defects": 1,
             "reviews": 10,
-            "boundaries": 7,
+            "boundaries": 11,
             "terms": 0,
             "leads": 9,
             "history_pointer": 3,
@@ -343,13 +343,17 @@
           {
             "section": "boundaries",
             "reason": "policy",
-            "count": 7,
+            "count": 11,
             "ids": [
               "boundaries:seam/SM-01",
               "boundaries:seam/SM-03",
               "boundaries:seam/SM-09",
               "boundaries:xref/B-01>B-02/dependency",
               "boundaries:xref/B-01>B-04/dependency",
+              "boundaries:xref/B-01>B-05/dependency",
+              "boundaries:xref/B-01>B-06/dependency",
+              "boundaries:xref/B-01>B-07/dependency",
+              "boundaries:xref/B-01>B-09/dependency",
               "boundaries:xref/B-04>B-01/dependency",
               "boundaries:xref/B-11>B-01/dependency"
             ],
@@ -384,8 +388,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 9257,
-          "response_bytes": 19412,
+          "payload_bytes": 9416,
+          "response_bytes": 19738,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": true,
@@ -412,7 +416,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 20122,
+      "wire_bytes": 20202,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -456,7 +460,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -576,7 +580,7 @@
             "as_of": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
           },
           "boundaries": {
-            "census": 2,
+            "census": 3,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
@@ -658,13 +662,13 @@
           }
         },
         "census": {
-          "total": 35,
+          "total": 36,
           "by_section": {
             "purpose": 1,
             "structure": 3,
             "defects": 1,
             "reviews": 6,
-            "boundaries": 2,
+            "boundaries": 3,
             "terms": 0,
             "leads": 5,
             "history_pointer": 3,
@@ -727,9 +731,10 @@
           {
             "section": "boundaries",
             "reason": "policy",
-            "count": 2,
+            "count": 3,
             "ids": [
               "boundaries:seam/SM-05",
+              "boundaries:xref/B-01>B-05/dependency",
               "boundaries:xref/B-05>B-06/data-flow"
             ],
             "ids_truncated": false
@@ -759,8 +764,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 9618,
-          "response_bytes": 20122,
+          "payload_bytes": 9657,
+          "response_bytes": 20202,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": true,
@@ -835,7 +840,7 @@
           "revision": {
             "checked_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
             "checked_at": "2026-09-12 13:14:57",
-            "repository_head": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+            "repository_head": "8c0600a9a516a54639dfc590da74a92a05956cd5",
             "origin_head": null,
             "agrees": false,
             "unchecked_since": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
@@ -1174,7 +1179,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 12260,
+    "wire_bytes": 12282,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -1275,7 +1280,7 @@
           "ordering_basis": "category-then-id"
         },
         "leads": {
-          "census": 68,
+          "census": 69,
           "recorded": true,
           "requested": true,
           "items": [],
@@ -1283,7 +1288,7 @@
           "counts": {
             "unverified_suspicion": 0,
             "pattern": 63,
-            "tension": 2,
+            "tension": 3,
             "anomaly": 2,
             "connection": 1
           },
@@ -1368,13 +1373,13 @@
         }
       },
       "census": {
-        "total": 96,
+        "total": 97,
         "by_section": {
           "open": 10,
           "awaiting_verification": 0,
           "undiscriminated": 0,
           "decisions": 5,
-          "leads": 68,
+          "leads": 69,
           "stale": 1,
           "hot_spots": 12
         }
@@ -1410,7 +1415,7 @@
         {
           "section": "leads",
           "reason": "policy",
-          "count": 68,
+          "count": 69,
           "ids": [
             "lead:1",
             "lead:2",
@@ -1479,7 +1484,8 @@
             "lead:65",
             "lead:66",
             "lead:67",
-            "lead:68"
+            "lead:68",
+            "lead:69"
           ],
           "ids_truncated": false
         },
@@ -1506,8 +1512,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5750,
-        "response_bytes": 12260,
+        "payload_bytes": 5760,
+        "response_bytes": 12282,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1576,7 +1582,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-602ac79e-4cec-4efd-9fb0-61f5ee137a45",
+      "projection_run_id": "projection-7954ffea-a954-4410-acbf-c6e3ed126789",
       "pages_rendered": 36,
       "html_pages_rendered": 36,
       "summary": {
@@ -1612,17 +1618,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-602ac79e-4cec-4efd-9fb0-61f5ee137a45"
+        "projection_run_id": "projection-7954ffea-a954-4410-acbf-c6e3ed126789"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "40b59364b414f349a81b3df177eb23252f21137c509072e61747550966f21965",
-      "manifest_sha256": "61a71094122f077b7f051d5e8d3d95fa367c8a2fe4052632e338057255ba1cf8",
+      "projection_contract_sha256": "8d9bbfb9189abdb38ba52b617b0c2ba8fd6ef2bd7ce6991ef7c1df26ca051b87",
+      "manifest_sha256": "caef7ed12a286a1be737adb0ec909de0790c28f2d02a4b211d2fce28750e63ed",
       "page_count": 73,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-12T13:31:11.427Z",
+      "promoted_at": "2026-09-12T14:52:27.179Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",

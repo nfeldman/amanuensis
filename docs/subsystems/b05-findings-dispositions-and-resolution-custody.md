@@ -54,6 +54,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | From | → | To | Relationship | Strength | Context |
 |---|---|---|---|---|---|
 | **B-05** | → | **[B-06](b06-locus-standing-and-the-reader-lenses.md)** | data-flow | observed | the resolution state the findings tools append is what the attention lens partitions on, so an event written here changes which lens a finding appears in, read at mcp-server/src/schema.sql:finding_state_current@258ccd2 |
+| **[B-01](b01-server-runtime-and-tool-dispatch.md)** | → | **B-05** | dependency | structural | the finding, disposition, concern, contradiction and resolution tools reach a client only through the single registry this module concatenates and dispatches against, so the resolution custody surface exists for a caller exactly when the registry carries it, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3 |
 
 ## Known defects here
 

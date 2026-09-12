@@ -1,17 +1,17 @@
 {
   "version": "0.5.0",
-  "generated_at": "2026-09-12T13:30:51Z",
+  "generated_at": "2026-09-12T14:52:21Z",
   "pages": [
     {
       "path": "architecture.md",
       "sources": {
         "db:arch:seams": "da5d8c999ff7a7700cbd74515438fea7a4134b97341415e42c82be241c7d28d6",
         "db:arch:subs": "58ba7eabdb038bda04828484033235393d56290ed144355eb3e9e64ea86019ca",
-        "db:arch:xrefs": "0864507b27161bb2e903e7c03da5570fc9669ca11dd5298e2b645e6946300582",
+        "db:arch:xrefs": "774e8a52cbb750067b0641b67e72ca024948fbb8a960d2ed42e9c7da296511f4",
         "prose:onboarding-report.md": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0"
       },
-      "content_hash": "9df01b32b2e97e87013aeda28b5732ac2d32db7cca0e4c92ac56fe26b6dec3cf",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "2ff7b61fe7dc96f03758e0b4f16662465a97405d9665fd385dc9c0200b15877e",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
         "prose:concern-checklist.md": "e94150ceb4d2b308dfdc51e0183396c46b5e5bac5d01df7a96d252acb8517eb9"
       },
       "content_hash": "e94150ceb4d2b308dfdc51e0183396c46b5e5bac5d01df7a96d252acb8517eb9",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "concerns.md",
@@ -29,7 +29,7 @@
         "db:concerns:subs": "ed60ea2e6bab0b9438355f7ae1c389fa2d24f0059585a740b9eeb1a28c4631a5"
       },
       "content_hash": "eb8c36878080cc0d8638c5c79d475c54e80f7cc284fa4d02210b90715ad8d959",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "contradictions.md",
@@ -39,7 +39,7 @@
         "db:contradictions:standing": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0"
       },
       "content_hash": "589e54d80a254caee61038587f758b9c5effab0b9d17c74ec55381571e1cbf9f",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "diagnosticity.md",
@@ -47,7 +47,7 @@
         "db:diagnosticity:index": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "52978217cbfbdcb15f5e81b3f04c53f77055e6608a23fb52c7a56a3dd977f6c3",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "disagreements.md",
@@ -57,7 +57,7 @@
         "db:disagreements:matrices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "3ea162d1382c32208f7df68b7ce9be6186b22dc13089dfe36bae5f990925e878",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "entry-point.md",
@@ -65,16 +65,16 @@
         "prose:entry-point.md": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba"
       },
       "content_hash": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "field-notes.md",
       "sources": {
         "db:notes:closed-count": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:notes:open": "ca2415829ec5c14867266aea4304dd4bcc30a9b25a920ac78477ca19cb10157e"
+        "db:notes:open": "a6ca49cf669fee12289f3d7356806a69b85cb4b37085df13bfb6204e47c62d3d"
       },
-      "content_hash": "014e7eb44e8870ecbff3da1a001e83d6246121ac493c0cb6ea2004aaabb11835",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "b835db44f22b13cfd95fc2a6e9298e3cb2c0b0f83b5b212f6bca511c29ec1a81",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "files.md",
@@ -84,7 +84,7 @@
         "db:files:standing": "71ef1607366216fe0eadc71d3b4e5587932846f6b7bd2a7293ed5cb48df0fb0d"
       },
       "content_hash": "d21b5ad5971a7eaa54c9eeae15c92308d7d7cecf0150855877f743af58647d67",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "findings.md",
@@ -92,7 +92,7 @@
         "db:findings:open": "a1097d44d674be96bdb9a381785df3a44fdd61556483dbdeeb033e4443b1935f"
       },
       "content_hash": "738c5f4f893a96c68532400a94dbbe933063dc94b646635c46653c033ff394e0",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "hot-spots.md",
@@ -101,7 +101,7 @@
         "db:hotspots:measures": "5363931d51b35c5637438a514d667f54bf939210ab652692664c0c483194a973"
       },
       "content_hash": "8be71d03daaddd55d95b9c9f8cb1401d6984f9a3695cd2aad6b7c38d1757cd30",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "how-to-read.md",
@@ -110,25 +110,25 @@
         "synthetic:how-to-read-contract": "92521fc3cbd964bd"
       },
       "content_hash": "e5e13dc5251dbbc892fcacf7d4cbc9ca1a0552dd2c30f6e656dcd1a6c73a927d",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "index.md",
       "sources": {
-        "db:index:alignment": "cfe20e0eb093785f026636a2ae66c901e30122e9c50a244a46196a44fd099b78",
+        "db:index:alignment": "48df7674f2fb22a8d080f03451bafbe77a0b77344a0017505f5089be4a3b4326",
         "db:index:decisions": "11d0a8967009cbcdf468f09e5b09e73e7119b528c35a0e0b23f2ae052786b8fa",
-        "db:index:identity": "c6829580a8053a8fc6b3d967f9319274ac0983861b12fc2b388391e98da1a7e0",
-        "db:index:session": "0a74e0fd9c222eb7bc839ca84b1bdf8966d7d1c8d6e220ddb04eef1cef62d174",
+        "db:index:identity": "931d73cc206559d429b860b80e58fd83819968632537639b2d7bb1dabd1c6c70",
+        "db:index:session": "713d0dbb967e4daddcbb9e6aa324f5ca7ddf8b4f097751aa0897254bf447911f",
         "db:index:stale-objects": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:index:states": "8de14c71dba4c8c514e97e808a95a500bf48ab9e44f5a4b0dfaff0d5182cdd8f",
         "db:index:subs": "2c9aa45e24fefd461ec181a60af7965b54b3946518639fb259fb25fb93c3bbf3",
         "db:index:unledgered": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
         "db:index:unresolved": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:index:verification": "c362f14b9064d56dd6d77260264df6f84aab6188ff6340059c9bb20ff063544f",
+        "db:index:verification": "ea7da79410ba2e43609e87a48af679e533052a7e2ea16b16afba06f2da28b753",
         "prose:entry-point.md": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba"
       },
-      "content_hash": "d1237eec189fa300af391451725b71e104933fc069b61c5a9aedfacbd9328290",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "c3062b5c2259116a50b1772b31267581bfffafa96ca1b54ee723d3e4a538f9dc",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "master-plan.md",
@@ -137,7 +137,7 @@
         "db:master-plan:subs": "6f5f649f3084baf8753473771ed61b014d46e425a523b5534e6b1678a2146898"
       },
       "content_hash": "ca33852697fa39451a46449c2195b47230bec54311035241746f2b748cd3a14a",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "not-yet-surveyed.md",
@@ -153,7 +153,7 @@
         "db:gaps:unledgered": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "0bb0fa4bf68e35ec7fc4eabb134afa1e3cba4ed9fbec5b86a31c183d23a70320",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "onboarding-report.md",
@@ -161,7 +161,7 @@
         "prose:onboarding-report.md": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0"
       },
       "content_hash": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "open-questions.md",
@@ -170,7 +170,7 @@
         "db:open_questions:open": "0b52e5ca76dea84e314e32575419e02dab07aa0619baa748da0d09882b68eda6"
       },
       "content_hash": "ce20f2965483fb01faa6ffc7ebdea5090caf7352a019d0956759df1b01b5dd12",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "resolution-history.md",
@@ -179,7 +179,7 @@
         "db:history:finding-events": "20691b7ef57722fcd5a5c89c89f024f3aafcec3cc69915e2f340155f5579e79a"
       },
       "content_hash": "6e8b278b882a7360dcc1350db039d0054dce3132c49726b820b23562ebee431c",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "resolved-findings.md",
@@ -188,7 +188,7 @@
         "db:findings:resolved-basis": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
       },
       "content_hash": "d4cef656166128d9bf1b66baf1717d509a4389cc1fb1444b6647478107d259f6",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "resolved-leads.md",
@@ -197,7 +197,7 @@
         "db:resolved-leads:questions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "a14bd884c690018893717964967522fdbb45b279ef1e74127fc0935a7b739eae",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "seams.md",
@@ -206,17 +206,17 @@
         "db:seams:assess": "6b97fcdb6771dd24ea0af0d61f2974d17d59c099faec901cabb2bdaf4e34a3db"
       },
       "content_hash": "0e74cb57507f21195d97bd862799074df03ac04dd96c041f0279be1e5e2def2b",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "sessions.md",
       "sources": {
         "db:sessions:refreshes": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:sessions:sessions": "680d7176b1df538ec7f2d0c79fb5d548fa6a523319680c41bdf2b6ce64bbda1f",
-        "db:sessions:verifications": "4e2013f63601859e03c030257db100332d5245cc68f92e53876243809ede99cc"
+        "db:sessions:sessions": "0d21e6a2df31fce11dda630d031a79b81f4721519df1013133f497c490515c33",
+        "db:sessions:verifications": "0d5011e0218d0bdf4ad386a4ab897a2e62a5defa3d492b1985fa4a624882c445"
       },
-      "content_hash": "7191b2e8de6faeafcf042c98f30d51ad3983f3799f5cdb6b0e95198545130a27",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "62992559848d58c6e8375916ccfe2e713460e269f6a41e80ee041f3cb0d015f6",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "stale.md",
@@ -227,7 +227,7 @@
         "db:stale:names": "b43ea9e8bbfdd9c21ceab5b261a57a7a58a6e0606f81b2407f0927e033958f03"
       },
       "content_hash": "6e213257aaa0dc69682a69cbb766d7a1be81d016f43e025264a2f383bf769547",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b01-server-runtime-and-tool-dispatch.md",
@@ -242,11 +242,11 @@
         "db:subsystem:B-01:seams": "0078dd317241672459be824d8df3e7240e40c6ef2ccb91f9fcfa4b88f41d5ffe",
         "db:subsystem:B-01:standing": "0624cf6a58f0c467614ef2aec66a175250b5dfb4c6034cf02ad7436645485e18",
         "db:subsystem:B-01:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-01:xrefs": "c412389c04c1a20279cca81ad044e509236874cc9f3f6a7356f9842b092f6467",
+        "db:subsystem:B-01:xrefs": "cc316938008a54f1411cbe4a49467d99288bad463f7b63df1ef19dc385733793",
         "prose:B-01-server-runtime-and-tool-dispatch.md": "cd3e9f496a1d3b624e691578d23f11a5aefe0913ce6d75641c12b169cbdb6325"
       },
-      "content_hash": "7c77174b134dbd55e0aa2ea267cd638a6f951c2a9c4d065b504bf3e05fe2e2f9",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "20a4e4c9864be73bb8a0a6c421201af026dce749340b24023685ab7411af83d3",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b02-repository-binding-and-storage-custody.md",
@@ -265,13 +265,13 @@
         "prose:B-02-repository-binding-and-storage-custody.md": "b815eaa57d68ccac031f5aaf38d3c94bed5c1c071579d7b6b68beae1d6501a8b"
       },
       "content_hash": "565d9c28dd53ce8415466f8e6f6e3d165f1a175572dca7684dcd3dec39594390",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b03-conspectus-schema-vocabulary-and-invariants.md",
       "sources": {
         "db:subsystem:B-03:artifacts": "171f744b466938b71204b011c5218b70d05b545125298c7cb13bd8f8a2cf8dbe",
-        "db:subsystem:B-03:claims": "0d622271cbbbd31bd3531b7d1490100d6237c9b81bcbbca1a113f17ced9f7aaa",
+        "db:subsystem:B-03:claims": "8823003790035875ef37755d121716d424ddf5cabf7671944a8a5d62169dc9aa",
         "db:subsystem:B-03:concerns": "cea53254ed757baa30361c8f37ef4ecc1314765571a446055d74be245eda9e08",
         "db:subsystem:B-03:disp": "f98c310834db753511fce0f50fd06bb9c8f85bb5f95ab44a78c42363507d2a19",
         "db:subsystem:B-03:files": "c78f05ac4ccf785b349b74e77197536e91cb0136fdc8651bd73ba5679fed3705",
@@ -283,14 +283,14 @@
         "db:subsystem:B-03:xrefs": "122205a9a3cf0a5dc7eec81e8284935eeb195b7b49b1bb9a588fc0abcb3251d9",
         "prose:B-03-conspectus-schema-vocabulary-and-invariants.md": "3632e2b5b9aa396c50453fa37c34d14fc6ca73fd000361012822af0eec4cd912"
       },
-      "content_hash": "4be48b958163efd8613030aed3f10d76cf9b7e81e7a10de705450c7e83241d2b",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "cf91bde1a102a8ca626b408f4dfefe2867bb5c4d1ee1167f2b753e19e60ef10d",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b04-survey-record-tools.md",
       "sources": {
         "db:subsystem:B-04:artifacts": "3e5f7e0024bd93d6a9ba7500c7c1aa48a95f735934bc9879319b8ec2dec9faa3",
-        "db:subsystem:B-04:claims": "3833088309fc1dc752c46249bb94ee6a933e47afd9eb788d426f82368a509dd4",
+        "db:subsystem:B-04:claims": "ae150476e25e11c7d3b30368c00ec06d4b8f81e707cb7f272d092f12f4f25a99",
         "db:subsystem:B-04:concerns": "cea53254ed757baa30361c8f37ef4ecc1314765571a446055d74be245eda9e08",
         "db:subsystem:B-04:disp": "69a8e2ac03a88a29500373572d76025547d24a177578eefa12dd982c34ce544c",
         "db:subsystem:B-04:files": "46e9af36cbd871e925ed71df7214bbdd0f477f1793f3b10dd8872d743c4b538a",
@@ -302,8 +302,8 @@
         "db:subsystem:B-04:xrefs": "722fbdb79f369b4bf7bbae10fd58de86e787d3dfb945dcb631dcf7faa3053ddc",
         "prose:B-04-survey-record-tools.md": "4291a07a4299d918c3640fc3dcf5afbe49588ea8e8472196b1a92b1aac520853"
       },
-      "content_hash": "97df6be0b7d237f56f4bd929edaba032ee5c5c4ea383cfc112f10a0ea5df7fa3",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "c1a6e20107ebb0ac63c28dc8a6b1f675ee6bcda6b1fa0e746b0244f77e64464d",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b05-findings-dispositions-and-resolution-custody.md",
@@ -318,17 +318,17 @@
         "db:subsystem:B-05:seams": "c404ceb9a5a04da5aaca5671ad84cb6436017c939b11c1a92c9a511fef10be98",
         "db:subsystem:B-05:standing": "1959902547098c79d85a0f7d0901aa45590deadd8635c26f127b204c7fede0b1",
         "db:subsystem:B-05:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-05:xrefs": "f4a988b091ed5ec22aa05e8020e471c86a3319419339a7c9de7f71eea1f7489f",
+        "db:subsystem:B-05:xrefs": "1ac07e5d6fd28984c2d9184245e659ebedd42b2aea17ad741cbe28a199c4764a",
         "prose:B-05-findings-dispositions-and-resolution-custody.md": "a12adeec760c3229ae96845584f48f6f2f42fff9fa874d013109581c3e4d3ecb"
       },
-      "content_hash": "ecfcb870877a074f45c215c5c27eed7e3b7550f60537f30f8d28ecf5b844d916",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "a98ec964a405a22abf3dad95885f579c7fc5179f66db4d40af7ee8f6d19b8cb1",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b06-locus-standing-and-the-reader-lenses.md",
       "sources": {
         "db:subsystem:B-06:artifacts": "e1b637ee4f37471e32661d3063bddb37c152e36ff1326a649f8119b1275dddf0",
-        "db:subsystem:B-06:claims": "6754da3ebb918533bb944019e9bd2b03c7f122c9e78bf025ad642ec8d353f907",
+        "db:subsystem:B-06:claims": "5463ec39be8f2c222c0518639711d8550e43aa52d2f1ad5c3bbc76b169cf48ec",
         "db:subsystem:B-06:concerns": "cea53254ed757baa30361c8f37ef4ecc1314765571a446055d74be245eda9e08",
         "db:subsystem:B-06:disp": "85e0a16bd6c68c7b696dfc568dc635c83e24b133ef257a6ca62781f3b3779851",
         "db:subsystem:B-06:files": "be80b08fa09ff9f6b07c5abdcdf2c4bed10724a73191cdad49c6e2e1eac881d3",
@@ -337,11 +337,11 @@
         "db:subsystem:B-06:seams": "ddf7aa5435baf54eb216cd0d69ce623b406cf728eeaf85f0b345cc3f300e2c63",
         "db:subsystem:B-06:standing": "5b6d5c266efcd3a8d7f538de29471a4ce87aa2b315a1988764ebb2f42afe50d6",
         "db:subsystem:B-06:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-06:xrefs": "649460045076e3bfafac36cdf740776cb67f201b4f359d8fd13f29f476fe8063",
+        "db:subsystem:B-06:xrefs": "9e3af6ce10a94600cdbc23b881a4bb9103d59bd92cbb11102adf5d7187eae501",
         "prose:B-06-locus-standing-and-the-reader-lenses.md": "d132efaa14cff4f0ce8bc8dcd7a865f98b9c3bfb5174c19c27965e296538d449"
       },
-      "content_hash": "b1f5939828fb113c905b6bdf050f5ced95d9c98240edab8b9ef9ad34265cb75d",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "ba48cfec86cc9fa49c6ea553a5a952d5f9e5be27c0b642ad53ab64e103db38f2",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b07-git-state-staleness-and-refresh.md",
@@ -356,11 +356,11 @@
         "db:subsystem:B-07:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:subsystem:B-07:standing": "507402e5d7e654012a93466174dcb0b7ba01051cfe4c10caae17af3bac4f1197",
         "db:subsystem:B-07:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-07:xrefs": "048b6f7b430ee6ebb0c1f4d4bc3f2f9adeee6ce9655b6d2912f1d45f10122b23",
+        "db:subsystem:B-07:xrefs": "9ccf14f9ff3c7f6a3e799ce79c18aafe0eca9f730f3990bb6779595d47939332",
         "prose:B-07-git-state-staleness-and-refresh.md": "38105f5cfe6625ee71a02a6ece63023b2735d74c38a002dec85698d682adfff4"
       },
-      "content_hash": "ca46ab55afc699ec0661c30dfd2f80f056fefb341d95616c9e2bb87d21dca1f7",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "ab2b443299004ad09a7a2ab272203a746851ba50b0b60664d8e212fce47e3271",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b08-materializer-rendering-pipeline.md",
@@ -379,7 +379,7 @@
         "prose:B-08-materializer-rendering-pipeline.md": "96f47bc3b39abfed628f84d9247a56020b1332007f62c74ec6e5b8a0971148b5"
       },
       "content_hash": "9dc69f32d5e8702ec0328c4ba3581c79ed7b4f39ed89ffd021b8f0f4cb24fc12",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b09-projection-read-back-and-publication-custody.md",
@@ -394,11 +394,11 @@
         "db:subsystem:B-09:seams": "b4d817afc223a545dbeb3248889aed3de1bae2e25e02aaa66e2e1809078a599c",
         "db:subsystem:B-09:standing": "1c3cfb5b5241b09d80d47ffff6fad55c3bb58d89a4f33e56c1d94d7366054ccb",
         "db:subsystem:B-09:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-09:xrefs": "0b3d8a03604ff8ab4bac081eca762dd4fb327236e1a2dde7146b7d5667454aba",
+        "db:subsystem:B-09:xrefs": "4440eee024da8e4ced5e2b277dfc743c8ffeefc2408dc43762639a657e0050aa",
         "prose:B-09-projection-read-back-and-publication-custody.md": "755317dbb38dd1830057ed941b4ea5d16b0dab0dbf4573526d99e3df04cf324d"
       },
-      "content_hash": "a27adf81da5ef7383372ba618111eae62bbd252f16fa87167f15057061ca9851",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "content_hash": "ce193b90ffd84e2f691586fd7f10630192dfbabbb5b616674c1250301227bc43",
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b10-the-amanuensis-skill.md",
@@ -417,7 +417,7 @@
         "prose:B-10-the-amanuensis-skill.md": "0983da5845e2ac01701825ed1666afca914160ff687f59952e2b1741c68bc58c"
       },
       "content_hash": "7b5572b88ce18ba54fdd59b04680dabc069900c700cbb3827d67f220a7d20ec5",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b11-development-harness-and-gates.md",
@@ -436,7 +436,7 @@
         "prose:B-11-development-harness-and-gates.md": "54e5f6c5b06dd4e7e3967398c120b20741ba68486314cae489d336bb938f0554"
       },
       "content_hash": "cd3b0627ecc6b8034959f69631d19ed0138cc62fb5a4a39aca3817639faccb88",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "subsystems/b12-vendored-research-corpus.md",
@@ -454,7 +454,7 @@
         "db:subsystem:B-12:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "6c8e5ee6b755ba6c515ab19e7425a4d8cbccb47663b4efbcda3c6499b9a49ed4",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     },
     {
       "path": "vocabulary.md",
@@ -462,157 +462,157 @@
         "db:vocab:all": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "9edecd353ac43ca1491c1cbc7c274e2d7fddde9879374646898d2af3c38705b8",
-      "rendered_at": "2026-09-12T13:30:51Z"
+      "rendered_at": "2026-09-12T14:52:21Z"
     }
   ],
   "projection_files": [
     {
       "path": "architecture.html",
-      "content_hash": "53fbc9993f02a78b4c35039179fe318b43f95e64a734be49aa01ac32730dd59c"
+      "content_hash": "e2cd8ff07eb0f019721e33c0e4a39ca0df0f66262c607888a6e36d5fafecc292"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "e52aec5cfaf1fc30448573e77e3f40a9d85c3a660900b30a12e556e614721d1a"
+      "content_hash": "4d065db4b655cab7b33283fb23908938f3fe3531f9feaa07c407720ec34bd665"
     },
     {
       "path": "concerns.html",
-      "content_hash": "8895197d892f4485a193add1d45769e4ada3f175d90745f4122a77091885a5cd"
+      "content_hash": "e9cb590763199aa0e06719e0425092bf7523683c38faa9e95c13ab8a9e43adc1"
     },
     {
       "path": "contradictions.html",
-      "content_hash": "d3c8d0749214c235f9a98f562455318f311f21b66ec5a41a2319025cb77d0b2d"
+      "content_hash": "bf5b7a91e0e1f8e786e560a0487a5dc4dd9cf411d9eb816407e815d4eb14fdd1"
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "acf6931e58e9bf90e6f6684a28b0b93011a9ad68ad9d298d912b73f6bb16bea3"
+      "content_hash": "12aac91af1b5d01fb15df022fbc9e88106ec4c84d9f4f7989eb44be6343dc9fa"
     },
     {
       "path": "disagreements.html",
-      "content_hash": "b3330b0cef182ce43c5da69acd4087fe9e8a71e09d1ef7c658448d045e60213c"
+      "content_hash": "51e7123bfc16ad3846f6e207e92ebd4f593dcc1d59be425749d4d4ad3caa9610"
     },
     {
       "path": "entry-point.html",
-      "content_hash": "14c3167ca430a5c10f2bfd230b45d50043fafd4304e6f33829713bbfb4893f17"
+      "content_hash": "6c584979ce38b1db9d174c5243cc5cc21461b05a4c50fb3efbe1c53cea933158"
     },
     {
       "path": "field-notes.html",
-      "content_hash": "2ad4ee4b662b28a1ff3cc584b5c705122d317888612393a7487fce0b5a39a10d"
+      "content_hash": "83563a4f36a09337523e5e04cb9fa729b7821b549df36aaa0a00157339c1f461"
     },
     {
       "path": "files.html",
-      "content_hash": "b1992cbdfbd6f8a946d8a720a6d2551f9305f16ba9a4e1a619d57c744324c542"
+      "content_hash": "13201030e27d78b682d671f283a0750d24d24580834ad0f9567e8ab509171fa5"
     },
     {
       "path": "findings.html",
-      "content_hash": "652a63455590f05c128223631fb8429f77e77e4942259dc1c895eee80e43ec16"
+      "content_hash": "b3cf9e84747c5b0c3f84122750013f496ce3872c097c521238eac8554876c7e6"
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "56997c3f4dbf17fd3c18fc1c086785c65a6316935b2b5516aaf763ddfb74db1b"
+      "content_hash": "c45c43d66e3d4769144203c24a0abf409470e1bfdda8edab18ce62a2a9fe5433"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "8a579198cb2121c7d5991018072c039cc7aefae846ed2bae66c5c84626ccf58d"
+      "content_hash": "ae64c0759bef4b5e3b7b81a098c4cbc6001e85ec42ad6c386fdc641dd2e9216d"
     },
     {
       "path": "index.html",
-      "content_hash": "ecdcd3e7681618deca13c71ded2434ff0ee1fce9f444679b6d8f97902114a5eb"
+      "content_hash": "b0bf114401d3555963cde24081dfbf195d11ef5638096a25a34220c9385349d2"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "4e03ba90ffe63ac9d632dc2833889e5fa5cf8f255cc022e90f55c03ca653aaa5"
+      "content_hash": "78b77ac30701d6ada76196cc69705772c6592bcdeabb224758f46eeb3414d2b6"
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "0fce154ff8da6621e9b38df4f45840ffde903336959311415624151455e63a46"
+      "content_hash": "b3d42d869f255fe7ba1ecf719cc65d94a941a052a1c7503d40e51232b38ae39c"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "ac73a962e6d3e58f0c9852a97fd9a869959dbe76cf45d271b208a5db8228c23c"
+      "content_hash": "c0da6e27d45df0549921461fe1e9e9634d15f5537c195352bed3769b23f16eb0"
     },
     {
       "path": "open-questions.html",
-      "content_hash": "d783bb4d20d433c7c234319df321efd2f7840448808db23eeebba3d99c6255e7"
+      "content_hash": "d377cbb06e89306dd5cdc2f142ea2bbe6679aa091433f5a5a920d66d221b2922"
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "bed7faf21de4aaf9e2519d88ec25b2af01d0a706009faeca0fa9fa8c4a19e905"
+      "content_hash": "4b2b99670115833ba97859366999f1920eef5d05635b21408e0ffb799ce3471c"
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "21e02faf882e07b33caec6bf26f043c04040667f6616f6206c68f053d3ac49c2"
+      "content_hash": "04d0896df924e4add51f9f837b1392c2314901a1f998992990093debcfa4ea29"
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "ac25880a1e2f8d57a3eb326c3f464a4822d4b9eb52958df44890a79f5e988266"
+      "content_hash": "44923a0c4276d7682955a97b193f7b861282a0b805e524ec3e50f3d17bbe1b97"
     },
     {
       "path": "seams.html",
-      "content_hash": "88a89418bb1597cd5356a3352175652701e86567c73d1a8bb5287e61d2700e20"
+      "content_hash": "5050762e7ccbd6d77e1e6644e0eb5fd4e84900aaa912e8c9b3811caec818ac63"
     },
     {
       "path": "search-index.js",
-      "content_hash": "d3b5fc05f2b5cbfa4ac590d1dedf0cb32e57c979813e85875bba9007ec8fdc59"
+      "content_hash": "83e74e18ad41d9fd3b2b206f6d349e9d4960bdb69a5e3a077599c5a45e990083"
     },
     {
       "path": "sessions.html",
-      "content_hash": "f1e93e7591c25e7c8d2282f3a181a7f6f502e9d911f8635b88cbbceb735be9e7"
+      "content_hash": "a1898ae2d39d3b8ba12aa1f887547e440e4505dfe513f89a4e60b3f0ecf2b51c"
     },
     {
       "path": "stale.html",
-      "content_hash": "a143d4054729c844ecf81f9b797e2cf4f7b194ba86fb4400e0bcf6657c588230"
+      "content_hash": "8f34bee3c2deac9cb6e6581169e38bc0529e3961b9ae3498e3ffaff62e4898ae"
     },
     {
       "path": "subsystems/b01-server-runtime-and-tool-dispatch.html",
-      "content_hash": "b4055c157c537361e0f5c0ee12e264775cf96e587878bdf8bd489347d1a1680c"
+      "content_hash": "88bef09c93ebac433888d4d883cd145a307e81968c283cab4c1dccb35bb43068"
     },
     {
       "path": "subsystems/b02-repository-binding-and-storage-custody.html",
-      "content_hash": "3c37e8bc176a96b341a861ef1e34d10890a9c6942f4cafc2cb89cdff82e34c8f"
+      "content_hash": "7c349dfc4e6f1794c7b7503363429a19e6d60fa6d20fdf42cd8bdcf7d244c8e8"
     },
     {
       "path": "subsystems/b03-conspectus-schema-vocabulary-and-invariants.html",
-      "content_hash": "6fae7dd2d131eaf19e2afa4c949d479a2f117119981b5921335e3ddc07db7022"
+      "content_hash": "9aa6eb00f0c65340e305783a164cb83eff863d4e6da3bf896a8ee6d1bb660464"
     },
     {
       "path": "subsystems/b04-survey-record-tools.html",
-      "content_hash": "6dd8ad7b5e8e4dedb8e476dda4fae4bc37e37a598164906c535dd17f48f53cc9"
+      "content_hash": "a78c00493864adfbc078e38f69774c19f9d6a1ed211a75eb1a4c195661df38c4"
     },
     {
       "path": "subsystems/b05-findings-dispositions-and-resolution-custody.html",
-      "content_hash": "6ea32d226d98505c1d9e5318c679a7921f63725ffde3446310be4a632b1ac202"
+      "content_hash": "0d3f2e82c0e2afbfb131298baa8bc47b1603f36ac58f8a92e003c2e7d5dcad32"
     },
     {
       "path": "subsystems/b06-locus-standing-and-the-reader-lenses.html",
-      "content_hash": "81de4497e06355b68297d5f3f5ba8fe7163f2e9a59b930a14b3f2cdf1f517729"
+      "content_hash": "104d25373dd5d0ef5dd4daade8b0948d11d3c531f6def685162c03e2f8dfb679"
     },
     {
       "path": "subsystems/b07-git-state-staleness-and-refresh.html",
-      "content_hash": "471cb3046f0c66d3e55c74632f267f96e0b5bf79b862e3c90e106b2f035a26cc"
+      "content_hash": "ea54b03092e3042d618304ae0866124ddf68e2d7810b3e575489de919e166b16"
     },
     {
       "path": "subsystems/b08-materializer-rendering-pipeline.html",
-      "content_hash": "3b63e811f0dc2e8ca7aa75d6f412ee7e27ce8dcd89ad5ff03d539426553e4f13"
+      "content_hash": "264a415f5597f006d1aa2132f441a44dbfad5204cb9a174e2daaf3e4024ba544"
     },
     {
       "path": "subsystems/b09-projection-read-back-and-publication-custody.html",
-      "content_hash": "541c7f148d34f0ba5be69a5f6941c5e12bb6916ecb4d2e9f7fd30d38427cfbdf"
+      "content_hash": "0070b76a6bf42ddf0092ad4d07712678e8e1c0b50ca8a903f6572cded5b76308"
     },
     {
       "path": "subsystems/b10-the-amanuensis-skill.html",
-      "content_hash": "6b69225f053e37515da718780b833e34bbf622b508ba15973ec339f02181123e"
+      "content_hash": "ab8a069e1b1d96578a70091106b488fe8b1a4a5961ff7e0c4cc652f85828de83"
     },
     {
       "path": "subsystems/b11-development-harness-and-gates.html",
-      "content_hash": "c72bda505ba59d9f5f3d8275bc962e082975d98e2f2993e6ba484c5a663bfa00"
+      "content_hash": "50186b7a2e323154f6382c1f41241dd73efe2780a39d11ba75415fec69280d8f"
     },
     {
       "path": "subsystems/b12-vendored-research-corpus.html",
-      "content_hash": "f7debcc08b1dd683237954fe0caff1944ccc358c181a105aa8644b19344cc63f"
+      "content_hash": "b94da13160a24a5a014a0b9643d6510d095e356e7c8f3faa77dc9b1204eed238"
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "80fc6667a15530c03a5facb3381e89a02d1596e792a7ba91b82b5766d43e029e"
+      "content_hash": "d680ab0fdde58338e7ee2d0364570d60f6e938e0786368106fe633740f0c06d1"
     }
   ]
 }

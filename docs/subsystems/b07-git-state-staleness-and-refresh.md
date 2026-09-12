@@ -43,6 +43,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | From | → | To | Relationship | Strength | Context |
 |---|---|---|---|---|---|
 | **B-07** | → | **[B-06](b06-locus-standing-and-the-reader-lenses.md)** | data-flow | structural | the stale flag and reason this pass writes are what turn an examined standing into examined-stale for every later answer, read at mcp-server/src/tools/git.ts:gitTools@258ccd2 |
+| **[B-01](b01-server-runtime-and-tool-dispatch.md)** | → | **B-07** | dependency | structural | the git-state, staleness, change-impact and refresh tools are registered by this module and by nothing else, so the freshness surface a host can call is whatever the registry admits, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3 |
 
 ## Known defects here
 
