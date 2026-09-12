@@ -1459,17 +1459,22 @@ def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         conn,
         "SELECT * FROM field_notes ORDER BY created_at DESC",
     )
+    # §7.1 titles this page Leads. Its membership narrows to open notes when
+    # `resolved-leads.md` exists to receive the closed ones; until then the
+    # closed notes stay here rather than leaving the projection, and the lede
+    # says so instead of promising a page that is not published yet.
     out = [
-        "# Field notes",
+        "# Leads",
         "",
-        "_Peripheral observations from every survey pass. Agents record patterns, anomalies, "
-        "connections, tensions, and candidate concerns here when they notice something the "
-        "phase structure does not ask for. The memory-auditor agent periodically reviews open "
-        "notes for promotion to findings or dismissal._",
+        "_Observations from every survey pass that are not yet findings: patterns, "
+        "anomalies, connections, tensions, and candidate concerns recorded when a "
+        "reader noticed something the phase structure did not ask for. Each one "
+        "carries its own follow-up state; closed leads are listed here beside the "
+        "open ones._",
         "",
     ]
     if not notes:
-        out.append("_No field notes recorded._")
+        out.append("_No lead is recorded._")
     else:
         by_cat: dict[str, list[dict[str, Any]]] = {}
         for n in notes:
