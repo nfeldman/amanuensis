@@ -14,6 +14,7 @@ import html
 import posixpath
 import re
 import textwrap
+from collections.abc import Sequence
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
@@ -24,7 +25,36 @@ from .manifest import sha256_bytes
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
 
-HTML_PROJECTION_VERSION = "1.12.0"
+HTML_PROJECTION_VERSION = "1.13.0"
+
+# The navigation groups, in the order a reader meets them (spec §7.1). Four of
+# them are the reader lenses of §1.1; `Overview` is the entrance and is not a
+# lens. The order is explicit because the previous grouping was dict insertion
+# order over the page plan, which made the rail's shape a side effect of the
+# order pages happened to be appended in. A page whose `group` is not named
+# here is a render error: a lens the reader's guide does not explain, appended
+# silently, is exactly the drift this constant removes.
+NAV_GROUPS: tuple[str, ...] = ("Overview", "Codebase", "Unresolved", "History", "Method")
+
+
+class UnknownNavGroup(ValueError):
+    """A planned page claims a navigation group `NAV_GROUPS` does not name."""
+
+
+def assert_nav_groups(groups: Sequence[tuple[str, str]]) -> None:
+    """Refuse `(path, group)` pairs that no navigation group would hold.
+
+    Raised before anything is written. The projection cannot render a page it
+    has nowhere to route from, and appending a sixth group would publish a
+    lens with no definition in `how-to-read.md` (§7.8).
+    """
+
+    rogue = sorted({f"{path} (group {group!r})" for path, group in groups if group not in NAV_GROUPS})
+    if rogue:
+        raise UnknownNavGroup(
+            f"{len(rogue)} page(s) claim a navigation group outside NAV_GROUPS "
+            f"{NAV_GROUPS}: {', '.join(rogue)}"
+        )
 
 
 @dataclass(frozen=True)
@@ -39,6 +69,10 @@ class SitePage:
     kind: str = "reference"
     record_id: str | None = None
     status: str | None = None
+    # A named division inside `group`, rendered under its own `<h3>` after the
+    # group's ungrouped items (§7.1). Empty means the page sits directly in the
+    # group.
+    subgroup: str = ""
 
     @property
     def html_path(self) -> str:
@@ -260,7 +294,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 }
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-item { margin: .08rem 0; }
-.nav-item[hidden], .nav-group[hidden] { display: none; }
+.nav-subgroup { margin: .5rem 0 0; }
+.nav-subgroup-title {
+  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
+  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
 .nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
 .nav-link:hover { color: var(--text); background: var(--surface); }
 .nav-link[aria-current="page"] { color: var(--accent-strong); }
@@ -897,6 +936,9 @@ _JS = r"""
       const match = !needle || item.dataset.search.includes(needle);
       item.hidden = !match;
       if (match) visible += 1;
+    });
+    document.querySelectorAll('.nav-subgroup').forEach((subgroup) => {
+      subgroup.hidden = !subgroup.querySelector('.nav-item:not([hidden])');
     });
     document.querySelectorAll('.nav-group').forEach((group) => {
       group.hidden = !group.querySelector('.nav-item:not([hidden])');
@@ -2402,33 +2444,66 @@ def _page_eyebrow(page: SitePage) -> str:
     return html.escape(page.group)
 
 
+def _nav_item(page: SitePage, current: SitePage) -> str:
+    href = _rel_link(current.html_path, page.html_path)
+    selected = ' aria-current="page"' if page.html_path == current.html_path else ""
+    status_class = f" status-{page.status}" if page.status else ""
+    record = (
+        f'<span class="nav-id" data-identifier-defined>{html.escape(page.record_id)}</span>'
+        if page.record_id
+        else ""
+    )
+    search = " ".join(
+        filter(None, (page.label, page.record_id, page.hint, page.status, page.subgroup))
+    ).lower()
+    title = html.escape(page.hint, quote=True)
+    return (
+        f'<li class="nav-item" data-search="{html.escape(search, quote=True)}">'
+        f'<a class="nav-link" href="{html.escape(href, quote=True)}" title="{title}"{selected}>'
+        f'<span class="nav-tick{status_class}" aria-hidden="true"></span>'
+        f'<span><span class="nav-name">{html.escape(page.label)}</span>{record}</span></a></li>'
+    )
+
+
 def _nav(pages: list[SitePage], current: SitePage) -> str:
-    groups: dict[str, list[SitePage]] = {}
-    for page in pages:
-        groups.setdefault(page.group, []).append(page)
+    """The rail, in `NAV_GROUPS` order, subgroups last inside each group (§7.1).
+
+    Group order is the constant's, not the page plan's append order, and a
+    group the constant does not name never reaches here: `assert_nav_groups`
+    refuses the plan first. Inside a group the pages that belong to it directly
+    come first; each subgroup then follows under its own `<h3>`, so a reader
+    scanning the rail meets the group's own pages before its divisions.
+    """
+
+    assert_nav_groups([(page.markdown_path, page.group) for page in pages])
     chunks: list[str] = []
-    for group, items in groups.items():
-        lis: list[str] = []
+    for group in NAV_GROUPS:
+        items = [page for page in pages if page.group == group]
+        if not items:
+            continue
+        direct = [page for page in items if not page.subgroup]
+        subgroups: dict[str, list[SitePage]] = {}
         for page in items:
-            href = _rel_link(current.html_path, page.html_path)
-            selected = ' aria-current="page"' if page.html_path == current.html_path else ""
-            status_class = f" status-{page.status}" if page.status else ""
-            record = (
-                f'<span class="nav-id" data-identifier-defined>{html.escape(page.record_id)}</span>'
-                if page.record_id
-                else ""
-            )
-            search = " ".join(filter(None, (page.label, page.record_id, page.hint, page.status))).lower()
-            title = html.escape(page.hint, quote=True)
-            lis.append(
-                f'<li class="nav-item" data-search="{html.escape(search, quote=True)}">'
-                f'<a class="nav-link" href="{html.escape(href, quote=True)}" title="{title}"{selected}>'
-                f'<span class="nav-tick{status_class}" aria-hidden="true"></span>'
-                f'<span><span class="nav-name">{html.escape(page.label)}</span>{record}</span></a></li>'
+            if page.subgroup:
+                subgroups.setdefault(page.subgroup, []).append(page)
+        group_id = f"nav-group-{slugify(group)}"
+        body = (
+            f'<ul class="nav-list">{"".join(_nav_item(page, current) for page in direct)}</ul>'
+            if direct
+            else ""
+        )
+        for subgroup, members in subgroups.items():
+            subgroup_id = f"{group_id}-{slugify(subgroup)}"
+            body += (
+                f'<div class="nav-subgroup">'
+                f'<h3 class="nav-subgroup-title" id="{subgroup_id}">{html.escape(subgroup)}</h3>'
+                f'<ul class="nav-list" aria-labelledby="{subgroup_id}">'
+                f'{"".join(_nav_item(page, current) for page in members)}</ul></div>'
             )
         chunks.append(
-            f'<section class="nav-group"><h2 class="nav-group-title">{html.escape(group)}</h2>'
-            f'<ul class="nav-list">{"".join(lis)}</ul></section>'
+            f'<section class="nav-group">'
+            f'<h2 class="nav-group-title" id="{group_id}">{html.escape(group)}</h2>'
+            f"{body}</section>"
         )
     return "".join(chunks)
 

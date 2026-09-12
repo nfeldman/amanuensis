@@ -314,6 +314,9 @@ jobs:
       - name: Ledger-derived freshness and the stale read-back axis
         working-directory: materializer
         run: python3 test-ledger-freshness.py
+      - name: Page plan, navigation groups, Files, and Not yet surveyed
+        working-directory: materializer
+        run: python3 test-lens-pages.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor

@@ -16,7 +16,7 @@ import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from hashlib import sha256
+from hashlib import sha1, sha256
 from pathlib import Path
 from typing import Any
 
@@ -675,16 +675,34 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 
 
 def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any]) -> RenderResult:
+    """One subsystem, in §7.3's order.
+
+    What changed and why: the scope statement leads under its own **Scope**
+    heading and is never relabelled Purpose. `schema.sql:675` documents
+    `subsystems.scope` as free-text key files, directories, and symbols, and
+    the stores hold exactly that — `crates/axiomdb-core/src/write/coordinator.rs
+    (4008 lines)` is not a purpose sentence, and calling it one would invent a
+    durable field nobody wrote. A subsystem with no scope recorded says so.
+
+    The survey record — the file ledger, the concern review, the adversarial
+    notes, the survey artifact — moves last. It is apparatus: how the reading
+    was produced, subordinate to what was read (`reporting-style.md`). Known
+    defects link to the page their resolution state selects and carry no
+    durable marker, because a finding renders as a full record exactly once
+    (§6.2).
+    """
+
     sid = s["id"]
     files = rows(
         conn,
-        "SELECT file_path, why_in_scope, classification, ref_sha FROM file_ledger WHERE subsystem_id = ? ORDER BY classification, file_path",
+        "SELECT file_path, why_in_scope, classification, ref_sha, stale, stale_reason"
+        " FROM file_ledger WHERE subsystem_id = ? ORDER BY classification, file_path",
         (sid,),
     )
     dispositions = rows(
         conn,
         """
-        SELECT d.*, c.category
+        SELECT d.*, c.category, c.status AS concern_status
         FROM dispositions d JOIN concerns c ON c.code = d.concern_code
         WHERE d.subsystem_id = ?
         ORDER BY d.concern_code
@@ -693,7 +711,11 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     )
     findings = rows(
         conn,
-        "SELECT * FROM findings WHERE subsystem_id = ? ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END, finding_id",
+        "SELECT f.finding_id, f.severity, f.symptom, v.resolution_state"
+        " FROM findings f JOIN finding_state_current v ON v.finding_id = f.finding_id"
+        " WHERE f.subsystem_id = ?"
+        " ORDER BY CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1"
+        "   WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END, f.finding_id",
         (sid,),
     )
     vocab = rows(
@@ -708,8 +730,18 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     )
     seams = rows(
         conn,
-        "SELECT id, shared_object, party_a, party_b FROM seams WHERE party_a = ? OR party_b = ? ORDER BY id",
+        "SELECT a.seam_id AS id, a.shared_object, a.party_a, a.party_b, a.assessable"
+        " FROM seam_assessability a WHERE a.party_a = ? OR a.party_b = ? ORDER BY a.seam_id",
         (sid, sid),
+    )
+    active_concerns = rows(
+        conn, "SELECT code FROM concerns WHERE status='active' ORDER BY code"
+    )
+    standing = rows(
+        conn,
+        "SELECT file_path, standing_state, stale FROM file_standing"
+        " WHERE subsystem_id = ? ORDER BY file_path",
+        (sid,),
     )
 
     # The per-subsystem survey artifact — hand-authored markdown lives in
@@ -717,7 +749,8 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     # artifact with kind='subsystem-survey' and this subsystem_id.
     survey_rows = rows(
         conn,
-        "SELECT path, content_hash FROM artifacts WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
+        "SELECT path, content_hash, ref_sha FROM artifacts"
+        " WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
         (sid,),
     )
     survey_prose = ""
@@ -735,26 +768,190 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         f"**Layer**: {s.get('layer') or '—'}",
         "",
     ]
-    if s.get("scope"):
-        out += ["## Scope", "", s["scope"], ""]
-    if s.get("jump_in_reading"):
-        out += ["## Start here", "", s["jump_in_reading"], ""]
-    if s.get("notes"):
-        out += ["## Notes", "", s["notes"], ""]
 
-    if files:
-        out += ["## File ledger", "", "| Path | Classification | Why in scope | Ref SHA |", "|---|---|---|---|"]
-        for f in files:
-            out.append(
-                f"| `{f['file_path']}` | {f['classification'] or '—'} | {f['why_in_scope'] or '—'} | "
-                f"`{(f['ref_sha'] or '—')[:8]}` |"
-            )
+    # 1. Scope — verbatim, under that heading, never as a purpose sentence.
+    out += ["## Scope", ""]
+    if s.get("scope"):
+        out += [str(s["scope"]), ""]
+    else:
+        out += [
+            "No scope statement is recorded for this subsystem. The file ledger"
+            " below is the only record of what belongs to it.",
+            "",
+        ]
+
+    # 2. Start here.
+    if s.get("jump_in_reading"):
+        out += ["## Start here", "", str(s["jump_in_reading"]), ""]
+
+    # 3. Structure. Claims are P11's; until a subsystem carries them the
+    #    narrative attaches under its own labelled heading so no reader mistakes
+    #    unbound prose for a revision-bound inventory.
+    out += ["## Structure", "", "### Structural inventory not recorded as claims", ""]
+    narrative = str(s.get("notes") or "").strip()
+    provenance = ", ".join(
+        f"`{sv['path']}` at content hash `{str(sv['content_hash'] or '—')[:12]}`"
+        f", recorded at {_short(str(sv['ref_sha'] or ''))}"
+        for sv in survey_rows
+    )
+    if narrative:
+        out += [
+            "No structural claim is recorded for this subsystem, so nothing below is"
+            " bound to a revision. It is the narrative the survey left."
+            + (f" Its source is {provenance}." if provenance else ""),
+            "",
+            narrative,
+            "",
+        ]
+    else:
+        out += [
+            "No structural claim is recorded for this subsystem, and no narrative was"
+            " left in its place."
+            + (f" The survey artifact is {provenance}." if provenance else ""),
+            "",
+        ]
+
+    # 4. Boundaries — seams and recorded edges.
+    if seams or xrefs:
+        out += ["## Boundaries", ""]
+        if seams:
+            out += [
+                "| Seam | Shared object | Other party | Assessable |",
+                "|---|---|---|---|",
+            ]
+            for sm in seams:
+                other = sm["party_b"] if sm["party_a"] == sid else sm["party_a"]
+                assessable = (
+                    "both parties are `mapped`"
+                    if int(sm["assessable"] or 0)
+                    else "not yet: both parties must be `mapped`"
+                )
+                out.append(
+                    f"| **{sm['id']}** | {sm['shared_object']} | **{other}** |"
+                    f" {assessable} |"
+                )
+            out.append("")
+        if xrefs:
+            out += [
+                "| From | → | To | Relationship | Strength | Context |",
+                "|---|---|---|---|---|---|",
+            ]
+            for x in xrefs:
+                out.append(
+                    f"| **{x['from_id']}** | → | **{x['to_id']}** | {x['relationship']} | "
+                    f"{x['strength']} | {(x['context'] or '—').replace('|', '/')} |"
+                )
+            out.append("")
+
+    # 5. Vocabulary.
+    if vocab:
+        out += ["## Vocabulary", ""]
+        out += [f"- **{v['term']}** — {v['gloss']}" for v in vocab]
         out.append("")
 
+    # 6. Known defects here — links, never a second full record (§6.2).
+    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    open_findings = [f for f in findings if str(f["resolution_state"]) in open_states]
+    resolved = [f for f in findings if str(f["resolution_state"]) not in open_states]
+    out += ["## Known defects here", ""]
+    # Subsystem pages live one directory down, so every link to a top-level
+    # lens page is written relative to this page. A bare `findings.md` here
+    # resolves to `subsystems/findings.md` and turns the coverage axis red.
+    up = "../"
+    if open_findings:
+        out += [
+            f"{len(open_findings)} defect(s) here are open or awaiting verification."
+            " Each one's full record, with its evidence, is on"
+            f" [Open findings]({up}findings.md).",
+            "",
+        ]
+        for f in open_findings:
+            page = finding_page(str(f["resolution_state"])) or "findings.md"
+            out.append(
+                f"- [{f['finding_id']}]({up}{page}#{str(f['finding_id']).lower()})"
+                f" · {_sev_badge(str(f['severity']))}"
+                f" · {RESOLUTION_LABELS.get(str(f['resolution_state']), f['resolution_state'])}"
+                f" — {f['symptom']}"
+            )
+        out.append("")
+    else:
+        out += ["No defect here is open or awaiting verification.", ""]
+    if resolved:
+        out += [
+            f"{len(resolved)} further defect(s) here reached a terminal state; they are"
+            f" recorded on [Resolved findings]({up}resolved-findings.md).",
+            "",
+        ]
+
+    # 7. Standing (§2.5): what this subsystem's record entitles a reader to claim.
+    out += ["## Standing", ""]
+    # Read through `file_standing` and counted by the same predicates
+    # `describe_locus` uses for a subsystem (§2.5, `mcp-server/src/standing.ts`),
+    # so the page and the tool cannot report different coverage for one store.
+    examined = sum(
+        1 for r in standing if str(r["standing_state"]) in ("examined", "examined-stale")
+    )
+    candidate = sum(1 for r in standing if str(r["standing_state"]) == "scoped-unread")
+    excluded = sum(1 for r in standing if str(r["standing_state"]) == "excluded")
+    stale_here = sum(1 for r in standing if int(r["stale"] or 0))
+    on_active = [d for d in dispositions if str(d["concern_status"]) == "active"]
+    breakdown = ", ".join(
+        f"{sum(1 for d in on_active if str(d['classification']) == value)} {value}"
+        for value in values_of("disposition_classification")
+        if any(str(d["classification"]) == value for d in on_active)
+    )
+    by_state = {
+        state: sum(1 for f in findings if str(f["resolution_state"]) == state)
+        for state in values_of("finding_resolution_state")
+    }
+    assessable_seams = sum(1 for sm in seams if int(sm["assessable"] or 0))
+    out += _metric_table(
+        [
+            ("Files read", f"{examined} of {len(standing)} ledger rows"),
+            ("Files in scope, not yet read", f"{candidate} of {len(standing)}"),
+            ("Files excluded from the survey obligation", f"{excluded} of {len(standing)}"),
+            ("Ledger rows the repository has changed under", f"{stale_here} of {len(standing)}"),
+            (
+                "Active concerns with a disposition recorded here",
+                f"{len(on_active)} of {len(active_concerns)}"
+                + (f" — {breakdown}" if breakdown else ""),
+            ),
+            (
+                "Findings by resolution state",
+                ", ".join(
+                    f"{count} {RESOLUTION_LABELS.get(state, state).lower()}"
+                    for state, count in by_state.items()
+                    if count
+                )
+                or "none recorded",
+            ),
+            (
+                "Seams assessable from both sides",
+                f"{assessable_seams} of {len(seams)}" if seams else "no seam names this subsystem",
+            ),
+        ]
+    )
+
+    # 8. Survey record — apparatus, last.
+    out += ["## Survey record", ""]
+    out += ["### File ledger", ""]
+    if files:
+        out += ["| Path | Classification | Why in scope | Examined at |", "|---|---|---|---|"]
+        for f in files:
+            path = str(f["file_path"])
+            out.append(
+                f'| <a id="{ledger_entry_anchor(str(sid), path)}"></a>`{path}`'
+                f" | {f['classification'] or '—'}"
+                f" | {(f['why_in_scope'] or '—').replace('|', '/')}"
+                f" | `{(str(f['ref_sha'] or '—'))[:8]}` |"
+            )
+        out.append("")
+    else:
+        out += ["No file is recorded in this subsystem's ledger.", ""]
+
+    out += ["### Concern review", ""]
     if dispositions:
         out += [
-            "## Concern review",
-            "",
             "| Concern | Classification | Evidence quality | Linchpin? | Rationale |",
             "|---|---|---|---|---|",
         ]
@@ -765,55 +962,11 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                 f"{lp} | {(d['rationale'] or '—').replace('|', '/')} |"
             )
         out.append("")
-
-    if findings:
-        out += ["## Findings", ""]
-        for f in findings:
-            files_cited = json.loads(f["primary_files"]) if f["primary_files"] else []
-            out += [
-                f"### {f['finding_id']} · {_sev_badge(f['severity'])} · {f['status']}",
-                "",
-                f"**Symptom**: {f['symptom']}  ",
-                f"**Root cause**: {f['root_cause']}",
-                "",
-            ]
-            if f.get("business_context"):
-                out += [f"_Business context_: {f['business_context']}", ""]
-            if files_cited:
-                out += ["**Primary files**:"]
-                for fc in files_cited:
-                    out.append(f"- `{fc}`")
-                out.append("")
-
-    if xrefs:
-        out += [
-            "## Related subsystems",
-            "",
-            "| From | → | To | Relationship | Strength | Context |",
-            "|---|---|---|---|---|---|",
-        ]
-        for x in xrefs:
-            out.append(
-                f"| **{x['from_id']}** | → | **{x['to_id']}** | {x['relationship']} | "
-                f"{x['strength']} | {(x['context'] or '—').replace('|', '/')} |"
-            )
-        out.append("")
-
-    if seams:
-        out += ["## Seams", "", "| Seam | Shared object | Other party |", "|---|---|---|"]
-        for sm in seams:
-            other = sm["party_b"] if sm["party_a"] == sid else sm["party_a"]
-            out.append(f"| **{sm['id']}** | {sm['shared_object']} | **{other}** |")
-        out.append("")
-
-    if vocab:
-        out += ["## Vocabulary", ""]
-        for v in vocab:
-            out.append(f"- **{v['term']}** — {v['gloss']}")
-        out.append("")
+    else:
+        out += ["No concern has been dispositioned in this subsystem.", ""]
 
     if survey_prose:
-        out += ["## Survey notes", "", survey_prose]
+        out += ["### Survey artifact", "", survey_prose]
 
     text = "\n".join(out).rstrip() + "\n"
     sources: dict[str, str] = (
@@ -824,6 +977,9 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         | _db_source(f"subsystem:{sid}:vocab", vocab)
         | _db_source(f"subsystem:{sid}:xrefs", xrefs)
         | _db_source(f"subsystem:{sid}:seams", seams)
+        | _db_source(f"subsystem:{sid}:concerns", active_concerns)
+        | _db_source(f"subsystem:{sid}:standing", standing)
+        | _db_source(f"subsystem:{sid}:artifacts", survey_rows)
         | prose_sources
     )
     return text, sources
@@ -1771,3 +1927,417 @@ def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResul
     if not body.lstrip().startswith("#"):
         body = f"# {title}\n\n{body}"
     return body, _prose_source(storage, rel_source)
+
+
+# ---------------------------------------------------------------------------
+# Files index and the recorded edge of the map (§7.4, §7.5)
+# ---------------------------------------------------------------------------
+
+STANDING_LABELS = labels("standing_state")
+
+# §2.4.6. `dispositions`' primary key is `(subsystem_id, concern_code)` — no
+# seam id — and `composition_seam_concerns` holds no rows on any store we have
+# read, so an `SC-%` disposition says *this party has assessed some seam
+# concern*, never *this party has assessed this seam*. The sentence travels
+# with every reading built on that proxy.
+PER_PARTY_PROXY = (
+    "Binding: per-party-proxy; no seam-bound disposition is recorded. An `SC-%`"
+    " disposition says a party has assessed some seam concern, never that it"
+    " assessed this seam."
+)
+
+
+def file_anchor(file_path: str) -> str:
+    """The Files index anchor for one path (§7.4).
+
+    Not `slugify`: it collapses every run of non-`[a-z0-9-]` characters, so
+    `src/a/b.ts`, `src/a-b.ts`, and `src/a.b.ts` would share one id and two of
+    the three rows would be unreachable. The digest does not collide; the
+    readable path stays beside it as link text.
+    """
+
+    return "f-" + sha1(file_path.encode("utf-8")).hexdigest()[:10]
+
+
+def ledger_entry_anchor(subsystem_id: str, file_path: str) -> str:
+    """The anchor for one `(subsystem, path)` ledger entry on a subsystem page.
+
+    The Files index carries the path anchor and links onward to the owning
+    subsystem's ledger entry, so no per-file page is generated (decision 3).
+    Keyed on the ledger's own primary key, because 53 paths on the AxiomDB
+    store have more than one owner and each owner records its own reading.
+    """
+
+    token = sha1(f"{subsystem_id}\x00{file_path}".encode()).hexdigest()
+    return f"le-{token[:10]}"
+
+
+def _open_defects_by_path(conn: sqlite3.Connection) -> dict[str, int]:
+    """Open and awaiting-verification findings per cited path (§7.4).
+
+    `findings.primary_files` is a JSON array of `file:symbol@sha` citations
+    (`schema.sql:285`), so a citation matches a path when it equals it or
+    begins `<path>:`. Resolved findings are not counted: the column says how
+    much open work cites the file, and a verified repair is not open work.
+    """
+
+    counts: dict[str, int] = {}
+    open_states = FINDING_LENS_STATES.get("findings.md", ())
+    if not open_states:
+        return counts
+    placeholders = ",".join("?" for _ in open_states)
+    for f in rows(
+        conn,
+        "SELECT f.finding_id, f.primary_files FROM findings f"
+        " JOIN finding_state_current v ON v.finding_id = f.finding_id"
+        f" WHERE v.resolution_state IN ({placeholders})",
+        tuple(open_states),
+    ):
+        try:
+            cited = json.loads(f["primary_files"]) if f["primary_files"] else []
+        except json.JSONDecodeError:
+            cited = []
+        seen: set[str] = set()
+        for citation in cited:
+            path = str(citation).split(":", 1)[0].strip()
+            if path and path not in seen:
+                seen.add(path)
+                counts[path] = counts.get(path, 0) + 1
+    return counts
+
+
+def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """One row per distinct ledger path (§7.4).
+
+    Two things this page refuses to flatten. Every owner is listed, because
+    `file_ledger`'s key is `(subsystem_id, file_path)` and a path with ten
+    owners is not a path with one. And the examined revision is **per owner**:
+    two subsystems can record different examination revisions for one path, so
+    a single value is printed only when every owner agrees — printing one
+    anyway would assert an agreement the ledger does not record.
+    """
+
+    del storage  # the ledger and the standing view are the only sources
+
+    standing = rows(
+        conn,
+        "SELECT file_path, subsystem_id, subsystem_name, classification,"
+        " standing_state, ref_sha, examined_at, stale, stale_reason"
+        " FROM file_standing ORDER BY file_path, subsystem_id",
+    )
+    defects = _open_defects_by_path(conn)
+    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+    checked = str(git.get("last_checked_sha") or "")
+
+    by_path: dict[str, list[dict[str, Any]]] = {}
+    for entry in standing:
+        by_path.setdefault(str(entry["file_path"]), []).append(entry)
+
+    out = ["# Files", ""]
+    if not by_path:
+        out += [
+            "No file is recorded in the ledger, so this index has nothing to show."
+            " That is a statement about the record, not about the repository: no"
+            " path here has been read, excluded, or even scoped.",
+            "",
+        ]
+    else:
+        out += [
+            f"{len(by_path)} distinct path(s) across {len(standing)} ledger row(s),"
+            f" read at {_short(checked)}. Every owner of a path is listed, and the"
+            " examined revision is the one that owner recorded — two subsystems"
+            " may have read the same file at different revisions.",
+            "",
+            "| File | Owners | Standing | Examined at | Open defects |",
+            "|---|---|---|---|---|",
+        ]
+        for file_path in sorted(by_path):
+            owners = by_path[file_path]
+            states = {str(o["standing_state"]) for o in owners}
+            headline = next(iter(states)) if len(states) == 1 else "mixed"
+            revisions = {str(o["ref_sha"] or "") for o in owners}
+            if len(revisions) == 1:
+                revision = f"`{(next(iter(revisions)) or '—')[:8]}`"
+            else:
+                revision = " · ".join(
+                    f"{str(o['subsystem_name'] or o['subsystem_id'])}"
+                    f" `{(str(o['ref_sha'] or '—'))[:8]}`"
+                    for o in owners
+                )
+            owner_links = " · ".join(
+                f"[{str(o['subsystem_name'] or o['subsystem_id'])}]"
+                f"({subsystem_page(str(o['subsystem_id']), str(o['subsystem_name'] or ''))}"
+                f"#{ledger_entry_anchor(str(o['subsystem_id']), file_path)})"
+                for o in owners
+            )
+            out.append(
+                f'| <a id="{file_anchor(file_path)}"></a>`{file_path}` |'
+                f" {owner_links} |"
+                f" {STANDING_LABELS.get(headline, headline)} |"
+                f" {revision} |"
+                f" {defects.get(file_path, 0)} |"
+            )
+        out.append("")
+
+    sources = {
+        **_db_source("files:standing", standing),
+        **_db_source("files:defects", defects),
+        **_db_source("files:git", git),
+    }
+    return "\n".join(out) + "\n", sources
+
+
+def _tracked_paths(conn: sqlite3.Connection) -> int:
+    """The tracked-path universe the last reconciliation saw (§7.5, section 1).
+
+    `detect_changes` rebuilds `scope_gaps` from `git ls-files` on every run
+    (`mcp-server/src/tools/git.ts:224`, `:286`): unledgered paths are the
+    tracked paths no ledger row names, and `absent` rows are the ledger paths
+    the tree no longer carries. The universe is therefore recoverable from the
+    store — unledgered paths plus the ledger paths still tracked — without a
+    second git call that could disagree with the reconciliation that wrote
+    these rows.
+    """
+
+    counted = row(
+        conn,
+        "SELECT (SELECT COUNT(*) FROM scope_gaps WHERE kind='unledgered') AS unledgered,"
+        " (SELECT COUNT(*) FROM (SELECT DISTINCT file_path FROM file_ledger"
+        "   WHERE file_path NOT IN (SELECT file_path FROM scope_gaps WHERE kind='absent')))"
+        "  AS still_tracked",
+    ) or {"unledgered": 0, "still_tracked": 0}
+    return int(counted["unledgered"] or 0) + int(counted["still_tracked"] or 0)
+
+
+def _gap_denominator(numerator: int, denominator: int, unit: str, clause: str) -> list[str]:
+    """One section's headline: the count, its unit, and its denominator.
+
+    A bare zero is not a reading. Without the denominator beside it, a section
+    that reports nothing cannot be told from one that could never report
+    anything, which is the zero-denominator green ADR-0001 and VP4 both name.
+    """
+
+    if not denominator:
+        return [
+            f"No {unit} is recorded, so this gap is not measured here. That is a"
+            " statement about the record, not a claim that the gap is closed.",
+            "",
+        ]
+    return [f"**{numerator} of {denominator}** {unit} {clause}", ""]
+
+
+def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+    """The recorded edge of the map: five gaps, each over its own unit (§7.5).
+
+    Sections 4 and 5 count **pairs**, not seams and not concern codes. Read
+    over the AxiomDB store, the global forms of those two predicates — a
+    concern dispositioned nowhere, a seam with no `SC-%` on either side —
+    report zero while 1,094 (subsystem, concern) pairs and 9 one-sided seams
+    are open. A section that cannot turn red on the only store it has been run
+    against is a zero-denominator green (VP4), and this page exists precisely
+    to show what is not known.
+    """
+
+    del storage  # every gap below is a property of the durable records
+
+    git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
+    checked = str(git.get("last_checked_sha") or "")
+    branch = str(git.get("canonical_branch") or "not recorded")
+
+    unledgered = rows(
+        conn,
+        "SELECT file_path, detected_sha FROM scope_gaps WHERE kind='unledgered'"
+        " ORDER BY file_path",
+    )
+    tracked = _tracked_paths(conn)
+    subsystems = rows(
+        conn, "SELECT id, name, status, layer, notes FROM subsystems ORDER BY id"
+    )
+    names = {str(s["id"]): str(s["name"]) for s in subsystems}
+    ledger = rows(
+        conn,
+        "SELECT subsystem_id, file_path, why_in_scope,"
+        " COALESCE(classification,'candidate') AS classification"
+        f" FROM file_ledger WHERE {OBLIGATION_BEARING_SQL}"
+        " ORDER BY subsystem_id, file_path",
+    )
+    candidates = [r for r in ledger if r["classification"] == "candidate"]
+    deferred = [s for s in subsystems if str(s["status"]) == "deferred"]
+    seams = rows(
+        conn,
+        "SELECT seam_id, shared_object, party_a, party_b, assessable"
+        " FROM seam_assessability ORDER BY seam_id",
+    )
+    seam_concern_parties = {
+        str(d["subsystem_id"])
+        for d in rows(
+            conn,
+            "SELECT DISTINCT subsystem_id FROM dispositions WHERE concern_code LIKE 'SC-%'",
+        )
+    }
+    active_concerns = rows(
+        conn, "SELECT code, category FROM concerns WHERE status='active' ORDER BY code"
+    )
+    dispositioned = {
+        (str(d["subsystem_id"]), str(d["concern_code"]))
+        for d in rows(conn, "SELECT subsystem_id, concern_code FROM dispositions")
+    }
+
+    out = [
+        "# Not yet surveyed",
+        "",
+        "The recorded edge of the map at"
+        f" {_short(checked)} on `{branch}`. Each section counts the unit its gap"
+        " actually occupies and carries that unit's denominator: a file that no"
+        " one has read, a seam side no one has assessed, and a concern no one has"
+        " dispositioned here are three different kinds of not-knowing, and none of"
+        " them is evidence about the others.",
+        "",
+    ]
+
+    # 1. Unledgered paths, over tracked paths.
+    out += ["## Paths with no ledger row", ""]
+    out += _gap_denominator(
+        len(unledgered),
+        tracked,
+        "tracked paths",
+        "are named by no `file_ledger` row in any subsystem. They participate in no"
+        " subsystem's scope, so nothing here has been read, excluded, or deferred.",
+    )
+    if unledgered:
+        by_directory: dict[str, list[str]] = {}
+        for entry in unledgered:
+            path = str(entry["file_path"])
+            head = path.split("/", 1)[0] if "/" in path else "(repository root)"
+            by_directory.setdefault(head, []).append(path)
+        for directory in sorted(by_directory, key=lambda d: (-len(by_directory[d]), d)):
+            paths = by_directory[directory]
+            out += [f"### {directory} — {len(paths)} path(s)", ""]
+            out += [f"- `{path}`" for path in paths]
+            out.append("")
+
+    # 2. Candidate rows, over obligation-bearing ledger rows.
+    out += ["## Files in scope that no one has read", ""]
+    out += _gap_denominator(
+        len(candidates),
+        len(ledger),
+        "ledger rows that carry a survey obligation",
+        "are classified `candidate`: the file participates in its subsystem and no"
+        " one has read it.",
+    )
+    if candidates:
+        by_subsystem: dict[str, list[dict[str, Any]]] = {}
+        for entry in candidates:
+            by_subsystem.setdefault(str(entry["subsystem_id"]), []).append(entry)
+        for subsystem_id in sorted(by_subsystem):
+            entries = by_subsystem[subsystem_id]
+            name = names.get(subsystem_id, subsystem_id)
+            out += [
+                f"### **{subsystem_id}** {name} — {len(entries)} unread of"
+                f" {sum(1 for r in ledger if str(r['subsystem_id']) == subsystem_id)}",
+                "",
+            ]
+            out += [
+                f"- `{entry['file_path']}` — {entry['why_in_scope'] or 'no reason recorded'}"
+                for entry in entries
+            ]
+            out.append("")
+
+    # 3. Deferred subsystems, over subsystems.
+    out += ["## Subsystems set aside", ""]
+    out += _gap_denominator(
+        len(deferred),
+        len(subsystems),
+        "subsystems",
+        "are deferred. `deferred` is not a rung on the survey ladder but an"
+        " orthogonal do-not-survey flag, so nothing in them has been surveyed at any"
+        " depth.",
+    )
+    if deferred:
+        out += ["| Subsystem | Layer | Recorded reason |", "|---|---|---|"]
+        for s in deferred:
+            reason = str(s["notes"] or "").replace("|", "/").strip()
+            out.append(
+                f"| [{s['name']}]({subsystem_page(str(s['id']), str(s['name']))})"
+                f" **{s['id']}** | {s['layer'] or '—'} |"
+                f" {reason or 'No reason is recorded.'} |"
+            )
+        out.append("")
+
+    # 4. Unassessed seam sides, over 2 × seams.
+    unassessed: list[tuple[str, str, str, str]] = []
+    for seam in seams:
+        assessable = int(seam["assessable"] or 0)
+        for side, other in (
+            (str(seam["party_a"]), str(seam["party_b"])),
+            (str(seam["party_b"]), str(seam["party_a"])),
+        ):
+            if not assessable:
+                why = "the seam is not assessable: both parties must be `mapped`"
+            elif side not in seam_concern_parties:
+                why = "this party holds no `SC-%` disposition"
+            else:
+                continue
+            unassessed.append((str(seam["seam_id"]), side, other, why))
+    out += ["## Seam sides no one has assessed", ""]
+    out += _gap_denominator(
+        len(unassessed),
+        2 * len(seams),
+        "(seam, side) pairs",
+        "carry no recorded assessment. The unit is the pair, not the seam: a seam"
+        " assessed from one side only is half-known, and counting seams would report"
+        " it as covered.",
+    )
+    out += [PER_PARTY_PROXY, ""]
+    if unassessed:
+        out += ["| Seam | Unassessed party | Other party | Why |", "|---|---|---|---|"]
+        for seam_id, side, other, why in unassessed:
+            out.append(
+                f"| **{seam_id}** | [{names.get(side, side)}]"
+                f"({subsystem_page(side, names.get(side, side))}) **{side}** |"
+                f" **{other}** | {why} |"
+            )
+        out.append("")
+
+    # 5. Undispositioned (subsystem, active concern) pairs.
+    missing: dict[str, list[str]] = {}
+    for s in subsystems:
+        for concern in active_concerns:
+            pair = (str(s["id"]), str(concern["code"]))
+            if pair not in dispositioned:
+                missing.setdefault(str(s["id"]), []).append(str(concern["code"]))
+    undispositioned = sum(len(codes) for codes in missing.values())
+    out += ["## Concerns no one has dispositioned here", ""]
+    out += _gap_denominator(
+        undispositioned,
+        len(subsystems) * len(active_concerns),
+        "(subsystem, active concern) pairs",
+        "carry no disposition. The unit is the pair: a concern dispositioned"
+        " somewhere else says nothing about this subsystem, and counting concern"
+        " codes would report a checklist as complete while most regions were never"
+        " tested against it.",
+    )
+    if missing:
+        out += ["| Subsystem | Undispositioned | Concerns |", "|---|---|---|"]
+        for subsystem_id in sorted(missing):
+            codes = missing[subsystem_id]
+            name = names.get(subsystem_id, subsystem_id)
+            out.append(
+                f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
+                f" {len(codes)} of {len(active_concerns)} |"
+                f" {', '.join(f'**{code}**' for code in codes)} |"
+            )
+        out.append("")
+
+    sources = {
+        **_db_source("gaps:unledgered", unledgered),
+        **_db_source("gaps:tracked", {"tracked": tracked}),
+        **_db_source("gaps:ledger", ledger),
+        **_db_source("gaps:subsystems", subsystems),
+        **_db_source("gaps:seams", seams),
+        **_db_source("gaps:seam-parties", sorted(seam_concern_parties)),
+        **_db_source("gaps:concerns", active_concerns),
+        **_db_source("gaps:dispositions", sorted(dispositioned)),
+        **_db_source("gaps:git", git),
+    }
+    return "\n".join(out) + "\n", sources

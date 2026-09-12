@@ -925,8 +925,8 @@ def main() -> int:
             if not body_rows:
                 return f"{FILES_PAGE} carries no table rows"
             paths = [
-                re.sub(r"[`*\[\]]", "", cell).split("]")[0].strip()
-                for cell, *_rest in (row for row in body_rows)
+                re.sub(r"[`*]", "", re.sub(r"<[^>]+>", "", cell)).strip()
+                for cell, *_rest in body_rows
             ]
             found = {p for p in paths if p}
             expected = set(LEDGER_PATHS)

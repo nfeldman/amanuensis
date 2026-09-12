@@ -34,7 +34,12 @@ from typing import Any
 
 from . import renderers
 from .db import VIEW_ABSENT_CAUSE, missing_views, open_ro, row, rows
-from .html_projection import SitePage, render_html_projection
+from .html_projection import (
+    SitePage,
+    UnknownNavGroup,
+    assert_nav_groups,
+    render_html_projection,
+)
 from .manifest import (
     MATERIALIZER_VERSION,
     Manifest,
@@ -112,9 +117,13 @@ class PagePlan:
     title: str = ""
     label: str = ""
     hint: str = ""
-    group: str = "Reference"
+    group: str = "Codebase"
     kind: str = "reference"
     status: str | None = None
+    # A named division inside `group` (spec §7.1). Subsystem pages and evidence
+    # matrices are families with one page per record, so they render under their
+    # own heading rather than flooding the group they belong to.
+    subgroup: str = ""
 
 
 @dataclass
@@ -202,6 +211,15 @@ class Materializer:
                     f"{VIEW_ABSENT_CAUSE}"
                 )
             plan = self._plan(conn)
+            # A page whose group is not in NAV_GROUPS is a render error (§7.1).
+            # It is caught here, before a byte is written: the rail would have
+            # nowhere to route it from, and a group appended silently is a lens
+            # the reader's guide never explains. `_nav` asserts the same thing
+            # again for callers that reach it directly.
+            try:
+                assert_nav_groups([(p.path, p.group) for p in plan])
+            except UnknownNavGroup as unknown:
+                return self._refused(str(unknown))
             self.summary.pages_total = len(plan)
 
             # Render each page if sources changed.
@@ -293,6 +311,7 @@ class Materializer:
                     label=p.label or p.title,
                     hint=p.hint,
                     group=p.group,
+                    subgroup=p.subgroup,
                     kind=p.kind,
                     record_id=p.xref_id,
                     status=p.status,
@@ -369,23 +388,33 @@ class Materializer:
         storage = self.storage
         plan: list[PagePlan] = []
 
-        # Static top-level pages.
+        # Static top-level pages, in §7.1's order. `group` is one of
+        # `NAV_GROUPS` and nothing else; `subgroup` names a division inside it.
+        # Every hint opens with the clause §7.1 fixes for it, so the rail, the
+        # page's own description meta, and the table a reviewer reads say the
+        # same thing.
         plan.extend(
             [
-                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="Identity, four status dimensions, one count per resolution state, and one route into each lens.", group="Orientation", kind="overview"),
-                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system.", group="Orientation", kind="architecture"),
-                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystem map", hint="See every architectural region, how deeply it has been surveyed, and where a reader should enter it.", group="Orientation", kind="registry"),
-                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Review the defects that are open or awaiting verification at the checked revision.", group="Evidence", kind="findings"),
-                PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Read the findings whose resolution is recorded as verified, ruled out, or accepted, grouped by that state.", group="Evidence", kind="findings"),
-                PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern.", group="Evidence", kind="coverage"),
-                PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Inspect shared objects and ordering assumptions where independently understandable subsystems meet.", group="Evidence", kind="seams"),
-                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Find places where credible records disagree instead of having their differences silently smoothed away.", group="Evidence", kind="contradictions"),
-                PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Follow evidence matrices used when more than one concern could explain the same observed symptom.", group="Evidence", kind="diagnosticity"),
-                PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving.", group="Working record", kind="questions"),
-                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Field notes", label="Field notes", hint="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings.", group="Working record", kind="notes"),
-                PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", group="Working record", kind="stale"),
-                PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="Translate project-native names into the meanings Amanuensis observed in context.", group="Reference", kind="glossary"),
-                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes.", group="Reference", kind="guide"),
+                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="Identity, four status dimensions, and one route into each lens.", group="Overview", kind="overview"),
+                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
+                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
+                PagePlan("files.md", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", group="Codebase", kind="files"),
+                PagePlan("not-yet-surveyed.md", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", hint="The recorded edge of the map, each gap counted over the unit it occupies.", group="Codebase", kind="gaps"),
+                PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", group="Codebase", kind="seams"),
+                PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="The project's own names, with the meanings Amanuensis observed in context.", group="Codebase", kind="glossary"),
+                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Defects open or awaiting verification at the checked revision.", group="Unresolved", kind="findings"),
+                PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Questions the survey could not settle, with the assumption used to keep moving.", group="Unresolved", kind="questions"),
+                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings.", group="Unresolved", kind="notes"),
+                PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", group="Unresolved", kind="stale"),
+                PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Verified, ruled out, and accepted, each with the basis its resolution rests on.", group="History", kind="findings"),
+                # §7.1 re-homes this page to History and moves its unresolved
+                # rows to `disagreements.md`. That page is P9's; until it exists
+                # the hint says what this one actually still carries rather than
+                # promising a narrowing that has not happened yet.
+                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Records that disagree, and the evidence that settled the ones now resolved.", group="History", kind="contradictions"),
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage), title="How to read the conspectus", label="Reader's guide", hint="Every enum, what it authorizes, and what it cannot justify.", group="Method", kind="guide"),
+                PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", group="Method", kind="coverage"),
+                PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", group="Method", kind="diagnosticity"),
             ]
         )
 
@@ -393,9 +422,9 @@ class Materializer:
         # exist. Each passes through the file with a tiny header if
         # needed.
         for rel_src, out_rel, title, label, hint in (
-            ("onboarding-report.md", "onboarding-report.md", "Onboarding record", "Onboarding record", "Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."),
-            ("entry-point.md", "entry-point.md", "Where to begin", "Where to begin", "Use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."),
-            ("concern-checklist.md", "concern-checklist.md", "Calibrated review checklist", "Review checklist", "See the concern set used to test each subsystem and the provenance of those checks."),
+            ("onboarding-report.md", "onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus."),
+            ("entry-point.md", "entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index."),
+            ("concern-checklist.md", "concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
         ):
             if (storage / rel_src).is_file():
                 plan.append(
@@ -405,7 +434,7 @@ class Materializer:
                         title=title,
                         label=label,
                         hint=hint,
-                        group="Reference",
+                        group="Method",
                         kind="artifact",
                     )
                 )
@@ -423,8 +452,9 @@ class Materializer:
                     xref_display=f"{s['id']}",
                     title=s["name"],
                     label=s["name"],
-                    hint=f"Survey record for {s['name']}: scope, reading path, concern review, findings, boundaries, vocabulary, and notes.",
-                    group="Subsystems",
+                    hint=f"Scope, structure, boundaries, defects, and the survey record for {s['name']}.",
+                    group="Codebase",
+                    subgroup="Subsystems",
                     kind="subsystem",
                     status=s["status"],
                 )
@@ -443,8 +473,9 @@ class Materializer:
                     xref_display=f"DM-{m['id']}",
                     title=m["symptom"],
                     label=m["symptom"],
-                    hint="Compare the evidence against each viable explanation and see which contradictions drove the recorded outcome.",
-                    group="Evidence matrices",
+                    hint="One matrix: the evidence against each viable explanation, and the outcome it drove.",
+                    group="Method",
+                    subgroup="Evidence matrices",
                     kind="matrix",
                     status=m.get("outcome"),
                 )
