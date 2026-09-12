@@ -29,10 +29,21 @@
 //   - a subsystem P17 carried to `structural` is not `mapped` here, or a
 //     subsystem P17 deferred was mapped anyway;
 //   - a subsystem's status ladder skips a rung, runs backwards, ends anywhere
-//     but `mapped`, or reaches `mapped` by any route other than
-//     `update_subsystem_status`; or a rung's own prerequisite (a registered
-//     subsystem-survey artifact for `concerns`, a disposition for `adversarial`)
-//     is not in the record;
+//     but `mapped`, or carries a rung that names no record witnessing it; or a
+//     rung's own prerequisite (a registered subsystem-survey artifact for
+//     `concerns`, a disposition for `adversarial`, a challenge outcome on every
+//     current claim for `mapped`) is not in the record.
+//
+//     The ladder used to be reconstructed by the recorder from the subsystem's
+//     current status, with the writing tool, the session and the revision typed
+//     in — so this gate asserted those three fields against a reconstruction of
+//     itself and could not fail (slice-S6, F6/codex). It is now read out of
+//     `subsystem_status_transitions` where a row exists and out of the storage
+//     checkpoint whose committed `memory.db` witnesses the change where one does
+//     not, and each rung declares which. A checkpoint is coarser than a tool
+//     call — a batch commit can span three rungs — so a rung names the span it
+//     `covers` and this gate checks the deliverable behind **each** covered
+//     rung rather than taking the span on trust;
 //   - an active concern has no terminal disposition in a non-deferred subsystem
 //     and no recorded open question naming the exact gap;
 //   - a disposition carries no attached evidence, cites a file that is not in
@@ -46,8 +57,8 @@
 //   - a `confirmed-bug` disposition has no finding, or a finding names no
 //     disposition that confirms it;
 //   - a subsystem records no adversarial pass, or a current `<sid>/` claim P17
-//     recorded carries no adversarial outcome — the structural account would
-//     then have been published unchallenged;
+//     recorded carries no row in `claim_challenge_outcomes` — the structural
+//     account would then have been published unchallenged;
 //   - a seam whose two parties are both mapped carries no SC disposition, or
 //     carries one on only one side;
 //   - the live store, when present, breaks any of those, or has lost a
@@ -145,6 +156,16 @@ const CLAIM_OUTCOMES = ["survived", "overturned", "superseded"];
 
 const STATUS_ORDER = ["unmapped", "scoping", "structural", "concerns", "adversarial", "mapped"];
 
+// The tools permitted to write `subsystems.status`, which are therefore the
+// only tools a recorded ladder rung may name as its writer.
+const STATUS_WRITERS = ["upsert_subsystem", "update_subsystem_status", "reset_subsystem"];
+
+// The durable record a claim target's outcome must point at (§9.1, Phase 4).
+// A `survived` outcome closes no row, so before this record existed it was
+// indistinguishable from a claim nobody looked at (slice-S6, F6/codex).
+const CHALLENGE_OUTCOME_RECORD = /^claim-challenge-outcome:\d+$/;
+const VALIDITY_EVENT_RECORD = /^claim-validity-event:\d+$/;
+
 const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"];
 
 // ---------------------------------------------------------------------------
@@ -241,6 +262,16 @@ function pairKey(a, b) {
 
 function qualityRank(kind) {
   return EVIDENCE_KINDS.indexOf(String(kind ?? ""));
+}
+
+/**
+ * The id of the newest recorded outcome for a `claim_key` in the live store.
+ * The record is append-only, so the last row is where the account stands and
+ * the earlier ones are its history.
+ */
+function latestOutcomeId(live, claimKey) {
+  const rows = (live.challengeOutcomes ?? []).filter((row) => row.claim_key === claimKey);
+  return rows.length ? rows[rows.length - 1].id : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -361,40 +392,95 @@ check("every subsystem P17 carried to structural is mapped here, and nothing P17
   return null;
 });
 
-check("each subsystem's status ladder climbs one rung at a time to mapped, through update_subsystem_status", () => {
+check("each subsystem's status ladder is a recorded chain that reaches mapped without skipping a rung", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
+  const storageShas = new Set(
+    (Array.isArray(receipt?.storage_history) ? receipt.storage_history : []).map((entry) => entry?.sha),
+  );
   for (const id of expectedMapped()) {
     const row = rowById(id);
     const ladder = Array.isArray(row?.status_ladder) ? row.status_ladder : [];
     if (!ladder.length) return `${id} records no status ladder, so nothing says how it reached mapped`;
-    const opened = coverageRows().find((entry) => entry?.id === id)?.status;
-    if (ladder[0]?.from !== opened) {
-      return `${id}'s ladder opens at ${JSON.stringify(ladder[0]?.from ?? null)}; P17 left it at ${JSON.stringify(opened ?? null)}`;
+    let previous = ladder[0]?.from ?? null;
+    if (previous !== null && statusRank(previous) < 0) {
+      return `${id}'s ladder opens at ${JSON.stringify(previous)}, which is not a status of the survey progression`;
     }
-    let previous = ladder[0].from;
+    const covered = new Set();
     for (const step of ladder) {
-      if (step?.from !== previous) {
-        return `${id}'s ladder jumps from ${JSON.stringify(previous)} to a step recorded as leaving ${JSON.stringify(step?.from ?? null)}`;
+      if ((step?.from ?? null) !== previous) {
+        return `${id}'s ladder jumps from ${JSON.stringify(previous)} to a rung recorded as leaving ${JSON.stringify(step?.from ?? null)}`;
       }
-      if (statusRank(step?.to) !== statusRank(previous) + 1) {
-        return `${id}'s ladder steps ${JSON.stringify(previous)} → ${JSON.stringify(step?.to ?? null)}, which is not the next rung of the survey progression`;
+      const fromRank = previous === null ? -1 : statusRank(previous);
+      const toRank = statusRank(step?.to);
+      if (toRank < 0 || toRank <= fromRank) {
+        return `${id}'s ladder steps ${JSON.stringify(previous)} → ${JSON.stringify(step?.to ?? null)}, which does not advance the survey progression`;
       }
-      if (step?.tool !== "update_subsystem_status") {
-        return `${id} reached ${JSON.stringify(step?.to ?? null)} through ${JSON.stringify(step?.tool ?? null)}; update_subsystem_status is the only route`;
+      // The rungs the observation spans, declared rather than inferred, and
+      // checked against the two statuses it joins: a rung that under-declares
+      // its span would skip the deliverable check below.
+      const expectedCovers = STATUS_ORDER.slice(fromRank + 1, toRank + 1);
+      const declared = Array.isArray(step?.covers) ? step.covers : [];
+      if (declared.join(",") !== expectedCovers.join(",")) {
+        return `${id}'s rung ${JSON.stringify(previous)} → ${JSON.stringify(step?.to)} declares it covers [${declared.join(", ")}], not [${expectedCovers.join(", ")}]`;
       }
-      if (!nonEmpty(step?.session_id)) return `${id}'s step to ${step?.to} is attributed to no session`;
-      if (!isHex(step?.ref_sha, 7, 40)) return `${id}'s step to ${step?.to} is bound to no revision`;
+      for (const rung of expectedCovers) covered.add(rung);
+      // Which record witnesses this rung, and the fields that record can
+      // supply. A rung that names neither is a reconstruction.
+      if (step?.source === "subsystem_status_transitions") {
+        if (!Number.isInteger(step?.transition_id)) {
+          return `${id}'s rung to ${JSON.stringify(step?.to)} claims the transition record and names no row in it`;
+        }
+        if (!STATUS_WRITERS.includes(step?.tool)) {
+          return `${id} reached ${JSON.stringify(step?.to)} through ${JSON.stringify(step?.tool ?? null)}, which is not a status writer`;
+        }
+        if (!nonEmpty(step?.session_id)) return `${id}'s recorded rung to ${step?.to} is attributed to no session`;
+      } else if (step?.source === "storage-checkpoint") {
+        if (!isHex(step?.storage_commit, 7, 40) || !storageShas.has(step.storage_commit)) {
+          return `${id}'s rung to ${JSON.stringify(step?.to)} cites storage commit ${JSON.stringify(step?.storage_commit ?? null)}, which the recorded storage history does not carry`;
+        }
+        if (step?.tool !== null || step?.session_id !== null || step?.transition_id !== null) {
+          return `${id}'s checkpoint rung to ${JSON.stringify(step?.to)} reports a tool, session or transition row the checkpoint cannot witness`;
+        }
+      } else {
+        return `${id}'s rung to ${JSON.stringify(step?.to)} declares source ${JSON.stringify(step?.source ?? null)}: nothing witnesses it`;
+      }
       previous = step.to;
     }
     if (previous !== "mapped") return `${id}'s ladder ends at ${JSON.stringify(previous)}, not mapped`;
-    // The two rungs the server itself gates. A ladder that claims them without
-    // the record behind them is a ladder that could not have been climbed.
-    if (!nonEmpty(row?.artifact?.path) || !isHex(row?.artifact?.content_hash, 64, 64)) {
+    // Every rung of the progression is accounted for, so a ladder cannot reach
+    // mapped by jumping over a phase it never declares.
+    const owed = STATUS_ORDER.slice(
+      ladder[0]?.from === null ? 0 : statusRank(ladder[0].from) + 1,
+      STATUS_ORDER.indexOf("mapped") + 1,
+    );
+    const skipped = owed.filter((rung) => !covered.has(rung));
+    if (skipped.length) return `${id}'s ladder accounts for no rung at ${skipped.join(", ")}`;
+    // The deliverable behind each gated rung. A ladder that claims a rung
+    // without the record behind it is a ladder that could not have been
+    // climbed — the server replays every intermediate prerequisite on each
+    // status write, so a span of three rungs is three prerequisites that were
+    // satisfied, and each is checked here rather than taken on trust.
+    if (covered.has("structural") && !coverageClaimKeys(id).length) {
+      return `${id} advanced to structural with no current claim in P17's record`;
+    }
+    if (
+      covered.has("concerns") &&
+      (!nonEmpty(row?.artifact?.path) || !isHex(row?.artifact?.content_hash, 64, 64))
+    ) {
       return `${id} advanced to concerns with no registered subsystem-survey artifact in the record`;
     }
-    if (!dispositionsOf(row).length) {
+    if (covered.has("adversarial") && !dispositionsOf(row).length) {
       return `${id} advanced to adversarial with no disposition in the record`;
+    }
+    if (covered.has("mapped")) {
+      const targets = Array.isArray(row?.adversarial?.claim_targets) ? row.adversarial.claim_targets : [];
+      const unrecorded = targets.filter(
+        (target) => !CHALLENGE_OUTCOME_RECORD.test(String(target?.record ?? "")),
+      );
+      if (!targets.length || unrecorded.length) {
+        return `${id} advanced to mapped with ${unrecorded.length || "no"} claim target(s) carrying no challenge outcome record`;
+      }
     }
   }
   return null;
@@ -624,21 +710,45 @@ check("every subsystem ran an adversarial pass over every claim P17 left current
         return `claim ${target?.claim_key} records no challenge, so nothing says what would have overturned it or where that was looked for`;
       }
       // A `survived` outcome changes no row, so it is indistinguishable from a
-      // claim nobody looked at unless the record says where it was written down.
-      if (!nonEmpty(target?.record)) {
-        return `claim ${target?.claim_key} records outcome ${target.outcome} with no durable record of it`;
+      // claim nobody looked at unless a durable record carries it.
+      if (!CHALLENGE_OUTCOME_RECORD.test(String(target?.record ?? ""))) {
+        return `claim ${target?.claim_key} records outcome ${target.outcome} and its record is ${JSON.stringify(target?.record ?? null)}, not a claim challenge outcome row`;
       }
-      if (target.outcome === "survived" && !/^field-note:\d+$/.test(String(target.record))) {
-        return `claim ${target.claim_key} survived and its record is ${JSON.stringify(target.record)}, not a field note id`;
+      // An outcome that closed the claim must name the event that closed it;
+      // one that did not must not name an event at all.
+      if (target.outcome === "survived") {
+        if (target.validity_event !== null && target.validity_event !== undefined) {
+          return `claim ${target.claim_key} survived and cites ${JSON.stringify(target.validity_event)}, which would be an interval it closed`;
+        }
+      } else if (!VALIDITY_EVENT_RECORD.test(String(target?.validity_event ?? ""))) {
+        return `claim ${target.claim_key} was ${target.outcome} and cites ${JSON.stringify(target?.validity_event ?? null)}, not a claim validity event`;
       }
-      if (target.outcome !== "survived" && !/^claim-validity-event:\d+$/.test(String(target.record))) {
-        return `claim ${target.claim_key} was ${target.outcome} and its record is ${JSON.stringify(target.record)}, not a claim validity event`;
+      // Earlier readings of the same key are part of the outcome record too: a
+      // key whose first reading was overturned and whose re-assertion survived
+      // must still carry the overturning and the event behind it.
+      for (const prior of Array.isArray(target?.prior_outcomes) ? target.prior_outcomes : []) {
+        if (!CLAIM_OUTCOMES.includes(prior?.outcome)) {
+          return `claim ${target.claim_key} records a prior outcome ${JSON.stringify(prior?.outcome ?? null)}`;
+        }
+        if (!CHALLENGE_OUTCOME_RECORD.test(String(prior?.record ?? ""))) {
+          return `claim ${target.claim_key}'s prior ${prior?.outcome} outcome names no challenge outcome row`;
+        }
+        if (prior.outcome !== "survived" && !VALIDITY_EVENT_RECORD.test(String(prior?.validity_event ?? ""))) {
+          return `claim ${target.claim_key} was ${prior.outcome} earlier and names no claim validity event for it`;
+        }
       }
     }
+    // The census counts **every** recorded outcome, not one per key: a reading
+    // that was overturned and then re-asserted is two outcomes, and a census
+    // over latest-per-key would report the overturning as if it never happened.
     const outcomes = adversarial.outcomes ?? {};
+    const everyOutcome = targets.flatMap((entry) => [
+      ...(Array.isArray(entry?.prior_outcomes) ? entry.prior_outcomes.map((p) => p?.outcome) : []),
+      entry?.outcome,
+    ]);
     for (const outcome of CLAIM_OUTCOMES) {
       const declared = outcomes[outcome] ?? 0;
-      const actual = targets.filter((entry) => entry.outcome === outcome).length;
+      const actual = everyOutcome.filter((value) => value === outcome).length;
       if (declared !== actual) {
         return `${id} reports ${declared} claim(s) ${outcome} and lists ${actual}`;
       }
@@ -822,6 +932,9 @@ if (existsSync(storeAbs)) {
       findingState: all("SELECT finding_id, resolution_state FROM finding_state_current"),
       claims: all("SELECT claim_id, claim_key FROM claims WHERE valid_until_sha IS NULL"),
       claimEvents: all("SELECT claim_id, event_type FROM claim_validity_events"),
+      challengeOutcomes: all(
+        "SELECT id, claim_id, claim_key, outcome FROM claim_challenge_outcomes ORDER BY id",
+      ),
       fieldNotes: all("SELECT id, observation FROM field_notes"),
       seams: all("SELECT id, party_a, party_b, notes FROM seams"),
     };
@@ -927,20 +1040,31 @@ if (existsSync(storeAbs)) {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
-    const challenged = new Set();
-    for (const note of live.fieldNotes) {
-      const match = /adversarial probe for claim ([^\s]+)/.exec(String(note.observation ?? ""));
-      if (match) challenged.add(match[1]);
-    }
-    const eventClaims = new Set(
-      live.claimEvents.filter((row) => row.event_type !== "asserted").map((row) => row.claim_id),
-    );
+    // Read off `claim_challenge_outcomes`, not off the wording of a field
+    // note: a note that happens to contain the phrase is prose, and prose was
+    // exactly what made this unfalsifiable before (slice-S6, F6/codex).
+    const outcomeByClaim = new Map();
+    for (const row of live.challengeOutcomes ?? []) outcomeByClaim.set(row.claim_id, row);
     const mapped = new Set(expectedMapped());
     for (const claim of live.claims) {
       const sid = String(claim.claim_key).split("/")[0];
       if (!mapped.has(sid)) continue;
-      if (challenged.has(claim.claim_key) || eventClaims.has(claim.claim_id)) continue;
-      return `live claim ${claim.claim_key} is current in a mapped subsystem with no adversarial outcome recorded against it`;
+      const outcome = outcomeByClaim.get(claim.claim_id);
+      if (!outcome) {
+        return `live claim ${claim.claim_key} is current in a mapped subsystem with no challenge outcome recorded against it`;
+      }
+      if (!CLAIM_OUTCOMES.includes(outcome.outcome)) {
+        return `live claim ${claim.claim_key} records outcome ${JSON.stringify(outcome.outcome)}`;
+      }
+      // The receipt must report what the store holds, or the committed record
+      // and the live one are two answers with one name.
+      const target = (rowById(sid)?.adversarial?.claim_targets ?? []).find(
+        (entry) => entry?.claim_key === claim.claim_key,
+      );
+      if (!target) return `live claim ${claim.claim_key} is current and the depth receipt records no target for it`;
+      if (target.record !== `claim-challenge-outcome:${latestOutcomeId(live, claim.claim_key)}`) {
+        return `the receipt records ${JSON.stringify(target.record)} for ${claim.claim_key}; the live store's latest outcome is claim-challenge-outcome:${latestOutcomeId(live, claim.claim_key)}`;
+      }
     }
     return null;
   });

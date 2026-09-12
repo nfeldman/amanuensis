@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-coverage-receipt/v1",
   "packet": "P17",
-  "recorded_at": "2026-09-12T14:46:27.176Z",
-  "repository_sha": "09e9730dd94902047d1c7b8c35cc31f5a28b5179",
+  "recorded_at": "2026-09-12T14:51:14.560Z",
+  "repository_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
   "project_key": "github.com/nfeldman/amanuensis",
@@ -25,7 +25,7 @@
       "excluded_paths": [
         ".amanuensis"
       ],
-      "tracked_files": 600,
+      "tracked_files": 601,
       "storage_tracked_files": 0
     },
     "artifacts": [
@@ -621,21 +621,29 @@
           ]
         },
         {
-          "claim_id": "B-03-C01",
+          "claim_id": "B-03-C07",
           "claim_key": "B-03/key-type/mcp-server-src-schema-sql-claims",
           "subject_type": "symbol",
           "subject_id": "mcp-server/src/schema.sql:claims",
           "epistemic_kind": "observation",
-          "statement": "A claim is an immutable row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Superseding a claim closes the old interval and inserts a new row, so the record keeps both readings rather than overwriting one.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "A claim is a row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Only the interval's end is ever written after insertion: invalidation and supersession both UPDATE the predecessor's valid_until_sha, and supersession then inserts the successor, so the history is preserved by a controlled close-plus-insert rather than by immutability.",
+          "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642",
           "evidence": [
             {
-              "id": 15,
+              "id": 93,
               "kind": "code-verified",
               "file_path": "mcp-server/src/schema.sql",
               "symbol": "claims",
-              "line_range": "940-967",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "line_range": "1019-1040",
+              "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642"
+            },
+            {
+              "id": 94,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/claims.ts",
+              "symbol": "invalidate_claim/supersede_claim",
+              "line_range": "553-553,629-629",
+              "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642"
             }
           ]
         },
@@ -2131,6 +2139,26 @@
   ],
   "storage_history": [
     {
+      "sha": "9569bf1898fb1c1f4128472fe7def5c63387e253",
+      "date": "2026-09-12T10:51:11-04:00",
+      "message": "session mtyi67ge-c4n4m29c ended (completed)"
+    },
+    {
+      "sha": "7e774382b5e8fe34186101a49365cdf5d6ffe08b",
+      "date": "2026-09-12T10:51:11-04:00",
+      "message": "P20 regeneration · 53 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+    },
+    {
+      "sha": "18a3296de70ed6dc8f5543d49af9c91890b1a079",
+      "date": "2026-09-12T10:51:10-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
+      "sha": "0b084b394f63f1dc3351526cdf68b4174fa4d7da",
+      "date": "2026-09-12T10:51:06-04:00",
+      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+    },
+    {
       "sha": "6edefce787b8544244dd7635d35711537b09ebac",
       "date": "2026-09-12T10:45:56-04:00",
       "message": "session mtyhzh5l-zpd2vmfp ended (completed)"
@@ -2272,7 +2300,7 @@
     "deferred": 1,
     "scoped_files": 58,
     "claims": 53,
-    "claim_evidence": 76,
+    "claim_evidence": 78,
     "xrefs": 20,
     "seams": 9
   },

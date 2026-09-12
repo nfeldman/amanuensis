@@ -16,6 +16,15 @@
 //        `field_note_id` says exactly which probe produced it. A claim whose
 //        probe note is missing is reported and skipped, never invented.
 //
+//   F8 — the rebuilt B-03 claim on the `claims` table called the row immutable
+//        while both `invalidate_claim` and `supersede_claim` execute
+//        `UPDATE claims SET valid_until_sha`. The committed receipt's wording
+//        was corrected in the fix session, but the store still held the
+//        original reading, so a regeneration would have pulled it back. It is
+//        superseded here the way the schema intends a corrected reading to be
+//        recorded: the old interval is closed and the new reading is inserted
+//        under the same `claim_key`, so both readings stay in the record.
+//
 //   F7 — `mcp-server/src/index.ts` imports and registers tool arrays owned by
 //        B-05, B-06, B-07 and B-09 with no recorded edge, so the topology drew
 //        a registry that depends on four subsystems it never names. Those four
@@ -29,6 +38,7 @@
 //
 // Usage: node dev/record-regeneration-pass.mjs [--dry-run]
 
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,12 +55,21 @@ if (!existsSync(join(STORAGE, "memory.db"))) {
 const { openDatabase } = await import("../mcp-server/dist/db.js");
 const { resolveProject } = await import("../mcp-server/dist/project.js");
 const { claimTools } = await import("../mcp-server/dist/tools/claims.js");
+const { evidenceTools } = await import("../mcp-server/dist/tools/evidence.js");
+const { fieldNoteTools } = await import("../mcp-server/dist/tools/field-notes.js");
 const { xrefTools } = await import("../mcp-server/dist/tools/xrefs.js");
 const { projectTools } = await import("../mcp-server/dist/tools/project.js");
 const { storageHistoryTools } = await import("../mcp-server/dist/tools/storage-history.js");
 
 const TOOLS = new Map(
-  [...claimTools, ...xrefTools, ...projectTools, ...storageHistoryTools].map((tool) => [tool.name, tool]),
+  [
+    ...claimTools,
+    ...evidenceTools,
+    ...fieldNoteTools,
+    ...xrefTools,
+    ...projectTools,
+    ...storageHistoryTools,
+  ].map((tool) => [tool.name, tool]),
 );
 
 const project = resolveProject(REPO, {
@@ -68,6 +87,12 @@ function call(name, args) {
 
 const all = (sql, ...params) => db.prepare(sql).all(...params);
 const one = (sql, ...params) => db.prepare(sql).get(...params) ?? null;
+
+function spawnSyncGit(args) {
+  const result = spawnSync("git", args, { cwd: REPO, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} did not succeed`);
+  return String(result.stdout ?? "").trim();
+}
 
 // ---------------------------------------------------------------------------
 // F7 — the registry's own crossings, read off `mcp-server/src/index.ts`.
@@ -126,7 +151,14 @@ const REGISTRY_EDGES = [
 const head = one("SELECT last_checked_sha FROM git_state WHERE repo_id = 'default'")?.last_checked_sha;
 if (!head) throw new Error("the store records no last_checked_sha to bind this pass to");
 
-const report = { outcomes_written: 0, outcomes_present: 0, edges_written: 0, edges_present: 0, skipped: [] };
+const report = {
+  outcomes_written: 0,
+  outcomes_present: 0,
+  edges_written: 0,
+  edges_present: 0,
+  corrections: 0,
+  skipped: [],
+};
 
 if (!DRY_RUN) {
   // The session opens first: `commit_phase_gate` is itself a gated write, and
@@ -139,6 +171,97 @@ if (!DRY_RUN) {
   call("commit_phase_gate", {
     label: "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges",
   });
+}
+
+// --- F8: the claim-mutability reading, superseded rather than edited ---------
+const MUTABILITY_KEY = "B-03/key-type/mcp-server-src-schema-sql-claims";
+const MUTABILITY_STATEMENT =
+  "A claim is a row over a revision interval: claim_key plus subject, a statement, an " +
+  "epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Only the " +
+  "interval's end is ever written after insertion: invalidation and supersession both UPDATE " +
+  "the predecessor's valid_until_sha, and supersession then inserts the successor, so the " +
+  "history is preserved by a controlled close-plus-insert rather than by immutability.";
+
+const mutability = one(
+  "SELECT claim_id, statement, valid_until_sha FROM claims WHERE claim_key = ? AND valid_until_sha IS NULL",
+  MUTABILITY_KEY,
+);
+if (mutability && /\bimmutable row\b/i.test(mutability.statement)) {
+  const workspaceSha = spawnSyncGit(["rev-parse", "HEAD"]);
+  const nextId = (() => {
+    const used = all("SELECT claim_id FROM claims WHERE substr(claim_key, 1, 5) = 'B-03/'").map(
+      (row) => Number(/C(\d+)$/.exec(row.claim_id)?.[1] ?? 0),
+    );
+    return `B-03-C${String(Math.max(0, ...used) + 1).padStart(2, "0")}`;
+  })();
+  if (!DRY_RUN) {
+    const schemaEvidence = call("add_evidence", {
+      file_path: "mcp-server/src/schema.sql",
+      symbol: "claims",
+      line_range: "1019-1040",
+      ref_sha: workspaceSha,
+      kind: "code-verified",
+      note: "the claims table as declared now: the only column a writer sets after insertion is valid_until_sha, guarded by the claims_versions_are_immutable trigger",
+    }).id;
+    const writerEvidence = call("add_evidence", {
+      file_path: "mcp-server/src/tools/claims.ts",
+      symbol: "invalidate_claim/supersede_claim",
+      line_range: "553-553,629-629",
+      ref_sha: workspaceSha,
+      kind: "code-verified",
+      note: "both writers execute UPDATE claims SET valid_until_sha on the predecessor; supersession then inserts the successor",
+    }).id;
+    call("supersede_claim", {
+      predecessor_claim_id: mutability.claim_id,
+      successor_claim_id: nextId,
+      statement: MUTABILITY_STATEMENT,
+      epistemic_kind: "observation",
+      at_sha: workspaceSha,
+      rationale:
+        "the predecessor called the row immutable; the trigger permits exactly one write after " +
+        "insertion and both claim writers take it, so the record is preserved by a controlled " +
+        "close-plus-insert and not by immutability (slice-S6, F8/codex)",
+      evidence_ids: [schemaEvidence, writerEvidence],
+    });
+    const note = call("add_field_note", {
+      category: "tension",
+      observation:
+        `adversarial probe for claim ${MUTABILITY_KEY} superseded it: the reading called the row ` +
+        "immutable, and claims.ts executes UPDATE claims SET valid_until_sha on both the " +
+        "invalidation and the supersession path. The probe looked for a second mutable column and " +
+        "found none — the claims_versions_are_immutable trigger aborts any update that touches " +
+        "anything but a still-open valid_until_sha — so the corrected reading is a controlled " +
+        "close-plus-insert, which the successor records.",
+      location: "B-03",
+    }).id;
+    const event = one(
+      "SELECT id FROM claim_validity_events WHERE claim_id = ? AND event_type = 'superseded' ORDER BY id DESC LIMIT 1",
+      mutability.claim_id,
+    );
+    call("record_claim_challenge", {
+      claim_id: mutability.claim_id,
+      outcome: "superseded",
+      challenge:
+        "The probe read the claims table and both claim writers at the asserted revision: the " +
+        "predecessor's 'immutable row' is contradicted by UPDATE claims SET valid_until_sha on " +
+        "the invalidation and supersession paths, so the reading is replaced rather than upheld.",
+      ref_sha: workspaceSha,
+      validity_event_id: event.id,
+      field_note_id: note,
+    });
+    call("record_claim_challenge", {
+      claim_id: nextId,
+      outcome: "survived",
+      challenge:
+        "The probe looked for a column other than valid_until_sha that a writer sets after " +
+        "insertion, and for a path that rewrites a statement in place; the " +
+        "claims_versions_are_immutable trigger aborts every such update, and no writer attempts " +
+        "one, so the close-plus-insert reading stands.",
+      ref_sha: workspaceSha,
+      field_note_id: note,
+    });
+  }
+  report.corrections = (report.corrections ?? 0) + 1;
 }
 
 // --- F6: one outcome per claim, from the probe note that produced it ---------
@@ -263,7 +386,7 @@ db.close();
 process.stdout.write(
   `${DRY_RUN ? "[dry run] " : ""}${report.outcomes_written} challenge outcome(s) written ` +
     `(${report.outcomes_present} already present), ${report.edges_written} edge(s) written ` +
-    `(${report.edges_present} already present)\n`,
+    `(${report.edges_present} already present), ${report.corrections ?? 0} claim(s) superseded\n`,
 );
 for (const line of report.skipped) process.stdout.write(`  skipped: ${line}\n`);
 process.exit(report.skipped.length ? 1 : 0);
