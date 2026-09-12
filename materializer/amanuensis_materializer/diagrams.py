@@ -13,6 +13,11 @@ from pathlib import Path
 from .db import rows
 from .slugs import subsystem_page
 
+# The obligation predicate is generated from the `obligation_bearing` flag on
+# each file_classification value in contracts/conspectus-vocabulary.json, so the
+# server and the projection cannot disagree about which scoped files carry work.
+from .vocabulary import OBLIGATION_BEARING_SQL as _OBLIGATION_BEARING
+
 
 def _safe_label(text: str) -> str:
     # Mermaid doesn't like pipes or newlines inside node labels.
@@ -112,14 +117,6 @@ def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
     return "\n".join([header, sep, *body]) + legend
 
 
-# Generated output, vendored code, and files ruled irrelevant are scoped but
-# carry no survey obligation. Counting their drift would let a republished
-# projection — which changes on every publish — read as the conspectus going
-# stale, diluting the signal this view exists to give.
-_OBLIGATION_BEARING = (
-    "COALESCE(classification, 'candidate') NOT IN"
-    " ('generated-ignore', 'vendor-ignore', 'irrelevant')"
-)
 
 
 def staleness_map(conn: sqlite3.Connection) -> str:

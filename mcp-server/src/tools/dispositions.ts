@@ -8,32 +8,15 @@ import {
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
-
-const CLASSIFICATIONS = [
-  "confirmed-bug",
-  "confirmed-acceptable",
-  "ruled-out",
-  "out-of-scope",
-  "unresolved-competition",
-] as const;
 // A disposition's evidence_quality names the strongest evidence row attached to
 // it, so this vocabulary must be exactly what add_evidence accepts. It was once
 // a shorter list, which left an agent whose best evidence was `test-observed`
 // no way to say so — it had to overstate as code-verified or understate as
-// contract-stated, and code-verified is the nearer value (finding B03-3).
-// scripts/check-evidence-vocabulary.mjs holds these lists together.
-const EVIDENCE_QUALITY = [
-  "code-verified",
-  "contract-stated",
-  "comment-asserted",
-  "name-inferred",
-  "pattern-matched",
-  "test-observed",
-  "config-asserted",
-  "doc-asserted",
-  "runtime-observed",
-] as const;
-const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
+// contract-stated, and code-verified is the nearer value (finding B03-3). Both
+// are now generated from contracts/conspectus-vocabulary.json, and
+// scripts/check-evidence-vocabulary.mjs holds the source, the two generated
+// copies, and SKILL.md's prose ladder together.
+import { DISPOSITION_CLASSIFICATIONS, EVIDENCE_QUALITIES, PASS_TYPES } from "../vocabulary.js";
 
 export const dispositionTools: ToolDefinition[] = [
   {
@@ -70,9 +53,9 @@ export const dispositionTools: ToolDefinition[] = [
       requireActiveSession(ctx, "set_disposition");
       const subsystemId = requireString(args, "subsystem_id");
       const concernCode = requireString(args, "concern_code");
-      const classification = requireEnum(args, "classification", CLASSIFICATIONS);
+      const classification = requireEnum(args, "classification", DISPOSITION_CLASSIFICATIONS);
       const evidence = requireWorkspaceCitation(args.evidence, "evidence", { strict: false });
-      const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITY);
+      const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITIES);
       const linchpin = optBool(args, "linchpin_dependent", false);
       const rationale = requireString(args, "rationale");
       const refSha = requireString(args, "ref_sha");

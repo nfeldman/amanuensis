@@ -206,8 +206,18 @@ CREATE TABLE IF NOT EXISTS dispositions (
                               'ruled-out','out-of-scope',
                               'unresolved-competition')),
     evidence        TEXT,               -- file:symbol@sha reference
+    -- The full evidence-kind ladder, not a subset of it. B03-3 widened
+    -- add_evidence and set_disposition to nine kinds and left this CHECK at
+    -- five, so a disposition whose strongest evidence was `test-observed`,
+    -- `runtime-observed`, `config-asserted`, or `doc-asserted` was accepted by
+    -- the tool and then rejected by SQLite. Parity with
+    -- contracts/conspectus-vocabulary.json is asserted by
+    -- `gen-vocabulary.mjs --check-sql`. Databases created before this widening
+    -- keep the narrower constraint: `CREATE TABLE IF NOT EXISTS` does not
+    -- rewrite an existing table and SQLite cannot alter a CHECK in place.
     evidence_quality TEXT CHECK (evidence_quality IN (
-                              'code-verified','contract-stated',
+                              'code-verified','runtime-observed','contract-stated',
+                              'test-observed','config-asserted','doc-asserted',
                               'comment-asserted','name-inferred',
                               'pattern-matched')),
     linchpin_dependent INTEGER NOT NULL DEFAULT 0, -- 1 if finding depends on fragile evidence

@@ -11,18 +11,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const EPISTEMIC_KINDS = [
-  "observation",
-  "inference",
-  "hypothesis",
-  "open-question",
-  "direct-intent",
-  "inferred-intent",
-  "decision",
-] as const;
-
-type EpistemicKind = (typeof EPISTEMIC_KINDS)[number];
+import { CLAIM_EPISTEMIC_KINDS, type ClaimEpistemicKind } from "../vocabulary.js";
 
 interface ClaimRow {
   claim_id: string;
@@ -30,7 +19,7 @@ interface ClaimRow {
   subject_type: string;
   subject_id: string;
   statement: string;
-  epistemic_kind: EpistemicKind;
+  epistemic_kind: ClaimEpistemicKind;
   asserted_at_sha: string;
   valid_from_sha: string;
   valid_until_sha: string | null;
@@ -166,7 +155,7 @@ function insertClaim(
     subjectType: string;
     subjectId: string;
     statement: string;
-    epistemicKind: EpistemicKind;
+    epistemicKind: ClaimEpistemicKind;
     assertedAtSha: string;
     validFromSha: string;
     sessionId: string;
@@ -233,7 +222,7 @@ export const claimTools: ToolDefinition[] = [
         subject_type: { type: "string" },
         subject_id: { type: "string" },
         statement: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
         ref_sha: { type: "string" },
         valid_from_sha: { type: "string" },
         evidence_ids: { type: "array", items: { type: "integer" }, minItems: 1 },
@@ -257,7 +246,7 @@ export const claimTools: ToolDefinition[] = [
       const subjectType = requireString(args, "subject_type");
       const subjectId = requireString(args, "subject_id");
       const statement = requireString(args, "statement");
-      const epistemicKind = requireEnum(args, "epistemic_kind", EPISTEMIC_KINDS);
+      const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const assertedAtSha = resolveCommit(ctx, requireString(args, "ref_sha"));
       const validFromSha = resolveCommit(ctx, optString(args, "valid_from_sha") ?? assertedAtSha);
       if (!isAncestor(ctx, validFromSha, assertedAtSha)) {
@@ -352,7 +341,7 @@ export const claimTools: ToolDefinition[] = [
         predecessor_claim_id: { type: "string" },
         successor_claim_id: { type: "string" },
         statement: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
         at_sha: { type: "string" },
         rationale: { type: "string" },
         evidence_ids: { type: "array", items: { type: "integer" }, minItems: 1 },
@@ -379,7 +368,7 @@ export const claimTools: ToolDefinition[] = [
       }
       const predecessor = currentClaim(ctx, predecessorId);
       const statement = requireString(args, "statement");
-      const epistemicKind = requireEnum(args, "epistemic_kind", EPISTEMIC_KINDS);
+      const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const rationale = requireString(args, "rationale");
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
       requireStrictDescendant(ctx, atSha, predecessor.valid_from_sha, "supersession");
@@ -452,7 +441,7 @@ export const claimTools: ToolDefinition[] = [
         claim_key: { type: "string" },
         subject_type: { type: "string" },
         subject_id: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
         query_sha: { type: "string" },
         include_historical: { type: "boolean" },
       },

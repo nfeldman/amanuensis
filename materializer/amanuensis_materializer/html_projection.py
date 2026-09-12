@@ -22,6 +22,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 
 from .manifest import sha256_bytes
 from .slugs import slugify
+from .vocabulary import axes, labels, meanings
 
 HTML_PROJECTION_VERSION = "1.12.0"
 
@@ -53,83 +54,33 @@ class HtmlProjectionResult:
     warnings: list[str]
 
 
-STATUS_HINTS = {
-    "mapped": "Survey complete through structural analysis, concern review, and adversarial challenge.",
-    "adversarial": "Candidate conclusions are being challenged; treat them as provisional.",
-    "concerns": "Structural mapping is complete and concern-by-concern review is in progress.",
-    "structural": "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
-    "scoping": "Only the subsystem boundary and file scope are established so far.",
-    "unmapped": "This subsystem has not yet been surveyed; no architectural claims are authorized.",
-    "deferred": "This subsystem is intentionally outside the active survey plan.",
-    "confirmed-bug": "A defect supported by evidence and retained after adversarial review.",
-    "confirmed-acceptable": "The observed behavior is real and judged to be intended or acceptable.",
-    "ruled-out": "The candidate problem was overturned by evidence or adversarial review.",
-    "out-of-scope": "The concern does not apply within this subsystem's declared boundary.",
-    "unresolved-competition": "Multiple explanations remain viable; the evidence does not discriminate.",
-    "fixed": "The defect was confirmed at an earlier revision and is recorded as addressed later.",
-    "open": "This item still needs attention or a human decision.",
-    "resolved": "This item has a recorded resolution.",
-    "accepted": "The behavior is recorded as understood and acceptable; it is not an open defect.",
-    "fixed-pending-verification": "A repair is recorded, but independent fix evidence has not yet closed the finding.",
-    "verified-fixed": "A later revision contains a repair backed by recorded verification evidence.",
-}
+# The reader-facing vocabulary is not restated here. Every hint, label, and
+# axis below is built from contracts/conspectus-vocabulary.json through the
+# generated `vocabulary` module, so a value the server accepts and a value the
+# projection can explain are the same set by construction.
+#
+# These tables are one flat namespace over several axes — `_status_html` and
+# `_code_html` look a bare token up without knowing which enum it came from —
+# so a value carried by more than one enum is taken from the first enum in the
+# precedence below. The order is declared, never dictionary chance.
+_STATUS_ENUMS = (
+    "subsystem_status",
+    "disposition_classification",
+    "finding_status",
+    "finding_resolution_state",
+    "diagnosticity_outcome",
+)
 
-EVIDENCE_HINTS = {
-    "code-verified": "The implementation was read and the stated behavior was verified directly.",
-    "contract-stated": "An explicit schema, type, or behavioral contract states this claim.",
-    "test-observed": "A test run or recorded observation demonstrates this behavior.",
-    "config-asserted": "Configuration states the behavior, but runtime behavior was not independently verified.",
-    "doc-asserted": "Project documentation states the claim; implementation agreement is not yet verified.",
-    "comment-asserted": "A code comment states the claim; the implementation was not verified against it.",
-    "name-inferred": "The claim is inferred from a symbol name and should be treated as weak evidence.",
-    "pattern-matched": "The claim matches a known pattern and is only a scoping signal.",
-}
+STATUS_HINTS = meanings(*_STATUS_ENUMS)
 
-SEVERITY_HINTS = {
-    "CRITICAL": "Potential data loss, security failure, privilege escalation, or production outage path.",
-    "HIGH": "Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.",
-    "MEDIUM": "Incorrect edge-case behavior or a correctness issue with a known workaround.",
-    "LOW": "Maintainability, clarity, or defensive-coding risk most likely to affect a future change.",
-}
+EVIDENCE_HINTS = meanings("evidence_kind")
 
-DISPLAY_STATUS = {
-    "confirmed-bug": "Confirmed defect",
-    "confirmed-acceptable": "Accepted behavior",
-    "ruled-out": "Ruled out",
-    "out-of-scope": "Out of scope",
-    "unresolved-competition": "Competing explanations",
-    "code-verified": "Code verified",
-    "contract-stated": "Contract stated",
-    "test-observed": "Test observed",
-    "config-asserted": "Config asserted",
-    "doc-asserted": "Docs asserted",
-    "comment-asserted": "Comment asserted",
-    "name-inferred": "Name inferred",
-    "pattern-matched": "Pattern matched",
-    "fixed-pending-verification": "Unverified fix",
-    "verified-fixed": "Verified fixed",
-}
+SEVERITY_HINTS = meanings("severity")
 
-STATUS_AXIS = {
-    **dict.fromkeys(
-        ("unmapped", "scoping", "structural", "concerns", "adversarial", "mapped", "deferred"),
-        "survey",
-    ),
-    **dict.fromkeys(
-        (
-            "confirmed-bug",
-            "confirmed-acceptable",
-            "ruled-out",
-            "out-of-scope",
-            "unresolved-competition",
-        ),
-        "disposition",
-    ),
-    **dict.fromkeys(
-        ("open", "fixed", "resolved", "accepted", "fixed-pending-verification", "verified-fixed"),
-        "resolution",
-    ),
-}
+DISPLAY_STATUS = labels(*_STATUS_ENUMS, "evidence_kind")
+
+STATUS_AXIS = axes(*_STATUS_ENUMS)
+
 
 _CSS = r"""
 :root {

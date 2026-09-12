@@ -8,8 +8,7 @@ import {
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const CATEGORIES = ["pattern", "anomaly", "connection", "tension", "candidate-concern"] as const;
+import { FIELD_NOTE_CATEGORIES } from "../vocabulary.js";
 
 export const fieldNoteTools: ToolDefinition[] = [
   {
@@ -30,7 +29,7 @@ export const fieldNoteTools: ToolDefinition[] = [
     },
     handler: (args, ctx) => {
       requireActiveSession(ctx, "add_field_note");
-      const category = requireEnum(args, "category", CATEGORIES);
+      const category = requireEnum(args, "category", FIELD_NOTE_CATEGORIES);
       const observation = requireString(args, "observation");
       const location = optString(args, "location");
       const refSha = optString(args, "ref_sha");

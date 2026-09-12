@@ -8,19 +8,10 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { FILE_CLASSIFICATIONS, type FileClassification } from "../vocabulary.js";
 
-const CLASSIFICATIONS = [
-  "candidate",
-  "examined",
-  "generated-ignore",
-  "vendor-ignore",
-  "irrelevant",
-  "deferred-with-reason",
-] as const;
-type Classification = (typeof CLASSIFICATIONS)[number];
-
-function isClassification(v: string): v is Classification {
-  return (CLASSIFICATIONS as readonly string[]).includes(v);
+function isClassification(v: string): v is FileClassification {
+  return (FILE_CLASSIFICATIONS as readonly string[]).includes(v);
 }
 
 export const fileTools: ToolDefinition[] = [
@@ -120,7 +111,7 @@ export const fileTools: ToolDefinition[] = [
       requireActiveSession(ctx, "update_file_classification");
       const subsystemId = requireString(args, "subsystem_id");
       const filePath = requireWorkspaceSourcePath(args.file_path);
-      const classification = requireEnum(args, "classification", CLASSIFICATIONS);
+      const classification = requireEnum(args, "classification", FILE_CLASSIFICATIONS);
       const refSha = optString(args, "ref_sha");
       const res = ctx.db
         .prepare(

@@ -18,10 +18,7 @@ import {
   requireOverturnEvidence,
   requireSubsystemStatus,
 } from "../invariants.js";
-
-const SEVERITY = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
-const STATUS = ["confirmed-bug", "confirmed-acceptable", "fixed", "ruled-out"] as const;
-const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
+import { FINDING_STATUSES, PASS_TYPES, SEVERITIES } from "../vocabulary.js";
 
 function git(ctx: ServerContext, args: string[]): ReturnType<typeof spawnSync> {
   return spawnSync("git", args, {
@@ -51,7 +48,9 @@ function requireAncestor(ctx: ServerContext, ancestor: string, descendant: strin
   );
 }
 
-function stateForStatus(status: (typeof STATUS)[number]): "open" | "accepted" | "ruled-out" {
+function stateForStatus(
+  status: (typeof FINDING_STATUSES)[number],
+): "open" | "accepted" | "ruled-out" {
   if (status === "confirmed-bug") return "open";
   if (status === "confirmed-acceptable") return "accepted";
   return "ruled-out";
@@ -96,8 +95,8 @@ export const findingTools: ToolDefinition[] = [
       const subsystemId = requireString(args, "subsystem_id");
       const symptom = requireString(args, "symptom");
       const rootCause = requireString(args, "root_cause");
-      const severity = requireEnum(args, "severity", SEVERITY);
-      const status = requireEnum(args, "status", STATUS);
+      const severity = requireEnum(args, "severity", SEVERITIES);
+      const status = requireEnum(args, "status", FINDING_STATUSES);
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
       const rawFixLocation = optString(args, "fix_location");
       const fixLocation = rawFixLocation
@@ -188,7 +187,7 @@ export const findingTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const sessionId = requireActiveSession(ctx, "update_finding_status");
       const findingId = requireString(args, "finding_id");
-      const status = requireEnum(args, "status", STATUS);
+      const status = requireEnum(args, "status", FINDING_STATUSES);
       const rawFixLocation = optString(args, "fix_location");
       const fixLocation = rawFixLocation
         ? requireWorkspaceSourcePath(rawFixLocation, "fix_location")

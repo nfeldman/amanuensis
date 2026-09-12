@@ -100,9 +100,23 @@ const VALIDATOR_BINDINGS = [
   { file: "src/tools/files.ts", literal: "const CLASSIFICATIONS = [", imports: "FILE_CLASSIFICATIONS" },
   { file: "src/tools/findings.ts", literal: "const SEVERITY = [", imports: "SEVERITIES" },
   { file: "src/tools/findings.ts", literal: "const STATUS = [", imports: "FINDING_STATUSES" },
-  { file: "src/tools/claims.ts", literal: "const EPISTEMIC_KINDS = [", imports: "CLAIM_EPISTEMIC_KINDS" },
-  { file: "src/tools/xrefs.ts", literal: "const STRENGTHS = [", imports: "XREF_STRENGTHS" },
-  { file: "src/tools/field-notes.ts", literal: "const CATEGORIES = [", imports: "FIELD_NOTE_CATEGORIES" },
+  { file: "src/tools/dispositions.ts", literal: "const PASS_TYPES = [", imports: "PASS_TYPES" },
+  { file: "src/tools/findings.ts", literal: "const PASS_TYPES = [", imports: "PASS_TYPES" },
+  {
+    file: "src/tools/claims.ts",
+    literal: "const EPISTEMIC_KINDS = [",
+    imports: "CLAIM_EPISTEMIC_KINDS",
+  },
+  {
+    file: "src/tools/xrefs.ts",
+    literal: '["observed", "confirmed", "structural"]',
+    imports: "XREF_STRENGTHS",
+  },
+  {
+    file: "src/tools/field-notes.ts",
+    literal: "const CATEGORIES = [",
+    imports: "FIELD_NOTE_CATEGORIES",
+  },
 ];
 
 // The flat hint tables in html_projection.py and the enums that compose them,

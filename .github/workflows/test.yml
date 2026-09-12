@@ -195,9 +195,18 @@ jobs:
       - name: Startup bounds — no unbounded probe on the activation path
         working-directory: mcp-server
         run: node test-startup-bounds.mjs
-      - name: Evidence vocabulary — add_evidence, set_disposition, and SKILL.md agree
+      - name: Generated enum modules match the vocabulary source
+        working-directory: mcp-server
+        run: node scripts/gen-vocabulary.mjs --check
+      - name: SQL CHECK literals match the vocabulary source
+        working-directory: mcp-server
+        run: node scripts/gen-vocabulary.mjs --check-sql
+      - name: Evidence vocabulary — the source, both generated files, and SKILL.md agree
         working-directory: mcp-server
         run: node scripts/check-evidence-vocabulary.mjs
+      - name: Single enum source — generated files, SQL CHECKs, validators, hint tables
+        working-directory: mcp-server
+        run: node test-vocabulary-source.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs

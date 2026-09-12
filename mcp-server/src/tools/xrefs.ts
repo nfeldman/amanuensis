@@ -1,17 +1,17 @@
 import { ok, optString, requireString, type ToolDefinition } from "../helpers.js";
+import { XREF_RELATIONSHIPS, XREF_STRENGTHS } from "../vocabulary.js";
 
 export const xrefTools: ToolDefinition[] = [
   {
     name: "add_xref",
-    description:
-      "Record a cross-reference between two subsystems. relationship is free-form but should use one of the canonical values: shared-pattern, data-flow, dependency, mirrors, contention, temporal-coupling. strength ∈ {observed, confirmed, structural}; defaults to 'observed'.",
+    description: `Record a cross-reference between two subsystems. relationship is free-form but should use one of the canonical values: ${XREF_RELATIONSHIPS.join(", ")}. strength ∈ {${XREF_STRENGTHS.join(", ")}}; defaults to '${XREF_STRENGTHS[0]}'.`,
     inputSchema: {
       type: "object",
       properties: {
         from_id: { type: "string" },
         to_id: { type: "string" },
         relationship: { type: "string" },
-        strength: { type: "string", enum: ["observed", "confirmed", "structural"] },
+        strength: { type: "string", enum: [...XREF_STRENGTHS] },
         context: { type: "string" },
       },
       required: ["from_id", "to_id", "relationship"],
@@ -21,7 +21,7 @@ export const xrefTools: ToolDefinition[] = [
       const fromId = requireString(args, "from_id");
       const toId = requireString(args, "to_id");
       const relationship = requireString(args, "relationship");
-      const strength = optString(args, "strength") ?? "observed";
+      const strength = optString(args, "strength") ?? XREF_STRENGTHS[0];
       const context = optString(args, "context");
       ctx.db
         .prepare(
