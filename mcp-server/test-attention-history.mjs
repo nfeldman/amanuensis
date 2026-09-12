@@ -462,6 +462,56 @@ function buildFixture() {
      VALUES (?,?,?,?,?,?,?)`,
   ).run("C-1", "C-3", head, eClaim, "the queue reading replaces the loop reading", "s-1", "2026-09-02 10:00:00");
 
+
+  // ---------------------------------------------------------------------
+  // The families slice-S5's review found unreachable. Each is seeded so that
+  // exactly one reading is correct and the pre-review implementation returns
+  // the other one.
+  // ---------------------------------------------------------------------
+
+  // F8/codex: a seam whose two parties both hold an `SC-%` disposition but
+  // whose `assessable` is 0, because neither subsystem is `mapped`. §2.4.6
+  // counts a side unassessed on *either* ground, so both sides are unassessed
+  // and a count that reads only the disposition sees none.
+  concern.run("SC-1", "seam-contract", "seeded", "B-01");
+  disposition.run("B-01", "SC-1", "ruled-out", `src/ingest.ts:read@${head}`, "code-verified", "the seam side is assessed");
+  disposition.run("B-02", "SC-1", "ruled-out", `lib/store.ts:put@${head}`, "code-verified", "the seam side is assessed");
+  db.prepare(
+    "INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b) VALUES (?,?,?,?,?)",
+  ).run("SM-01", "the ingest queue", "queue", "B-01", "B-02");
+
+  // F3/codex: `access_log` rows reach a subsystem only through `entries`. One
+  // row reaches B-01; one names an entry no row defines, so a measure read off
+  // `access_log` alone over-counts and a measure that compares `entry_id` with
+  // a subsystem id counts nothing at all.
+  db.prepare(
+    "INSERT INTO entries (id, tier, subsystem_id, source_path, ref_sha) VALUES (?,?,?,?,?)",
+  ).run("E-01", 1, "B-01", "conspectus/B-01.md", head);
+  const access = db.prepare(
+    "INSERT INTO access_log (id, entry_id, entry_tier, accessed_at, trigger, session_id) VALUES (?,?,?,?,?,?)",
+  );
+  access.run(1, "E-01", 1, "2026-09-02 09:30:00", "phase-3 read", "s-2");
+  access.run(2, "E-01", 1, "2026-09-02 09:31:00", "xref", "s-2");
+  access.run(3, "E-99", 1, "2026-09-02 09:32:00", "orphan", "s-2");
+
+  // F9/codex: an unresolved contradiction between two findings that have both
+  // reached a terminal state. It is undiscriminated at every scope: whether two
+  // accounts still stand is not a question about either finding's own state.
+  finding.run("B01-5", "B-01", "a terminal reading", "one account", "LOW",
+    "confirmed-bug", "src/ingest.ts:read", '["src/ingest.ts:read"]', head, "s-1", "survey");
+  finding.run("B01-6", "B-01", "the competing terminal reading", "the other account", "LOW",
+    "confirmed-bug", "src/ingest.ts:read", '["src/ingest.ts:read"]', head, "s-1", "survey");
+  findingEvidence.run("B01-5", eFix, "fix-verification");
+  findingEvidence.run("B01-6", eFix, "fix-verification");
+  for (const id of ["B01-5", "B01-6"]) {
+    event.run(id, "fixed-pending-verification", "src/ingest.ts:read", head, null, "repair landed", "s-1", "2026-09-01 11:10:00");
+    event.run(id, "verified-fixed", "src/ingest.ts:read", head, eFix, "verified at the head", "s-1", "2026-09-01 11:20:00");
+  }
+  db.prepare(
+    `INSERT INTO contradictions (id, finding_a, finding_b, shared_location, conflict_type, resolution, resolved_at, session_id)
+     VALUES (?,?,?,?,?,?,?,?)`,
+  ).run(3, "B01-5", "B01-6", "src/ingest.ts:read", "severity-conflict", "unresolved", null, null);
+
   return { root, workspace, storageRoot, project, db, ctx, base, head };
 }
 
@@ -676,20 +726,32 @@ await check("a seeded unresolved-competition matrix is undiscriminated, with its
         : `disposition:${item.subsystem_id}/${item.concern_code}`,
   );
   if (truncated) return "the undiscriminated ledger truncated its ids, so membership cannot be read";
-  for (const expected of ["matrix:1", "contradiction:1", "disposition:B-01/CC-1"]) {
+  for (const expected of ["matrix:1", "contradiction:1", "contradiction:3", "disposition:B-01/CC-1"]) {
     if (!ids.has(expected)) return `${expected} is neither served nor in the ledger`;
   }
   for (const refused of ["matrix:2", "contradiction:2", "disposition:B-01/CC-2"]) {
     if (ids.has(refused)) return `${refused} is resolved and is in the undiscriminated census`;
   }
-  if (ids.size !== 3) return `the census holds ${ids.size} members for three seeded rows`;
+  if (ids.size !== 4) return `the census holds ${ids.size} members for four seeded rows`;
   const counts = sectionOf(attention, "undiscriminated")?.counts ?? {};
-  if (counts.contradictions !== 1 || counts.matrices !== 1 || counts.dispositions !== 1)
+  if (counts.contradictions !== 2 || counts.matrices !== 1 || counts.dispositions !== 1)
     return `the per-source counts read ${JSON.stringify(counts)}`;
   for (const item of itemsOf(attention, "undiscriminated")) {
     if (item.label !== "undiscriminated") return `a served item carries ${JSON.stringify(item.label)}`;
   }
-  const matrix = itemsOf(attention, "undiscriminated").find((item) => item.kind === "diagnosticity-matrix");
+  // The label is read off a served row. A project-wide response spends its
+  // budget across seven sections, so the row is asked for by name rather than
+  // hoped for: what is asserted is the label, not which section won the budget.
+  let only = null;
+  try {
+    only = call("get_attention", { sections: ["undiscriminated"] });
+  } catch (e) {
+    return `get_attention(sections) did not answer — ${e && e.message ? e.message : e}`;
+  }
+  for (const item of itemsOf(only, "undiscriminated")) {
+    if (item.label !== "undiscriminated") return `a served item carries ${JSON.stringify(item.label)}`;
+  }
+  const matrix = itemsOf(only, "undiscriminated").find((item) => item.kind === "diagnosticity-matrix");
   if (!matrix) return "no matrix is served, so the label cannot be read off one";
   return matrix.matrix_id === 1 ? null : `the matrix served is ${matrix.matrix_id}`;
 });
@@ -871,13 +933,13 @@ emit("history");
 await check("get_history serves resolution events newest first", () => {
   if (historyError) return historyError;
   const view = sectionOf(history, "resolutions");
-  if (view?.census !== 6) return `the resolutions census is ${view?.census} on a store holding six events`;
+  if (view?.census !== 10) return `the resolutions census is ${view?.census} on a store holding ten events`;
   const items = view.items ?? [];
   const ids = items.map((item) => item.event_id);
   if (ids.length === 0) return "no resolution event is served";
   const sorted = [...ids].sort((a, b) => b - a);
   if (JSON.stringify(ids) !== JSON.stringify(sorted)) return `the events are served ${JSON.stringify(ids)}`;
-  if (ids[0] !== 6) return `the newest event is ${ids[0]}, so the page is not newest-first`;
+  if (ids[0] !== 10) return `the newest event is ${ids[0]}, so the page is not newest-first`;
   const census = censusIds(history, "resolutions", (item) => `event:${item.event_id}`);
   if (census.truncated) return "the resolutions ledger truncated its ids";
   for (let id = 1; id <= 6; id += 1) {
@@ -1116,6 +1178,257 @@ await check("both tools appear in the generated tool inventory", () => {
   for (const name of ["get_attention", "get_history"]) {
     if (!inventory.includes(name)) return `${name} is not in the generated inventory`;
   }
+  return null;
+});
+
+// ---------------------------------------------------------------------------
+// The families slice-S5's independent review found unreachable. Each assertion
+// below fails on the reviewed tree and states the reading §4.1, §5.2, §5.3,
+// §7.6 and §2.4.6 require.
+// ---------------------------------------------------------------------------
+
+// F1/codex. §4.1 binds each tool to one number, measured on the bytes the host
+// receives. The reviewed tree measured the residue against a 32768-byte
+// ceiling that belongs to `describe_locus`'s expanded budget, and echoed an
+// unbounded caller string into the untruncatable part of the response, so a
+// schema-valid call could be made to serve four times its budget.
+await check("a caller cannot inflate either response past its own §4.1 budget", () => {
+  if (fixtureError) return fixtureError;
+  if (!toolNamed("get_history") || !toolNamed("get_attention")) return "a locus tool is not registered";
+  for (const [name, args, budget] of [
+    ["get_history", (value) => ({ locus: value }), HISTORY_BUDGET],
+    ["get_attention", (value) => ({ scope: value }), ATTENTION_BUDGET],
+  ]) {
+    let payload = null;
+    try {
+      payload = call(name, args("a".repeat(5000)));
+    } catch {
+      // Refusing the call is one correct answer: what may not happen is
+      // answering it over budget.
+      continue;
+    }
+    const wire = wireBytes(payload);
+    if (wire > budget)
+      return `${name} served ${wire} bytes against its ${budget}-byte budget (within_budget=${JSON.stringify(payload?.trace?.within_budget)})`;
+  }
+  // The bound must be advertised, not only enforced, or a host that validates
+  // its calls cannot tell a refusal from a server fault.
+  for (const [name, fields] of [
+    ["get_history", ["locus", "finding_id"]],
+    ["get_attention", ["scope"]],
+    ["describe_locus", ["locus"]],
+  ]) {
+    const schema = toolNamed(name)?.inputSchema ?? {};
+    for (const field of fields) {
+      const property = schema.properties?.[field];
+      if (!property) return `${name} advertises no ${field} property`;
+      if (typeof property.maxLength !== "number")
+        return `${name}.${field} advertises no maxLength, so an unbounded string is schema-valid`;
+    }
+  }
+  return null;
+});
+
+// F2/codex. §5.2 scopes by what a record names. A subsystem owns files, so a
+// lead whose `location` names a file the subsystem owns is in that subsystem's
+// scope; matching the location token against the subsystem id alone answers a
+// scoped question with an empty list the store contradicts.
+await check("a subsystem scope reaches leads that name a file it owns", () => {
+  if (fixtureError) return fixtureError;
+  let scoped = null;
+  try {
+    scoped = call("get_attention", { scope: "B-01" });
+  } catch (e) {
+    return `get_attention(scope) did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const { ids, truncated } = censusIds(scoped, "leads", (item) => `lead:${item.note_id}`);
+  if (truncated) return "the scoped leads ledger truncated its ids, so membership cannot be read";
+  if (!ids.has("lead:1"))
+    return `note 1 names src/ingest.ts, which B-01 owns in file_ledger, and the B-01 scope holds ${ids.size} lead(s)`;
+  // Scope is still a fence: a lead that names neither the subsystem nor a file
+  // it owns must not be reached by it.
+  const foreign = call("get_attention", { scope: "B-02" });
+  const other = censusIds(foreign, "leads", (item) => `lead:${item.note_id}`);
+  if (!other.truncated && other.ids.has("lead:1"))
+    return "the B-02 scope reaches a lead that names only a file B-01 owns";
+  return null;
+});
+
+// F3/codex. §7.6 column 10 is omitted entirely when nothing was recorded,
+// rather than printed as a column of zeros (VP4). `access_log` reaches a
+// subsystem only through `entries`; comparing `entry_id` with a subsystem id
+// prints zeros for every row, which is the shape the column exists to refuse.
+await check("access heat is measured through entries, or the measure is absent", () => {
+  if (fixtureError) return fixtureError;
+  let payload = null;
+  try {
+    payload = call("get_attention", {});
+  } catch (e) {
+    return `get_attention did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const rows = itemsOf(payload, "hot_spots");
+  const b01 = rows.find((row) => row.subsystem_id === "B-01");
+  const b02 = rows.find((row) => row.subsystem_id === "B-02");
+  if (!b01 || !b02) return "the hot spots section does not serve both seeded subsystems";
+  const carried = rows.filter((row) => row.access_heat !== undefined);
+  if (carried.length === 0) return null; // the column is absent, which §7.6 allows
+  if (b01.access_heat !== 2)
+    return `B-01 owns entry E-01, which access_log names twice, and its heat reads ${JSON.stringify(b01.access_heat)}`;
+  if (b02.access_heat !== 0)
+    return `B-02 owns no accessed entry and its heat reads ${JSON.stringify(b02.access_heat)}`;
+  if (carried.every((row) => Number(row.access_heat) === 0))
+    return "every row reads zero, which is the column of zeros §7.6 omits rather than prints";
+  return null;
+});
+
+// F8/codex. §2.4.6 and §7.6 count a seam side unassessed on either of two
+// grounds: the seam is not assessable, or that side holds no `SC-%`
+// disposition. A count that reads only the disposition calls an unassessable
+// seam assessed.
+await check("an unassessable seam counts both its sides unassessed", () => {
+  if (fixtureError) return fixtureError;
+  let payload = null;
+  try {
+    payload = call("get_attention", {});
+  } catch (e) {
+    return `get_attention did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const assessable = Number(
+    (fixture.db.prepare("SELECT assessable FROM seam_assessability WHERE seam_id = 'SM-01'").get() ?? {})
+      .assessable,
+  );
+  if (assessable !== 0) return "the seeded seam is assessable, so the assertion tests nothing";
+  for (const id of ["B-01", "B-02"]) {
+    const row = itemsOf(payload, "hot_spots").find((item) => item.subsystem_id === id);
+    if (!row) return `${id} has no hot spots row`;
+    const sides = row.unassessed_seam_sides ?? {};
+    if (sides.of !== 2) return `${id} is party to one seam and its denominator reads ${JSON.stringify(sides.of)}`;
+    if (sides.sides !== 2)
+      return `SM-01 is not assessable, so both sides are unassessed; ${id} reads ${JSON.stringify(sides.sides)}/${JSON.stringify(sides.of)}`;
+  }
+  return null;
+});
+
+// F9/codex. Whether two accounts still stand is not a question about either
+// finding's own resolution state. Scoping contradictions through the
+// unresolved-findings list drops an unresolved contradiction between two
+// terminal findings from every scope but the project.
+await check("a scope reaches an unresolved contradiction between terminal findings", () => {
+  if (fixtureError) return fixtureError;
+  let scoped = null;
+  try {
+    scoped = call("get_attention", { scope: "B-01" });
+  } catch (e) {
+    return `get_attention(scope) did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const { ids, truncated } = censusIds(scoped, "undiscriminated", (item) =>
+    item.kind === "contradiction"
+      ? `contradiction:${item.contradiction_id}`
+      : item.kind === "diagnosticity-matrix"
+        ? `matrix:${item.matrix_id}`
+        : `disposition:${item.subsystem_id}/${item.concern_code}`,
+  );
+  if (truncated) return "the scoped undiscriminated ledger truncated its ids";
+  if (!ids.has("contradiction:3"))
+    return "contradiction 3 stands unresolved between two B-01 findings and the B-01 scope does not hold it";
+  const counts = sectionOf(scoped, "undiscriminated")?.counts ?? {};
+  if (counts.contradictions !== 2)
+    return `the B-01 scope counts ${JSON.stringify(counts.contradictions)} unresolved contradiction(s) where two stand`;
+  // Still a fence: B-02 is party to neither.
+  const foreign = call("get_attention", { scope: "B-02" });
+  const other = censusIds(foreign, "undiscriminated", (item) =>
+    item.kind === "contradiction" ? `contradiction:${item.contradiction_id}` : `other:${item.kind}`,
+  );
+  if (!other.truncated && other.ids.has("contradiction:3"))
+    return "the B-02 scope reaches a contradiction between two B-01 findings";
+  return null;
+});
+
+// F4/codex. `open_questions` carries no binding to a finding — only a
+// nullable `subsystem_id`. Serving a subsystem's closed questions under a
+// finding subject asserts an attribution the store does not hold.
+await check("get_history by finding_id attributes no question the store does not bind to it", () => {
+  if (fixtureError) return fixtureError;
+  let payload = null;
+  try {
+    payload = call("get_history", { finding_id: "B01-4" });
+  } catch (e) {
+    return `get_history(finding_id) did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const section = sectionOf(payload, "questions");
+  if (!section) return "the response carries no questions section";
+  if (section.census !== 0 || itemsOf(payload, "questions").length !== 0)
+    return `finding B01-4 has no question bound to it and the response serves ${section.census} (ids ${itemsOf(payload, "questions").map((item) => item.question_id).join(", ")})`;
+  if (section.recorded !== false)
+    return "an absent family is declared recorded:true, which §4.3 reserves for a non-empty source";
+  if (typeof section.statement !== "string" || section.statement.length === 0)
+    return "the empty questions section carries no statement saying why it is empty";
+  // The locus route is unaffected: a subsystem question still reaches its
+  // subsystem.
+  const byLocus = call("get_history", { locus: "src/ingest.ts" });
+  if (itemsOf(byLocus, "questions").length === 0)
+    return "the locus route now serves no question either, which drops a family §5.3 names";
+  return null;
+});
+
+// F5/codex. §5.3 serves answered questions. An answered question whose answer
+// is dropped serves the fact of an answer without the answer.
+await check("an answered question carries its answer", () => {
+  if (fixtureError) return fixtureError;
+  let payload = null;
+  try {
+    payload = call("get_history", { locus: "B-01" });
+  } catch (e) {
+    return `get_history did not answer — ${e && e.message ? e.message : e}`;
+  }
+  const answered = itemsOf(payload, "questions").find((item) => item.question_id === 2);
+  if (!answered) return "question 2 is answered and the B-01 history does not serve it";
+  const stored = fixture.db.prepare("SELECT answer FROM open_questions WHERE id = 2").get()?.answer;
+  if (!stored) return "the fixture stores no answer for question 2, so the assertion tests nothing";
+  if (answered.answer !== stored)
+    return `the store holds ${JSON.stringify(stored)} and the item carries ${JSON.stringify(answered.answer)}`;
+  const dismissed = itemsOf(payload, "questions").find((item) => item.question_id === 3);
+  if (dismissed && dismissed.answer !== null && dismissed.answer !== undefined)
+    return "a dismissed question carries an answer the store does not hold";
+  const schema = historyContract.schema;
+  const text = JSON.stringify(schema ?? {});
+  return text.includes('"answer"')
+    ? null
+    : "the history contract does not name `answer`, so a response without it validates";
+});
+
+// F6/codex. §5.3 requires exactly one subject. The handler refuses the other
+// two shapes; the advertised schema accepted them, so a host that validates
+// its calls is told they are well formed.
+await check("get_history advertises the mutual exclusion its handler enforces", () => {
+  const schema = toolNamed("get_history")?.inputSchema;
+  if (!schema) return "get_history advertises no input schema";
+  const branches = schema.oneOf;
+  if (!Array.isArray(branches) || branches.length !== 2)
+    return `the schema carries ${JSON.stringify(schema.required ?? schema.oneOf ?? null)} where §5.3 requires exactly one of two subjects`;
+  const shapes = branches.map((branch) => JSON.stringify({
+    required: [...(branch.required ?? [])].sort(),
+    forbidden: Object.entries(branch.properties ?? {})
+      .filter(([, value]) => value && value.not !== undefined)
+      .map(([key]) => key)
+      .sort(),
+  }));
+  if (!shapes.includes('{"required":["locus"],"forbidden":["finding_id"]}'))
+    return `no branch requires locus while forbidding finding_id; branches read ${shapes.join(" | ")}`;
+  if (!shapes.includes('{"required":["finding_id"],"forbidden":["locus"]}'))
+    return `no branch requires finding_id while forbidding locus; branches read ${shapes.join(" | ")}`;
+  if (!Ajv2020) return null;
+  let validate = null;
+  try {
+    validate = new Ajv2020({ strict: false }).compile({ $schema: "https://json-schema.org/draft/2020-12/schema", ...schema });
+  } catch (e) {
+    return `the advertised schema does not compile — ${e && e.message ? e.message : e}`;
+  }
+  if (validate({})) return "the advertised schema accepts a call with neither subject";
+  if (validate({ locus: "src/ingest.ts", finding_id: "B01-1" }))
+    return "the advertised schema accepts a call naming both subjects";
+  if (!validate({ locus: "src/ingest.ts" })) return "the advertised schema rejects a locus-only call";
+  if (!validate({ finding_id: "B01-1" })) return "the advertised schema rejects a finding-only call";
   return null;
 });
 

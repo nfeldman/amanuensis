@@ -618,6 +618,34 @@ await check("notes.md keeps what is not known, never omitted, and runs no survey
   return null;
 });
 
+// F7/codex. A term is one of §3.1's four locus kinds, and the fixed route says
+// so. A worked sequence that starts a term question at `lookup_term` and stops
+// at the gloss contradicts the route the same file sets two sections earlier,
+// and drops standing, the account, and what is not known.
+await check("every worked one-locus sequence starts where the fixed route starts", () => {
+  if (notesText === null) return `${NOTES_REL} is absent`;
+  // Each worked sequence is a "### \"…\"" heading followed by its numbered
+  // steps; a sequence about one locus must open on `describe_locus`.
+  const sections = notesText.split(/\n### /).slice(1);
+  const oneLocus = sections.filter((section) => /^"What (do we know about|does)\b/i.test(section));
+  if (oneLocus.length < 2)
+    return `only ${oneLocus.length} one-locus sequence(s) were found, so the assertion tests nothing`;
+  for (const section of oneLocus) {
+    const title = section.split("\n")[0];
+    const firstStep = section.match(/\n\s*1\.\s+([\s\S]{0,160})/);
+    if (!firstStep) return `the sequence ${title} carries no first step`;
+    if (!firstStep[1].includes("describe_locus"))
+      return `the sequence ${title} starts at ${firstStep[1].split("\n")[0].trim()} where the fixed route starts at describe_locus`;
+    // The three-part shape may be spelled out or pointed at — what may not
+    // happen is a sequence that stops at the first tool result, which is the
+    // shape the fixed route exists to replace.
+    const flat = section.replace(/\s+/g, " ");
+    if (!/three parts|answer shape|standing/i.test(flat))
+      return `the sequence ${title} neither carries the standing-first answer shape nor points at it`;
+  }
+  return null;
+});
+
 // ---------------------------------------------------------------------------
 // The installer's opt-in agent-instructions paragraph
 // ---------------------------------------------------------------------------
