@@ -22,6 +22,7 @@ import {
 import {
   FINDING_RESOLUTION_STATES,
   FINDING_STATUSES,
+  OPEN_FINDING_SQL,
   PASS_TYPES,
   SEVERITIES,
 } from "../vocabulary.js";
@@ -466,8 +467,13 @@ export const findingTools: ToolDefinition[] = [
                 SUM(CASE WHEN f.severity='HIGH' THEN 1 ELSE 0 END) AS high,
                 SUM(CASE WHEN f.severity='MEDIUM' THEN 1 ELSE 0 END) AS medium,
                 SUM(CASE WHEN f.severity='LOW' THEN 1 ELSE 0 END) AS low,
-                SUM(CASE WHEN f.status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs,
-                SUM(CASE WHEN f.status='fixed' THEN 1 ELSE 0 END) AS fixed,
+                -- open_bugs answers the same question get_dashboard,
+                -- list_subsystems, and the master plan answer, so it reads the
+                -- same generated predicate over the view rather than
+                -- findings.status (F9/codex). fixed stays on the coarse status
+                -- axis C27 deliberately retains, and is named for it.
+                SUM(CASE WHEN ${OPEN_FINDING_SQL} THEN 1 ELSE 0 END) AS open_bugs,
+                SUM(CASE WHEN v.legacy_status='fixed' THEN 1 ELSE 0 END) AS fixed,
                 ${RESOLUTION_STATE_COUNTS}
            FROM findings f
            JOIN finding_state_current v ON v.finding_id=f.finding_id

@@ -55,6 +55,7 @@ const GIT_REL = "mcp-server/src/tools/git.ts";
 const STANDING_REL = "mcp-server/src/standing.ts";
 const DASHBOARD_REL = "mcp-server/src/tools/dashboard.ts";
 const SUBSYSTEMS_REL = "mcp-server/src/tools/subsystems.ts";
+const FINDINGS_REL = "mcp-server/src/tools/findings.ts";
 const RENDERERS_REL = "materializer/amanuensis_materializer/renderers.py";
 const OVERVIEW_GATE_REL = "materializer/test-overview-truthfulness.py";
 const CI_REL = ".github/workflows/test.yml";
@@ -488,7 +489,7 @@ emit("F9/codex — one open-finding predicate, three readers");
 
 check("no reader derives an open count from findings.status", () => {
   const bad = [];
-  for (const rel of [DASHBOARD_REL, SUBSYSTEMS_REL]) {
+  for (const rel of [DASHBOARD_REL, SUBSYSTEMS_REL, FINDINGS_REL]) {
     const text = readText(join(REPO, rel));
     if (text === null) {
       bad.push(`${rel} is absent`);
