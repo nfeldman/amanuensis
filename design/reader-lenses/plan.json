@@ -162,8 +162,8 @@
       "attempts": 1,
       "start_sha": "a27cf3e352e928f087240720585dfa705d1f74b9",
       "red_sha": "694341d15da95697f797e6dd2c5b3f042365f531",
-      "green_sha": "c59b88f6bca05a8ade3e6579c0a7aaac7e7a1ddd",
-      "verified_by_launcher": false,
+      "green_sha": "fd940244a084b27e26ddb9061c038ef57c27db7a",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "--check-sql found live drift on its first run: set_disposition has accepted nine evidence qualities since B03-3 while dispositions.evidence_quality still rejected four of them, so recording test-observed, runtime-observed, config-asserted, or doc-asserted failed at the SQLite CHECK; the constraint is widened, but CREATE TABLE IF NOT EXISTS leaves pre-existing databases on the narrow one and SQLite cannot alter a CHECK in place, so that residue is unfixed and would need a table rebuild. Three choices fill gaps the spec left open: finding_status is carried as a 25th enum because findings.status is CHECK-constrained and findings.ts enforces it though 10.1's list omits it; the deliverable src/tools/notes.ts does not exist and was read as src/tools/field-notes.ts; and finding_resolution_state.open's meaning generalizes the spec example's trailing noun because html_projection's hint tables are one flat namespace and diagnosticity_outcome carries open too. The hint tables are built over a declared enum precedence recorded in html_projection.py; no rendered label or axis changes and only runtime-observed gains a hint it never had."
     },
