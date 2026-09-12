@@ -24,6 +24,8 @@
 //   - an omission carries a reason other than `policy` or `budget`, or a
 //     section with census 0 reports `recorded: true` or contributes an
 //     omission row;
+//   - an omitted unassessed seam is identified by its seam alone, so the two
+//     sides of one seam collapse onto a single omission id;
 //   - the aggregated ledger's `ids` exceed the 1024-byte per-entry sub-budget,
 //     or a truncated id list does not set `ids_truncated`, or a `count` is not
 //     exact on a 150-item census;
@@ -523,6 +525,22 @@ function buildFixture() {
     "INSERT INTO xrefs (from_id, to_id, relationship, strength, context) VALUES ('B-04', ?, 'data-flow', 'observed', ?)",
   );
   for (let i = 1; i <= 3; i += 1) seam.run(`SM-0${i}`, `spread rows ${i}`);
+
+  // §2.4.6's census unit is the (seam, side) pair, so a file owned by *both*
+  // parties of a seam contributes two unknown entries per seam. Its own two
+  // subsystems keep it clear of every other arm's budget.
+  subsystem.run("S-A", "Seam A", "concerns", "src/seamed.ts", "src/seamed.ts");
+  subsystem.run("S-B", "Seam B", "concerns", "src/seamed.ts", "src/seamed.ts");
+  ledger.run("S-A", "src/seamed.ts", head);
+  ledger.run("S-B", "src/seamed.ts", head);
+  const bothSides = db.prepare(
+    `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b, a_writes, b_reads)
+     VALUES (?, ?, 'table', 'S-A', 'S-B', 'appends rows', 'reads rows')`,
+  );
+  for (let i = 1; i <= 20; i += 1) {
+    const id = `SB-${String(i).padStart(2, "0")}`;
+    bothSides.run(id, `seamed rows ${i}`);
+  }
   xref.run("B-02", "the wide reader reads what the spread path writes");
   xref.run("B-01", "the hot path reads what the spread path writes");
   const spreadResolution = db.prepare(
@@ -936,6 +954,31 @@ await check("every omission carries policy or budget, aggregated once per pair",
     if (new Set(ids).size !== ids.length) return `${label}: an omitted id repeats`;
   }
   return null;
+});
+
+check("an omitted unassessed seam is identified by its (seam, side) pair", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  // Both parties of every SB-* seam own this file, so the census holds two
+  // entries per seam and the omission ledger has to tell them apart: an id
+  // that names only the seam cannot say which side went unserved, and two
+  // omissions collapse onto one id.
+  const payload = describeLocus({ locus: "src/seamed.ts", sections: SECTIONS });
+  const ids = omittedIds(payload, "unknown", "budget");
+  if (ids.length < 2) return `the unknown census omits ${ids.length} entr(ies) under budget`;
+  if (new Set(ids).size !== ids.length) {
+    const repeated = ids.filter((id, index) => ids.indexOf(id) !== index);
+    return `an omitted seam id repeats, so two (seam, side) omissions share one id: ${JSON.stringify([...new Set(repeated)].slice(0, 3))}`;
+  }
+  const seamIds = ids.filter((id) => id.includes("seam/"));
+  if (!seamIds.length) return `no omitted id names a seam: ${JSON.stringify(ids.slice(0, 3))}`;
+  // The id has to carry the side, and the owning subsystem with it: `side`
+  // alone is meaningful only against the seam row a reader would have to go
+  // fetch, and the whole point of the id is to name the census member.
+  const sided = seamIds.filter((id) => /\/[ab]\//.test(id));
+  return sided.length === seamIds.length
+    ? null
+    : `${seamIds.length - sided.length} omitted seam id(s) name no side: ${JSON.stringify(seamIds.slice(0, 3))}`;
 });
 
 await check("an unrecorded source declares census 0 and recorded false, and omits nothing", () => {
