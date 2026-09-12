@@ -213,6 +213,9 @@ jobs:
       - name: Locus standing — the file_standing view, kind inference, reachability
         working-directory: mcp-server
         run: node test-locus-index-view.mjs
+      - name: describe_locus — the account, its contract, and read-only annotations
+        working-directory: mcp-server
+        run: node test-locus-standing.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs

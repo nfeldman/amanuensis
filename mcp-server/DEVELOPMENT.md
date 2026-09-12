@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
+_197 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -441,6 +441,12 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `acquire_lock` | Acquire a write lock on an artifact path (relative to project storage). Used by the coordinator to serialize sub-agent writes to the same artifact. ttl_minutes defaults to 15. Returns {ok:true} on success, or {ok:false, held_by, expires_at} when the artifact is already locked. |
 | `release_lock` | Release a write lock. Only the holder may release it. Safe to call even if no lock exists. |
 | `get_active_locks` | Return all currently held (non-expired) locks. Reads from the active_write_locks view. |
+
+### `locus` (1)
+
+| Tool | Description |
+|---|---|
+| `describe_locus` | Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. |
 
 ### `logging` (3)
 

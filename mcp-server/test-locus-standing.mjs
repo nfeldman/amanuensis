@@ -347,16 +347,11 @@ function buildFixture() {
      VALUES ('B01-2', 'fixed-pending-verification', 'src/examined.ts:readLedger', ?, 'handle closed on the error path', 'p6')`,
   ).run(head);
 
-  db.prepare("INSERT INTO concerns (code, category, question, status) VALUES (?, ?, ?, 'active')").run(
-    "CC-1",
-    "concurrency",
-    "can two writers interleave?",
+  const concern = db.prepare(
+    "INSERT INTO concerns (code, category, origin, notes, status) VALUES (?, ?, 'seeded', ?, 'active')",
   );
-  db.prepare("INSERT INTO concerns (code, category, question, status) VALUES (?, ?, ?, 'active')").run(
-    "SC-1",
-    "seam",
-    "is the seam contract written down?",
-  );
+  concern.run("CC-1", "concurrency", "can two writers interleave?");
+  concern.run("SC-1", "seam", "is the seam contract written down?");
   db.prepare(
     `INSERT INTO dispositions (subsystem_id, concern_code, classification, evidence, evidence_quality, rationale)
      VALUES ('B-01', 'CC-1', 'ruled-out', ?, 'code-verified', 'the writer holds the lock across the retry')`,
@@ -535,7 +530,10 @@ check("index.ts registers the locus tools first and carries an explicit read-onl
     return "describe_locus is not in READ_ONLY_TOOLS";
   const composition = source.match(/const allTools: ToolDefinition\[\] = \[([\s\S]*?)\];/);
   if (!composition) return "allTools could not be read from index.ts";
-  const first = composition[1].trim().split("\n")[0]?.trim();
+  const first = composition[1]
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !line.startsWith("//"));
   return first === "...locusTools," ? null : `allTools opens with ${JSON.stringify(first)}`;
 });
 
@@ -720,19 +718,28 @@ check("a candidate row serves no structural claim and says why", () => {
     return `withheld_unauthorized is ${JSON.stringify(structure.withheld_unauthorized)}, not 1`;
   if (structure.recorded !== true)
     return "the section reports nothing recorded while the store holds a row";
-  return String(structure.statement ?? "").includes(SCOPED_UNREAD_CANNOT)
+  if (!String(structure.statement ?? "").toLowerCase().includes("not examined"))
+    return `the statement does not say "not examined": ${JSON.stringify(structure.statement)}`;
+  return String(structure.cannot_justify ?? "").includes(SCOPED_UNREAD_CANNOT)
     ? null
-    : `the statement does not carry §2.3's sentence: ${JSON.stringify(structure.statement)}`;
+    : `the section does not carry §2.3's sentence: ${JSON.stringify(structure.cannot_justify)}`;
 });
 
 check("'no findings' is never said at a state §2.3 forbids it at", () => {
   const reason = needFixture();
   if (reason) return reason;
+  // The sentences the tool itself authors, not the whole payload: §2.3's own
+  // `cannot_justify` text quotes the forbidden phrase in order to forbid it,
+  // and a reader of the serialized blob cannot tell an assertion from a
+  // prohibition. Section statements are where the tool speaks in its own voice.
   for (const locus of ["src/candidate.ts", "src/unledgered.ts"]) {
-    const serialized = JSON.stringify(describeLocus({ locus })).toLowerCase();
-    if (serialized.includes("no findings") || serialized.includes("no open findings"))
-      return `${locus} reports an absence of findings`;
-    if (!serialized.includes("not examined")) return `${locus} does not say "not examined"`;
+    const payload = describeLocus({ locus });
+    const statements = SECTIONS.map((name) => String(sectionOf(payload, name)?.statement ?? ""))
+      .join(" ")
+      .toLowerCase();
+    if (/\bno (open )?findings\b/.test(statements))
+      return `${locus} reports an absence of findings: ${statements}`;
+    if (!statements.includes("not examined")) return `${locus} does not say "not examined"`;
   }
   return null;
 });
