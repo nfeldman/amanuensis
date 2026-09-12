@@ -241,6 +241,11 @@ jobs:
       # a real deletion, and reads the committed receipt of the live run.
       - name: Self-conspectus rebuild — snapshot, discard, reinitialize, read back
         run: node dev/test-rebuild-readback.mjs
+      # Also from the repository root, and for the same reason: the store is
+      # untracked, so what the rebuild covered is asserted over a committed
+      # receipt here and over the live store wherever one exists.
+      - name: Rebuild coverage — onboarding, batched subsystems, claims, cited edges
+        run: node dev/test-rebuild-coverage.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
