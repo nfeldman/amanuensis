@@ -845,6 +845,18 @@ END;
 -- pending instead of fabricating verification or silently treating them as
 -- open.  Rows without a fix location receive an honest legacy placeholder;
 -- they still cannot become verified without a new tool-mediated event.
+--
+-- The sweep runs on every open, so it must import only rows whose history is
+-- genuinely absent.  `findings.status` stays 'fixed' after `verify_finding_fix`
+-- records a verified-fixed event -- that tool writes the event, not the coarse
+-- column -- so a sweep keyed on the column alone would append a newer pending
+-- event behind the verification on the next open, and
+-- `finding_resolution_current` (newest event wins) would report the repair as
+-- unverified again.  `origin_key` cannot prevent it: the verification carries
+-- no origin key, so `INSERT OR IGNORE` sees no conflict.  The NOT EXISTS guard
+-- is what keeps the sweep to its stated job -- importing a label that has no
+-- recorded history -- and it is idempotent by construction, because the row it
+-- inserts is itself a history.
 INSERT OR IGNORE INTO finding_resolution_events
     (origin_key, finding_id, resolution_state, fix_location, fix_sha,
      rationale, session_id, recorded_at)
@@ -857,7 +869,9 @@ SELECT 'legacy-fixed:' || finding_id,
        session_id,
        updated_at
   FROM findings
- WHERE status = 'fixed';
+ WHERE status = 'fixed'
+   AND NOT EXISTS (SELECT 1 FROM finding_resolution_events e
+                    WHERE e.finding_id = findings.finding_id);
 
 CREATE VIEW IF NOT EXISTS finding_resolution_current AS
 SELECT e.*
