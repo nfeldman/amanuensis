@@ -445,18 +445,23 @@ function gitStateRow(db: DB): GitStateRow | null {
 }
 
 /**
- * The upstream head, resolved the way `source_alignment` resolves it: ask git
- * which ref the canonical branch tracks, and fall back to the conventional
- * `origin/<branch>` only when no upstream is configured. Reading
- * `refs/remotes/origin/<branch>` first reports the wrong ref in any clone whose
- * remote is not named `origin`.
+ * The upstream head: the ref the canonical branch actually records that it
+ * tracks, and nothing else. §2.4.4 item 4 is explicit — "when an upstream is
+ * recorded, otherwise `null`".
+ *
+ * There is deliberately no `refs/remotes/origin/<branch>` fallback here, which
+ * is the one place this diverges from the projection's Upstream head row
+ * (`renderers.py` `source_alignment`). That row prints the resolving ref
+ * beside the value, so a fallback there is disclosed to the reader; this field
+ * is a bare SHA with nowhere to say the answer came from a convention rather
+ * than from configuration. A guess a caller cannot distinguish from a recorded
+ * fact is the wrong kind of answer, and in a clone whose branch tracks nothing
+ * the honest report is that no upstream is recorded (F5/codex).
  */
 function originHead(git: GitProbe, branch: string | null): string | null {
   if (!git.available || !branch) return null;
   const upstream = git.run(["rev-parse", "--verify", `${branch}@{upstream}`]);
-  if (upstream.status === 0 && upstream.stdout) return upstream.stdout;
-  const fallback = git.run(["rev-parse", "--verify", `refs/remotes/origin/${branch}`]);
-  return fallback.status === 0 && fallback.stdout ? fallback.stdout : null;
+  return upstream.status === 0 && upstream.stdout ? upstream.stdout : null;
 }
 
 function revisionBlock(db: DB, git: GitProbe): RevisionBlock {
