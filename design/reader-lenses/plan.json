@@ -410,14 +410,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "b6720be88363f33bd41262204ec69d433e47a9bf",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "fcc6fd1",
+      "green_sha": "09a12d5c010e5ba0e0894cd2a119a52109224813",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "file_standing carries §2.2's CASE plus the owning subsystem's name and status; standing.ts owns the three things SQL cannot decide (zero owners, disagreeing owners, ref reachability) and never writes, so unreachable-ref and unverifiable-ref are response-only downgrades and no read-only tool mutates the ledger. Five spec gaps filled and recorded in code: STANDING_AUTHORITY_ORDER ranks the six per-owner states so mixed can take the weakest (§2.3 ranks none); a zero-owner path with a scope_gaps absent row reads absent rather than unledgered, which is what makes §2.4.2's 'unledgered / absent' parenthesis mean something; an owner subsystem with no subsystems row ranks unmapped; the ceiling's deferral sentence is a separate deferred_note so authorizes stays exactly the enum source's string; and candidate-sibling excludes the locus itself. One deliberate deviation from a sibling packet: contracts/conspectus-vocabulary.json (P1's) gains authorizes on every subsystem_status value, because §2.4.3's ceiling text had no single source otherwise and §10.1 names that file as where it lives; both generated modules follow and --check/--check-sql pass. Fifty-one sabotages were run across the view, the inference order, the reachability probe, the ceiling, the five unknown[] predicates, both view guards and the materializer refusal; all turn the gate red except one recorded no-op (the view's COALESCE arm and its ELSE arm are interchangeable over the CHECK-constrained classification domain)."
     },
     {
       "id": "P6",
