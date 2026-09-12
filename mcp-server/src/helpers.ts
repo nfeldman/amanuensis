@@ -195,6 +195,36 @@ export function citationRevision(token: string): string {
 }
 
 /**
+ * Split a stored citation into the three parts ingress accepted.
+ *
+ * `requireWorkspaceCitation` takes the **first** colon as the symbol delimiter
+ * and the **last** `@` as the revision delimiter, so a vendored path such as
+ * `src/pkg@v1/file.ts:loadVendored@abcdef0` is a valid citation. Every read
+ * surface has to undo exactly that split: a reader that took the first `@`
+ * instead reduced that path to `src/pkg`, serving the finding at a path nobody
+ * cited and losing it at the path that was. One parser, used everywhere, is
+ * the only thing that keeps the two ends from drifting again.
+ *
+ * Lexical only, and total: a value carrying no revision keeps the whole value
+ * as its citation, and one carrying no colon has a null symbol.
+ */
+export function parseCitation(token: string): {
+  path: string;
+  symbol: string | null;
+  revision: string | null;
+} {
+  const at = token.lastIndexOf("@");
+  const citation = at > 0 ? token.slice(0, at) : token;
+  const revision = at > 0 ? token.slice(at + 1) : null;
+  const colon = citation.indexOf(":");
+  return {
+    path: colon === -1 ? citation : citation.slice(0, colon),
+    symbol: colon === -1 ? null : citation.slice(colon + 1),
+    revision,
+  };
+}
+
+/**
  * Validate every citation token in a prose value and return them normalized.
  *
  * Each token's path goes through `requireWorkspaceSourcePath` and its revision

@@ -28,6 +28,7 @@ import {
   citationTokensIn,
   optString,
   optStringArray,
+  parseCitation,
   requireString,
   responseBytes,
   type ServerContext,
@@ -649,12 +650,10 @@ function primaryFilesNames(
   if (!Array.isArray(entries)) return false;
   return entries.some((entry) => {
     if (typeof entry !== "string") return false;
-    const citation = entry.split("@")[0] ?? entry;
-    const colon = citation.indexOf(":");
-    const file = colon === -1 ? citation : citation.slice(0, colon);
-    if (file !== path) return false;
+    const cited = parseCitation(entry);
+    if (cited.path !== path) return false;
     if (!symbol) return true;
-    return colon !== -1 && citation.slice(colon + 1) === symbol;
+    return cited.symbol === symbol;
   });
 }
 
@@ -2264,7 +2263,7 @@ function locationInScope(
     .filter((token) => token.length > 0);
   for (const token of tokens) {
     if (scope.subsystems.includes(token)) return true;
-    const path = token.split("@")[0]?.split(":")[0] ?? token;
+    const path = parseCitation(token).path;
     if (scope.path_prefix && path.startsWith(scope.path_prefix)) return true;
     if (ownedPaths.has(path)) return true;
   }
@@ -2339,10 +2338,7 @@ function findingsInScope(
     if (!Array.isArray(entries)) return false;
     return entries.some((entry) => {
       if (typeof entry !== "string") return false;
-      const citation = entry.split("@")[0] ?? entry;
-      const colon = citation.indexOf(":");
-      const path = colon === -1 ? citation : citation.slice(0, colon);
-      return path.startsWith(scope.path_prefix as string);
+      return parseCitation(entry).path.startsWith(scope.path_prefix as string);
     });
   });
 }
@@ -3381,8 +3377,7 @@ function buildLeadHistory(db: DB, subject: HistorySubject): BudgetedSection {
     return tokens.some((token) => {
       if (subject.owners.includes(token)) return true;
       if (!subject.path) return false;
-      const path = token.split("@")[0]?.split(":")[0] ?? token;
-      return path === subject.path;
+      return parseCitation(token).path === subject.path;
     });
   });
   return {

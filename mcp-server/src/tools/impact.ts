@@ -5,6 +5,7 @@ import {
   optEnum,
   optInt,
   optString,
+  parseCitation,
   requireString,
   requireWorkspaceSourcePath,
   type ServerContext,
@@ -175,7 +176,7 @@ function parsePrimaryFiles(raw: string | null): string[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((item): item is string => typeof item === "string")
-      .map((item) => item.split("@")[0]?.split(":")[0] ?? item);
+      .map((item) => parseCitation(item).path);
   } catch {
     return [];
   }
