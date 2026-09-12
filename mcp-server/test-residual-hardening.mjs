@@ -20,9 +20,11 @@
 //     live one (F1/codex, slice-S7);
 //   - the open-finding count is derived from findings.status in any of the
 //     four surfaces that publish one — a duplicate predicate beside
-//     finding_state_current — or the master plan, get_dashboard, and
-//     list_subsystems disagree on a store holding a legacy-only finding and
-//     a finding whose event log has overtaken its coarse status (F9/codex);
+//     finding_state_current — or any of the master plan, get_dashboard,
+//     list_subsystems and get_finding_summary disagrees with the view, or with
+//     the others, on a store holding a legacy-only finding and a finding whose
+//     event log has overtaken its coarse status (F9/codex; F2/codex, which
+//     found get_finding_summary counted by no arm but the textual scan);
 //   - detect_changes or the standing reachability table writes a literal
 //     stale_reason the vocabulary source does not carry, or either writer
 //     stops reading the generated STALE_REASONS (F4/codex, F2/codex);
@@ -697,6 +699,56 @@ check("list_subsystems counts open findings from finding_state_current", () => {
   return got === expectedOpen
     ? null
     : `list_subsystems reports ${got} open findings where finding_state_current holds ${expectedOpen}; it is still reading findings.status`;
+});
+
+// The fourth surface. P21 added `get_finding_summary` to the readers bound to
+// OPEN_FINDING_SQL and said so in this gate's own header, but the only arm that
+// reached it was the textual scan for `status = 'confirmed-bug'`. Inverting its
+// predicate to `NOT (OPEN_FINDING_SQL)` carries neither that literal nor any
+// other the scan looks for, and the gate stayed green (F2/codex, slice-S7). A
+// count is checked by counting.
+check("get_finding_summary counts open findings from finding_state_current", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  if (expectedOpen === null) return "the divergent fixture was not seeded";
+  const result = call("get_finding_summary", {}, fixture.ctx);
+  if (!result.ok) return `get_finding_summary refused — ${result.error}`;
+  const rows = Array.isArray(result.value) ? result.value : [];
+  if (rows.length === 0) return "get_finding_summary returned no rows, so the count has no denominator";
+  const got = rows.reduce((total, row) => total + Number(row.open_bugs ?? 0), 0);
+  return got === expectedOpen
+    ? null
+    : `get_finding_summary reports ${got} open findings where finding_state_current holds ${expectedOpen}; its predicate has parted from the other three`;
+});
+
+// The four readers must agree with each other, not merely each with the view.
+// Three surfaces agreeing on a wrong number and a fourth agreeing on a right
+// one are the same total, which is why the arms above are per-reader and this
+// one is over the set.
+check("all four open-count surfaces publish the same total", () => {
+  const blocked = needFixture();
+  if (blocked) return blocked;
+  if (expectedOpen === null) return "the divergent fixture was not seeded";
+  const dashboard = call("get_dashboard", {}, fixture.ctx);
+  const subsystems = call("list_subsystems", {}, fixture.ctx);
+  const summary = call("get_finding_summary", {}, fixture.ctx);
+  if (!dashboard.ok || !subsystems.ok || !summary.ok)
+    return "one of the three tool surfaces refused, so they cannot be compared";
+  const totals = {
+    get_dashboard: Number(dashboard.value?.open_bugs ?? -1),
+    list_subsystems: (Array.isArray(subsystems.value) ? subsystems.value : []).reduce(
+      (total, entry) => total + Number(entry.confirmed_bugs ?? 0),
+      0,
+    ),
+    get_finding_summary: (Array.isArray(summary.value) ? summary.value : []).reduce(
+      (total, row) => total + Number(row.open_bugs ?? 0),
+      0,
+    ),
+  };
+  const disagreeing = Object.entries(totals).filter(([, total]) => total !== expectedOpen);
+  return disagreeing.length
+    ? `${disagreeing.map(([name, total]) => `${name}=${total}`).join(", ")} against finding_state_current's ${expectedOpen}`
+    : null;
 });
 
 function pythonProbe(code) {
