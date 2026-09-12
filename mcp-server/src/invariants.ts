@@ -142,6 +142,48 @@ export function enforceMonotonicTransition(
 }
 
 /**
+ * The structural phase's own deliverable, checked at the status advance
+ * (spec.md §9.1). `structural` authorizes claims about types, state
+ * containers, flows and the concurrency model; before this, the only thing
+ * the server required of the phase was the narrative artifact — and prose is
+ * not revision-bound, so nothing downstream could tell a mapped structure
+ * from a described one.
+ *
+ * One claim is enough, and no category is required. Forcing a count, or a row
+ * per category, is a quota over a field the writer must author, which is the
+ * fabrication-to-order hazard BP4 names and the case GP8's v2 scope note
+ * excludes from substrate enforcement. A subsystem with genuinely no mutable
+ * state container records that as an explicit negative claim instead of
+ * omitting the category. Claim *truth* is the adversarial pass's obligation:
+ * `references/phase-4-adversarial.md` pulls these claims as targets and
+ * records each outcome before the subsystem may advance to `mapped`.
+ *
+ * The prefix is compared with `substr`, not `LIKE`: a subsystem id may
+ * legitimately contain `_` or `%`, and an unescaped LIKE pattern would let one
+ * subsystem's claim satisfy another's gate.
+ */
+function requireStructuralClaim(db: DB, subsystemId: string): void {
+  const prefix = `${subsystemId}/`;
+  const { n } = db
+    .prepare(
+      `SELECT COUNT(*) AS n
+         FROM claims
+        WHERE valid_until_sha IS NULL
+          AND substr(claim_key, 1, length(?)) = ?`,
+    )
+    .get(prefix, prefix) as { n: number };
+  if (n > 0) return;
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'structural': no current claim carries a ` +
+      `claim_key beginning '${prefix}'. The structural phase must record its key ` +
+      `types, state containers, flow steps, concurrency invariants and seam ` +
+      `contracts through add_claim before the subsystem is advanced. One claim is ` +
+      `enough; a category that is genuinely empty is recorded as an explicit ` +
+      `negative claim rather than omitted.`,
+  );
+}
+
+/**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
  * (targetRank > currentRank); no-ops and deferred toggles are exempt.
@@ -149,6 +191,8 @@ export function enforceMonotonicTransition(
  * | Target status | Required prior-phase evidence                          |
  * |---------------|--------------------------------------------------------|
  * | structural    | ≥1 file_ledger row (scoper ran add_files_to_scope)     |
+ * |               |   AND ≥1 current claim keyed `<sid>/…` (the structural |
+ * |               |   phase recorded its inventory through add_claim)      |
  * | concerns      | ≥1 artifacts row kind='subsystem-survey' (structural   |
  * |               |   phase wrote and registered its narrative document)   |
  * | adversarial   | ≥1 dispositions row (concerns pass ran set_disposition)|
@@ -176,6 +220,7 @@ export function enforcePhasePrerequisites(
             `structural phase begins.`,
         );
       }
+      requireStructuralClaim(db, subsystemId);
       break;
     }
     case "concerns": {

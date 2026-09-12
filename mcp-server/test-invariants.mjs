@@ -7,7 +7,7 @@
 // that accidentally rejects valid writes is caught alongside one that
 // silently accepts bad writes.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
@@ -16,6 +16,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { dispositionTools } from "./dist/tools/dispositions.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
 import { findingTools } from "./dist/tools/findings.js";
@@ -61,6 +62,7 @@ const allTools = new Map(
     ...findingTools,
     ...fieldNoteTools,
     ...evidenceTools,
+    ...claimTools,
     ...fileTools,
     ...artifactTools,
   ].map((td) => [td.name, td]),
@@ -73,6 +75,21 @@ function call(name, args, ctx) {
 function freshCtx() {
   const ws = mkdtempSync(join(tmpdir(), "inv-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
+  // One real commit. The `structural` prerequisite now requires a claim, and
+  // `add_claim` resolves every ref_sha in the bound workspace — `git init`
+  // alone leaves a repo with no commit for it to resolve.
+  writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
+  spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+  spawnSync(
+    "git",
+    [
+      "-c", "user.email=inv@localhost",
+      "-c", "user.name=invariants",
+      "-c", "commit.gpgsign=false",
+      "commit", "-q", "--no-verify", "-m", "seed",
+    ],
+    { cwd: ws },
+  );
   const project = resolveProject(ws);
   ensureProjectStorage(project, (databasePath) => {
     const database = openDatabase(databasePath);
@@ -88,6 +105,49 @@ function freshCtx() {
       rmSync(project.storagePath, { recursive: true, force: true });
     },
   };
+}
+
+function headSha(ctx) {
+  return String(
+    spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: ctx.project.workspacePath,
+      encoding: "utf8",
+    }).stdout ?? "",
+  ).trim();
+}
+
+// Phase 2's own deliverable: advancing to `structural` requires at least one
+// current claim whose claim_key begins `<sid>/`. Seeded through add_claim so
+// the fixture exercises the same write path a survey would.
+let seededClaims = 0;
+function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
+  const existing = ctx.db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM claims WHERE valid_until_sha IS NULL AND substr(claim_key, 1, length(?)) = ?",
+    )
+    .get(`${id}/`, `${id}/`);
+  if (existing.n > 0) return;
+  const sha = headSha(ctx);
+  const evidenceId = call(
+    "add_evidence",
+    { file_path: filePath, symbol: "Unit", line_range: "1-4", ref_sha: sha, kind: "code-verified" },
+    ctx,
+  ).id;
+  seededClaims += 1;
+  call(
+    "add_claim",
+    {
+      claim_id: `CL-${seededClaims}`,
+      claim_key: `${id}/key-type/unit`,
+      subject_type: "symbol",
+      subject_id: `${filePath}:Unit`,
+      statement: `Unit is the type ${id} is built around.`,
+      epistemic_kind: "observation",
+      ref_sha: sha,
+      evidence_ids: [evidenceId],
+    },
+    ctx,
+  );
 }
 
 // Convenience: advance a subsystem through the survey to a target depth,
@@ -121,6 +181,8 @@ function advanceTo(ctx, id, status) {
         },
         ctx,
       );
+      // Structural prerequisite: ≥1 current claim keyed `<sid>/`.
+      seedStructuralClaim(ctx, id);
     }
     if (order[i] === "concerns") {
       // Structural prerequisite: subsystem-survey artifact registered.
@@ -162,6 +224,10 @@ function advanceTo(ctx, id, status) {
     // hasn't added any findings.
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
+}
+function readStatus(ctx, id) {
+  const row = ctx.db.prepare("SELECT status FROM subsystems WHERE id = ?").get(id);
+  return row ? row.status : null;
 }
 function startSession(ctx, intent = "test") {
   const r = call("start_session", { intent }, ctx);
@@ -774,6 +840,59 @@ t("advance to 'structural' without file_ledger is rejected", () => {
   }
 });
 
+t("advance to 'structural' without a current <sid>/ claim is rejected", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx);
+    call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
+    // Another subsystem's claim does not stand in for this one's.
+    call("upsert_subsystem", { id: "B-02", name: "B02", status: "unmapped" }, ctx);
+    seedStructuralClaim(ctx, "B-02", "a.ts");
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),
+      "claim_key beginning 'B-01/'",
+    );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
+    call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
+    assert(
+      readStatus(ctx, "B-01") === "structural",
+      "one claim should be sufficient — no per-category quota is enforced",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+t("a claim closed at a later commit no longer satisfies the structural gate", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx);
+    call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
+    ctx.db.prepare("UPDATE claims SET valid_until_sha = 'closed' WHERE claim_key = ?").run(
+      "B-01/key-type/unit",
+    );
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),
+      "no current claim",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
   const { ctx, cleanup } = freshCtx();
   try {
@@ -785,6 +904,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
@@ -806,6 +926,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -849,6 +970,7 @@ t("phase prerequisites: happy path passes all gates", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",

@@ -516,21 +516,18 @@ check("the prefix is matched literally, not as a LIKE pattern", () => {
     statement: "Token is the unit B-08 parses.",
     evidenceId: seedEvidence("src/B-08.ts"),
   });
-  const underscore = refusal(
-    "update_subsystem_status",
-    { id: "B_08", status: "structural" },
-    fixture.ctx,
-  );
-  const percent = refusal(
-    "update_subsystem_status",
-    { id: "B%", status: "structural" },
-    fixture.ctx,
-  );
-  const admitted = [underscore === null ? "B_08" : null, percent === null ? "B%" : null].filter(
-    Boolean,
-  );
-  return admitted.length
-    ? `${admitted.join(" and ")} advanced on a claim belonging to B-08, so the prefix is a LIKE pattern rather than a literal`
+  const wrong = [];
+  for (const id of ["B_08", "B%"]) {
+    scopedSubsystem(id);
+    const message = refusal("update_subsystem_status", { id, status: "structural" }, fixture.ctx);
+    if (message === null) {
+      wrong.push(`${id} advanced on a claim belonging to B-08`);
+    } else if (!message.includes("claim_key")) {
+      wrong.push(`${id} was refused, but for some other reason: ${message}`);
+    }
+  }
+  return wrong.length
+    ? `${wrong.join("; ")} — the prefix is read as a LIKE pattern rather than a literal`
     : null;
 });
 

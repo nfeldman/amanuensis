@@ -190,8 +190,23 @@ run("update_file_classification", {
 run("get_subsystem_files", { subsystem_id: "B-01", classification_filter: "examined" }, (r) => r.length === 2);
 
 // Advance B-01 through the survey pipeline. File ledger must exist before
-// 'structural', and the subsystem-survey artifact must be registered before
-// 'concerns' — both are now enforced server-side.
+// 'structural', the structural phase's inventory must be recorded as at
+// least one claim keyed `B-01/`, and the subsystem-survey artifact must be
+// registered before 'concerns' — all three are enforced server-side.
+const smokeEvidence = run("add_evidence", {
+  file_path: "scheduler/main.ts", symbol: "runJob", line_range: "1-20",
+  ref_sha: claimSha1, kind: "code-verified",
+}, (r) => r.ok && typeof r.id === "number");
+run("add_claim", {
+  claim_id: "CL-B01-runjob",
+  claim_key: "B-01/key-type/job",
+  subject_type: "symbol",
+  subject_id: "scheduler/main.ts:Job",
+  statement: "Job is the unit the scheduler queues, runs, and retires.",
+  epistemic_kind: "observation",
+  ref_sha: claimSha1,
+  evidence_ids: [smokeEvidence.id],
+}, (r) => r.ok);
 run("update_subsystem_status", { id: "B-01", status: "structural" }, (r) => r.previous_status === "scoping");
 run("register_artifact", {
   path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01",
@@ -383,7 +398,9 @@ run("verify_finding_fix", {
 }, (r) => r.ok && r.resolution_state === "verified-fixed");
 run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, (r) => r.length === 1 && r[0].role === "supports");
 run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 2);
-run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 2);
+// Three rows on this path now: the disposition citation, the fix
+// verification, and Phase 2's structural-claim evidence.
+run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 3);
 
 // 20. Temporal claims
 const claimEv1 = run("add_evidence", {
@@ -433,7 +450,9 @@ run("invalidate_claim", {
   reason: "the second fixture refutes it",
   evidence_ids: [claimEv2.id],
 }, (r) => r.ok);
-run("get_claims", { query_sha: claimSha2 }, (r) => r.length === 1 && r[0].claim_id === "smoke-claim-2");
+run("get_claims", { query_sha: claimSha2 }, (r) =>
+  r.length === 2 &&
+  r.map((c) => c.claim_id).sort().join(",") === "CL-B01-runjob,smoke-claim-2");
 run("get_claim_history", { claim_key: "smoke.fixture" }, (r) => r.claims.length === 2 && r.edges.length === 1);
 run("get_legacy_claim_projection", { legacy_source: "findings" }, (r) => r.length === 4);
 

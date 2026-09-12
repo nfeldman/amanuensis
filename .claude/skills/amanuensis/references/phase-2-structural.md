@@ -66,12 +66,68 @@ counterpart fills in the other half when it is mapped. Seam concerns
 (`SC-N` codes) are evaluated later by the adversarial agent or the
 coordinator's seam-assessment step — not here.
 
-### 6. Update file classifications
+### 6. Record the inventory as claims
+
+Prose is not revision-bound. Everything the steps above established is
+also recorded through `add_claim`, so a later reader can tell what is
+still current from what a newer commit has superseded, and so the
+adversarial pass has something to challenge.
+
+One claim per structural fact, with a `claim_key` that is **stable
+across re-surveys** — the next survey of the same fact supersedes this
+claim rather than adding a duplicate beside it. `<symbol-slug>` is the
+symbol lowercased with non-alphanumerics collapsed to `-`.
+
+- **Key type** — `<sid>/key-type/<symbol-slug>`; `subject_type:
+  "symbol"`, `subject_id: "<path>:<symbol>"`; `epistemic_kind:
+  "observation"`; at least one evidence row of kind `code-verified` or
+  `contract-stated` citing that same `<path>`.
+- **State container** — `<sid>/state-container/<symbol-slug>`; subject
+  and evidence as for a key type. State the lifetime and the
+  invalidation rule in the `statement`.
+- **Flow step** — `<sid>/flow/<flow-slug>/<nn>`, `<nn>` zero-padded in
+  execution order; subject and evidence as for a key type, naming the
+  symbol that step runs.
+- **Concurrency invariant** — `<sid>/concurrency`; `subject_type:
+  "subsystem"`, `subject_id: "<sid>"`; `epistemic_kind: "observation"`
+  when you read the guarantee, `"inference"` when you derived it from
+  the runtime; at least one evidence row, any kind.
+- **Seam contract** — `<sid>/seam/<seam-id>`; `subject_type: "seam"`,
+  `subject_id: "<seam-id>"`; `epistemic_kind: "observation"`; at least
+  one evidence row citing the writing or the reading site.
+
+The server refuses a `key-type`, `state-container` or `flow` claim
+unless one attached evidence row is `code-verified` or
+`contract-stated` **and** cites the file named in `subject_id`. Those
+three are read off one file, so the record can require that the reading
+cite it. Concurrency and seam claims carry the weaker requirement on
+purpose: they are frequently derived rather than read, and a kind the
+evidence cannot honestly carry is worse than an honest weak one.
+
+**A category that is genuinely empty is claimed as an explicit
+negative, not omitted.** Drop the symbol segment and make the
+subsystem the subject: `<sid>/key-type`, `<sid>/state-container` or
+`<sid>/flow`, with `subject_type: "subsystem"`, `subject_id: "<sid>"`,
+and a `statement` that says plainly what is absent and over what
+scope — "B-04 holds no mutable state container; every value it
+computes is returned, not retained."
+Cite the evidence rows you read to conclude it. An absence is not read
+off one symbol, so the file-anchored rule above does not apply to it.
+
+**This is a prerequisite, not a suggestion.** The advance to
+`structural` is refused unless at least one current claim carries a
+`claim_key` beginning `<sid>/`. No count beyond one is required and no
+category is mandatory — a quota over a field you have to author invites
+padding rather than accuracy. Record what you found; the adversarial
+pass in Phase 4 pulls every one of these claims as a target and is
+where their truth is tested.
+
+### 7. Update file classifications
 
 Files actually read in this phase move from `candidate` to
 `examined` via `update_file_classification`.
 
-### 7. Vocabulary
+### 8. Vocabulary
 
 Continue adding terms via `define_term`. Any internal name whose
 meaning required reading code should be captured with enough
@@ -98,7 +154,8 @@ subsystem_id, ref_sha=<session sha>)` then
 
 Return to the coordinator with a one-line summary:
 
-- Counts of key types, state containers, flows documented.
+- Counts of key types, state containers, flows documented, and
+  the claims recorded for them.
 - Concurrency model verdict.
 - Seam contracts written + any seams where contract detail is still
   unknown.
@@ -107,7 +164,9 @@ Return to the coordinator with a one-line summary:
 - Open questions logged this phase.
 
 The coordinator advances status to `structural` and starts Phase 3
-immediately. No pause.
+immediately. No pause. That advance is refused if step 6 recorded no
+claim, so hand back only once at least one current `<sid>/` claim
+exists.
 
 For seams where you genuinely cannot tell the contract from this
 side (e.g. ordering depends on a runtime config you can't read),
@@ -120,7 +179,8 @@ for the rest.
 - **Types before implementation.** Read class bodies for method
   signatures and invariants, not for line-by-line logic.
 - **Cite everything.** Every structural claim in the summary needs a
-  `file:symbol@sha` reference.
+  `file:symbol@sha` reference, and every one recorded through
+  `add_claim` needs its evidence rows.
 - **Do not classify concerns yet.** Phase 3 does that. If you notice
   a concern while structural reading, record a
   `field_note(category="candidate-concern")` and continue mapping.

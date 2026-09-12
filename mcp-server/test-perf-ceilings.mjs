@@ -15,7 +15,7 @@
 // locally — the numbers there will show which operation slowed and by
 // how much.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
@@ -31,6 +31,8 @@ import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo, commitStorage } from "./dist/storage-git.js";
 import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { evidenceTools } from "./dist/tools/evidence.js";
+import { claimTools } from "./dist/tools/claims.js";
 
 const allTools = new Map(
   [
@@ -44,6 +46,8 @@ const allTools = new Map(
     ...storageHistoryTools,
     ...fileTools,
     ...artifactTools,
+    ...evidenceTools,
+    ...claimTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -90,6 +94,15 @@ function ceiling(label, ceilingMs, fn) {
 // the measurement-only scripts.
 const ws = mkdtempSync(join(tmpdir(), "perf-ceil-"));
 spawnSync("git", ["init", "-q"], { cwd: ws });
+// One real commit: `structural` now requires a claim, `add_claim` resolves
+// every ref_sha in the bound workspace, and `git init` alone leaves a repo
+// with no commit for it to resolve.
+writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
+spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+spawnSync("git", ["-c", "user.email=perf@localhost", "-c", "user.name=perf", "-c", "commit.gpgsign=false", "commit", "-q", "--no-verify", "-m", "seed"], { cwd: ws });
+const seedSha = String(
+  spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" }).stdout ?? "",
+).trim();
 const project = resolveProject(ws);
 ensureProjectStorage(project, (databasePath) => {
   const database = openDatabase(databasePath);
@@ -106,6 +119,8 @@ for (let i = 0; i < 20; i++) {
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
   call("add_files_to_scope", { subsystem_id: id, ref_sha: "ceil-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "ceiling fixture" }] }, ctx);
+  const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
+  call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);

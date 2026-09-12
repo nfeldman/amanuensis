@@ -225,6 +225,9 @@ jobs:
       - name: Structural claims — add_claim's substrate checks and the narrative fallback
         working-directory: mcp-server
         run: node test-structural-claims.mjs
+      - name: Phase 2 claims — the claim_key prerequisite on 'structural'
+        working-directory: mcp-server
+        run: node test-phase2-claims-gate.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
