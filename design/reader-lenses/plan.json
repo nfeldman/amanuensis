@@ -1044,14 +1044,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "0faaab0e3054817a86395c42877201b169e4f6dc",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "ff48b11d3c0c0106243d565e639915845e6fc402",
+      "green_sha": "23416a37f1f7727639055390c1847da87d68f5c2",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Gate asserts over the live stdio surface: instructions and annotations come from initialize/tools-list, the inventory total from gen-tool-inventory.mjs --check rather than a literal (baseline = total less the three named locus tools), and the installer is run in temp workspaces. SERVER_INSTRUCTIONS keeps the phrase 'evidence-backed codebase conspectus' inside the producer sentence so test-mcp-compatibility.mjs's existing assertion is not weakened. The opt-in flag is --agent-instructions: CLAUDE.md for claude, AGENTS.md otherwise, project scope only (a user-scoped Codex install is rooted in CODEX_HOME and applyPlan's containment would reject a workspace write); uninstall does not remove the block, which is delimited and removable by hand. routing-measurement.md is the protocol only, marked 'specified, not yet run': it needs S6's rebuilt self-conspectus, and no gate assertion reads its result, so a null result stays green. mcp-server/README.md gained a paragraph documenting the new flag; it is no packet's deliverable."
     },
     {
       "id": "P16",
