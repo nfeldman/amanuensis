@@ -33,7 +33,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P13 | Cited edges and topology from recorded rows only | ready | P6, P8, P12 | `mcp-server/test-edge-contract.mjs` | C45, C55, C63 |
+| P13 | Cited edges and topology from recorded rows only | ready (1 attempt) | P6, P8, P12 | `mcp-server/test-edge-contract.mjs` | C45, C55, C63 |
 
 ## S5 · Consumer routing (review: pending)
 
