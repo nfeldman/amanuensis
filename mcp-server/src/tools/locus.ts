@@ -515,7 +515,24 @@ interface ResolutionEventRow {
   recorded_at: string;
 }
 
-function primaryFilesNames(primaryFiles: string | null, path: string): boolean {
+/**
+ * Whether a finding's `primary_files` citation names this locus.
+ *
+ * A citation is `path[:symbol][@sha]`, and the symbol half is significant: at
+ * a symbol locus the whole `path:symbol` must match, because C13 forbids a
+ * symbol from inheriting the file's state silently and the evidence arm
+ * already narrows on `e.symbol`. Comparing the path alone let every finding
+ * cited to one symbol answer for every other symbol in the same file
+ * (F7/codex). A file locus still matches on the path, which is what collects
+ * the file's symbol-level findings onto it.
+ *
+ * The split is on the *first* colon, so a `Type::method` symbol survives it.
+ */
+function primaryFilesNames(
+  primaryFiles: string | null,
+  path: string,
+  symbol: string | null,
+): boolean {
   if (!primaryFiles) return false;
   let entries: unknown;
   try {
@@ -527,8 +544,11 @@ function primaryFilesNames(primaryFiles: string | null, path: string): boolean {
   return entries.some((entry) => {
     if (typeof entry !== "string") return false;
     const citation = entry.split("@")[0] ?? entry;
-    const file = citation.includes(":") ? citation.slice(0, citation.indexOf(":")) : citation;
-    return file === path;
+    const colon = citation.indexOf(":");
+    const file = colon === -1 ? citation : citation.slice(0, colon);
+    if (file !== path) return false;
+    if (!symbol) return true;
+    return colon !== -1 && citation.slice(colon + 1) === symbol;
   });
 }
 
@@ -568,7 +588,8 @@ function matchingFindings(db: DB, scope: AccountScope): FindingRow[] {
     )
     .all(...params) as FindingRow[];
   return rows.filter(
-    (row) => row.cited === 1 || primaryFilesNames(row.primary_files, scope.path as string),
+    (row) =>
+      row.cited === 1 || primaryFilesNames(row.primary_files, scope.path as string, scope.symbol),
   );
 }
 
