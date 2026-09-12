@@ -71,10 +71,10 @@
         "P15"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "62e624bb6b9fc955f15464a6e48e4e355d4a3f4b",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "dafc70ed56d78869d66d32e888c5ba6f7dc9aae9",
+        "findings": 9
       }
     },
     {

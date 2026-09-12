@@ -35,7 +35,7 @@
 |---|---|---|---|---|---|
 | P13 | Cited edges and topology from recorded rows only | done (1 attempt) | P6, P8, P12 | `mcp-server/test-edge-contract.mjs` | C45, C55, C63 |
 
-## S5 · Consumer routing (review: pending)
+## S5 · Consumer routing (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
