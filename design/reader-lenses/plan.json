@@ -888,8 +888,8 @@
       "gate": {
         "test_path": "mcp-server/test-edge-contract.mjs",
         "command": "cd mcp-server && node test-edge-contract.mjs",
-        "red_expect": "add_xref|context",
-        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+        "red_expect": "add_xref recorded an edge whose context",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|ModuleNotFoundError|ImportError|No module named|No such file|can't open file|SyntaxError"
       },
       "regression": [
         "cd mcp-server && npx biome check src/",

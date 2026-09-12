@@ -52,9 +52,9 @@
 // Phase 2 recorded the edges that exist in the code. And `phase-2-structural.md`
 // is asserted on the instruction it carries, not on whether an agent follows it.
 //
-// Output protocol: exactly one status line, last, on stdout. Every message is
-// scrubbed, so a missing deliverable reports as an assertion failure rather
-// than as a crash.
+// Output protocol: exactly one status line, last, on stdout — GREEN, RED, or
+// INCONCLUSIVE. A gate that could not run is not a gate that passed or failed,
+// and the third verdict exists so the first two cannot absorb it.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -82,36 +82,61 @@ const TOPOLOGY_HEADER = "| From | Relationship | To | Strength | Context |";
 const ATLAS_HEADER = "| Region | Subsystem | Survey depth |";
 
 // ---------------------------------------------------------------------------
-// Output funnel. Nothing reaches stdout except through emit(), and everything
-// is scrubbed of the launcher's crash signatures so that a genuine assertion
-// failure is never mistaken for a gate that never ran.
+// Output funnel, and the difference between a red gate and a gate that never
+// ran.
+//
+// The launcher tells those apart by looking for crash signatures in this output
+// and by requiring a `GATE P13 RED: <reason>` marker. An earlier version of this
+// file rewrote every one of those signatures — `MODULE_NOT_FOUND` to
+// `module-absent`, `ModuleNotFoundError` to `python-module-absent` — on the
+// theory that a missing deliverable should reach the launcher as an assertion
+// failure rather than as a crash. That inverted the guard it was written to
+// serve: deleting `diagrams.py`, a listed deliverable, produced exit 1, a
+// `GATE P13 RED:` line, and no trace of the `ModuleNotFoundError` behind it,
+// which the launcher accepted as a genuine red — `gate_crashed` and
+// `gate.red_rejects` were both looking for text this file had already erased
+// (slice-S4 F4/codex).
+//
+// Nothing is rewritten now. A build or load failure is detected before any
+// assertion runs, and any crash signature reaching the transcript at all demotes
+// the run to INCONCLUSIVE: raw diagnostics, no RED marker, no GREEN, exit 1.
+// A verifier that could not read its subject must return inconclusive rather
+// than a verdict (catalog BP22).
 // ---------------------------------------------------------------------------
-const SCRUB = [
-  [/MODULE_NOT_FOUND/g, "module-absent"],
-  [/ModuleNotFoundError/g, "python-module-absent"],
-  [/Cannot find module/g, "cannot load module"],
-  [/No such file or directory/g, "path is absent"],
-  [/No such file/g, "path is absent"],
-  [/can't open file/g, "cannot open path"],
-  [/SyntaxError/g, "parse-failure"],
-  [/syntax error/gi, "malformed statement"],
-  [/ImportError/g, "python-import-error"],
-  [/ReferenceError/g, "reference-error"],
-  [/TypeError/g, "type-error"],
-  [/ENOENT/g, "PATH-ABSENT"],
-  [/is not defined/g, "is undeclared"],
-  [/is not a function/g, "is not callable"],
-  [/command not found/g, "executable is absent"],
-];
 
-function scrub(text) {
-  let out = String(text ?? "");
-  for (const [pattern, replacement] of SCRUB) out = out.replace(pattern, replacement);
-  return out;
-}
+// The launcher's own crash vocabulary (run.sh:54, GATE_CRASH_RE), plus the two
+// shapes it does not list but which mean the same thing here.
+const CRASH_SIGNATURES =
+  /Cannot find module|MODULE_NOT_FOUND|ModuleNotFoundError|SyntaxError|No such file or directory|command not found|ImportError|ENOENT|ReferenceError|is not defined|No module named/;
+
+const transcript = [];
 
 function emit(line) {
-  process.stdout.write(`${scrub(line)}\n`);
+  const text = String(line ?? "");
+  transcript.push(text);
+  process.stdout.write(`${text}\n`);
+}
+
+// Reasons the gate could not reach a verdict. Raw, never rewritten.
+const blockers = [];
+
+function inconclusive(reason) {
+  blockers.push(String(reason ?? ""));
+}
+
+// Print the INCONCLUSIVE verdict and leave. Called both from the preflight and
+// from the end of the run, so a crash signature that surfaces mid-assertion is
+// treated exactly like one caught up front.
+function concludeInconclusive() {
+  emit("");
+  for (const blocker of blockers) emit(blocker);
+  const crashed = CRASH_SIGNATURES.exec(transcript.join("\n"));
+  emit(
+    `GATE P13 INCONCLUSIVE: the gate could not read its subject, so it reports no verdict — ${
+      blockers[0] ?? `a crash signature reached the transcript (${crashed?.[0]})`
+    }`,
+  );
+  process.exit(1);
 }
 
 const failures = [];
@@ -162,6 +187,39 @@ try {
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
+
+// ---------------------------------------------------------------------------
+// Preflight. Every deliverable this gate reads must be loadable before a single
+// assertion runs, because an assertion evaluated against an absent deliverable
+// reports the deliverable's absence in the vocabulary of a contract failure —
+// and that is the false red F4/codex exploited. Both halves are checked: the
+// TypeScript the handlers live in, and the Python the projection is rendered by.
+// ---------------------------------------------------------------------------
+if (!built.ok) {
+  inconclusive(`src/ was not compiled before this gate read dist/ — ${built.detail}`);
+}
+if (loadError !== null) {
+  inconclusive(`a deliverable module under dist/ could not be loaded — ${loadError}`);
+}
+{
+  const probe = spawnSync(
+    PY,
+    ["-c", "import amanuensis_materializer.renderers, amanuensis_materializer.diagrams"],
+    {
+      cwd: REPO,
+      encoding: "utf8",
+      env: { ...process.env, PYTHONPATH: join(REPO, "materializer"), PYTHONDONTWRITEBYTECODE: "1" },
+    },
+  );
+  if (probe.error) {
+    inconclusive(`the materializer could not be imported — ${PY} could not be run: ${probe.error.message}`);
+  } else if (probe.status !== 0) {
+    inconclusive(
+      `the materializer modules this gate renders through could not be imported — ${String(probe.stderr ?? "").trim()}`,
+    );
+  }
+}
+if (blockers.length) concludeInconclusive();
 
 function toolNamed(name) {
   const groups = [
@@ -725,6 +783,13 @@ function renderArchitecture(spec) {
   }
   if (!parsed) {
     const detail = `${stdout}\n${String(result.stderr ?? "")}`.trim().split("\n").slice(-4).join(" / ");
+    // A renderer that could not be imported or parsed says nothing about
+    // whether the projection is faithful. Reporting it as a failed assertion
+    // dresses a crash as a contract verdict, so it demotes the whole run.
+    if (CRASH_SIGNATURES.test(detail)) {
+      inconclusive(`the architecture renderer could not be run — ${detail.slice(0, 400)}`);
+      concludeInconclusive();
+    }
     return { error: `the architecture page could not be rendered — ${detail.slice(0, 300)}` };
   }
   return { markdown: String(parsed.markdown ?? "") };
@@ -1158,6 +1223,11 @@ if (fixture?.db) {
   }
 }
 for (const dir of roots) rmSync(dir, { recursive: true, force: true });
+
+// A crash signature anywhere in the transcript means some assertion was
+// evaluated against something it could not read, whatever verdict it returned.
+// Neither RED nor GREEN is reportable from here.
+if (blockers.length || CRASH_SIGNATURES.test(transcript.join("\n"))) concludeInconclusive();
 
 if (failures.length) {
   emit("");
