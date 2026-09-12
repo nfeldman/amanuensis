@@ -1170,6 +1170,65 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   },
 };
 
+/** One column whose CHECK constraint enforces a vocabulary. */
+export interface VocabularySqlBinding {
+  table: string;
+  column: string;
+}
+
+/**
+ * Where each vocabulary is enforced as a SQL CHECK. `--check-sql` asserts the
+ * schema agrees with the source here; src/db.ts reads the same mapping to bring
+ * a database created before a widening forward, since SQLite cannot alter a
+ * CHECK in place and `CREATE TABLE IF NOT EXISTS` does not rewrite one.
+ */
+export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly VocabularySqlBinding[]>> = {
+  finding_resolution_state: [{ table: "finding_resolution_events", column: "resolution_state" }],
+  finding_status: [{ table: "findings", column: "status" }],
+  file_classification: [{ table: "file_ledger", column: "classification" }],
+  subsystem_status: [{ table: "subsystems", column: "status" }],
+  evidence_kind: [{ table: "evidence", column: "kind" }],
+  evidence_quality: [{ table: "dispositions", column: "evidence_quality" }],
+  disposition_classification: [{ table: "dispositions", column: "classification" }],
+  severity: [{ table: "findings", column: "severity" }],
+  field_note_category: [{ table: "field_notes", column: "category" }],
+  open_question_category: [{ table: "open_questions", column: "category" }],
+  open_question_resolution: [{ table: "open_questions", column: "resolution" }],
+  xref_strength: [{ table: "xrefs", column: "strength" }],
+  contradiction_resolution: [
+    { table: "contradictions", column: "resolution" },
+    { table: "contradiction_resolution_events", column: "resolution" },
+  ],
+  diagnosticity_outcome: [{ table: "diagnosticity_sessions", column: "outcome" }],
+  claim_epistemic_kind: [{ table: "claims", column: "epistemic_kind" }],
+  concern_status: [{ table: "concerns", column: "status" }],
+  pass_type: [
+    { table: "dispositions", column: "pass_type" },
+    { table: "findings", column: "pass_type" },
+  ],
+};
+
+/** The values a CHECK on those columns must admit, by enum name. */
+export const SQL_CONSTRAINED_VOCABULARIES: Readonly<Record<string, readonly string[]>> = {
+  finding_resolution_state: FINDING_RESOLUTION_STATES,
+  finding_status: FINDING_STATUSES,
+  file_classification: FILE_CLASSIFICATIONS,
+  subsystem_status: SUBSYSTEM_STATUSES,
+  evidence_kind: EVIDENCE_KINDS,
+  evidence_quality: EVIDENCE_QUALITIES,
+  disposition_classification: DISPOSITION_CLASSIFICATIONS,
+  severity: SEVERITIES,
+  field_note_category: FIELD_NOTE_CATEGORIES,
+  open_question_category: OPEN_QUESTION_CATEGORIES,
+  open_question_resolution: OPEN_QUESTION_RESOLUTIONS,
+  xref_strength: XREF_STRENGTHS,
+  contradiction_resolution: CONTRADICTION_RESOLUTIONS,
+  diagnosticity_outcome: DIAGNOSTICITY_OUTCOMES,
+  claim_epistemic_kind: CLAIM_EPISTEMIC_KINDS,
+  concern_status: CONCERN_STATUSES,
+  pass_type: PASS_TYPES,
+};
+
 /**
  * Classifications that exempt a scoped file from survey obligation: generated
  * output, vendored third-party code, and files ruled irrelevant. Staleness over
