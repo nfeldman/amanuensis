@@ -14,6 +14,15 @@ export const FINDING_RESOLUTION_STATES = [
 ] as const;
 export type FindingResolutionState = (typeof FINDING_RESOLUTION_STATES)[number];
 
+/** carried_finding_outcome — carried axis. */
+export const CARRIED_FINDING_OUTCOMES = [
+  "successor-finding",
+  "ruled-out",
+  "repaired",
+  "archived-terminal",
+] as const;
+export type CarriedFindingOutcome = (typeof CARRIED_FINDING_OUTCOMES)[number];
+
 /** finding_status — resolution axis. */
 export const FINDING_STATUSES = [
   "confirmed-bug",
@@ -266,6 +275,50 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         label: "Verified fixed",
         meaning: "A later revision contains a repair backed by recorded verification evidence.",
         cannot_justify: "that the repair is still present at the repository head",
+      },
+    ],
+  },
+  carried_finding_outcome: {
+    axis: "carried",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "successor-finding",
+        label: "Re-found here",
+        meaning:
+          "A finding filed in this store records the same defect, so the carried obligation is discharged into it and a reference to the archived id follows the finding into its successor.",
+        cannot_justify:
+          "that the successor is the same defect; the substrate can require that a finding was filed in this store and in this session, and cannot read the judgement that the two are one",
+        authorizes:
+          "reporting the archived defect as still tracked, under the successor's id and the successor's resolution state",
+      },
+      {
+        value: "ruled-out",
+        label: "Ruled out here",
+        meaning:
+          "A reading taken in this store, in the session that overturned it, does not show the defect the archive recorded.",
+        cannot_justify:
+          "that no related defect exists at the same locus; overturning requires evidence collected by the overturning pass, not that the locus was exhausted",
+        authorizes: "closing a Pecia reference to the archived finding",
+      },
+      {
+        value: "repaired",
+        label: "Repaired here",
+        meaning:
+          "A commit that resolves in the bound workspace carries the repair, and at least one attached evidence row was read at a revision that is a descendant of, or equal to, that commit.",
+        cannot_justify:
+          "that the repair is still present at the repository head, or that it is complete; a claimed repair with no post-repair reading is fixed-pending-verification, never a discharge",
+        authorizes: "closing a Pecia reference to the archived finding",
+      },
+      {
+        value: "archived-terminal",
+        label: "Closed in the archive",
+        meaning:
+          "The archive had already closed this finding — verified-fixed, ruled-out or accepted — and the carry recorded that state rather than re-deciding it. Written by the carry alone.",
+        cannot_justify:
+          "anything about this store: nobody here checked a commit or read a repaired path, and the row carries the archive's judgement and not this survey's",
+        authorizes:
+          "treating the obligation as decided for the fully-surveyed predicate and for the reference resolver",
       },
     ],
   },
@@ -1226,7 +1279,11 @@ export interface VocabularySqlBinding {
  * CHECK in place and `CREATE TABLE IF NOT EXISTS` does not rewrite one.
  */
 export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly VocabularySqlBinding[]>> = {
-  finding_resolution_state: [{ table: "finding_resolution_events", column: "resolution_state" }],
+  finding_resolution_state: [
+    { table: "finding_resolution_events", column: "resolution_state" },
+    { table: "carried_findings", column: "archived_resolution" },
+  ],
+  carried_finding_outcome: [{ table: "carried_finding_outcomes", column: "outcome" }],
   finding_status: [{ table: "findings", column: "status" }],
   file_classification: [{ table: "file_ledger", column: "classification" }],
   subsystem_status: [
@@ -1258,6 +1315,7 @@ export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly Vocabular
 /** The values a CHECK on those columns must admit, by enum name. */
 export const SQL_CONSTRAINED_VOCABULARIES: Readonly<Record<string, readonly string[]>> = {
   finding_resolution_state: FINDING_RESOLUTION_STATES,
+  carried_finding_outcome: CARRIED_FINDING_OUTCOMES,
   finding_status: FINDING_STATUSES,
   file_classification: FILE_CLASSIFICATIONS,
   subsystem_status: SUBSYSTEM_STATUSES,

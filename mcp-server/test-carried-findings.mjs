@@ -720,7 +720,11 @@ async function main(mods) {
       one.db.pragma("wal_checkpoint(TRUNCATE)");
       cpSync(one.project.dbPath, archive);
       const probe = openDatabase(archive);
-      probe.exec("DELETE FROM store_identity");
+      // A store frozen before `store_identity` existed simply does not carry
+      // the table. The row cannot be deleted — the trigger refuses, which is
+      // T-arm behaviour — so the fixture removes the table the way history
+      // did: by never having had it.
+      probe.exec("DROP TABLE store_identity");
       probe.exec(
         `INSERT INTO git_state (repo_id, canonical_branch, last_checked_sha, onboarding_sha)
          VALUES ('default','main','61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27','b8b566f')
@@ -1291,16 +1295,21 @@ async function main(mods) {
       .run(headSha(source), headSha(source));
     seedFinding(source, "B03-6");
     seedFinding(source, "B03-7");
+    seedFinding(source, "B03-9");
+    // B03-7 the archive closed; B03-9 it claimed to have fixed without proving
+    // it, which ADR-0001 calls `fixed-pending-verification` and which is not a
+    // closure. The carry must tell them apart: only the first is terminal.
     source.db
-      .prepare("UPDATE findings SET status='fixed' WHERE finding_id='B03-7'")
+      .prepare("UPDATE findings SET status='confirmed-acceptable' WHERE finding_id='B03-7'")
       .run();
+    source.db.prepare("UPDATE findings SET status='fixed' WHERE finding_id='B03-9'").run();
     source.db.pragma("wal_checkpoint(TRUNCATE)");
     const archivePath = join(scratch, "archive-store.db");
     cpSync(source.project.dbPath, archivePath);
     archiveSummary = {
       built: true,
       path: archivePath,
-      expected: 2,
+      expected: 3,
       identity: storeIdOf(source),
       anchor: headSha(source),
     };
@@ -1338,7 +1347,7 @@ async function main(mods) {
       return `the rebuilt store holds ${rows?.length ?? "no readable"} carried record(s) for ${archiveSummary.expected} archived finding(s)`;
     }
     const ids = rows.map((row) => row.archived_finding_id);
-    return ids.join(",") === "B03-6,B03-7"
+    return ids.join(",") === "B03-6,B03-7,B03-9"
       ? null
       : `the carried ids are ${ids.join(", ")}; every archived finding is carried whatever its resolution state`;
   });
@@ -1358,9 +1367,14 @@ async function main(mods) {
     if (byId.get("B03-7") !== "archived-terminal") {
       return `the archive's closed finding was carried with outcome ${JSON.stringify(byId.get("B03-7") ?? null)}; pre-recording it as 'repaired' would put a row into a state whose rule requires a resolving commit and an attached post-repair reading, with neither present`;
     }
-    return byId.get("B03-6") === null || byId.get("B03-6") === undefined
+    const undecided = ["B03-6", "B03-9"].filter(
+      (id) => byId.get(id) !== null && byId.get(id) !== undefined,
+    );
+    return undecided.length === 0
       ? null
-      : `the archive's *open* finding was pre-recorded ${JSON.stringify(byId.get("B03-6"))}; an open finding is the obligation the survey has to decide`;
+      : `${undecided.join(" and ")} was pre-recorded ${undecided
+          .map((id) => JSON.stringify(byId.get(id)))
+          .join(", ")}; an open finding is the obligation the survey has to decide, and a repair the archive claimed without proving is fixed-pending-verification, never a closure`;
   });
 
   check("C3 --carry-from none records an explicit reasoned empty carry", () => {

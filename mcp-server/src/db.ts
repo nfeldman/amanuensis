@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,9 +75,37 @@ export function openDatabase(dbPath: string): DB {
   // work in the common case.
   runMigrations(db);
   initializeSchema(db);
+  mintStoreIdentity(db);
   requireSchemaObjects(db);
   requireViews(db);
   return db;
+}
+
+/**
+ * Give this store the identity a carried record names it by (§5.3).
+ *
+ * Minted once and never recomputed, because there is nothing to recompute:
+ * identity is a fact the store carries, not a function of its mutable state.
+ * The alternative an earlier draft took — a digest over
+ * `<repo_id|canonical_branch|onboarding_sha|last_checked_sha>` — fails in both
+ * directions. `set_git_state` may update `last_checked_sha` at any time, so a
+ * live store's identity would move every time it reconciled and an id written
+ * into a successor last week could not be recomputed from the source today;
+ * and two clean-slate rebuilds of the same repository at the same revision
+ * yield the same tuple, so they would collide.
+ *
+ * It is written here rather than as a column default because SQLite has no
+ * random default a `CREATE TABLE` can carry. `INSERT OR IGNORE` makes the mint
+ * happen on the open that creates the table and never again — including on an
+ * existing populated store, which gains its identity the first time it is
+ * opened after this schema lands, and keeps it thereafter. The immutability
+ * trigger is on UPDATE and DELETE, so a second open is a silent no-op rather
+ * than a refusal.
+ */
+function mintStoreIdentity(db: DB): void {
+  db.prepare("INSERT OR IGNORE INTO store_identity (id, store_generation) VALUES (1, ?)").run(
+    randomBytes(16).toString("hex"),
+  );
 }
 
 /**

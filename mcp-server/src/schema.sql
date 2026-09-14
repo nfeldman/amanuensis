@@ -519,6 +519,160 @@ BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
 
 
 ----------------------------------------------------------------------
+-- STORE_IDENTITY: which store this is, minted rather than derived
+----------------------------------------------------------------------
+-- A carried record must name the store it came from, and the name must not
+-- change under it (candidate finding B03-R1: a finding id with no store
+-- generation lets a rebuilt store silently re-satisfy a closed reference).
+--
+-- Minted, not derived. An earlier draft derived the identity as a digest of
+-- <repo_id|canonical_branch|onboarding_sha|last_checked_sha>, and that fails in
+-- both directions: `set_git_state` may update `last_checked_sha` at any time,
+-- so a live store's identity changes every time it reconciles and an id written
+-- into a successor last week cannot be recomputed from the source today; and
+-- two clean-slate rebuilds of the same repository at the same revision produce
+-- the same tuple, so they collide -- exactly the confusion the field exists to
+-- prevent. Identity is a fact the store carries, not a function of its mutable
+-- state (design/survey-depth/spec.md §5.3).
+--
+-- The row is written by `openDatabase` on the open that creates it, because
+-- SQLite has no random default a CREATE TABLE can carry. It is single-valued
+-- by the CHECK and immutable by the triggers.
+CREATE TABLE IF NOT EXISTS store_identity (
+    id                INTEGER PRIMARY KEY CHECK (id = 1),
+    store_generation  TEXT    NOT NULL CHECK (length(store_generation) = 32),
+    minted_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS store_identity_is_immutable
+BEFORE UPDATE ON store_identity FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'store identity is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS store_identity_cannot_be_deleted
+BEFORE DELETE ON store_identity FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'store identity cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
+-- CARRIED FINDINGS: what a reinitialization owes its predecessor
+----------------------------------------------------------------------
+-- A reinitialization discards a conspectus. Before this, no record type carried
+-- a prior finding into the successor: six baseline open findings -- B03-5,
+-- B03-6, B03-7, B03-8, B04-5, B07-1 -- were neither re-found nor ruled out, and
+-- their text survived only in an archive nobody re-read (candidate findings
+-- B03-R1 and B03-R2).
+--
+-- Carried findings live in their own table rather than in `findings`. A carried
+-- record is an *obligation to decide*, not a finding this store confirmed:
+-- putting it in `findings` would let it be counted as a defect this survey
+-- found, would collide with the successor's id, and would make
+-- `finding_resolution_current` answer about a store that no longer exists
+-- (spec.md §5.2).
+--
+-- One run per invocation of the carry, including a reasoned empty one. Without
+-- it "nothing was carried" and "nobody ran a carry" are the same reading
+-- (VP4(e)). `expected_count` and `imported_count` are separate fields so a
+-- partial carry is a visible disagreement rather than a silent one: the carry
+-- refuses to write past `imported_count` and refuses to finish while the two
+-- differ or while the rows written disagree with either.
+CREATE TABLE IF NOT EXISTS carry_runs (
+    id                INTEGER PRIMARY KEY,
+    source_kind       TEXT    NOT NULL CHECK (source_kind IN ('store','export','none')),
+    source_path       TEXT,               -- NULL only for source_kind='none'
+    archived_store_id TEXT,               -- NULL only for source_kind='none'
+    archived_anchor   TEXT,               -- the archive's anchor revision
+    reason            TEXT    NOT NULL,   -- required for every kind; the only field 'none' has
+    expected_count    INTEGER NOT NULL,   -- findings the source declares
+    imported_count    INTEGER NOT NULL,   -- carried_findings rows this run commits to writing
+    session_id        TEXT,
+    ran_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS carried_findings (
+    carried_id           INTEGER PRIMARY KEY,
+    archived_finding_id  TEXT    NOT NULL,  -- the id in the archived store, e.g. 'B03-5'
+    archived_store_id    TEXT    NOT NULL,  -- identity of the store it came from (§5.3)
+    archived_anchor_sha  TEXT    NOT NULL,  -- that store's revision at export
+    subsystem_id         TEXT    NOT NULL,  -- as recorded there; may not exist here
+    severity             TEXT    NOT NULL CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+    symptom              TEXT    NOT NULL,
+    root_cause           TEXT    NOT NULL,
+    carry_run_id         INTEGER NOT NULL REFERENCES carry_runs(id) ON DELETE RESTRICT,
+    archived_resolution  TEXT    NOT NULL CHECK (archived_resolution IN
+                            ('open','accepted','ruled-out',
+                             'fixed-pending-verification','verified-fixed')),
+    archived_ref_sha     TEXT,
+    primary_files        TEXT,              -- JSON array, as archived
+    carried_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    carried_by_session   TEXT,
+    UNIQUE (archived_store_id, archived_finding_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_carried_findings_run
+    ON carried_findings(carry_run_id);
+CREATE INDEX IF NOT EXISTS idx_carried_findings_archived_id
+    ON carried_findings(archived_finding_id);
+
+-- One outcome per carried record, and outcomes are never deleted. A mistaken
+-- outcome is corrected by a new carried record from the same archive, which is
+-- visible (spec.md §5.4).
+CREATE TABLE IF NOT EXISTS carried_finding_outcomes (
+    id            INTEGER PRIMARY KEY,
+    carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
+    outcome       TEXT    NOT NULL CHECK (outcome IN
+                            ('successor-finding','ruled-out','repaired','archived-terminal')),
+    successor_id  TEXT,        -- findings.finding_id, required for 'successor-finding'
+    repaired_sha  TEXT,        -- resolved commit, required for 'repaired'
+    rationale     TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL,
+    ref_sha       TEXT    NOT NULL,
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_one
+    ON carried_finding_outcomes(carried_id);
+
+-- The evidence join §5.4's `ruled-out` and `repaired` authority rules require:
+-- overturning a carried finding needs a reading collected in the current
+-- session, and discharging a repair needs a reading taken at a revision that is
+-- a descendant of, or equal to, the repair.
+CREATE TABLE IF NOT EXISTS carried_finding_evidence (
+    carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    role          TEXT    NOT NULL DEFAULT 'supports',
+    attached_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (carried_id, evidence_id)
+);
+
+-- Append-only by the triggers rather than by the paragraphs above: a carried
+-- record that can be edited after the fact is not a record of what the
+-- predecessor held, and an outcome that can be rewritten is not a decision.
+CREATE TRIGGER IF NOT EXISTS carried_finding_is_immutable
+BEFORE UPDATE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_cannot_be_deleted
+BEFORE DELETE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_is_immutable
+BEFORE UPDATE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_cannot_be_deleted
+BEFORE DELETE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_evidence_is_immutable
+BEFORE UPDATE ON carried_finding_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding evidence attachment is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_evidence_cannot_be_deleted
+BEFORE DELETE ON carried_finding_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding evidence attachment cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_is_immutable
+BEFORE UPDATE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_cannot_be_deleted
+BEFORE DELETE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
 -- ENTRY_VERSIONS: cheap time-travel (append-only snapshots)
 ----------------------------------------------------------------------
 -- Before any UPDATE to entries, a trigger copies the old row here.

@@ -9,6 +9,7 @@
 // write path.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import SqliteDatabase from "better-sqlite3";
 import type { DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
 import {
@@ -1081,5 +1082,270 @@ export function requireOverturnEvidence(
         `status change. A reclassification with no new evidence is recorded as an open ` +
         `question, not applied.`,
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// §5: findings carry forward
+// ---------------------------------------------------------------------------
+
+/**
+ * §5.3's store identity, for a source store this process is about to carry
+ * from.
+ *
+ * Two forms, and the prefix says which. A store that minted a
+ * `store_generation` reports `store-` plus its first 16 hex, read from the row
+ * and never recomputed. The archive at `…/archive/store-7c1c1a9/memory.db` was
+ * frozen before that column existed and is immutable — it cannot be given one
+ * now — so for a source with no `store_identity` row the id is `store-legacy-`
+ * plus the first 16 hex of SHA-256 over that store's frozen
+ * `<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`.
+ *
+ * That derivation is sound *for an archive*, whose `git_state` is frozen along
+ * with the rest of it, and unsound for a live store, whose `last_checked_sha`
+ * `set_git_state` may change at any time. The prefix is what tells a later
+ * reader which of the two they are holding, and the fallback is reached only
+ * when the minted row is genuinely absent.
+ *
+ * The source is opened **read-only**: deriving an identity must not write one,
+ * because an open through `openDatabase` would mint the very row whose absence
+ * selects the legacy form, and would silently turn every archive into a
+ * first-form store the moment it was read.
+ */
+export function archivedStoreId(sourcePath: string): string {
+  let db: DB | null = null;
+  try {
+    db = new SqliteDatabase(sourcePath, { readonly: true, fileMustExist: true });
+  } catch (error) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} could not be opened read-only: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  try {
+    const minted = readMintedGeneration(db);
+    if (minted !== null) return `store-${minted.slice(0, 16)}`;
+    const git = db
+      .prepare(
+        "SELECT repo_id, canonical_branch, onboarding_sha, last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1",
+      )
+      .get() as
+      | {
+          repo_id: string | null;
+          canonical_branch: string | null;
+          onboarding_sha: string | null;
+          last_checked_sha: string | null;
+        }
+      | undefined;
+    if (!git) {
+      throw new ToolError(
+        `the carry source at ${sourcePath} carries neither a store_identity row nor a git_state ` +
+          `row, so it cannot be named. A carried record must name the store it came from (§5.3).`,
+      );
+    }
+    const tuple = [
+      git.repo_id ?? "",
+      git.canonical_branch ?? "",
+      git.onboarding_sha ?? "",
+      git.last_checked_sha ?? "",
+    ].join("|");
+    return `store-legacy-${createHash("sha256").update(tuple).digest("hex").slice(0, 16)}`;
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* the read already happened; a close failure changes no answer */
+    }
+  }
+}
+
+/** This store's own §5.3 identity, or null on a store that predates the table. */
+export function storeIdentity(db: DB): string | null {
+  const minted = readMintedGeneration(db);
+  return minted === null ? null : `store-${minted.slice(0, 16)}`;
+}
+
+function readMintedGeneration(db: DB): string | null {
+  try {
+    const row = db.prepare("SELECT store_generation FROM store_identity WHERE id = 1").get() as
+      | { store_generation: string | null }
+      | undefined;
+    const value = row?.store_generation ?? null;
+    return typeof value === "string" && value.length > 0 ? value : null;
+  } catch {
+    // A store frozen before the table existed. That absence is what selects
+    // the legacy derivation, so it is an answer rather than a failure.
+    return null;
+  }
+}
+
+/**
+ * Whether `ancestor` is a descendant-or-equal relation's left side: true when
+ * `ancestor` is an ancestor of `descendant`, or the two are the same commit.
+ *
+ * "At or after" has no meaning on a Git DAG until it is said which relation is
+ * meant. §5.4 says ancestry, so a reading taken on a sibling branch that never
+ * contained the repair does not discharge it, however much later its timestamp
+ * is. `git merge-base --is-ancestor` is the test, and it answers true for equal
+ * commits.
+ */
+export function isAncestorOrSame(
+  workspacePath: string,
+  ancestor: string,
+  descendant: string,
+): boolean {
+  const result = spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return !result.error && result.status === 0;
+}
+
+/** One carried record's terminal outcome, or null while it is undecided. */
+export interface CarriedOutcome {
+  outcome: "successor-finding" | "ruled-out" | "repaired" | "archived-terminal";
+  successor_id: string | null;
+  repaired_sha: string | null;
+}
+
+/**
+ * The carried records this store holds that no outcome has decided, with the
+ * obligation id §5.5 gives each of them.
+ *
+ * Enforced at the whole-store predicate and **not** at `mapped` for the carried
+ * finding's subsystem, per `README.md` §4: a rebuild must be able to progress
+ * subsystem by subsystem, and a carried record names a subsystem that may not
+ * exist here at all.
+ */
+export function undecidedCarriedFindings(db: DB): Array<{
+  carried_id: number;
+  archived_finding_id: string;
+  archived_store_id: string;
+  severity: string;
+  obligation_id: string;
+}> {
+  const rows = db
+    .prepare(
+      `SELECT cf.carried_id, cf.archived_finding_id, cf.archived_store_id, cf.severity
+         FROM carried_findings cf
+         LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+        WHERE o.id IS NULL
+        ORDER BY cf.archived_store_id, cf.archived_finding_id`,
+    )
+    .all() as Array<{
+    carried_id: number;
+    archived_finding_id: string;
+    archived_store_id: string;
+    severity: string;
+  }>;
+  return rows.map((row) => ({
+    ...row,
+    obligation_id: `carried:${row.archived_store_id}:${row.archived_finding_id}`,
+  }));
+}
+
+/** One archived finding, as a carry reads it out of a source store. */
+export interface ArchivedFinding {
+  finding_id: string;
+  subsystem_id: string;
+  symptom: string;
+  root_cause: string;
+  severity: string;
+  resolution_state: string;
+  ref_sha: string | null;
+  primary_files: string[];
+}
+
+/**
+ * Every finding an archived store holds, with the identity and anchor a carry
+ * has to record beside them.
+ *
+ * Read here rather than in the rebuild driver so the SQL lives where
+ * `scripts/check-sql-identifiers.mjs` can see it, and so any reinitialization
+ * path — not only that script — reads the archive the same way. The source is
+ * opened read-only for the reason `archivedStoreId` gives: an open through
+ * `openDatabase` would mint the identity row whose absence selects the legacy
+ * form, turning every archive into a first-form store the moment it was read.
+ *
+ * `resolution_state` is the same COALESCE the resolver and `finding_state_current`
+ * use, so an archive written before resolution events existed still reports a
+ * state rather than a NULL, and *every* archived finding is carried whatever
+ * its state (spec.md §5.4).
+ */
+export function readArchivedStore(sourcePath: string): {
+  archived_store_id: string;
+  archived_anchor: string;
+  findings: ArchivedFinding[];
+} {
+  const archivedStore = archivedStoreId(sourcePath);
+  let db: DB;
+  try {
+    db = new SqliteDatabase(sourcePath, { readonly: true, fileMustExist: true });
+  } catch (error) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} could not be opened read-only: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  try {
+    const git = db
+      .prepare("SELECT last_checked_sha, onboarding_sha FROM git_state ORDER BY repo_id LIMIT 1")
+      .get() as { last_checked_sha: string | null; onboarding_sha: string | null } | undefined;
+    const rows = db
+      .prepare(
+        `SELECT f.finding_id, f.subsystem_id, f.symptom, f.root_cause, f.severity,
+                f.ref_sha, f.primary_files,
+                COALESCE(r.resolution_state,
+                         CASE f.status WHEN 'fixed'                THEN 'fixed-pending-verification'
+                                       WHEN 'ruled-out'            THEN 'ruled-out'
+                                       WHEN 'confirmed-acceptable' THEN 'accepted'
+                                       ELSE 'open' END) AS resolution_state
+           FROM findings f
+           LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id
+          ORDER BY f.finding_id`,
+      )
+      .all() as Array<{
+      finding_id: string;
+      subsystem_id: string;
+      symptom: string;
+      root_cause: string;
+      severity: string;
+      ref_sha: string | null;
+      primary_files: string | null;
+      resolution_state: string;
+    }>;
+    return {
+      archived_store_id: archivedStore,
+      archived_anchor: git?.last_checked_sha ?? git?.onboarding_sha ?? "",
+      findings: rows.map((row) => ({
+        finding_id: row.finding_id,
+        subsystem_id: row.subsystem_id,
+        symptom: row.symptom,
+        root_cause: row.root_cause,
+        severity: row.severity,
+        resolution_state: row.resolution_state,
+        ref_sha: row.ref_sha,
+        primary_files: parseStringArray(row.primary_files),
+      })),
+    };
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* the read already happened; a close failure changes no answer */
+    }
+  }
+}
+
+function parseStringArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((entry) => String(entry)) : [];
+  } catch {
+    return [];
   }
 }
