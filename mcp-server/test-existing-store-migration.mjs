@@ -31,7 +31,8 @@
 //   drop `requireSchemaObjects` from `openDatabase`        → S1
 //   let `rebuildTable` drop a row, a column or a trigger   → M2, M4
 //   copy a bare `CREATE` into schema.sql                   → S2, M3
-//   delete an `_is_immutable` / `_cannot_be_deleted` pair  → T1, T2
+//   delete an `_is_immutable` / `_cannot_be_deleted` pair  → T0, T1, T2
+//   drop a row from contracts/append-only-tables.txt      → T0
 //   make `clean_publish` promote a red run                 → P1
 //   let the gate report green with no store                → C1
 
@@ -54,6 +55,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = join(here, "src", "schema.sql");
+const REQUIRED_APPEND_ONLY_PATH = join(here, "contracts", "append-only-tables.txt");
 const DEFAULT_SOURCE = join(homedir(), "repos", "axiomdb", ".amanuensis", "memory.db");
 const SOURCE = process.env.AMANUENSIS_XS1_SOURCE_STORE ?? DEFAULT_SOURCE;
 
@@ -162,6 +164,34 @@ function bareCreateStatements() {
 }
 
 /**
+ * The tables that must be append-only, read from `contracts/append-only-tables.txt`.
+ *
+ * This list is the gate's denominator and it is **not** derived from the
+ * triggers the gate is checking. It used to be: `appendOnlyTables()` parsed
+ * schema.sql's trigger declarations and kept only the tables carrying both, so
+ * deleting a table's pair deleted the table from the set being probed and the
+ * gate reported `46 of 81` instead of `46 of 82` and exited 0 (GP24 — a
+ * numerator and a denominator read from the same implementation shrink
+ * together and prove nothing). The row stays here when the trigger leaves
+ * schema.sql, and T0 says so.
+ */
+function requiredAppendOnlyTables() {
+  const rows = [];
+  const text = readFileSync(REQUIRED_APPEND_ONLY_PATH, "utf8");
+  for (const [index, line] of text.split("\n").entries()) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
+    const parts = trimmed.split(/\s+/);
+    if (parts.length !== 3) {
+      rows.push({ line: index + 1, malformed: trimmed });
+      continue;
+    }
+    rows.push({ table: parts[0], immutable: parts[1], undeletable: parts[2], line: index + 1 });
+  }
+  return rows;
+}
+
+/**
  * Tables `schema.sql` declares append-only with the `<name>_is_immutable` /
  * `<name>_cannot_be_deleted` pair, with each trigger's guarded columns and its
  * own `RAISE(ABORT, …)` message.
@@ -169,6 +199,9 @@ function bareCreateStatements() {
  * The message matters: a `CHECK` that happens to refuse the probe's new value
  * is not the trigger firing, and counting it would let a table lose its
  * immutability trigger while this gate stayed green.
+ *
+ * This is now the *observed* side of T0, never the required side: what the
+ * schema happens to declare, laid against what the manifest requires.
  */
 function appendOnlyTables() {
   const text = readFileSync(SCHEMA_PATH, "utf8");
@@ -193,7 +226,7 @@ function appendOnlyTables() {
     pairs.set(table, entry);
   }
   return [...pairs.values()]
-    .filter((p) => p.immutable && p.undeletable)
+    .filter((p) => p.immutable || p.undeletable)
     .sort((a, b) => a.table.localeCompare(b.table));
 }
 
@@ -291,10 +324,22 @@ function main(Database, openDatabase, materializeTools, resolveProject, ensurePr
   }
 
   const declared = declaredObjects();
-  const pairs = appendOnlyTables();
+  const observed = new Map(appendOnlyTables().map((p) => [p.table, p]));
+  const required = requiredAppendOnlyTables();
+  const halfDeclared = [...observed.values()].filter((p) => !(p.immutable && p.undeletable));
   notes.push(
-    `source ${SOURCE}; schema.sql declares ${declared.length} object(s), ${pairs.length} append-only table(s)`,
+    `source ${SOURCE}; schema.sql declares ${declared.length} object(s); ` +
+      `contracts/append-only-tables.txt requires ${required.length} append-only table(s); ` +
+      `schema.sql declares a complete pair for ${[...observed.values()].length - halfDeclared.length}`,
   );
+  if (halfDeclared.length > 0) {
+    // Pre-existing shapes from earlier lanes: one guard, not two. Named rather
+    // than dropped, so nobody has to re-derive which tables they are.
+    notes.push(
+      `${halfDeclared.length} table(s) carry one guard of the pair and are not append-only tables: ` +
+        halfDeclared.map((p) => `${p.table} (${p.immutable?.trigger ?? p.undeletable?.trigger})`).join("; "),
+    );
+  }
 
   // The populated copy every non-seeded assertion runs against.
   const plain = copyStore("plain");
@@ -506,22 +551,82 @@ function main(Database, openDatabase, materializeTools, resolveProject, ensurePr
     return bare.length === 0 ? null : `${bare.length} bare CREATE statement(s): ${bare.join("; ")}`;
   });
 
+  // --- T0: the required list and schema.sql agree, in both directions.
+  //
+  // This is the assertion the reviewer's sabotage walked past. Deleting a
+  // table's trigger pair from schema.sql used to delete the table from the set
+  // T1 and T2 iterate; now the requirement outlives the declaration and this
+  // check names what went missing. The second direction keeps the file from
+  // falling behind: an append-only table added to schema.sql with no row here
+  // is red too, so the list cannot quietly stop covering the schema.
+  check("T0 contracts/append-only-tables.txt and schema.sql declare the same pairs", () => {
+    const problems = [];
+    for (const row of required) {
+      if (row.malformed !== undefined) {
+        problems.push(`line ${row.line} is not '<table> <immutable> <undeletable>': ${row.malformed}`);
+      }
+    }
+    const declaredTables = new Set(declared.filter((o) => o.type === "table").map((o) => o.name));
+    const declaredTriggers = new Set(declared.filter((o) => o.type === "trigger").map((o) => o.name));
+    for (const row of required) {
+      if (row.malformed !== undefined) continue;
+      if (!declaredTables.has(row.table)) {
+        problems.push(`${row.table} is required append-only but schema.sql declares no such table`);
+        continue;
+      }
+      const pair = observed.get(row.table);
+      if (!declaredTriggers.has(row.immutable) || pair?.immutable?.trigger !== row.immutable) {
+        problems.push(`${row.table}: schema.sql does not declare ${row.immutable} BEFORE UPDATE on it`);
+      }
+      if (!declaredTriggers.has(row.undeletable) || pair?.undeletable?.trigger !== row.undeletable) {
+        problems.push(`${row.table}: schema.sql does not declare ${row.undeletable} BEFORE DELETE on it`);
+      }
+    }
+    const requiredTables = new Set(required.map((row) => row.table));
+    for (const pair of observed.values()) {
+      if (pair.immutable && pair.undeletable && !requiredTables.has(pair.table)) {
+        problems.push(
+          `${pair.table} carries an append-only trigger pair in schema.sql and no row in ` +
+            `contracts/append-only-tables.txt — add it, so the probe below has to cover it`,
+        );
+      }
+    }
+    return problems.length === 0
+      ? null
+      : `${problems.length} disagreement(s) between the required list and schema.sql: ${problems.slice(0, 6).join("; ")}`;
+  });
+
   // --- T1/T2: the trigger, not the prose, is what makes a table append-only.
+  const pairs = required
+    .filter((row) => row.malformed === undefined)
+    .map((row) => ({
+      table: row.table,
+      immutable: observed.get(row.table)?.immutable ?? null,
+      undeletable: observed.get(row.table)?.undeletable ?? null,
+      requiredImmutable: row.immutable,
+      requiredUndeletable: row.undeletable,
+    }));
   const triggerCensus = objectCensus(plain);
   check("T1 every append-only table's trigger pair is present after the open", () => {
-    if (pairs.length === 0) return "schema.sql declares no append-only table, so this measures nothing";
+    if (pairs.length === 0) return "the required list names no append-only table, so this measures nothing";
     const absent = [];
     for (const pair of pairs) {
-      if (triggerCensus.get(pair.immutable.trigger) !== "trigger") absent.push(pair.immutable.trigger);
-      if (triggerCensus.get(pair.undeletable.trigger) !== "trigger") absent.push(pair.undeletable.trigger);
+      if (triggerCensus.get(pair.requiredImmutable) !== "trigger") absent.push(pair.requiredImmutable);
+      if (triggerCensus.get(pair.requiredUndeletable) !== "trigger") absent.push(pair.requiredUndeletable);
     }
     return absent.length === 0
       ? null
-      : `${absent.length} declared trigger(s) absent after the open: ${absent.slice(0, 6).join(", ")}`;
+      : `${absent.length} required trigger(s) absent after the open: ${absent.slice(0, 6).join(", ")}`;
   });
 
   check("T2 an UPDATE and a DELETE both raise on every append-only table a row can be seeded in", () => {
     const seeded = copyStore("append-only");
+    // Through `openDatabase`, not `new Database`: the seeded copy used to be a
+    // raw copy of the source, which carries none of the tables this lane adds,
+    // so every one of them landed in `unprovable` with `near ")": syntax error`
+    // — the empty column list of a table that was not there. The probe reported
+    // 46 of 82 and named the lane's own tables as unseedable.
+    openDatabase(seeded).close();
     const db = new Database(seeded);
     try {
       db.pragma("foreign_keys = OFF");
@@ -529,6 +634,16 @@ function main(Database, openDatabase, materializeTools, resolveProject, ensurePr
       const mutable = [];
       const unprovable = [];
       for (const pair of pairs) {
+        if (!pair.immutable || !pair.undeletable) {
+          // Required append-only, and schema.sql declares no such pair. T0 says
+          // so already; this counts it as a mutation admitted rather than as a
+          // table the probe merely could not seed, because a table with no
+          // trigger is exactly what this assertion exists to refuse.
+          mutable.push(
+            `${pair.table}: no ${pair.immutable ? pair.requiredUndeletable : pair.requiredImmutable} declared in schema.sql`,
+          );
+          continue;
+        }
         const create =
           db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(pair.table)?.sql ?? "";
         const columns = db.prepare(`SELECT * FROM pragma_table_info('${pair.table}')`).all();
