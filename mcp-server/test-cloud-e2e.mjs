@@ -37,6 +37,8 @@ import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { compareTools } from "./dist/tools/compare.js";
 import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { evidenceTools } from "./dist/tools/evidence.js";
+import { claimTools } from "./dist/tools/claims.js";
 
 const allTools = new Map(
   [
@@ -50,6 +52,8 @@ const allTools = new Map(
     ...compareTools,
     ...fileTools,
     ...artifactTools,
+    ...evidenceTools,
+    ...claimTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -112,6 +116,46 @@ function makeTargetRepo(label) {
   return ws;
 }
 
+/**
+ * Phase 2's deliverable, as the harness would write it: `structural` requires
+ * at least one current claim keyed `<sid>/`, and `add_claim` resolves its
+ * ref_sha in the bound workspace, so the seed commit is what it cites.
+ */
+function headSha(ws) {
+  return String(
+    spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" }).stdout ?? "",
+  ).trim();
+}
+
+function seedStructuralClaim(ws, ctx, subsystemId) {
+  const sha = headSha(ws);
+  const evidenceId = call(
+    "add_evidence",
+    {
+      file_path: "main.ts",
+      symbol: "x",
+      line_range: "1-1",
+      ref_sha: sha,
+      kind: "code-verified",
+    },
+    ctx,
+  ).id;
+  call(
+    "add_claim",
+    {
+      claim_id: `CL-${subsystemId}`,
+      claim_key: `${subsystemId}/key-type/x`,
+      subject_type: "symbol",
+      subject_id: "main.ts:x",
+      statement: "x is the only value main.ts exports.",
+      epistemic_kind: "observation",
+      ref_sha: sha,
+      evidence_ids: [evidenceId],
+    },
+    ctx,
+  );
+}
+
 // ---- Simulate one full workflow run ----
 t("workflow-shape: cloud run produces the expected conspectus layout", () => {
   const conspectus = makeConspectusRepo();
@@ -137,6 +181,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
+    seedStructuralClaim(target, ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -164,10 +209,10 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
         subsystem_id: "B-01",
         concern_code: "CC-1",
         classification: "confirmed-acceptable",
-        evidence: "main.ts:root@abc",
+        evidence: `main.ts:root@${headSha(target)}`,
         evidence_quality: "name-inferred",
         rationale: "name suggests bounded; verified by reviewer's answer to OQ",
-        ref_sha: "abc",
+        ref_sha: headSha(target),
         pass_type: "survey",
       },
       ctx,
@@ -253,6 +298,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
       call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
       call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
+      seedStructuralClaim(ws, ctx, "B-01");
       call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
       call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -266,7 +312,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
           evidence: "x",
           evidence_quality: "code-verified",
           rationale: "r",
-          ref_sha: "abc",
+          ref_sha: headSha(ws),
           pass_type: "survey",
         },
         ctx,

@@ -7,3 +7,6 @@ dist/
 # Sources of truth live at the repo root.
 /skills/
 /materializer/
+
+# Scratch server copies the P5 locus-standing gate builds and removes.
+.locus-standing-scratch-*/

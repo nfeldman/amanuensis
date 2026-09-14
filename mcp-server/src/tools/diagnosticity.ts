@@ -11,8 +11,11 @@ import {
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 
+import { DIAGNOSTICITY_OUTCOMES as OUTCOMES } from "../vocabulary.js";
+
+// `verdict` is this tool's own cell vocabulary and is not CHECK-constrained
+// in schema.sql, so it is not part of the conspectus enum source.
 const VERDICTS = ["consistent", "contradicts", "irrelevant", "ambiguous"] as const;
-const OUTCOMES = ["open", "resolved", "unresolved-competition"] as const;
 
 export const diagnosticityTools: ToolDefinition[] = [
   {

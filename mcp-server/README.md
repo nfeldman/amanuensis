@@ -41,6 +41,14 @@ onboarding only when that host loads Agent Skills or equivalent workflow
 instructions. Without them, the typed MCP tools and concise server instructions
 remain available, but the complete method is not installed automatically.
 
+`install` writes only its own files. Pass `--agent-instructions` to also add a
+short Amanuensis paragraph to the project's own agent instructions — `CLAUDE.md`
+for Claude Code, `AGENTS.md` for the other clients — telling agents to call
+`describe_locus` before editing an unfamiliar file. Without the flag the
+installer prints the offer and writes nothing to either file. The paragraph sits
+between `<!-- >>> amanuensis (managed) -->` delimiters, is appended once, and is
+removed by deleting the block.
+
 Repository binding is not an OS sandbox; host trust, approvals, and filesystem
 permissions remain authoritative. Every process exposes an immutable binding
 receipt through `get_project_info` and revalidates its canonical repository,

@@ -1,0 +1,1559 @@
+{
+  "version": 1,
+  "branch": "reader-lenses",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Truthful partition",
+      "packets": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "a27cf3e352e928f087240720585dfa705d1f74b9",
+        "reviewed_sha": "7bc1e3348d4e8765edba56e7fc4293f859b3c707",
+        "findings": 5
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Standing",
+      "packets": [
+        "P5",
+        "P6",
+        "P7",
+        "P8",
+        "P9",
+        "P10"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "b6720be88363f33bd41262204ec69d433e47a9bf",
+        "reviewed_sha": "b7688b3e8ed912e2c7623d57b598e3f140db7ae1",
+        "findings": 11
+      }
+    },
+    {
+      "id": "S3",
+      "title": "Documentation from claims",
+      "packets": [
+        "P11",
+        "P12"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "ae2ffac5a509db32eecbecbac8e03b5b61109d45",
+        "reviewed_sha": "6f025ec9f28009e2139552664c15480136d44334",
+        "findings": 10
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Connective view",
+      "packets": [
+        "P13"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "1226365f264d086be94932322202071dbebcc5d6",
+        "reviewed_sha": "d052842a38ceee829a3ef19182c0567e9ad97146",
+        "findings": 5
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Consumer routing",
+      "packets": [
+        "P14",
+        "P15"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "62e624bb6b9fc955f15464a6e48e4e355d4a3f4b",
+        "reviewed_sha": "dafc70ed56d78869d66d32e888c5ba6f7dc9aae9",
+        "findings": 9
+      }
+    },
+    {
+      "id": "S6",
+      "title": "Dogfood rebuild",
+      "packets": [
+        "P16",
+        "P17",
+        "P19",
+        "P18",
+        "P20"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "55b8b90e78b278a58dbd59bd304f1649f972fd7d",
+        "reviewed_sha": "9f0daac0b3b91cf73f97a3471f1f7d0e0f810ccb",
+        "findings": 10
+      }
+    },
+    {
+      "id": "S7",
+      "title": "Residual hardening",
+      "packets": [
+        "P21"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "d36800d3793b09eb052d089386cd7c5e1cc69e1d",
+        "reviewed_sha": "cb941a28df893dd8185b32a0987be20798370c78",
+        "findings": 6
+      }
+    }
+  ],
+  "packets": [
+    {
+      "id": "P1",
+      "slice": "S1",
+      "title": "Single enum source for every vocabulary surface",
+      "claims": [
+        "C1",
+        "C3",
+        "C7",
+        "C48",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/files.ts",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "mcp-server/scripts/check-evidence-vocabulary.mjs",
+        ".github/workflows/test.yml",
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/tools/xrefs.ts",
+        "mcp-server/src/tools/notes.ts",
+        "materializer/amanuensis_materializer/diagrams.py"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-vocabulary-source.mjs",
+        "command": "cd mcp-server && node test-vocabulary-source.mjs",
+        "red_expect": "evidence vocabulary drift|vocabulary source divergence",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "node mcp-server/scripts/gen-vocabulary.mjs --check exits 0 on a clean tree and non-zero after editing either generated file by hand",
+        "Every enum value in conspectus-vocabulary.json carries value, label, meaning, and cannot_justify",
+        "A value added to the JSON and not regenerated turns the check red",
+        "check-evidence-vocabulary.mjs is rewritten to compare the JSON source, vocabulary.ts, vocabulary.py, and SKILL.md's ladder independently, and turns red when any one of the four diverges",
+        "The red(P1) commit contains mcp-server/test-vocabulary-source.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "gen-vocabulary.mjs --check-sql compares every CHECK (<col> IN (...)) literal in schema.sql for the columns the source names, and turns red on a divergence",
+        "The obligation-bearing predicate is generated from the file_classification flag into helpers.ts and diagrams.py; no hand-maintained copy remains"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "a27cf3e352e928f087240720585dfa705d1f74b9",
+      "red_sha": "694341d15da95697f797e6dd2c5b3f042365f531",
+      "green_sha": "fd940244a084b27e26ddb9061c038ef57c27db7a",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "--check-sql found live drift on its first run: set_disposition has accepted nine evidence qualities since B03-3 while dispositions.evidence_quality still rejected four of them, so recording test-observed, runtime-observed, config-asserted, or doc-asserted failed at the SQLite CHECK; the constraint is widened, but CREATE TABLE IF NOT EXISTS leaves pre-existing databases on the narrow one and SQLite cannot alter a CHECK in place, so that residue is unfixed and would need a table rebuild. Three choices fill gaps the spec left open: finding_status is carried as a 25th enum because findings.status is CHECK-constrained and findings.ts enforces it though 10.1's list omits it; the deliverable src/tools/notes.ts does not exist and was read as src/tools/field-notes.ts; and finding_resolution_state.open's meaning generalizes the spec example's trailing noun because html_projection's hint tables are one flat namespace and diagnosticity_outcome carries open too. The hint tables are built over a declared enum precedence recorded in html_projection.py; no rendered label or axis changes and only runtime-observed gains a hint it never had."
+    },
+    {
+      "id": "P2",
+      "slice": "S1",
+      "title": "Partition findings by resolution state",
+      "claims": [
+        "C2",
+        "C27",
+        "C28",
+        "C29",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/readback.py",
+        ".github/workflows/test.yml",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/review-session.ts",
+        "mcp-server/src/tools/review.ts"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-finding-partition.mjs",
+        "command": "cd mcp-server && node test-finding-partition.mjs",
+        "red_expect": "finding_state_current|marker appears",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "finding_state_current returns one row per findings row and agrees with finding_resolution_current wherever an event exists",
+        "A fixture with one verified-fixed CRITICAL and one open LOW renders the CRITICAL only on resolved-findings.md",
+        "Each finding's opaque marker appears exactly once across the Markdown corpus and exactly once across the HTML corpus",
+        "findings.md renders only open and fixed-pending-verification records",
+        "The red(P2) commit contains mcp-server/test-finding-partition.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "list_findings, get_finding_summary, compile_review_session, and the review historical-findings reader all select from finding_state_current, and a legacy row with no event row reports the same state through all four",
+        "A static check finds no remaining COALESCE(r.resolution_state, CASE f.status ...) expression outside the view",
+        "_build_xref_index routes a finding id by finding_state_current.resolution_state; a resolved finding referenced from a subsystem page resolves to resolved-findings.md and the coverage axis stays green",
+        "An exhaustive census asserts every findings row lands in exactly one lens membership query, and a row in both or neither turns the gate red"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "717217beecc9337623e77146bcd62d6d477de49d",
+      "red_sha": "7090c41e834f6ccd9aedf66923d9572343514bcc",
+      "green_sha": "e9ea64498f32871d560071c06015aa881f1f8fbd",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "finding_state_current carries the legacy-status fallback once; the renderer, get_findings, get_finding_summary, compile_review_session and the review historical-findings reader all select from it (the spec calls the first list_findings; the tool is named get_findings). findings.md narrows to open and fixed-pending-verification and the new resolved-findings.md carries the resolved records; _build_xref_index routes by state and readback.py holds the one lens membership definition plus the exhaustive census. Two deviations to check: the Unresolved page stays severity-major with state as the secondary sort, because a state-major structure would move '## High findings' to an h3 and break test-materializer.py's asserted anchor - P8/P9 own that restructuring; and resolved-findings.md keeps the existing five-column finding table, so SS7.7's basis-by-kind rendering is left to P9. The first red commit (73b7ed7) reached every assertion but two messages contained 'is not defined', which the launcher reads as a crash signature, so 7090c41 reverts the deliverables, rewords the gate and scrubs that phrase, and 33158ce re-applies them unchanged."
+    },
+    {
+      "id": "P3",
+      "slice": "S1",
+      "title": "Overview thesis by heading and the orientation lint",
+      "claims": [
+        "C32",
+        "C49",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P1",
+        "P2"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/lint.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-overview-truthfulness.py",
+        "command": "cd materializer && python3 test-overview-truthfulness.py",
+        "red_expect": "orientation|thesis",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs"
+      ],
+      "acceptance": [
+        "The thesis is taken from the entry-point.md section headed 'What is this codebase?' and from nowhere else",
+        "An entry-point.md with no such section publishes a named instruction instead of a fallback paragraph",
+        "Orientation prose containing '34/34 mapped' sets summary.ok false and does not publish",
+        "The overview carries four separately named status dimensions and one linked count per finding_resolution_state value, with no composite score",
+        "The red(P3) commit contains materializer/test-overview-truthfulness.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "entries-derived stale markers are still emitted exactly once after render_index is rewritten, so test-projection-custody.mjs stays green"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "8f0db681161175a831f07bf68bd46e7aa7410a69",
+      "red_sha": "595165aa0c1468e7b9bab8829ceedc30778a5b81",
+      "green_sha": "2a0a53d3303fa24d6312c7961609fc6e0c5938e7",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The lint is wired at the overview thesis only; the subsystem purpose sentence is C33/P8's slot, and orientation_violations is ready for it. The obligation-bearing stale counts live in one new helper, renderers.ledger_freshness, written as SUM(CASE ...) rather than §11.2's COUNT(*) FILTER — same rows, no SQLite version floor — so P4 should point the HTML strip at that helper instead of adding a second copy. Left for whoever owns html_projection.py: its table caption tracks level-2 headings only, so the four dimension definition lists share one aria-label; each is still named by its own h3."
+    },
+    {
+      "id": "P4",
+      "slice": "S1",
+      "title": "Ledger-derived freshness and a stale axis with a denominator",
+      "claims": [
+        "C50",
+        "C51",
+        "C60",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-ledger-freshness.py",
+        "command": "cd materializer && python3 test-ledger-freshness.py",
+        "red_expect": "freshness strip|stale_entries",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs"
+      ],
+      "acceptance": [
+        "The snapshot strip and the overview count equal get_dashboard's stale_entries, stale_exempt, scoped_files, and staleness_measured on the same store",
+        "An empty file_ledger renders 'Freshness not measured by this projection'",
+        "Every obligation-bearing stale ledger row has exactly one record on stale.md in each format",
+        "Deleting one stale record turns the state read-back axis red",
+        "The entries-derived stale marker check is still present and still red-capable",
+        "The red(P4) commit contains materializer/test-ledger-freshness.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "77d1904c459ad0c46d6935ebf1a2363e796fb6ec",
+      "red_sha": "508a2a06f52b2be3d4bb735be924ab39a2899e12",
+      "green_sha": "aab65845e3a3c42add75cb41011ab94fbcf53415",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Spec gap filled: §11.3 requires one record per obligation-bearing stale row but §6.1 defines membership only for examined and candidate, leaving deferred-with-reason in no section. stale.md therefore carries a third heading, 'Deferred files that changed after they were set aside', and the read-back census requires every obligation-bearing classification to be claimed by exactly one section, so a fourth would be a partition hole rather than a silent drop. stale.md is planned with group='Working record' to match the nav vocabulary in force today; P8 moves it to 'Unresolved' when it introduces NAV_GROUPS. The revision column is headed by what ref_sha means per section — Read at, Scoped at, Deferred at — since heading a candidate's revision 'Read at' asserts a reading nobody took. Parity runs get_dashboard's own scalar subqueries lifted out of dashboard.ts rather than restating them. Twelve sabotages, including four the read-back census cannot see, each turn the gate red."
+    },
+    {
+      "id": "P5",
+      "slice": "S2",
+      "title": "Standing views and deterministic locus resolution",
+      "claims": [
+        "C4",
+        "C5",
+        "C6",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C56",
+        "C57",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P1",
+        "P2"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/standing.ts",
+        "mcp-server/src/db.ts",
+        ".github/workflows/test.yml",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/db.py"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-index-view.mjs",
+        "command": "cd mcp-server && node test-locus-index-view.mjs",
+        "red_expect": "file_standing|expected standing_state",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "file_standing returns one row per file_ledger row with the seven-state CASE applied",
+        "A declared fixture table of (classification, stale, stale_reason) -> expected standing_state covers all seven states, including candidate with stale=1 and classification IS NULL, and the view is asserted against it rather than against a second copy of its own CASE",
+        "Locus kind inference resolves, in the documented order, a subsystem id, a vocabulary term containing ':', a Rust Type::method symbol split at the first colon, a path present in a table, a path-shaped string in no table (unledgered), and a bare term (not-defined)",
+        "A resolvable non-ancestor ref_sha downgrades to examined-stale with stale_reason unreachable-ref; an unresolvable one downgrades with unverifiable-ref; with git unavailable the row keeps examined but serves the examined-stale authorization text",
+        "The five unknown[] sources return exactly the rows their SQL selects on a fixture seeded with partial coverage: a subsystem missing one active concern's disposition while another subsystem holds it, and a seam with an SC-% disposition on exactly one side. Both must be reported",
+        "The red(P5) commit contains mcp-server/test-locus-index-view.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "measured.ledger_reconciled is null on a path with owner rows and carries the reconciliation receipt instead",
+        "A deferred owning subsystem is excluded from the ceiling rank and listed in deferred_owners[]",
+        "The materializer turns the publish red with the named cause when file_standing or finding_state_current is absent from the store"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "b6720be88363f33bd41262204ec69d433e47a9bf",
+      "red_sha": "fcc6fd1",
+      "green_sha": "b81185b0d16f804237050d78861edc4006b9bf1c",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "file_standing carries §2.2's CASE plus the owning subsystem's name and status; standing.ts owns the three things SQL cannot decide (zero owners, disagreeing owners, ref reachability) and never writes, so unreachable-ref and unverifiable-ref are response-only downgrades and no read-only tool mutates the ledger. Five spec gaps filled and recorded in code: STANDING_AUTHORITY_ORDER ranks the six per-owner states so mixed can take the weakest (§2.3 ranks none); a zero-owner path with a scope_gaps absent row reads absent rather than unledgered, which is what makes §2.4.2's 'unledgered / absent' parenthesis mean something; an owner subsystem with no subsystems row ranks unmapped; the ceiling's deferral sentence is a separate deferred_note so authorizes stays exactly the enum source's string; and candidate-sibling excludes the locus itself. One deliberate deviation from a sibling packet: contracts/conspectus-vocabulary.json (P1's) gains authorizes on every subsystem_status value, because §2.4.3's ceiling text had no single source otherwise and §10.1 names that file as where it lives; both generated modules follow and --check/--check-sql pass. Fifty-one sabotages were run across the view, the inference order, the reachability probe, the ceiling, the five unknown[] predicates, both view guards and the materializer refusal; all turn the gate red except one recorded no-op (the view's COALESCE arm and its ELSE arm are interchangeable over the CHECK-constrained classification domain)."
+    },
+    {
+      "id": "P6",
+      "slice": "S2",
+      "title": "describe_locus, its contract, and read-only annotations",
+      "claims": [
+        "C7",
+        "C15",
+        "C16",
+        "C17",
+        "C21",
+        "C22",
+        "C26",
+        "C59",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P5"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/locus-account.schema.json",
+        "mcp-server/DEVELOPMENT.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-standing.mjs",
+        "command": "cd mcp-server && node test-locus-standing.mjs",
+        "red_expect": "standing|unknown\\[\\]",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "describe_locus on an unledgered path returns state unledgered and an empty account, not an error",
+        "describe_locus on a candidate row returns an empty structure section and never a content claim",
+        "describe_locus on a multi-owner file with disagreeing owners returns state mixed and lists every owner",
+        "The response validates against contracts/locus-account.schema.json and reports model_calls 0",
+        "tools/list advertises describe_locus with readOnlyHint true and destructiveHint false",
+        "gen-tool-inventory.mjs --check passes with the locus group present",
+        "The red(P6) commit contains mcp-server/test-locus-standing.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A zero-denominator measured field renders with its denominator and never as health",
+        "An origin head that disagrees with the workspace head is reported, not reconciled"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "3a841f9ff113b69df34e0d7a3602db825869120c",
+      "red_sha": "9c11c87325aad3922e36cef0d8bccb9de0a9d331",
+      "green_sha": "c4dd0e0093fc5956af527bd38e08e161ed0a7973",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "describe_locus ships with the eight sections of 3.1, the 1.0.0 contract, READ_ONLY_TOOLS, and the locus group first in the inventory (197 tools). Three gaps the spec left open were filled and are the places to look first: (1) the structure section is withheld at a standing that authorizes no content claim, declared as authorized=false with withheld_unauthorized, source_rows and 2.3s cannot_justify carried in a field rather than quoted in prose, because acceptance requires a candidate row to serve no content claim while the store may hold one; (2) an as_of defects replay places an event by fix_sha ancestry, counts events that name no revision, and reports as_of_placeable=false for a finding whose only witness is the mutable status column rather than back-dating it; (3) the empty-defects sentence is per locus kind - a subsystem may say \"no open findings\" once its status reaches concerns, a term never. trace.response_bytes is null and the omission ledger carries only policy reasons: byte enforcement and budget truncation are P7. locus.ts carries a third copy of the two git ancestry questions (claims.ts and standing.ts have the others) because each owns a different failure policy; unifying them belongs to no packet here. Eighteen sabotages were run against the gate and one survives, named in the gate files false-green note: deleting the census-reconciliation throw, which needs P7s over-budget fixture to see."
+    },
+    {
+      "id": "P7",
+      "slice": "S2",
+      "title": "Response budgets and the omission ledger",
+      "claims": [
+        "C14",
+        "C18",
+        "C19",
+        "C20",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P6"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/contracts/locus-account.schema.json",
+        ".github/workflows/test.yml",
+        "mcp-server/src/helpers.ts"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-locus-compactness.mjs",
+        "command": "cd mcp-server && node test-locus-compactness.mjs",
+        "red_expect": "budget|census",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs"
+      ],
+      "acceptance": [
+        "JSON.stringify(jsonResult(payload, { compact: true })) -- the whole wire response including structuredContent -- is at most 8192 bytes on the pathological fixture, and the default pretty jsonResult size is measured and printed beside it",
+        "selected + omitted equals census for every section, with distinct omitted ids",
+        "Every omission carries policy or budget and no other reason; a section with census 0 carries recorded:false and emits no omission row",
+        "The same fixture measured before truncation exceeds the budget, proving the gate can fail",
+        "owners[] is never truncated, whatever the budget",
+        "The red(P7) commit contains mcp-server/test-locus-compactness.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "On a 150-item census fixture the aggregated omitted[] stays inside its 1024-byte per-entry sub-budget, sets ids_truncated, and still reports an exact count",
+        "jsonResult gains a compact option; the three locus tools use it and every other tool's output is byte-identical to before"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "e9a58f5725076fd624ab2ab0312f6b34cbd51229",
+      "red_sha": "b4c86e8c2813a6e05d8f6fafccfc68935c271d76",
+      "green_sha": "3b443fe039159378313c965e607b17ddbc3cf163",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Budgets are enforced on the emitted wire response: ToolDefinition gains a compact flag and index.ts's one dispatch line reads it (index.ts is P6's deliverable; P14's two tools inherit the same flag). Two gaps §4.3 leaves open are filled and named in trace.truncation_order: retention across sections is round-robin (the deepest served list gives up the next item) so a truncated account samples every section instead of emptying the lowest-ranked ones, and when every truncatable item is gone the ledger's id samples shrink down a fixed ladder while counts stay exact and within_budget:false declares the residue. Measured consequence the owner should weigh: the emitted envelope is 2.13x the compact payload it duplicates, so against a 3467-3695 byte floor (standing, the eight section views, census, ledger, trace) the 8192-byte default budget leaves about 150 bytes and a default describe_locus serves zero to two items; a second owner puts the floor alone over budget. P18's §12.4 assertion 1 must therefore request sections explicitly, where the budget is 20480, and eight item-level checks in P6's gate now do the same with every assertion unchanged."
+    },
+    {
+      "id": "P8",
+      "slice": "S2",
+      "title": "Page plan, navigation groups, Files, and Not yet surveyed",
+      "claims": [
+        "C30",
+        "C31",
+        "C33",
+        "C34",
+        "C35",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P2",
+        "P4",
+        "P5"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-lens-pages.py",
+        "command": "cd materializer && python3 test-lens-pages.py",
+        "red_expect": "NAV_GROUPS|not-yet-surveyed",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "Navigation renders the five groups in NAV_GROUPS order and a page outside them is a render error",
+        "Subsystem pages render under the Subsystems subgroup of Codebase",
+        "files.md carries one row per distinct ledger path with every owner, a per-owner examined revision, and a collision-resistant path-hash anchor; three seeded colliding path slugs produce three distinct anchors",
+        "not-yet-surveyed.md carries five sections, each counted over the unit its gap occupies: unassessed (seam, side) pairs over 2*seams and undispositioned (subsystem, active concern) pairs over subsystems*active concerns. A fixture with one-sided seam coverage and partial concern coverage reports non-zero in both",
+        "Subsystem pages open with identity and a Scope heading carrying subsystems.scope verbatim, then start here and structure, with the survey record last; scope is never labelled Purpose",
+        "No previously planned page path is retired",
+        "The red(P8) commit contains materializer/test-lens-pages.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "ea43adbb8a0db033d0bd97902db3fb759a774809",
+      "red_sha": "2c8c56cd6ad3bab391be241462139e50874f47c3",
+      "green_sha": "75cc4dc70f3e225715a54f2f35ab5f64c726a974",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Five NAV_GROUPS with two subgroups (Codebase/Subsystems, Method/Evidence matrices); a page outside them is refused by assert_nav_groups on the plan before any byte is written and again inside _nav. No path retired. Six deliberate deviations from the §7.1 table, each recorded in code: the per-matrix page path stays diagnosticity/dm-<id>.md because renaming it to matrices/<id>.md would retire a planned path, which acceptance 6 and the bolded rule under the table both forbid; the master-plan and subsystem-page hints say scope rather than 'purpose sentence', because C33's applied disposition forbids relabelling subsystems.scope as purpose; the contradictions.md and field-notes.md hints describe what those pages still carry, since disagreements.md and resolved-leads.md are P9's and a hint promising a narrowing that has not happened is false for a whole packet; field-notes.md's own H1 becomes Leads to match the title §7.1 gives it; and master-plan.md's 'survey depth subordinate' column change is deferred because its table shape drives a typed HTML record-list that test-materializer.py pins. Spec gaps filled: the tracked-path denominator is reconstructed from scope_gaps plus still-tracked ledger paths, exactly the universe git.ts:224 wrote, so no second git call can disagree with the reconciliation; the deferral reason is subsystems.notes, the only free-text field the schema gives a deferred subsystem, and a subsystem with none says so; the Files open-defect count is findings in open or fixed-pending-verification whose primary_files citation equals the path or begins '<path>:'; a path whose owners record different standing states reads 'Owners disagree' rather than one owner's state, by §2.4.2's rule; files.md links each owner to a new le-<sha1> anchor on that owner's ledger row, so 'links onward to the owning subsystem page's ledger entry' is literally true and the coverage axis checks it. The subsystem Standing block counts through file_standing with describe_locus's own predicates (standing.ts:915), so page and tool cannot disagree. Thirty-two sabotages across the constant, the rail, the plan, the Files index, the five denominators and the subsystem order all turn the gate red; the first gate let two through (grouping by first appearance, which the plan's own order hid, and a false no-scope sentence) and was strengthened. Note for the slice reviewer: not-yet-surveyed.md lists every unledgered path grouped by directory, which is 1,717 entries on the AxiomDB store — deliberate (territory is not omitted to make the map look complete) but worth a disclosure decision in P10's interface work. Several pages' Markdown H1 still differs from the §7.1 title (Concerns/Review coverage, Seams/System boundaries, Glossary/Codebase glossary, Master plan/Subsystem map); that mismatch predates this packet and was left alone."
+    },
+    {
+      "id": "P9",
+      "slice": "S2",
+      "title": "Unresolved and History pages; reader's guide from the enum source",
+      "claims": [
+        "C28",
+        "C36",
+        "C37",
+        "C38",
+        "C58",
+        "C61",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-history-and-disagreements.py",
+        "command": "cd materializer && python3 test-history-and-disagreements.py",
+        "red_expect": "disagreements|resolved-leads|basis",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "disagreements.md carries unresolved contradictions, open and unresolved-competition matrices, and unresolved-competition dispositions, and nothing resolved",
+        "hot-spots.md sorts by open critical+high, then medium+low, then unread fraction, then id, with no composite column",
+        "The access heat column is absent when no subsystem has an access_log row",
+        "resolution-history.md is newest-first and links every event to its record",
+        "sessions.md carries sessions, refresh runs, and projection verification runs",
+        "Every empty lens page states scope, basis, and checked revision",
+        "how-to-read.md tables are generated from conspectus-vocabulary.json and list every enum value the server enforces",
+        "The red(P9) commit contains materializer/test-history-and-disagreements.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "resolved-leads.md carries answered, dismissed, and superseded questions ordered by resolved_at and closed field notes ordered by id, each group stating what the store does not record about how they got there",
+        "A seeded accepted finding with an empty rationale renders basis none-recorded and is counted under Terminal without a recorded basis, rather than as resolved-with-proof",
+        "A seeded unresolved-competition matrix appears on disagreements.md and on no History page"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "925dff942ac79ba76d80342568e72606abaa99a0",
+      "red_sha": "4d9f2682df0367a1bfde8dccc26622d62d3e2e87",
+      "green_sha": "d37ce7784cdb92302a0b7e5b9235a76eeb138482",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Spec gap filled: a contradiction contributes to the Undiscriminated column of every subsystem owning one of its findings, since contradictions carry no subsystem_id and a cross-subsystem disagreement is undiscriminated territory in both. Two files outside the deliverables changed: test-materializer.py's contradictions assertion tracks the §7.1 rename to Conflicting evidence and adds a route check (same strength, new membership), and materializer/test-history-and-disagreements.py is the gate itself, whose fixture was strengthened after the red commit so each of §7.6's four sort keys is separately falsifiable — a stable sort over id-ordered rows had made the tiebreaks untestable (VP4). The spec's §7.7 order for closed leads (id descending) and §1.1's fixed sentence ('the order below is the order the leads were opened') read in tension; the sentence is emitted verbatim and the column is headed Opened so the list is unambiguous."
+    },
+    {
+      "id": "P10",
+      "slice": "S2",
+      "title": "Locus search index and accessible interface enhancement",
+      "claims": [
+        "C39",
+        "C40",
+        "C41",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P5",
+        "P8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/core.py",
+        ".github/workflows/test.yml",
+        "materializer/test-search-index.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-search-index.py",
+        "command": "cd materializer && python3 test-search-index.py",
+        "red_expect": "search-index|anchor",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "search-index.js carries every obligation-bearing ledger path exactly once and every cited symbol at least once",
+        "search-index.js appears in .projection-contract.json and in manifest.projection_files",
+        "Removing one path from the index turns the state read-back axis red",
+        "Every file's anchor is reachable from files.md with scripts disabled",
+        "The search combobox exposes role, aria-expanded, aria-controls, aria-activedescendant, and a polite live region",
+        "The projection references no external host in any script, style, link, or image",
+        "The red(P10) commit contains materializer/test-search-index.py and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A clean publish and verify_materialized_docs are both green with search-index.js present, and removing the file turns the coverage axis red",
+        "The projection inventory globs *.js and verify_projection derives expected paths from manifest.projection_files as well as the page plan",
+        "Arrow keys move the active option, Enter activates it, Escape closes the list and restores focus to the prior element, and the live region announces the result count -- driven in a browser, not asserted from static attributes",
+        "With JavaScript disabled every page, every file anchor, and every filtered table row is reachable and visible"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "7b7743e87a8c31168b35fb9e952283fde0cc1cf9",
+      "red_sha": "16095bc07263faad671d7e549bf5d30540966d21",
+      "green_sha": "e14481203c38e9db4ad6c0751496f9acc63c5ee8",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "search-index.js is written by render_html_projection into the same files map as the HTML, so one code path gives it manifest.projection_files, the publication receipt, and retirement immunity; core._locus_index builds it from file_standing and evidence. Spec gaps filled and recorded in code: a path entry's h is files.html#f-<sha1>, the anchor §7.4 fixes, since §8.1.1's \"#<slug>\" would be the colliding slugify id §7.4 exists to reject; the index carries every distinct ledger path, not only the obligation-bearing ones, so it mirrors the Files index row for row and every entry's anchor resolves, while the read-back requirement stays scoped to the obligation; and a cited symbol whose file no ledger row names lands on files.html with no fragment, because there is no Files row to anchor to. Two deliberate interface readings: the combobox is built by script rather than served, since an input announced as a combobox that nothing can expand promises a control a no-JS reader does not have -- so the gate reads role, aria-expanded, aria-controls, aria-activedescendant and the live region back from the browser, not from the bytes; and Escape restores focus to the element focused before the search, per §8.2's wording, rather than keeping focus in the combobox as the ARIA pattern's first Escape does. The rail's page filter is replaced by one result list over pages, ledger paths, and cited symbols (§8.1.1's extension of ⌘K); the rail itself stays complete and unfiltered, which is also what makes the no-JS path whole. Filters: findings.html filters the whole Unresolved lens including Awaiting verification, hot-spots' severity facet is named by its two band columns because that table keeps critical+high and medium+low apart on purpose, a row recording no value on a facet cannot be excluded by it, and hiding extends from rows to the containers and headings a fully hidden run leaves behind -- guarded so a heading with no filterable row under it is never folded. html_pages_rendered/unchanged still count pages only; the index is not an HTML page and html_pages_total counts the plan. Thirty-one sabotages were run across the builder, the three read-back changes, the combobox, and the filters; two survived the first pass and were closed by strengthening the gate (a duplicated index entry, and the folded-prose-heading regression), and one is a recorded no-op: removing the explicit node.focus() from Enter's same-page branch changes nothing while the target still carries tabindex=\"-1\", and removing the tabindex as well does turn the gate red. Note for the slice reviewer: the checked-in docs/ projection is now behind what this packet renders (every page gains a script reference, a data-root, and the new search markup); republishing it is §12.2's packet, and no CI check byte-compares it."
+    },
+    {
+      "id": "P11",
+      "slice": "S3",
+      "title": "Structure from claims with a labelled narrative fallback",
+      "claims": [
+        "C42",
+        "C44",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P6",
+        "P8"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        ".github/workflows/test.yml",
+        "mcp-server/src/tools/claims.ts"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-structural-claims.mjs",
+        "command": "cd mcp-server && node test-structural-claims.mjs",
+        "red_expect": "structure section|narrative",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs"
+      ],
+      "acceptance": [
+        "A claim closed by apply_change_impact no longer appears as current in describe_locus or on the subsystem page",
+        "A subsystem with zero claims renders 'Structural inventory not recorded as claims' and the labelled narrative",
+        "Narrative attaches only with revision_bound false and the artifact's content_hash",
+        "The structure section is empty for a scoped-unread locus regardless of subsystem claims",
+        "The red(P11) commit contains mcp-server/test-structural-claims.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "add_claim refuses a subject_type outside {symbol, subsystem, seam}",
+        "add_claim refuses a <sid>/key-type, /state-container, or /flow claim whose evidence kinds are all outside {code-verified, contract-stated} or whose evidence cites a different file than subject_id, and accepts the concurrency and seam kinds without that requirement"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "ae2ffac5a509db32eecbecbac8e03b5b61109d45",
+      "red_sha": "ee8038fd140fabef320edb33582353ac34f830ba",
+      "green_sha": "83d28cdce966a41fe39aa7b5803032597f944f80",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Structure selects claims through three arms at a subsystem locus - subject id, evidence citation, and section 9.1's <sid>/ claim_key namespace - because the first two alone miss a seam claim whose evidence lies outside the subsystem's ledger; describe_locus and the subsystem page use the same three, and the gate asserts that parity in both directions. The narrative is a pointer in the tool (artifact_path, content_hash, revision_bound false, label) and prose on the page, per 3.4 and 9.1; 4.2 calls narrative opt-in but 5.1 fixes the sections enum at eight names, so there is no request mechanism and the ~200-byte pointer always attaches when a subsystem locus serves no claim. Touched P6/P7's mcp-server/contracts/locus-account.schema.json to admit that object - without it the response fails its own contract. The promoted survey artifact's ATX headings are demoted three levels so its own H1 does not close the page section; heading level only, no other byte changes. Note for the reviewer: test-finding-partition.mjs (P2's gate) already fails on this branch at the P11 start commit with the same two assertions, unchanged by this packet."
+    },
+    {
+      "id": "P12",
+      "slice": "S3",
+      "title": "Phase 2 writes structural claims, and the status gate that requires one",
+      "claims": [
+        "C42",
+        "C43",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P11"
+      ],
+      "deliverables": [
+        "mcp-server/src/invariants.ts",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        "mcp-server/test-invariants.mjs",
+        "mcp-server/test-smoke.mjs",
+        ".github/workflows/test.yml",
+        "mcp-server/test-perf-ceilings.mjs",
+        "mcp-server/test-perf-tier2.mjs",
+        "mcp-server/test-cloud-e2e.mjs",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-phase2-claims-gate.mjs",
+        "command": "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "red_expect": "structural|claim_key",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-change-impact.mjs",
+        "cd mcp-server && node test-cloud-e2e.mjs",
+        "cd mcp-server && node test-autoprogress.mjs",
+        "cd mcp-server && node test-perf-ceilings.mjs",
+        "cd mcp-server && node test-perf-tier2.mjs"
+      ],
+      "acceptance": [
+        "Advancing a subsystem to structural with no current <sid>/ claim is refused with a named missing deliverable",
+        "One claim is sufficient; no per-category quota is enforced",
+        "An explicit negative claim satisfies the gate",
+        "phase-2-structural.md documents the five claim kinds, their claim_key shapes, and their evidence requirements",
+        "Every existing test that advances a subsystem to structural still passes",
+        "The red(P12) commit contains mcp-server/test-phase2-claims-gate.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "test-perf-ceilings.mjs, test-perf-tier2.mjs, and test-cloud-e2e.mjs seed one commit, one evidence row, and one claim per subsystem, and still pass; without the fixture change add_claim cannot resolve a ref_sha in a repo with no commits",
+        "phase-4-adversarial.md pulls every current <sid>/ claim as a target and records each challenge outcome before the subsystem may advance to mapped"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "6628a01be6ce4fb04eecbc07af9cbbd9a4070534",
+      "red_sha": "01a613fbe3fd8d2cbdf03542614c62db5f00fe6e",
+      "green_sha": "f8687fb9f54e4744ed9c09da4c2dbe8eeac5c140",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The rule is requireStructuralClaim in invariants.ts, matched with substr not LIKE because a subsystem id may carry _ or % and an unescaped pattern lets one subsystem's claim satisfy another's gate. Two gaps filled and recorded: 9.1 requires an explicit negative claim but gives it no claim_key shape, so phase-2-structural.md documents it as the category key with the symbol segment dropped (<sid>/state-container) and the subsystem as subject, which keeps it outside P11's file-anchored evidence check since an absence is not read off one symbol; and 9.1 names get_claims(subsystem_id), which does not exist (get_claims has no subsystem filter and sets additionalProperties false), so phase-4-adversarial.md instructs get_claims() plus a <sid>/ prefix filter rather than widening P11's deliverable. test-smoke's two exact-count assertions (get_evidence on scheduler/main.ts, get_claims at claimSha2) were raised to the new exact counts, not relaxed. Pre-existing and unrelated: test-finding-partition.mjs (P2's gate) is already red at 6628a01 on the same two resolved-findings.md link assertions."
+    },
+    {
+      "id": "P13",
+      "slice": "S4",
+      "title": "Cited edges and topology from recorded rows only",
+      "claims": [
+        "C45",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P6",
+        "P8",
+        "P12"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/xrefs.ts",
+        "mcp-server/src/tools/locus.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".github/workflows/test.yml",
+        "mcp-server/src/helpers.ts",
+        "mcp-server/test-smoke.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-edge-contract.mjs",
+        "command": "cd mcp-server && node test-edge-contract.mjs",
+        "red_expect": "add_xref recorded an edge whose context",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|ModuleNotFoundError|ImportError|No module named|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "add_xref refuses an absent or empty context, one with no token matching the citation grammar, and one whose token's revision does not resolve in the workspace",
+        "add_xref accepts prose containing a well-formed citation token, stores the prose verbatim, and returns the validated token in citations[]; symbol reachability is not checked and the contract says so",
+        "A store with zero xrefs renders the layer atlas and says so",
+        "Every rendered edge corresponds to an xrefs row; none is inferred from names or seams",
+        "describe_locus boundaries carries recorded edges for the owning subsystems",
+        "The red(P13) commit contains mcp-server/test-edge-contract.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "test-smoke.mjs:254 passes a context; it is the only existing add_xref caller"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "1226365f264d086be94932322202071dbebcc5d6",
+      "red_sha": "03a78b511172a1d18e4e613063b3d2c0abd8d723",
+      "green_sha": "ade9f0764ed3684705f3cf37b3913c973d9fc5aa",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The citation grammar is §9.2's regex verbatim, anchored after a whitespace split, so a token the writer parenthesized is not a token; the gate pins that boundary deliberately and the tool description plus phase-2-structural.md both show the token unpunctuated — the usability wart is the spec's choice, not a deviation. Four gaps filled and recorded: (1) helpers.ts gains citationTokensIn (lexical, no git) beside extractWorkspaceCitations (path + git rev-parse), so the write path validates and read paths reuse one grammar rather than a second copy; (2) the published context schema carries a pattern generated from that same constant, and the gate asserts the pattern and the handler agree case for case on an eight-row table — a grammar widened in one place only turns it red; (3) locus.ts's boundaries xref items carry citations[]; they originally derived ref_sha/revision_bound from the first token, which slice-S4's review overturned (F5/codex) — §3.2 binds an item only where its source row has a revision column and xrefs has none, and P6's gate asserted the opposite on the same section, so the item is served unbound with its citations exposed (green d6e92ef); (4) diagrams.py gains subsystem_dependency_view returning heading and body together and renderers.py stops making its own read of xrefs — the two predicates could disagree and head an atlas 'Subsystem dependency graph'. New in the projection: an exact census of recorded subsystems no recorded edge reaches, so a partial edge set cannot read as a complete graph; the gate asserts it on two arms with different answers. The architecture table keeps its five columns because html_projection.py's _DEPENDENCY_TOPOLOGY_PROJECTION matches the header tuple exactly and a sixth column would silently drop the typed topology. No Python copy of the citation grammar exists by design. DEVELOPMENT.md is regenerated (add_xref's description changed) though it is not a listed deliverable; gen-tool-inventory --check is in the regression list and requires it. Twenty-nine sabotages were run; two survived the first gate (a widened grammar, and a Phase 2 citation obligation satisfied by the file's unrelated 'cite everything' rule) and both were closed before the last green."
+    },
+    {
+      "id": "P14",
+      "slice": "S5",
+      "title": "get_attention and get_history",
+      "claims": [
+        "C23",
+        "C24",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P7",
+        "P9"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/contracts/attention.schema.json",
+        "mcp-server/contracts/locus-history.schema.json",
+        "mcp-server/DEVELOPMENT.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-attention-history.mjs",
+        "command": "cd mcp-server && node test-attention-history.mjs",
+        "red_expect": "get_attention|get_history|label",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs"
+      ],
+      "acceptance": [
+        "Per-label fixture assertions hold: a finding with a prior verified-fixed event is regression, an open candidate-concern note is unverified-suspicion, an open question is unknown, a closed claim interval is stale-knowledge with source claim. Neither latent-defect nor contested appears as a label",
+        "stale-knowledge items carry source claim or source ledger and are never summed together",
+        "get_attention's selected open and awaiting-verification ids, unioned with the ids its omitted[] records under reason budget, equal the finding_state_current query exactly on the seeded store, and omitted[].count reconciles",
+        "get_history returns resolution events, supersessions, contradiction resolutions, closed questions, and sessions, newest first",
+        "Both responses honour their byte budgets and carry an omission ledger",
+        "The red(P14) commit contains mcp-server/test-attention-history.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "A seeded unresolved-competition matrix is labelled undiscriminated"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "62e624bb6b9fc955f15464a6e48e4e355d4a3f4b",
+      "red_sha": "596a0d35a825f2b32af01490a67dad636d12ffd2",
+      "green_sha": "bf96531448a2c831cb9fb3d115e4ec05f0b9fa11",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "get_attention serves §5.2's seven sections under §10's seven-value attention_label enum, enforced by a substrate check that refuses any other label; latent-defect, contested and ruled-out-historical appear nowhere. Two gaps §5.2 leaves open are filled and stated in code: an open field note whose category is not candidate-concern is a census member recorded under policy (ADR-0010 defines unverified-suspicion over candidate-concern alone and the enum carries no value for the rest), and the ledger arm of stale-knowledge is narrowed to classification='examined' per §6.1, with drifted candidate and deferred rows recorded under policy and counted as drifted_unread/drifted_deferred rather than labelled - calling an unread file's drift stale *knowledge* asserts a reading nobody took. F7/codex's narrative drift is settled on NarrativePointer: §4.2's narrative names the body, which no tool serves under any option, and §9.1's 'on the page only' is where opting in happens; the ~200-byte locator §3.4 attaches travels with structure and is on by default. §5.1's input surface is not widened. get_attention and get_history share one budget engine that reuses §4.3's aggregated ledger, the id sub-budget ladder and the census invariant; describe_locus keeps its own loop because it enforces three budgets these do not, and the divergence is stated where the engine is defined. The engine also takes back items the drop step overshot, so a response never declares a drop the budget did not require. Note for the reviewer: test-finding-partition.mjs (P2's gate) is red at HEAD and was already red at start_sha 62e624b with the identical two failures about subsystem-page links to resolved-findings.md; it is not in this packet's regression list and nothing here touches the materializer."
+    },
+    {
+      "id": "P15",
+      "slice": "S5",
+      "title": "Consumer routing: server instructions, skill route, installer opt-in",
+      "claims": [
+        "C25",
+        "C46",
+        "C47",
+        "C64",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P14"
+      ],
+      "deliverables": [
+        "mcp-server/src/index.ts",
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/notes.md",
+        ".github/workflows/test.yml",
+        "mcp-server/src/cli.ts",
+        "design/reader-lenses/routing-measurement.md"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-consumer-route.mjs",
+        "command": "cd mcp-server && node test-consumer-route.mjs",
+        "red_expect": "SERVER_INSTRUCTIONS|readOnlyHint|inventory",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-installer.mjs",
+        "cd mcp-server && node test-activation-contract.mjs"
+      ],
+      "acceptance": [
+        "SERVER_INSTRUCTIONS names describe_locus in its first sentence and still names get_project_info for producers",
+        "The generated tool inventory reports the baseline count plus three; the baseline is read from gen-tool-inventory.mjs output, not from a literal",
+        "SKILL.md carries the consumer routing row and notes.md states the standing-first answer shape",
+        "The installer path in mcp-server/src/cli.ts -- there is no src/installer.ts -- offers the agent-instructions paragraph as opt-in and writes nothing when declined",
+        "The rewritten vocabulary check still reads SKILL.md's ladder independently",
+        "The red(P15) commit contains mcp-server/test-consumer-route.mjs and its red output matches gate.red_expect, not a module-not-found error",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "routing-measurement.md records 20 file questions, two arms (with and without the describe_locus route), two runs per arm, tool-call counts reported per question and never pooled across arms. It gates nothing and a null result is reported as a null result"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "0faaab0e3054817a86395c42877201b169e4f6dc",
+      "red_sha": "ff48b11d3c0c0106243d565e639915845e6fc402",
+      "green_sha": "f56eb6a5472e668f322830af95d439153eb11c66",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Gate asserts over the live stdio surface: instructions and annotations come from initialize/tools-list, the inventory total from gen-tool-inventory.mjs --check rather than a literal (baseline = total less the three named locus tools), and the installer is run in temp workspaces. SERVER_INSTRUCTIONS keeps the phrase 'evidence-backed codebase conspectus' inside the producer sentence so test-mcp-compatibility.mjs's existing assertion is not weakened. The opt-in flag is --agent-instructions: CLAUDE.md for claude, AGENTS.md otherwise, project scope only (a user-scoped Codex install is rooted in CODEX_HOME and applyPlan's containment would reject a workspace write); uninstall does not remove the block, which is delimited and removable by hand. routing-measurement.md is the protocol only, marked 'specified, not yet run': it needs S6's rebuilt self-conspectus, and no gate assertion reads its result, so a null result stays green. mcp-server/README.md gained a paragraph documenting the new flag; it is no packet's deliverable."
+    },
+    {
+      "id": "P16",
+      "slice": "S6",
+      "title": "Snapshot, discard, and reinitialize the self-conspectus store",
+      "claims": [
+        "C52",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P10",
+        "P12",
+        "P13",
+        "P15"
+      ],
+      "deliverables": [
+        "dev/test-rebuild-readback.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-readback.mjs",
+        "command": "node dev/test-rebuild-readback.mjs",
+        "red_expect": "storage marker|empty store|reinitialized",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "commit_phase_gate captures a Pre-rebuild snapshot of the storage directory's Git history before anything is deleted",
+        "The MCP server process is stopped before memory.db, memory.db-wal, and memory.db-shm are removed; nothing holds a handle across the deletion",
+        "A new server process opens the storage, initializeSchema creates file_standing and finding_state_current, and the storage marker validates",
+        "get_project_info and get_dashboard answer against the empty store, proving step 4 produced a live store rather than a stale handle",
+        "dev/conspectus/ fixture files are unchanged",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P16) commit contains dev/test-rebuild-readback.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 120,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "55b8b90e78b278a58dbd59bd304f1649f972fd7d",
+      "red_sha": "b208b62ec0fa5651b2acc757739aedca5f0c2d30",
+      "green_sha": "66d5073e5c918f4ad19a1e73f6e9630c5c602a0e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "§12.1 step 3 is under-specified and the gate records why: removing only memory.db/-wal/-shm leaves initialization.json naming a missing database (the next open fails with a storage-marker error), and removing the marker too trips the incomplete-store rollback, so the discard archives and removes the whole storage directory and then carries the archived Git history back in, leaving the snapshot reachable from the store that replaced it. This worktree carried no self-conspectus store, so the live run exercised the procedure at the real path over a store this packet initialized for it; design/reader-lenses/rebuild-receipt.json says so in words and the gate's procedure arm proves snapshot recoverability against a populated store instead. Two files beyond the listed deliverables: dev/rebuild-self-conspectus-store.mjs (the one-shot driver, --confirm required) and the receipt it writes. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) has been RED since P8 (75cc4dc7) on subsystem-page links to resolved-findings.md; it was already red at P16's start_sha."
+    },
+    {
+      "id": "P17",
+      "slice": "S6",
+      "title": "Rebuild the conspectus through the skill with claims-backed Phase 2",
+      "claims": [
+        "C52",
+        "C42",
+        "C43",
+        "C45",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P16"
+      ],
+      "deliverables": [
+        "dev/test-rebuild-coverage.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-coverage.mjs",
+        "command": "node dev/test-rebuild-coverage.mjs",
+        "red_expect": "subsystem|claim|edge",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "Onboarding runs through the skill and records the repository boundary and the initial decomposition",
+        "Every subsystem is surveyed in priority order, in batches with a checkpoint commit per batch, so a failure resumes from the last batch rather than from the start",
+        "Every subsystem that reached structural carries at least one current <sid>/ claim with code-grade evidence",
+        "Every cross-subsystem data flow or dependency is recorded as an xrefs row with a validated citation token",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P17) commit contains dev/test-rebuild-coverage.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 240,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "05b79685671d4a785b14ea83ad970f0682ef52d8",
+      "red_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+      "green_sha": "e2bda8559bfe40a6c18f2cdeda547310557d5705",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The store is untracked, so the gate asserts over design/reader-lenses/rebuild-coverage-receipt.json -- written by dev/record-rebuild-coverage.mjs, two files beyond the listed deliverables -- and re-checks the live store read-only (node:sqlite, no server spawn) wherever one is present, saying which mode it ran in. Scope is onboarding plus Phase 1 and Phase 2 for every subsystem: eleven reached structural with 53 claims over 72 evidence rows, 16 cited edges and 9 seams, in five batches behind their own storage checkpoint commits; phases 3-5 are outside this packet's acceptance and no finding exists yet, so findings-index.md is empty and says so. Two gaps filled and recorded here: onboarding owes a checkpoint while surveying no subsystem, so batch 1 declares kind='onboarding' and nothing else may be empty; and B-12 (scholiast/, 103 files the running system never imports) is deferred at directory granularity -- three ledger rows, 100 files left visibly unclassified rather than silently claimed -- recorded as open question 4. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) is still RED on subsystem-page links to resolved-findings.md, as P16 recorded; it is not in P17's regression list and was red before P17 began."
+    },
+    {
+      "id": "P19",
+      "slice": "S6",
+      "title": "Survey every subsystem through concerns, adversarial review, and packaging to mapped",
+      "claims": [
+        "C52",
+        "C42",
+        "C43",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P17"
+      ],
+      "deliverables": [
+        "dev/test-rebuild-depth.mjs",
+        "design/reader-lenses/rebuild-depth-receipt.json",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-depth.mjs",
+        "command": "node dev/test-rebuild-depth.mjs",
+        "red_expect": "not mapped|no terminal disposition|no adversarial|depth receipt",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs"
+      ],
+      "acceptance": [
+        "Decision 4 asks for the self-conspectus to be rebuilt, and P17 stopped at Phase 2; this packet carries every non-deferred subsystem (B-01 through B-11) from structural to mapped through the skill's Phase 3 (concern review), Phase 4 (adversarial review), and Phase 5 (packaging), in priority order, in batches with a storage checkpoint commit per batch so a failure resumes from the last batch",
+        "Every active concern has an evidence-backed terminal disposition in every non-deferred subsystem, or a recorded open question naming the exact gap; findings are recorded only through add_finding with attached evidence, and ruled-out concerns keep their overturn argument",
+        "Seams whose two parties are both mapped receive SC dispositions on both sides; the skill's status ladder is honored and update_subsystem_status is the only route to mapped",
+        "design/reader-lenses/rebuild-depth-receipt.json records, per subsystem: status, terminal dispositions over the active-concern denominator, findings by resolution state, adversarial pass count, and the store's last_checked_sha; it is committed, and the gate asserts over it, also running against the live store when one is present and saying which mode ran",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P19) commit contains dev/test-rebuild-depth.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 300,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "9f6019581856adff67c9cee862476f0b7f6a3063",
+      "red_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
+      "green_sha": "5b83e7ece2eca97ea88c471fb9c0c64b60114bb2",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Phases 3-5 through the skill over B-01..B-11 in four batches behind their own storage checkpoints, then seam assessment and packaging. 66 checklist dispositions (6 concerns x 11 subsystems), all terminal, none deferred to a gap; 10 confirmed bugs with attached evidence (5 MEDIUM, 5 LOW), 9 upheld and 1 scope-restricted by the adversarial pass; 53 claim targets challenged with 52 survived and 1 overturned and re-asserted (B-01-C01's ToolDefinition shape was wrong on the handler order and omitted the compact flag); all 9 seams assessed with SC-1..SC-9 on both sides. Two files beyond the deliverables: dev/record-rebuild-depth.mjs and the receipt it writes. Three choices the spec left open, recorded here: SC dispositions live only under seams[] in the receipt, because an SC code names two parties and counting it into an eleven-subsystem denominator would read as a missing disposition everywhere it does not apply; the seam pass and Phase 5 are not a fifth batch, because they survey no subsystem, and are named in the receipt's seam_assessment block against the session-close storage commit; and finding ids start at B03-4 and B04-4 because schema.sql cites B03-1..B03-3 and B04-1/B04-3 by name for earlier defects. Open question 5 records that B11-2 is filed under ZD-1 by analogy rather than by its recorded wording. docs/ was not promoted: that is P18's deliverable."
+    },
+    {
+      "id": "P18",
+      "slice": "S6",
+      "title": "Publish, promote to the tracked docs/, and gate the dogfood receipt",
+      "claims": [
+        "C53",
+        "C54",
+        "C62",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P17",
+        "P19"
+      ],
+      "deliverables": [
+        "dev/promote-docs.mjs",
+        "dev/test-reader-lenses-dogfood.mjs",
+        "design/reader-lenses/dogfood-receipt.json",
+        "docs/",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-reader-lenses-dogfood.mjs",
+        "command": "node dev/test-reader-lenses-dogfood.mjs",
+        "red_expect": "dogfood|receipt|byte-match",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs"
+      ],
+      "acceptance": [
+        "materialize_docs(clean_publish=true) renders and reads back into .amanuensis/docs; a red read-back leaves the previous contents untouched and promotes nothing",
+        "dev/promote-docs.mjs refuses to run unless the source carries a .projection-contract.json whose three axes are green",
+        "After promotion, verify_materialized_docs pointed at the root docs/ re-reads the promoted tree and every file's hash matches the contract at that path",
+        "dogfood-receipt.json carries the three describe_locus responses, the get_attention id sets, the finding_state_current query result, and the store's last_checked_sha, and is committed",
+        "The gate runs against the committed receipt, reports which mode it ran in, and passes in CI where .amanuensis/ does not exist",
+        "describe_locus returns examined standing with at least one structural claim for mcp-server/src/index.ts, mcp-server/src/tools/findings.ts, and materializer/amanuensis_materializer/core.py",
+        "get_attention's selected open and awaiting-verification ids unioned with its budget-omitted ids equal finding_state_current exactly on the rebuilt store",
+        "docs/ is committed with its .manifest.json and .projection-contract.json",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P18) commit contains dev/test-reader-lenses-dogfood.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "46bb2a49aefe13b9a76ad69a33f6688c8f7df1bf",
+      "red_sha": "668af2f0ec58278a86922cd5b93e8b69a9548e2c",
+      "green_sha": "5e9a650019458787affd7db019add4a308ec447e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Publication is two steps and the second one had to be a script: verified live that verify_materialized_docs pointed at the root docs/ answers \"materializer read-back output escapes its configured root\", because resolveStorageOutputPath confines it beneath project.storagePath -- the guard 12.2 itself endorses. dev/promote-docs.mjs therefore invokes the same --readback-only code path the tool wraps (materialize.py, which the handler passes exactly that flag), directly at the destination; the acceptance line naming the tool is satisfied by the operation, not by the wrapper, and that is the one place this packet reads the spec against its own cited evidence. It refuses in a fixed order -- no contract, drifted bytes, unclaimed files, no manifest, a read-back not green on all three axes, an unmanaged destination -- writes nothing until all six pass, and keeps the previous contents in a backup until the promoted tree is re-verified at the destination path. describe_locus is called with sections named (structure, reviews, leads, history_pointer, raising the wire budget from 8192 to 20480): the budget is measured on the doubled envelope, so a default call on a file this well recorded serves zero items, as P7 measured. Two files beyond the deliverables: dev/record-dogfood-receipt.mjs, which takes the three responses over the wire from a spawned server and reads the evidence citations behind each served claim from the store, and the promotion receipt it consumes (scratch only). docs/ is replaced wholesale -- the eight-subsystem A0-era projection is retired for 75 files over 73 contract pages, read-back green on all three axes at docs/ itself. The gate proves the restore-on-red property for the promotion step, which is this packet's own code; the clean-publish half of acceptance 1 was exercised green live and its red path stays materializer/test-readback.py's, which covers the unmanaged-files refusal but not a red read-back leaving the prior output in place. Pre-existing and outside this packet: mcp-server/test-finding-partition.mjs (P2's gate) is still RED on subsystem-page links to resolved-findings.md, as P16, P17 and P19 recorded; it is not in P18's regression list and this packet changed neither its subject nor its fixture."
+    },
+    {
+      "id": "P20",
+      "slice": "S6",
+      "title": "Regeneration pass: challenge outcomes before mapped, the missing edges, and the canonical project name",
+      "claims": [
+        "C43",
+        "C52",
+        "C54",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P18"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/claims.ts",
+        "dev/record-rebuild-depth.mjs",
+        "dev/record-rebuild-coverage.mjs",
+        "design/reader-lenses/rebuild-depth-receipt.json",
+        "design/reader-lenses/rebuild-coverage-receipt.json",
+        "design/reader-lenses/dogfood-receipt.json",
+        "docs/",
+        "dev/test-rebuild-regeneration.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-rebuild-regeneration.mjs",
+        "command": "node dev/test-rebuild-regeneration.mjs",
+        "red_expect": "no challenge outcome|mapped without|synthesized ladder|missing edge|project name|worktree basename",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-rebuild-depth.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "Carries the three slice-S6 findings the fix session verified but could not repair in one session: F6 (challenge outcomes and status transitions are not durable, and mapped has no prerequisite), F7 (cross-subsystem dependencies visible in mcp-server/src/index.ts have no recorded edge), F9 (the promoted docs/ take their identity from the worktree basename). Read design/reader-lenses/reviews/slice-S6/codex.md and dispositions.md first",
+        "A durable record of per-claim challenge outcomes exists (a table and a tool to write it, append-only), status transitions are recorded rather than synthesized, invariants.ts refuses the transition to mapped for a subsystem with a current claim that has no recorded challenge outcome, and record-rebuild-depth.mjs builds the ladder and the adversarial block from those records only; test-rebuild-depth.mjs asserts fields it reads, never fields it synthesizes",
+        "Every cross-subsystem import or registration visible in mcp-server/src/index.ts and the tool registry has an xrefs row written through add_xref with a validated citation token, and the coverage denominator names known cross-subsystem imports so a missing edge turns the coverage gate red",
+        "The project's canonical name is recorded during onboarding or derived from binding metadata (the recorded remote or package name), never from the storage or worktree directory; the overview and every page title use it",
+        "The adversarial pass is re-run over the live store where the new outcome record requires it, both rebuild receipts and the dogfood receipt are regenerated from the live store, docs/ is re-rendered with clean_publish, re-verified, and re-promoted through dev/promote-docs.mjs, and every previously green gate stays green",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P20) commit contains dev/test-rebuild-regeneration.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 300,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "0016335b32d05629eb1752570d1b4905745f9a24",
+      "red_sha": "9861534282eef3cfd371ed8370ad76bb72408590",
+      "green_sha": "747d247df82934696391c7b3da296bebaebe2337",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Closes slice-S6 F6, F7, F9 and reconciles F8 in the live store. Two append-only tables (claim_challenge_outcomes, subsystem_status_transitions) with substrate triggers; record_claim_challenge/get_claim_challenges; enforcePhasePrerequisites gains a 'mapped' case requiring an outcome on every current <sid>/ claim, so both status writers are gated. record-rebuild-depth.mjs now reads the ladder from the transition rows and, for rungs climbed before the table existed, from the subsystems.status held in each storage checkpoint's committed memory.db — a rung declares its source and the span it covers, and test-rebuild-depth.mjs checks the deliverable behind each covered rung instead of asserting fields the recorder typed in. Four registry crossings (B-01 to B-05/B-06/B-07/B-09) recorded through add_xref; the coverage receipt now carries registry_ownership and registry_crossings re-derived from the tracked index.ts. project_name comes from binding metadata or a package manifest, never a directory. Files beyond the declared deliverables, each because the packet could not land otherwise: dev/record-regeneration-pass.mjs (new, the auditable live-store write path), dev/test-rebuild-depth.mjs, mcp-server/test-invariants.mjs and mcp-server/test-edge-contract.mjs (fixtures and an allowlist the new prerequisite and the new caller reach), mcp-server/contracts/conspectus-vocabulary.json plus the generated vocabulary modules and DEVELOPMENT.md. dev/test-finding-partition (P2) and dev/test-activation-evidence were already red at 0016335 and are unchanged by this packet."
+    },
+    {
+      "id": "P21",
+      "slice": "S7",
+      "title": "Residual hardening from the final review: revision-bound writers, one status predicate, and gates that can turn red",
+      "claims": [
+        "C6",
+        "C16",
+        "C27",
+        "C48",
+        "C55",
+        "C63"
+      ],
+      "depends_on": [
+        "P20"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/standing.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/dashboard.ts",
+        "materializer/amanuensis_materializer/renderers.py",
+        "mcp-server/scripts/check-evidence-vocabulary.mjs",
+        "mcp-server/test-vocabulary-source.mjs",
+        "materializer/test-overview-truthfulness.py",
+        "mcp-server/test-residual-hardening.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-residual-hardening.mjs",
+        "command": "cd mcp-server && node test-residual-hardening.mjs",
+        "red_expect": "unresolved ref_sha|revision_bound|duplicate predicate|findings.status|literal stale_reason|validator accepts|bare percentage",
+        "red_rejects": "MODULE_NOT_FOUND|Cannot find module|No such file|can't open file|SyntaxError"
+      },
+      "regression": [
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-locus-index-view.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-adversarial-correctness.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && npx biome check src/",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "ruff check materializer/",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "Carries the six final-review findings the fix session verified and deferred with no packet: F6/codex (high) - the evidence, findings, and dispositions writers accept any non-empty ref_sha and describe_locus reports revision_bound for it; F4/codex and F2/codex - stale_reason writers use bare literals, nothing consumes the generated STALE_REASONS, and the vocabulary gate cannot turn red on them; F9/codex - the master plan, get_dashboard, and list_subsystems derive open counts from findings.status while the lenses read finding_state_current; F2/claude - the vocabulary gate's tool-validator check cannot fire; F3/claude - the overview lint misses a bare percentage presented as health. Read design/reader-lenses/reviews/final/codex.md, claude.md, and dispositions.md first",
+        "add_evidence, add_finding, and set_disposition resolve ref_sha in the bound workspace the way add_claim does and refuse an unresolvable one; revision_bound is true only for a resolved revision",
+        "git.ts and standing.ts take their stale_reason values from the generated STALE_REASONS, and the vocabulary gate turns red when a writer uses a value the source does not carry or a tool validator accepts one",
+        "One predicate over finding_state_current serves the master plan, get_dashboard, and list_subsystems open counts; the duplicate over findings.status is removed, and a gate proves the three agree on a store holding a legacy-only finding",
+        "The overview truthfulness lint catches a bare percentage presented as health, with a red case",
+        "The packet's gate runs in .github/workflows/test.yml",
+        "The red(P21) commit contains mcp-server/test-residual-hardening.mjs and its red output matches gate.red_expect, not a module-not-found error"
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 180,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "d36800d3793b09eb052d089386cd7c5e1cc69e1d",
+      "red_sha": "e04329b012b2e6dddd70ceeda3b74ffc436232cb",
+      "green_sha": "9dfcc3d232d8d0897e572e678c434ceb20f6c246",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "All six deferred final-review findings discharged. F6/codex (high): helpers.resolveWorkspaceCommit is one resolver shared with add_claim's contract; add_evidence, add_finding, and set_disposition resolve ref_sha in the bound workspace, refuse an unresolvable one, and store the resolved 40-char commit, so revision_bound is backed by the record. Resolution runs AFTER each writer's authorization gates so a depth-contract refusal still says so; resolutions of object-name-shaped input are memoized per workspace, which keeps both perf ceilings at ~1% (0.05ms/0.08ms against 10ms). The read surface's revision_bound predicate in locus.ts is unchanged: ingress now guarantees a resolved value, and changing the read predicate would contradict P6's invariant that revision_bound == (ref_sha !== null). F9/codex: resolution_open joins the vocabulary contract as a per-value flag and gen-vocabulary.mjs emits OPEN_FINDING_SQL into both generated modules beside OBLIGATION_BEARING_SQL; get_dashboard, list_subsystems, render_master_plan AND get_finding_summary (a fourth surface the finding did not name) now read it over finding_state_current. The dead finding_summary VIEW in schema.sql still derives one from findings.status; nothing reads it and schema.sql is applied to live DBs on open, so removing it is a migration, not this packet. F4/F2 codex: git.ts and standing.ts type their stale_reason values StaleReason; check-evidence-vocabulary.mjs's SKILL comparison is table-driven over all four surfaces SKILL.md publishes (kind ladder, disposition verdicts, phase ladder, authorized-claims table) with declared omissions, and both of the reviewer's SKILL sabotages now turn it red. F2/claude: test-vocabulary-source.mjs gained behavioural validator and stale_reason-writer arms; the validator arm reads the accepted set back out of requireEnum's own refusal, because the reviewer's sabotage widened one list by exactly one value and a fixed probe cannot see that. F3/claude: composite_index_violations lives in test-overview-truthfulness.py with positive and negative corpora and an end-to-end red arm that publishes an overview carrying 'Conspectus health | 72%' from a scratch materializer. A bare percentage is refused outright in the overview (every number the four dimensions publish is a count with its own denominator); a ratio is refused only when its label names a judgement of the record, so section 11.2's '12 of 240 ledger rows' still passes. Fixtures in test-smoke, test-invariants, test-cloud-e2e, test-perf-ceilings and test-perf-tier2 now cite their own repositories' commits; no test was weakened. Both vocabulary gates avoid the literal 'add_xref' so P13's whole-file caller scan stays honest. Every implementation point was sabotaged and confirmed red, then restored."
+    }
+  ],
+  "completion": {
+    "commands": [
+      "cd materializer && python3 test-history-and-disagreements.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-readback.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+      "cd mcp-server && node scripts/check-tool-schemas.mjs",
+      "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+      "cd mcp-server && node test-activation-contract.mjs",
+      "cd mcp-server && node test-activation-doctor.mjs",
+      "cd mcp-server && node test-adversarial-correctness.mjs",
+      "cd mcp-server && node test-adversarial-security.mjs",
+      "cd mcp-server && node test-attention-history.mjs",
+      "cd mcp-server && node test-autoprogress.mjs",
+      "cd mcp-server && node test-change-impact.mjs",
+      "cd mcp-server && node test-chorusmith-adapter.mjs",
+      "cd mcp-server && node test-cloud-e2e.mjs",
+      "cd mcp-server && node test-cloud-storage.mjs",
+      "cd mcp-server && node test-codebase-brief.mjs",
+      "cd mcp-server && node test-codex-parent-workspace.mjs",
+      "cd mcp-server && node test-compare.mjs",
+      "cd mcp-server && node test-composition.mjs",
+      "cd mcp-server && node test-consumer-route.mjs",
+      "cd mcp-server && node test-crosswalk-qualification.mjs",
+      "cd mcp-server && node test-decisions.mjs",
+      "cd mcp-server && node test-derived-staleness.mjs",
+      "cd mcp-server && node test-design-session.mjs",
+      "cd mcp-server && node test-edge-contract.mjs",
+      "cd mcp-server && node test-finding-partition.mjs",
+      "cd mcp-server && node test-first-use-laziness.mjs",
+      "cd mcp-server && node test-first-use-recovery.mjs",
+      "cd mcp-server && node test-historical-evaluation.mjs",
+      "cd mcp-server && node test-installer.mjs",
+      "cd mcp-server && node test-invariants.mjs",
+      "cd mcp-server && node test-learning-ledger.mjs",
+      "cd mcp-server && node test-locus-compactness.mjs",
+      "cd mcp-server && node test-locus-index-view.mjs",
+      "cd mcp-server && node test-locus-standing.mjs",
+      "cd mcp-server && node test-mcp-compatibility.mjs",
+      "cd mcp-server && node test-nested-activation-binding.mjs",
+      "cd mcp-server && node test-operating-envelope.mjs",
+      "cd mcp-server && node test-package-activation-parity.mjs",
+      "cd mcp-server && node test-package-artifact.mjs",
+      "cd mcp-server && node test-perf-ceilings.mjs",
+      "cd mcp-server && node test-phase2-claims-gate.mjs",
+      "cd mcp-server && node test-priority.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-refresh-recovery.mjs",
+      "cd mcp-server && node test-release-rollback.mjs",
+      "cd mcp-server && node test-research-broker.mjs",
+      "cd mcp-server && node test-residual-hardening.mjs",
+      "cd mcp-server && node test-resolution-proof.mjs",
+      "cd mcp-server && node test-revalidation-scheduler.mjs",
+      "cd mcp-server && node test-review-analysis.mjs",
+      "cd mcp-server && node test-review-brief.mjs",
+      "cd mcp-server && node test-review-session.mjs",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd mcp-server && node test-startup-bounds.mjs",
+      "cd mcp-server && node test-storage-git.mjs",
+      "cd mcp-server && node test-structural-claims.mjs",
+      "cd mcp-server && node test-temporal-claims.mjs",
+      "cd mcp-server && node test-vocabulary-source.mjs",
+      "cd mcp-server && node test-workspace-binding.mjs",
+      "cd mcp-server && npm audit --audit-level=critical",
+      "cd mcp-server && npm run build",
+      "cd mcp-server && npx biome check src/",
+      "node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json",
+      "node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json",
+      "node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json",
+      "node dev/check-living-conspectus.mjs",
+      "node dev/render-friction-free-release-readiness.mjs --check",
+      "node dev/render-roadmap.mjs --check",
+      "node dev/test-activation-operating-envelope-red-gates.mjs",
+      "node dev/test-activation-operating-trust-cleanup.mjs",
+      "node dev/test-codex-host-evidence-red-gates.mjs",
+      "node dev/test-friction-free-release-readiness-red-gates.mjs",
+      "node dev/test-living-conspectus.mjs",
+      "node dev/test-package-activation-parity-red-gates.mjs",
+      "node dev/test-pecia-roadmap-red-gates.mjs",
+      "node dev/test-pecia-roadmap.mjs",
+      "node dev/test-reader-lenses-dogfood.mjs",
+      "node dev/test-rebuild-coverage.mjs",
+      "node dev/test-rebuild-depth.mjs",
+      "node dev/test-rebuild-readback.mjs",
+      "node dev/test-rebuild-regeneration.mjs",
+      "node dev/test-roadmap.mjs",
+      "ruff check materializer/"
+    ]
+  },
+  "final_review": {
+    "status": "reviewed",
+    "reviewed_sha": "595238ada3eb41bcd5f964d4526537b1c1cc99dd",
+    "findings": 0
+  }
+}

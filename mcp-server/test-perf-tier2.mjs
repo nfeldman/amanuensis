@@ -7,7 +7,7 @@
 // Compares: gated write (full path) against a direct INSERT (what the
 // pre-Tier-2 code did).
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
@@ -20,6 +20,8 @@ import { findingTools } from "./dist/tools/findings.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
+import { evidenceTools } from "./dist/tools/evidence.js";
+import { claimTools } from "./dist/tools/claims.js";
 
 const allTools = new Map(
   [
@@ -31,6 +33,8 @@ const allTools = new Map(
     ...fieldNoteTools,
     ...fileTools,
     ...artifactTools,
+    ...evidenceTools,
+    ...claimTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -50,6 +54,15 @@ function measure(label, fn, iters = 1000) {
 // Set up a populated project.
 const ws = mkdtempSync(join(tmpdir(), "perf-t2-"));
 spawnSync("git", ["init", "-q"], { cwd: ws });
+// One real commit: `structural` now requires a claim, `add_claim` resolves
+// every ref_sha in the bound workspace, and `git init` alone leaves a repo
+// with no commit for it to resolve.
+writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
+spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+spawnSync("git", ["-c", "user.email=perf@localhost", "-c", "user.name=perf", "-c", "commit.gpgsign=false", "commit", "-q", "--no-verify", "-m", "seed"], { cwd: ws });
+const seedSha = String(
+  spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" }).stdout ?? "",
+).trim();
 const project = resolveProject(ws);
 ensureProjectStorage(project, (databasePath) => {
   const database = openDatabase(databasePath);
@@ -67,6 +80,8 @@ for (let i = 0; i < 40; i++) {
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
   call("add_files_to_scope", { subsystem_id: id, ref_sha: "perf-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "perf fixture" }] }, ctx);
+  const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
+  call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -90,7 +105,7 @@ measure("set_disposition (gate: status + concern lookup + upsert)", () => {
       evidence: "x",
       evidence_quality: "code-verified",
       rationale: "r",
-      ref_sha: "deadbeef",
+      ref_sha: seedSha,
       pass_type: "survey",
     },
     ctx,
@@ -109,7 +124,7 @@ measure("add_finding (gate: status + insert)", () => {
       root_cause: "r",
       severity: "LOW",
       status: "confirmed-bug",
-      ref_sha: "abc",
+      ref_sha: seedSha,
       pass_type: "survey",
     },
     ctx,
@@ -156,4 +171,6 @@ console.log("\nInterpretation:");
 console.log("  - Tier 2 adds a PK status lookup per gated write (~1-5µs).");
 console.log("  - Compared to the write itself (INSERT + indexes, ~30-100µs),");
 console.log("    the gate overhead is ≤10% on the hot path.");
-console.log("  - No network, no lock, no subprocess — this is cache-friendly SQLite.");
+console.log("  - No network and no lock. The first durable write at a revision");
+console.log("    resolves it with one `git rev-parse`; that resolution is memoized");
+console.log("    per workspace, so the steady state above spawns no subprocess.");

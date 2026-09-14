@@ -35,6 +35,28 @@ const packageVersion = (
 const SERVER_NAME = "amanuensis-memory";
 const CODEX_BLOCK_START = "# >>> amanuensis init (managed)";
 const CODEX_BLOCK_END = "# <<< amanuensis init (managed)";
+// The agent-instructions paragraph is opt-in. It is the only thing the
+// installer would write into a file the project owns and maintains by hand,
+// so it is never written unless it was asked for: an install that was not
+// asked prints the offer and writes nothing. The delimiters make the block
+// findable on a rerun and removable by hand.
+const AGENT_INSTRUCTIONS_START = "<!-- >>> amanuensis (managed) -->";
+const AGENT_INSTRUCTIONS_END = "<!-- <<< amanuensis (managed) -->";
+const AGENT_INSTRUCTIONS_BLOCK = [
+  AGENT_INSTRUCTIONS_START,
+  "## Amanuensis",
+  "",
+  "This project has an Amanuensis conspectus: a recorded, evidence-backed survey of the",
+  "codebase. Before you edit an unfamiliar file, call `describe_locus` on it. The answer",
+  "opens with standing — what the record authorizes about that path and what it cannot",
+  "justify — and then the account: purpose, structure, known defects, boundaries, and",
+  "terms. When standing is `unledgered`, `excluded`, or `scoped-unread`, say so and offer",
+  "a survey rather than reading the file and improvising. `get_attention` lists what is",
+  "unresolved; `get_history` lists what was concluded.",
+  AGENT_INSTRUCTIONS_END,
+  "",
+].join("\n");
+
 const LEGACY_AGENT_FILES = [
   "amanuensis-adversarial.agent.md",
   "amanuensis-auto.agent.md",
@@ -56,6 +78,7 @@ type InitFlags = {
   force: boolean;
   mcpOnly: boolean;
   scope: InstallScope;
+  agentInstructions: boolean;
 };
 
 type PlanAction =
@@ -147,6 +170,11 @@ function printUsage(): void {
       "  --mcp-only       Configure only the MCP launcher. Intended for",
       "                   local development with a live global skill symlink.",
       "  --dry-run        Print the complete plan; write nothing.",
+      "  --agent-instructions",
+      "                   Opt in to a short Amanuensis paragraph in the",
+      "                   project's agent instructions: CLAUDE.md for Claude",
+      "                   Code, AGENTS.md for the other clients. Nothing is",
+      "                   written to either file without this flag.",
       "  --repair         With doctor, prepare a bounded user/project migration.",
       "  --apply-plan ID  Apply only the exact repair plan ID returned by dry-run.",
       "  --json           Emit the doctor report as machine-readable JSON.",
@@ -889,6 +917,71 @@ function planCodexUninstall(actions: PlanAction[], workspace: string, flags: Ini
   });
 }
 
+/**
+ * The file the selected client reads for project-wide agent instructions.
+ *
+ * Claude Code reads `CLAUDE.md`; Codex and the Agent Skills clients read
+ * `AGENTS.md`. Both live in the target repository, so the paragraph is offered
+ * only for a project-scoped install — a user-scoped Codex registration is
+ * rooted in `$CODEX_HOME` and has no repository to write into.
+ */
+function agentInstructionsPath(workspace: string, client: Client): string {
+  return join(workspace, client === "claude" ? "CLAUDE.md" : "AGENTS.md");
+}
+
+function agentInstructionsApplies(flags: InitFlags): boolean {
+  return flags.scope === "project";
+}
+
+/**
+ * Plan the opt-in paragraph. Absent file: create it. Present without the
+ * managed block: append, leaving every existing byte in place. Present with
+ * the block: skip, so a rerun is a no-op rather than a second copy.
+ */
+function planAgentInstructions(actions: PlanAction[], workspace: string, flags: InitFlags): void {
+  const path = agentInstructionsPath(workspace, flags.client);
+  assertSafeRootPath(workspace, path);
+  if (!existsSync(path)) {
+    actions.push({ kind: "write-file", path, content: AGENT_INSTRUCTIONS_BLOCK, mode: "create" });
+    return;
+  }
+  if (!statSync(path).isFile()) {
+    actions.push({
+      kind: "conflict",
+      path,
+      reason: "agent instructions path is not a regular file",
+    });
+    return;
+  }
+  const current = readFileSync(path, "utf8");
+  if (current.includes(AGENT_INSTRUCTIONS_START)) {
+    actions.push({ kind: "skip-file", path, reason: "Amanuensis paragraph already present" });
+    return;
+  }
+  const separator = current.endsWith("\n\n") ? "" : current.endsWith("\n") ? "\n" : "\n\n";
+  actions.push({
+    kind: "write-file",
+    path,
+    content: `${current}${separator}${AGENT_INSTRUCTIONS_BLOCK}`,
+    mode: "overwrite",
+  });
+}
+
+/**
+ * Print the offer when the paragraph was not asked for. The offer is the whole
+ * of the opt-in: nothing is written on this path, and the message says so.
+ */
+function printAgentInstructionsOffer(workspace: string, flags: InitFlags): void {
+  const path = agentInstructionsPath(workspace, flags.client);
+  const name = relative(workspace, path) || path;
+  const present = existsSync(path) && readFileSync(path, "utf8").includes(AGENT_INSTRUCTIONS_START);
+  if (present) return;
+  console.log("");
+  console.log(`Optional: add a short Amanuensis paragraph to ${name} so agents call`);
+  console.log("describe_locus before editing an unfamiliar file, and answer from standing");
+  console.log("rather than improvising. Not written; rerun with --agent-instructions to add it.");
+}
+
 function planLegacyAgents(actions: PlanAction[], workspace: string): void {
   const legacyRoot = join(workspace, ".github", "agents");
   for (const filename of LEGACY_AGENT_FILES) {
@@ -911,6 +1004,8 @@ function buildPlan(flags: InitFlags, workspace: string): { actions: PlanAction[]
   };
 
   if (flags.scope === "project") planLegacyAgents(actions, workspace);
+  if (flags.agentInstructions && agentInstructionsApplies(flags))
+    planAgentInstructions(actions, workspace, flags);
   if (!flags.mcpOnly) planSkill(actions, workspace, flags, planMkdir);
   if (flags.client === "claude" || flags.client === "vscode") {
     planJsonConfig(actions, workspace, flags.client, flags, planMkdir);
@@ -975,6 +1070,9 @@ function doctorRepairPlans(workspace: string): Array<{
     dir: workspace,
     client: "codex" as const,
     dryRun: false,
+    // A repair migrates an existing registration; it never writes into the
+    // project's own agent instructions.
+    agentInstructions: false,
   };
   const userFlags: InitFlags = {
     ...shared,
@@ -1266,6 +1364,7 @@ function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = 
       force: { type: "boolean", default: false },
       "mcp-only": { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
+      "agent-instructions": { type: "boolean", default: false },
       help: { type: "boolean", default: false },
     },
     allowPositionals: false,
@@ -1283,6 +1382,7 @@ function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = 
     force: operation === "upgrade" ? true : (values.force as boolean),
     mcpOnly: values["mcp-only"] as boolean,
     scope: parseScope(values.scope, client),
+    agentInstructions: values["agent-instructions"] as boolean,
   };
   if (flags.client === "generic" && flags.mcpOnly) {
     throw new Error(
@@ -1304,6 +1404,8 @@ function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = 
   );
   const plan = buildPlan(flags, workspace);
   applyPlan(plan.actions, flags, plan.root);
+  if (!flags.agentInstructions && agentInstructionsApplies(flags))
+    printAgentInstructionsOffer(workspace, flags);
   if (!flags.dryRun) {
     printNextSteps(
       flags.client,
@@ -1342,6 +1444,7 @@ function cmdUninstall(argv: string[]): void {
     force: values.force as boolean,
     mcpOnly: values["mcp-only"] as boolean,
     scope: parseScope(values.scope, client),
+    agentInstructions: false,
   };
   const requestedWorkspace = resolve(flags.dir);
   if (!existsSync(requestedWorkspace) || !statSync(requestedWorkspace).isDirectory()) {

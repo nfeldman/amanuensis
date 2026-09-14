@@ -11,6 +11,11 @@ opposite — look for evidence they don't, or that a compensating
 mechanism bounds the damage, or that the execution context makes the
 concern inapplicable.
 
+Phase 2's structural claims are targets on the same terms. The status
+gate that admitted the subsystem to `structural` establishes that those
+claims exist and cite evidence; it establishes nothing about whether
+they are true. This pass is where that is decided.
+
 This is **not devil's-advocate theater.** You are looking for *actual*
 mechanisms the Phase 3 read missed. A common LLM failure mode is
 confirming bugs without checking for:
@@ -34,6 +39,13 @@ Find those.
   `linchpin_dependent=true`.
 - Any `confirmed-acceptable` disposition with only call-path
   context (Phase 3's rationale flags this).
+- Every **current claim whose `claim_key` begins `<sid>/`** — Phase
+  2's structural inventory: key types, state containers, flow steps,
+  the concurrency invariant, seam contracts, and any explicit negative
+  claim. Call `get_claims(subsystem_id: "<sid>")`, which returns
+  exactly those rows — the prefix is matched on the server, so a
+  target cannot be lost to a filter you forgot to write. Every one of
+  them is a target; none is exempt for being small.
 
 ### 2. For each target, formulate the disproof question
 
@@ -76,6 +88,19 @@ For each target, write in the subsystem survey artifact
     stays but its linchpin dependency is now documented
     explicitly.
 
+For each **claim** target, write one entry under the same section,
+keyed by `claim_key`:
+
+- **Claim** — the `claim_key` and the statement as recorded.
+- **Challenge** — what would have to be true for the claim to be
+  wrong, and where you looked.
+- **Outcome** — one of:
+  - `survived` — you looked and found nothing that overturns it.
+  - `overturned` — you found evidence the claim is wrong at the
+    current revision.
+  - `superseded` — the claim was right and is now stale; you have a
+    corrected reading of the same fact.
+
 ### 5. Update the DB
 
 For each verdict:
@@ -106,6 +131,25 @@ For each verdict:
   probe for ${finding_id} did not find an overturning mechanism")`
   so the pattern of successful hardening is legible.
 
+And for each claim outcome:
+
+- **`overturned`** — `add_evidence` for the disproof, then
+  `invalidate_claim(claim_id, at_sha, reason, evidence_ids)`. That
+  writes the `invalidated` row in `claim_validity_events`, which is
+  the durable record that the claim was challenged and lost. The
+  server rejects an invalidation whose evidence is already attached
+  to the claim, so the disproof has to be new.
+- **`superseded`** — `supersede_claim`, which closes the predecessor
+  and opens the successor on the same `claim_key` in one commit and
+  writes the `superseded` event. Use this, not delete-and-re-add: the
+  history is the point.
+- **`survived`** — no claim row changes, so the outcome has to be
+  recorded explicitly or it is indistinguishable from a claim nobody
+  looked at. Write
+  `add_field_note(category="pattern", observation="adversarial probe
+  for claim ${claim_key} did not overturn it", location=<sid>)`
+  alongside the artifact entry.
+
 ### 6. Contradiction detection across sessions
 
 Before handing back, check for contradictions between your findings
@@ -127,6 +171,8 @@ Return to the coordinator with a one-line summary:
 
 - Counts per verdict (`upheld`, `overturned`, `scope-restricted`,
   `quality-upgraded`, `quality-downgraded`).
+- Counts per claim outcome (`survived`, `overturned`, `superseded`),
+  and the `claim_key` of any target you did not reach.
 - Contradictions detected and their resolutions.
 - Linchpin-dependent dispositions that remain — these are the
   legitimate ongoing fragility the materializer will surface.
@@ -135,6 +181,13 @@ Return to the coordinator with a one-line summary:
 The coordinator advances status to `adversarial` and runs Phase 5
 packaging immediately. No pause.
 
+**Before the subsystem may advance to `mapped`, every current `<sid>/`
+claim must carry a recorded outcome** — a `claim_validity_event` from
+`invalidate_claim` or `supersede_claim`, or an explicit `survived`
+note. A claim with no recorded outcome means the structural account
+was published unchallenged; say so in the hand-back rather than
+letting `mapped` imply a review that did not happen.
+
 ## Rules
 
 - **Overturning requires evidence, not vibes.** "Claim A might be
@@ -142,7 +195,9 @@ packaging immediately. No pause.
   or admit it isn't there.
 - **Be fair to Phase 3.** If you can't overturn, say so. Do not
   invent compensating mechanisms because it feels more balanced to
-  overturn some of the findings.
+  overturn some of the findings. The same holds for claims: a
+  `survived` outcome on every claim is a legitimate result, and
+  inventing one overturn to look rigorous corrupts the record.
 - **`linchpin-dependent` is a valid steady state.** Not every
   finding can be upgraded to `code-verified`. Persistent fragility
   that is documented is better than false confidence.

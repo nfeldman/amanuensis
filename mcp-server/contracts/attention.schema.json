@@ -1,0 +1,341 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/attention/1.0.0",
+  "title": "Amanuensis attention surface",
+  "description": "The get_attention response: what the conspectus records as unresolved, each item under one operational label whose meaning is fixed by the reader's guide. No field carries text generated during the call.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "scope",
+    "checked_sha",
+    "sections",
+    "census",
+    "omitted",
+    "trace"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0.0"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested",
+        "kind",
+        "subsystems",
+        "path_prefix",
+        "resolved"
+      ],
+      "description": "\u00a75.2's scope argument as it resolved: \u00a72.1's rule decides between a subsystem id and a repository path prefix, and `resolved` is false when the argument names nothing the store holds.",
+      "properties": {
+        "requested": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "project",
+            "subsystem",
+            "path-prefix"
+          ]
+        },
+        "subsystems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path_prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "checked_sha": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The revision the response is read against: git_state.last_checked_sha, else the workspace head, else null when git cannot answer."
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "open",
+        "awaiting_verification",
+        "undiscriminated",
+        "decisions",
+        "leads",
+        "stale",
+        "hot_spots"
+      ],
+      "properties": {
+        "open": {
+          "$ref": "#/$defs/section"
+        },
+        "awaiting_verification": {
+          "$ref": "#/$defs/section"
+        },
+        "undiscriminated": {
+          "$ref": "#/$defs/section"
+        },
+        "decisions": {
+          "$ref": "#/$defs/section"
+        },
+        "leads": {
+          "$ref": "#/$defs/section"
+        },
+        "stale": {
+          "$ref": "#/$defs/section"
+        },
+        "hot_spots": {
+          "$ref": "#/$defs/section"
+        }
+      }
+    },
+    "census": {
+      "$ref": "#/$defs/census"
+    },
+    "omitted": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/omission"
+      }
+    },
+    "trace": {
+      "$ref": "#/$defs/trace"
+    }
+  },
+  "$defs": {
+    "label": {
+      "description": "\u00a75.2's seven labels. Four are ADR-0010's operational definitions reused verbatim (regression, unverified-suspicion, unknown, stale-knowledge); awaiting-verification and undiscriminated are get_attention's own; `open` is finding_state_current.resolution_state's own value. ADR-0010's latent-defect, contested, and ruled-out-historical are deliberately absent, each for a reason \u00a75.2 states.",
+      "enum": [
+        "open",
+        "regression",
+        "unverified-suspicion",
+        "unknown",
+        "stale-knowledge",
+        "awaiting-verification",
+        "undiscriminated"
+      ]
+    },
+    "item": {
+      "type": "object",
+      "description": "One record, or \u2014 in hot_spots \u2014 one subsystem's measures. Every item states the revision it is bound to (\u00a73.2) and who authored the durable text it carries (\u00a73.4). A row whose source table has no revision column carries ref_sha null and revision_bound false rather than borrowing a neighbour's.",
+      "required": [
+        "ref_sha",
+        "revision_bound",
+        "authored"
+      ],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "ref_sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision_bound": {
+          "type": "boolean"
+        },
+        "authored": {
+          "enum": [
+            "model",
+            "code"
+          ]
+        },
+        "source": {
+          "enum": [
+            "claim",
+            "ledger"
+          ],
+          "description": "stale only: which of the two populations the item belongs to. The two are never summed (VP6)."
+        },
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "census",
+        "recorded",
+        "requested",
+        "items"
+      ],
+      "properties": {
+        "census": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total candidates. \u00a74.3's invariant: selected + omitted == census, reconciled against omitted[].count."
+        },
+        "recorded": {
+          "type": "boolean",
+          "description": "False when the source table holds no row for this scope; rendered as an honest empty rather than as an omission."
+        },
+        "requested": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        },
+        "statement": {
+          "type": "string"
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Per-source counts, never pooled into a total."
+        },
+        "ordering_basis": {
+          "type": "string",
+          "description": "The code constant that fixed this section's order; the last item served is the first dropped."
+        },
+        "session_attribution": {
+          "type": "string"
+        },
+        "seam_binding": {
+          "type": "string"
+        }
+      }
+    },
+    "census": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "by_section"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "by_section": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "section",
+        "reason",
+        "count",
+        "ids",
+        "ids_truncated"
+      ],
+      "description": "\u00a74.3's aggregated ledger, one entry per (section, reason). `count` is exact and never truncated \u2014 it is what the census invariant reconciles against; the id sample beside it declares when it could not carry them all.",
+      "properties": {
+        "section": {
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "policy",
+            "budget"
+          ],
+          "description": "ADR-0011's two applicable reasons. `irrelevant` does not apply: selection here is registry-exact, not lexical."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ids_truncated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_calls",
+        "selection",
+        "budget_bytes",
+        "payload_bytes",
+        "response_bytes",
+        "truncation_order",
+        "truncated",
+        "within_budget",
+        "over_budget_reason",
+        "limit"
+      ],
+      "properties": {
+        "model_calls": {
+          "const": 0
+        },
+        "selection": {
+          "type": "string"
+        },
+        "budget_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The compact payload alone."
+        },
+        "response_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The whole wire response: the compact text block plus the structuredContent that repeats it (\u00a74.1)."
+        },
+        "truncation_order": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "within_budget": {
+          "type": "boolean"
+        },
+        "over_budget_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

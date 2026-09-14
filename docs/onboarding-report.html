@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Amanuensis HTML projection 1.12.0">
-<meta name="description" content="Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus.">
-<title>Onboarding record · Amanuensis · Amanuensis</title>
+<meta name="generator" content="Amanuensis HTML projection 1.14.0">
+<meta name="description" content="The repository boundary and initial decomposition that established this conspectus.">
+<title>Onboarding record · amanuensis · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root {
@@ -185,7 +185,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 }
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-item { margin: .08rem 0; }
-.nav-item[hidden], .nav-group[hidden] { display: none; }
+.nav-subgroup { margin: .5rem 0 0; }
+.nav-subgroup-title {
+  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
+  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
 .nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
 .nav-link:hover { color: var(--text); background: var(--surface); }
 .nav-link[aria-current="page"] { color: var(--accent-strong); }
@@ -227,15 +232,22 @@ h1 {
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
 .freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
 .freshness.stale::before { background: var(--source-stale); }
+.freshness.unmeasured::before { background: var(--rule-strong); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content > section:last-child { border-bottom: 0; }
 .content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
-.content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
-.content-findings .section-high-findings { --enum-color: var(--severity-high); }
-.content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
-.content-findings .section-low-findings { --enum-color: var(--severity-low); }
+.content-findings .section-open { --enum-color: var(--resolution-open); }
+.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
+.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
+.content-findings .section-ruled-out, .content-findings .section-accepted {
+  --enum-color: var(--resolution-accepted);
+}
+.content-findings section > h3 { --enum-color: var(--rule-strong); }
+.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
+  border-left: .14em solid var(--enum-color); padding-left: .5rem;
+}
 .content-findings section > h2::before {
   content: ""; display: inline-block; width: .14em; height: .72em;
   margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
@@ -658,8 +670,28 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
 .page-foot p { margin: 0; max-width: 52rem; }
 .page-foot a { color: inherit; }
-.empty-search { display: none; margin: 1rem 0; color: var(--text-muted); font-size: .8rem; }
-.empty-search.visible { display: block; }
+[hidden] { display: none !important; }
+
+/* Search results and the in-page filters. Ruled registers, not cards: a row
+   per result, one rule between them, no icon and no badge (§8.3). Every one of
+   these elements is built by script; nothing here is served hidden. */
+.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+.search-status:empty { display: none; }
+.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
+.search-results:empty { display: none; border-top: 0; }
+.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
+.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
+.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
+.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
+.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
 
 @media (max-width: 900px) {
   .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
@@ -750,84 +782,77 @@ a .identifier-definition { text-decoration-color: currentColor; }
 }
 </style>
 </head>
-<body>
+<body data-root="">
 <a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
-  <aside class="nav-rail" aria-label="Amanuensis report navigation">
+  <aside class="nav-rail" aria-label="amanuensis report navigation">
     <a class="brand" href="index.html">
-      <span class="brand-mark">Amanuensis</span>
+      <span class="brand-mark">amanuensis</span>
       <span class="brand-sub">Architecture survey · Amanuensis</span>
     </a>
-    <label class="search-label" for="conspectus-search">Find a page <span aria-hidden="true">⌘K</span></label>
-    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Name, ID, or topic…" autocomplete="off">
-    <p class="empty-search" data-empty-search>No matching page in this projection.</p>
-    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title">Orientation</h2><ul class="nav-list"><li class="nav-item" data-search="overview start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><a class="nav-link" href="index.html" title="Start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li><li class="nav-item" data-search="architecture read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><a class="nav-link" href="architecture.html" title="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystem map see every architectural region, how deeply it has been surveyed, and where a reader should enter it."><a class="nav-link" href="master-plan.html" title="See every architectural region, how deeply it has been surveyed, and where a reader should enter it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystem map</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Evidence</h2><ul class="nav-list"><li class="nav-item" data-search="findings review defects that survived the evidence and adversarial gates, ordered by impact."><a class="nav-link" href="findings.html" title="Review defects that survived the evidence and adversarial gates, ordered by impact."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Findings</span></span></a></li><li class="nav-item" data-search="review coverage see which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><a class="nav-link" href="concerns.html" title="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="system boundaries inspect shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="seams.html" title="Inspect shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="conflicting evidence find places where credible records disagree instead of having their differences silently smoothed away."><a class="nav-link" href="contradictions.html" title="Find places where credible records disagree instead of having their differences silently smoothed away."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li><li class="nav-item" data-search="competing explanations follow evidence matrices used when more than one concern could explain the same observed symptom."><a class="nav-link" href="diagnosticity.html" title="Follow evidence matrices used when more than one concern could explain the same observed symptom."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Working record</h2><ul class="nav-list"><li class="nav-item" data-search="decisions needed work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><a class="nav-link" href="open-questions.html" title="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="field notes browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><a class="nav-link" href="field-notes.html" title="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Field notes</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Reference</h2><ul class="nav-list"><li class="nav-item" data-search="codebase glossary translate project-native names into the meanings amanuensis observed in context."><a class="nav-link" href="vocabulary.html" title="Translate project-native names into the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li><li class="nav-item" data-search="reader&#x27;s guide understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><a class="nav-link" href="how-to-read.html" title="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="onboarding record review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."><a class="nav-link" href="onboarding-report.html" title="Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus." aria-current="page"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><a class="nav-link" href="entry-point.html" title="Use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li><li class="nav-item" data-search="review checklist see the concern set used to test each subsystem and the provenance of those checks."><a class="nav-link" href="concern-checklist.html" title="See the concern set used to test each subsystem and the provenance of those checks."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Subsystems</h2><ul class="nav-list"><li class="nav-item" data-search="survey methodology and agent contracts b-01 survey record for survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b01-survey-methodology-and-agent-contracts.html" title="Survey record for Survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey methodology and agent contracts</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="mcp core, persistence, and lifecycle b-02 survey record for mcp core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b02-mcp-core-persistence-and-lifecycle.html" title="Survey record for MCP core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">MCP core, persistence, and lifecycle</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="knowledge tools and workflow api b-03 survey record for knowledge tools and workflow api: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b03-knowledge-tools-and-workflow-api.html" title="Survey record for Knowledge tools and workflow API: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Knowledge tools and workflow API</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="diff-aware materializer b-04 survey record for diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b04-diff-aware-materializer.html" title="Survey record for Diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Diff-aware materializer</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="packaging, installer, validation, and product docs b-05 survey record for packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b05-packaging-installer-validation-and-product-docs.html" title="Survey record for Packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Packaging, installer, validation, and product docs</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="report interface design and validation studies b-06 survey record for report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b06-report-interface-design-and-validation-studies.html" title="Survey record for Report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Report interface design and validation studies</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="embedded research surveys and platform trials b-07 survey record for embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b07-embedded-research-surveys-and-platform-trials.html" title="Survey record for Embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Embedded research surveys and platform trials</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="activation evidence and release-readiness harness b-08 survey record for activation evidence and release-readiness harness: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b08-activation-evidence-and-release-readiness-harness.html" title="Survey record for Activation evidence and release-readiness harness: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Activation evidence and release-readiness harness</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li></ul></section></nav>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title" id="nav-group-overview">Overview</h2><ul class="nav-list" aria-labelledby="nav-group-overview"><li class="nav-item" data-search="overview identity, four status dimensions, and one route into each lens."><a class="nav-link" href="index.html" title="Identity, four status dimensions, and one route into each lens."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-codebase">Codebase</h2><ul class="nav-list" aria-labelledby="nav-group-codebase"><li class="nav-item" data-search="architecture runtime shape, recorded edges, and boundaries, read as one connected system."><a class="nav-link" href="architecture.html" title="Runtime shape, recorded edges, and boundaries, read as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystems every region, grouped by layer, with the scope recorded for it."><a class="nav-link" href="master-plan.html" title="Every region, grouped by layer, with the scope recorded for it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystems</span></span></a></li><li class="nav-item" data-search="files one row per ledger file with owners, standing, and open defects."><a class="nav-link" href="files.html" title="One row per ledger file with owners, standing, and open defects."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Files</span></span></a></li><li class="nav-item" data-search="not yet surveyed the recorded edge of the map, each gap counted over the unit it occupies."><a class="nav-link" href="not-yet-surveyed.html" title="The recorded edge of the map, each gap counted over the unit it occupies."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Not yet surveyed</span></span></a></li><li class="nav-item" data-search="system boundaries shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="seams.html" title="Shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="codebase glossary the project&#x27;s own names, with the meanings amanuensis observed in context."><a class="nav-link" href="vocabulary.html" title="The project&#x27;s own names, with the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li></ul><div class="nav-subgroup"><h3 class="nav-subgroup-title" id="nav-group-codebase-subsystems">Subsystems</h3><ul class="nav-list" aria-labelledby="nav-group-codebase-subsystems"><li class="nav-item" data-search="server runtime and tool dispatch b-01 scope, structure, boundaries, defects, and the survey record for server runtime and tool dispatch. mapped subsystems"><a class="nav-link" href="subsystems/b01-server-runtime-and-tool-dispatch.html" title="Scope, structure, boundaries, defects, and the survey record for Server runtime and tool dispatch."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Server runtime and tool dispatch</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="repository binding and storage custody b-02 scope, structure, boundaries, defects, and the survey record for repository binding and storage custody. mapped subsystems"><a class="nav-link" href="subsystems/b02-repository-binding-and-storage-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Repository binding and storage custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Repository binding and storage custody</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="conspectus schema, vocabulary, and invariants b-03 scope, structure, boundaries, defects, and the survey record for conspectus schema, vocabulary, and invariants. mapped subsystems"><a class="nav-link" href="subsystems/b03-conspectus-schema-vocabulary-and-invariants.html" title="Scope, structure, boundaries, defects, and the survey record for Conspectus schema, vocabulary, and invariants."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Conspectus schema, vocabulary, and invariants</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="survey record tools b-04 scope, structure, boundaries, defects, and the survey record for survey record tools. mapped subsystems"><a class="nav-link" href="subsystems/b04-survey-record-tools.html" title="Scope, structure, boundaries, defects, and the survey record for Survey record tools."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey record tools</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="findings, dispositions, and resolution custody b-05 scope, structure, boundaries, defects, and the survey record for findings, dispositions, and resolution custody. mapped subsystems"><a class="nav-link" href="subsystems/b05-findings-dispositions-and-resolution-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Findings, dispositions, and resolution custody</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="locus standing and the reader lenses b-06 scope, structure, boundaries, defects, and the survey record for locus standing and the reader lenses. mapped subsystems"><a class="nav-link" href="subsystems/b06-locus-standing-and-the-reader-lenses.html" title="Scope, structure, boundaries, defects, and the survey record for Locus standing and the reader lenses."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Locus standing and the reader lenses</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="git state, staleness, and refresh b-07 scope, structure, boundaries, defects, and the survey record for git state, staleness, and refresh. mapped subsystems"><a class="nav-link" href="subsystems/b07-git-state-staleness-and-refresh.html" title="Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Git state, staleness, and refresh</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="materializer rendering pipeline b-08 scope, structure, boundaries, defects, and the survey record for materializer rendering pipeline. mapped subsystems"><a class="nav-link" href="subsystems/b08-materializer-rendering-pipeline.html" title="Scope, structure, boundaries, defects, and the survey record for Materializer rendering pipeline."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Materializer rendering pipeline</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li><li class="nav-item" data-search="projection read-back and publication custody b-09 scope, structure, boundaries, defects, and the survey record for projection read-back and publication custody. mapped subsystems"><a class="nav-link" href="subsystems/b09-projection-read-back-and-publication-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Projection read-back and publication custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Projection read-back and publication custody</span><span class="nav-id" data-identifier-defined>B-09</span></span></a></li><li class="nav-item" data-search="the amanuensis skill b-10 scope, structure, boundaries, defects, and the survey record for the amanuensis skill. mapped subsystems"><a class="nav-link" href="subsystems/b10-the-amanuensis-skill.html" title="Scope, structure, boundaries, defects, and the survey record for The Amanuensis skill."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">The Amanuensis skill</span><span class="nav-id" data-identifier-defined>B-10</span></span></a></li><li class="nav-item" data-search="development harness and gates b-11 scope, structure, boundaries, defects, and the survey record for development harness and gates. mapped subsystems"><a class="nav-link" href="subsystems/b11-development-harness-and-gates.html" title="Scope, structure, boundaries, defects, and the survey record for Development harness and gates."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Development harness and gates</span><span class="nav-id" data-identifier-defined>B-11</span></span></a></li><li class="nav-item" data-search="vendored research corpus b-12 scope, structure, boundaries, defects, and the survey record for vendored research corpus. deferred subsystems"><a class="nav-link" href="subsystems/b12-vendored-research-corpus.html" title="Scope, structure, boundaries, defects, and the survey record for Vendored research corpus."><span class="nav-tick status-deferred" aria-hidden="true"></span><span><span class="nav-name">Vendored research corpus</span><span class="nav-id" data-identifier-defined>B-12</span></span></a></li></ul></div></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-unresolved">Unresolved</h2><ul class="nav-list" aria-labelledby="nav-group-unresolved"><li class="nav-item" data-search="open findings defects open or awaiting verification at the checked revision."><a class="nav-link" href="findings.html" title="Defects open or awaiting verification at the checked revision."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Open findings</span></span></a></li><li class="nav-item" data-search="disagreements where credible records disagree or the evidence does not discriminate between them."><a class="nav-link" href="disagreements.html" title="Where credible records disagree or the evidence does not discriminate between them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Disagreements</span></span></a></li><li class="nav-item" data-search="decisions needed questions the survey could not settle, with the assumption used to keep moving."><a class="nav-link" href="open-questions.html" title="Questions the survey could not settle, with the assumption used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="leads open observations that are not yet findings."><a class="nav-link" href="field-notes.html" title="Open observations that are not yet findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Leads</span></span></a></li><li class="nav-item" data-search="stale knowledge examined files the repository has changed under, and scoped files that changed before anyone read them."><a class="nav-link" href="stale.html" title="Examined files the repository has changed under, and scoped files that changed before anyone read them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Stale knowledge</span></span></a></li><li class="nav-item" data-search="hot spots where unresolved work and unread territory concentrate, as separate measures."><a class="nav-link" href="hot-spots.html" title="Where unresolved work and unread territory concentrate, as separate measures."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Hot spots</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-history">History</h2><ul class="nav-list" aria-labelledby="nav-group-history"><li class="nav-item" data-search="resolved findings verified, ruled out, and accepted, each with the basis its resolution rests on."><a class="nav-link" href="resolved-findings.html" title="Verified, ruled out, and accepted, each with the basis its resolution rests on."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved findings</span></span></a></li><li class="nav-item" data-search="resolution history the append-only account of how records reached their state."><a class="nav-link" href="resolution-history.html" title="The append-only account of how records reached their state."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolution history</span></span></a></li><li class="nav-item" data-search="resolved leads and questions questions that were answered or dismissed, and leads that were closed."><a class="nav-link" href="resolved-leads.html" title="Questions that were answered or dismissed, and leads that were closed."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved leads and questions</span></span></a></li><li class="nav-item" data-search="sessions and publications what ran, when, and what it produced."><a class="nav-link" href="sessions.html" title="What ran, when, and what it produced."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Sessions and publications</span></span></a></li><li class="nav-item" data-search="conflicting evidence resolved disagreements and the evidence that settled them."><a class="nav-link" href="contradictions.html" title="Resolved disagreements and the evidence that settled them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-method">Method</h2><ul class="nav-list" aria-labelledby="nav-group-method"><li class="nav-item" data-search="reader&#x27;s guide every enum, what it authorizes, and what it cannot justify."><a class="nav-link" href="how-to-read.html" title="Every enum, what it authorizes, and what it cannot justify."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="review coverage which failure modes were tested where, and the disposition each one reached."><a class="nav-link" href="concerns.html" title="Which failure modes were tested where, and the disposition each one reached."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="review checklist the concern set and its provenance."><a class="nav-link" href="concern-checklist.html" title="The concern set and its provenance."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li><li class="nav-item" data-search="competing explanations index of evidence matrices and their outcomes."><a class="nav-link" href="diagnosticity.html" title="Index of evidence matrices and their outcomes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li><li class="nav-item" data-search="onboarding record the repository boundary and initial decomposition that established this conspectus."><a class="nav-link" href="onboarding-report.html" title="The repository boundary and initial decomposition that established this conspectus." aria-current="page"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin a dated reading path recorded by an earlier session; it is survey history, not a current index."><a class="nav-link" href="entry-point.html" title="A dated reading path recorded by an earlier session; it is survey history, not a current index."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li></ul></section></nav>
     <div class="rail-foot">
       <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="onboarding-report.md">Markdown source</a></div>
       <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
     </div>
   </aside>
   <main class="document" id="content">
-    <div class="mobile-bar"><span class="mobile-brand">Amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
-        <p class="eyebrow">Reference</p>
+        <p class="eyebrow">Method</p>
         <h1>Onboarding record</h1>
-        <p class="page-hint">Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus.</p>
+        <p class="page-hint">The repository boundary and initial decomposition that established this conspectus.</p>
         <div class="snapshot-strip">
-          <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
-          <span class="snapshot-item"><b>Checked</b>&nbsp; adc4ce04aa57</span>
-          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-08-29 04:56:43</span>
-          <span class="snapshot-item"><span class="freshness">No recorded stale entries</span></span>
+          <span class="snapshot-item"><b>Branch</b>&nbsp; reader-lenses</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 0fee11b0fea1</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-09-12 13:14:57</span>
+          <span class="snapshot-item"><span class="freshness">Stale: 0 with a survey obligation, 0 exempt, of 58 scoped files</span></span>
           
         </div>
       </header>
-      <article class="content content-artifact"><p><strong>Codebase</strong>: Amanuensis <strong>Date</strong>: 2026-08-12 <strong>Onboarding session</strong>: <code>mspky4v5-2wuk50if</code></p>
-<section class="section-epistemic-status">
-<h2 id="epistemic-status"><a class="heading-anchor" href="#epistemic-status" aria-label="Link to Epistemic status">§</a>Epistemic status</h2>
-<p>This report is an onboarding map at repository revision <code>b8b566f</code>, not a completed subsystem survey. Observations cite code or repository contracts. Subsystem behavior and correctness remain unverified until the corresponding subsystem reaches the required survey phase.</p>
+      <article class="content content-artifact"><p>Session <code>mtyc4dcu-04ike3jr</code>, at <code>258ccd2</code> on branch <code>reader-lenses</code>. This pass rebuilt the self-conspectus after the store was discarded and reinitialized (reader-lenses P16), so the account here starts from an empty database and cites only what was read in this pass.</p>
+<section class="section-phase-0-orientation">
+<h2 id="phase-0-orientation"><a class="heading-anchor" href="#phase-0-orientation" aria-label="Link to Phase 0 · Orientation">§</a>Phase 0 · Orientation</h2>
+<p>The workspace is a git worktree at <code>/Users/nfeldman/automation/claude/amanuensis-reader-lenses</code>, 560 tracked files. <code>.amanuensis/</code> is Amanuensis's own state and is excluded from every scan and from the file ledger; <code>git check-ignore</code> confirms it is excluded from version control. Navigation was by <code>rg</code>, <code>git ls-files</code>, and direct reading. No language-intelligence server (call hierarchy, find-references) was available, which is why the structural pass below reads type declarations and named exports rather than resolved call graphs, and why every flow step recorded is one that was read rather than traced automatically.</p>
 </section>
-<section class="section-repository-shape">
-<h2 id="repository-shape"><a class="heading-anchor" href="#repository-shape" aria-label="Link to Repository shape">§</a>Repository shape</h2>
-<div class="table-wrap"><table><caption>repository shape</caption><thead><tr><th scope="col">Dimension</th><th scope="col">Observed value</th><th scope="col">Confidence</th></tr></thead><tbody><tr><td data-label="Dimension">Primary language(s)</td><td data-label="Observed value">TypeScript/JavaScript and Python</td><td data-label="Confidence"><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></td></tr><tr><td data-label="Dimension">Secondary language(s)</td><td data-label="Observed value">SQL, Markdown, YAML/JSON</td><td data-label="Confidence"><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></td></tr><tr><td data-label="Dimension">Build system(s)</td><td data-label="Observed value">npm/TypeScript; Python standard library with Ruff for lint</td><td data-label="Confidence"><span class="evidence-label evidence-config-asserted" title="Configuration states the behavior, but runtime behavior was not independently verified.">Config asserted</span></td></tr><tr><td data-label="Dimension">Code generation present?</td><td data-label="Observed value">Yes</td><td data-label="Confidence"><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></td></tr><tr><td data-label="Dimension">Generated file patterns</td><td data-label="Observed value"><code>mcp-server/dist/**</code>; package mirrors of <code>agents/**</code> and <code>materializer/**</code>; generated <code>ROADMAP.md</code></td><td data-label="Confidence"><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></td></tr><tr><td data-label="Dimension">Monorepo or single service?</td><td data-label="Observed value">One product with server, materializer, prompt/agent, and delivery surfaces</td><td data-label="Confidence"><span class="evidence-label evidence-doc-asserted" title="Project documentation states the claim; implementation agreement is not yet verified.">Docs asserted</span></td></tr><tr><td data-label="Dimension">Deployable unit count</td><td data-label="Observed value">Two executables: <code>amanuensis-memory</code> and installer CLI; Python materializer is invoked as a subprocess</td><td data-label="Confidence"><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></td></tr><tr><td data-label="Dimension">Canonical branch</td><td data-label="Observed value"><code>main</code></td><td data-label="Confidence"><span class="evidence-label evidence-config-asserted" title="Configuration states the behavior, but runtime behavior was not independently verified.">Config asserted</span></td></tr><tr><td data-label="Dimension">Branch convention</td><td data-label="Observed value"><code>codex/</code> for this implementation lane; historical <code>feat/</code> and <code>docs/</code> branches exist</td><td data-label="Confidence"><span class="evidence-label evidence-config-asserted" title="Configuration states the behavior, but runtime behavior was not independently verified.">Config asserted</span></td></tr><tr><td data-label="Dimension">Onboarding SHA</td><td data-label="Observed value"><code>b8b566f</code></td><td data-label="Confidence">git-observed</td></tr></tbody></table></div>
-<h3 id="directory-cluster-map"><a class="heading-anchor" href="#directory-cluster-map" aria-label="Link to Directory cluster map">§</a>Directory cluster map</h3>
-<div class="table-wrap"><table><caption>repository shape</caption><thead><tr><th scope="col">Cluster</th><th scope="col">Apparent role</th><th scope="col">Language</th><th scope="col">Confidence</th><th scope="col">Notes</th></tr></thead><tbody><tr><td data-label="Cluster"><code>.claude/skills/amanuensis/</code></td><td data-label="Apparent role">Canonical survey methodology and phase references</td><td data-label="Language">Markdown</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">Source for skill-driven operation. <code>.claude/skills/amanuensis/SKILL.md@b8b566f</code>.</td></tr><tr><td data-label="Cluster"><code>agents/</code></td><td data-label="Apparent role">VS Code custom-agent bundle and public references</td><td data-label="Language">Markdown</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">Package source copied by prepack. <code>mcp-server/scripts/prepack-bundle-assets.mjs@b8b566f</code>.</td></tr><tr><td data-label="Cluster"><code>mcp-server/src/</code></td><td data-label="Apparent role">MCP bootstrap, persistence, invariants, CLI, and tool handlers</td><td data-label="Language">TypeScript/SQL</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">One stdio server registers 75 tools. <code>mcp-server/src/index.ts:main@b8b566f</code>.</td></tr><tr><td data-label="Cluster"><code>mcp-server/test-*.mjs</code> and <code>scripts/</code></td><td data-label="Apparent role">Contract, adversarial, integration, performance, and generation gates</td><td data-label="Language">JavaScript</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">CI enumerates the authoritative gate set. <code>.github/workflows/test.yml@b8b566f</code>.</td></tr><tr><td data-label="Cluster"><code>materializer/</code></td><td data-label="Apparent role">Read-only projection of DB/prose state into linked Markdown</td><td data-label="Language">Python</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">Uses per-page source hashes and a manifest. <code>materializer/amanuensis_materializer/core.py:Materializer@b8b566f</code>.</td></tr><tr><td data-label="Cluster"><code>dev/</code>, root docs, <code>.github/</code></td><td data-label="Apparent role">Product direction, research/design notes, contribution and delivery contracts</td><td data-label="Language">Markdown/JSON/JS/YAML</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes"><code>ROADMAP.md</code> is generated from <code>dev/roadmap.json</code>. <code>dev/render-roadmap.mjs@b8b566f</code>.</td></tr></tbody></table></div>
+<section class="section-phase-1-repository-shape">
+<h2 id="phase-1-repository-shape"><a class="heading-anchor" href="#phase-1-repository-shape" aria-label="Link to Phase 1 · Repository shape">§</a>Phase 1 · Repository shape</h2>
+<div class="table-wrap"><table><caption>phase 1 repository shape</caption><thead><tr><th scope="col">Directory</th><th scope="col">Apparent role</th><th scope="col">Language</th><th scope="col">Confidence</th><th scope="col">Notes</th></tr></thead><tbody><tr><td data-label="Directory"><code>mcp-server/</code></td><td data-label="Apparent role">The MCP server and its tests</td><td data-label="Language">TypeScript on Node 24</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">166 tracked files; <code>src/</code> is 55 files and ~38k lines; built with <code>npm run build</code> to <code>dist/</code></td></tr><tr><td data-label="Directory"><code>materializer/</code></td><td data-label="Apparent role">Read-only projection to Markdown and HTML</td><td data-label="Language">Python 3.12</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">24 tracked files; a package plus a CLI entry (<code>materialize.py</code>) and six test scripts</td></tr><tr><td data-label="Directory"><code>.claude/skills/amanuensis/</code></td><td data-label="Apparent role">The survey methodology</td><td data-label="Language">Markdown</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes"><code>SKILL.md</code> plus 15 reference files; read by an agent, and by one mechanical checker</td></tr><tr><td data-label="Directory"><code>dev/</code></td><td data-label="Apparent role">Gates, harnesses, one-shot procedures</td><td data-label="Language">JavaScript (ESM)</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">136 tracked files, including the immutable A0 historical fixture under <code>dev/conspectus/</code></td></tr><tr><td data-label="Directory"><code>docs/</code></td><td data-label="Apparent role">The checked-in projection</td><td data-label="Language">Markdown + HTML</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">48 tracked files; written by promotion, never by hand</td></tr><tr><td data-label="Directory"><code>design/</code></td><td data-label="Apparent role">Design records for in-flight cycles</td><td data-label="Language">Markdown + JSON</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">The reader-lenses specification, claims, plan, and review dispositions</td></tr><tr><td data-label="Directory"><code>scholiast/</code></td><td data-label="Apparent role">A checked-in research survey</td><td data-label="Language">Markdown + JSON</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes">103 files no part of the running system imports; deferred as <a href="subsystems/b12-vendored-research-corpus.html"><abbr class="identifier-definition" title="B-12 — Vendored research corpus" aria-label="B-12 — Vendored research corpus">B-12</abbr></a></td></tr><tr><td data-label="Directory"><code>.github/workflows/</code></td><td data-label="Apparent role">CI</td><td data-label="Language">YAML</td><td data-label="Confidence"><span class="severity severity-high" title="Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.">High</span></td><td data-label="Notes"><code>test.yml</code> is the gate list; <code>pages.yml</code>, <code>publish.yml</code>, <code>published-smoke.yml</code> are release paths</td></tr></tbody></table></div>
 </section>
-<section class="section-runtime-boundary-map">
-<h2 id="runtime-boundary-map"><a class="heading-anchor" href="#runtime-boundary-map" aria-label="Link to Runtime boundary map">§</a>Runtime boundary map</h2>
-<div class="runtime-boundary-projection"><figure class="runtime-boundary-diagram" aria-label="runtime boundary map"><figcaption class="runtime-diagram-caption"><strong>6 recorded runtime boundaries</strong><span>Runtime → communication mechanism → recorded target</span></figcaption><div class="runtime-svg-scroll"><svg class="runtime-boundary-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 684" role="img" aria-labelledby="runtime-boundary-svg-title runtime-boundary-svg-description"><title id="runtime-boundary-svg-title">Runtime boundary map</title><desc id="runtime-boundary-svg-description">6 recorded runtime boundaries; each row connects a runtime or process to its recorded target through the stated mechanism.</desc><text class="runtime-svg-column-label" x="24" y="27">Runtime or process</text><text class="runtime-svg-column-label" x="480" y="27" text-anchor="middle">Mechanism</text><text class="runtime-svg-column-label" x="692" y="27">Communicates with</text><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="48" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="60" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="60" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="101" x2="692" y2="101"/><path class="runtime-svg-arrow" d="M 692 101 L 682 96 L 682 106 Z"/><rect class="runtime-svg-edge-label" x="308" y="82.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="87" text-anchor="start"><tspan x="38" dy="0">Host agent runtime</tspan></text><text class="runtime-svg-language" x="38" y="111" text-anchor="start"><tspan x="38" dy="0">external</tspan></text><text class="runtime-svg-title" x="706" y="91" text-anchor="start"><tspan x="706" dy="0">MCP server</tspan></text><text class="runtime-svg-mechanism" x="480" y="97.5" text-anchor="middle"><tspan x="480" dy="0">stdio MCP</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="154" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="166" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="166" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="207" x2="692" y2="207"/><path class="runtime-svg-arrow" d="M 692 207 L 682 202 L 682 212 Z"/><rect class="runtime-svg-edge-label" x="308" y="181" width="344" height="52"/><text class="runtime-svg-title" x="38" y="193" text-anchor="start"><tspan x="38" dy="0">amanuensis-memory</tspan></text><text class="runtime-svg-language" x="38" y="217" text-anchor="start"><tspan x="38" dy="0">Node/TypeScript</tspan></text><text class="runtime-svg-title" x="706" y="197" text-anchor="start"><tspan x="706" dy="0">host, SQLite, git, Python</tspan></text><text class="runtime-svg-mechanism" x="480" y="196" text-anchor="middle"><tspan x="480" dy="0">MCP stdio, native SQLite binding,</tspan><tspan x="480" dy="15">subprocess</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="260" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="272" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="272" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="313" x2="692" y2="313"/><path class="runtime-svg-arrow" d="M 692 313 L 682 308 L 682 318 Z"/><rect class="runtime-svg-edge-label" x="308" y="287" width="344" height="52"/><text class="runtime-svg-title" x="38" y="299" text-anchor="start"><tspan x="38" dy="0">SQLite memory.db</tspan></text><text class="runtime-svg-language" x="38" y="323" text-anchor="start"><tspan x="38" dy="0">SQL</tspan></text><text class="runtime-svg-title" x="706" y="303" text-anchor="start"><tspan x="706" dy="0">MCP server and materializer</tspan></text><text class="runtime-svg-mechanism" x="480" y="302" text-anchor="middle"><tspan x="480" dy="0">WAL; one writer API, read-only</tspan><tspan x="480" dy="15">materializer connection</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="366" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="378" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="378" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="419" x2="692" y2="419"/><path class="runtime-svg-arrow" d="M 692 419 L 682 414 L 682 424 Z"/><rect class="runtime-svg-edge-label" x="308" y="400.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="405" text-anchor="start"><tspan x="38" dy="0">Git storage history</tspan></text><text class="runtime-svg-language" x="38" y="429" text-anchor="start"><tspan x="38" dy="0">git subprocess</tspan></text><text class="runtime-svg-title" x="706" y="409" text-anchor="start"><tspan x="706" dy="0">storage directory</tspan></text><text class="runtime-svg-mechanism" x="480" y="415.5" text-anchor="middle"><tspan x="480" dy="0">synchronous child process</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane" x="0" y="472" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="484" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="484" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="525" x2="692" y2="525"/><path class="runtime-svg-arrow" d="M 692 525 L 682 520 L 682 530 Z"/><rect class="runtime-svg-edge-label" x="308" y="506.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="511" text-anchor="start"><tspan x="38" dy="0">Python materializer</tspan></text><text class="runtime-svg-language" x="38" y="535" text-anchor="start"><tspan x="38" dy="0">Python</tspan></text><text class="runtime-svg-title" x="706" y="515" text-anchor="start"><tspan x="706" dy="0">SQLite and prose storage</tspan></text><text class="runtime-svg-mechanism" x="480" y="521.5" text-anchor="middle"><tspan x="480" dy="0">child process and filesystem</tspan></text></g><g class="runtime-svg-row"><rect class="runtime-svg-lane-even" x="0" y="578" width="960" height="106"/><rect class="runtime-svg-node" x="24" y="590" width="244" height="82"/><rect class="runtime-svg-node runtime-svg-target" x="692" y="590" width="244" height="82"/><line class="runtime-svg-edge" x1="268" y1="631" x2="692" y2="631"/><path class="runtime-svg-arrow" d="M 692 631 L 682 626 L 682 636 Z"/><rect class="runtime-svg-edge-label" x="308" y="612.5" width="344" height="37"/><text class="runtime-svg-title" x="38" y="617" text-anchor="start"><tspan x="38" dy="0">Installer CLI</tspan></text><text class="runtime-svg-language" x="38" y="641" text-anchor="start"><tspan x="38" dy="0">Node/TypeScript</tspan></text><text class="runtime-svg-title" x="706" y="621" text-anchor="start"><tspan x="706" dy="0">workspace files</tspan></text><text class="runtime-svg-mechanism" x="480" y="627.5" text-anchor="middle"><tspan x="480" dy="0">filesystem/config merge</tspan></text></g></svg></div></figure><div class="runtime-boundary-details" role="list" aria-label="Complete runtime boundary details"><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Host agent runtime</h3><span class="runtime-detail-language">external</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>MCP server</p><p><span class="runtime-detail-label">Mechanism</span>stdio MCP</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Starts the server with a workspace path. <code>.mcp.json@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3><code>amanuensis-memory</code></h3><span class="runtime-detail-language">Node/TypeScript</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>host, SQLite, git, Python</p><p><span class="runtime-detail-label">Mechanism</span>MCP stdio, native SQLite binding, subprocess</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Owns validation and durable records. <code>mcp-server/src/index.ts:main@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>SQLite <code>memory.db</code></h3><span class="runtime-detail-language">SQL</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>MCP server and materializer</p><p><span class="runtime-detail-label">Mechanism</span>WAL; one writer API, read-only materializer connection</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Schema initializes and migrates on open. <code>mcp-server/src/db.ts:openDatabase@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Git storage history</h3><span class="runtime-detail-language">git subprocess</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>storage directory</p><p><span class="runtime-detail-label">Mechanism</span>synchronous child process</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Commits DB/prose state at gates. <code>mcp-server/src/storage-git.ts:commitStorage@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Python materializer</h3><span class="runtime-detail-language">Python</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>SQLite and prose storage</p><p><span class="runtime-detail-label">Mechanism</span>child process and filesystem</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Emits docs and <code>.manifest.json</code>. <code>materializer/amanuensis_materializer/core.py:Materializer.materialize@b8b566f</code>.</p></div></article><article class="runtime-detail" role="listitem"><header class="runtime-detail-head"><h3>Installer CLI</h3><span class="runtime-detail-language">Node/TypeScript</span></header><div class="runtime-detail-body"><p><span class="runtime-detail-label">Communicates with</span>workspace files</p><p><span class="runtime-detail-label">Mechanism</span>filesystem/config merge</p><p class="runtime-detail-note"><span class="runtime-detail-label">Recorded note</span>Writes agents and VS Code MCP config. <code>mcp-server/src/cli.ts:plan@b8b566f</code>.</p></div></article></div></div>
+<section class="section-phase-2-runtime-boundary-map">
+<h2 id="phase-2-runtime-boundary-map"><a class="heading-anchor" href="#phase-2-runtime-boundary-map" aria-label="Link to Phase 2 · Runtime boundary map">§</a>Phase 2 · Runtime boundary map</h2>
+<div class="table-wrap"><table><caption>phase 2 runtime boundary map</caption><thead><tr><th scope="col">Process</th><th scope="col">Language</th><th scope="col">Peers</th><th scope="col">Mechanism</th></tr></thead><tbody><tr><td data-label="Process"><code>amanuensis-memory</code> MCP server</td><td data-label="Language">Node 24</td><td data-label="Peers">the agent host (Claude Code, Codex)</td><td data-label="Mechanism">JSON-RPC over stdio, one process per workspace binding</td></tr><tr><td data-label="Process"><code>materialize.py</code></td><td data-label="Language">Python 3.12</td><td data-label="Peers">the store; the server that invokes it</td><td data-label="Mechanism">spawned as a subprocess by <code>materialize_docs</code>; opens the database read-only</td></tr><tr><td data-label="Process"><code>git</code></td><td data-label="Language">—</td><td data-label="Peers">the server</td><td data-label="Mechanism"><code>spawnSync</code> from the server, in the workspace for revisions and in the storage directory for its own history</td></tr></tbody></table></div>
+<p>The store is a single SQLite database at <code>&lt;workspace&gt;/.amanuensis/memory.db</code>, in WAL mode. The storage directory is itself a git repository, which is how a phase gate is recoverable.</p>
 </section>
-<section class="section-significant-stateful-entities">
-<h2 id="significant-stateful-entities"><a class="heading-anchor" href="#significant-stateful-entities" aria-label="Link to Significant stateful entities">§</a>Significant stateful entities</h2>
-<div class="table-wrap lifecycle-table"><table><caption>significant stateful entities</caption><thead><tr><th scope="col">Name</th><th scope="col">What it stores</th><th scope="col">Lifetime</th><th scope="col">Populated by</th><th scope="col">Invalidated by</th></tr></thead><tbody><tr><th scope="row" data-label="Name"><span class="table-key"><code>memory.db</code> + WAL</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>~/.amanuensis/workspaces/&lt;owner&gt;/&lt;repo&gt;/</code></span></th><td data-label="What it stores">Survey entities, evidence, findings, sessions, queries, locks, seams</td><td data-label="Lifetime">Cross-session</td><td data-label="Populated by">MCP tool handlers</td><td data-label="Invalidated by">Explicit reset/status/validity operations; schema has no general claim-time model yet</td></tr><tr><th scope="row" data-label="Name"><span class="table-key"><code>ServerContext.sessionId</code></span><span class="table-detail"><span class="visually-hidden">Location: </span><code>mcp-server/src/index.ts</code></span></th><td data-label="What it stores">Active writer session</td><td data-label="Lifetime">Server process</td><td data-label="Populated by"><code>start_session</code></td><td data-label="Invalidated by"><code>end_session</code> or process exit</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">Storage git repository</span><span class="table-detail"><span class="visually-hidden">Location: </span>project storage directory</span></th><td data-label="What it stores">Checkpoint history of non-ignored storage files</td><td data-label="Lifetime">Cross-session</td><td data-label="Populated by"><code>commit_phase_gate</code>, <code>end_session</code></td><td data-label="Invalidated by">Git history only; rollback is external</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">File ledger and git baseline</span><span class="table-detail"><span class="visually-hidden">Location: </span>SQLite tables</span></th><td data-label="What it stores">File-to-subsystem assignment and checked revision</td><td data-label="Lifetime">Cross-session</td><td data-label="Populated by">scope and git tools</td><td data-label="Invalidated by">reset/change detection</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">Materializer manifest</span><span class="table-detail"><span class="visually-hidden">Location: </span>rendered docs directory</span></th><td data-label="What it stores">Per-page source/content hashes</td><td data-label="Lifetime">Cross-render</td><td data-label="Populated by">materializer</td><td data-label="Invalidated by">source/version/content difference or page retirement</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">Write locks and dispatch rows</span><span class="table-detail"><span class="visually-hidden">Location: </span>SQLite tables</span></th><td data-label="What it stores">Advisory coordination and fan-out history</td><td data-label="Lifetime">Cross-process</td><td data-label="Populated by">lock/dispatch tools</td><td data-label="Invalidated by">release/expiry and completion calls</td></tr></tbody></table></div>
+<section class="section-phase-3-stateful-entities">
+<h2 id="phase-3-stateful-entities"><a class="heading-anchor" href="#phase-3-stateful-entities" aria-label="Link to Phase 3 · Stateful entities">§</a>Phase 3 · Stateful entities</h2>
+<div class="table-wrap lifecycle-table"><table><caption>phase 3 stateful entities</caption><thead><tr><th scope="col">Name</th><th scope="col">Stores</th><th scope="col">Lifetime</th><th scope="col">Populated by</th><th scope="col">Invalidated by</th></tr></thead><tbody><tr><th scope="row" data-label="Name"><span class="table-key">the database handle</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>mcp-server/src/db.ts</code></span></th><td data-label="Stores">the open connection</td><td data-label="Lifetime">process</td><td data-label="Populated by">first use</td><td data-label="Invalidated by">process exit; nothing re-opens it mid-life</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">the binding receipt</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>.amanuensis/initialization.json</code></span></th><td data-label="Stores">workspace identity, storage policy</td><td data-label="Lifetime">persistent</td><td data-label="Populated by">first initialization</td><td data-label="Invalidated by">never rewritten; a mismatch refuses the open</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">the storage git repository</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>.amanuensis/.git</code></span></th><td data-label="Stores">every phase gate commit</td><td data-label="Lifetime">persistent</td><td data-label="Populated by"><code>commit_phase_gate</code></td><td data-label="Invalidated by">nothing; it is append-only in practice</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">the file ledger</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>file_ledger</code> table</span></th><td data-label="Stores">one row per scoped path</td><td data-label="Lifetime">persistent</td><td data-label="Populated by"><code>add_files_to_scope</code></td><td data-label="Invalidated by"><code>detect_changes</code> writes stale reasons onto it</td></tr><tr><th scope="row" data-label="Name"><span class="table-key">the resolution event spine</span><span class="table-detail"><span class="visually-hidden">Location: </span><code>finding_resolution_events</code></span></th><td data-label="Stores">append-only state transitions</td><td data-label="Lifetime">persistent</td><td data-label="Populated by"><code>add_finding</code>, the resolution tools</td><td data-label="Invalidated by">never updated or deleted; current state is a view</td></tr></tbody></table></div>
 </section>
-<section class="section-concern-calibration">
-<h2 id="concern-calibration"><a class="heading-anchor" href="#concern-calibration" aria-label="Link to Concern calibration">§</a>Concern calibration</h2>
-<div class="table-wrap"><table><caption>concern calibration</caption><thead><tr><th scope="col">Territory</th><th scope="col">Verdict</th><th scope="col">Derived concerns / disqualifier</th></tr></thead><tbody><tr><td data-label="Territory">T1 scope-context identity</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#si-1"><abbr class="identifier-definition" title="SI-1 — Scope Identity: Verify project-key derivation, stored workspacepath collision detection, and storage-root confinement cannot conflate two workspaces or escape the root." aria-label="SI-1 — Scope Identity: Verify project-key derivation, stored workspacepath collision detection, and storage-root confinement cannot conflate two workspaces or escape the root.">SI-1</abbr></a>, <a href="concerns.html#si-2"><abbr class="identifier-definition" title="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA." aria-label="SI-2 — Revision Identity: Verify every evidence-bearing record and generated artifact retains the exact repository revision and cannot be reused as current evidence at another SHA.">SI-2</abbr></a></td></tr><tr><td data-label="Territory">T2 cache coherence</td><td data-label="Verdict">applicable by analogy to derived-state manifests and git baselines</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#cc-1"><abbr class="identifier-definition" title="CC-1 — Cache Coherence: Compare every materialized page with its declared DB/prose source set; omitted dependencies must not leave a page falsely unchanged." aria-label="CC-1 — Cache Coherence: Compare every materialized page with its declared DB/prose source set; omitted dependencies must not leave a page falsely unchanged.">CC-1</abbr></a></td></tr><tr><td data-label="Territory">T3 temporal bounds</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#tb-1"><abbr class="identifier-definition" title="TB-1 — Temporal Bounds: Inspect every git and Python subprocess invocation for bounded completion, cancellation, and actionable failure propagation." aria-label="TB-1 — Temporal Bounds: Inspect every git and Python subprocess invocation for bounded completion, cancellation, and actionable failure propagation.">TB-1</abbr></a></td></tr><tr><td data-label="Territory">T4 exceptional-path asymmetry</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#ep-1"><abbr class="identifier-definition" title="EP-1 — Exceptional Paths: Verify a failed page render cannot publish a globally green or internally inconsistent documentation set." aria-label="EP-1 — Exceptional Paths: Verify a failed page render cannot publish a globally green or internally inconsistent documentation set.">EP-1</abbr></a>, <a href="concerns.html#ep-2"><abbr class="identifier-definition" title="EP-2 — Exceptional Paths: Verify each mutating tool either commits all dependent rows or leaves pre-call state intact when validation, SQL, or filesystem work fails." aria-label="EP-2 — Exceptional Paths: Verify each mutating tool either commits all dependent rows or leaves pre-call state intact when validation, SQL, or filesystem work fails.">EP-2</abbr></a></td></tr><tr><td data-label="Territory">T5 aliasing/ownership</td><td data-label="Verdict">not seeded</td><td data-label="Derived concerns / disqualifier">MCP values cross serialization boundaries and no shared returned mutable object was established during onboarding; revisit if <a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a>/<a href="subsystems/b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a> finds one</td></tr><tr><td data-label="Territory">T6 incremental/full divergence</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#if-1"><abbr class="identifier-definition" title="IF-1 — Incremental Full Divergence: Compare incremental materialization, force-full materialization, and clean-export outputs for exact state, coverage, and content correspondence." aria-label="IF-1 — Incremental Full Divergence: Compare incremental materialization, force-full materialization, and clean-export outputs for exact state, coverage, and content correspondence.">IF-1</abbr></a></td></tr><tr><td data-label="Territory">T7 atomicity</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#at-1"><abbr class="identifier-definition" title="AT-1 — Atomicity: Inspect multi-table resets, status advances, finding transitions, and diagnosticity resolution for transaction boundaries covering all dependent writes." aria-label="AT-1 — Atomicity: Inspect multi-table resets, status advances, finding transitions, and diagnosticity resolution for transaction boundaries covering all dependent writes.">AT-1</abbr></a>, <a href="concerns.html#at-2"><abbr class="identifier-definition" title="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op." aria-label="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op.">AT-2</abbr></a></td></tr><tr><td data-label="Territory">T8 concurrency races</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#cr-1"><abbr class="identifier-definition" title="CR-1 — Concurrency: Verify concurrent agents, advisory write locks, SQLite WAL writers, and storage git commits cannot lose or misattribute landed work." aria-label="CR-1 — Concurrency: Verify concurrent agents, advisory write locks, SQLite WAL writers, and storage git commits cannot lose or misattribute landed work.">CR-1</abbr></a></td></tr><tr><td data-label="Territory">T9 resource lifecycle</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#rl-1"><abbr class="identifier-definition" title="RL-1 — Resource Lifecycle: Verify database handles, spawned processes, temporary directories, and materializer locks release on success, error, timeout, and cancellation." aria-label="RL-1 — Resource Lifecycle: Verify database handles, spawned processes, temporary directories, and materializer locks release on success, error, timeout, and cancellation.">RL-1</abbr></a>, <a href="concerns.html#rl-2"><abbr class="identifier-definition" title="RL-2 — Resource Lifecycle: Verify sessions, dispatches, open questions, and write locks have explicit terminal or recovery paths and cannot remain silently authoritative after abandonment." aria-label="RL-2 — Resource Lifecycle: Verify sessions, dispatches, open questions, and write locks have explicit terminal or recovery paths and cannot remain silently authoritative after abandonment.">RL-2</abbr></a></td></tr><tr><td data-label="Territory">T10 trust boundary</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#tr-1"><abbr class="identifier-definition" title="TR-1 — Trust Boundary: Verify MCP string/path/enum inputs cannot escape storage, inject SQL or git arguments, or create authority beyond the active subsystem depth." aria-label="TR-1 — Trust Boundary: Verify MCP string/path/enum inputs cannot escape storage, inject SQL or git arguments, or create authority beyond the active subsystem depth.">TR-1</abbr></a>, <a href="concerns.html#tr-2"><abbr class="identifier-definition" title="TR-2 — Trust Boundary: Verify installer parsing and config merging preserve unrelated user configuration, back up destructive overwrites, and reject path traversal." aria-label="TR-2 — Trust Boundary: Verify installer parsing and config merging preserve unrelated user configuration, back up destructive overwrites, and reject path traversal.">TR-2</abbr></a></td></tr><tr><td data-label="Territory">T11 seam contracts</td><td data-label="Verdict">applicable</td><td data-label="Derived concerns / disqualifier"><a href="concerns.html#sc-1"><abbr class="identifier-definition" title="SC-1 — Seam Contract: Verify schema columns/views, TypeScript tool queries, and Python materializer reads evolve together and fail closed on contract drift." aria-label="SC-1 — Seam Contract: Verify schema columns/views, TypeScript tool queries, and Python materializer reads evolve together and fail closed on contract drift.">SC-1</abbr></a>, <a href="concerns.html#sc-2"><abbr class="identifier-definition" title="SC-2 — Seam Contract: Verify package-time agent/materializer mirrors are derived from root sources and CI detects stale or host-dependent packaged assets." aria-label="SC-2 — Seam Contract: Verify package-time agent/materializer mirrors are derived from root sources and CI detects stale or host-dependent packaged assets.">SC-2</abbr></a></td></tr></tbody></table></div>
-<p>The calibrated checklist is in <code>concern-checklist.md</code>; the SQLite concern rows are authoritative for later disposition coverage.</p>
+<section class="section-phase-4-concern-calibration">
+<h2 id="phase-4-concern-calibration"><a class="heading-anchor" href="#phase-4-concern-calibration" aria-label="Link to Phase 4 · Concern calibration">§</a>Phase 4 · Concern calibration</h2>
+<p>Six concerns were derived and are recorded in <code>concern-checklist.md</code>. Territories that did not apply, with the disqualifying condition: <strong>distributed consensus</strong> — there is one process and one database, no quorum, no replication. <strong>Request-scoped tenancy</strong> — no multi-tenant request path exists; the server is bound to one workspace for its lifetime. <strong>Client-side rendering state</strong> — the published projection is static HTML with a no-JavaScript reading path by design. <strong>Schema migration under load</strong> — the schema is applied at open with <code>CREATE TABLE IF NOT EXISTS</code>, and no online migration path exists to be raced.</p>
 </section>
-<section class="section-draft-master-plan">
-<h2 id="draft-master-plan"><a class="heading-anchor" href="#draft-master-plan" aria-label="Link to Draft master plan">§</a>Draft master plan</h2>
-<p>Five subsystems were registered. <a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a> and <a href="subsystems/b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a> share priority 1 because all durable authority flows through their schema/invariant and handler seam. <a href="subsystems/b04-diff-aware-materializer.html"><abbr class="identifier-definition" title="B-04 — Diff-aware materializer" aria-label="B-04 — Diff-aware materializer">B-04</abbr></a> and <a href="subsystems/b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a> share priority 2; delivery and documentation are <a href="subsystems/b05-packaging-installer-validation-and-product-docs.html"><abbr class="identifier-definition" title="B-05 — Packaging, installer, validation, and product docs" aria-label="B-05 — Packaging, installer, validation, and product docs">B-05</abbr></a> at priority 3. See <code>master-plan.md</code>.</p>
+<section class="section-phase-5-master-plan">
+<h2 id="phase-5-master-plan"><a class="heading-anchor" href="#phase-5-master-plan" aria-label="Link to Phase 5 · Master plan">§</a>Phase 5 · Master plan</h2>
+<p>Twelve subsystems, ranked 1–5. See <code>master-plan.md</code>.</p>
 </section>
-<section class="section-questions-for-the-human">
-<h2 id="questions-for-the-human"><a class="heading-anchor" href="#questions-for-the-human" aria-label="Link to Questions for the human">§</a>Questions for the human</h2>
-<h3 id="tier-1-blockers"><a class="heading-anchor" href="#tier-1-blockers" aria-label="Link to Tier 1 — Blockers">§</a>Tier 1 — Blockers</h3>
-<ol><li>Should “fully surveyed” include every tracked test, generated file, prompt, and product document? Working assumption: yes, with explicit exclusions only.</li></ol>
-<h3 id="tier-2-priority-shapers"><a class="heading-anchor" href="#tier-2-priority-shapers" aria-label="Link to Tier 2 — Priority shapers">§</a>Tier 2 — Priority shapers</h3>
-<ol><li>Should the installer support Codex MCP registration alongside VS Code? Working assumption: record the gap in <a href="subsystems/b05-packaging-installer-validation-and-product-docs.html"><abbr class="identifier-definition" title="B-05 — Packaging, installer, validation, and product docs" aria-label="B-05 — Packaging, installer, validation, and product docs">B-05</abbr></a>; do not expand A0 installer scope.</li></ol>
-<h3 id="tier-3-context"><a class="heading-anchor" href="#tier-3-context" aria-label="Link to Tier 3 — Context">§</a>Tier 3 — Context</h3>
-<ol><li>Should phase checkpoints version live SQLite contents? Working assumption: yes; <a href="concerns.html#at-2"><abbr class="identifier-definition" title="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op." aria-label="AT-2 — Atomicity: Verify a phase checkpoint persists SQLite WAL changes into the git-tracked memory.db before reporting a storage commit or no-op.">AT-2</abbr></a> remains active because WAL-backed mutations produced no storage commit during onboarding.</li></ol>
+<section class="section-phase-6-questions-for-the-human">
+<h2 id="phase-6-questions-for-the-human"><a class="heading-anchor" href="#phase-6-questions-for-the-human" aria-label="Link to Phase 6 · Questions for the human">§</a>Phase 6 · Questions for the human</h2>
+<p>Logged rather than blocking; see the open-question queue.</p>
 </section>
-<section class="section-recommended-first-mapping">
-<h2 id="recommended-first-mapping"><a class="heading-anchor" href="#recommended-first-mapping" aria-label="Link to Recommended first mapping">§</a>Recommended first mapping</h2>
-<p><strong>Top</strong>: <a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a> — it owns database initialization, validity gates, session identity, project identity, and checkpoint mechanics.</p>
-<p><strong>Second</strong>: <a href="subsystems/b03-knowledge-tools-and-workflow-api.html"><abbr class="identifier-definition" title="B-03 — Knowledge tools and workflow API" aria-label="B-03 — Knowledge tools and workflow API">B-03</abbr></a> — it is the largest mutation surface and turns the <a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html"><abbr class="identifier-definition" title="B-02 — MCP core, persistence, and lifecycle" aria-label="B-02 — MCP core, persistence, and lifecycle">B-02</abbr></a> contracts into the actual workflow API.</p>
+<section class="section-phase-7-conspectus">
+<h2 id="phase-7-conspectus"><a class="heading-anchor" href="#phase-7-conspectus" aria-label="Link to Phase 7 · Conspectus">§</a>Phase 7 · Conspectus</h2>
+<p>Artifacts registered and hashed at <code>258ccd2</code>. The per-subsystem surveys that follow are batched, with a storage checkpoint commit per batch.</p>
 </section></article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="onboarding-report.md">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>
+<script src="search-index.js"></script>
 <script>
 (() => {
   const root = document.documentElement;
@@ -884,27 +909,338 @@ a .identifier-definition { text-decoration-color: currentColor; }
     if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
   });
 
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
   const search = document.querySelector('[data-nav-search]');
-  const empty = document.querySelector('[data-empty-search]');
-  const filter = () => {
-    const needle = search.value.trim().toLocaleLowerCase();
-    let visible = 0;
-    document.querySelectorAll('.nav-item').forEach((item) => {
-      const match = !needle || item.dataset.search.includes(needle);
-      item.hidden = !match;
-      if (match) visible += 1;
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
     });
-    document.querySelectorAll('.nav-group').forEach((group) => {
-      group.hidden = !group.querySelector('.nav-item:not([hidden])');
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
     });
-    empty?.classList.toggle('visible', visible === 0);
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
   };
-  search?.addEventListener('input', filter);
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault(); search?.focus(); search?.select();
     }
   });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
 })();
 </script>
 </body>

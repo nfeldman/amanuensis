@@ -7,14 +7,22 @@ import {
   type ToolDefinition,
 } from "../helpers.js";
 import {
+  enforceForwardPrerequisites,
   enforceMonotonicTransition,
-  enforcePhasePrerequisites,
   readSubsystemStatus,
+  recordStatusTransition,
   STATUS_ORDER,
   type SubsystemStatus,
 } from "../invariants.js";
+// One predicate for one question: the rollup counted `findings.status`
+// while every lens counted `finding_state_current`, so a repaired finding
+// stayed open here after it had closed everywhere else (F9/codex).
+import { OPEN_FINDING_SQL, SUBSYSTEM_STATUSES } from "../vocabulary.js";
 
-const ALL_STATUSES = [...STATUS_ORDER, "deferred"] as const;
+// The validator takes the source's list. `STATUS_ORDER` keeps authorship of
+// the ladder's *order*, which the source does not carry; the gate asserts the
+// two cover the same set (C48, F4/codex).
+const ALL_STATUSES = SUBSYSTEM_STATUSES;
 
 // The canonical schema does not include explicit columns for subsystem name,
 // scope, jump-in reading, etc. — those live in the master-plan.md prose.
@@ -43,9 +51,9 @@ export const subsystemTools: ToolDefinition[] = [
       // and a JS Map merge.
       const sql = `
         SELECT s.id, s.name, s.status, s.layer, s.scope, s.jump_in_reading, s.notes, s.priority,
-               COUNT(f.finding_id) FILTER (WHERE f.status='confirmed-bug') AS confirmed_bugs
+               COUNT(v.finding_id) FILTER (WHERE ${OPEN_FINDING_SQL}) AS confirmed_bugs
           FROM subsystems s
-          LEFT JOIN findings f ON f.subsystem_id = s.id
+          LEFT JOIN finding_state_current v ON v.subsystem_id = s.id
          ${statusFilter ? "WHERE s.status = ?" : ""}
          GROUP BY s.id
          ORDER BY CASE WHEN s.priority IS NULL THEN 1 ELSE 0 END, s.priority, s.layer, s.id`;
@@ -107,7 +115,16 @@ export const subsystemTools: ToolDefinition[] = [
       // Upsert may hit an existing row — enforce that the new status is
       // not a silent regression. Fresh inserts bypass the guard (there
       // is no prior status to compare against).
-      enforceMonotonicTransition(id, readSubsystemStatus(ctx.db, id), status);
+      const previousStatus = readSubsystemStatus(ctx.db, id);
+      enforceMonotonicTransition(id, previousStatus, status);
+
+      // …and that it is not a silent *advance* either. This tool writes
+      // `status` directly, so without this it is a second door to every
+      // status that `update_subsystem_status` gates — including
+      // `structural`, whose prerequisites are the only record that the
+      // scoping and structural phases ran at all. A fresh insert is held
+      // to the same bar as an advance: both arrive at the same state.
+      enforceForwardPrerequisites(ctx.db, id, previousStatus, status);
 
       // COALESCE on the UPDATE path: omitted priority leaves the
       // prior value alone. Pass explicit priority=null in the future
@@ -127,6 +144,17 @@ export const subsystemTools: ToolDefinition[] = [
              updated_at=datetime('now')`,
         )
         .run(id, name, status, layer, scope, jumpIn, notes, priority ?? null);
+      // The rung this write climbed, appended to the ladder. `upsert_subsystem`
+      // is a status writer as much as `update_subsystem_status` is, so a ladder
+      // that recorded only the latter would have a hole exactly where the
+      // second door is (slice-S3 F3/codex; slice-S6 F6/codex).
+      recordStatusTransition(ctx.db, {
+        subsystemId: id,
+        fromStatus: previousStatus,
+        toStatus: status,
+        tool: "upsert_subsystem",
+        sessionId: ctx.sessionId,
+      });
       return ok();
     },
   },
@@ -160,19 +188,18 @@ export const subsystemTools: ToolDefinition[] = [
       // Enforce that each newly-reached status has the prior phase's evidence.
       // Checked after the monotonic guard so regression attempts are caught first.
       // Skipped for deferred toggles (both directions) and no-op same-status writes.
-      const currentRank = STATUS_ORDER.indexOf(
-        currentStatus as Exclude<SubsystemStatus, "deferred">,
-      );
-      const targetRank = STATUS_ORDER.indexOf(status as Exclude<SubsystemStatus, "deferred">);
-      if (currentRank >= 0 && targetRank > currentRank) {
-        for (const s of STATUS_ORDER.slice(currentRank + 1, targetRank + 1)) {
-          enforcePhasePrerequisites(ctx.db, id, s);
-        }
-      }
+      enforceForwardPrerequisites(ctx.db, id, currentStatus, status);
 
       ctx.db
         .prepare("UPDATE subsystems SET status=?, updated_at=datetime('now') WHERE id=?")
         .run(status, id);
+      recordStatusTransition(ctx.db, {
+        subsystemId: id,
+        fromStatus: currentStatus,
+        toStatus: status,
+        tool: "update_subsystem_status",
+        sessionId: ctx.sessionId,
+      });
       return ok({ previous_status: currentStatus });
     },
   },
@@ -288,12 +315,53 @@ export const subsystemTools: ToolDefinition[] = [
           deleted.file_ledger = ctx.db
             .prepare("DELETE FROM file_ledger WHERE subsystem_id = ?")
             .run(id).changes;
+          // Structural claims are the structural phase's output, exactly as
+          // dispositions are the concerns phase's. A reset *below* structural
+          // discards that phase, so its claims go with it; leaving them
+          // current let the re-advance to `structural` be satisfied by the
+          // very reading the reset threw away, and C43's "at least one current
+          // claim" stopped meaning the phase had run (slice-S3, F6/codex).
+          // A reset that stops at `structural` regresses the concerns pass and
+          // not the structural one, so the claims stay — the same rule the
+          // ledger follows one phase down.
+          //
+          // Matched with substr rather than LIKE: a subsystem id may carry `_`
+          // or `%`, and an unescaped pattern would reach another subsystem's
+          // namespace. Supersession rows are cleared first because their two
+          // foreign keys are ON DELETE RESTRICT; claim_evidence and
+          // claim_validity_events cascade. Every version under the prefix goes,
+          // current and historical alike: a surviving predecessor whose
+          // successor had been deleted would be a history with a hole in it.
+          const prefix = `${id}/`;
+          const owned =
+            "SELECT claim_id FROM claims WHERE substr(claim_key, 1, length(:prefix)) = :prefix";
+          deleted.claim_supersessions = ctx.db
+            .prepare(
+              `DELETE FROM claim_supersessions
+                WHERE predecessor_claim_id IN (${owned})
+                   OR successor_claim_id IN (${owned})`,
+            )
+            .run({ prefix }).changes;
+          deleted.claims = ctx.db
+            .prepare("DELETE FROM claims WHERE substr(claim_key, 1, length(?)) = ?")
+            .run(prefix, prefix).changes;
         }
         ctx.db
           .prepare(
             "UPDATE subsystems SET status=?, updated_at=datetime('now'), notes = COALESCE(notes, '') || char(10) || ? WHERE id = ?",
           )
           .run(toStatus, `[reset ${new Date().toISOString()}] ${reason}`, id);
+        // A regression is a rung of the recorded ladder too: a subsystem that
+        // reached `mapped`, was reset, and climbed back has a history, and a
+        // ladder that showed only the climb would be a history with a hole.
+        recordStatusTransition(ctx.db, {
+          subsystemId: id,
+          fromStatus: row.status as SubsystemStatus,
+          toStatus,
+          tool: "reset_subsystem",
+          sessionId: ctx.sessionId,
+          reason,
+        });
       });
       txn();
 

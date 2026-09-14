@@ -5,41 +5,25 @@ import {
   requireEnum,
   requireString,
   requireWorkspaceCitation,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
-
-const CLASSIFICATIONS = [
-  "confirmed-bug",
-  "confirmed-acceptable",
-  "ruled-out",
-  "out-of-scope",
-  "unresolved-competition",
-] as const;
 // A disposition's evidence_quality names the strongest evidence row attached to
 // it, so this vocabulary must be exactly what add_evidence accepts. It was once
 // a shorter list, which left an agent whose best evidence was `test-observed`
 // no way to say so — it had to overstate as code-verified or understate as
-// contract-stated, and code-verified is the nearer value (finding B03-3).
-// scripts/check-evidence-vocabulary.mjs holds these lists together.
-const EVIDENCE_QUALITY = [
-  "code-verified",
-  "contract-stated",
-  "comment-asserted",
-  "name-inferred",
-  "pattern-matched",
-  "test-observed",
-  "config-asserted",
-  "doc-asserted",
-  "runtime-observed",
-] as const;
-const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
+// contract-stated, and code-verified is the nearer value (finding B03-3). Both
+// are now generated from contracts/conspectus-vocabulary.json, and
+// scripts/check-evidence-vocabulary.mjs holds the source, the two generated
+// copies, and SKILL.md's prose ladder together.
+import { DISPOSITION_CLASSIFICATIONS, EVIDENCE_QUALITIES, PASS_TYPES } from "../vocabulary.js";
 
 export const dispositionTools: ToolDefinition[] = [
   {
     name: "set_disposition",
     description:
-      "Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. This is the primary DB analog of the subsystem survey's Concern Disposition Table.",
+      "Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. ref_sha must resolve to a commit in the bound workspace and is stored resolved. This is the primary DB analog of the subsystem survey's Concern Disposition Table.",
     inputSchema: {
       type: "object",
       properties: {
@@ -70,12 +54,12 @@ export const dispositionTools: ToolDefinition[] = [
       requireActiveSession(ctx, "set_disposition");
       const subsystemId = requireString(args, "subsystem_id");
       const concernCode = requireString(args, "concern_code");
-      const classification = requireEnum(args, "classification", CLASSIFICATIONS);
+      const classification = requireEnum(args, "classification", DISPOSITION_CLASSIFICATIONS);
       const evidence = requireWorkspaceCitation(args.evidence, "evidence", { strict: false });
-      const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITY);
+      const evidenceQuality = requireEnum(args, "evidence_quality", EVIDENCE_QUALITIES);
       const linchpin = optBool(args, "linchpin_dependent", false);
       const rationale = requireString(args, "rationale");
-      const refSha = requireString(args, "ref_sha");
+      const requestedRefSha = requireString(args, "ref_sha");
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 
@@ -94,6 +78,13 @@ export const dispositionTools: ToolDefinition[] = [
       if (!concernExists) {
         return { ok: false, error: `concern ${concernCode} does not exist — add it first` };
       }
+
+      // Resolved in the bound workspace, and stored resolved, for the reason
+      // add_claim already resolved its own: an unresolvable revision is
+      // published as a revision-bound reading by every reader (F6/codex). It
+      // runs after the depth and concern gates so a caller who got those wrong
+      // is told that rather than told about its revision.
+      const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
 
       ctx.db
         .prepare(

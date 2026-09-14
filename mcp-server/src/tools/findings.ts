@@ -9,6 +9,7 @@ import {
   requireString,
   requireWorkspaceCitation,
   requireWorkspaceSourcePath,
+  resolveWorkspaceCommit,
   type ServerContext,
   type ToolDefinition,
   ToolError,
@@ -18,10 +19,22 @@ import {
   requireOverturnEvidence,
   requireSubsystemStatus,
 } from "../invariants.js";
+import {
+  FINDING_RESOLUTION_STATES,
+  FINDING_STATUSES,
+  OPEN_FINDING_SQL,
+  PASS_TYPES,
+  SEVERITIES,
+} from "../vocabulary.js";
 
-const SEVERITY = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
-const STATUS = ["confirmed-bug", "confirmed-acceptable", "fixed", "ruled-out"] as const;
-const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
+// One count per resolution state, generated from the enum source so the roll-up
+// cannot fall behind the vocabulary. The column for a state is its value with
+// dashes replaced, which keeps the two names `get_finding_summary` already
+// published — `fixed_pending_verification` and `verified_fixed`.
+const RESOLUTION_STATE_COUNTS = FINDING_RESOLUTION_STATES.map(
+  (state) =>
+    `SUM(CASE WHEN v.resolution_state='${state}' THEN 1 ELSE 0 END) AS ${state.replace(/-/g, "_")}`,
+).join(",\n                ");
 
 function git(ctx: ServerContext, args: string[]): ReturnType<typeof spawnSync> {
   return spawnSync("git", args, {
@@ -29,13 +42,6 @@ function git(ctx: ServerContext, args: string[]): ReturnType<typeof spawnSync> {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-}
-
-function resolveCommit(ctx: ServerContext, requested: string): string {
-  const result = git(ctx, ["rev-parse", "--verify", `${requested}^{commit}`]);
-  const sha = result.stdout?.toString().trim() ?? "";
-  if (result.status !== 0 || !sha) throw new ToolError(`unknown git commit: ${requested}`);
-  return sha;
 }
 
 function requireAncestor(ctx: ServerContext, ancestor: string, descendant: string): void {
@@ -51,7 +57,9 @@ function requireAncestor(ctx: ServerContext, ancestor: string, descendant: strin
   );
 }
 
-function stateForStatus(status: (typeof STATUS)[number]): "open" | "accepted" | "ruled-out" {
+function stateForStatus(
+  status: (typeof FINDING_STATUSES)[number],
+): "open" | "accepted" | "ruled-out" {
   if (status === "confirmed-bug") return "open";
   if (status === "confirmed-acceptable") return "accepted";
   return "ruled-out";
@@ -61,7 +69,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "add_finding",
     description:
-      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms.",
+      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at.",
     inputSchema: {
       type: "object",
       properties: {
@@ -96,8 +104,8 @@ export const findingTools: ToolDefinition[] = [
       const subsystemId = requireString(args, "subsystem_id");
       const symptom = requireString(args, "symptom");
       const rootCause = requireString(args, "root_cause");
-      const severity = requireEnum(args, "severity", SEVERITY);
-      const status = requireEnum(args, "status", STATUS);
+      const severity = requireEnum(args, "severity", SEVERITIES);
+      const status = requireEnum(args, "status", FINDING_STATUSES);
       const passType = requireEnum(args, "pass_type", PASS_TYPES);
       const rawFixLocation = optString(args, "fix_location");
       const fixLocation = rawFixLocation
@@ -107,7 +115,7 @@ export const findingTools: ToolDefinition[] = [
         requireWorkspaceCitation(citation, "primary_files"),
       );
       const businessContext = optString(args, "business_context");
-      const refSha = requireString(args, "ref_sha");
+      const requestedRefSha = requireString(args, "ref_sha");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
 
       if (status === "fixed" || status === "ruled-out") {
@@ -122,6 +130,15 @@ export const findingTools: ToolDefinition[] = [
       // reached the requisite phase.
       const minStatus = passType === "adversarial" ? "adversarial" : "concerns";
       requireSubsystemStatus(ctx.db, subsystemId, minStatus, "add_finding");
+
+      // Resolved in the bound workspace, and stored resolved: the opening
+      // resolution event is cut by this revision and every reader reports the
+      // finding revision-bound on it, so an unresolvable one would publish a
+      // binding the record cannot support (F6/codex). It runs after the
+      // authorization gates because a caller writing to the wrong subsystem is
+      // better told that than told about its revision, and because a refused
+      // write should not spawn a git subprocess first.
+      const refSha = resolveWorkspaceCommit(ctx, requestedRefSha);
 
       try {
         ctx.db.transaction(() => {
@@ -149,10 +166,19 @@ export const findingTools: ToolDefinition[] = [
           ctx.db
             .prepare(
               `INSERT INTO finding_resolution_events
-                 (finding_id, resolution_state, rationale, session_id)
-               VALUES (?, ?, ?, ?)`,
+                 (finding_id, resolution_state, effective_sha, rationale, session_id)
+               VALUES (?, ?, ?, ?, ?)`,
             )
-            .run(findingId, stateForStatus(status), `Finding recorded as ${status}`, sessionId);
+            .run(
+              findingId,
+              stateForStatus(status),
+              // The revision the finding was read at. Without it the opening
+              // event carries no revision at all and every historical cut
+              // counts it as unplaceable (F5/codex).
+              refSha,
+              `Finding recorded as ${status}`,
+              sessionId,
+            );
         })();
       } catch (e) {
         // The PK on findings.finding_id is the only UNIQUE constraint on
@@ -188,7 +214,7 @@ export const findingTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const sessionId = requireActiveSession(ctx, "update_finding_status");
       const findingId = requireString(args, "finding_id");
-      const status = requireEnum(args, "status", STATUS);
+      const status = requireEnum(args, "status", FINDING_STATUSES);
       const rawFixLocation = optString(args, "fix_location");
       const fixLocation = rawFixLocation
         ? requireWorkspaceSourcePath(rawFixLocation, "fix_location")
@@ -214,23 +240,23 @@ export const findingTools: ToolDefinition[] = [
             "fixed requires both fix_location and fix_sha and remains pending until verify_finding_fix succeeds",
           );
         }
-        fixSha = resolveCommit(ctx, requestedFixSha);
+        fixSha = resolveWorkspaceCommit(ctx, requestedFixSha, "fix_sha");
       }
 
-      const evidenceId =
+      const overturnEvidence =
         status === "ruled-out"
-          ? ((
-              ctx.db
-                .prepare(
-                  `SELECT e.id
-                     FROM finding_evidence fe
-                     JOIN evidence e ON e.id = fe.evidence_id
-                    WHERE fe.finding_id = ? AND e.session_id = ?
-                    ORDER BY e.id DESC LIMIT 1`,
-                )
-                .get(findingId, sessionId) as { id: number } | undefined
-            )?.id ?? null)
-          : null;
+          ? (ctx.db
+              .prepare(
+                `SELECT e.id, e.ref_sha
+                   FROM finding_evidence fe
+                   JOIN evidence e ON e.id = fe.evidence_id
+                  WHERE fe.finding_id = ? AND e.session_id = ?
+                  ORDER BY e.id DESC LIMIT 1`,
+              )
+              .get(findingId, sessionId) as { id: number; ref_sha: string | null } | undefined)
+          : undefined;
+      const evidenceId = overturnEvidence?.id ?? null;
+      const overturnSha = overturnEvidence?.ref_sha ?? null;
       const resolutionState =
         status === "fixed" ? "fixed-pending-verification" : stateForStatus(status);
       ctx.db.transaction(() => {
@@ -242,15 +268,18 @@ export const findingTools: ToolDefinition[] = [
         ctx.db
           .prepare(
             `INSERT INTO finding_resolution_events
-               (finding_id, resolution_state, fix_location, fix_sha, evidence_id,
-                rationale, session_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (finding_id, resolution_state, fix_location, fix_sha, effective_sha,
+                evidence_id, rationale, session_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             findingId,
             resolutionState,
             status === "fixed" ? fixLocation : null,
             fixSha,
+            // A repair is read at the commit that carries it; an overturn is
+            // read at the revision its disproving evidence was collected at.
+            fixSha ?? overturnSha,
             evidenceId,
             resolutionNote ?? `Status changed from ${row.status} to ${status}`,
             sessionId,
@@ -327,17 +356,25 @@ export const findingTools: ToolDefinition[] = [
       if (evidence.role !== "fix-verification") {
         throw new ToolError("verification evidence must be attached with role fix-verification");
       }
-      const fixSha = resolveCommit(ctx, current.fix_sha);
-      const evidenceSha = resolveCommit(ctx, evidence.ref_sha);
+      const fixSha = resolveWorkspaceCommit(ctx, current.fix_sha, "fix_sha");
+      const evidenceSha = resolveWorkspaceCommit(
+        ctx,
+        evidence.ref_sha,
+        "the verification evidence ref_sha",
+      );
       requireAncestor(ctx, fixSha, evidenceSha);
       ctx.db
         .prepare(
           `INSERT INTO finding_resolution_events
-             (finding_id, resolution_state, fix_location, fix_sha, evidence_id,
-              rationale, session_id)
-           VALUES (?, 'verified-fixed', ?, ?, ?, ?, ?)`,
+             (finding_id, resolution_state, fix_location, fix_sha, effective_sha,
+              evidence_id, rationale, session_id)
+           VALUES (?, 'verified-fixed', ?, ?, ?, ?, ?, ?)`,
         )
-        .run(findingId, current.fix_location, fixSha, evidenceId, note, sessionId);
+        // `fix_sha` still names the repair this event confirms; `effective_sha`
+        // is the revision the verification itself was read at — a strict
+        // descendant, by the requireAncestor check above. A replay that cut by
+        // `fix_sha` reported verified-fixed at the repair commit (F5/codex).
+        .run(findingId, current.fix_location, fixSha, evidenceSha, evidenceId, note, sessionId);
       return ok({
         finding_id: findingId,
         resolution_state: "verified-fixed",
@@ -399,15 +436,10 @@ export const findingTools: ToolDefinition[] = [
           `SELECT f.finding_id, f.subsystem_id, f.symptom, f.root_cause, f.severity, f.status,
                   f.fix_location, f.primary_files, f.business_context, f.ref_sha, f.session_id,
                   f.pass_type, f.created_at, f.updated_at,
-                  COALESCE(r.resolution_state,
-                    CASE f.status WHEN 'fixed' THEN 'fixed-pending-verification'
-                                  WHEN 'ruled-out' THEN 'ruled-out'
-                                  WHEN 'confirmed-acceptable' THEN 'accepted'
-                                  ELSE 'open' END) AS resolution_state,
-                  r.fix_sha, r.evidence_id AS resolution_evidence_id,
-                  r.recorded_at AS resolution_recorded_at
+                  v.resolution_state, v.fix_sha, v.resolution_evidence_id,
+                  v.resolution_recorded_at
              FROM findings f
-             LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id
+             JOIN finding_state_current v ON v.finding_id = f.finding_id
              ${where}
              ORDER BY
                CASE f.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1
@@ -435,14 +467,16 @@ export const findingTools: ToolDefinition[] = [
                 SUM(CASE WHEN f.severity='HIGH' THEN 1 ELSE 0 END) AS high,
                 SUM(CASE WHEN f.severity='MEDIUM' THEN 1 ELSE 0 END) AS medium,
                 SUM(CASE WHEN f.severity='LOW' THEN 1 ELSE 0 END) AS low,
-                SUM(CASE WHEN f.status='confirmed-bug' THEN 1 ELSE 0 END) AS open_bugs,
-                SUM(CASE WHEN f.status='fixed' THEN 1 ELSE 0 END) AS fixed,
-                SUM(CASE WHEN COALESCE(r.resolution_state,
-                    CASE WHEN f.status='fixed' THEN 'fixed-pending-verification' END)
-                    = 'fixed-pending-verification' THEN 1 ELSE 0 END) AS fixed_pending_verification,
-                SUM(CASE WHEN r.resolution_state='verified-fixed' THEN 1 ELSE 0 END) AS verified_fixed
+                -- open_bugs answers the same question get_dashboard,
+                -- list_subsystems, and the master plan answer, so it reads the
+                -- same generated predicate over the view rather than
+                -- findings.status (F9/codex). fixed stays on the coarse status
+                -- axis C27 deliberately retains, and is named for it.
+                SUM(CASE WHEN ${OPEN_FINDING_SQL} THEN 1 ELSE 0 END) AS open_bugs,
+                SUM(CASE WHEN v.legacy_status='fixed' THEN 1 ELSE 0 END) AS fixed,
+                ${RESOLUTION_STATE_COUNTS}
            FROM findings f
-           LEFT JOIN finding_resolution_current r ON r.finding_id=f.finding_id
+           JOIN finding_state_current v ON v.finding_id=f.finding_id
           GROUP BY f.subsystem_id ORDER BY f.subsystem_id`,
         )
         .all();

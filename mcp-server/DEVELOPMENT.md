@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
+_201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -222,14 +222,16 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `export_chorusmith_adapter_artifact` | Project one durable CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, or RunManifest through its @1.0.0 adapter into an Amanuensis custody envelope containing a Chorusmith PersistArtifactInput-compatible projection. Chorusmith must compute its own native record hash during future ingress; export is append-only, projection-only, and grants no external write authority. |
 | `get_chorusmith_adapter_run` | Read one immutable adapter manifest, its ordered landed/pending steps, restart receipts, and parity verifications. This is also the RunManifest@1.0.0 adapter's projection source. |
 
-### `claims` (6)
+### `claims` (8)
 
 | Tool | Description |
 |---|---|
 | `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. |
+| `record_claim_challenge` | Record the adversarial pass's outcome for one current claim (spec.md §9.1, Phase 4). outcome ∈ {survived, overturned, superseded}. `challenge` is what would have overturned the claim and where that was looked for, in prose of at least 24 characters; a one-word note is not a challenge. An 'overturned' or 'superseded' outcome must name the claim_validity_events row that closed the claim — invalidate_claim and supersede_claim write it — and 'survived' must not, because nothing was closed. field_note_id optionally links the probe note the pass wrote. The record is append-only: a later pass records a further outcome, it does not edit this one. Every current `<sid>/` claim must carry an outcome before the subsystem may advance to 'mapped'. |
+| `get_claim_challenges` | Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history. |
 | `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. |
 | `supersede_claim` | Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. |
-| `get_claims` | Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
+| `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
 
@@ -351,7 +353,7 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
+| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. ref_sha must resolve to a commit in the bound workspace and is stored resolved. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
 | `get_dispositions` | Return dispositions. Filter by subsystem_id, concern_code, or both. Omit both to return everything (useful for adversarial review across the conspectus). |
 | `get_concern_coverage` | Return the concern × subsystem matrix (active concerns × registered subsystems) with current disposition or '—' for unexamined cells. Used to produce the materialized heatmap. |
 
@@ -371,7 +373,7 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_evidence` | Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells. |
+| `add_evidence` | Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells. |
 | `attach_evidence_to_disposition` | Link an evidence row to a disposition with a role (supports / contradicts / linchpin / compensating). Idempotent — repeated calls just update the role. |
 | `attach_evidence_to_finding` | Link an evidence row to a finding with a role (symptom / root-cause / fix-anchor / fix-verification / compensating). verify_finding_fix requires fix-verification. |
 | `get_evidence` | Fetch evidence rows. Filter by id, file_path, kind, ref_sha, or any combination. Returns the full row with collected_at timestamp. |
@@ -398,7 +400,7 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. |
+| `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at. |
 | `update_finding_status` | Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session. |
 | `verify_finding_fix` | Promote a fixed-pending-verification finding to verified-fixed. The evidence must be attached to the finding, collected in the active session, and repository-bound to the fix commit or one of its descendants. Historical events remain append-only. |
 | `get_finding_resolution_history` | Return the append-only resolution history for one finding, including pending repairs, verification evidence, reopenings, and superseded verified states. |
@@ -441,6 +443,14 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 | `acquire_lock` | Acquire a write lock on an artifact path (relative to project storage). Used by the coordinator to serialize sub-agent writes to the same artifact. ttl_minutes defaults to 15. Returns {ok:true} on success, or {ok:false, held_by, expires_at} when the artifact is already locked. |
 | `release_lock` | Release a write lock. Only the holder may release it. Safe to call even if no lock exists. |
 | `get_active_locks` | Return all currently held (non-expired) locks. Reads from the active_write_locks view. |
+
+### `locus` (3)
+
+| Tool | Description |
+|---|---|
+| `describe_locus` | Return what the conspectus records about one file, symbol, subsystem, or term: its standing — what the record authorizes and what it cannot justify — followed by the recorded account. Reads only; makes no model call and generates no text. An unknown locus returns a standing state, not an error. Pass `sections` to choose exactly which account sections to return; omit it for the default set. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
+| `get_attention` | Return what the conspectus records as unresolved: open findings and regressions, repairs awaiting verification, records where two credible accounts still stand, open questions, unverified suspicions, knowledge the repository has moved under, and per-subsystem measures. Every item carries an operational label whose meaning is fixed by the reader's guide. Reads only; makes no model call and generates no text. Pass `scope` to narrow to one subsystem id or one repository path prefix. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
+| `get_history` | Return what the conspectus records as concluded about one locus or one finding: resolution events, claim supersessions and validity events, resolved contradictions, answered or dismissed questions, closed leads, and the sessions that cite the subject. Newest first, one page. Exactly one of `locus` or `finding_id` is required. Reads only; makes no model call and generates no text. The response is bounded: what does not fit is declared in `omitted[]` with an exact count, never dropped silently. |
 
 ### `logging` (3)
 
@@ -599,7 +609,7 @@ _196 tools across 41 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_xref` | Record a cross-reference between two subsystems. relationship is free-form but should use one of the canonical values: shared-pattern, data-flow, dependency, mirrors, contention, temporal-coupling. strength ∈ {observed, confirmed, structural}; defaults to 'observed'. |
+| `add_xref` | Record a cross-reference between two subsystems. context is required and must carry at least one whitespace-delimited citation token of the form file:symbol@sha, with a 7-40 character hex revision — the token's path is validated as a workspace source path and its revision must resolve in the bound workspace. The surrounding prose is stored verbatim and the validated tokens come back in citations[]. The symbol is not checked for reachability: deciding whether a symbol exists at a revision needs a language parser this server does not have, so a citation records where the edge was read, not a symbol the server confirmed. relationship is free-form but should use one of the canonical values: shared-pattern, data-flow, dependency, mirrors, contention, temporal-coupling; an edge recorded because it crosses a subsystem boundary is data-flow or dependency. strength ∈ {observed, confirmed, structural}; defaults to 'observed'. |
 | `get_xrefs` | Return cross-references involving a subsystem (as either source or target). |
 
 <!-- TOOL-INVENTORY-END -->

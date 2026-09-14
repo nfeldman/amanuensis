@@ -7,7 +7,7 @@
 // that accidentally rejects valid writes is caught alongside one that
 // silently accepts bad writes.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
@@ -16,6 +16,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { dispositionTools } from "./dist/tools/dispositions.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
 import { findingTools } from "./dist/tools/findings.js";
@@ -61,6 +62,7 @@ const allTools = new Map(
     ...findingTools,
     ...fieldNoteTools,
     ...evidenceTools,
+    ...claimTools,
     ...fileTools,
     ...artifactTools,
   ].map((td) => [td.name, td]),
@@ -73,6 +75,21 @@ function call(name, args, ctx) {
 function freshCtx() {
   const ws = mkdtempSync(join(tmpdir(), "inv-"));
   spawnSync("git", ["init", "-q"], { cwd: ws });
+  // One real commit. The `structural` prerequisite now requires a claim, and
+  // `add_claim` resolves every ref_sha in the bound workspace — `git init`
+  // alone leaves a repo with no commit for it to resolve.
+  writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
+  spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+  spawnSync(
+    "git",
+    [
+      "-c", "user.email=inv@localhost",
+      "-c", "user.name=invariants",
+      "-c", "commit.gpgsign=false",
+      "commit", "-q", "--no-verify", "-m", "seed",
+    ],
+    { cwd: ws },
+  );
   const project = resolveProject(ws);
   ensureProjectStorage(project, (databasePath) => {
     const database = openDatabase(databasePath);
@@ -88,6 +105,75 @@ function freshCtx() {
       rmSync(project.storagePath, { recursive: true, force: true });
     },
   };
+}
+
+function headSha(ctx) {
+  return String(
+    spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: ctx.project.workspacePath,
+      encoding: "utf8",
+    }).stdout ?? "",
+  ).trim();
+}
+
+// Phase 2's own deliverable: advancing to `structural` requires at least one
+// current claim whose claim_key begins `<sid>/`. Seeded through add_claim so
+// the fixture exercises the same write path a survey would.
+let seededClaims = 0;
+function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
+  const existing = ctx.db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM claims WHERE valid_until_sha IS NULL AND substr(claim_key, 1, length(?)) = ?",
+    )
+    .get(`${id}/`, `${id}/`);
+  if (existing.n > 0) return;
+  const sha = headSha(ctx);
+  const evidenceId = call(
+    "add_evidence",
+    { file_path: filePath, symbol: "Unit", line_range: "1-4", ref_sha: sha, kind: "code-verified" },
+    ctx,
+  ).id;
+  seededClaims += 1;
+  call(
+    "add_claim",
+    {
+      claim_id: `CL-${seededClaims}`,
+      claim_key: `${id}/key-type/unit`,
+      subject_type: "symbol",
+      subject_id: `${filePath}:Unit`,
+      statement: `Unit is the type ${id} is built around.`,
+      epistemic_kind: "observation",
+      ref_sha: sha,
+      evidence_ids: [evidenceId],
+    },
+    ctx,
+  );
+}
+
+// Phase 4's own deliverable: every current `<sid>/` claim needs a recorded
+// challenge outcome before the subsystem may advance to `mapped`. A survived
+// outcome is the ordinary result and the one a fixture climb produces.
+function seedChallengeOutcomes(ctx, id) {
+  const unchallenged = ctx.db
+    .prepare(
+      `SELECT claim_id FROM claims c
+        WHERE c.valid_until_sha IS NULL
+          AND substr(c.claim_key, 1, length(?)) = ?
+          AND NOT EXISTS (SELECT 1 FROM claim_challenge_outcomes o WHERE o.claim_id = c.claim_id)`,
+    )
+    .all(`${id}/`, `${id}/`);
+  for (const row of unchallenged) {
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: row.claim_id,
+        outcome: "survived",
+        challenge: "fixture probe: read the declaration and found nothing that would overturn it",
+        ref_sha: headSha(ctx),
+      },
+      ctx,
+    );
+  }
 }
 
 // Convenience: advance a subsystem through the survey to a target depth,
@@ -121,6 +207,8 @@ function advanceTo(ctx, id, status) {
         },
         ctx,
       );
+      // Structural prerequisite: ≥1 current claim keyed `<sid>/`.
+      seedStructuralClaim(ctx, id);
     }
     if (order[i] === "concerns") {
       // Structural prerequisite: subsystem-survey artifact registered.
@@ -151,17 +239,25 @@ function advanceTo(ctx, id, status) {
             evidence_quality: "code-verified",
             linchpin_dependent: false,
             rationale: "fixture disposition for advanceTo",
-            ref_sha: "fixture-ref",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
         );
       }
     }
-    // mapped: gate is 0 open findings; vacuously satisfied when advanceTo
-    // hasn't added any findings.
+    if (order[i] === "mapped") {
+      // Phase 4's prerequisite: every current `<sid>/` claim carries a
+      // recorded challenge outcome before the subsystem may publish its
+      // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
+      seedChallengeOutcomes(ctx, id);
+    }
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
+}
+function readStatus(ctx, id) {
+  const row = ctx.db.prepare("SELECT status FROM subsystems WHERE id = ?").get(id);
+  return row ? row.status : null;
 }
 function startSession(ctx, intent = "test") {
   const r = call("start_session", { intent }, ctx);
@@ -184,7 +280,7 @@ t("set_disposition without active session is rejected", () => {
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "deadbeef",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -238,7 +334,7 @@ t("set_disposition on unmapped subsystem is rejected", () => {
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "deadbeef",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -267,7 +363,7 @@ t("set_disposition on structural subsystem is rejected (must be ≥concerns)", (
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "deadbeef",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -296,7 +392,7 @@ t("adversarial-pass disposition on concerns-only subsystem is rejected", () => {
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "deadbeef",
+            ref_sha: headSha(ctx),
             pass_type: "adversarial",
           },
           ctx,
@@ -326,7 +422,7 @@ t("set_disposition on deferred subsystem is rejected even if it had prior depth"
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "deadbeef",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -353,7 +449,7 @@ t("set_disposition positive path works at concerns status", () => {
         evidence: "x",
         evidence_quality: "code-verified",
         rationale: "r",
-        ref_sha: "deadbeef",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -380,7 +476,7 @@ t("add_finding on unmapped subsystem rejected; works at concerns", () => {
             root_cause: "r",
             severity: "LOW",
             status: "confirmed-bug",
-            ref_sha: "abc",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -398,7 +494,7 @@ t("add_finding on unmapped subsystem rejected; works at concerns", () => {
         root_cause: "r",
         severity: "LOW",
         status: "confirmed-bug",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -423,7 +519,7 @@ t("update_finding_status enforces gate on the underlying subsystem", () => {
         root_cause: "r",
         severity: "LOW",
         status: "confirmed-bug",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -518,7 +614,7 @@ t("reset_subsystem clears dependents and allows regression", () => {
         evidence: "x",
         evidence_quality: "code-verified",
         rationale: "r",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -532,7 +628,7 @@ t("reset_subsystem clears dependents and allows regression", () => {
         root_cause: "r",
         severity: "LOW",
         status: "confirmed-bug",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -558,7 +654,7 @@ t("reset_subsystem clears dependents and allows regression", () => {
             evidence: "x",
             evidence_quality: "code-verified",
             rationale: "r",
-            ref_sha: "abc",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -662,7 +758,7 @@ t("reset_subsystem with a contradiction on its finding fails transactionally", (
         root_cause: "r",
         severity: "LOW",
         status: "confirmed-bug",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -676,7 +772,7 @@ t("reset_subsystem with a contradiction on its finding fails transactionally", (
         root_cause: "r2",
         severity: "LOW",
         status: "confirmed-acceptable",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "adversarial",
       },
       ctx,
@@ -721,7 +817,7 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
         file_path: "a.ts",
         symbol: "f",
         line_range: "1-10",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         kind: "code-verified",
       },
       ctx,
@@ -736,7 +832,7 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
         evidence: "a.ts:f@abc",
         evidence_quality: "code-verified",
         rationale: "r",
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -774,6 +870,59 @@ t("advance to 'structural' without file_ledger is rejected", () => {
   }
 });
 
+t("advance to 'structural' without a current <sid>/ claim is rejected", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx);
+    call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
+    // Another subsystem's claim does not stand in for this one's.
+    call("upsert_subsystem", { id: "B-02", name: "B02", status: "unmapped" }, ctx);
+    seedStructuralClaim(ctx, "B-02", "a.ts");
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),
+      "claim_key beginning 'B-01/'",
+    );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
+    call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
+    assert(
+      readStatus(ctx, "B-01") === "structural",
+      "one claim should be sufficient — no per-category quota is enforced",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+t("a claim closed at a later commit no longer satisfies the structural gate", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx);
+    call("upsert_subsystem", { id: "B-01", name: "B01", status: "unmapped" }, ctx);
+    call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
+    call(
+      "add_files_to_scope",
+      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      ctx,
+    );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
+    ctx.db.prepare("UPDATE claims SET valid_until_sha = 'closed' WHERE claim_key = ?").run(
+      "B-01/key-type/unit",
+    );
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),
+      "no current claim",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
   const { ctx, cleanup } = freshCtx();
   try {
@@ -785,6 +934,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
@@ -806,6 +956,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -849,6 +1000,7 @@ t("phase prerequisites: happy path passes all gates", () => {
       { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
+    seedStructuralClaim(ctx, "B-01", "a.ts");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -867,13 +1019,15 @@ t("phase prerequisites: happy path passes all gates", () => {
         evidence_quality: "code-verified",
         linchpin_dependent: false,
         rationale: "test",
-        ref_sha: "r",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
     );
     call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
-    // No open findings → can map.
+    // Phase 4's prerequisite: the structural account is challenged before it
+    // is published as mapped (§9.1).
+    seedChallengeOutcomes(ctx, "B-01");
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
   } finally {
@@ -903,7 +1057,7 @@ t("project-local Amanuensis state is rejected at source and evidence ingress", (
         "reserved Amanuensis tool state",
       );
       assertThrows(
-        () => call("add_evidence", { file_path: path, ref_sha: "r", kind: "code-verified" }, ctx),
+        () => call("add_evidence", { file_path: path, ref_sha: headSha(ctx), kind: "code-verified" }, ctx),
         "reserved Amanuensis tool state",
       );
     }
@@ -918,7 +1072,7 @@ t("project-local Amanuensis state is rejected at source and evidence ingress", (
             evidence: ".amanuensis/memory.db:db@r",
             evidence_quality: "code-verified",
             rationale: "must reject before write",
-            ref_sha: "r",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -943,7 +1097,7 @@ t("project-local Amanuensis state is rejected at source and evidence ingress", (
               evidence,
               evidence_quality: "code-verified",
               rationale: "legacy prose must reject embedded self-state paths",
-              ref_sha: "r",
+              ref_sha: headSha(ctx),
               pass_type: "survey",
             },
             ctx,
@@ -963,7 +1117,7 @@ t("project-local Amanuensis state is rejected at source and evidence ingress", (
             severity: "LOW",
             status: "confirmed-bug",
             primary_files: [".amanuensis/docs/index.md:page@r"],
-            ref_sha: "r",
+            ref_sha: headSha(ctx),
             pass_type: "survey",
           },
           ctx,
@@ -997,7 +1151,7 @@ t("overturn to ruled-out without new session evidence is rejected", () => {
         root_cause: "no TTL on entries",
         severity: "HIGH",
         status: "confirmed-bug",
-        ref_sha: "fixture-ref",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -1026,7 +1180,7 @@ t("fixed transition requires repository-bound repair coordinates", () => {
         root_cause: "wrong bound",
         severity: "LOW",
         status: "confirmed-bug",
-        ref_sha: "fixture-ref",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -1054,7 +1208,7 @@ t("overturn to ruled-out succeeds once disproving evidence is attached this sess
         root_cause: "no lock",
         severity: "HIGH",
         status: "confirmed-bug",
-        ref_sha: "fixture-ref",
+        ref_sha: headSha(ctx),
         pass_type: "survey",
       },
       ctx,
@@ -1065,7 +1219,7 @@ t("overturn to ruled-out succeeds once disproving evidence is attached this sess
         file_path: "src/B-07/cache.ts",
         symbol: "get",
         line_range: "10-20",
-        ref_sha: "fixture-ref",
+        ref_sha: headSha(ctx),
         kind: "code-verified",
         excerpt: "callers hold the region lock",
         note: "compensating mechanism found in adversarial pass",

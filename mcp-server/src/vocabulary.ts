@@ -1,0 +1,1297 @@
+// Generated from contracts/conspectus-vocabulary.json — do not edit by hand.
+// Run `node scripts/gen-vocabulary.mjs` after changing the source; CI runs
+// `--check` and `--check-sql` and fails when a copy or a SQL CHECK diverges.
+
+export const VOCABULARY_CONTRACT_VERSION = "1.0.0";
+
+/** finding_resolution_state — resolution axis. */
+export const FINDING_RESOLUTION_STATES = [
+  "open",
+  "accepted",
+  "ruled-out",
+  "fixed-pending-verification",
+  "verified-fixed",
+] as const;
+export type FindingResolutionState = (typeof FINDING_RESOLUTION_STATES)[number];
+
+/** finding_status — resolution axis. */
+export const FINDING_STATUSES = [
+  "confirmed-bug",
+  "confirmed-acceptable",
+  "fixed",
+  "ruled-out",
+] as const;
+export type FindingStatus = (typeof FINDING_STATUSES)[number];
+
+/** standing_state — standing axis. */
+export const STANDING_STATES = [
+  "unledgered",
+  "excluded",
+  "scoped-unread",
+  "examined",
+  "examined-stale",
+  "absent",
+  "mixed",
+] as const;
+export type StandingState = (typeof STANDING_STATES)[number];
+
+/** stale_reason — standing axis. */
+export const STALE_REASONS = [
+  "git-drift",
+  "absent",
+  "unverifiable-ref",
+  "unreachable-ref",
+] as const;
+export type StaleReason = (typeof STALE_REASONS)[number];
+
+/** file_classification — standing axis. */
+export const FILE_CLASSIFICATIONS = [
+  "candidate",
+  "examined",
+  "generated-ignore",
+  "vendor-ignore",
+  "irrelevant",
+  "deferred-with-reason",
+] as const;
+export type FileClassification = (typeof FILE_CLASSIFICATIONS)[number];
+
+/** subsystem_status — survey axis. */
+export const SUBSYSTEM_STATUSES = [
+  "unmapped",
+  "scoping",
+  "structural",
+  "concerns",
+  "adversarial",
+  "mapped",
+  "deferred",
+] as const;
+export type SubsystemStatus = (typeof SUBSYSTEM_STATUSES)[number];
+
+/** evidence_kind — evidence axis. */
+export const EVIDENCE_KINDS = [
+  "code-verified",
+  "runtime-observed",
+  "contract-stated",
+  "test-observed",
+  "config-asserted",
+  "doc-asserted",
+  "comment-asserted",
+  "name-inferred",
+  "pattern-matched",
+] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+
+/** evidence_quality — evidence axis. */
+export const EVIDENCE_QUALITIES = [
+  "code-verified",
+  "runtime-observed",
+  "contract-stated",
+  "test-observed",
+  "config-asserted",
+  "doc-asserted",
+  "comment-asserted",
+  "name-inferred",
+  "pattern-matched",
+] as const;
+export type EvidenceQuality = (typeof EVIDENCE_QUALITIES)[number];
+
+/** disposition_classification — disposition axis. */
+export const DISPOSITION_CLASSIFICATIONS = [
+  "confirmed-bug",
+  "confirmed-acceptable",
+  "ruled-out",
+  "out-of-scope",
+  "unresolved-competition",
+] as const;
+export type DispositionClassification = (typeof DISPOSITION_CLASSIFICATIONS)[number];
+
+/** severity — severity axis. */
+export const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
+export type Severity = (typeof SEVERITIES)[number];
+
+/** field_note_category — lead axis. */
+export const FIELD_NOTE_CATEGORIES = [
+  "pattern",
+  "anomaly",
+  "connection",
+  "tension",
+  "candidate-concern",
+] as const;
+export type FieldNoteCategory = (typeof FIELD_NOTE_CATEGORIES)[number];
+
+/** open_question_category — question axis. */
+export const OPEN_QUESTION_CATEGORIES = [
+  "domain-knowledge",
+  "scope-judgment",
+  "priority-ranking",
+  "contradiction",
+  "tooling-limit",
+  "ambiguous-evidence",
+  "other",
+] as const;
+export type OpenQuestionCategory = (typeof OPEN_QUESTION_CATEGORIES)[number];
+
+/** open_question_resolution — resolution axis. */
+export const OPEN_QUESTION_RESOLUTIONS = ["open", "answered", "dismissed", "superseded"] as const;
+export type OpenQuestionResolution = (typeof OPEN_QUESTION_RESOLUTIONS)[number];
+
+/** field_note_follow_up — lead axis. */
+export const FIELD_NOTE_FOLLOW_UPS = ["open", "dismissed"] as const;
+export type FieldNoteFollowUp = (typeof FIELD_NOTE_FOLLOW_UPS)[number];
+
+/** xref_relationship — relation axis. */
+export const XREF_RELATIONSHIPS = [
+  "shared-pattern",
+  "data-flow",
+  "dependency",
+  "mirrors",
+  "contention",
+  "temporal-coupling",
+] as const;
+export type XrefRelationship = (typeof XREF_RELATIONSHIPS)[number];
+
+/** xref_strength — relation axis. */
+export const XREF_STRENGTHS = ["observed", "confirmed", "structural"] as const;
+export type XrefStrength = (typeof XREF_STRENGTHS)[number];
+
+/** contradiction_resolution — resolution axis. */
+export const CONTRADICTION_RESOLUTIONS = [
+  "a-supersedes-b",
+  "b-supersedes-a",
+  "scope-distinction",
+  "unresolved",
+] as const;
+export type ContradictionResolution = (typeof CONTRADICTION_RESOLUTIONS)[number];
+
+/** diagnosticity_outcome — resolution axis. */
+export const DIAGNOSTICITY_OUTCOMES = ["open", "resolved", "unresolved-competition"] as const;
+export type DiagnosticityOutcome = (typeof DIAGNOSTICITY_OUTCOMES)[number];
+
+/** claim_epistemic_kind — claim axis. */
+export const CLAIM_EPISTEMIC_KINDS = [
+  "observation",
+  "inference",
+  "hypothesis",
+  "open-question",
+  "direct-intent",
+  "inferred-intent",
+  "decision",
+] as const;
+export type ClaimEpistemicKind = (typeof CLAIM_EPISTEMIC_KINDS)[number];
+
+/** claim_subject_type — claim axis. */
+export const CLAIM_SUBJECT_TYPES = ["symbol", "subsystem", "seam"] as const;
+export type ClaimSubjectType = (typeof CLAIM_SUBJECT_TYPES)[number];
+
+/** concern_status — concern axis. */
+export const CONCERN_STATUSES = ["active", "retired", "merged", "candidate"] as const;
+export type ConcernStatus = (typeof CONCERN_STATUSES)[number];
+
+/** pass_type — provenance axis. */
+export const PASS_TYPES = ["onboarding", "survey", "adversarial", "refresh"] as const;
+export type PassType = (typeof PASS_TYPES)[number];
+
+/** lens — lens axis. */
+export const LENSES = ["codebase", "unresolved", "history", "method"] as const;
+export type Lens = (typeof LENSES)[number];
+
+/** omission_reason — omission axis. */
+export const OMISSION_REASONS = ["policy", "budget"] as const;
+export type OmissionReason = (typeof OMISSION_REASONS)[number];
+
+/** attention_label — attention axis. */
+export const ATTENTION_LABELS = [
+  "open",
+  "regression",
+  "unverified-suspicion",
+  "unknown",
+  "stale-knowledge",
+  "awaiting-verification",
+  "undiscriminated",
+] as const;
+export type AttentionLabel = (typeof ATTENTION_LABELS)[number];
+
+export interface VocabularyValue {
+  value: string;
+  label: string;
+  meaning: string;
+  cannot_justify: string;
+  authorizes?: string;
+  obligation_bearing?: boolean;
+}
+
+export interface VocabularyEnum {
+  axis: string;
+  open_vocabulary: boolean;
+  values: readonly VocabularyValue[];
+}
+
+/** Every enum with its per-value label, meaning, and authorization limit. */
+export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
+  finding_resolution_state: {
+    axis: "resolution",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "open",
+        label: "Open",
+        meaning: "No terminal resolution event has been recorded; the item is still open.",
+        cannot_justify: "that the defect is still reproducible at the repository head",
+      },
+      {
+        value: "accepted",
+        label: "Accepted",
+        meaning: "The behavior is recorded as understood and acceptable; it is not an open defect.",
+        cannot_justify: "that the judgement was revisited at the repository head",
+      },
+      {
+        value: "ruled-out",
+        label: "Ruled out",
+        meaning: "The candidate problem was overturned by evidence or adversarial review.",
+        cannot_justify: "that no related defect exists at the same locus",
+      },
+      {
+        value: "fixed-pending-verification",
+        label: "Unverified fix",
+        meaning:
+          "A repair is recorded, but independent fix evidence has not yet closed the finding.",
+        cannot_justify: "that the defect is gone at the repository head",
+      },
+      {
+        value: "verified-fixed",
+        label: "Verified fixed",
+        meaning: "A later revision contains a repair backed by recorded verification evidence.",
+        cannot_justify: "that the repair is still present at the repository head",
+      },
+    ],
+  },
+  finding_status: {
+    axis: "resolution",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "confirmed-bug",
+        label: "Confirmed defect",
+        meaning: "A defect supported by evidence and retained after adversarial review.",
+        cannot_justify:
+          "that the defect is unrepaired at the repository head; the resolution events are the authority",
+      },
+      {
+        value: "confirmed-acceptable",
+        label: "Accepted behavior",
+        meaning: "The observed behavior is real and judged to be intended or acceptable.",
+        cannot_justify: "that the judgement was revisited at the repository head",
+      },
+      {
+        value: "fixed",
+        label: "Fixed",
+        meaning:
+          "The defect was confirmed at an earlier revision and is recorded as addressed later.",
+        cannot_justify:
+          "that verification evidence closed the finding; only a verified-fixed event carries that",
+      },
+      {
+        value: "ruled-out",
+        label: "Ruled out",
+        meaning: "The candidate problem was overturned by evidence or adversarial review.",
+        cannot_justify: "that no related defect exists at the same locus",
+      },
+    ],
+  },
+  standing_state: {
+    axis: "standing",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "unledgered",
+        label: "No record",
+        meaning: "No file_ledger row names this path in any subsystem.",
+        cannot_justify: '"there are no findings here"; "this file is out of scope"',
+        authorizes: "nothing",
+      },
+      {
+        value: "excluded",
+        label: "Excluded",
+        meaning:
+          "A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason.",
+        cannot_justify: "any claim about the file's content or behavior",
+        authorizes: "the recorded exclusion reason and classification",
+      },
+      {
+        value: "scoped-unread",
+        label: "In scope, not yet read",
+        meaning:
+          "A ledger row classifies the path candidate: it participates in a subsystem, and no one has read it.",
+        cannot_justify: "any claim about content, behavior, or the absence of defects",
+        authorizes: "that this file participates in its owning subsystem",
+      },
+      {
+        value: "examined",
+        label: "Examined",
+        meaning:
+          "A ledger row classifies the path examined, it is not stale, and its examination revision resolves in the workspace.",
+        cannot_justify: "claims about symbols no evidence cites; the absence of defects",
+        authorizes: "current claims whose evidence cites this file",
+      },
+      {
+        value: "examined-stale",
+        label: "Examined, since changed",
+        meaning:
+          "The path was examined, and drift, absence, or an unreachable examination revision has withdrawn that reading's currency.",
+        cannot_justify: "any current claim at the repository head",
+        authorizes: "a dated historical reading, attributed to its examination revision",
+      },
+      {
+        value: "absent",
+        label: "No longer in the repository",
+        meaning: "A scope_gaps row of kind absent, or a ledger row whose stale_reason is absent.",
+        cannot_justify: "anything at the repository head",
+        authorizes: "that the path was once surveyed",
+      },
+      {
+        value: "mixed",
+        label: "Owners disagree",
+        meaning:
+          "Two or more owning subsystems record different standing states for the same path.",
+        cannot_justify: "anything the weakest owner state cannot justify",
+        authorizes: "only what the weakest owner state authorizes",
+      },
+    ],
+  },
+  stale_reason: {
+    axis: "standing",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "git-drift",
+        label: "Changed since examination",
+        meaning: "The file's content differs from the revision it was examined at.",
+        cannot_justify: "that the recorded reading is wrong, only that it is no longer current",
+      },
+      {
+        value: "absent",
+        label: "Gone from the repository",
+        meaning: "The examined path is no longer tracked in the workspace.",
+        cannot_justify: "anything about the current tree at that path",
+      },
+      {
+        value: "unverifiable-ref",
+        label: "Examination revision cannot be compared",
+        meaning:
+          "The examination revision could not be diffed against the current head, so drift could not be computed.",
+        cannot_justify: "that the file did or did not change",
+      },
+      {
+        value: "unreachable-ref",
+        label: "Examination revision is not an ancestor",
+        meaning:
+          "The examination revision resolves in the workspace but is not an ancestor of the current head.",
+        cannot_justify: "any current claim at the repository head",
+      },
+    ],
+  },
+  file_classification: {
+    axis: "standing",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "candidate",
+        label: "In scope, not yet read",
+        meaning: "The path participates in a subsystem and has not been read.",
+        cannot_justify: "any claim about content or behavior",
+        obligation_bearing: true,
+      },
+      {
+        value: "examined",
+        label: "Examined",
+        meaning: "The path was read and its reading is anchored to an examination revision.",
+        cannot_justify: "claims about symbols no evidence cites",
+        obligation_bearing: true,
+      },
+      {
+        value: "generated-ignore",
+        label: "Generated",
+        meaning: "The path is build or projection output and is not read as a source of claims.",
+        cannot_justify: "anything about the generator that produced it",
+        obligation_bearing: false,
+      },
+      {
+        value: "vendor-ignore",
+        label: "Vendored",
+        meaning: "The path is third-party code carried in the tree and is not surveyed.",
+        cannot_justify: "anything about the upstream project's behavior",
+        obligation_bearing: false,
+      },
+      {
+        value: "irrelevant",
+        label: "Ruled irrelevant",
+        meaning: "The path was judged to carry nothing the survey needs.",
+        cannot_justify: "that the judgement was re-examined at the repository head",
+        obligation_bearing: false,
+      },
+      {
+        value: "deferred-with-reason",
+        label: "Deferred",
+        meaning: "The path is in scope but deliberately left unread, with the reason recorded.",
+        cannot_justify: "any claim about content or behavior",
+        obligation_bearing: true,
+      },
+    ],
+  },
+  subsystem_status: {
+    axis: "survey",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "unmapped",
+        label: "Unmapped",
+        meaning:
+          "This subsystem has not yet been surveyed; no architectural claims are authorized.",
+        cannot_justify: "any claim about this subsystem's behavior",
+        authorizes: "nothing",
+      },
+      {
+        value: "scoping",
+        label: "Scoping",
+        meaning: "Only the subsystem boundary and file scope are established so far.",
+        cannot_justify: "any behavioral claim; file scope is all that is established",
+        authorizes: "which files are in scope for this subsystem",
+      },
+      {
+        value: "structural",
+        label: "Structural",
+        meaning:
+          "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
+        cannot_justify: "any correctness claim",
+        authorizes: "claims about types, state containers, flows, and the concurrency model",
+      },
+      {
+        value: "concerns",
+        label: "Concerns",
+        meaning: "Structural mapping is complete and concern-by-concern review is in progress.",
+        cannot_justify: "that a finding survived adversarial challenge",
+        authorizes: "concern review decisions that cite evidence",
+      },
+      {
+        value: "adversarial",
+        label: "Adversarial",
+        meaning: "Candidate conclusions are being challenged; treat them as provisional.",
+        cannot_justify: "that the challenge pass has finished",
+        authorizes:
+          "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
+      },
+      {
+        value: "mapped",
+        label: "Mapped",
+        meaning:
+          "Survey complete through structural analysis, concern review, and adversarial challenge.",
+        cannot_justify: "that the reading is current at the repository head",
+        authorizes:
+          "the recorded survey through structural analysis, concern review, and adversarial challenge",
+      },
+      {
+        value: "deferred",
+        label: "Deferred",
+        meaning: "This subsystem is intentionally outside the active survey plan.",
+        cannot_justify: "anything about this subsystem's behavior",
+        authorizes: "nothing",
+      },
+    ],
+  },
+  evidence_kind: {
+    axis: "evidence",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "code-verified",
+        label: "Code verified",
+        meaning: "The implementation was read and the stated behavior was verified directly.",
+        cannot_justify: "behavior at any revision other than the one cited",
+      },
+      {
+        value: "runtime-observed",
+        label: "Runtime observed",
+        meaning: "The behavior was observed in a running system and the observation was recorded.",
+        cannot_justify: "that the same behavior holds under other inputs or configurations",
+      },
+      {
+        value: "contract-stated",
+        label: "Contract stated",
+        meaning: "An explicit schema, type, or behavioral contract states this claim.",
+        cannot_justify: "that the implementation honors the contract",
+      },
+      {
+        value: "test-observed",
+        label: "Test observed",
+        meaning: "A test run or recorded observation demonstrates this behavior.",
+        cannot_justify: "behavior outside what the test exercises",
+      },
+      {
+        value: "config-asserted",
+        label: "Config asserted",
+        meaning:
+          "Configuration states the behavior, but runtime behavior was not independently verified.",
+        cannot_justify: "that this configuration is the one in effect",
+      },
+      {
+        value: "doc-asserted",
+        label: "Docs asserted",
+        meaning:
+          "Project documentation states the claim; implementation agreement is not yet verified.",
+        cannot_justify: "that the implementation matches the documentation",
+      },
+      {
+        value: "comment-asserted",
+        label: "Comment asserted",
+        meaning: "A code comment states the claim; the implementation was not verified against it.",
+        cannot_justify: "that the comment is current with the code beside it",
+      },
+      {
+        value: "name-inferred",
+        label: "Name inferred",
+        meaning: "The claim is inferred from a symbol name and should be treated as weak evidence.",
+        cannot_justify: "any correctness claim; a name is not an implementation",
+      },
+      {
+        value: "pattern-matched",
+        label: "Pattern matched",
+        meaning: "The claim matches a known pattern and is only a scoping signal.",
+        cannot_justify: "any claim about what this locus actually does",
+      },
+    ],
+  },
+  evidence_quality: {
+    axis: "evidence",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "code-verified",
+        label: "Code verified",
+        meaning: "The implementation was read and the stated behavior was verified directly.",
+        cannot_justify: "behavior at any revision other than the one cited",
+      },
+      {
+        value: "runtime-observed",
+        label: "Runtime observed",
+        meaning: "The behavior was observed in a running system and the observation was recorded.",
+        cannot_justify: "that the same behavior holds under other inputs or configurations",
+      },
+      {
+        value: "contract-stated",
+        label: "Contract stated",
+        meaning: "An explicit schema, type, or behavioral contract states this claim.",
+        cannot_justify: "that the implementation honors the contract",
+      },
+      {
+        value: "test-observed",
+        label: "Test observed",
+        meaning: "A test run or recorded observation demonstrates this behavior.",
+        cannot_justify: "behavior outside what the test exercises",
+      },
+      {
+        value: "config-asserted",
+        label: "Config asserted",
+        meaning:
+          "Configuration states the behavior, but runtime behavior was not independently verified.",
+        cannot_justify: "that this configuration is the one in effect",
+      },
+      {
+        value: "doc-asserted",
+        label: "Docs asserted",
+        meaning:
+          "Project documentation states the claim; implementation agreement is not yet verified.",
+        cannot_justify: "that the implementation matches the documentation",
+      },
+      {
+        value: "comment-asserted",
+        label: "Comment asserted",
+        meaning: "A code comment states the claim; the implementation was not verified against it.",
+        cannot_justify: "that the comment is current with the code beside it",
+      },
+      {
+        value: "name-inferred",
+        label: "Name inferred",
+        meaning: "The claim is inferred from a symbol name and should be treated as weak evidence.",
+        cannot_justify: "any correctness claim; a name is not an implementation",
+      },
+      {
+        value: "pattern-matched",
+        label: "Pattern matched",
+        meaning: "The claim matches a known pattern and is only a scoping signal.",
+        cannot_justify: "any claim about what this locus actually does",
+      },
+    ],
+  },
+  disposition_classification: {
+    axis: "disposition",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "confirmed-bug",
+        label: "Confirmed defect",
+        meaning: "A defect supported by evidence and retained after adversarial review.",
+        cannot_justify: "that the defect is unrepaired at the repository head",
+      },
+      {
+        value: "confirmed-acceptable",
+        label: "Accepted behavior",
+        meaning: "The observed behavior is real and judged to be intended or acceptable.",
+        cannot_justify: "that the judgement was revisited at the repository head",
+      },
+      {
+        value: "ruled-out",
+        label: "Ruled out",
+        meaning: "The candidate problem was overturned by evidence or adversarial review.",
+        cannot_justify: "that no related defect exists at the same locus",
+      },
+      {
+        value: "out-of-scope",
+        label: "Out of scope",
+        meaning: "The concern does not apply within this subsystem's declared boundary.",
+        cannot_justify: "that the concern does not apply elsewhere in the project",
+      },
+      {
+        value: "unresolved-competition",
+        label: "Competing explanations",
+        meaning: "Multiple explanations remain viable; the evidence does not discriminate.",
+        cannot_justify: "that any one of the competing explanations is the right one",
+      },
+    ],
+  },
+  severity: {
+    axis: "severity",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "CRITICAL",
+        label: "Critical",
+        meaning:
+          "Potential data loss, security failure, privilege escalation, or production outage path.",
+        cannot_justify: "how likely the path is to be reached; severity is impact, not confidence",
+      },
+      {
+        value: "HIGH",
+        label: "High",
+        meaning:
+          "Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow.",
+        cannot_justify: "how confident the finding is; severity is impact, not confidence",
+      },
+      {
+        value: "MEDIUM",
+        label: "Medium",
+        meaning: "Incorrect edge-case behavior or a correctness issue with a known workaround.",
+        cannot_justify: "that the edge case is rare in practice",
+      },
+      {
+        value: "LOW",
+        label: "Low",
+        meaning:
+          "Maintainability, clarity, or defensive-coding risk most likely to affect a future change.",
+        cannot_justify: "that the risk will never be reached",
+      },
+    ],
+  },
+  field_note_category: {
+    axis: "lead",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "pattern",
+        label: "Pattern",
+        meaning: "A recurrence noticed in more than one place.",
+        cannot_justify: "that the recurrence is intentional",
+      },
+      {
+        value: "anomaly",
+        label: "Anomaly",
+        meaning: "A deviation from the surrounding conventions or expectations.",
+        cannot_justify: "that the deviation is a defect",
+      },
+      {
+        value: "connection",
+        label: "Connection",
+        meaning: "A relationship noticed across subsystem boundaries.",
+        cannot_justify: "that the relationship is load-bearing",
+      },
+      {
+        value: "tension",
+        label: "Tension",
+        meaning: "Local correctness that sits awkwardly against global coherence.",
+        cannot_justify: "that either side is wrong",
+      },
+      {
+        value: "candidate-concern",
+        label: "Candidate concern",
+        meaning: "A pattern that might warrant a concern code of its own.",
+        cannot_justify: "that the concern has been reviewed anywhere",
+      },
+    ],
+  },
+  open_question_category: {
+    axis: "question",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "domain-knowledge",
+        label: "Domain knowledge",
+        meaning: "A business rule or domain fact the record cannot supply.",
+        cannot_justify: "the assumption recorded in its place",
+      },
+      {
+        value: "scope-judgment",
+        label: "Scope judgment",
+        meaning: "A scope fence that needs a human to confirm.",
+        cannot_justify: "that the assumed boundary is the right one",
+      },
+      {
+        value: "priority-ranking",
+        label: "Priority ranking",
+        meaning: "A survey order the agent guessed and a reviewer can override.",
+        cannot_justify: "that the ranking reflects project priorities",
+      },
+      {
+        value: "contradiction",
+        label: "Contradiction",
+        meaning: "Two credible sources disagree and the record does not settle it.",
+        cannot_justify: "either reading",
+      },
+      {
+        value: "tooling-limit",
+        label: "Tooling limit",
+        meaning: "An operation the agent could not perform.",
+        cannot_justify: "anything about what that operation would have shown",
+      },
+      {
+        value: "ambiguous-evidence",
+        label: "Ambiguous evidence",
+        meaning: "The evidence permits more than one interpretation.",
+        cannot_justify: "any single interpretation",
+      },
+      {
+        value: "other",
+        label: "Other",
+        meaning: "A question that fits none of the recorded categories.",
+        cannot_justify: "anything beyond the question as asked",
+      },
+    ],
+  },
+  open_question_resolution: {
+    axis: "resolution",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "open",
+        label: "Open",
+        meaning: "No answer has been recorded.",
+        cannot_justify: "that the question is still the right one to ask",
+      },
+      {
+        value: "answered",
+        label: "Answered",
+        meaning: "A human recorded an answer.",
+        cannot_justify: "that the answer was applied to the record",
+      },
+      {
+        value: "dismissed",
+        label: "Dismissed",
+        meaning: "The question was withdrawn without an answer.",
+        cannot_justify: "that the underlying uncertainty was resolved",
+      },
+      {
+        value: "superseded",
+        label: "Superseded",
+        meaning: "A later question or decision replaced this one.",
+        cannot_justify: "what the replacement decided",
+      },
+    ],
+  },
+  field_note_follow_up: {
+    axis: "lead",
+    open_vocabulary: true,
+    values: [
+      {
+        value: "open",
+        label: "Open",
+        meaning: "The lead has not been taken up.",
+        cannot_justify: "that the lead is still worth taking up",
+      },
+      {
+        value: "dismissed",
+        label: "Dismissed",
+        meaning: "The lead was closed without becoming a finding.",
+        cannot_justify: "that the observation behind it was wrong",
+      },
+    ],
+  },
+  xref_relationship: {
+    axis: "relation",
+    open_vocabulary: true,
+    values: [
+      {
+        value: "shared-pattern",
+        label: "Shared pattern",
+        meaning: "Both subsystems implement the same pattern.",
+        cannot_justify: "that either copy is derived from the other",
+      },
+      {
+        value: "data-flow",
+        label: "Data flow",
+        meaning: "Data produced by one subsystem is consumed by the other.",
+        cannot_justify: "the direction of control, only of data",
+      },
+      {
+        value: "dependency",
+        label: "Dependency",
+        meaning: "One subsystem depends on the other to do its work.",
+        cannot_justify: "that the dependency is the only one between them",
+      },
+      {
+        value: "mirrors",
+        label: "Mirrors",
+        meaning: "The two subsystems maintain parallel structures that must stay in step.",
+        cannot_justify: "that anything enforces the parallel",
+      },
+      {
+        value: "contention",
+        label: "Contention",
+        meaning: "Both subsystems compete for the same resource.",
+        cannot_justify: "that the contention is unmanaged",
+      },
+      {
+        value: "temporal-coupling",
+        label: "Temporal coupling",
+        meaning: "The two must run, or change, in a particular order.",
+        cannot_justify: "that the order is enforced anywhere",
+      },
+    ],
+  },
+  xref_strength: {
+    axis: "relation",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "observed",
+        label: "Observed",
+        meaning: "The link was seen once in the code and recorded.",
+        cannot_justify: "that the link is intentional or stable",
+      },
+      {
+        value: "confirmed",
+        label: "Confirmed",
+        meaning: "The link was checked from both sides.",
+        cannot_justify: "that the link is architecturally required",
+      },
+      {
+        value: "structural",
+        label: "Structural",
+        meaning: "The link follows from a structure both sides depend on.",
+        cannot_justify: "that either side is aware of the other",
+      },
+    ],
+  },
+  contradiction_resolution: {
+    axis: "resolution",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "a-supersedes-b",
+        label: "A supersedes B",
+        meaning: "The first finding stands and the second is withdrawn.",
+        cannot_justify: "that the withdrawn finding was wrong about everything it said",
+      },
+      {
+        value: "b-supersedes-a",
+        label: "B supersedes A",
+        meaning: "The second finding stands and the first is withdrawn.",
+        cannot_justify: "that the withdrawn finding was wrong about everything it said",
+      },
+      {
+        value: "scope-distinction",
+        label: "Scope distinction",
+        meaning: "Both findings stand; they apply to scopes the record now distinguishes.",
+        cannot_justify: "that either finding was re-verified",
+      },
+      {
+        value: "unresolved",
+        label: "Unresolved",
+        meaning: "The conflict is recorded and not yet settled.",
+        cannot_justify: "either finding",
+      },
+    ],
+  },
+  diagnosticity_outcome: {
+    axis: "resolution",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "open",
+        label: "Open",
+        meaning: "The competing explanations have not been analyzed to a verdict.",
+        cannot_justify: "any one of the competing explanations",
+      },
+      {
+        value: "resolved",
+        label: "Resolved",
+        meaning: "This item has a recorded resolution.",
+        cannot_justify: "that the resolution was independently checked",
+      },
+      {
+        value: "unresolved-competition",
+        label: "Competing explanations",
+        meaning: "Multiple explanations remain viable; the evidence does not discriminate.",
+        cannot_justify: "that any one of the competing explanations is the right one",
+      },
+    ],
+  },
+  claim_epistemic_kind: {
+    axis: "claim",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "observation",
+        label: "Observation",
+        meaning: "Something read directly in the code or an artifact.",
+        cannot_justify: "why it is that way",
+      },
+      {
+        value: "inference",
+        label: "Inference",
+        meaning: "A conclusion drawn from observations, not read directly.",
+        cannot_justify: "itself as an observation",
+      },
+      {
+        value: "hypothesis",
+        label: "Hypothesis",
+        meaning: "A candidate explanation offered for testing.",
+        cannot_justify: "any conclusion until it has been tested",
+      },
+      {
+        value: "open-question",
+        label: "Open question",
+        meaning: "A question the record raises and does not answer.",
+        cannot_justify: "any answer to it",
+      },
+      {
+        value: "direct-intent",
+        label: "Direct intent",
+        meaning: "Intent a human stated.",
+        cannot_justify: "intent the human did not state",
+      },
+      {
+        value: "inferred-intent",
+        label: "Inferred intent",
+        meaning: "Intent attributed from the code or the record, not stated.",
+        cannot_justify: "that the attributed intent is the actual one",
+      },
+      {
+        value: "decision",
+        label: "Decision",
+        meaning: "A choice recorded with the authority that made it.",
+        cannot_justify: "that the decision was carried out",
+      },
+    ],
+  },
+  claim_subject_type: {
+    axis: "claim",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "symbol",
+        label: "Symbol",
+        meaning: "A named function, type, or value at a path.",
+        cannot_justify: "anything about its callers",
+      },
+      {
+        value: "subsystem",
+        label: "Subsystem",
+        meaning: "A registered subsystem id.",
+        cannot_justify: "anything about a specific file within it",
+      },
+      {
+        value: "seam",
+        label: "Seam",
+        meaning: "A registered boundary between two subsystems.",
+        cannot_justify: "either party's internals",
+      },
+    ],
+  },
+  concern_status: {
+    axis: "concern",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "active",
+        label: "Active",
+        meaning: "The concern is on the checklist and must be dispositioned.",
+        cannot_justify: "that any subsystem has dispositioned it",
+      },
+      {
+        value: "retired",
+        label: "Retired",
+        meaning: "The concern was withdrawn from the checklist.",
+        cannot_justify: "that past dispositions were revisited",
+      },
+      {
+        value: "merged",
+        label: "Merged",
+        meaning: "The concern was folded into another concern code.",
+        cannot_justify: "anything the target concern has not recorded",
+      },
+      {
+        value: "candidate",
+        label: "Candidate",
+        meaning: "The concern was proposed and not yet accepted onto the checklist.",
+        cannot_justify: "that it is reviewed anywhere",
+      },
+    ],
+  },
+  pass_type: {
+    axis: "provenance",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "onboarding",
+        label: "Onboarding",
+        meaning: "The first pass, which establishes scope and the survey plan.",
+        cannot_justify: "any correctness claim",
+      },
+      {
+        value: "survey",
+        label: "Survey",
+        meaning: "The structural and concern-review pass over a subsystem.",
+        cannot_justify: "that a conclusion survived challenge",
+      },
+      {
+        value: "adversarial",
+        label: "Adversarial",
+        meaning: "The pass that tries to overturn what the survey concluded.",
+        cannot_justify: "that nothing was missed",
+      },
+      {
+        value: "refresh",
+        label: "Refresh",
+        meaning: "A later pass that re-examines the record against a newer revision.",
+        cannot_justify: "anything the refresh did not re-read",
+      },
+    ],
+  },
+  lens: {
+    axis: "lens",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "codebase",
+        label: "Codebase",
+        meaning:
+          "The recorded account of what the project is, how it works, and which of its territory has not been read.",
+        cannot_justify: "that unread territory holds no defects",
+      },
+      {
+        value: "unresolved",
+        label: "Unresolved",
+        meaning:
+          "Records that have not reached a terminal, evidence-backed state at the checked revision.",
+        cannot_justify: "that a record here is still reproducible at the repository head",
+      },
+      {
+        value: "history",
+        label: "History",
+        meaning:
+          "Records that have reached a terminal state, plus the recorded account of how they got there where one exists.",
+        cannot_justify: "that a terminal state was re-checked at the repository head",
+      },
+      {
+        value: "method",
+        label: "Method",
+        meaning:
+          "The apparatus by which a reader judges how far the rest of the record can be trusted.",
+        cannot_justify: "any claim about the project itself",
+      },
+    ],
+  },
+  omission_reason: {
+    axis: "omission",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "policy",
+        label: "Not requested",
+        meaning: "The section was not requested by the call.",
+        cannot_justify: "that the section is empty",
+      },
+      {
+        value: "budget",
+        label: "Over budget",
+        meaning: "The item was eligible and ranked below the byte or item budget.",
+        cannot_justify: "that the omitted items matter less than the selected ones",
+      },
+    ],
+  },
+  attention_label: {
+    axis: "attention",
+    open_vocabulary: false,
+    values: [
+      {
+        value: "open",
+        label: "Open",
+        meaning: "A finding with no terminal resolution event, ordered by severity.",
+        cannot_justify: "that the defect is still reproducible at the repository head",
+      },
+      {
+        value: "regression",
+        label: "Regression",
+        meaning: "A currently open finding with a prior verified-fixed event.",
+        cannot_justify: "that the recorded repair was reverted rather than defeated another way",
+      },
+      {
+        value: "unverified-suspicion",
+        label: "Unverified suspicion",
+        meaning: "An open candidate-concern field note.",
+        cannot_justify: "that the suspicion is a defect",
+      },
+      {
+        value: "unknown",
+        label: "Unknown",
+        meaning: "An open question.",
+        cannot_justify: "any answer to it",
+      },
+      {
+        value: "stale-knowledge",
+        label: "Stale knowledge",
+        meaning:
+          "A claim validity interval closed at or before the reviewed head, or an obligation-bearing ledger row marked stale.",
+        cannot_justify: "that the recorded reading was wrong, only that it is no longer current",
+      },
+      {
+        value: "awaiting-verification",
+        label: "Awaiting verification",
+        meaning: "A finding whose current resolution state is fixed-pending-verification.",
+        cannot_justify: "that the defect is gone at the repository head",
+      },
+      {
+        value: "undiscriminated",
+        label: "Undiscriminated",
+        meaning:
+          "Two or more credible accounts stand and the record does not say which of them the evidence picks out.",
+        cannot_justify: "any one of the competing accounts",
+      },
+    ],
+  },
+};
+
+/** One column whose CHECK constraint enforces a vocabulary. */
+export interface VocabularySqlBinding {
+  table: string;
+  column: string;
+}
+
+/**
+ * Where each vocabulary is enforced as a SQL CHECK. `--check-sql` asserts the
+ * schema agrees with the source here; src/db.ts reads the same mapping to bring
+ * a database created before a widening forward, since SQLite cannot alter a
+ * CHECK in place and `CREATE TABLE IF NOT EXISTS` does not rewrite one.
+ */
+export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly VocabularySqlBinding[]>> = {
+  finding_resolution_state: [{ table: "finding_resolution_events", column: "resolution_state" }],
+  finding_status: [{ table: "findings", column: "status" }],
+  file_classification: [{ table: "file_ledger", column: "classification" }],
+  subsystem_status: [
+    { table: "subsystems", column: "status" },
+    { table: "subsystem_status_transitions", column: "from_status" },
+    { table: "subsystem_status_transitions", column: "to_status" },
+  ],
+  evidence_kind: [{ table: "evidence", column: "kind" }],
+  evidence_quality: [{ table: "dispositions", column: "evidence_quality" }],
+  disposition_classification: [{ table: "dispositions", column: "classification" }],
+  severity: [{ table: "findings", column: "severity" }],
+  field_note_category: [{ table: "field_notes", column: "category" }],
+  open_question_category: [{ table: "open_questions", column: "category" }],
+  open_question_resolution: [{ table: "open_questions", column: "resolution" }],
+  xref_strength: [{ table: "xrefs", column: "strength" }],
+  contradiction_resolution: [
+    { table: "contradictions", column: "resolution" },
+    { table: "contradiction_resolution_events", column: "resolution" },
+  ],
+  diagnosticity_outcome: [{ table: "diagnosticity_sessions", column: "outcome" }],
+  claim_epistemic_kind: [{ table: "claims", column: "epistemic_kind" }],
+  concern_status: [{ table: "concerns", column: "status" }],
+  pass_type: [
+    { table: "dispositions", column: "pass_type" },
+    { table: "findings", column: "pass_type" },
+  ],
+};
+
+/** The values a CHECK on those columns must admit, by enum name. */
+export const SQL_CONSTRAINED_VOCABULARIES: Readonly<Record<string, readonly string[]>> = {
+  finding_resolution_state: FINDING_RESOLUTION_STATES,
+  finding_status: FINDING_STATUSES,
+  file_classification: FILE_CLASSIFICATIONS,
+  subsystem_status: SUBSYSTEM_STATUSES,
+  evidence_kind: EVIDENCE_KINDS,
+  evidence_quality: EVIDENCE_QUALITIES,
+  disposition_classification: DISPOSITION_CLASSIFICATIONS,
+  severity: SEVERITIES,
+  field_note_category: FIELD_NOTE_CATEGORIES,
+  open_question_category: OPEN_QUESTION_CATEGORIES,
+  open_question_resolution: OPEN_QUESTION_RESOLUTIONS,
+  xref_strength: XREF_STRENGTHS,
+  contradiction_resolution: CONTRADICTION_RESOLUTIONS,
+  diagnosticity_outcome: DIAGNOSTICITY_OUTCOMES,
+  claim_epistemic_kind: CLAIM_EPISTEMIC_KINDS,
+  concern_status: CONCERN_STATUSES,
+  pass_type: PASS_TYPES,
+};
+
+/**
+ * Classifications that exempt a scoped file from survey obligation: generated
+ * output, vendored third-party code, and files ruled irrelevant. Staleness over
+ * these is real drift but carries no work, so counting it in an obligation
+ * metric dilutes the signal — most sharply for a checked-in projection, which
+ * changes on every publish and would otherwise make republishing the report
+ * read as the conspectus going stale.
+ */
+export const OBLIGATION_EXEMPT_CLASSIFICATIONS = [
+  "generated-ignore",
+  "vendor-ignore",
+  "irrelevant",
+] as const;
+export const OBLIGATION_BEARING_CLASSIFICATIONS = [
+  "candidate",
+  "examined",
+  "deferred-with-reason",
+] as const;
+
+/** SQL predicate selecting ledger rows that do carry a survey obligation. */
+export const OBLIGATION_BEARING_SQL =
+  "COALESCE(classification, 'candidate') NOT IN ('generated-ignore', 'vendor-ignore', 'irrelevant')";
+
+/**
+ * The resolution states that leave a finding open. One question, one
+ * predicate: get_dashboard, list_subsystems, and the master plan read the
+ * same SQL over `finding_state_current` that the lenses do, so a finding
+ * whose event log has overtaken `findings.status` cannot be counted open on
+ * one surface and closed on another.
+ */
+export const OPEN_RESOLUTION_STATES = ["open"] as const;
+export const CLOSED_RESOLUTION_STATES = [
+  "accepted",
+  "ruled-out",
+  "fixed-pending-verification",
+  "verified-fixed",
+] as const;
+
+/** SQL predicate selecting the finding_state_current rows still open. */
+export const OPEN_FINDING_SQL = "resolution_state IN ('open')";
+
+/** Terms orientation prose may not use; see the orientation lint. */
+export const ORIENTATION_FORBIDDEN_TERMS = [
+  "stale",
+  "fresh",
+  "mapped",
+  "unmapped",
+  "re-anchored",
+  "up to date",
+  "out of date",
+  "current as of",
+  "fully surveyed",
+] as const;

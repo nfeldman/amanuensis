@@ -1,0 +1,41 @@
+# slice-S7 — fix session dispositions
+
+Run `20260912-132939-fix-slice-S7`, one reviewer (codex), so the `/name` suffix is omitted.
+Every finding was reproduced before it was acted on; the one that did not reproduce is
+rejected with what was run. No test or gate was weakened.
+
+| F1 | verified: yes | action: fixed | reproduced: add_evidence at a full SHA, then the commit removed and `git rev-parse` exiting 128, and a second add_evidence returned `{ok:true,id:2}` — two evidence rows at an unresolvable revision. The memo at helpers.ts:127 answered for git. Cache removed, so every durable write resolves live; add_finding and set_disposition re-filed under the git-subprocess perf ceilings because that is now what they are (6.29-6.50ms over five runs, 200ms ceiling, ~31x — tighter in multiples than every sibling in that section). New gate arm at test-residual-hardening.mjs:559 with a VP4 denominator check that the commit really stopped resolving. red 747e287, green a428780 |
+| F2 | verified: yes | action: fixed | reproduced: inverted `open_bugs` to `NOT (OPEN_FINDING_SQL)` at findings.ts:475 and the gate printed `GATE P21 GREEN`. The only arm reaching that surface was the textual scan for `status = 'confirmed-bug'`, which the sabotage does not contain. Two behavioural arms added — get_finding_summary against finding_state_current at test-residual-hardening.mjs:713, and a four-way agreement arm over the set, since three readers wrong and one right sum the same as a per-reader check passing. Reviewer's sabotage re-applied against the sharpened gate: RED on both arms, reporting 1 against the view's 2; undone, tree clean. fixed 3dd12ab |
+| F3 | verified: yes | action: fixed | reproduced: added `bogus` to open-questions.ts's CATEGORIES; both `test-residual-hardening.mjs` and `test-vocabulary-source.mjs` stayed green, because `validatorProbes()` was a hand-written table of ten that named no open-question validator. Fixed by discovery rather than a longer list: five probes added (open-question category and resolution, contradiction resolution, diagnosticity outcome, subsystem status), a census at test-residual-hardening.mjs:1124 requiring every source enum to be probed or declared a non-input with its reason, and a scan over every TypeScript source at :1164. Sabotage re-applied both ways it can now take — as a local literal, and in the generated module — RED each time; undone, tree clean. red 6bda086, green f7cb4f3 |
+| F4 | verified: yes | action: fixed | reproduced: the contract carries `open_question_category`, `open_question_resolution`, `contradiction_resolution` and `diagnosticity_outcome`, `vocabulary.ts` generates all four, and nothing imported them — six literal copies across open-questions.ts:11,21, contradictions.ts:12, diagnosticity.ts:15 and review-analysis.ts:19,21, against spec §10.2's "import their enum arrays from it instead of declaring literals". All six now import the generated arrays; subsystems.ts validates against SUBSYSTEM_STATUSES while STATUS_ORDER keeps authorship of the ladder's order, with set parity asserted — the split §10.2 already makes for the SQL CHECKs. diagnosticity's `verdict` stays local and is declared a non-input: it carries no CHECK in schema.sql. red 6bda086, green f7cb4f3 |
+| F5 | verified: yes | action: fixed | reproduced: seeded a thesis carrying `Health: 72%` and published — `ok: true`, `published: true`, `warnings: []`, and `Health: 72%` still in index.md, while the gate's own copy of the lint flagged it. The rule lived only in test-overview-truthfulness.py, where it could grade a publish but not refuse one. `composite_index_violations` moved into lint.py:112; read_thesis refuses a thesis presenting one so the figure never reaches the bytes, and render_index lints the whole rendered page at renderers.py:848 through `warn`, which clears `summary.ok`. The gate now resolves the lint off the production module and asserts the armed publish is red rather than reading the published bytes. Unwiring each surface turns its arm red; both restored. red 9a40451, green 22fce1d |
+| F6 | verified: no | action: rejected | reproduced: nothing to reproduce — `node dev/test-reader-lenses-dogfood.mjs` exits 0 here (`GATE P18 GREEN`), `git rev-parse --verify 331078257db7b478aae4f97884fe00cbd90a6e24^{commit}` exits 0, and that commit is an ancestor of HEAD on `reader-lenses` (it is `green(P20)`). The failure is a property of the review snapshot, which the reviewer's own notes describe as having a read-only Git index; the proposed fix does not address it, since a receipt bound to any revision fails in a snapshot carrying no history. Binding the receipt to a revision is §12's contract, not a defect — and the gate failing loudly on an unresolvable one is the behaviour C6 asks for |
+
+## What the repairs cost elsewhere
+
+One gate changed shape rather than strictness. `add_finding` and `set_disposition` moved from
+the SQLite perf ceilings to the git-subprocess ones, because dropping F1's cache makes them
+subprocess operations by construction. The new bound is ~31x measured; every other entry in
+that section sits at 47-154x, so the bound did not go slack. This is the one place a number
+moved, and it moved because the operation did.
+
+## One pre-existing red, not caused by these repairs and not in scope
+
+`node dev/test-activation-evidence.mjs` fails on a source-digest drift in
+`a22-codex-host.json` for `mcp-server/src/project.ts`. That file was last changed by
+6357847, an ancestor of this review's baseline 87b83c6, and no commit in this session
+touches it. It is an A22 activation-evidence receipt from a different workstream, is not in
+P21's regression list, and was not reported by the reviewer. Left alone deliberately;
+refreshing an activation receipt is not a slice-S7 repair.
+
+## Regression
+
+The whole suite was run, not only the packet lists: 58 of 58 `mcp-server/test-*.mjs`,
+7 of 7 `materializer/test-*.py`, 15 of 16 `dev/test-*.mjs` (the sixteenth is the
+pre-existing red above), biome, `tsc --noEmit`, ruff, and both `gen-vocabulary` checks.
+That sweep caught one regression the packet lists would have missed: the census reason for
+`xref_relationship` originally spelled the edge-writing tool's name, which registered this
+gate as a caller in P13's whole-file scan. Reworded; P13 is green.
+
+All 24 of P21's commands pass on the final tree: P21's nineteen, plus `gen-vocabulary.mjs --check` and
+`--check-sql`, `tsc --noEmit`, and `test-perf-ceilings.mjs` (14 of 14 within ceiling).

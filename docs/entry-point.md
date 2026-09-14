@@ -1,91 +1,66 @@
 # Entry point
 
-**Conspectus version**: full-project survey at `e33bb5f`
-**Canonical branch**: `main`
-**Onboarding SHA**: `b8b566f`
-
 ## What is this codebase?
 
-Amanuensis is an evidence-driven codebase-survey system. A host agent follows phased
-methodology from the skill/agent files and calls the `amanuensis-memory` stdio MCP server.
-That Node/TypeScript server owns a SQLite WAL database plus a git-backed prose storage
-directory and enforces survey-depth and evidence contracts. A Python subprocess renders the
-DB and prose into cross-linked Markdown using per-page dependency hashes. A separate Node CLI
-installs the agent bundle and MCP configuration. These boundaries are observed at
-`mcp-server/src/index.ts:main@b8b566f`, `mcp-server/src/project.ts:resolveProject@b8b566f`,
-and `materializer/amanuensis_materializer/core.py:Materializer@b8b566f`.
+Amanuensis gives a coding agent a durable, evidence-backed account of a repository. It has
+three parts. An MCP server (`mcp-server/`, TypeScript, ~38k lines of `src/`) holds the
+account in a SQLite database beside the repository and exposes it as tools: record a
+subsystem, a file's place in scope, a piece of structured evidence, a revision-bound claim,
+a concern's disposition, a finding and the events that resolve it. A Python materializer
+(`materializer/`) opens that database read-only and projects it into Markdown pages and a
+self-contained HTML index for people. A skill (`.claude/skills/amanuensis/`) is the
+methodology the agent follows: a phased survey in which each phase has a deliverable, and
+each status a subsystem reaches authorizes a narrower or wider set of claims than the one
+before.
 
-## Domain vocabulary
+The organising idea is that an assertion about code is only worth carrying forward if the
+record says how it was reached. Every claim cites structured evidence; every piece of
+evidence names a file, a symbol, and the git revision it was read at; a status advance is
+refused unless the phase before it left the deliverable it owes.
 
-- **Conspectus**: persistent evidence-bearing record of what was observed, concluded,
-  contradicted, ruled out, or left open about a repository.
-- **Disposition**: terminal per-subsystem answer to one calibrated concern, with evidence.
-- **Depth contract**: the subsystem status bounds what claims may be written.
-- **Seam**: a shared boundary whose correctness cannot be inferred from either party alone.
-- **Materialization**: derivation of human-readable docs from durable DB/prose state.
+## What do I map first?
 
-## Directory map
+`mcp-server/src/index.ts` and `mcp-server/src/helpers.ts` — the server and the argument
+validators every tool handler calls. Then `mcp-server/src/schema.sql`, which is the shape
+of everything the system knows, and `mcp-server/src/invariants.ts`, which is the rules a
+record must satisfy before it is admitted.
 
-| Path | Kind | Canonical source |
-|---|---|---|
-| `entry-point.md` | entry point | this file |
-| `onboarding-report.md` | onboarding observations and calibration | onboarding session |
-| `master-plan.md` | subsystem inventory and order | SQLite subsystem rows |
-| `findings-index.md` | finding summary | SQLite findings rows |
-| `concern-checklist.md` | calibrated probes | SQLite concern rows |
-| `field-notes.md` | narrative observations | field-note rows plus prose |
-| `B-XX-*.md` | subsystem survey | one per mapped subsystem |
-| `design/delightful-output-panel/` | report-interface design evidence | [B-06](subsystems/b06-report-interface-design-and-validation-studies.md) survey |
-| `scholiast/` | embedded research and platform-trial evidence | [B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md) survey |
+## Given a bug report, what do I read first?
 
-## Knowledge depth contract
+`describe_locus` on the file the report names. It answers with the standing of that path —
+what the record authorizes you to say about it and what it cannot justify — before any
+account of the code. If standing comes back unledgered, the record has nothing on that path
+and you should say so rather than read the file and improvise.
 
-| Mapping status | Authorized claims |
-|---|---|
-| `unmapped` | None. |
-| `scoping` | File scope only. |
-| `structural` | Types, state containers, flows, concurrency; no correctness claims. |
-| `concerns` | Evidence-backed concern dispositions and findings. |
-| `adversarial` | Concern results that survived a refutation pass. |
-| `mapped` | Packaged subsystem knowledge; seams still need composed assessment. |
+## Given a feature request, what mode applies?
 
-Any claim exceeding its source depth is speculative.
+A feature that adds a tool touches [B-01](subsystems/b01-server-runtime-and-tool-dispatch.md) (registration and dispatch), [B-03](subsystems/b03-conspectus-schema-vocabulary-and-invariants.md) (schema and the
+vocabulary contract) and [B-11](subsystems/b11-development-harness-and-gates.md) (the gate and its CI row) together; none of those three can be
+changed alone. A feature that changes what a reader sees touches [B-06](subsystems/b06-locus-standing-and-the-reader-lenses.md) and [B-08](subsystems/b08-materializer-rendering-pipeline.md)/[B-09](subsystems/b09-projection-read-back-and-publication-custody.md), where
+the read-back axes decide whether a projection is published at all.
 
-## Survey status
+## Confirmed bugs
 
-All seven subsystems are mapped at the current survey revision. The original five-subsystem
-runtime/method/materializer/delivery map remains mapped, [B-06](subsystems/b06-report-interface-design-and-validation-studies.md) covers report-interface design and
-validation, and [B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md) covers the embedded research and platform-trial evidence layer. This is a
-coverage claim, not a defect-free claim; current finding resolution is read from durable finding
-records rather than this orientation paragraph.
+Ten, at `0fee11b`, all with attached evidence and an adversarial verdict. The full index with
+severities is `findings-index.md`; the three patterns are what a new reader needs.
 
-## Open confirmed bugs
+- **A predicate held twice.** `finding_state_current` exists so that "an open bug" has one
+  definition. Two readers still compute it inline from `findings.status`: `list_subsystems`
+  ([B04-5](findings.md#b04-5)) and the subsystem-map renderer ([B08-1](findings.md#b08-1)). They agree today because every transition
+  tool writes the column and the event together — `verify_finding_fix` already does not.
+- **A revision nobody resolved.** `add_claim` and `add_xref` resolve every revision they cite
+  against the bound workspace. `add_evidence` ([B04-4](findings.md#b04-4)), `set_disposition` and `add_finding`
+  ([B05-1](findings.md#b05-1)) do not, so the rows that carry a reading are the ones whose binding is unchecked.
+- **A vocabulary party no check reads.** Prose in `schema.sql` describing a CHECK the migration
+  now repairs ([B03-4](findings.md#b03-4)); prose in `SKILL.md` publishing twenty-three enums the four-party check
+  never compares ([B10-1](findings.md#b10-1)); and `STALE_REASONS`, generated into two modules and imported by
+  neither of its writers ([B07-1](findings.md#b07-1)).
 
-- **[B07-1](findings.md#b07-1) (LOW):** research capture and snapshot-verification calls lack a caller-controlled
-  completion deadline (`scholiast/ai-primary-web-platform-landscape/capture-component-landscape.mjs:github/npmMetadata@073cee8`;
-  `scholiast/ai-primary-web-platform-landscape/verify-trial-snapshot.py:module verification@073cee8`).
+Two more are about the gates themselves: an ancestry axis that cannot turn red where CI runs it
+([B11-1](findings.md#b11-1)), and three harness files a `grep` reports as empty ([B11-2](findings.md#b11-2)).
 
-## Verified fixed
+## Minimal read
 
-- **[B02-1](findings.md#b02-1) (HIGH):** the phase-gate WAL/checkpoint defect was fixed at `7bfa45c` and independently
-  verified through the durable finding-resolution gate.
-
-## Mode selection
-
-| Task | Start here |
-|---|---|
-| Bug report | Search findings, then identify its subsystem and read that survey's cited evidence. If the subsystem is below concerns depth, treat the report as an unverified hypothesis. |
-| New feature | Use design mode: compile observed behavior, direct intent, inferred intent, constraints, contradictions, and unknowns separately before proposing options. At onboarding, read `ROADMAP.md` plus the target subsystem's jump-in files. |
-| Report projection change | Read `design/delightful-output-panel/design-language.md`, [B-06](subsystems/b06-report-interface-design-and-validation-studies.md), [B-04](subsystems/b04-diff-aware-materializer.md), and seams [SM-06](seams.md#sm-06)/[SM-07](seams.md#sm-07) before changing presentation semantics. |
-| Research-backed report change | Read [B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md), the relevant `scholiast/` conspectus, [B-06](subsystems/b06-report-interface-design-and-validation-studies.md), and seam [SM-08](seams.md#sm-08); preserve the research claim's stated scope and limitations. |
-| Refactor | Read the target subsystem plus every declared seam and current git validity state. |
-| New contributor | This entry point, `master-plan.md`, then the target subsystem's jump-in reading. |
-
-## Minimal bootstrapping read
-
-1. `entry-point.md`
-2. `master-plan.md`
-3. The target subsystem's jump-in files
-4. `findings-index.md`
-5. `concern-checklist.md` for any correctness claim
-6. `seam-assessments-b8b566f.md` for any cross-subsystem claim
+Unchanged by this pass, with one addition. `mcp-server/src/tools/evidence.ts` is now part of
+the smallest set: it is the single ingress for every evidence row in the store, which is what
+makes [B04-4](findings.md#b04-4) one change rather than many.

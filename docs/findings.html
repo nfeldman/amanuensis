@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Amanuensis HTML projection 1.12.0">
-<meta name="description" content="Review defects that survived the evidence and adversarial gates, ordered by impact.">
-<title>Confirmed findings · Amanuensis · Amanuensis</title>
+<meta name="generator" content="Amanuensis HTML projection 1.14.0">
+<meta name="description" content="Defects open or awaiting verification at the checked revision.">
+<title>Open findings · amanuensis · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root {
@@ -185,7 +185,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 }
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-item { margin: .08rem 0; }
-.nav-item[hidden], .nav-group[hidden] { display: none; }
+.nav-subgroup { margin: .5rem 0 0; }
+.nav-subgroup-title {
+  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
+  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
 .nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
 .nav-link:hover { color: var(--text); background: var(--surface); }
 .nav-link[aria-current="page"] { color: var(--accent-strong); }
@@ -227,15 +232,22 @@ h1 {
 .freshness { display: inline-flex; gap: .38rem; align-items: center; }
 .freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
 .freshness.stale::before { background: var(--source-stale); }
+.freshness.unmeasured::before { background: var(--rule-strong); }
 
 .content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
 .content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
 .content > section:last-child { border-bottom: 0; }
 .content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
-.content-findings .section-critical-findings { --enum-color: var(--severity-critical); }
-.content-findings .section-high-findings { --enum-color: var(--severity-high); }
-.content-findings .section-medium-findings { --enum-color: var(--severity-medium); }
-.content-findings .section-low-findings { --enum-color: var(--severity-low); }
+.content-findings .section-open { --enum-color: var(--resolution-open); }
+.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
+.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
+.content-findings .section-ruled-out, .content-findings .section-accepted {
+  --enum-color: var(--resolution-accepted);
+}
+.content-findings section > h3 { --enum-color: var(--rule-strong); }
+.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
+  border-left: .14em solid var(--enum-color); padding-left: .5rem;
+}
 .content-findings section > h2::before {
   content: ""; display: inline-block; width: .14em; height: .72em;
   margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
@@ -658,8 +670,28 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
 .page-foot p { margin: 0; max-width: 52rem; }
 .page-foot a { color: inherit; }
-.empty-search { display: none; margin: 1rem 0; color: var(--text-muted); font-size: .8rem; }
-.empty-search.visible { display: block; }
+[hidden] { display: none !important; }
+
+/* Search results and the in-page filters. Ruled registers, not cards: a row
+   per result, one rule between them, no icon and no badge (§8.3). Every one of
+   these elements is built by script; nothing here is served hidden. */
+.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+.search-status:empty { display: none; }
+.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
+.search-results:empty { display: none; border-top: 0; }
+.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
+.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
+.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
+.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
+.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
 
 @media (max-width: 900px) {
   .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
@@ -750,69 +782,67 @@ a .identifier-definition { text-decoration-color: currentColor; }
 }
 </style>
 </head>
-<body>
+<body data-root="">
 <a class="skip-link" href="#content">Skip to content</a>
 <div class="shell">
-  <aside class="nav-rail" aria-label="Amanuensis report navigation">
+  <aside class="nav-rail" aria-label="amanuensis report navigation">
     <a class="brand" href="index.html">
-      <span class="brand-mark">Amanuensis</span>
+      <span class="brand-mark">amanuensis</span>
       <span class="brand-sub">Architecture survey · Amanuensis</span>
     </a>
-    <label class="search-label" for="conspectus-search">Find a page <span aria-hidden="true">⌘K</span></label>
-    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Name, ID, or topic…" autocomplete="off">
-    <p class="empty-search" data-empty-search>No matching page in this projection.</p>
-    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title">Orientation</h2><ul class="nav-list"><li class="nav-item" data-search="overview start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><a class="nav-link" href="index.html" title="Start here for the survey&#x27;s present state, freshness, and highest-signal routes into the codebase."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li><li class="nav-item" data-search="architecture read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><a class="nav-link" href="architecture.html" title="Read the runtime shape, subsystem dependencies, boundaries, and stale areas as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystem map see every architectural region, how deeply it has been surveyed, and where a reader should enter it."><a class="nav-link" href="master-plan.html" title="See every architectural region, how deeply it has been surveyed, and where a reader should enter it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystem map</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Evidence</h2><ul class="nav-list"><li class="nav-item" data-search="findings review defects that survived the evidence and adversarial gates, ordered by impact."><a class="nav-link" href="findings.html" title="Review defects that survived the evidence and adversarial gates, ordered by impact." aria-current="page"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Findings</span></span></a></li><li class="nav-item" data-search="review coverage see which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><a class="nav-link" href="concerns.html" title="See which failure modes were tested in each subsystem and the disposition reached for every applicable concern."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="system boundaries inspect shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="seams.html" title="Inspect shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="conflicting evidence find places where credible records disagree instead of having their differences silently smoothed away."><a class="nav-link" href="contradictions.html" title="Find places where credible records disagree instead of having their differences silently smoothed away."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li><li class="nav-item" data-search="competing explanations follow evidence matrices used when more than one concern could explain the same observed symptom."><a class="nav-link" href="diagnosticity.html" title="Follow evidence matrices used when more than one concern could explain the same observed symptom."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Working record</h2><ul class="nav-list"><li class="nav-item" data-search="decisions needed work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><a class="nav-link" href="open-questions.html" title="Work the questions the autonomous survey could not settle safely, including the assumptions used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="field notes browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><a class="nav-link" href="field-notes.html" title="Browse anomalies, tensions, recurring patterns, and leads that have not yet become confirmed findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Field notes</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Reference</h2><ul class="nav-list"><li class="nav-item" data-search="codebase glossary translate project-native names into the meanings amanuensis observed in context."><a class="nav-link" href="vocabulary.html" title="Translate project-native names into the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li><li class="nav-item" data-search="reader&#x27;s guide understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><a class="nav-link" href="how-to-read.html" title="Understand survey depth, evidence quality, findings, contradictions, and the limits on what each state authorizes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="onboarding record review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."><a class="nav-link" href="onboarding-report.html" title="Review the repository boundary, runtime inventory, and initial decomposition that established this conspectus."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><a class="nav-link" href="entry-point.html" title="Use the shortest useful reading path into an unfamiliar codebase before exploring subsystem detail."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li><li class="nav-item" data-search="review checklist see the concern set used to test each subsystem and the provenance of those checks."><a class="nav-link" href="concern-checklist.html" title="See the concern set used to test each subsystem and the provenance of those checks."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Subsystems</h2><ul class="nav-list"><li class="nav-item" data-search="survey methodology and agent contracts b-01 survey record for survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b01-survey-methodology-and-agent-contracts.html" title="Survey record for Survey methodology and agent contracts: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey methodology and agent contracts</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="mcp core, persistence, and lifecycle b-02 survey record for mcp core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b02-mcp-core-persistence-and-lifecycle.html" title="Survey record for MCP core, persistence, and lifecycle: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">MCP core, persistence, and lifecycle</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="knowledge tools and workflow api b-03 survey record for knowledge tools and workflow api: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b03-knowledge-tools-and-workflow-api.html" title="Survey record for Knowledge tools and workflow API: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Knowledge tools and workflow API</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="diff-aware materializer b-04 survey record for diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b04-diff-aware-materializer.html" title="Survey record for Diff-aware materializer: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Diff-aware materializer</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="packaging, installer, validation, and product docs b-05 survey record for packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b05-packaging-installer-validation-and-product-docs.html" title="Survey record for Packaging, installer, validation, and product docs: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Packaging, installer, validation, and product docs</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="report interface design and validation studies b-06 survey record for report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b06-report-interface-design-and-validation-studies.html" title="Survey record for Report interface design and validation studies: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Report interface design and validation studies</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="embedded research surveys and platform trials b-07 survey record for embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b07-embedded-research-surveys-and-platform-trials.html" title="Survey record for Embedded research surveys and platform trials: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Embedded research surveys and platform trials</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="activation evidence and release-readiness harness b-08 survey record for activation evidence and release-readiness harness: scope, reading path, concern review, findings, boundaries, vocabulary, and notes. mapped"><a class="nav-link" href="subsystems/b08-activation-evidence-and-release-readiness-harness.html" title="Survey record for Activation evidence and release-readiness harness: scope, reading path, concern review, findings, boundaries, vocabulary, and notes."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Activation evidence and release-readiness harness</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li></ul></section></nav>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title" id="nav-group-overview">Overview</h2><ul class="nav-list" aria-labelledby="nav-group-overview"><li class="nav-item" data-search="overview identity, four status dimensions, and one route into each lens."><a class="nav-link" href="index.html" title="Identity, four status dimensions, and one route into each lens."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-codebase">Codebase</h2><ul class="nav-list" aria-labelledby="nav-group-codebase"><li class="nav-item" data-search="architecture runtime shape, recorded edges, and boundaries, read as one connected system."><a class="nav-link" href="architecture.html" title="Runtime shape, recorded edges, and boundaries, read as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystems every region, grouped by layer, with the scope recorded for it."><a class="nav-link" href="master-plan.html" title="Every region, grouped by layer, with the scope recorded for it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystems</span></span></a></li><li class="nav-item" data-search="files one row per ledger file with owners, standing, and open defects."><a class="nav-link" href="files.html" title="One row per ledger file with owners, standing, and open defects."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Files</span></span></a></li><li class="nav-item" data-search="not yet surveyed the recorded edge of the map, each gap counted over the unit it occupies."><a class="nav-link" href="not-yet-surveyed.html" title="The recorded edge of the map, each gap counted over the unit it occupies."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Not yet surveyed</span></span></a></li><li class="nav-item" data-search="system boundaries shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="seams.html" title="Shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="codebase glossary the project&#x27;s own names, with the meanings amanuensis observed in context."><a class="nav-link" href="vocabulary.html" title="The project&#x27;s own names, with the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li></ul><div class="nav-subgroup"><h3 class="nav-subgroup-title" id="nav-group-codebase-subsystems">Subsystems</h3><ul class="nav-list" aria-labelledby="nav-group-codebase-subsystems"><li class="nav-item" data-search="server runtime and tool dispatch b-01 scope, structure, boundaries, defects, and the survey record for server runtime and tool dispatch. mapped subsystems"><a class="nav-link" href="subsystems/b01-server-runtime-and-tool-dispatch.html" title="Scope, structure, boundaries, defects, and the survey record for Server runtime and tool dispatch."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Server runtime and tool dispatch</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="repository binding and storage custody b-02 scope, structure, boundaries, defects, and the survey record for repository binding and storage custody. mapped subsystems"><a class="nav-link" href="subsystems/b02-repository-binding-and-storage-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Repository binding and storage custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Repository binding and storage custody</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="conspectus schema, vocabulary, and invariants b-03 scope, structure, boundaries, defects, and the survey record for conspectus schema, vocabulary, and invariants. mapped subsystems"><a class="nav-link" href="subsystems/b03-conspectus-schema-vocabulary-and-invariants.html" title="Scope, structure, boundaries, defects, and the survey record for Conspectus schema, vocabulary, and invariants."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Conspectus schema, vocabulary, and invariants</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="survey record tools b-04 scope, structure, boundaries, defects, and the survey record for survey record tools. mapped subsystems"><a class="nav-link" href="subsystems/b04-survey-record-tools.html" title="Scope, structure, boundaries, defects, and the survey record for Survey record tools."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey record tools</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="findings, dispositions, and resolution custody b-05 scope, structure, boundaries, defects, and the survey record for findings, dispositions, and resolution custody. mapped subsystems"><a class="nav-link" href="subsystems/b05-findings-dispositions-and-resolution-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Findings, dispositions, and resolution custody</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="locus standing and the reader lenses b-06 scope, structure, boundaries, defects, and the survey record for locus standing and the reader lenses. mapped subsystems"><a class="nav-link" href="subsystems/b06-locus-standing-and-the-reader-lenses.html" title="Scope, structure, boundaries, defects, and the survey record for Locus standing and the reader lenses."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Locus standing and the reader lenses</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="git state, staleness, and refresh b-07 scope, structure, boundaries, defects, and the survey record for git state, staleness, and refresh. mapped subsystems"><a class="nav-link" href="subsystems/b07-git-state-staleness-and-refresh.html" title="Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Git state, staleness, and refresh</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="materializer rendering pipeline b-08 scope, structure, boundaries, defects, and the survey record for materializer rendering pipeline. mapped subsystems"><a class="nav-link" href="subsystems/b08-materializer-rendering-pipeline.html" title="Scope, structure, boundaries, defects, and the survey record for Materializer rendering pipeline."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Materializer rendering pipeline</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li><li class="nav-item" data-search="projection read-back and publication custody b-09 scope, structure, boundaries, defects, and the survey record for projection read-back and publication custody. mapped subsystems"><a class="nav-link" href="subsystems/b09-projection-read-back-and-publication-custody.html" title="Scope, structure, boundaries, defects, and the survey record for Projection read-back and publication custody."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Projection read-back and publication custody</span><span class="nav-id" data-identifier-defined>B-09</span></span></a></li><li class="nav-item" data-search="the amanuensis skill b-10 scope, structure, boundaries, defects, and the survey record for the amanuensis skill. mapped subsystems"><a class="nav-link" href="subsystems/b10-the-amanuensis-skill.html" title="Scope, structure, boundaries, defects, and the survey record for The Amanuensis skill."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">The Amanuensis skill</span><span class="nav-id" data-identifier-defined>B-10</span></span></a></li><li class="nav-item" data-search="development harness and gates b-11 scope, structure, boundaries, defects, and the survey record for development harness and gates. mapped subsystems"><a class="nav-link" href="subsystems/b11-development-harness-and-gates.html" title="Scope, structure, boundaries, defects, and the survey record for Development harness and gates."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Development harness and gates</span><span class="nav-id" data-identifier-defined>B-11</span></span></a></li><li class="nav-item" data-search="vendored research corpus b-12 scope, structure, boundaries, defects, and the survey record for vendored research corpus. deferred subsystems"><a class="nav-link" href="subsystems/b12-vendored-research-corpus.html" title="Scope, structure, boundaries, defects, and the survey record for Vendored research corpus."><span class="nav-tick status-deferred" aria-hidden="true"></span><span><span class="nav-name">Vendored research corpus</span><span class="nav-id" data-identifier-defined>B-12</span></span></a></li></ul></div></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-unresolved">Unresolved</h2><ul class="nav-list" aria-labelledby="nav-group-unresolved"><li class="nav-item" data-search="open findings defects open or awaiting verification at the checked revision."><a class="nav-link" href="findings.html" title="Defects open or awaiting verification at the checked revision." aria-current="page"><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Open findings</span></span></a></li><li class="nav-item" data-search="disagreements where credible records disagree or the evidence does not discriminate between them."><a class="nav-link" href="disagreements.html" title="Where credible records disagree or the evidence does not discriminate between them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Disagreements</span></span></a></li><li class="nav-item" data-search="decisions needed questions the survey could not settle, with the assumption used to keep moving."><a class="nav-link" href="open-questions.html" title="Questions the survey could not settle, with the assumption used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="leads open observations that are not yet findings."><a class="nav-link" href="field-notes.html" title="Open observations that are not yet findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Leads</span></span></a></li><li class="nav-item" data-search="stale knowledge examined files the repository has changed under, and scoped files that changed before anyone read them."><a class="nav-link" href="stale.html" title="Examined files the repository has changed under, and scoped files that changed before anyone read them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Stale knowledge</span></span></a></li><li class="nav-item" data-search="hot spots where unresolved work and unread territory concentrate, as separate measures."><a class="nav-link" href="hot-spots.html" title="Where unresolved work and unread territory concentrate, as separate measures."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Hot spots</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-history">History</h2><ul class="nav-list" aria-labelledby="nav-group-history"><li class="nav-item" data-search="resolved findings verified, ruled out, and accepted, each with the basis its resolution rests on."><a class="nav-link" href="resolved-findings.html" title="Verified, ruled out, and accepted, each with the basis its resolution rests on."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved findings</span></span></a></li><li class="nav-item" data-search="resolution history the append-only account of how records reached their state."><a class="nav-link" href="resolution-history.html" title="The append-only account of how records reached their state."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolution history</span></span></a></li><li class="nav-item" data-search="resolved leads and questions questions that were answered or dismissed, and leads that were closed."><a class="nav-link" href="resolved-leads.html" title="Questions that were answered or dismissed, and leads that were closed."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved leads and questions</span></span></a></li><li class="nav-item" data-search="sessions and publications what ran, when, and what it produced."><a class="nav-link" href="sessions.html" title="What ran, when, and what it produced."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Sessions and publications</span></span></a></li><li class="nav-item" data-search="conflicting evidence resolved disagreements and the evidence that settled them."><a class="nav-link" href="contradictions.html" title="Resolved disagreements and the evidence that settled them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-method">Method</h2><ul class="nav-list" aria-labelledby="nav-group-method"><li class="nav-item" data-search="reader&#x27;s guide every enum, what it authorizes, and what it cannot justify."><a class="nav-link" href="how-to-read.html" title="Every enum, what it authorizes, and what it cannot justify."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="review coverage which failure modes were tested where, and the disposition each one reached."><a class="nav-link" href="concerns.html" title="Which failure modes were tested where, and the disposition each one reached."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="review checklist the concern set and its provenance."><a class="nav-link" href="concern-checklist.html" title="The concern set and its provenance."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li><li class="nav-item" data-search="competing explanations index of evidence matrices and their outcomes."><a class="nav-link" href="diagnosticity.html" title="Index of evidence matrices and their outcomes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li><li class="nav-item" data-search="onboarding record the repository boundary and initial decomposition that established this conspectus."><a class="nav-link" href="onboarding-report.html" title="The repository boundary and initial decomposition that established this conspectus."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin a dated reading path recorded by an earlier session; it is survey history, not a current index."><a class="nav-link" href="entry-point.html" title="A dated reading path recorded by an earlier session; it is survey history, not a current index."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li></ul></section></nav>
     <div class="rail-foot">
       <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="findings.md">Markdown source</a></div>
       <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
     </div>
   </aside>
   <main class="document" id="content">
-    <div class="mobile-bar"><span class="mobile-brand">Amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
     <div class="document-inner">
       <header class="page-head">
-        <p class="eyebrow">Evidence</p>
-        <h1>Confirmed findings</h1>
-        <p class="page-hint">Review defects that survived the evidence and adversarial gates, ordered by impact.</p>
+        <p class="eyebrow">Unresolved</p>
+        <h1>Open findings</h1>
+        <p class="page-hint">Defects open or awaiting verification at the checked revision.</p>
         <div class="snapshot-strip">
-          <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
-          <span class="snapshot-item"><b>Checked</b>&nbsp; adc4ce04aa57</span>
-          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-08-29 04:56:43</span>
-          <span class="snapshot-item"><span class="freshness">No recorded stale entries</span></span>
+          <span class="snapshot-item"><b>Branch</b>&nbsp; reader-lenses</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 0fee11b0fea1</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-09-12 13:14:57</span>
+          <span class="snapshot-item"><span class="freshness">Stale: 0 with a survey obligation, 0 exempt, of 58 scoped files</span></span>
           
         </div>
       </header>
-      <article class="content content-findings"><section class="section-high-findings">
-<h2 id="high-findings"><a class="heading-anchor" href="#high-findings" aria-label="Link to High findings">§</a>High findings</h2>
-<h3 class="finding-subsystem-heading" id="mcp-core-persistence-and-lifecycle" data-identifier-defined><a class="heading-anchor" href="#mcp-core-persistence-and-lifecycle" aria-label="Link to MCP core, persistence, and lifecycle">§</a><a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html">MCP core, persistence, and lifecycle</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="high findings"><!-- amanuensis:finding:47d5c6eae5b99f1bfe21308db51867ae17da48ba25d361eb042149ccdbe0f877 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b02-1" data-record-label="finding B02-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b02-1"><span id="b02-1" class="record-anchor"></span><strong>B02-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-verified-fixed">Verified fixed</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>b8b566f</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A phase-gate Git commit can omit the database mutations completed in that phase.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">SQLite runs in WAL mode, WAL is ignored by storage Git, and commitStorage does not checkpoint the database before staging.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="knowledge-tools-and-workflow-api" data-identifier-defined><a class="heading-anchor" href="#knowledge-tools-and-workflow-api" aria-label="Link to Knowledge tools and workflow API">§</a><a href="subsystems/b03-knowledge-tools-and-workflow-api.html">Knowledge tools and workflow API</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="high findings"><!-- amanuensis:finding:a1e44b20bb88cf816e2cf058cfd11b2afa1ca2a248c0d9853eb8b12904881f43 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b03-1" data-record-label="finding B03-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b03-1"><span id="b03-1" class="record-anchor"></span><strong>B03-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A subsystem can report status 'mapped' with zero stale entries while an arbitrary fraction of its declared scope has never been classified, and while ledger rows continue to assert that deleted files were examined.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The refresh path never reconciles the file ledger against the working tree. detect_changes inner-joins the commit-range diff against file_ledger, so paths added since the baseline match no row and are silently dropped; no ledger writer enumerates the tree; the scoping-to-structural invariant checks only that at least one ledger row exists; and no classification value or non-destructive tool can retire a row whose file was deleted.</div></div></div></div></article><!-- amanuensis:finding:9f021cbf58b96ca414b52864a779000d8654574782578f1a0a787ac1f97918d2 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b03-2" data-record-label="finding B03-2"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b03-2"><span id="b03-2" class="record-anchor"></span><strong>B03-2</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The entire staleness surface is inert.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">detect_changes reports drift to its caller but persists none of it, get_stale_backlog always returns empty, clear_staleness has nothing to clear, and the dashboard's stale_entries is permanently 0 regardless of how far the conspectus has drifted from HEAD.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">All staleness state lives in the entries table, and no server code path ever inserts a row into it. The only INSERT INTO entries in the repository is in materializer/test-readback.py, a test fixture. Every read and update of staleness therefore operates on a permanently empty table.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="packaging-installer-validation-and-product-docs" data-identifier-defined><a class="heading-anchor" href="#packaging-installer-validation-and-product-docs" aria-label="Link to Packaging, installer, validation, and product docs">§</a><a href="subsystems/b05-packaging-installer-validation-and-product-docs.html">Packaging, installer, validation, and product docs</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="high findings"><!-- amanuensis:finding:12cbd57d87e0a1b81b7e15720e21a6900c7c87978c1699bcd48440da44a33ade --><article class="record record-finding" role="listitem" aria-labelledby="finding-b05-1" data-record-label="finding B05-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b05-1"><span id="b05-1" class="record-anchor"></span><strong>B05-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The roadmap and the A26 receipt both assert v0.2.0-beta.1 is an unpublished candidate, while the package is published on npm holding the latest dist-tag.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">The publication gate cannot detect the discrepancy because nothing checks the registry or the tag.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">render-roadmap.mjs validates delivery.release only for internal consistency — field shapes, and agreement between roadmap.json and the A26 receipt. It never queries the registry, the git tag, or the publish workflow run. A release that has actually been published therefore satisfies every candidate assertion, including publicationStatus 'not-published', indefinitely.</div></div></div></div></article></div>
-</section>
-<section class="section-medium-findings">
-<h2 id="medium-findings"><a class="heading-anchor" href="#medium-findings" aria-label="Link to Medium findings">§</a>Medium findings</h2>
-<h3 class="finding-subsystem-heading" id="mcp-core-persistence-and-lifecycle-2" data-identifier-defined><a class="heading-anchor" href="#mcp-core-persistence-and-lifecycle-2" aria-label="Link to MCP core, persistence, and lifecycle">§</a><a href="subsystems/b02-mcp-core-persistence-and-lifecycle.html">MCP core, persistence, and lifecycle</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="medium findings"><!-- amanuensis:finding:5b8a8674582a5618d24e7cfc7c5784abd9ce3abf2e609ff6c2a6f5861b46da9d --><article class="record record-finding" role="listitem" aria-labelledby="finding-b02-2" data-record-label="finding B02-2"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b02-2"><span id="b02-2" class="record-anchor"></span><strong>B02-2</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A stalled ps or git subprocess during server startup hangs the MCP server indefinitely with no timeout, no diagnosis, and no usable state.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">Every subprocess on the startup and project-binding path is synchronous and unbounded: discoverCodexParentWorkspace runs ps via execFileSync, and project binding runs six git invocations via execSync, execFileSync, and spawnSync. None passes a timeout option, and execFileSync blocks the Node event loop for the call's full duration. The error handler in codex-host.ts returns null only for errors carrying an errno code, so a hang — which raises nothing — is not covered.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="knowledge-tools-and-workflow-api-2" data-identifier-defined><a class="heading-anchor" href="#knowledge-tools-and-workflow-api-2" aria-label="Link to Knowledge tools and workflow API">§</a><a href="subsystems/b03-knowledge-tools-and-workflow-api.html">Knowledge tools and workflow API</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="medium findings"><!-- amanuensis:finding:a2dada7a319ab8eeb4c655c2ec2365f734c38d3fabb937c8c4ce813892dbb61f --><article class="record record-finding" role="listitem" aria-labelledby="finding-b03-3" data-record-label="finding B03-3"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b03-3"><span id="b03-3" class="record-anchor"></span><strong>B03-3</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A disposition whose strongest supporting evidence is test-observed, config-asserted, or doc-asserted cannot record that quality; set_disposition rejects the value, forcing the agent to overstate it as code-verified or understate it as contract-stated.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The EVIDENCE_QUALITY enum in tools/dispositions.ts lists five values while the KINDS enum in tools/evidence.ts lists nine, and the <a href="subsystems/b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a> methodology contract publishes an eight-rung ladder as the authoritative evidence-quality scale. The two vocabularies were allowed to diverge, and nothing checks them against each other or against the published contract.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="diff-aware-materializer" data-identifier-defined><a class="heading-anchor" href="#diff-aware-materializer" aria-label="Link to Diff-aware materializer">§</a><a href="subsystems/b04-diff-aware-materializer.html">Diff-aware materializer</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="medium findings"><!-- amanuensis:finding:706a0f871ac7b99e4357cc4264ec047e37a7ea55f63e3addee9fdd32523704b4 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b04-1" data-record-label="finding B04-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b04-1"><span id="b04-1" class="record-anchor"></span><strong>B04-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>5694080</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The published conspectus states 'No stale entries — the conspectus is fresh.' in both the HTML reading surface and its Markdown companion, regardless of how far behind HEAD the survey actually is.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">diagrams.py:staleness_map renders an empty query result as an affirmative freshness claim. Its source, the entries table, is never populated by the server (see <strong><abbr class="identifier-definition" title="B03-2 — Finding in Knowledge tools and workflow API: The entire staleness surface is inert." aria-label="B03-2 — Finding in Knowledge tools and workflow API: The entire staleness surface is inert.">B03-2</abbr></strong>), so the empty branch is the only branch that ever executes — but the deeper defect is that the empty case is reported as positive health rather than as absent data.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="activation-evidence-and-release-readiness-harness" data-identifier-defined><a class="heading-anchor" href="#activation-evidence-and-release-readiness-harness" aria-label="Link to Activation evidence and release-readiness harness">§</a><a href="subsystems/b08-activation-evidence-and-release-readiness-harness.html">Activation evidence and release-readiness harness</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="medium findings"><!-- amanuensis:finding:c33234b7d1ed2897c72414dcc68063803adb417d5636b9242b71444e2e56c1fb --><article class="record record-finding" role="listitem" aria-labelledby="finding-b08-1" data-record-label="finding B08-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b08-1"><span id="b08-1" class="record-anchor"></span><strong>B08-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-fixed-pending-verification">Unverified fix</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>8c779e1c</code></dd></div></dl></header><div class="record-body"><p class="record-lede">Release readiness depends on the byte state of the user's live ~/.codex/config.toml.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">Once that file changes for any reason, the A22 checker reports drift permanently, the A26 candidate suite fails, and no release can be cut until another real-host A22 campaign rebaselines the pin.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The A22 receipt records host.configSha256Before/After and configurationCustody.restoredConfigSha256 for the developer's own Codex configuration, and check-codex-host-evidence compares the live file against them. That file is user-level and mutable independently of this repository, so the pin is a snapshot of something the project does not own and cannot hold still. dev/refresh-a22-evidence.mjs rebaselines the fourteen source digests but not the config pin, leaving no cheap recovery.</div></div></div></div></article></div>
-</section>
-<section class="section-low-findings">
-<h2 id="low-findings"><a class="heading-anchor" href="#low-findings" aria-label="Link to Low findings">§</a>Low findings</h2>
-<h3 class="finding-subsystem-heading" id="knowledge-tools-and-workflow-api-3" data-identifier-defined><a class="heading-anchor" href="#knowledge-tools-and-workflow-api-3" aria-label="Link to Knowledge tools and workflow API">§</a><a href="subsystems/b03-knowledge-tools-and-workflow-api.html">Knowledge tools and workflow API</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="low findings"><!-- amanuensis:finding:dd9a532ba428c06720c816c26ff40c038b456426167ecaa1b4d1786dcf297631 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b03-4" data-record-label="finding B03-4"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b03-4"><span id="b03-4" class="record-anchor"></span><strong>B03-4</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>adc4ce0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A scoped file whose content is identical to what was examined can be reported stale indefinitely, because staleness is decided by whether its path appeared in a commit range rather than by whether its content changed.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The drift predicate in detect_changes tests path membership in the lastSha..currentSha diff and only null-checks the row's ref_sha, never comparing content at that commit against the current one. Nothing clears stale except an explicit clear_staleness, so a path touched and reverted — or touched on a branch later deleted — remains flagged against unchanged content.</div></div></div></div></article></div>
-<h3 class="finding-subsystem-heading" id="embedded-research-surveys-and-platform-trials" data-identifier-defined><a class="heading-anchor" href="#embedded-research-surveys-and-platform-trials" aria-label="Link to Embedded research surveys and platform trials">§</a><a href="subsystems/b07-embedded-research-surveys-and-platform-trials.html">Embedded research surveys and platform trials</a></h3>
-<div class="record-list record-list-finding" role="list" aria-label="low findings"><!-- amanuensis:finding:5b90b53ec0f81ef847766380b42be22e6c08d6dca7946efc2439fe965de77143 --><article class="record record-finding" role="listitem" aria-labelledby="finding-b07-1" data-record-label="finding B07-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b07-1"><span id="b07-1" class="record-anchor"></span><strong>B07-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>073cee86</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A research refresh or snapshot verification can hang indefinitely when GitHub, npm, the shadcn CLI, or a child detector stalls.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The affected fetch(), spawnSync(), and subprocess.check_output() calls provide no timeout, abort signal, or cancellation path.</div></div></div></div></article></div>
+      <article class="content content-findings" data-filter-scope="findings" data-facet-severity="Medium|Low" data-facet-subsystem="Server runtime and tool dispatch|Survey record tools|Findings, dispositions, and resolution custody|Git state, staleness, and refresh|The Amanuensis skill|Conspectus schema, vocabulary, and invariants|Materializer rendering pipeline|Development harness and gates"><section class="section-open">
+<h2 id="open"><a class="heading-anchor" href="#open" aria-label="Link to Open">§</a><span class="status status-resolution status-open" title="No terminal resolution event has been recorded; the item is still open.">Open</span></h2>
+<p><em>10 defect(s) with no recorded repair.</em></p>
+<h3 id="medium-findings"><a class="heading-anchor" href="#medium-findings" aria-label="Link to Medium findings">§</a>Medium findings</h3>
+<h4 class="finding-subsystem-heading" id="server-runtime-and-tool-dispatch" data-identifier-defined><a class="heading-anchor" href="#server-runtime-and-tool-dispatch" aria-label="Link to Server runtime and tool dispatch">§</a><a href="subsystems/b01-server-runtime-and-tool-dispatch.html">Server runtime and tool dispatch</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:cc78044544af598925de07123aa694d25430434fcf83dd6fa8c44449698b6824 --><article class="record record-finding" data-filter-row data-filter-subsystem="Server runtime and tool dispatch" data-filter-severity="Medium" role="listitem" aria-labelledby="finding-b01-1" data-record-label="finding B01-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b01-1"><span id="b01-1" class="record-anchor"></span><strong>B01-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A ToolDefinition array exported from a module under mcp-server/src/tools/ but never concatenated into index.ts's registry is served by nothing, advertised by nothing, and reported by no check: the tool-inventory gate stays green and DEVELOPMENT.md simply omits it.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">gen-tool-inventory.mjs derives its denominator from the served tools/list. scanToolFiles() reads every src/tools/*.ts and does hold the full exported set, but that map is consulted only to group and order the served tools; its keys are never diffed against the served list, so the one artifact that sees both sides discards the only comparison that could turn red. check-tool-schemas.mjs imports every dist/tools module and therefore also sees an unregistered one, but asserts schema shape only.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="survey-record-tools" data-identifier-defined><a class="heading-anchor" href="#survey-record-tools" aria-label="Link to Survey record tools">§</a><a href="subsystems/b04-survey-record-tools.html">Survey record tools</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:6374cca73aa49a111c30775938c961063a9892f3d60bd99b65e8eb748c34e5eb --><article class="record record-finding" data-filter-row data-filter-subsystem="Survey record tools" data-filter-severity="Medium" role="listitem" aria-labelledby="finding-b04-4" data-record-label="finding B04-4"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b04-4"><span id="b04-4" class="record-anchor"></span><strong>B04-4</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">add_evidence writes an evidence row whose ref_sha was never resolved, so a disposition or finding can be published citing file:symbol@&amp;lt;sha&amp;gt; for a sha that names no commit in the bound workspace, and every reader downstream presents it as a revision binding.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The handler validates file_path through requireWorkspaceSourcePath and kind against the generated enum, then takes ref_sha with requireString and stores it. The module imports no git helper. Revision resolution in this server is attached to the citing record rather than to the cited row: add_claim resolves each evidence row's ref_sha and requires ancestry, and add_xref resolves every citation token, so evidence that only ever reaches a disposition or a finding is never resolved by anyone.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="findings-dispositions-and-resolution-custody" data-identifier-defined><a class="heading-anchor" href="#findings-dispositions-and-resolution-custody" aria-label="Link to Findings, dispositions, and resolution custody">§</a><a href="subsystems/b05-findings-dispositions-and-resolution-custody.html">Findings, dispositions, and resolution custody</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:12cbd57d87e0a1b81b7e15720e21a6900c7c87978c1699bcd48440da44a33ade --><article class="record record-finding" data-filter-row data-filter-subsystem="Findings, dispositions, and resolution custody" data-filter-severity="Medium" role="listitem" aria-labelledby="finding-b05-1" data-record-label="finding B05-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b05-1"><span id="b05-1" class="record-anchor"></span><strong>B05-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">A concern verdict and a confirmed bug are both stored with a ref_sha nobody resolved, so a disposition or finding can claim to have been assessed at a revision that exists in no repository, and every surface that prints the binding repeats the claim.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">set_disposition and add_finding read ref_sha with requireString and write it. dispositions.ts imports no git helper at all; findings.ts has resolveCommit and applies it only to fix_sha, on the repair path. The disposition's free-text evidence citation is parsed with strict:false, which checks only that it does not point into reserved tool state before returning it verbatim, so the revision inside that string is unchecked too.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="git-state-staleness-and-refresh" data-identifier-defined><a class="heading-anchor" href="#git-state-staleness-and-refresh" aria-label="Link to Git state, staleness, and refresh">§</a><a href="subsystems/b07-git-state-staleness-and-refresh.html">Git state, staleness, and refresh</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:5b90b53ec0f81ef847766380b42be22e6c08d6dca7946efc2439fe965de77143 --><article class="record record-finding" data-filter-row data-filter-subsystem="Git state, staleness, and refresh" data-filter-severity="Medium" role="listitem" aria-labelledby="finding-b07-1" data-record-label="finding B07-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b07-1"><span id="b07-1" class="record-anchor"></span><strong>B07-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The four stale reasons are declared in the vocabulary source and generated into two modules that nobody imports; both writers spell the values as string literals and the column carries no CHECK, so a value that drifts from the enum is written, stored, and read with nothing naming the divergence.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">stale_reason declares "sql": [] in the source — a deliberate choice, since the column predates the enum — and the generated STALE_REASONS constants are consumed by no TypeScript or Python module. detect_changes writes "git-drift", "absent" and "unverifiable-ref" inline, and standing.ts:reachability writes "unverifiable-ref" and "unreachable-ref" inline. The enum therefore has three copies and zero enforcement points, which is the one shape the four-party contract does not cover: a vocabulary with no consumer.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="the-amanuensis-skill" data-identifier-defined><a class="heading-anchor" href="#the-amanuensis-skill" aria-label="Link to The Amanuensis skill">§</a><a href="subsystems/b10-the-amanuensis-skill.html">The Amanuensis skill</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:43048b19c807541cf9f24e09d93a608a30ec708998a59d870770fa01bbed2618 --><article class="record record-finding" data-filter-row data-filter-subsystem="The Amanuensis skill" data-filter-severity="Medium" role="listitem" aria-labelledby="finding-b10-1" data-record-label="finding B10-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b10-1"><span id="b10-1" class="record-anchor"></span><strong>B10-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">SKILL.md can drift from the vocabulary source on twenty-three of the twenty-five enums with no check naming the divergence: the four-party check compares the hand-written party only on evidence kinds and disposition classifications, while the prose also publishes the six-value status ladder and the five field-note categories as lists an agent acts on directly.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">check-evidence-vocabulary.mjs compares the two generated parties against every enum the source carries, by iterating sourceLists. The fourth party is handled separately, by two hand-written regexes that look for one literal phrase each — "kind ladder (...)" and "<code>set_disposition</code> writes one of <code>...</code>". Every other vocabulary SKILL.md publishes is outside both patterns, so adding a status or renaming a field-note category changes the source, both generated modules, and the SQL, and leaves the prose asserting the old list with nothing comparing them.</div></div></div></div></article></div>
+<h3 id="low-findings"><a class="heading-anchor" href="#low-findings" aria-label="Link to Low findings">§</a>Low findings</h3>
+<h4 class="finding-subsystem-heading" id="conspectus-schema-vocabulary-and-invariants" data-identifier-defined><a class="heading-anchor" href="#conspectus-schema-vocabulary-and-invariants" aria-label="Link to Conspectus schema, vocabulary, and invariants">§</a><a href="subsystems/b03-conspectus-schema-vocabulary-and-invariants.html">Conspectus schema, vocabulary, and invariants</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:dd9a532ba428c06720c816c26ff40c038b456426167ecaa1b4d1786dcf297631 --><article class="record record-finding" data-filter-row data-filter-subsystem="Conspectus schema, vocabulary, and invariants" data-filter-severity="Low" role="listitem" aria-labelledby="finding-b03-4" data-record-label="finding B03-4"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b03-4"><span id="b03-4" class="record-anchor"></span><strong>B03-4</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">schema.sql tells a reader of dispositions.evidence_quality that "databases created before this widening keep the narrower constraint", which stopped being true when the vocabulary CHECK migration landed: the source binds evidence_quality to that very column, so every open compares its live CHECK against the source and rebuilds the table when it is narrower.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The vocabulary contract has four parties and a check that compares them; hand-written prose inside schema.sql is a fifth, unchecked one. gen-vocabulary.mjs --check-sql compares CHECK literals, and check-evidence-vocabulary.mjs compares value lists, so neither reads a comment. When migrateVocabularyChecks was added in db.ts it made the statement obsolete and nothing in the repository could notice.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="survey-record-tools-2" data-identifier-defined><a class="heading-anchor" href="#survey-record-tools-2" aria-label="Link to Survey record tools">§</a><a href="subsystems/b04-survey-record-tools.html">Survey record tools</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:a01d786dde9f27952868a962fb456c1693847bbbb9eda1c373c19839924315c3 --><article class="record record-finding" data-filter-row data-filter-subsystem="Survey record tools" data-filter-severity="Low" role="listitem" aria-labelledby="finding-b04-5" data-record-label="finding B04-5"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b04-5"><span id="b04-5" class="record-anchor"></span><strong>B04-5</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The confirmed_bugs rollup on every row list_subsystems returns is computed from findings.status, not from finding_state_current, so the dashboard's count of open bugs and a subsystem page's list of them are produced by two separate definitions of the same predicate.</p><div class="record-fields"><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">finding_state_current was introduced because each reader had been mapping findings.status its own way, and its comment enumerates the readers that were converted: the renderer, the two findings tools, the review session, and the review historical-findings reader. list_subsystems was not among them and still carries a FILTER (WHERE f.status='confirmed-bug') in its LEFT JOIN.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="materializer-rendering-pipeline" data-identifier-defined><a class="heading-anchor" href="#materializer-rendering-pipeline" aria-label="Link to Materializer rendering pipeline">§</a><a href="subsystems/b08-materializer-rendering-pipeline.html">Materializer rendering pipeline</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:c33234b7d1ed2897c72414dcc68063803adb417d5636b9242b71444e2e56c1fb --><article class="record record-finding" data-filter-row data-filter-subsystem="Materializer rendering pipeline" data-filter-severity="Low" role="listitem" aria-labelledby="finding-b08-1" data-record-label="finding B08-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b08-1"><span id="b08-1" class="record-anchor"></span><strong>B08-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The subsystem map prints each subsystem's finding count as "N (M open)" where M is computed from findings.status, while the subsystem page for the same subsystem lists those findings with a resolution_state read from finding_state_current.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">One publish carries two definitions of open.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">render_master_plan's rollup query aggregates SUM(CASE WHEN status='confirmed-bug' …) over the findings table. render_subsystem, in the same module, joins finding_state_current for the same rows. The view's comment enumerates the readers that were converted to it and names "the renderer" among them; the conversion reached render_subsystem and not render_master_plan.</div></div></div></div></article></div>
+<h4 class="finding-subsystem-heading" id="development-harness-and-gates" data-identifier-defined><a class="heading-anchor" href="#development-harness-and-gates" aria-label="Link to Development harness and gates">§</a><a href="subsystems/b11-development-harness-and-gates.html">Development harness and gates</a></h4>
+<div class="record-list record-list-finding" role="list" aria-label="open"><!-- amanuensis:finding:8a79e3cc7ca3610be73431028d83d0df6978522509d27a5ad17ed07e30fabe98 --><article class="record record-finding" data-filter-row data-filter-subsystem="Development harness and gates" data-filter-severity="Low" role="listitem" aria-labelledby="finding-b11-1" data-record-label="finding B11-1"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b11-1"><span id="b11-1" class="record-anchor"></span><strong>B11-1</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">The revision-ancestry axis of dev/test-rebuild-readback.mjs and dev/test-rebuild-coverage.mjs cannot turn red in CI.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">The mcp-server job that runs both checks out at actions/checkout's default depth of 1; the gates detect the shallow clone, print that ancestry is not evaluable, and return a pass for that assertion.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The gates handle the environment honestly — reporting not-evaluable rather than green is the correct response to a clone that cannot answer ancestry — but the environment is chosen by the workflow, and the workflow can give them a full clone. The roadmap job in the same file sets fetch-depth: 0 for gates that need history; the mcp-server job does not, and it is the job that carries the two gates whose receipts bind claims to revisions.</div></div></div></div></article><!-- amanuensis:finding:d2f533e960072a849a6cf19732efc159c44c53e42584358fda7c70fcd4db2eac --><article class="record record-finding" data-filter-row data-filter-subsystem="Development harness and gates" data-filter-severity="Low" role="listitem" aria-labelledby="finding-b11-2" data-record-label="finding B11-2"><header class="record-meta" data-identifier-defined><h4 class="record-primary" id="finding-b11-2"><span id="b11-2" class="record-anchor"></span><strong>B11-2</strong></h4><dl class="record-facts"><div class="record-fact record-fact-status"><dt>Status</dt><dd><span class="status status-resolution status-open">Open</span></dd></div><div class="record-fact record-fact-ref-sha"><dt>Revision</dt><dd><code>0fee11b0</code></dd></div></dl></header><div class="record-body"><p class="record-lede">Three JavaScript files in the harness carry raw NUL bytes, which makes them binary to the repository's own search tools: <code>grep -n pairKey dev/test-rebuild-coverage.mjs</code> prints nothing and exits 1, and <code>rg -n pairKey</code> on the same file prints only "binary file matches (found \0 byte around offset 10704)" with no line number and no content.</p><div class="record-fields"><div class="record-field"><p class="record-label">Observed behavior</p><div class="record-copy">A search therefore reports that a symbol in a load-bearing gate is absent.</div></div><div class="record-field"><p class="record-label">Root cause</p><div class="record-copy">The files embed the separator and sentinel characters literally rather than as escapes: dev/test-rebuild-coverage.mjs uses a raw 0x00 in pairKey's join and in the batch-label comparison's default, and mcp-server/scripts/gen-vocabulary.mjs and dev/amanuensis-defects-to-pecia.mjs each carry two more. The choice of a NUL separator is right — no subsystem id or path can contain one, so two keys cannot collide by concatenation, which is the same reasoning readback.py's ledger-row token uses — but readback.py writes it as the escape \x00 and stays text.</div></div></div></div></article></div>
 </section></article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="findings.md">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>
+<script src="search-index.js"></script>
 <script>
 (() => {
   const root = document.documentElement;
@@ -869,27 +899,338 @@ a .identifier-definition { text-decoration-color: currentColor; }
     if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
   });
 
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
   const search = document.querySelector('[data-nav-search]');
-  const empty = document.querySelector('[data-empty-search]');
-  const filter = () => {
-    const needle = search.value.trim().toLocaleLowerCase();
-    let visible = 0;
-    document.querySelectorAll('.nav-item').forEach((item) => {
-      const match = !needle || item.dataset.search.includes(needle);
-      item.hidden = !match;
-      if (match) visible += 1;
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
     });
-    document.querySelectorAll('.nav-group').forEach((group) => {
-      group.hidden = !group.querySelector('.nav-item:not([hidden])');
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
     });
-    empty?.classList.toggle('visible', visible === 0);
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
   };
-  search?.addEventListener('input', filter);
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault(); search?.focus(); search?.select();
     }
   });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
 })();
 </script>
 </body>

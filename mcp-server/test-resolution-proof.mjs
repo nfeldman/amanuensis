@@ -333,4 +333,131 @@ try {
   rmSync(legacyRoot, { recursive: true, force: true });
 }
 
+// F1: the sweep must not append behind a store that already carries events.
+// `findings.status` stays 'fixed' after a repair is verified, so a sweep keyed
+// only on that column re-imports the row on every reopen and the newest event
+// — pending — wins `finding_resolution_current`, silently un-verifying a
+// verified repair.  One reopen is enough to show it.
+const reopenRoot = mkdtempSync(join(tmpdir(), "amanuensis-resolution-reopen-"));
+try {
+  // Its own workspace: the shared fixture above is removed with its root.
+  const reopenWorkspace = join(reopenRoot, "workspace");
+  mkdirSync(reopenWorkspace);
+  execFileSync("git", ["init", "-q"], { cwd: reopenWorkspace });
+  const reopenCommit = (value) => {
+    writeFileSync(join(reopenWorkspace, "fixture.ts"), `export const value = ${JSON.stringify(value)};\n`);
+    execFileSync("git", ["add", "fixture.ts"], { cwd: reopenWorkspace });
+    execFileSync(
+      "git",
+      ["-c","commit.gpgsign=false","-c","user.name=amanuensis-test","-c","user.email=test@localhost",
+       "commit","--quiet","--no-verify","-m",value],
+      { cwd: reopenWorkspace },
+    );
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: reopenWorkspace, encoding: "utf8" }).trim();
+  };
+  const reopenBefore = reopenCommit("before");
+  const reopenFix = reopenCommit("fix");
+  const reopenAfter = reopenCommit("after");
+  const reopenPath = join(reopenRoot, "memory.db");
+  let reopenDb = openDatabase(reopenPath);
+  const reopenCtx = {
+    project: {
+      workspacePath: reopenWorkspace,
+      projectKey: "test/reopen",
+      storagePath: reopenRoot,
+      dbPath: reopenPath,
+      storageGitReady: false,
+    },
+    db: reopenDb,
+    sessionId: null,
+  };
+  const reopenCall = (name, args = {}) => tools.get(name).handler(args, reopenCtx);
+  reopenCtx.sessionId = reopenCall("start_session", { intent: "reopen-proof" }).session_id;
+  reopenDb
+    .prepare("INSERT INTO subsystems (id, name, status) VALUES ('B-02', 'Reopen', 'concerns')")
+    .run();
+  reopenCall("add_finding", {
+    finding_id: "B02-1",
+    subsystem_id: "B-02",
+    symptom: "old behavior remains visible",
+    root_cause: "missing repair",
+    severity: "HIGH",
+    status: "confirmed-bug",
+    ref_sha: reopenBefore,
+    pass_type: "survey",
+  });
+  reopenCall("update_finding_status", {
+    finding_id: "B02-1",
+    status: "fixed",
+    fix_location: "fixture.ts:value",
+    fix_sha: reopenFix,
+    resolution_note: "repair committed",
+  });
+  const proof = reopenCall("add_evidence", {
+    file_path: "fixture.ts",
+    symbol: "value",
+    ref_sha: reopenAfter,
+    kind: "test-observed",
+    note: "post-repair regression passes",
+  });
+  reopenCall("attach_evidence_to_finding", {
+    finding_id: "B02-1",
+    evidence_id: proof.id,
+    role: "fix-verification",
+  });
+  reopenCall("verify_finding_fix", {
+    finding_id: "B02-1",
+    evidence_id: proof.id,
+    verification_note: "regression reproducer is now green",
+  });
+  const stateOf = (handle) =>
+    handle
+      .prepare("SELECT resolution_state FROM finding_state_current WHERE finding_id='B02-1'")
+      .get().resolution_state;
+  assert(stateOf(reopenDb) === "verified-fixed", "fixture did not reach verified-fixed");
+  reopenDb.close();
+
+  test("a verified repair survives reopening the database", () => {
+    reopenDb = openDatabase(reopenPath);
+    const state = stateOf(reopenDb);
+    assert(
+      state === "verified-fixed",
+      `reopening downgraded the verified repair to ${state}; the legacy sweep appended behind it`,
+    );
+  });
+
+  test("reopening appends no legacy import behind a recorded event", () => {
+    const imported = reopenDb
+      .prepare(
+        "SELECT COUNT(*) AS n FROM finding_resolution_events WHERE finding_id='B02-1' AND origin_key IS NOT NULL",
+      )
+      .get().n;
+    assert(imported === 0, `the sweep imported ${imported} legacy row(s) over a live history`);
+  });
+
+  test("the sweep stays idempotent across repeated reopens of a legacy row", () => {
+    reopenDb
+      .prepare(
+        `INSERT INTO findings
+           (finding_id, subsystem_id, symptom, root_cause, severity, status, ref_sha)
+         VALUES ('B02-2', 'B-02', 'legacy', 'legacy', 'LOW', 'fixed', 'old-sha')`,
+      )
+      .run();
+    reopenDb.close();
+    for (const _ of [0, 1]) {
+      reopenDb = openDatabase(reopenPath);
+      reopenDb.close();
+    }
+    reopenDb = openDatabase(reopenPath);
+    const rows = reopenDb
+      .prepare("SELECT COUNT(*) AS n FROM finding_resolution_events WHERE finding_id='B02-2'")
+      .get().n;
+    assert(rows === 1, `legacy row imported ${rows} times`);
+    assert(stateOf(reopenDb) === "verified-fixed", "the second reopen sweep disturbed B02-1");
+  });
+  reopenDb.close();
+} finally {
+  rmSync(reopenRoot, { recursive: true, force: true });
+}
+
 console.log(`\n${passed} resolution-proof checks passed`);

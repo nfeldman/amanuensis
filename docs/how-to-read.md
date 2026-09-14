@@ -1,190 +1,408 @@
 # How to read this conspectus
 
-An Amanuensis conspectus is a **persistent, evidence-driven
-architectural record** of a codebase. This site is the human-facing
-view; behind it sits a SQLite database every claim on the site was
-generated from. Every assertion carries provenance: who said it, when,
-against what commit, with what evidence, at what depth of survey.
+An Amanuensis conspectus is a **persistent, evidence-driven architectural
+record** of a codebase. This site is the human-facing view; behind it sits a
+SQLite database that every claim on the site was generated from. Every
+assertion carries provenance: who recorded it, when, against which revision,
+with what evidence, and at what depth of survey.
 
-This page is shipped automatically with every conspectus. Read it
-once; you won't need to read it again.
+The record is organized as four lenses and an entrance. **Codebase** is the
+account of what the project is and which of its territory no one has read.
+**Unresolved** is what has not reached a terminal, evidence-backed state at the
+checked revision. **History** is what has, plus the append-only account of how,
+for the two record families that keep one. **Method** — these pages — is the
+apparatus by which you judge how far the rest of the record can be trusted.
+
+Two habits make the rest of it readable. Read a claim against the survey depth
+of the subsystem it is about: survey depth is the knowledge-depth contract, and
+it fixes what claims about that region you should accept at all. And read every
+state below for what it *cannot* justify as much as for what it can — that
+column is the whole point of the vocabulary.
+
 
 ## What to look at first
 
-| If you're here because… | Start here |
+Every page this conspectus publishes, in the order the record presents them. The lens a page sits under says what kind of claim it carries.
+
+### Overview
+
+| Page | What it carries |
 |---|---|
-| You've never seen this project before | [`entry-point.md`](entry-point.md) → [`master-plan.md`](master-plan.md) |
-| You're investigating a specific bug | [`findings.md`](findings.md), filtered by severity |
-| You want to understand the architecture | [`architecture.md`](architecture.md), then a subsystem page |
-| You're evaluating how trustworthy this is | [`open-questions.md`](open-questions.md), [`contradictions.md`](contradictions.md), [`diagnosticity.md`](diagnosticity.md) |
-| You want to reproduce or extend the survey | `provenance.md` (if present) + the repo's git log |
+| [Overview](index.md) | Identity, four status dimensions, and one route into each lens. |
 
-## Reading the status badges
+### Codebase
 
-Every subsystem carries a **status** that defines what claims about
-it you should accept. This is the knowledge-depth contract — the
-methodology's most important epistemic guardrail.
-
-| Status | What claims are authorized |
+| Page | What it carries |
 |---|---|
-| `unmapped` | **None.** No assertions about behavior. |
-| `scoping` | File scope only: "F is in scope for S." No behavioral claims. |
-| `structural` | Types, state containers, data flows, concurrency model. **No correctness claims.** |
-| `concerns` | Concern review with evidence. Findings at evidence_quality ≥ code-verified. |
-| `adversarial` | As above, plus findings survived attempted refutation. **Highest confidence.** |
-| `mapped` | Complete. Seam contracts filled in. Ready for composition with mapped peers. |
-| `deferred` | Orthogonal flag: "do not survey yet." Not a knowledge level. |
+| [Architecture](architecture.md) | Runtime shape, recorded edges, and boundaries, read as one connected system. |
+| [Subsystems](master-plan.md) | Every region, grouped by layer, with the scope recorded for it. |
+| [Files](files.md) | One row per ledger file with owners, standing, and open defects. |
+| [Not yet surveyed](not-yet-surveyed.md) | The recorded edge of the map, each gap counted over the unit it occupies. |
+| [System boundaries](seams.md) | Shared objects and ordering assumptions where independently understandable subsystems meet. |
+| [Codebase glossary](vocabulary.md) | The project's own names, with the meanings Amanuensis observed in context. |
+| Subsystems · [Server runtime and tool dispatch](subsystems/b01-server-runtime-and-tool-dispatch.md) | Scope, structure, boundaries, defects, and the survey record for Server runtime and tool dispatch. |
+| Subsystems · [Repository binding and storage custody](subsystems/b02-repository-binding-and-storage-custody.md) | Scope, structure, boundaries, defects, and the survey record for Repository binding and storage custody. |
+| Subsystems · [Conspectus schema, vocabulary, and invariants](subsystems/b03-conspectus-schema-vocabulary-and-invariants.md) | Scope, structure, boundaries, defects, and the survey record for Conspectus schema, vocabulary, and invariants. |
+| Subsystems · [Survey record tools](subsystems/b04-survey-record-tools.md) | Scope, structure, boundaries, defects, and the survey record for Survey record tools. |
+| Subsystems · [Findings, dispositions, and resolution custody](subsystems/b05-findings-dispositions-and-resolution-custody.md) | Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody. |
+| Subsystems · [Locus standing and the reader lenses](subsystems/b06-locus-standing-and-the-reader-lenses.md) | Scope, structure, boundaries, defects, and the survey record for Locus standing and the reader lenses. |
+| Subsystems · [Git state, staleness, and refresh](subsystems/b07-git-state-staleness-and-refresh.md) | Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh. |
+| Subsystems · [Materializer rendering pipeline](subsystems/b08-materializer-rendering-pipeline.md) | Scope, structure, boundaries, defects, and the survey record for Materializer rendering pipeline. |
+| Subsystems · [Projection read-back and publication custody](subsystems/b09-projection-read-back-and-publication-custody.md) | Scope, structure, boundaries, defects, and the survey record for Projection read-back and publication custody. |
+| Subsystems · [The Amanuensis skill](subsystems/b10-the-amanuensis-skill.md) | Scope, structure, boundaries, defects, and the survey record for The Amanuensis skill. |
+| Subsystems · [Development harness and gates](subsystems/b11-development-harness-and-gates.md) | Scope, structure, boundaries, defects, and the survey record for Development harness and gates. |
+| Subsystems · [Vendored research corpus](subsystems/b12-vendored-research-corpus.md) | Scope, structure, boundaries, defects, and the survey record for Vendored research corpus. |
 
-If you see a confident-sounding claim about a subsystem that is still
-`structural`, that's a methodology violation — treat the claim as
-speculation. The server enforces this at write time, but readers are
-the final check.
+### Unresolved
 
-## Reading evidence quality
-
-Every disposition and every finding carries an `evidence_quality`
-tag that describes how solid the underlying observation is. Higher
-quality supports stronger claims.
-
-| Quality | What it means |
+| Page | What it carries |
 |---|---|
-| `code-verified` | The reviewer read the code and confirmed the behavior. Strongest. |
-| `contract-stated` | An explicit contract (type signature, schema, docstring with semantics) asserts the behavior. |
-| `comment-asserted` | A code comment claims the behavior, but the code was not verified against the claim. |
-| `name-inferred` | Inferred from a symbol's name (e.g. `sanitizeInput` must sanitize). Weak; needs adversarial review. |
-| `pattern-matched` | Fits a pattern we've seen elsewhere. Weakest; used only as a scoping signal. |
+| [Open findings](findings.md) | Defects open or awaiting verification at the checked revision. |
+| [Disagreements](disagreements.md) | Where credible records disagree or the evidence does not discriminate between them. |
+| [Decisions needed](open-questions.md) | Questions the survey could not settle, with the assumption used to keep moving. |
+| [Leads](field-notes.md) | Open observations that are not yet findings. |
+| [Stale knowledge](stale.md) | Examined files the repository has changed under, and scoped files that changed before anyone read them. |
+| [Hot spots](hot-spots.md) | Where unresolved work and unread territory concentrate, as separate measures. |
 
-Any finding classified `confirmed-bug` should rest on
-`code-verified` or `contract-stated` evidence. If you see a
-confirmed-bug with `name-inferred` evidence that survived adversarial
-review, that's a flag to look closely — either the adversarial pass
-was inadequate or the reviewer genuinely had no better evidence and
-flagged the finding as linchpin-dependent.
+### History
 
-## Reading finding severity
-
-Severity reflects impact, not confidence.
-
-| Severity | Typical shape |
+| Page | What it carries |
 |---|---|
-| `CRITICAL` | Data loss, security hole, privilege escalation, production outage path. |
-| `HIGH` | Incorrect behavior on a common code path; corrupt state; wedged queues. |
-| `MEDIUM` | Incorrect behavior on an edge case; correctness issue with a known workaround. |
-| `LOW` | Readability/maintainability; defensive-coding gaps; would bite a future change. |
+| [Resolved findings](resolved-findings.md) | Verified, ruled out, and accepted, each with the basis its resolution rests on. |
+| [Resolution history](resolution-history.md) | The append-only account of how records reached their state. |
+| [Resolved leads and questions](resolved-leads.md) | Questions that were answered or dismissed, and leads that were closed. |
+| [Sessions and publications](sessions.md) | What ran, when, and what it produced. |
+| [Conflicting evidence](contradictions.md) | Resolved disagreements and the evidence that settled them. |
 
-## Reading finding status
+### Method
 
-After adversarial review, each finding carries one of:
-
-| Status | What it means |
+| Page | What it carries |
 |---|---|
-| `confirmed-bug` | The bug is real at the surveyed commit, survived refutation. |
-| `confirmed-acceptable` | The behavior exists but is the intended design — documented as such. |
-| `ruled-out` | Claim was made but adversarial review overturned it. Record preserved so future analysts don't re-tread the same ground. |
-| `fixed` | Confirmed at the surveyed commit; a later commit has addressed it. |
+| [Reader's guide](how-to-read.md) | Every enum, what it authorizes, and what it cannot justify. |
+| [Review coverage](concerns.md) | Which failure modes were tested where, and the disposition each one reached. |
+| [Review checklist](concern-checklist.md) | The concern set and its provenance. |
+| [Competing explanations](diagnosticity.md) | Index of evidence matrices and their outcomes. |
+| [Onboarding record](onboarding-report.md) | The repository boundary and initial decomposition that established this conspectus. |
+| [Where to begin](entry-point.md) | A dated reading path recorded by an earlier session; it is survey history, not a current index. |
 
-Note that `ruled-out` findings stay in the record. That's a feature,
-not dead wood — if somebody reads a later version of the code and
-starts to form the same suspicion, the overturn argument is already
-written down.
+## The vocabulary this record uses
 
-## Reading open questions
+Every value below is generated from the vocabulary contract, version `1.0.0` — the same source the server validates writes against and the same source this site's labels come from. A value the server accepts and this page did not carry would be a drift, so the generator produces both from one definition.
 
-If the conspectus was produced by the autoprogress coordinator
-(cloud mode), [`open-questions.md`](open-questions.md) is the queue
-of things the agent could not answer without human input. Each entry
-records:
+### Finding resolution state
 
-- the **question** (what the agent couldn't decide)
-- **what it blocked** (the classification or decision that was held up)
-- **what the agent assumed** (the best-available interpretation it
-  proceeded with)
+`finding_resolution_state` · resolution axis
 
-A small open-question queue, mostly in the `priority-ranking` or
-`scope-judgment` categories, means the run was confident. A large
-queue weighted toward `domain-knowledge` or `contradiction` means
-the survey is walking on thin ice — treat its findings with more
-skepticism and plan a focused human pass on those subsystems.
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `open` | Open | No terminal resolution event has been recorded; the item is still open. | that the defect is still reproducible at the repository head |
+| `accepted` | Accepted | The behavior is recorded as understood and acceptable; it is not an open defect. | that the judgement was revisited at the repository head |
+| `ruled-out` | Ruled out | The candidate problem was overturned by evidence or adversarial review. | that no related defect exists at the same locus |
+| `fixed-pending-verification` | Unverified fix | A repair is recorded, but independent fix evidence has not yet closed the finding. | that the defect is gone at the repository head |
+| `verified-fixed` | Verified fixed | A later revision contains a repair backed by recorded verification evidence. | that the repair is still present at the repository head |
 
-## Reading contradictions
+### Finding status
 
-[`contradictions.md`](contradictions.md) pairs findings that make
-incompatible claims about the same `file:symbol@sha`. The conspectus
-preserves these rather than smoothing them away; an unresolved
-contradiction is the most honest thing a survey can say about a
-genuinely ambiguous situation.
+`finding_status` · resolution axis
 
-Resolutions:
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `confirmed-bug` | Confirmed defect | A defect supported by evidence and retained after adversarial review. | that the defect is unrepaired at the repository head; the resolution events are the authority |
+| `confirmed-acceptable` | Accepted behavior | The observed behavior is real and judged to be intended or acceptable. | that the judgement was revisited at the repository head |
+| `fixed` | Fixed | The defect was confirmed at an earlier revision and is recorded as addressed later. | that verification evidence closed the finding; only a verified-fixed event carries that |
+| `ruled-out` | Ruled out | The candidate problem was overturned by evidence or adversarial review. | that no related defect exists at the same locus |
 
-- `a-supersedes-b` / `b-supersedes-a` — one claim is now considered
-  correct; the other stays on record for traceability.
-- `scope-distinction` — both claims are right, about different
-  scopes (different inputs, different code paths). The `scope_note`
-  explains.
-- `unresolved` — the evidence genuinely does not disambiguate.
+### Standing state
 
-If you see `unresolved`, that's the survey telling you: "two
-credible readings, no way to choose between them yet." That is
-information.
+`standing_state` · standing axis
 
-## Reading diagnosticity matrices
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `unledgered` | No record | No file_ledger row names this path in any subsystem. | "there are no findings here"; "this file is out of scope" |
+| `excluded` | Excluded | A ledger row classifies the path as generated, vendored, irrelevant, or deferred with a recorded reason. | any claim about the file's content or behavior |
+| `scoped-unread` | In scope, not yet read | A ledger row classifies the path candidate: it participates in a subsystem, and no one has read it. | any claim about content, behavior, or the absence of defects |
+| `examined` | Examined | A ledger row classifies the path examined, it is not stale, and its examination revision resolves in the workspace. | claims about symbols no evidence cites; the absence of defects |
+| `examined-stale` | Examined, since changed | The path was examined, and drift, absence, or an unreachable examination revision has withdrawn that reading's currency. | any current claim at the repository head |
+| `absent` | No longer in the repository | A scope_gaps row of kind absent, or a ledger row whose stale_reason is absent. | anything at the repository head |
+| `mixed` | Owners disagree | Two or more owning subsystems record different standing states for the same path. | anything the weakest owner state cannot justify |
 
-When two or more concerns could independently explain the same
-observable symptom in a subsystem, the coordinator opens a matrix
-(the Analysis of Competing Hypotheses pattern). The matrix's columns
-are the competing concerns; its rows are pieces of evidence; each
-cell records whether that evidence is `consistent`, `contradicts`,
-`irrelevant`, or `ambiguous` for that concern.
+### Stale reason
 
-The methodology ranks concerns by **inconsistency** — the one with
-the most contradicting evidence is rejected first — rather than by
-supporting evidence, because an evidence base consistent with all
-competing explanations tells you nothing. The `leading_concern` on
-a resolved matrix is the surviving best explanation; the
-`linchpin_note` identifies the single piece of evidence the
-resolution most depends on (and therefore the one a reviewer should
-re-verify first).
+`stale_reason` · standing axis
 
-Matrices that resolve to `unresolved-competition` are analogous to
-unresolved contradictions: a legitimate terminal state when the
-evidence does not disambiguate.
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `git-drift` | Changed since examination | The file's content differs from the revision it was examined at. | that the recorded reading is wrong, only that it is no longer current |
+| `absent` | Gone from the repository | The examined path is no longer tracked in the workspace. | anything about the current tree at that path |
+| `unverifiable-ref` | Examination revision cannot be compared | The examination revision could not be diffed against the current head, so drift could not be computed. | that the file did or did not change |
+| `unreachable-ref` | Examination revision is not an ancestor | The examination revision resolves in the workspace but is not an ancestor of the current head. | any current claim at the repository head |
 
-## Provenance
+### File classification
 
-If the conspectus ships with a `provenance.md`
-page, that is the chronological event log: sessions in order,
-findings within sessions in order, with commit SHAs and timestamps.
-It's the evidence that the survey was run in the order it claims —
-not retroactively curated.
+`file_classification` · standing axis
 
-Combined with the git log of the conspectus repo itself (every
-phase gate is a commit; every commit is timestamped), provenance is
-the strongest claim the methodology can make about its own honesty.
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `candidate` | In scope, not yet read | The path participates in a subsystem and has not been read. | any claim about content or behavior |
+| `examined` | Examined | The path was read and its reading is anchored to an examination revision. | claims about symbols no evidence cites |
+| `generated-ignore` | Generated | The path is build or projection output and is not read as a source of claims. | anything about the generator that produced it |
+| `vendor-ignore` | Vendored | The path is third-party code carried in the tree and is not surveyed. | anything about the upstream project's behavior |
+| `irrelevant` | Ruled irrelevant | The path was judged to carry nothing the survey needs. | that the judgement was re-examined at the repository head |
+| `deferred-with-reason` | Deferred | The path is in scope but deliberately left unread, with the reason recorded. | any claim about content or behavior |
 
-## Reproducing what you're reading
+### Subsystem status
 
-Anyone with:
+`subsystem_status` · survey axis
 
-- the surveyed codebase's commit SHA (the `ref_sha` on findings and
-  evidence),
-- the Amanuensis version that ran the survey (captured in commit
-  messages on the conspectus repo), and
-- sufficient API budget to drive an LLM through the same phases
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `unmapped` | Unmapped | This subsystem has not yet been surveyed; no architectural claims are authorized. | any claim about this subsystem's behavior |
+| `scoping` | Scoping | Only the subsystem boundary and file scope are established so far. | any behavioral claim; file scope is all that is established |
+| `structural` | Structural | Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized. | any correctness claim |
+| `concerns` | Concerns | Structural mapping is complete and concern-by-concern review is in progress. | that a finding survived adversarial challenge |
+| `adversarial` | Adversarial | Candidate conclusions are being challenged; treat them as provisional. | that the challenge pass has finished |
+| `mapped` | Mapped | Survey complete through structural analysis, concern review, and adversarial challenge. | that the reading is current at the repository head |
+| `deferred` | Deferred | This subsystem is intentionally outside the active survey plan. | anything about this subsystem's behavior |
 
-…can replay the survey and see whether their conclusions overlap
-with these. Non-determinism in the LLM means the two runs won't be
-identical; structural overlap is the expected property, and the
-[`compare_conspectuses`](https://github.com/search?q=compare_conspectuses)
-tool in the Amanuensis server measures it.
+### Evidence kind
+
+`evidence_kind` · evidence axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `code-verified` | Code verified | The implementation was read and the stated behavior was verified directly. | behavior at any revision other than the one cited |
+| `runtime-observed` | Runtime observed | The behavior was observed in a running system and the observation was recorded. | that the same behavior holds under other inputs or configurations |
+| `contract-stated` | Contract stated | An explicit schema, type, or behavioral contract states this claim. | that the implementation honors the contract |
+| `test-observed` | Test observed | A test run or recorded observation demonstrates this behavior. | behavior outside what the test exercises |
+| `config-asserted` | Config asserted | Configuration states the behavior, but runtime behavior was not independently verified. | that this configuration is the one in effect |
+| `doc-asserted` | Docs asserted | Project documentation states the claim; implementation agreement is not yet verified. | that the implementation matches the documentation |
+| `comment-asserted` | Comment asserted | A code comment states the claim; the implementation was not verified against it. | that the comment is current with the code beside it |
+| `name-inferred` | Name inferred | The claim is inferred from a symbol name and should be treated as weak evidence. | any correctness claim; a name is not an implementation |
+| `pattern-matched` | Pattern matched | The claim matches a known pattern and is only a scoping signal. | any claim about what this locus actually does |
+
+### Evidence quality
+
+`evidence_quality` · evidence axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `code-verified` | Code verified | The implementation was read and the stated behavior was verified directly. | behavior at any revision other than the one cited |
+| `runtime-observed` | Runtime observed | The behavior was observed in a running system and the observation was recorded. | that the same behavior holds under other inputs or configurations |
+| `contract-stated` | Contract stated | An explicit schema, type, or behavioral contract states this claim. | that the implementation honors the contract |
+| `test-observed` | Test observed | A test run or recorded observation demonstrates this behavior. | behavior outside what the test exercises |
+| `config-asserted` | Config asserted | Configuration states the behavior, but runtime behavior was not independently verified. | that this configuration is the one in effect |
+| `doc-asserted` | Docs asserted | Project documentation states the claim; implementation agreement is not yet verified. | that the implementation matches the documentation |
+| `comment-asserted` | Comment asserted | A code comment states the claim; the implementation was not verified against it. | that the comment is current with the code beside it |
+| `name-inferred` | Name inferred | The claim is inferred from a symbol name and should be treated as weak evidence. | any correctness claim; a name is not an implementation |
+| `pattern-matched` | Pattern matched | The claim matches a known pattern and is only a scoping signal. | any claim about what this locus actually does |
+
+### Disposition classification
+
+`disposition_classification` · disposition axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `confirmed-bug` | Confirmed defect | A defect supported by evidence and retained after adversarial review. | that the defect is unrepaired at the repository head |
+| `confirmed-acceptable` | Accepted behavior | The observed behavior is real and judged to be intended or acceptable. | that the judgement was revisited at the repository head |
+| `ruled-out` | Ruled out | The candidate problem was overturned by evidence or adversarial review. | that no related defect exists at the same locus |
+| `out-of-scope` | Out of scope | The concern does not apply within this subsystem's declared boundary. | that the concern does not apply elsewhere in the project |
+| `unresolved-competition` | Competing explanations | Multiple explanations remain viable; the evidence does not discriminate. | that any one of the competing explanations is the right one |
+
+### Severity
+
+`severity` · severity axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `CRITICAL` | Critical | Potential data loss, security failure, privilege escalation, or production outage path. | how likely the path is to be reached; severity is impact, not confidence |
+| `HIGH` | High | Incorrect behavior on a common path, corrupt state, or a seriously wedged workflow. | how confident the finding is; severity is impact, not confidence |
+| `MEDIUM` | Medium | Incorrect edge-case behavior or a correctness issue with a known workaround. | that the edge case is rare in practice |
+| `LOW` | Low | Maintainability, clarity, or defensive-coding risk most likely to affect a future change. | that the risk will never be reached |
+
+### Field note category
+
+`field_note_category` · lead axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `pattern` | Pattern | A recurrence noticed in more than one place. | that the recurrence is intentional |
+| `anomaly` | Anomaly | A deviation from the surrounding conventions or expectations. | that the deviation is a defect |
+| `connection` | Connection | A relationship noticed across subsystem boundaries. | that the relationship is load-bearing |
+| `tension` | Tension | Local correctness that sits awkwardly against global coherence. | that either side is wrong |
+| `candidate-concern` | Candidate concern | A pattern that might warrant a concern code of its own. | that the concern has been reviewed anywhere |
+
+### Open question category
+
+`open_question_category` · question axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `domain-knowledge` | Domain knowledge | A business rule or domain fact the record cannot supply. | the assumption recorded in its place |
+| `scope-judgment` | Scope judgment | A scope fence that needs a human to confirm. | that the assumed boundary is the right one |
+| `priority-ranking` | Priority ranking | A survey order the agent guessed and a reviewer can override. | that the ranking reflects project priorities |
+| `contradiction` | Contradiction | Two credible sources disagree and the record does not settle it. | either reading |
+| `tooling-limit` | Tooling limit | An operation the agent could not perform. | anything about what that operation would have shown |
+| `ambiguous-evidence` | Ambiguous evidence | The evidence permits more than one interpretation. | any single interpretation |
+| `other` | Other | A question that fits none of the recorded categories. | anything beyond the question as asked |
+
+### Open question resolution
+
+`open_question_resolution` · resolution axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `open` | Open | No answer has been recorded. | that the question is still the right one to ask |
+| `answered` | Answered | A human recorded an answer. | that the answer was applied to the record |
+| `dismissed` | Dismissed | The question was withdrawn without an answer. | that the underlying uncertainty was resolved |
+| `superseded` | Superseded | A later question or decision replaced this one. | what the replacement decided |
+
+### Field note follow up
+
+`field_note_follow_up` · lead axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `open` | Open | The lead has not been taken up. | that the lead is still worth taking up |
+| `dismissed` | Dismissed | The lead was closed without becoming a finding. | that the observation behind it was wrong |
+
+### Xref relationship
+
+`xref_relationship` · relation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `shared-pattern` | Shared pattern | Both subsystems implement the same pattern. | that either copy is derived from the other |
+| `data-flow` | Data flow | Data produced by one subsystem is consumed by the other. | the direction of control, only of data |
+| `dependency` | Dependency | One subsystem depends on the other to do its work. | that the dependency is the only one between them |
+| `mirrors` | Mirrors | The two subsystems maintain parallel structures that must stay in step. | that anything enforces the parallel |
+| `contention` | Contention | Both subsystems compete for the same resource. | that the contention is unmanaged |
+| `temporal-coupling` | Temporal coupling | The two must run, or change, in a particular order. | that the order is enforced anywhere |
+
+### Xref strength
+
+`xref_strength` · relation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `observed` | Observed | The link was seen once in the code and recorded. | that the link is intentional or stable |
+| `confirmed` | Confirmed | The link was checked from both sides. | that the link is architecturally required |
+| `structural` | Structural | The link follows from a structure both sides depend on. | that either side is aware of the other |
+
+### Contradiction resolution
+
+`contradiction_resolution` · resolution axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `a-supersedes-b` | A supersedes B | The first finding stands and the second is withdrawn. | that the withdrawn finding was wrong about everything it said |
+| `b-supersedes-a` | B supersedes A | The second finding stands and the first is withdrawn. | that the withdrawn finding was wrong about everything it said |
+| `scope-distinction` | Scope distinction | Both findings stand; they apply to scopes the record now distinguishes. | that either finding was re-verified |
+| `unresolved` | Unresolved | The conflict is recorded and not yet settled. | either finding |
+
+### Diagnosticity outcome
+
+`diagnosticity_outcome` · resolution axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `open` | Open | The competing explanations have not been analyzed to a verdict. | any one of the competing explanations |
+| `resolved` | Resolved | This item has a recorded resolution. | that the resolution was independently checked |
+| `unresolved-competition` | Competing explanations | Multiple explanations remain viable; the evidence does not discriminate. | that any one of the competing explanations is the right one |
+
+### Claim epistemic kind
+
+`claim_epistemic_kind` · claim axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `observation` | Observation | Something read directly in the code or an artifact. | why it is that way |
+| `inference` | Inference | A conclusion drawn from observations, not read directly. | itself as an observation |
+| `hypothesis` | Hypothesis | A candidate explanation offered for testing. | any conclusion until it has been tested |
+| `open-question` | Open question | A question the record raises and does not answer. | any answer to it |
+| `direct-intent` | Direct intent | Intent a human stated. | intent the human did not state |
+| `inferred-intent` | Inferred intent | Intent attributed from the code or the record, not stated. | that the attributed intent is the actual one |
+| `decision` | Decision | A choice recorded with the authority that made it. | that the decision was carried out |
+
+### Claim subject type
+
+`claim_subject_type` · claim axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `symbol` | Symbol | A named function, type, or value at a path. | anything about its callers |
+| `subsystem` | Subsystem | A registered subsystem id. | anything about a specific file within it |
+| `seam` | Seam | A registered boundary between two subsystems. | either party's internals |
+
+### Concern status
+
+`concern_status` · concern axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `active` | Active | The concern is on the checklist and must be dispositioned. | that any subsystem has dispositioned it |
+| `retired` | Retired | The concern was withdrawn from the checklist. | that past dispositions were revisited |
+| `merged` | Merged | The concern was folded into another concern code. | anything the target concern has not recorded |
+| `candidate` | Candidate | The concern was proposed and not yet accepted onto the checklist. | that it is reviewed anywhere |
+
+### Pass type
+
+`pass_type` · provenance axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `onboarding` | Onboarding | The first pass, which establishes scope and the survey plan. | any correctness claim |
+| `survey` | Survey | The structural and concern-review pass over a subsystem. | that a conclusion survived challenge |
+| `adversarial` | Adversarial | The pass that tries to overturn what the survey concluded. | that nothing was missed |
+| `refresh` | Refresh | A later pass that re-examines the record against a newer revision. | anything the refresh did not re-read |
+
+### Lens
+
+`lens` · lens axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `codebase` | Codebase | The recorded account of what the project is, how it works, and which of its territory has not been read. | that unread territory holds no defects |
+| `unresolved` | Unresolved | Records that have not reached a terminal, evidence-backed state at the checked revision. | that a record here is still reproducible at the repository head |
+| `history` | History | Records that have reached a terminal state, plus the recorded account of how they got there where one exists. | that a terminal state was re-checked at the repository head |
+| `method` | Method | The apparatus by which a reader judges how far the rest of the record can be trusted. | any claim about the project itself |
+
+### Omission reason
+
+`omission_reason` · omission axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `policy` | Not requested | The section was not requested by the call. | that the section is empty |
+| `budget` | Over budget | The item was eligible and ranked below the byte or item budget. | that the omitted items matter less than the selected ones |
+
+### Attention label
+
+`attention_label` · attention axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `open` | Open | A finding with no terminal resolution event, ordered by severity. | that the defect is still reproducible at the repository head |
+| `regression` | Regression | A currently open finding with a prior verified-fixed event. | that the recorded repair was reverted rather than defeated another way |
+| `unverified-suspicion` | Unverified suspicion | An open candidate-concern field note. | that the suspicion is a defect |
+| `unknown` | Unknown | An open question. | any answer to it |
+| `stale-knowledge` | Stale knowledge | A claim validity interval closed at or before the reviewed head, or an obligation-bearing ledger row marked stale. | that the recorded reading was wrong, only that it is no longer current |
+| `awaiting-verification` | Awaiting verification | A finding whose current resolution state is fixed-pending-verification. | that the defect is gone at the repository head |
+| `undiscriminated` | Undiscriminated | Two or more credible accounts stand and the record does not say which of them the evidence picks out. | any one of the competing accounts |
+
+## Reproducing what you are reading
+
+Anyone with the surveyed revision (the `ref_sha` on findings and evidence), the
+Amanuensis version that ran the survey, and enough budget to drive a model
+through the same phases can replay it and see whether their conclusions
+overlap. Non-determinism means the two runs will not be identical; structural
+overlap is the expected property, and the `compare_conspectuses` tool measures
+it.
 
 ## If something here looks wrong
 
-Say so. The conspectus treats reader-surfaced disagreement as a
-first-class signal: a reviewer who disagrees with a finding should
-open an issue against this conspectus repo; the next survey session
-records the disagreement as a field note or converts it into a
-diagnosticity matrix if the reviewer's argument looks credible
-enough to compete with the existing finding.
-
-A methodology that refuses to hear its readers is one that should
+Say so. Reader-surfaced disagreement is a first-class signal: a reviewer who
+disagrees with a finding should open an issue against this conspectus, and the
+next survey session records the disagreement as a lead or converts it into an
+evidence matrix if the argument looks strong enough to compete with the
+existing finding. A record that refuses to hear its readers is one that should
 not be trusted.

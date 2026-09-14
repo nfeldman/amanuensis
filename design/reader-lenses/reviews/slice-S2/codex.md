@@ -1,0 +1,21 @@
+## Findings
+
+| Id | Kind | Severity | Claim | Evidence | Recommendation |
+|---|---|---|---|---|---|
+| F1 | gate-cannot-red | medium | P5 | Inverting the ancestor-success branch in `src/standing.ts:413` left `node test-locus-index-view.mjs` green because `test-locus-index-view.mjs:243-246` imports `dist`; rebuilding made the gate red. | Build before the gate or execute source directly. |
+| F2 | gate-cannot-red | medium | P6 | Adding `scoped-unread` to `CONTENT_AUTHORIZING` at `src/tools/locus.ts:96` left `node test-locus-standing.mjs` green; after `npm run build`, the same gate failed. `test-locus-standing.mjs:198-200` imports `dist`. | Make the gate compile its inputs before testing. |
+| F3 | gate-cannot-red | medium | P7 | Inverting compact serialization at `src/helpers.ts:62` left `node test-locus-compactness.mjs` green; rebuilding made it fail. `test-locus-compactness.mjs:190-193` imports compiled modules. | Prepend `npm run build` or test source modules. |
+| F4 | claim-unmet | high | C6 | `standing.ts:408` returns `examined` when `ref_sha` is null, although `schema.sql:165` permits that row and the spec requires an unresolvable revision to become `examined-stale`. A strengthened fixture returned `examined`. | Treat a missing examination revision as `unverifiable-ref` and add the null fixture. |
+| F5 | claim-unmet | medium | C10 | `standing.ts:446-451` falls back to `refs/remotes/origin/<branch>` without a configured upstream. The contract requires `origin_head` to be null in that case; the contrary behavior is explicitly expected by `test-locus-index-view.mjs:899-903`. | Remove the conventional-origin fallback and assert null without upstream configuration. |
+| F6 | claim-unmet | low | C8 | The 40-owner ceiling fixture returned `this locus cannot be served...44786 bytes`; `locus.ts:1533-1536` includes neither `src/crowded.ts` nor the owner count required by the claim. | Include the resolved path and complete owner count in the `ToolError`. |
+| F7 | claim-unmet | high | C13 | `primaryFilesNames` reduces citations to their path at `locus.ts:518-532`, and `matchingFindings` applies that path-only result at `:570-572`. A strengthened P6 fixture showed an uncited symbol inheriting five defects cited to another symbol. | Match the complete path-and-symbol citation for symbol loci and test uncited symbols. |
+| F8 | claim-unmet | high | C16 | `buildHistoryPointer` at `locus.ts:905-984` accepts no `as_of_sha`, while `:1287` declares the section historically supported. A strengthened P6 check at the middle commit retained B01-2’s resolution event from HEAD. | Apply the same ancestry cut to history items and counts before declaring `as_of_supported: true`. |
+| F9 | claim-unmet | medium | C20 | `unknownId` at `locus.ts:1087-1088` identifies an unassessed seam only by `seam_id`, although the census unit is `(seam, side)`. A two-owner, two-sided seam fixture made the omitted-id uniqueness check fail. | Include side and subsystem in each unassessed-seam omission id. |
+| F10 | claim-unmet | low | C33 | For a subsystem with recorded scope, `renderers.py:862-865` emits only the scope text and never says that no purpose statement exists. Adding the specification’s assertion made P8 red. | Emit the no-purpose statement alongside every Scope section. |
+| F11 | claim-unmet | medium | C41 | The content loop at `readback.py:375-391` hashes only receipt members and never verifies receipt membership. After removing `search-index.js` only from the receipt, read-back returned `verified: true` with state, coverage, and content all green. | Compare receipt paths with expected projection paths and make a missing receipt member fail the content axis. |
+
+## Notes
+
+P5–P9 gates were green after restoration. P10’s static and read-back arms passed, but Chromium exited 134 before exposing its debugging endpoint, leaving the gate red and browser-only accessibility behavior unverified.
+All unique declared regression commands passed under the pinned Node 24.18.0 and Python 3.12.13 toolchains.
+The snapshot was restored; `git status` shows only the launcher-supplied untracked `REVIEW/` directory.

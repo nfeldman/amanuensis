@@ -10,9 +10,10 @@ description: >
   onboarding", "survey B-01" (or any subsystem id), "resume survey", "what's
   left", "what have you noticed", "audit the conspectus", "refresh
   conspectus", "reinit survey", "map the architecture", "explore this
-  codebase". Also trigger for adjacent asks ("what do we know about X
-  subsystem", "is there a finding on this file") whenever a conspectus is
-  already on disk for the project, even if the user does not say
+  codebase". Also trigger for adjacent asks about one locus — a file, a
+  symbol, a subsystem, or a term ("what do we know about X", "before I change
+  X", "is there a finding on this file", "what is <term> here") whenever a
+  conspectus is already on disk for the project, even if the user does not say
   "amanuensis".
 ---
 
@@ -94,6 +95,7 @@ is read for evidence only — never modified.
 | "survey [id]" / "survey [subsystem]" | Per-subsystem phased survey, autonomous. See `references/subsystem-survey.md` and `references/phase-1-scope.md` through `references/phase-5-packaging.md`. |
 | "resume survey" | Call `list_sessions(state="active")`. If one is open, summarize its last dispatch (`get_dispatch_history`) and re-enter the appropriate phase. |
 | "what have you noticed" / "browse" | See `references/notes.md` — answer conversationally from field notes, vocabulary, and findings. No surveys. |
+| "what do we know about X" / "before I change X" / "is there a finding on this file" / "what is `<term>` here" | Call `describe_locus` first. Answer with standing, then the account. When standing is `unledgered`, `excluded`, or `scoped-unread`, say so and offer a survey; do not read the file and improvise. See `references/notes.md`. |
 | "audit" / "what's stale" | See `references/memory-audit.md` — sweep contradictions, linchpin findings, open notes, stale entries. Produce a worklist. |
 | "refresh" / "refresh the survey" / "bring the conspectus up to date" | See `references/refresh.md` — reconcile the ledger, then work the stale backlog by re-examining each file and clearing it. This route discharges drift; the audit route only lists it. |
 | "reinit survey" | The request authorizes this destructive operation. Snapshot, report the exact target, then clear it. |

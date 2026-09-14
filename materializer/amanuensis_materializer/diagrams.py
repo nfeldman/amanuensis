@@ -13,14 +13,51 @@ from pathlib import Path
 from .db import rows
 from .slugs import subsystem_page
 
+# The obligation predicate is generated from the `obligation_bearing` flag on
+# each file_classification value in contracts/conspectus-vocabulary.json, so the
+# server and the projection cannot disagree about which scoped files carry work.
+from .vocabulary import OBLIGATION_BEARING_SQL as _OBLIGATION_BEARING
+
 
 def _safe_label(text: str) -> str:
     # Mermaid doesn't like pipes or newlines inside node labels.
     return text.replace("|", "/").replace("\n", " ").replace('"', "'")
 
 
-def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
-    """Dependency surface from xrefs, or a truthful layer atlas without them."""
+# The two headings the architecture page's first topology section can carry.
+# The heading and the body are one decision (§9.2): a page headed "dependency
+# graph" over an atlas would assert edges nobody recorded, so `render_architecture`
+# takes both from `subsystem_dependency_view` rather than re-deciding on its own
+# read of `xrefs`.
+DEPENDENCY_HEADING = "Subsystem dependency graph"
+ATLAS_HEADING = "Subsystem atlas"
+
+
+def _edge_coverage_sentence(covered: int, total: int) -> str:
+    """State how much of the recorded subsystem set the recorded edges reach.
+
+    A dependency table shows only the subsystems some edge names. Without the
+    census a reader cannot tell a subsystem with no dependencies from one whose
+    edges were never recorded, and the table reads as a complete graph.
+    """
+    if total == 0:
+        return ""
+    uncovered = total - covered
+    if uncovered == 0:
+        return (
+            f"_All {total} recorded subsystems carry at least one recorded edge. No edge"
+            " below is inferred from a name, a prefix, or a nearby seam._"
+        )
+    verb = "carries" if uncovered == 1 else "carry"
+    return (
+        f"_{uncovered} of {total} recorded subsystems {verb} no recorded edge; the table"
+        " below is what the survey recorded, not the whole dependency surface. No edge is"
+        " inferred from a name, a prefix, or a nearby seam._"
+    )
+
+
+def subsystem_dependency_view(conn: sqlite3.Connection) -> tuple[str, str]:
+    """The heading and body of the architecture page's dependency section."""
     edges = rows(
         conn,
         "SELECT from_id, to_id, relationship, strength, context FROM xrefs ORDER BY from_id",
@@ -30,7 +67,7 @@ def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
         for r in rows(conn, "SELECT id, name, status, layer FROM subsystems")
     }
     if not subs and not edges:
-        return "_No subsystems recorded yet._"
+        return ATLAS_HEADING, "_No subsystems recorded yet._"
     if not edges:
         lines = [
             "_No dependency edges are recorded in this publication. The layer map below is a subsystem atlas, not an inferred dependency graph._",
@@ -45,9 +82,19 @@ def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
             lines.append(
                 f"| {region} | **[{sid}]({route})** {_safe_label(name)} | {subsystem['status']} |"
             )
-        return "\n".join(lines)
+        return ATLAS_HEADING, "\n".join(lines)
 
+    # The census counts recorded subsystems an edge names, so an edge naming an
+    # id no `subsystems` row carries cannot inflate the covered set.
+    covered = {
+        endpoint
+        for edge in edges
+        for endpoint in (edge["from_id"], edge["to_id"])
+        if endpoint in subs
+    }
     lines = [
+        _edge_coverage_sentence(len(covered), len(subs)),
+        "",
         "| From | Relationship | To | Strength | Context |",
         "|---|---|---|---|---|",
     ]
@@ -65,7 +112,12 @@ def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
             f"| **[{edge['to_id']}]({to_route})** {_safe_label(to_name)} "
             f"| {edge['strength']} | {context} |"
         )
-    return "\n".join(lines)
+    return DEPENDENCY_HEADING, "\n".join(lines)
+
+
+def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:
+    """Dependency surface from xrefs, or a truthful layer atlas without them."""
+    return subsystem_dependency_view(conn)[1]
 
 def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
     """Table-form heatmap (mermaid doesn't do heatmaps natively; we use
@@ -112,14 +164,6 @@ def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
     return "\n".join([header, sep, *body]) + legend
 
 
-# Generated output, vendored code, and files ruled irrelevant are scoped but
-# carry no survey obligation. Counting their drift would let a republished
-# projection — which changes on every publish — read as the conspectus going
-# stale, diluting the signal this view exists to give.
-_OBLIGATION_BEARING = (
-    "COALESCE(classification, 'candidate') NOT IN"
-    " ('generated-ignore', 'vendor-ignore', 'irrelevant')"
-)
 
 
 def staleness_map(conn: sqlite3.Connection) -> str:

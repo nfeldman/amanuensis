@@ -92,6 +92,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The rebuild gates below resolve every receipt revision against
+          # the history; at the default depth 1 they could not evaluate it.
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "24.18.0"
@@ -195,12 +199,79 @@ jobs:
       - name: Startup bounds — no unbounded probe on the activation path
         working-directory: mcp-server
         run: node test-startup-bounds.mjs
-      - name: Evidence vocabulary — add_evidence, set_disposition, and SKILL.md agree
+      - name: Generated enum modules match the vocabulary source
+        working-directory: mcp-server
+        run: node scripts/gen-vocabulary.mjs --check
+      - name: SQL CHECK literals match the vocabulary source
+        working-directory: mcp-server
+        run: node scripts/gen-vocabulary.mjs --check-sql
+      - name: Evidence vocabulary — the source, both generated files, and SKILL.md agree
         working-directory: mcp-server
         run: node scripts/check-evidence-vocabulary.mjs
+      - name: Single enum source — generated files, SQL CHECKs, validators, hint tables
+        working-directory: mcp-server
+        run: node test-vocabulary-source.mjs
+      - name: Finding partition — one state view, five readers, one page per finding
+        working-directory: mcp-server
+        run: node test-finding-partition.mjs
+      - name: Locus standing — the file_standing view, kind inference, reachability
+        working-directory: mcp-server
+        run: node test-locus-index-view.mjs
+      - name: describe_locus — the account, its contract, and read-only annotations
+        working-directory: mcp-server
+        run: node test-locus-standing.mjs
+      - name: Locus compactness — wire budgets and the omission ledger
+        working-directory: mcp-server
+        run: node test-locus-compactness.mjs
+      - name: Residual hardening — revision-bound writers, one open-finding predicate
+        working-directory: mcp-server
+        run: node test-residual-hardening.mjs
       - name: Temporal claims — intervals, supersession, migration, compatibility
         working-directory: mcp-server
         run: node test-temporal-claims.mjs
+      - name: Structural claims — add_claim's substrate checks and the narrative fallback
+        working-directory: mcp-server
+        run: node test-structural-claims.mjs
+      - name: Phase 2 claims — the claim_key prerequisite on 'structural'
+        working-directory: mcp-server
+        run: node test-phase2-claims-gate.mjs
+      - name: Cited edges — add_xref's citation contract and topology from recorded rows
+        working-directory: mcp-server
+        run: node test-edge-contract.mjs
+      - name: Attention and history — operational labels, census reconciliation, budgets
+        working-directory: mcp-server
+        run: node test-attention-history.mjs
+      - name: Consumer route — instructions, annotations, inventory, skill route, installer
+        working-directory: mcp-server
+        run: node test-consumer-route.mjs
+      # Runs from the repository root: it drives spawned server processes across
+      # a real deletion, and reads the committed receipt of the live run.
+      - name: Self-conspectus rebuild — snapshot, discard, reinitialize, read back
+        run: node dev/test-rebuild-readback.mjs
+      # Also from the repository root, and for the same reason: the store is
+      # untracked, so what the rebuild covered is asserted over a committed
+      # receipt here and over the live store wherever one exists.
+      - name: Rebuild coverage — onboarding, batched subsystems, claims, cited edges
+        run: node dev/test-rebuild-coverage.mjs
+      # Third arm of the same rebuild: what P17 left at `structural`, carried to
+      # `mapped` through the concern, adversarial and packaging phases. Same
+      # reason it reads a committed receipt, and the same live-store arm.
+      - name: Rebuild depth — concern dispositions, adversarial outcomes, seam assessment
+        run: node dev/test-rebuild-depth.mjs
+      # The last arm: what the rebuilt conspectus answers, and the projection
+      # promoted out of it. `docs/` is tracked, so the byte-match runs here for
+      # real; the three §12.4 assertions run against the committed receipt,
+      # because the store they were made against is not.
+      - name: Dogfood — the committed receipt, the attention fan-in, and the promoted docs/
+        run: node dev/test-reader-lenses-dogfood.mjs
+      # The regeneration pass that closed slice-S6's F6, F7 and F9: the durable
+      # challenge-outcome record and the `mapped` prerequisite over it, the
+      # recorded status ladder, the registry crossings, and the project's
+      # canonical name. Its first arm drives the real write path against a
+      # throwaway store, so it runs from the repository root with mcp-server's
+      # dependencies already installed by this job.
+      - name: Regeneration — challenge outcomes, the recorded ladder, the registry edges, the project name
+        run: node dev/test-rebuild-regeneration.mjs
       - name: Change impact — prediction, relation sensitivity, application
         working-directory: mcp-server
         run: node test-change-impact.mjs
@@ -287,6 +358,21 @@ jobs:
       - name: Projection read-back fault injection
         working-directory: materializer
         run: python3 test-readback.py
+      - name: Overview truthfulness — thesis by heading and the orientation lint
+        working-directory: materializer
+        run: python3 test-overview-truthfulness.py
+      - name: Ledger-derived freshness and the stale read-back axis
+        working-directory: materializer
+        run: python3 test-ledger-freshness.py
+      - name: Page plan, navigation groups, Files, and Not yet surveyed
+        working-directory: materializer
+        run: python3 test-lens-pages.py
+      - name: Unresolved and History pages, the resolution basis, and the reader's guide
+        working-directory: materializer
+        run: python3 test-history-and-disagreements.py
+      - name: Locus search index, read-back custody, and the accessible search
+        working-directory: materializer
+        run: python3 test-search-index.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor

@@ -80,7 +80,10 @@ node test-historical-evaluation.mjs     # clean historical packets, hidden kill 
 
 node scripts/check-sql-identifiers.mjs  # SQL identifiers resolve against schema
 node scripts/check-tool-schemas.mjs     # tool inputSchemas are valid JSON Schema
-node scripts/check-evidence-vocabulary.mjs # evidence vocabulary agrees across tools and skill
+node scripts/gen-vocabulary.mjs --check     # generated enum modules match the vocabulary source
+node scripts/gen-vocabulary.mjs --check-sql # schema.sql CHECK literals match the vocabulary source
+node scripts/check-evidence-vocabulary.mjs # source, both generated files, and SKILL.md agree
+node test-vocabulary-source.mjs          # one enum source: generated files, CHECKs, validators, hints
 node test-installer.mjs                  # client adapters, migration, and uninstall custody
 node test-activation-contract.mjs        # user-scope cwd binding and wrong-workspace halt
 node test-activation-doctor.mjs          # diagnosis and digest-bound repair red gate
@@ -252,6 +255,27 @@ node scripts/gen-tool-inventory.mjs
 ```
 
 Commit the regenerated `DEVELOPMENT.md` alongside the code change.
+
+## Auto-generated enum vocabulary
+
+`mcp-server/contracts/conspectus-vocabulary.json` is the single source for
+every CHECK-constrained vocabulary the server enforces and the projection
+renders, with a label, a one-sentence meaning, and what it cannot justify on
+each value. `mcp-server/src/vocabulary.ts` and
+`materializer/amanuensis_materializer/vocabulary.py` are generated from it —
+edit the JSON, never the generated files, then regenerate:
+
+```bash
+cd mcp-server
+node scripts/gen-vocabulary.mjs
+```
+
+The SQL `CHECK (<col> IN (…))` literals in `src/schema.sql` are **not**
+generated. That file is applied to live databases on every open, so rewriting
+it mechanically is a migration risk rather than a formatting one; add the value
+to the constraint by hand. `--check-sql` asserts the two agree. **CI fails on
+drift** in either direction, and `node scripts/check-evidence-vocabulary.mjs`
+additionally holds `SKILL.md`'s hand-written evidence ladder to the same source.
 
 ## Architectural contracts
 

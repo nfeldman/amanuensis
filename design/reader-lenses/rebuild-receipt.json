@@ -1,0 +1,186 @@
+{
+  "contract": "amanuensis-reader-lenses/rebuild-receipt/v1",
+  "packet": "P16",
+  "recorded_at": "2026-09-12T11:44:58.790Z",
+  "repository_sha": "b208b62ec0fa5651b2acc757739aedca5f0c2d30",
+  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
+  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+  "project_key": "github.com/nfeldman/amanuensis",
+  "produced_by": "dev/rebuild-self-conspectus-store.mjs --confirm",
+  "pre_rebuild": {
+    "store_present": false,
+    "db_exists": false,
+    "storage_entries": [],
+    "census": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "database_bytes": {
+      "memory.db": 1863680,
+      "memory.db-wal": 0,
+      "memory.db-shm": 32768
+    },
+    "note": "This worktree carried no self-conspectus store before the rebuild: the branch's work had never opened one, so the snapshot records an empty store this packet initialized to run the procedure at the real path, and the discard removed that. The recoverability of a populated snapshot is proved in the gate's procedure arm, not here."
+  },
+  "snapshot": {
+    "tool": "commit_phase_gate",
+    "label": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild",
+    "committed": true,
+    "commit_sha": "7c79dd1",
+    "reason": "committed",
+    "taken_before_deletion": true,
+    "history_at_snapshot": [
+      {
+        "sha": "7c79dd1",
+        "date": "2026-09-12T07:44:57-04:00",
+        "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
+      },
+      {
+        "sha": "a03d579",
+        "date": "2026-09-12T07:44:57-04:00",
+        "message": "amanuensis: initialize storage"
+      }
+    ]
+  },
+  "stop": {
+    "server_pid": 14677,
+    "signal": "SIGTERM",
+    "exited_before_deletion": true,
+    "pid_probe_after_exit": "ESRCH"
+  },
+  "discard": {
+    "removed": [
+      "memory.db",
+      "memory.db-wal",
+      "memory.db-shm"
+    ],
+    "survivors_of_partial_deletion": [
+      ".git",
+      ".gitignore",
+      ".storage-mode",
+      "initialization.json",
+      "project_identity",
+      "workspace_path"
+    ],
+    "removed_storage_directory": true,
+    "archive_path": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-reader-lenses/8616248b-3b9d-4ea8-9530-7f8f5fae2985/scratchpad/pre-rebuild-archive-2",
+    "reason": "Removing only memory.db, -wal and -shm leaves initialization.json naming a missing database, and the next open fails with a storage-marker error; removing the marker as well fails differently, because the incomplete-store rollback refuses a directory it did not create. The directory is archived whole and removed whole, and its Git history is carried back into the store that replaces it."
+  },
+  "reinitialize": {
+    "server_pid": 14836,
+    "cold_db_exists": false,
+    "views_created": [
+      "active_write_locks",
+      "compression_chain",
+      "concern_coverage",
+      "diagnosticity_evidence_value",
+      "field_demand",
+      "file_standing",
+      "finding_resolution_current",
+      "finding_state_current",
+      "finding_summary",
+      "hot_subsystems",
+      "legacy_claim_projection",
+      "revalidation_dashboard",
+      "review_brief_summary",
+      "seam_assessability",
+      "stale_backlog",
+      "stale_entries",
+      "subsystem_scope",
+      "xref_density"
+    ],
+    "marker": {
+      "contractVersion": "amanuensis-storage-initialization/v1",
+      "projectIdentity": "remote:github.com/nfeldman/amanuensis",
+      "projectKey": "github.com/nfeldman/amanuensis",
+      "storagePolicy": "worktree-local",
+      "canonicalRoot": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
+      "workspaceInstanceId": "17326a6e8bdd",
+      "database": "memory.db"
+    },
+    "marker_validates": true,
+    "entries": [
+      ".git",
+      ".gitignore",
+      ".storage-mode",
+      "initialization.json",
+      "memory.db",
+      "memory.db-shm",
+      "memory.db-wal",
+      "project_identity",
+      "workspace_path"
+    ]
+  },
+  "readback": {
+    "get_project_info": {
+      "project_key": "github.com/nfeldman/amanuensis",
+      "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
+      "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+      "db_exists": true
+    },
+    "get_dashboard": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "first_open_dashboard": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "subsystems": 0,
+    "read_by_a_further_process": true
+  },
+  "history_restored": {
+    "restored_from": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-reader-lenses/8616248b-3b9d-4ea8-9530-7f8f5fae2985/scratchpad/pre-rebuild-archive-2/.git",
+    "snapshot_sha": "7c79dd1",
+    "head_message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild",
+    "commits": [
+      {
+        "sha": "4df0b74",
+        "date": "2026-09-12T07:44:58-04:00",
+        "message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild"
+      },
+      {
+        "sha": "9735d9c",
+        "date": "2026-09-12T07:44:57-04:00",
+        "message": "session mtybiq1e-hj6rmlhx ended (completed)"
+      },
+      {
+        "sha": "7c79dd1",
+        "date": "2026-09-12T07:44:57-04:00",
+        "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
+      },
+      {
+        "sha": "a03d579",
+        "date": "2026-09-12T07:44:57-04:00",
+        "message": "amanuensis: initialize storage"
+      }
+    ]
+  },
+  "fixtures_unchanged": {
+    "checked": "sha256 of each A0 historical fixture after the rebuild (§12.3)",
+    "digests": {
+      "dev/conspectus/self-baseline.json": "0b9187cfe73fc5a0dc3bf01aa949b8f68b5c5b7aaf3169fcc839d44529445d7f",
+      "dev/conspectus/baseline-report.json": "26746fe217ebe196b02555334d116f49ee983c8b6704144efdb91bbf2e7cbea8",
+      "dev/conspectus/baseline-report-detector-1.0.0.json": "e1cfd009323b3830571bda7164a2eb1d84f3488c9a23d14e5050c80faba08f39",
+      "dev/conspectus/detector-registry.json": "eb35b6bdcf8f1ac571c522f59787327149b1c4db13ea4249f37a65947a03db11"
+    }
+  }
+}

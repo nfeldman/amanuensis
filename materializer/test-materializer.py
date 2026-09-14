@@ -260,8 +260,8 @@ def main() -> None:
         assert "https://" not in html_index, "HTML shell must not depend on a remote asset"
         html_findings = (docs / "findings.html").read_text()
         assert 'href="subsystems/b02-auth-service.html"' in html_findings
-        assert '<h3 class="finding-subsystem-heading"' in html_findings
-        assert '>Auth Service</a></h3>' in html_findings
+        assert '<h4 class="finding-subsystem-heading"' in html_findings
+        assert '>Auth Service</a></h4>' in html_findings
         assert '<span class="status status-resolution status-open">Open</span>' in html_findings
         assert 'class="record-list record-list-finding"' in html_findings
         assert 'class="record record-finding"' in html_findings
@@ -273,8 +273,14 @@ def main() -> None:
         assert 'h1, h2, .brand-mark, .record-primary, .record-lede' in html_findings
         assert 'class="content content-findings"' in html_findings
         assert 'id="high-findings"' in html_findings
-        assert '>High findings</h2>' in html_findings
+        assert '>High findings</h3>' in html_findings
         assert 'Link to High findings' in html_findings
+        # Spec 6.1 groups the Unresolved lens by resolution state first, so the
+        # page's h2 sections are the states and severity nests inside them.
+        assert '<section class="section-open">' in html_findings
+        assert html_findings.index('<section class="section-open">') < html_findings.index(
+            '>High findings</h3>'
+        )
         assert 'class="severity severity-high"' not in html_findings
         assert 'record-fact-severity' not in html_findings
         assert 'record-fact-subsystem' not in html_findings
@@ -449,9 +455,13 @@ def main() -> None:
         checklist = (docs / "concern-checklist.md").read_text()
         assert "## Active concerns (3)" in checklist
         assert "| Code | Category | Territory | Codebase-specific probe (abbreviated) | Primary subsystems |" in checklist
-        # Contradictions page should exist but note there are none currently.
+        # The contradictions page should exist and say what it now carries.
+        # §7.1 titles it Conflicting evidence and narrows it to the
+        # disagreements the evidence settled; the unresolved ones are on
+        # disagreements.md.
         contradictions = (docs / "contradictions.md").read_text()
-        assert "# Contradictions" in contradictions
+        assert "# Conflicting evidence" in contradictions
+        assert "disagreements.md" in contradictions
         # Diagnosticity matrix page should exist and contain the cell legend.
         matrix_files = list((docs / "diagnosticity").glob("dm-*.md")) if (docs / "diagnosticity").is_dir() else []
         assert matrix_files, "expected at least one diagnosticity matrix page"
@@ -626,6 +636,27 @@ def main() -> None:
         finally:
             staleness_db.close()
         print("staleness map: unmeasured, stale, and measured-clean states distinguished")
+
+        # _nest_prose shifts a survey artifact's headings beneath the page
+        # section it is rendered inside (§3.4, §9.1).  It must move headings and
+        # nothing else: a `#` inside a fenced code block is content the survey
+        # recorded, and rewriting it changes bytes the reader is told are
+        # verbatim.  Tracking only the backtick fence let the tilde form
+        # through (slice-S3, F10/codex).
+        rmod = __import__("amanuensis_materializer.renderers", fromlist=["renderers"])
+        nest = rmod._nest_prose
+        cases = [
+            ("~~~text\n# literal code heading\n~~~", "~~~text\n# literal code heading\n~~~"),
+            ("```text\n# literal code heading\n```", "```text\n# literal code heading\n```"),
+            ("~~~~\n~~~\n# inside the longer fence\n~~~~", "~~~~\n~~~\n# inside the longer fence\n~~~~"),
+            ("```\n~~~\n# inside the backtick fence\n```", "```\n~~~\n# inside the backtick fence\n```"),
+            # …while a heading outside every fence still moves.
+            ("# survey title\n~~~\n# not a heading\n~~~\n## after", "#### survey title\n~~~\n# not a heading\n~~~\n##### after"),
+        ]
+        for source, expected in cases:
+            got = nest(source, 3)
+            assert got == expected, f"_nest_prose({source!r}) -> {got!r}, wanted {expected!r}"
+        print("nested prose: headings move, fenced content of either fence character does not")
 
         print("\nOK — all diff-aware behaviors verified.")
 

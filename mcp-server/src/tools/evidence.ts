@@ -6,21 +6,11 @@ import {
   requireInt,
   requireString,
   requireWorkspaceSourcePath,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const KINDS = [
-  "code-verified",
-  "contract-stated",
-  "comment-asserted",
-  "name-inferred",
-  "pattern-matched",
-  "test-observed",
-  "config-asserted",
-  "doc-asserted",
-  "runtime-observed",
-] as const;
+import { EVIDENCE_KINDS } from "../vocabulary.js";
 
 const DISP_ROLES = ["supports", "contradicts", "linchpin", "compensating"] as const;
 const FIND_ROLES = [
@@ -35,7 +25,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "add_evidence",
     description:
-      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
+      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
     inputSchema: {
       type: "object",
       properties: {
@@ -54,8 +44,12 @@ export const evidenceTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       requireActiveSession(ctx, "add_evidence");
       const filePath = requireWorkspaceSourcePath(args.file_path);
-      const refSha = requireString(args, "ref_sha");
-      const kind = requireEnum(args, "kind", KINDS);
+      // The revision is resolved in the bound workspace and the resolved
+      // commit is what is stored: every read surface reports a non-null
+      // ref_sha as revision-bound, so an unresolvable one would publish a
+      // binding the record cannot support (F6/codex).
+      const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
+      const kind = requireEnum(args, "kind", EVIDENCE_KINDS);
       const symbol = optString(args, "symbol");
       const lineRange = optString(args, "line_range");
       const excerpt = optString(args, "excerpt");

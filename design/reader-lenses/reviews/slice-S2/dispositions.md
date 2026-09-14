@@ -1,0 +1,38 @@
+# slice-S2 dispositions
+
+Fix session `20260912-024900-fix-slice-S2`, one reviewer (codex), so the `/name` suffix is
+omitted. Every finding was reproduced against the tree before anything was changed; all eleven
+held.
+
+| F1 | verified: yes | action: fixed | reproduced: inverted `standing.ts:413` and ran `node test-locus-index-view.mjs` with no build — gate exit 0; `npm run build` then made it red. Root cause is shared with F2 and F3: the gates import `dist/`. `scripts/ensure-built.mjs` compiles with the pinned tsc before the dynamic imports, each gate asserts it under "build custody", and a failed build poisons `fixtureError` so nothing downstream can pass on stale bytes. Re-applying the sabotage with no manual build now turns P5 red; a variant that compiles cleanly (swapping the ancestor verdict) reds on the semantic assertion "expected standing_state examined". Sabotage undone, dist rebuilt. 842b00b |
+| F2 | verified: yes | action: fixed | reproduced: added `scoped-unread` to `CONTENT_AUTHORIZING` at `locus.ts:96`, `node test-locus-standing.mjs` exit 0 without a build, red after one. Same fix as F1. Re-applied with no manual build, P6 now reds on "a candidate row serves no structural claim and says why" and "mixed served the strongest owner's authorization". Sabotage undone. 842b00b |
+| F3 | verified: yes | action: fixed | reproduced: inverted the compact serialization at `helpers.ts:62`, `node test-locus-compactness.mjs` exit 0 without a build, red after one. Same fix as F1. Re-applied with no manual build, P7 now reds on "jsonResult's default path still emits the indented text block". Sabotage undone. 842b00b |
+| F4 | verified: yes | action: fixed | reproduced: seeded `src/no-ref.ts` as `examined` with a null `ref_sha` — permitted by `schema.sql:165` and never revisited by `detect_changes`, which only checks rows carrying one — and read it back as `examined`, `stale_reason` null, full `examined` authorization, `reachability_checked: true` about a check with no subject. `reachability` now returns `examined-stale` / `unverifiable-ref` for a null revision, the same reason a bad SHA gets; §2.2's table gains the row it was silent on. red 99a006b, green 359a7fd |
+| F5 | verified: yes | action: fixed | reproduced: in a clone carrying `refs/remotes/origin/main` with the tracking config unset, `revision.origin_head` returned the head, against §2.4.4's "when an upstream is recorded, otherwise `null`"; the P5 gate asserted the fallback rather than the contract. Fallback removed from `originHead`. The projection's Upstream head row keeps its own fallback (slice-S1 F4) because it prints the resolving ref beside the value; this field is a bare SHA with nowhere to disclose a guess, and that divergence is recorded at the function. red a06fae0, green 8faf812 |
+| F6 | verified: yes | action: fixed | reproduced: `describe_locus("src/crowded.ts")` raised "this locus cannot be served inside the 32768-byte ceiling: the untruncatable part of the response measures 44786 bytes" — the reviewer's exact string, naming neither the path nor the forty owners C8 requires. The `ToolError` now leads with the locus value, carries the owning-subsystem count, and points at `list_scope`. red 711a790, green 7c02468 |
+| F7 | verified: yes | action: fixed | reproduced: `describe_locus("src/examined.ts:writeLedger")` — a symbol with its own evidence row and no finding — served all five defects cited to `readLedger`, because `primaryFilesNames` compared the path half of each citation only. It now takes the scope's symbol and requires the whole `path:symbol` to match at a symbol locus; a file locus still matches on the path, and the split stays on the first colon so `Type::method` survives. The cited sibling still serves its five. red 9d593a0, green 461b523 |
+| F8 | verified: yes | action: fixed | reproduced: at `as_of_sha: mid` the `history_pointer` section reported `as_of_supported: true` and still carried B01-2's resolution event, whose only revision is `head` — the event the defects section already withholds there. `buildHistoryPointer` now receives the probe and `as_of`, keeps only events whose revision is an ancestor, and reconciles `counts.finding_resolution_events` with what it serves. Rows the cut cannot place — an event naming no revision, and sessions, which carry no revision at all — are kept and marked `as_of_placeable: false`, with unplaceable events counted, matching `resolutionAt`'s policy. red 3d253dd, green fe64d88 |
+| F9 | verified: yes | action: fixed | reproduced: `src/seamed.ts`, owned by both parties of twenty seams, read with every section requested (which raises the budget enough for the ledger to carry ids at all — at the default budget this locus omits everything with `ids: []`, so the existing uniqueness check could not see it). The omitted ids repeated: `unknown:seam/SB-02` twice, once per side. `unknownId` now emits `unknown:seam/<seam>/<side>/<subsystem>`. red 151fbe3, green 62685b3 |
+| F10 | verified: yes | action: fixed | reproduced: all four subsystem pages rendered Scope with no statement that no purpose is recorded, against §3.1 and §7.3; `subsystems` has no purpose column, so the sentence is owed on every page, not only where `scope` is empty. The Scope section now opens with it. The trailing "the scope below states what it covers" clause is dropped where no scope is recorded either, since it would be false there. red bd08d3e, green 9babd7f |
+| F11 | verified: yes | action: fixed | reproduced: removed `search-index.js` from `.projection-contract.json`'s `pages` while leaving its bytes on disk; `--readback-only` returned `verified: true` with state, coverage and content all green — the content axis hashes the receipt's own members, and coverage compares the plan to the files present, which it still is. Read-back now checks receipt membership before it hashes: an expected projection path the receipt does not name is a content mismatch. A path missing from both is left to coverage, so one fault is still reported once. red f9f81ab, green 08a7035 |
+
+## Notes
+
+- Nothing was deferred and nothing was rejected. Four findings were `high` (F4, F7, F8) or
+  raised the same defect three times (F1–F3); none was deferred.
+- F1–F3 share one root cause and one fix, so they carry one commit rather than a red/green pair:
+  per the brief, a `gate-cannot-red` finding is discharged by demonstrating the sharpened gate
+  fails under the reviewer's sabotage applied and undone locally, which is recorded per row above.
+- F5 was repaired **against** the direction slice-S1's F4 took in the materializer. The two are
+  not in conflict: that row discloses the ref it resolved, this field cannot, and the reason is
+  recorded at `originHead` so a later reader does not "restore parity" by re-adding the guess.
+- F9's reproduction exposed a second, narrower fact that no finding named and no packet owns: a
+  two-owner locus in the P7 fixture floors at 4038 payload bytes, so its doubled wire envelope
+  (8560 B) is over the 8192-byte default budget before a single item is served, and the omission
+  ledger's `ids` are emptied by the id-budget ladder. That is why the existing omitted-id
+  uniqueness check never fired on it. Left as an observation, not repaired here.
+- Every regression command of P5–P10 and every gate passed, 23 of 23, under Node 24.18.0 and
+  Python 3.12.13. P10 is green including its browser arm, which the review could not run.
+- No test or gate was weakened. Two assertions were realigned to the contract rather than
+  relaxed: P5's `origin_head` arm now requires the null §2.4.4 states (F5), and P7's ceiling arm
+  now requires more of the refusal message than it did (F6).

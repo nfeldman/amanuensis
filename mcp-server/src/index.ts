@@ -14,9 +14,16 @@ import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
+import { locusTools } from "./tools/locus.js";
 
+// §5.4: the consumer route opens, the producer route follows it. Hosts inject
+// this string once per session, so it names the three reader tools and the two
+// standings that stop an answer, and stops there — the method itself is the
+// skill's, not this string's. The producer sentence keeps the phrase
+// "evidence-backed codebase conspectus" that test-mcp-compatibility.mjs reads
+// back from the initialize result.
 const SERVER_INSTRUCTIONS =
-  "Build and maintain an evidence-backed codebase conspectus. Start with get_project_info, then get_dashboard and list_subsystems. Read source code for evidence; write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
+  "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first. Its standing states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
 const SERVER_VERSION = "0.2.0-beta.1";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
@@ -29,12 +36,23 @@ const ADDITIVE_TOOLS = new Set([
   "rebaseline_operating_envelope",
 ]);
 
+// The prefix rule below derives read-only from the `get_`/`list_`/`lookup_`
+// names, which the reader-lens tools do not carry: `describe_locus` answers
+// what the record holds about one locus and writes nothing. Naming them here
+// is the same explicit carve-out ADDITIVE_TOOLS already is, and it keeps the
+// prefix rule as the fallback rather than widening it into a fourth prefix
+// that any future write tool could accidentally match.
+const READ_ONLY_TOOLS = new Set(["describe_locus"]);
+
 function toolAnnotations(name: string) {
   // MCP annotations are hints, not authorization. Keep the read-only set
   // intentionally narrow: every get/list/lookup tool is contractually a
   // query, while tools such as verify_* may also record custody evidence.
   const readOnly =
-    name.startsWith("get_") || name.startsWith("list_") || name.startsWith("lookup_");
+    READ_ONLY_TOOLS.has(name) ||
+    name.startsWith("get_") ||
+    name.startsWith("list_") ||
+    name.startsWith("lookup_");
   return {
     readOnlyHint: readOnly,
     destructiveHint: !readOnly && !ADDITIVE_TOOLS.has(name),
@@ -188,6 +206,10 @@ async function main(): Promise<void> {
   };
 
   const allTools: ToolDefinition[] = [
+    // §5.5: the reader-lens tools head the advertised list, because the list
+    // order is the order a host reads and the consumer route is the one a
+    // reader needs first.
+    ...locusTools,
     ...projectTools,
     ...gitTools,
     ...impactTools,
@@ -278,7 +300,10 @@ async function main(): Promise<void> {
       assertProjectBinding(project);
       if (name !== "get_project_info") ensureDatabase();
       const data = tool.handler(args, ctx);
-      return jsonResult(data);
+      // §4.1: the tool declares whether its text block is serialized compactly,
+      // and the dispatcher honors the declaration. A tool that carries a byte
+      // budget therefore has it enforced on the emitted response.
+      return jsonResult(data, { compact: tool.compact === true });
     } catch (e) {
       if (e instanceof ToolError) {
         return jsonResult({ ok: false, error: e.message });

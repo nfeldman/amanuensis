@@ -12,23 +12,12 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
 
 const ROLES = ["generator", "refuter", "verifier"] as const;
 const CONDITIONS = ["same-context", "varied-context", "heterogeneous-runtime"] as const;
 const PROFILES = ["diff-scoped", "control-wide", "integral-head"] as const;
-const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 const VERDICTS = ["upheld", "overturned", "scope-restricted", "undetermined"] as const;
-const EVIDENCE_KINDS = [
-  "code-verified",
-  "contract-stated",
-  "comment-asserted",
-  "name-inferred",
-  "pattern-matched",
-  "test-observed",
-  "config-asserted",
-  "doc-asserted",
-  "runtime-observed",
-] as const;
 const LEAK_INJECTIONS = ["blind-truth-field", "prior-verdict-field"] as const;
 const BLIND_ARMS = ["clean", "marker-only", "treated", "null"] as const;
 

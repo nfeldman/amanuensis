@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   ok,
   optBool,
+  optInt,
   optString,
   requireEnum,
   requireExistingIds,
@@ -11,18 +12,12 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const EPISTEMIC_KINDS = [
-  "observation",
-  "inference",
-  "hypothesis",
-  "open-question",
-  "direct-intent",
-  "inferred-intent",
-  "decision",
-] as const;
-
-type EpistemicKind = (typeof EPISTEMIC_KINDS)[number];
+import {
+  CLAIM_EPISTEMIC_KINDS,
+  CLAIM_SUBJECT_TYPES,
+  type ClaimEpistemicKind,
+  EVIDENCE_KINDS,
+} from "../vocabulary.js";
 
 interface ClaimRow {
   claim_id: string;
@@ -30,7 +25,7 @@ interface ClaimRow {
   subject_type: string;
   subject_id: string;
   statement: string;
-  epistemic_kind: EpistemicKind;
+  epistemic_kind: ClaimEpistemicKind;
   asserted_at_sha: string;
   valid_from_sha: string;
   valid_until_sha: string | null;
@@ -41,6 +36,75 @@ interface ClaimRow {
 interface EvidenceRow {
   id: number;
   ref_sha: string;
+  kind: string;
+  file_path: string;
+}
+
+/**
+ * §9.1's three file-anchored structural categories, as the `claim_key` shape
+ * that names them. A key type, a state container, or a step of a flow is read
+ * off one file, so the record can require that the reading cite it.
+ * `<sid>/concurrency` and `<sid>/seam/<id>` are deliberately outside the
+ * pattern: §9.1 keeps the weaker requirement for them because they are
+ * frequently derived rather than read, and forcing a kind they cannot honestly
+ * carry is the fabrication hazard BP4 names.
+ */
+const FILE_ANCHORED_CLAIM_KEY = /^[^/\s]+\/(key-type|state-container|flow)\//;
+
+/**
+ * §9.1's outcome vocabulary for a claim target, which is deliberately not the
+ * finding-target verdict vocabulary: a claim either stood, fell, or was
+ * replaced by a better reading of the same `claim_key`.
+ */
+const CLAIM_CHALLENGE_OUTCOMES = ["survived", "overturned", "superseded"] as const;
+
+/**
+ * The floor on a recorded challenge. `survived` changes no row, so without an
+ * argument attached it is indistinguishable from a claim nobody looked at —
+ * which is precisely the state slice-S6 found the store in. The floor is a
+ * length, not a shape: demanding a template over a field the writer must
+ * author is the fabrication-to-order hazard BP4 names.
+ */
+const MIN_CHALLENGE_LENGTH = 24;
+
+/**
+ * The evidence kinds §9.1 accepts for those three categories, filtered out of
+ * the generated vocabulary rather than restated: if the enum source ever drops
+ * one, this list shrinks with it instead of naming a kind nothing can carry.
+ */
+const FILE_ANCHORED_EVIDENCE: readonly string[] = EVIDENCE_KINDS.filter(
+  (kind) => kind === "code-verified" || kind === "contract-stated",
+);
+
+/** §2.1's symbol split: the path is everything before the **first** colon. */
+function subjectPath(subjectId: string): string {
+  const at = subjectId.indexOf(":");
+  return at < 0 ? subjectId : subjectId.slice(0, at);
+}
+
+/**
+ * §9.1's second subtractive check. One attached row must satisfy **both**
+ * halves — a strong kind *and* the file `subject_id` names. Two rows that each
+ * satisfy one half do not satisfy it together: a `code-verified` reading of a
+ * different file says nothing about this symbol, and a `name-inferred` row on
+ * the right file is the classification-from-naming BP6 rules out. The refusal
+ * names the kinds it found, so the caller can see which half failed.
+ */
+function requireFileAnchoredEvidence(
+  claimKey: string,
+  subjectId: string,
+  rows: EvidenceRow[],
+): void {
+  if (!FILE_ANCHORED_CLAIM_KEY.test(claimKey)) return;
+  const path = subjectPath(subjectId);
+  if (rows.some((row) => FILE_ANCHORED_EVIDENCE.includes(row.kind) && row.file_path === path)) {
+    return;
+  }
+  const found =
+    rows.map((row) => `${row.kind} on ${row.file_path}`).join(", ") || "no evidence at all";
+  throw new ToolError(
+    `claim_key ${claimKey} records a key type, state container, or flow step read off ${path}, so at least one attached evidence row must be ${FILE_ANCHORED_EVIDENCE.join(" or ")} *and* cite ${path}; the attached evidence is ${found}`,
+  );
 }
 
 function requireEvidenceIds(args: Record<string, unknown>): number[] {
@@ -103,7 +167,9 @@ function requireEvidence(
   requireExistingIds(ctx.db, "evidence", "id", evidenceIds, "evidence id(s)");
   const placeholders = evidenceIds.map(() => "?").join(",");
   const rows = ctx.db
-    .prepare(`SELECT id, ref_sha FROM evidence WHERE id IN (${placeholders}) ORDER BY id`)
+    .prepare(
+      `SELECT id, ref_sha, kind, file_path FROM evidence WHERE id IN (${placeholders}) ORDER BY id`,
+    )
     .all(...evidenceIds) as EvidenceRow[];
   for (const row of rows) {
     const evidenceSha = resolveCommit(ctx, row.ref_sha);
@@ -158,6 +224,17 @@ function claimAppliesAt(ctx: ServerContext, row: ClaimRow, querySha: string): bo
   return row.valid_until_sha === null || !isAncestor(ctx, row.valid_until_sha, querySha);
 }
 
+/**
+ * The one place a row is written to `claims`. §9.1's file-anchored check runs
+ * here rather than in `add_claim`'s handler because a claim_key has two doors:
+ * `add_claim` opens it and `supersede_claim` replaces what is behind it, and a
+ * successor inherits its predecessor's `claim_key` and `subject_id` — it
+ * asserts the same file-anchored thing about the same symbol. Enforcing on one
+ * door only left the other able to replace a sound reading with a
+ * `name-inferred` row on an unrelated file while the `structural` gate went on
+ * counting the key as satisfied (slice-S3, F5/codex). The rows passed are the
+ * ones that will be attached as `supports`, not every id the caller named.
+ */
 function insertClaim(
   ctx: ServerContext,
   values: {
@@ -166,14 +243,16 @@ function insertClaim(
     subjectType: string;
     subjectId: string;
     statement: string;
-    epistemicKind: EpistemicKind;
+    epistemicKind: ClaimEpistemicKind;
     assertedAtSha: string;
     validFromSha: string;
     sessionId: string;
-    evidenceIds: number[];
+    evidenceRows: EvidenceRow[];
     reason: string;
   },
 ): void {
+  requireFileAnchoredEvidence(values.claimKey, values.subjectId, values.evidenceRows);
+  const evidenceIds = values.evidenceRows.map((row) => row.id);
   ctx.db
     .prepare(
       `INSERT INTO claims (
@@ -192,20 +271,14 @@ function insertClaim(
       values.validFromSha,
       values.sessionId,
     );
-  attachEvidence(ctx, values.claimId, values.evidenceIds, "supports");
+  attachEvidence(ctx, values.claimId, evidenceIds, "supports");
   ctx.db
     .prepare(
       `INSERT INTO claim_validity_events
          (claim_id, event_type, at_sha, reason, evidence_id, session_id)
        VALUES (?, 'asserted', ?, ?, ?, ?)`,
     )
-    .run(
-      values.claimId,
-      values.assertedAtSha,
-      values.reason,
-      values.evidenceIds[0],
-      values.sessionId,
-    );
+    .run(values.claimId, values.assertedAtSha, values.reason, evidenceIds[0], values.sessionId);
 }
 
 function friendlyWriteError(error: unknown, claimKey?: string): never {
@@ -230,10 +303,10 @@ export const claimTools: ToolDefinition[] = [
       properties: {
         claim_id: { type: "string" },
         claim_key: { type: "string" },
-        subject_type: { type: "string" },
+        subject_type: { type: "string", enum: CLAIM_SUBJECT_TYPES },
         subject_id: { type: "string" },
         statement: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
         ref_sha: { type: "string" },
         valid_from_sha: { type: "string" },
         evidence_ids: { type: "array", items: { type: "integer" }, minItems: 1 },
@@ -254,10 +327,12 @@ export const claimTools: ToolDefinition[] = [
       const sessionId = requireActiveSession(ctx, "add_claim");
       const claimId = requireString(args, "claim_id");
       const claimKey = requireString(args, "claim_key");
-      const subjectType = requireString(args, "subject_type");
+      // §9.1's first subtractive check: the enum §10.1's source owns, enforced
+      // by code rather than asked for in a prompt (GP8's v2 scope note).
+      const subjectType = requireEnum(args, "subject_type", CLAIM_SUBJECT_TYPES);
       const subjectId = requireString(args, "subject_id");
       const statement = requireString(args, "statement");
-      const epistemicKind = requireEnum(args, "epistemic_kind", EPISTEMIC_KINDS);
+      const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const assertedAtSha = resolveCommit(ctx, requireString(args, "ref_sha"));
       const validFromSha = resolveCommit(ctx, optString(args, "valid_from_sha") ?? assertedAtSha);
       if (!isAncestor(ctx, validFromSha, assertedAtSha)) {
@@ -266,7 +341,7 @@ export const claimTools: ToolDefinition[] = [
         );
       }
       const evidenceIds = requireEvidenceIds(args);
-      requireEvidence(ctx, evidenceIds, assertedAtSha);
+      const evidenceRows = requireEvidence(ctx, evidenceIds, assertedAtSha);
 
       try {
         ctx.db.transaction(() => {
@@ -280,7 +355,7 @@ export const claimTools: ToolDefinition[] = [
             assertedAtSha,
             validFromSha,
             sessionId,
-            evidenceIds,
+            evidenceRows,
             reason: "initial assertion",
           });
         })();
@@ -288,6 +363,156 @@ export const claimTools: ToolDefinition[] = [
         friendlyWriteError(error, claimKey);
       }
       return ok({ claim_id: claimId, claim_key: claimKey, valid_from_sha: validFromSha });
+    },
+  },
+  {
+    name: "record_claim_challenge",
+    description: `Record the adversarial pass's outcome for one current claim (spec.md §9.1, Phase 4). outcome ∈ {${CLAIM_CHALLENGE_OUTCOMES.join(", ")}}. \`challenge\` is what would have overturned the claim and where that was looked for, in prose of at least ${MIN_CHALLENGE_LENGTH} characters; a one-word note is not a challenge. An 'overturned' or 'superseded' outcome must name the claim_validity_events row that closed the claim — invalidate_claim and supersede_claim write it — and 'survived' must not, because nothing was closed. field_note_id optionally links the probe note the pass wrote. The record is append-only: a later pass records a further outcome, it does not edit this one. Every current \`<sid>/\` claim must carry an outcome before the subsystem may advance to 'mapped'.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        claim_id: { type: "string" },
+        outcome: { type: "string", enum: [...CLAIM_CHALLENGE_OUTCOMES] },
+        challenge: { type: "string", minLength: MIN_CHALLENGE_LENGTH },
+        ref_sha: { type: "string" },
+        validity_event_id: { type: "integer" },
+        field_note_id: { type: "integer" },
+      },
+      required: ["claim_id", "outcome", "challenge", "ref_sha"],
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const sessionId = requireActiveSession(ctx, "record_claim_challenge");
+      const claimId = requireString(args, "claim_id");
+      const outcome = requireEnum(args, "outcome", CLAIM_CHALLENGE_OUTCOMES);
+      const challenge = requireString(args, "challenge");
+      if (challenge.trim().length < MIN_CHALLENGE_LENGTH) {
+        throw new ToolError(
+          `challenge must say what would have overturned claim ${claimId} and where that was ` +
+            `looked for, in at least ${MIN_CHALLENGE_LENGTH} characters; a survived outcome with ` +
+            `no argument behind it is indistinguishable from a claim nobody read`,
+        );
+      }
+      const claim = ctx.db.prepare("SELECT * FROM claims WHERE claim_id = ?").get(claimId) as
+        | ClaimRow
+        | undefined;
+      if (!claim) throw new ToolError(`unknown claim: ${claimId}`);
+      const atSha = resolveCommit(ctx, requireString(args, "ref_sha"));
+      const eventId = optInt(args, "validity_event_id");
+      const noteId = optInt(args, "field_note_id");
+
+      if (outcome === "survived") {
+        // A claim that survived its challenge is still the account the
+        // subsystem publishes, so it must still be current; a closed interval
+        // is history, and history does not survive a challenge made after it.
+        if (claim.valid_until_sha !== null) {
+          throw new ToolError(`claim ${claimId} is historical, not current authority`);
+        }
+        if (eventId !== null) {
+          throw new ToolError(
+            "a survived claim closed no validity interval, so validity_event_id names an event that cannot be about this outcome",
+          );
+        }
+      } else {
+        if (eventId === null) {
+          throw new ToolError(
+            `an ${outcome} outcome must name the claim_validity_events row that closed ${claimId}; ` +
+              `an overturning that closed no interval overturned nothing`,
+          );
+        }
+        const event = ctx.db
+          .prepare("SELECT claim_id, event_type, at_sha FROM claim_validity_events WHERE id = ?")
+          .get(eventId) as { claim_id: string; event_type: string; at_sha: string } | undefined;
+        if (!event) throw new ToolError(`unknown claim validity event: ${eventId}`);
+        if (event.claim_id !== claimId) {
+          throw new ToolError(
+            `claim validity event ${eventId} belongs to claim ${event.claim_id}, not ${claimId}`,
+          );
+        }
+        const expected = outcome === "overturned" ? "invalidated" : "superseded";
+        if (event.event_type !== expected) {
+          throw new ToolError(
+            `an ${outcome} outcome must cite an '${expected}' event; event ${eventId} is '${event.event_type}'`,
+          );
+        }
+        // The cited event must be the one that closed *this* claim. A claim
+        // that is still current was not overturned, and an event that closed
+        // it at another boundary belongs to a different challenge. This is
+        // also why an overturning outcome is recorded against a historical
+        // claim: closing the interval is what invalidate_claim and
+        // supersede_claim do, so by the time the outcome can cite its event
+        // the claim is no longer current.
+        if (claim.valid_until_sha === null) {
+          throw new ToolError(
+            `claim ${claimId} is still current; an ${outcome} outcome must cite the event that closed it`,
+          );
+        }
+        if (claim.valid_until_sha !== event.at_sha) {
+          throw new ToolError(
+            `claim ${claimId} was closed at ${claim.valid_until_sha}; event ${eventId} is recorded at ${event.at_sha}`,
+          );
+        }
+      }
+      if (
+        noteId !== null &&
+        !ctx.db.prepare("SELECT 1 FROM field_notes WHERE id = ?").get(noteId)
+      ) {
+        throw new ToolError(`unknown field note: ${noteId}`);
+      }
+
+      const result = ctx.db
+        .prepare(
+          `INSERT INTO claim_challenge_outcomes
+             (claim_id, claim_key, outcome, challenge, at_sha, validity_event_id, field_note_id, session_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(claimId, claim.claim_key, outcome, challenge, atSha, eventId, noteId, sessionId);
+      return ok({
+        id: Number(result.lastInsertRowid),
+        claim_id: claimId,
+        claim_key: claim.claim_key,
+        outcome,
+        at_sha: atSha,
+      });
+    },
+  },
+  {
+    name: "get_claim_challenges",
+    description:
+      "Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        claim_id: { type: "string" },
+        subsystem_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const claimId = optString(args, "claim_id");
+      const subsystemId = optString(args, "subsystem_id");
+      if (claimId === null && subsystemId === null) {
+        throw new ToolError("name a claim_id or a subsystem_id");
+      }
+      if (claimId !== null) {
+        return ctx.db
+          .prepare(
+            `SELECT id, claim_id, claim_key, outcome, challenge, at_sha, validity_event_id,
+                    field_note_id, session_id, created_at
+               FROM claim_challenge_outcomes WHERE claim_id = ? ORDER BY id`,
+          )
+          .all(claimId);
+      }
+      const prefix = `${subsystemId}/`;
+      return ctx.db
+        .prepare(
+          `SELECT o.id, o.claim_id, o.claim_key, o.outcome, o.challenge, o.at_sha,
+                  o.validity_event_id, o.field_note_id, o.session_id, o.created_at
+             FROM claim_challenge_outcomes o
+            WHERE substr(o.claim_key, 1, length(?)) = ?
+            ORDER BY o.id`,
+        )
+        .all(prefix, prefix);
     },
   },
   {
@@ -352,7 +577,7 @@ export const claimTools: ToolDefinition[] = [
         predecessor_claim_id: { type: "string" },
         successor_claim_id: { type: "string" },
         statement: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
         at_sha: { type: "string" },
         rationale: { type: "string" },
         evidence_ids: { type: "array", items: { type: "integer" }, minItems: 1 },
@@ -379,12 +604,12 @@ export const claimTools: ToolDefinition[] = [
       }
       const predecessor = currentClaim(ctx, predecessorId);
       const statement = requireString(args, "statement");
-      const epistemicKind = requireEnum(args, "epistemic_kind", EPISTEMIC_KINDS);
+      const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const rationale = requireString(args, "rationale");
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
       requireStrictDescendant(ctx, atSha, predecessor.valid_from_sha, "supersession");
       const evidenceIds = requireEvidenceIds(args);
-      requireEvidence(ctx, evidenceIds, atSha);
+      const evidenceRows = requireEvidence(ctx, evidenceIds, atSha);
       const predecessorEvidence = new Set(
         (
           ctx.db
@@ -395,7 +620,11 @@ export const claimTools: ToolDefinition[] = [
       if (!evidenceIds.some((id) => !predecessorEvidence.has(id))) {
         throw new ToolError("supersession requires new evidence not attached to the predecessor");
       }
-      const successorEvidence = evidenceIds.filter((id) => !predecessorEvidence.has(id));
+      // Only the rows that will actually support the successor. The carried-over
+      // ids support the predecessor and stay attached to it; a successor judged
+      // on its predecessor's evidence would inherit a soundness it never earned.
+      const successorRows = evidenceRows.filter((row) => !predecessorEvidence.has(row.id));
+      const successorEvidence = successorRows.map((row) => row.id);
 
       try {
         ctx.db.transaction(() => {
@@ -412,7 +641,7 @@ export const claimTools: ToolDefinition[] = [
             assertedAtSha: atSha,
             validFromSha: atSha,
             sessionId,
-            evidenceIds: successorEvidence,
+            evidenceRows: successorRows,
             reason: rationale,
           });
           ctx.db
@@ -444,15 +673,25 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "get_claims",
     description:
-      "Return typed claims, current by default. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted.",
+      "Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted.",
     inputSchema: {
       type: "object",
       properties: {
         claim_id: { type: "string" },
         claim_key: { type: "string" },
+        // Deliberately unconstrained: this is a read filter over stored rows,
+        // and the store carries legacy subject types outside §10.1's enum
+        // (`impact.ts` reads `finding` and `obligation`). Constraining the
+        // filter would make those rows unreachable rather than invalid.
         subject_type: { type: "string" },
         subject_id: { type: "string" },
-        epistemic_kind: { type: "string", enum: EPISTEMIC_KINDS },
+        epistemic_kind: { type: "string", enum: CLAIM_EPISTEMIC_KINDS },
+        // §9.1's `get_claims(subsystem_id)`: every claim whose `claim_key`
+        // begins `<sid>/`. Phase 4 pulls its targets this way, and reading
+        // every current claim in the store to filter them client-side made
+        // the completeness of the adversarial pass a property of the caller's
+        // code rather than of the query (slice-S3, F8/codex).
+        subsystem_id: { type: "string" },
         query_sha: { type: "string" },
         include_historical: { type: "boolean" },
       },
@@ -461,6 +700,15 @@ export const claimTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const clauses: string[] = [];
       const params: string[] = [];
+      const subsystemId = optString(args, "subsystem_id");
+      if (subsystemId !== null) {
+        // substr, not LIKE: a subsystem id may carry `_` or `%`, and an
+        // unescaped pattern would reach into another subsystem's namespace —
+        // the same reason `requireStructuralClaim` matches this way.
+        const prefix = `${subsystemId}/`;
+        clauses.push("substr(claim_key, 1, length(?)) = ?");
+        params.push(prefix, prefix);
+      }
       for (const [argument, column] of [
         ["claim_id", "claim_id"],
         ["claim_key", "claim_key"],
@@ -533,6 +781,7 @@ export const claimTools: ToolDefinition[] = [
       type: "object",
       properties: {
         legacy_source: { type: "string" },
+        // As in `get_claims`: a filter over legacy rows, not a writer.
         subject_type: { type: "string" },
         subject_id: { type: "string" },
       },

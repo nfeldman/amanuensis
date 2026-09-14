@@ -7,18 +7,10 @@ import {
   type ToolDefinition,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
-
-const CATEGORIES = [
-  "domain-knowledge",
-  "scope-judgment",
-  "priority-ranking",
-  "contradiction",
-  "tooling-limit",
-  "ambiguous-evidence",
-  "other",
-] as const;
-
-const RESOLUTIONS = ["open", "answered", "dismissed", "superseded"] as const;
+import {
+  OPEN_QUESTION_CATEGORIES as CATEGORIES,
+  OPEN_QUESTION_RESOLUTIONS as RESOLUTIONS,
+} from "../vocabulary.js";
 
 export const openQuestionTools: ToolDefinition[] = [
   {

@@ -1,0 +1,19 @@
+## Findings
+
+| Id | Kind | Location | Severity | Evidence | Proposed fix |
+|---|---|---|---|---|---|
+| F1 | compactness | mcp-server/src/tools/locus.ts:2064 | high | A targeted call with a schema-valid 5,000-byte locus produced a 24,050-byte `get_history` response with `within_budget=false`; the code permits responses up to the unrelated 32,768-byte ceiling despite §4.1’s 8,192-byte budget | reject residual over-budget responses at the tool-specific budget and add a compatible input-length bound |
+| F2 | claim-unmet | C23 / mcp-server/src/tools/locus.ts:2186 | medium | On the seeded gate store, `get_attention` scoped to B-01 returned no leads although B-01 owns `src/ingest.ts` and open candidate-concern note 1 names that file; subsystem scope only matches a location token equal to the subsystem id | match location paths through `file_ledger` ownership, reusing the standing location predicate |
+| F3 | defect | mcp-server/src/tools/locus.ts:2734 | medium | The read-only AxiomDB query found one `access_log` row but zero rows reaching a subsystem through `entries`; the implementation nevertheless enables access heat for any log row and compares `entry_id` directly with subsystem ids | join `access_log` to `entries` on id and tier, group by `entries.subsystem_id`, and expose the measure only when that result is nonempty |
+| F4 | claim-unmet | C24 / mcp-server/src/tools/locus.ts:3173 | medium | A targeted `get_history` call for finding B01-4 attributed subsystem question ids 3 and 2 to that finding because finding subjects inherit their subsystem as `owners` | return no questions for a finding subject until a direct question-to-finding binding exists |
+| F5 | claim-unmet | C24 / mcp-server/src/tools/locus.ts:3178 | medium | The fixture stores answer `yes` for question 2, but the serialized history item had `answer` undefined; the SQL selects `answer` and the mapper drops it | include `answer` in question history items and require it conditionally in the response schema for answered questions |
+| F6 | contract-drift | C24 / mcp-server/src/tools/locus.ts:3430 | medium | The advertised input schema has neither `required` nor `oneOf`, so it accepts both no subject and both subjects although the handler and §5.3 require exactly one | encode mutually exclusive `locus` and `finding_id` requirements with JSON Schema `oneOf` |
+| F7 | claim-unmet | C47 / .claude/skills/amanuensis/references/notes.md:94 | medium | The fixed one-locus route says terms start with `describe_locus`, but the later “What does X mean here?” sequence still starts with `lookup_term` and omits standing, account, and unknowns | route the term sequence through `describe_locus` and the same three-part answer shape |
+| F8 | defect | mcp-server/src/tools/locus.ts:2724 | medium | Spec §7.6 counts a seam side unassessed when the seam is not assessable or the party lacks an SC disposition; the query omits `assessable` and lines 2772–2777 test only disposition presence | select `assessable` and count each side when it is zero or the party lacks an SC disposition |
+| F9 | claim-unmet | C23 / mcp-server/src/tools/locus.ts:2327 | medium | Scoped contradictions are filtered against ids from `attentionFindings`, which contains only open and pending findings; an unresolved contradiction between terminal findings therefore disappears from scoped attention | derive contradiction scope from all matching findings, independently of current finding resolution state |
+
+## Notes
+
+Both exact packet gates pass after restoration; each turned red under targeted production sabotage.
+All 14 distinct regression commands listed across P14 and P15 passed.
+All temporary probes were restored; the reviewed source and gate files have no remaining diff.

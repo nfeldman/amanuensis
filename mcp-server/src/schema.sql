@@ -192,6 +192,41 @@ CREATE TABLE IF NOT EXISTS scope_gaps (
     PRIMARY KEY (file_path, kind)
 );
 
+-- Per-owner standing: what a reader is entitled to claim about one file on
+-- the authority of one subsystem's examination of it. One row per file_ledger
+-- row, and no new table -- every column the CASE reads is already stored.
+--
+-- `unledgered` and `mixed` are deliberately absent from the CASE. Both are
+-- properties of the *set* of rows for a path (none at all, or two that
+-- disagree) and no single row can carry them; the standing block computes
+-- them over this view's rows. Reachability of `ref_sha` is likewise not
+-- decidable in SQL: a row that leaves here `examined` may still be downgraded
+-- to `examined-stale` by the git ancestry probe in src/standing.ts.
+--
+-- `stale_reason = 'absent'` is tested first because a path that left the
+-- repository cannot support a reading at the head whatever its classification
+-- says, and `COALESCE(classification,'candidate')` is what makes a null
+-- classification a scoped, unread file rather than a state of its own.
+CREATE VIEW IF NOT EXISTS file_standing AS
+SELECT l.file_path,
+       l.subsystem_id,
+       l.classification,
+       CASE
+         WHEN l.stale_reason = 'absent'                       THEN 'absent'
+         WHEN l.classification IN ('generated-ignore','vendor-ignore',
+                                   'irrelevant','deferred-with-reason')
+                                                              THEN 'excluded'
+         WHEN COALESCE(l.classification,'candidate')='candidate' THEN 'scoped-unread'
+         WHEN l.classification = 'examined' AND l.stale = 0    THEN 'examined'
+         WHEN l.classification = 'examined'                    THEN 'examined-stale'
+         ELSE 'scoped-unread'
+       END                                                     AS standing_state,
+       l.stale, l.stale_reason, l.ref_sha, l.examined_at,
+       s.name                                                  AS subsystem_name,
+       s.status                                                AS authority_ceiling
+  FROM file_ledger l
+  LEFT JOIN subsystems s ON s.id = l.subsystem_id;
+
 ----------------------------------------------------------------------
 -- DISPOSITIONS: concern × subsystem classification
 ----------------------------------------------------------------------
@@ -206,8 +241,18 @@ CREATE TABLE IF NOT EXISTS dispositions (
                               'ruled-out','out-of-scope',
                               'unresolved-competition')),
     evidence        TEXT,               -- file:symbol@sha reference
+    -- The full evidence-kind ladder, not a subset of it. B03-3 widened
+    -- add_evidence and set_disposition to nine kinds and left this CHECK at
+    -- five, so a disposition whose strongest evidence was `test-observed`,
+    -- `runtime-observed`, `config-asserted`, or `doc-asserted` was accepted by
+    -- the tool and then rejected by SQLite. Parity with
+    -- contracts/conspectus-vocabulary.json is asserted by
+    -- `gen-vocabulary.mjs --check-sql`. Databases created before this widening
+    -- keep the narrower constraint: `CREATE TABLE IF NOT EXISTS` does not
+    -- rewrite an existing table and SQLite cannot alter a CHECK in place.
     evidence_quality TEXT CHECK (evidence_quality IN (
-                              'code-verified','contract-stated',
+                              'code-verified','runtime-observed','contract-stated',
+                              'test-observed','config-asserted','doc-asserted',
                               'comment-asserted','name-inferred',
                               'pattern-matched')),
     linchpin_dependent INTEGER NOT NULL DEFAULT 0, -- 1 if finding depends on fragile evidence
@@ -804,6 +849,14 @@ CREATE TABLE IF NOT EXISTS finding_resolution_events (
                                'fixed-pending-verification','verified-fixed')),
     fix_location       TEXT,
     fix_sha            TEXT,
+    -- The revision this event was *read* at, which is not always the revision
+    -- it names. A repair is read at the commit that carries it; a verification
+    -- is read at the commit its evidence was collected at, a strict descendant
+    -- of the repair. Replaying by `fix_sha` back-dates every verification to
+    -- the repair it confirms, so `describe_locus(as_of_sha=<repair>)` reports
+    -- verified-fixed at a commit where nobody had verified anything. §3.3 cuts
+    -- by this column; it is NULL only on rows written before it existed.
+    effective_sha      TEXT,
     evidence_id        INTEGER REFERENCES evidence(id) ON DELETE RESTRICT,
     rationale          TEXT NOT NULL,
     session_id         TEXT,
@@ -835,6 +888,18 @@ END;
 -- pending instead of fabricating verification or silently treating them as
 -- open.  Rows without a fix location receive an honest legacy placeholder;
 -- they still cannot become verified without a new tool-mediated event.
+--
+-- The sweep runs on every open, so it must import only rows whose history is
+-- genuinely absent.  `findings.status` stays 'fixed' after `verify_finding_fix`
+-- records a verified-fixed event -- that tool writes the event, not the coarse
+-- column -- so a sweep keyed on the column alone would append a newer pending
+-- event behind the verification on the next open, and
+-- `finding_resolution_current` (newest event wins) would report the repair as
+-- unverified again.  `origin_key` cannot prevent it: the verification carries
+-- no origin key, so `INSERT OR IGNORE` sees no conflict.  The NOT EXISTS guard
+-- is what keeps the sweep to its stated job -- importing a label that has no
+-- recorded history -- and it is idempotent by construction, because the row it
+-- inserts is itself a history.
 INSERT OR IGNORE INTO finding_resolution_events
     (origin_key, finding_id, resolution_state, fix_location, fix_sha,
      rationale, session_id, recorded_at)
@@ -847,7 +912,9 @@ SELECT 'legacy-fixed:' || finding_id,
        session_id,
        updated_at
   FROM findings
- WHERE status = 'fixed';
+ WHERE status = 'fixed'
+   AND NOT EXISTS (SELECT 1 FROM finding_resolution_events e
+                    WHERE e.finding_id = findings.finding_id);
 
 CREATE VIEW IF NOT EXISTS finding_resolution_current AS
 SELECT e.*
@@ -859,6 +926,26 @@ SELECT e.*
      ORDER BY e2.id DESC
      LIMIT 1
  );
+
+-- One row per findings row, carrying the legacy-status fallback exactly once.
+-- Every reader of finding resolution selects from here: the renderer, the two
+-- findings tools, the review session, and the review historical-findings
+-- reader.  Before this view each of them mapped `findings.status` its own way
+-- (or not at all), so one legacy row with no resolution event could read as
+-- `accepted` on one surface and as an active defect on another.  `legacy_status`
+-- stays visible because it remains the coarse mutable projection, not the
+-- authority.
+CREATE VIEW IF NOT EXISTS finding_state_current AS
+SELECT f.finding_id, f.subsystem_id, f.severity, f.status AS legacy_status,
+       COALESCE(r.resolution_state,
+                CASE f.status WHEN 'fixed'                THEN 'fixed-pending-verification'
+                              WHEN 'ruled-out'            THEN 'ruled-out'
+                              WHEN 'confirmed-acceptable' THEN 'accepted'
+                              ELSE 'open' END)            AS resolution_state,
+       r.fix_sha, r.fix_location, r.evidence_id AS resolution_evidence_id,
+       r.recorded_at AS resolution_recorded_at
+  FROM findings f
+  LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id;
 
 CREATE TABLE IF NOT EXISTS contradiction_resolution_events (
     id              INTEGER PRIMARY KEY,
@@ -1052,6 +1139,100 @@ BEGIN
            AND evidence_id = NEW.evidence_id
            AND role = 'supports'
     ) THEN RAISE(ABORT, 'supersession evidence must support the successor claim') END;
+END;
+
+-- ---------------------------------------------------------------------------
+-- Phase 4's outcome per claim, and the ladder each subsystem actually climbed.
+--
+-- §9.1 requires the adversarial pass to pull every current `<sid>/` claim as a
+-- target and record the outcome "before the subsystem may advance to
+-- `mapped`". Until this table existed there was nowhere to put a *survived*
+-- outcome: `claim_validity_events` admits only asserted/invalidated/
+-- superseded/revalidated, and a claim that survives its challenge changes no
+-- row — so it was indistinguishable from a claim nobody looked at, and the
+-- `mapped` prerequisite could not be written (slice-S6, F6/codex).
+--
+-- `claim_key` is denormalized from the claim the row points at, because the
+-- prerequisite is a prefix query over it and the claim's own row may later be
+-- closed; the writer copies it rather than taking it from the caller.
+-- `validity_event_id` is required for a non-`survived` outcome: an overturning
+-- that closed no interval overturned nothing.
+CREATE TABLE IF NOT EXISTS claim_challenge_outcomes (
+    id                INTEGER PRIMARY KEY,
+    claim_id          TEXT    NOT NULL REFERENCES claims(claim_id) ON DELETE CASCADE,
+    claim_key         TEXT    NOT NULL,
+    outcome           TEXT    NOT NULL CHECK (outcome IN (
+                                'survived','overturned','superseded')),
+    challenge         TEXT    NOT NULL,
+    at_sha            TEXT    NOT NULL,
+    validity_event_id INTEGER REFERENCES claim_validity_events(id) ON DELETE RESTRICT,
+    field_note_id     INTEGER REFERENCES field_notes(id) ON DELETE RESTRICT,
+    session_id        TEXT    NOT NULL REFERENCES sessions(session_id),
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (length(trim(challenge)) >= 24),
+    CHECK (outcome = 'survived' OR validity_event_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_challenge_outcomes_claim
+    ON claim_challenge_outcomes(claim_id, id);
+CREATE INDEX IF NOT EXISTS idx_claim_challenge_outcomes_key
+    ON claim_challenge_outcomes(claim_key, id);
+
+-- Append-only in the substrate, not by convention: an outcome that can be
+-- edited after the advance is no longer the record the advance rested on.
+CREATE TRIGGER IF NOT EXISTS claim_challenge_outcomes_are_append_only
+BEFORE UPDATE ON claim_challenge_outcomes
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'claim challenge outcomes are append-only; record a further outcome instead');
+END;
+
+CREATE TRIGGER IF NOT EXISTS claim_challenge_outcomes_are_not_deletable
+BEFORE DELETE ON claim_challenge_outcomes
+FOR EACH ROW
+WHEN (SELECT COUNT(*) FROM claims WHERE claim_id = OLD.claim_id) > 0
+BEGIN
+    SELECT RAISE(ABORT, 'claim challenge outcomes are append-only; they go only with the claim they challenge');
+END;
+
+-- One row per rung actually climbed. The depth receipt's ladder used to be
+-- reconstructed from the subsystem's current status with the writing tool, the
+-- session and the revision typed into the recorder, so the gate that asserted
+-- those fields was asserting its own reconstruction (slice-S6, F6/codex).
+-- Every tool that writes `subsystems.status` appends here, and only a write
+-- that changes the status does: a no-op re-affirmation is not a rung.
+CREATE TABLE IF NOT EXISTS subsystem_status_transitions (
+    id            INTEGER PRIMARY KEY,
+    subsystem_id  TEXT    NOT NULL REFERENCES subsystems(id) ON DELETE CASCADE,
+    from_status   TEXT             CHECK (from_status IN ('unmapped','scoping','structural',
+                                              'concerns','adversarial','mapped','deferred')),
+    to_status     TEXT    NOT NULL CHECK (to_status IN ('unmapped','scoping','structural',
+                                              'concerns','adversarial','mapped','deferred')),
+    tool          TEXT    NOT NULL CHECK (tool IN (
+                                'upsert_subsystem','update_subsystem_status','reset_subsystem')),
+    session_id    TEXT             REFERENCES sessions(session_id),
+    ref_sha       TEXT,
+    reason        TEXT,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (from_status IS NULL OR from_status != to_status)
+);
+
+CREATE INDEX IF NOT EXISTS idx_subsystem_status_transitions_subsystem
+    ON subsystem_status_transitions(subsystem_id, id);
+
+CREATE TRIGGER IF NOT EXISTS subsystem_status_transitions_are_append_only
+BEFORE UPDATE ON subsystem_status_transitions
+FOR EACH ROW
+BEGIN
+    SELECT RAISE(ABORT, 'subsystem status transitions are append-only; the ladder is history, not state');
+END;
+
+CREATE TRIGGER IF NOT EXISTS subsystem_status_transitions_are_not_deletable
+BEFORE DELETE ON subsystem_status_transitions
+FOR EACH ROW
+WHEN (SELECT COUNT(*) FROM subsystems WHERE id = OLD.subsystem_id) > 0
+BEGIN
+    SELECT RAISE(ABORT, 'subsystem status transitions are append-only; they go only with the subsystem');
 END;
 
 -- Existing rows remain untouched. This view is an explicitly lossy bridge:

@@ -1,0 +1,488 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amanuensis.dev/contracts/locus-account/1.0.0",
+  "title": "Amanuensis locus account",
+  "description": "The describe_locus response: a locus, the standing that says what the record authorizes, and the account assembled from durable rows. No field carries text generated during the call.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "locus",
+    "standing",
+    "sections",
+    "census",
+    "omitted",
+    "trace",
+    "current",
+    "as_of_sha"
+  ],
+  "properties": {
+    "contract_version": { "const": "1.0.0" },
+    "locus": { "$ref": "#/$defs/locus" },
+    "standing": {
+      "oneOf": [
+        { "$ref": "#/$defs/fileStanding" },
+        { "$ref": "#/$defs/subsystemStanding" },
+        { "$ref": "#/$defs/symbolStanding" },
+        { "$ref": "#/$defs/termStanding" }
+      ]
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose",
+        "structure",
+        "defects",
+        "reviews",
+        "boundaries",
+        "terms",
+        "leads",
+        "history_pointer"
+      ],
+      "properties": {
+        "purpose": { "$ref": "#/$defs/section" },
+        "structure": { "$ref": "#/$defs/section" },
+        "defects": { "$ref": "#/$defs/section" },
+        "reviews": { "$ref": "#/$defs/section" },
+        "boundaries": { "$ref": "#/$defs/section" },
+        "terms": { "$ref": "#/$defs/section" },
+        "leads": { "$ref": "#/$defs/section" },
+        "history_pointer": { "$ref": "#/$defs/section" }
+      }
+    },
+    "census": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "by_section"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "by_section": {
+          "type": "object",
+          "description": "Candidate count per section before any truncation, plus `unknown` where the standing block carries a sample list. Never truncated.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "omitted": {
+      "type": "array",
+      "description": "The omission ledger: one entry per (section, reason), with an exact count that reconciles selected + omitted == census. `section` is one of the eight account sections or `unknown`, the standing block's sample list. `ids` carries as many census members as fit a 1024-byte per-entry sub-budget and sets ids_truncated when it cannot carry them all; `count` is never truncated.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "reason", "count", "ids", "ids_truncated"],
+        "properties": {
+          "section": { "type": "string" },
+          "reason": { "enum": ["policy", "budget"] },
+          "count": { "type": "integer", "minimum": 0 },
+          "ids": { "type": "array", "items": { "type": "string" } },
+          "ids_truncated": { "type": "boolean" }
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "description": "What produced the response and what it cost. Every byte count is measured, not estimated: payload_bytes is the compact payload and response_bytes the whole emitted envelope, text block plus the structuredContent that repeats it, which is what every budget in spec 4.1 is enforced on.",
+      "additionalProperties": false,
+      "required": [
+        "model_calls",
+        "selection",
+        "budget_bytes",
+        "payload_bytes",
+        "response_bytes",
+        "truncation_order",
+        "truncated",
+        "within_budget",
+        "over_budget_reason"
+      ],
+      "properties": {
+        "model_calls": { "const": 0 },
+        "selection": { "const": "registry-exact-v1" },
+        "budget_bytes": { "type": "integer", "minimum": 1 },
+        "payload_bytes": { "type": "integer", "minimum": 0 },
+        "response_bytes": { "type": "integer", "minimum": 0 },
+        "truncation_order": { "type": "string", "minLength": 1 },
+        "truncated": { "type": "boolean" },
+        "within_budget": { "type": "boolean" },
+        "over_budget_reason": { "type": ["string", "null"] }
+      }
+    },
+    "current": { "type": "boolean" },
+    "as_of_sha": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "sha": { "type": ["string", "null"] },
+    "locus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "kind", "kind_inferred_by", "split_at", "path", "symbol", "subsystem_id", "term"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["file", "symbol", "subsystem", "term"] },
+        "kind_inferred_by": {
+          "enum": [
+            "subsystem-id",
+            "vocabulary-term",
+            "colon-split",
+            "ledgered-path",
+            "path-shaped",
+            "bare-term",
+            "caller-supplied"
+          ]
+        },
+        "split_at": { "type": ["integer", "null"] },
+        "path": { "type": ["string", "null"] },
+        "symbol": { "type": ["string", "null"] },
+        "subsystem_id": { "type": ["string", "null"] },
+        "term": { "type": ["string", "null"] }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subsystem_id",
+        "subsystem_name",
+        "classification",
+        "standing_state",
+        "authority_ceiling",
+        "ref_sha",
+        "examined_at",
+        "stale",
+        "stale_reason",
+        "reachability_checked",
+        "authorization_downgraded",
+        "authorizes",
+        "cannot_justify"
+      ],
+      "properties": {
+        "subsystem_id": { "type": "string" },
+        "subsystem_name": { "type": ["string", "null"] },
+        "classification": { "type": ["string", "null"] },
+        "standing_state": {
+          "enum": [
+            "unledgered",
+            "excluded",
+            "scoped-unread",
+            "examined",
+            "examined-stale",
+            "absent",
+            "mixed"
+          ]
+        },
+        "authority_ceiling": { "type": ["string", "null"] },
+        "ref_sha": { "$ref": "#/$defs/sha" },
+        "examined_at": { "type": ["string", "null"] },
+        "stale": { "type": "integer" },
+        "stale_reason": { "type": ["string", "null"] },
+        "reachability_checked": { "type": "boolean" },
+        "authorization_downgraded": { "type": ["string", "null"] },
+        "authorizes": { "type": "string" },
+        "cannot_justify": { "type": "string" }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked_sha", "checked_at", "repository_head", "origin_head", "agrees", "unchecked_since"],
+      "properties": {
+        "checked_sha": { "$ref": "#/$defs/sha" },
+        "checked_at": { "type": ["string", "null"] },
+        "repository_head": { "$ref": "#/$defs/sha" },
+        "origin_head": { "$ref": "#/$defs/sha" },
+        "agrees": { "type": "boolean" },
+        "unchecked_since": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "measured": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ledger_rows",
+        "ledger_reconciled",
+        "reconciliation_receipt",
+        "staleness_measured",
+        "evidence_rows",
+        "claims_recorded"
+      ],
+      "properties": {
+        "ledger_rows": { "type": "integer", "minimum": 0 },
+        "ledger_reconciled": { "type": ["boolean", "null"] },
+        "reconciliation_receipt": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["last_checked_sha", "last_checked_at"],
+          "properties": {
+            "last_checked_sha": { "type": "string" },
+            "last_checked_at": { "type": ["string", "null"] }
+          }
+        },
+        "staleness_measured": { "type": "boolean" },
+        "evidence_rows": { "type": "integer", "minimum": 0 },
+        "claims_recorded": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "unknownEntry": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "concern-without-disposition",
+            "candidate-sibling",
+            "open-question",
+            "open-lead",
+            "unassessed-seam"
+          ]
+        },
+        "subsystem_id": { "type": ["string", "null"] },
+        "concern_code": { "type": "string" },
+        "category": { "type": ["string", "null"] },
+        "count": { "type": "integer", "minimum": 0 },
+        "paths": { "type": "array", "items": { "type": "string" } },
+        "question_id": { "type": "integer" },
+        "question": { "type": "string" },
+        "scope": { "type": "string" },
+        "note_id": { "type": "integer" },
+        "observation": { "type": "string" },
+        "location": { "type": ["string", "null"] },
+        "location_match": { "enum": ["exact", "prefix", "owner", "none"] },
+        "seam_id": { "type": "string" },
+        "shared_object": { "type": ["string", "null"] },
+        "side": { "enum": ["a", "b"] },
+        "assessable": { "type": "integer" },
+        "reason": { "type": "string" },
+        "binding": { "type": "string" }
+      }
+    },
+    "authorityCeiling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label", "authorizes", "cannot_justify", "deferred_owners", "deferred_note", "caveat"],
+      "properties": {
+        "value": { "type": "string" },
+        "label": { "type": "string" },
+        "authorizes": { "type": "string" },
+        "cannot_justify": { "type": "string" },
+        "deferred_owners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subsystem_id", "subsystem_name", "reason"],
+            "properties": {
+              "subsystem_id": { "type": "string" },
+              "subsystem_name": { "type": ["string", "null"] },
+              "reason": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "deferred_note": { "type": "string" },
+        "caveat": { "type": "string" }
+      }
+    },
+    "fileStanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owners",
+        "state",
+        "authority_ceiling",
+        "revision",
+        "measured",
+        "unknown",
+        "authorizes",
+        "cannot_justify",
+        "reachability_checked",
+        "authorization_downgraded"
+      ],
+      "properties": {
+        "owners": { "type": "array", "items": { "$ref": "#/$defs/owner" } },
+        "state": {
+          "enum": [
+            "unledgered",
+            "excluded",
+            "scoped-unread",
+            "examined",
+            "examined-stale",
+            "absent",
+            "mixed"
+          ]
+        },
+        "authority_ceiling": { "$ref": "#/$defs/authorityCeiling" },
+        "revision": { "$ref": "#/$defs/revision" },
+        "measured": { "$ref": "#/$defs/measured" },
+        "unknown": { "type": "array", "items": { "$ref": "#/$defs/unknownEntry" } },
+        "authorizes": { "type": "string" },
+        "cannot_justify": { "type": "string" },
+        "reachability_checked": { "type": "boolean" },
+        "authorization_downgraded": { "type": ["string", "null"] }
+      }
+    },
+    "subsystemStanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "name",
+        "authorizes",
+        "cannot_justify",
+        "ledger",
+        "concerns",
+        "findings",
+        "seams",
+        "revision",
+        "measured",
+        "unknown"
+      ],
+      "properties": {
+        "state": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "authorizes": { "type": "string" },
+        "cannot_justify": { "type": "string" },
+        "ledger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["examined", "candidate", "excluded", "stale", "total"],
+          "properties": {
+            "examined": { "type": "integer", "minimum": 0 },
+            "candidate": { "type": "integer", "minimum": 0 },
+            "excluded": { "type": "integer", "minimum": 0 },
+            "stale": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "concerns": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["applicable", "covered", "by_classification"],
+          "properties": {
+            "applicable": { "type": "integer", "minimum": 0 },
+            "covered": { "type": "integer", "minimum": 0 },
+            "by_classification": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "findings": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "seams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["seam_id", "shared_object", "side", "assessable"],
+            "properties": {
+              "seam_id": { "type": "string" },
+              "shared_object": { "type": ["string", "null"] },
+              "side": { "type": "string" },
+              "assessable": { "type": "integer" }
+            }
+          }
+        },
+        "revision": { "$ref": "#/$defs/revision" },
+        "measured": { "$ref": "#/$defs/measured" },
+        "unknown": { "type": "array", "items": { "$ref": "#/$defs/unknownEntry" } }
+      }
+    },
+    "symbolStanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "symbol", "symbol_cited", "citing_evidence", "symbol_prefix_matches"],
+      "properties": {
+        "file": { "$ref": "#/$defs/fileStanding" },
+        "symbol": { "type": "string" },
+        "symbol_cited": { "type": "boolean" },
+        "citing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "ref_sha"],
+            "properties": {
+              "id": { "type": "integer" },
+              "kind": { "type": "string" },
+              "ref_sha": { "type": "string" }
+            }
+          }
+        },
+        "symbol_prefix_matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "symbol", "match"],
+            "properties": {
+              "id": { "type": "integer" },
+              "kind": { "type": "string" },
+              "symbol": { "type": "string" },
+              "match": { "const": "prefix" }
+            }
+          }
+        },
+        "symbol_standing": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "termStanding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "term"],
+      "properties": {
+        "state": { "enum": ["defined", "not-defined"] },
+        "term": { "type": "string" },
+        "gloss": { "type": ["string", "null"] },
+        "expansion": { "type": ["string", "null"] },
+        "subsystem_id": { "type": ["string", "null"] },
+        "first_seen": { "type": ["string", "null"] },
+        "ref_sha": { "$ref": "#/$defs/sha" },
+        "nearest_terms": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["ref_sha", "revision_bound", "authored"],
+      "additionalProperties": true,
+      "properties": {
+        "ref_sha": { "$ref": "#/$defs/sha" },
+        "revision_bound": { "type": "boolean" },
+        "authored": { "enum": ["model", "code"] },
+        "evidence_kind": { "type": ["string", "null"] },
+        "current": { "type": "boolean" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["census", "recorded", "requested", "as_of_supported", "items"],
+      "properties": {
+        "census": { "type": "integer", "minimum": 0 },
+        "recorded": { "type": "boolean" },
+        "requested": { "type": "boolean" },
+        "as_of_supported": { "type": "boolean" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+        "statement": { "type": "string" },
+        "as_of": { "type": "string" },
+        "authorized": { "type": "boolean" },
+        "withheld_unauthorized": { "type": "integer", "minimum": 0 },
+        "cannot_justify": { "type": "string" },
+        "source_rows": { "type": "integer", "minimum": 0 },
+        "counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "session_attribution": { "const": "by-citation" },
+        "narrative": {
+          "type": "object",
+          "description": "§3.4's narrative attachment, served only on a `structure` section whose claim list is empty and whose locus is a subsystem. It is a pointer, not prose: the survey artifact's body is rendered on the subsystem page, where the labelling travels with it, rather than inside a response §4.1 bounds to 8192 bytes. It is never revision-bound, because the survey wrote it as one document rather than item by item.",
+          "additionalProperties": false,
+          "required": ["artifact_path", "content_hash", "revision_bound", "label"],
+          "properties": {
+            "artifact_path": { "type": "string", "minLength": 1 },
+            "content_hash": { "type": ["string", "null"] },
+            "revision_bound": { "const": false },
+            "label": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

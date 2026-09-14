@@ -142,6 +142,144 @@ export function enforceMonotonicTransition(
 }
 
 /**
+ * The structural phase's own deliverable, checked at the status advance
+ * (spec.md §9.1). `structural` authorizes claims about types, state
+ * containers, flows and the concurrency model; before this, the only thing
+ * the server required of the phase was the narrative artifact — and prose is
+ * not revision-bound, so nothing downstream could tell a mapped structure
+ * from a described one.
+ *
+ * One claim is enough, and no category is required. Forcing a count, or a row
+ * per category, is a quota over a field the writer must author, which is the
+ * fabrication-to-order hazard BP4 names and the case GP8's v2 scope note
+ * excludes from substrate enforcement. A subsystem with genuinely no mutable
+ * state container records that as an explicit negative claim instead of
+ * omitting the category. Claim *truth* is the adversarial pass's obligation:
+ * `references/phase-4-adversarial.md` pulls these claims as targets and
+ * records each outcome before the subsystem may advance to `mapped`.
+ *
+ * The prefix is compared with `substr`, not `LIKE`: a subsystem id may
+ * legitimately contain `_` or `%`, and an unescaped LIKE pattern would let one
+ * subsystem's claim satisfy another's gate.
+ */
+function requireStructuralClaim(db: DB, subsystemId: string): void {
+  const prefix = `${subsystemId}/`;
+  const { n } = db
+    .prepare(
+      `SELECT COUNT(*) AS n
+         FROM claims
+        WHERE valid_until_sha IS NULL
+          AND substr(claim_key, 1, length(?)) = ?`,
+    )
+    .get(prefix, prefix) as { n: number };
+  if (n > 0) return;
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'structural': no current claim carries a ` +
+      `claim_key beginning '${prefix}'. The structural phase must record its key ` +
+      `types, state containers, flow steps, concurrency invariants and seam ` +
+      `contracts through add_claim before the subsystem is advanced. One claim is ` +
+      `enough; a category that is genuinely empty is recorded as an explicit ` +
+      `negative claim rather than omitted.`,
+  );
+}
+
+/**
+ * Phase 4's own deliverable, checked at the advance to `mapped` (spec.md §9.1).
+ *
+ * `structural` establishes that the account exists in a revision-bound,
+ * evidence-backed form; §9.1 is explicit that it does not establish the
+ * account is *right*, and that claim truth "remains the adversarial pass's
+ * obligation — and that pass must actually be given the claims". Before this,
+ * `mapped` had no prerequisite at all, so a subsystem could publish a
+ * structural inventory nothing had ever challenged and still read as fully
+ * surveyed (slice-S6, F6/codex).
+ *
+ * The denominator is every claim the subsystem still holds as current, because
+ * that is what the published account rests on: a claim closed since the
+ * adversarial pass is no longer part of the account, and a claim added after it
+ * has not been challenged. One outcome per claim is enough and no outcome is
+ * privileged — `survived` is a legitimate and common result, and demanding a
+ * quota of overturnings would manufacture them (BP4). What the rule buys is
+ * that an unchallenged claim cannot be silently carried across the advance.
+ *
+ * The prefix is compared with `substr`, not `LIKE`, for the reason
+ * {@link requireStructuralClaim} gives: `_` and `%` in a subsystem id would
+ * otherwise let one subsystem's outcome satisfy another's gate.
+ */
+function requireChallengedClaims(db: DB, subsystemId: string): void {
+  const prefix = `${subsystemId}/`;
+  const unchallenged = db
+    .prepare(
+      `SELECT c.claim_key AS claim_key
+         FROM claims c
+        WHERE c.valid_until_sha IS NULL
+          AND substr(c.claim_key, 1, length(?)) = ?
+          AND NOT EXISTS (
+                SELECT 1 FROM claim_challenge_outcomes o WHERE o.claim_id = c.claim_id
+              )
+        ORDER BY c.claim_key`,
+    )
+    .all(prefix, prefix) as Array<{ claim_key: string }>;
+  if (unchallenged.length === 0) return;
+  const named = unchallenged
+    .slice(0, 5)
+    .map((row) => row.claim_key)
+    .join(", ");
+  const more = unchallenged.length > 5 ? ` and ${unchallenged.length - 5} more` : "";
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'mapped': ${unchallenged.length} current claim(s) carry no ` +
+      `challenge outcome — ${named}${more}. The adversarial pass pulls every current '${prefix}' ` +
+      `claim as a target and records the outcome through record_claim_challenge before the ` +
+      `subsystem advances; a structural account published unchallenged is an account nobody read ` +
+      `against the code.`,
+  );
+}
+
+/**
+ * Append one rung to the ladder a subsystem actually climbed.
+ *
+ * Called by every tool that writes `subsystems.status`, and only when the
+ * write changes it: a re-affirmation of the status a subsystem already holds
+ * climbed nothing, and counting it would make the recorded ladder disagree
+ * with the survey. The row carries the tool that wrote it, the session it was
+ * written in, and the revision the store was last checked at, because those
+ * are exactly the three fields the depth receipt used to type in for itself
+ * (slice-S6, F6/codex).
+ */
+export function recordStatusTransition(
+  db: DB,
+  entry: {
+    subsystemId: string;
+    fromStatus: SubsystemStatus | null;
+    toStatus: SubsystemStatus;
+    tool: "upsert_subsystem" | "update_subsystem_status" | "reset_subsystem";
+    sessionId: string | null;
+    reason?: string | null;
+  },
+): void {
+  if (entry.fromStatus === entry.toStatus) return;
+  const refSha =
+    (
+      db.prepare("SELECT last_checked_sha FROM git_state WHERE repo_id = 'default'").get() as
+        | { last_checked_sha: string | null }
+        | undefined
+    )?.last_checked_sha ?? null;
+  db.prepare(
+    `INSERT INTO subsystem_status_transitions
+       (subsystem_id, from_status, to_status, tool, session_id, ref_sha, reason)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    entry.subsystemId,
+    entry.fromStatus,
+    entry.toStatus,
+    entry.tool,
+    entry.sessionId,
+    refSha,
+    entry.reason ?? null,
+  );
+}
+
+/**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
  * (targetRank > currentRank); no-ops and deferred toggles are exempt.
@@ -149,11 +287,14 @@ export function enforceMonotonicTransition(
  * | Target status | Required prior-phase evidence                          |
  * |---------------|--------------------------------------------------------|
  * | structural    | ≥1 file_ledger row (scoper ran add_files_to_scope)     |
+ * |               |   AND ≥1 current claim keyed `<sid>/…` (the structural |
+ * |               |   phase recorded its inventory through add_claim)      |
  * | concerns      | ≥1 artifacts row kind='subsystem-survey' (structural   |
  * |               |   phase wrote and registered its narrative document)   |
  * | adversarial   | ≥1 dispositions row (concerns pass ran set_disposition)|
- * | mapped        | (no additional gate — monotonic + adversarial gates    |
- * |               |   are sufficient)                                       |
+ * | mapped        | every current claim keyed `<sid>/…` carries a recorded |
+ * |               |   challenge outcome — the adversarial pass ran over   |
+ * |               |   the account the advance is about to publish         |
  *
  * When an agent skips phases (e.g. unmapped→concerns), every intermediate
  * status's prerequisites are checked in order, so the first missing one
@@ -176,6 +317,7 @@ export function enforcePhasePrerequisites(
             `structural phase begins.`,
         );
       }
+      requireStructuralClaim(db, subsystemId);
       break;
     }
     case "concerns": {
@@ -206,9 +348,45 @@ export function enforcePhasePrerequisites(
       }
       break;
     }
+    case "mapped": {
+      requireChallengedClaims(db, subsystemId);
+      break;
+    }
     default:
       // 'unmapped', 'scoping', 'deferred' — no prerequisites.
       break;
+  }
+}
+
+/**
+ * Every prerequisite between where a subsystem is and where a write is putting
+ * it, checked in order so the first missing one names the phase that was
+ * skipped. Regressions, no-op writes and `deferred` toggles pass through: the
+ * rule binds genuine forward motion only.
+ *
+ * `previousStatus` is `null` for a row that does not exist yet, which an insert
+ * opening straight at a later status is. That is read as `unmapped` — the
+ * status such a row would have had a moment earlier — rather than as "no
+ * transition to check", because a fresh insert at `structural` reaches the same
+ * state as an advance to `structural` and must answer for the same evidence.
+ *
+ * Every tool that writes `subsystems.status` calls this. A prerequisite one
+ * writer honours and another walks around is not enforced, and `upsert_subsystem`
+ * is a status writer as much as `update_subsystem_status` is (slice-S3,
+ * F3/codex).
+ */
+export function enforceForwardPrerequisites(
+  db: DB,
+  subsystemId: string,
+  previousStatus: SubsystemStatus | null,
+  targetStatus: SubsystemStatus,
+): void {
+  const from = previousStatus ?? "unmapped";
+  const currentRank = STATUS_ORDER.indexOf(from as Exclude<SubsystemStatus, "deferred">);
+  const targetRank = STATUS_ORDER.indexOf(targetStatus as Exclude<SubsystemStatus, "deferred">);
+  if (currentRank < 0 || targetRank <= currentRank) return;
+  for (const status of STATUS_ORDER.slice(currentRank + 1, targetRank + 1)) {
+    enforcePhasePrerequisites(db, subsystemId, status);
   }
 }
 

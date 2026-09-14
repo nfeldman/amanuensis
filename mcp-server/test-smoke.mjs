@@ -190,8 +190,23 @@ run("update_file_classification", {
 run("get_subsystem_files", { subsystem_id: "B-01", classification_filter: "examined" }, (r) => r.length === 2);
 
 // Advance B-01 through the survey pipeline. File ledger must exist before
-// 'structural', and the subsystem-survey artifact must be registered before
-// 'concerns' — both are now enforced server-side.
+// 'structural', the structural phase's inventory must be recorded as at
+// least one claim keyed `B-01/`, and the subsystem-survey artifact must be
+// registered before 'concerns' — all three are enforced server-side.
+const smokeEvidence = run("add_evidence", {
+  file_path: "scheduler/main.ts", symbol: "runJob", line_range: "1-20",
+  ref_sha: claimSha1, kind: "code-verified",
+}, (r) => r.ok && typeof r.id === "number");
+run("add_claim", {
+  claim_id: "CL-B01-runjob",
+  claim_key: "B-01/key-type/job",
+  subject_type: "symbol",
+  subject_id: "scheduler/main.ts:Job",
+  statement: "Job is the unit the scheduler queues, runs, and retires.",
+  epistemic_kind: "observation",
+  ref_sha: claimSha1,
+  evidence_ids: [smokeEvidence.id],
+}, (r) => r.ok);
 run("update_subsystem_status", { id: "B-01", status: "structural" }, (r) => r.previous_status === "scoping");
 run("register_artifact", {
   path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01",
@@ -207,7 +222,7 @@ run("set_disposition", {
   evidence_quality: "code-verified",
   linchpin_dependent: false,
   rationale: "no cache in this subsystem",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "survey",
 }, (r) => r.ok);
 run("get_dispositions", { subsystem_id: "B-01" }, (r) => r.length === 1);
@@ -223,7 +238,7 @@ run("add_finding", {
   status: "confirmed-bug",
   primary_files: ["scheduler/main.ts:runJob@deadbeef"],
   business_context: "affects throughput under failure",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "survey",
 }, (r) => r.ok);
 run("update_finding_status", {
@@ -251,7 +266,15 @@ run("lookup_term", { term: "runJob" }, (r) => r !== null && r.gloss === "refined
 run("list_vocabulary", { subsystem_id: "B-01" }, (r) => r.length === 1);
 
 // 10. Xrefs
-run("add_xref", { from_id: "B-01", to_id: "B-02", relationship: "data-flow", strength: "observed" }, (r) => r.ok);
+// §9.2: context is required and must carry a citation token whose revision
+// resolves in the bound workspace; the prose around it is stored verbatim.
+run("add_xref", {
+  from_id: "B-01",
+  to_id: "B-02",
+  relationship: "data-flow",
+  strength: "observed",
+  context: `B-01 enqueues the job B-02 dequeues, at scheduler/main.ts:runJob@${claimSha1}`,
+}, (r) => r.ok && r.citations.length === 1 && r.citations[0] === `scheduler/main.ts:runJob@${claimSha1}`);
 run("get_xrefs", { subsystem_id: "B-01" }, (r) => r.length === 1);
 
 // 11. Contradictions — need a second finding to contradict with
@@ -265,7 +288,7 @@ run("add_finding", {
   root_cause: "distinct analysis",
   severity: "LOW",
   status: "confirmed-acceptable",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   pass_type: "adversarial",
 }, (r) => r.ok);
 const contra = run("add_contradiction", {
@@ -349,14 +372,14 @@ const ev1 = run("add_evidence", {
   file_path: "scheduler/main.ts",
   symbol: "runJob",
   line_range: "10-42",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   kind: "code-verified",
   note: "defer release covers exception path",
 }, (r) => r.ok && typeof r.id === "number");
 const ev2 = run("add_evidence", {
   file_path: "scheduler/main.ts",
   symbol: "runJob",
-  ref_sha: "deadbeef",
+  ref_sha: claimSha1,
   kind: "comment-asserted",
   note: "claim in docstring",
 }, (r) => r.ok);
@@ -383,7 +406,9 @@ run("verify_finding_fix", {
 }, (r) => r.ok && r.resolution_state === "verified-fixed");
 run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, (r) => r.length === 1 && r[0].role === "supports");
 run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 2);
-run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 2);
+// Three rows on this path now: the disposition citation, the fix
+// verification, and Phase 2's structural-claim evidence.
+run("get_evidence", { file_path: "scheduler/main.ts" }, (r) => r.length === 3);
 
 // 20. Temporal claims
 const claimEv1 = run("add_evidence", {
@@ -433,7 +458,9 @@ run("invalidate_claim", {
   reason: "the second fixture refutes it",
   evidence_ids: [claimEv2.id],
 }, (r) => r.ok);
-run("get_claims", { query_sha: claimSha2 }, (r) => r.length === 1 && r[0].claim_id === "smoke-claim-2");
+run("get_claims", { query_sha: claimSha2 }, (r) =>
+  r.length === 2 &&
+  r.map((c) => c.claim_id).sort().join(",") === "CL-B01-runjob,smoke-claim-2");
 run("get_claim_history", { claim_key: "smoke.fixture" }, (r) => r.claims.length === 2 && r.edges.length === 1);
 run("get_legacy_claim_projection", { legacy_source: "findings" }, (r) => r.length === 4);
 
