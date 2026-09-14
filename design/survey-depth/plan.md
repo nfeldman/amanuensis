@@ -6,7 +6,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P0 | Additive migration on an existing populated store | ready (1 attempt) | — | `mcp-server/test-existing-store-migration.mjs` | C10, C35, C38, C42 |
+| P0 | Additive migration on an existing populated store | done (unverified) (1 attempt) | — | `mcp-server/test-existing-store-migration.mjs` | C10, C35, C38, C42 |
 | P1 | Evidence-backed dispositions | ready | P0 | `mcp-server/test-disposition-evidence.mjs` | C7, C8, C9, C10, C32, C34, C37 |
 | P2 | Scope reconciliation before authority | ready | P1 | `mcp-server/test-scope-reconciliation.mjs` | C11, C12, C13, C34, C38 |
 | P3 | Vocabulary: discharge or decline | ready | P2 | `mcp-server/test-vocabulary-discharge.mjs` | C15, C16, C17, C34, C38, C40 |

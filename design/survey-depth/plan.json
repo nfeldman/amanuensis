@@ -116,14 +116,14 @@
       ],
       "needs_mcp": true,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "a12e72aee9d6b1c25a75ad655cc1b22a8e330133",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "ae95aff9ca1e79ebb70500cc2b7b2fb7b8589a31",
+      "green_sha": "c15c39efe729511b770effef45579220b2b99260",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The obligations bind AxiomDB immediately and with no grace path (decisions.md §1, README §4), and its shape is the adversarial one: 295 ledger rows over 187 distinct paths with 53 multiply-owned, 1718 scope gaps, 35 deferred-with-reason paths. Asserting the migration against a fresh fixture would test the one store shape that cannot fail."
+      "notes": "GATE XS1 runs the migration on a copy of the AxiomDB store (166 dispositions, 54 unattached, 295 ledger rows, 1718 gaps); the source is copied, never opened for writing, and digested before and after. Red on S2: CREATE TABLE IF NOT EXISTS is a silent no-op when the name is held by an object of another kind, so an open could leave a declared table absent and report success; openDatabase now runs requireSchemaObjects over schema.sql's own 517 declarations, which covers each table P2-P4 adds the moment it is declared, with no second list. Two acceptance bullets are not P0's to make green and are not asserted here: 'every table this lane adds' is the empty set at P0, so S1 asserts the stronger schema-wide form instead, and the SS2.3 advance refusal for an unattached disposition is P1's deliverable (invariants.ts) - P1's regression list already re-runs this gate. M5 asserts the 54 unattached dispositions survive; P1 asserts the refusal. T2 proves the append-only pair behaviourally on 46 of 75 declared tables; the other 29 refuse this probe's generic seed for named cross-row reasons, reported in the gate's notes."
     },
     {
       "id": "P1",
