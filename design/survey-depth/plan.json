@@ -848,7 +848,7 @@
       "gate": {
         "test_path": "dev/test-survey-depth.mjs",
         "command": "node dev/test-survey-depth.mjs",
-        "red_expect": "GATE SD RED: the candidate store does not meet the frozen baseline on B1",
+        "red_expect": "GATE D0 RED: the candidate store does not meet the frozen baseline on B1",
         "red_rejects": [
           "MODULE_NOT_FOUND",
           "Cannot find module",

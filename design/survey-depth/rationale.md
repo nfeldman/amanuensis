@@ -230,3 +230,47 @@ independently revertible; collapsing them would make a single red block all four
   recorded an open question asking the owner to confirm or override it; `dev/test-rebuild-depth.mjs`
   still expects `<subsystem-id-compact>-<N>`. §8.10 widens the gate to read the convention from a
   declared source rather than picking a winner, because picking one is the owner's call.
+
+## 10. Unsettled after round 1
+
+The round-1 reviews are dispositioned in `reviews/round-1/dispositions.md`: 60 items applied,
+1 rejected. What the revision did not close:
+
+- **The two reviewers disagreed about 11 claims and the disagreement was never about the facts.**
+  On every one of C12, C13, C15, C20, C21, C29, C31, C32 and C33, codex overturned and claude
+  upheld or qualified — and when I checked the evidence, codex's was right in every case. The
+  pattern is legible: codex challenged the *mechanism named* (does `requireWorkspaceCitation`
+  actually resolve? does `git ls-files` read R's tree?) while claude challenged the *substrate
+  behind it* (is the table really append-only? does the export really carry the id?). Neither
+  reviewer found the other's class. One heterogeneous pair covered more than either pass did, and
+  it is worth recording that both classes existed in a specification whose author believed it had
+  already checked them.
+
+- **Whether `store_generation` can be minted without a migration that rewrites rows.** §5.3 mints
+  an immutable identity at schema creation. An existing store — AxiomDB, the candidate — has none,
+  and the legacy derivation is sound only for a frozen archive. What identity a *live* pre-existing
+  store should acquire, and when, is not settled. P0 will find out on a copy; if minting one on
+  first open counts as rewriting the store, the fallback is that a live store has no identity until
+  its next archive, and carried records from it name the archive rather than the store.
+
+- **Whether `vocabulary_scopes` is a join table or a refusal.** §4.4 specifies the join table and
+  names the narrower fallback. The join table is the right shape and the larger change; P3 chooses
+  under its own budget, and the constraint that binds either way is that silent revocation is not
+  permitted.
+
+- **Whether the derived refusal set in §6.2 finds enough to justify itself.** It is a lexical scan
+  for three message openings. It found `phase-1-scope.md:58`, which the hand register had missed
+  for the whole of the design round — one real catch. Whether it catches a second, or whether the
+  register plus a human reading is the honest ceiling here, is a measurement P7 can make and this
+  revision cannot.
+
+- **The 420 minutes in P10.** It is derived from the baseline's 35 sessions across a month against
+  the rebuild's 6 in an evening, scaled to the 361 examined paths B2 requires. That is a better
+  estimate than the 300 it replaces and it is still an estimate from two points. If P10 exhausts
+  its budget the answer is more batches, not a lower B2: the fraction is frozen with the baseline.
+
+- **Decision 2's fallback was not triggered.** `decisions.md` §2 ("Substrate, not prose") names no
+  fallback, and no claim it rests on was overturned. What the reviews found is that four of its
+  obligations were still prose at the DDL level — tables declared append-only in a paragraph, with
+  no trigger — and the revision replaced the paragraph with 12 triggers and the `IF NOT EXISTS`
+  form the schema already requires. That is decision 2 being applied, not withdrawn.

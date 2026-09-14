@@ -1076,7 +1076,10 @@ refusals plus the two existing ones the lane touches, and requires the derived s
 
 ## 7. Acceptance rebuild
 
-### 7.1 The depth gate, `dev/test-survey-depth.mjs`
+### 7.1 The depth gate, `GATE D0` — `dev/test-survey-depth.mjs`
+
+It prints `GATE D0 GREEN`, `GATE D0 RED: <reason>` or `GATE D0 CANNOT RUN: <reason>` as its single
+last stdout line, under §8.0's protocol. `GATE D1` (§8.5) is the gate *for* it.
 
 Two arms, for the reason `dev/test-rebuild-depth.mjs:20-27` gives: the store is untracked
 (`git ls-files .amanuensis` returns 0), so a gate that only read a live store would be green by
@@ -1089,7 +1092,7 @@ absence in CI.
   otherwise the committed acceptance receipt (§7.5). When both are present it asserts both and
   requires them to agree; a receipt nobody can contradict is a claim about a claim. When
   **neither** is present the arm is `cannot run` and the gate exits **2**, printing
-  `GATE D1 CANNOT RUN: no live store and no committed acceptance receipt`. That is a third state,
+  `GATE D0 CANNOT RUN: no live store and no committed acceptance receipt`. That is a third state,
   distinct from red and from green, and it is the state CI is in between the packet that
   registers this gate and the packet that writes the receipt. Without it the gate is knowingly
   red for three packets and stops being a signal for any of them; with it the absence is
@@ -1192,7 +1195,12 @@ out-of-band, not as a pass (VP4(e)).
 
 ### 7.4 The acceptance rebuild
 
-The lane's final rebuild packet runs, in **this worktree**, the recipe of
+Steps 1–7 of onboarding belong to **P8**, the per-subsystem survey and the carried adjudication
+(steps 7–8) to **P10**, and publication, promotion and the receipts (steps 9–10) to **P11**. One
+packet for all of it was a 300-minute budget over a rebuild that must reach at least 361 examined
+paths where its predecessor reached 84.
+
+The lane's rebuild packets run, in **this worktree**, the recipe of
 `design/reader-lenses/spec.md` §12.1 with two additions:
 
 1. **Snapshot** — `commit_phase_gate(label="Pre-acceptance snapshot")`.
@@ -1290,6 +1298,22 @@ an assertion the gate can make and print.
 
 Each packet's `gate.red_expect` in `plan.json` quotes the first line of the reason its red prints,
 and `gate.red_rejects` carries the crash signatures above.
+
+### 8.0a `GATE XS1` — `mcp-server/test-existing-store-migration.mjs`
+
+**Red when:** opening a copy of an existing populated store rewrites, deletes or re-derives any
+`dispositions`, `evidence`, `disposition_evidence`, `file_ledger` or `vocabulary` row — asserted by
+a row-level digest taken before and after; a second open of the same copy throws, which is what bare
+`CREATE TABLE` in `schema.sql` does (`src/db.ts:85-89`); any table this lane adds is absent after the
+open; an `UPDATE` or `DELETE` on one of those tables succeeds; a subsystem holding an unattached
+disposition advances; or `materialize_docs(clean_publish=true)` alters the previous output on a
+refused run. Control: a copy whose dispositions are all attached advances and publishes. Reports
+`cannot run` — never green — when the source store is unreadable on this machine.
+
+**False green it cannot exclude:** it tests the AxiomDB store's shape, which is one existing store.
+A store with a shape neither it nor the fixtures cover migrates untested. That shape was chosen
+because it is the adversarial one available: 295 ledger rows over 187 distinct paths with 53
+multiply owned, 1718 scope gaps, 54 unattached dispositions, and 35 `deferred-with-reason` paths.
 
 ### 8.1 `GATE SD1` — `mcp-server/test-disposition-evidence.mjs`
 
@@ -1463,8 +1487,8 @@ finding **B03-R2**, which the acceptance rebuild must carry forward rather than 
 
 ### 8.10 Gates that must stay green, unchanged
 
-`dev/test-rebuild-coverage.mjs`, `dev/test-rebuild-readback.mjs`,
-`dev/test-reader-lenses-dogfood.mjs`, `dev/test-living-conspectus.mjs`,
+`dev/test-rebuild-coverage.mjs`, `dev/test-reader-lenses-dogfood.mjs`,
+`dev/test-living-conspectus.mjs`,
 `dev/check-living-conspectus.mjs`, `mcp-server/test-invariants.mjs`,
 `mcp-server/test-derived-staleness.mjs`, `mcp-server/test-locus-standing.mjs`,
 `mcp-server/test-finding-partition.mjs`, and the materializer's seven Python gates. No axis of
