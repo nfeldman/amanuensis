@@ -1,18 +1,38 @@
-# Concern checklist
+# Calibrated concern checklist — Amanuensis
 
-Calibrated for this codebase at `258ccd2`. Each entry is falsifiable by reading code; none
-needs a runtime to answer. This supersedes the territory catalog for later sessions.
+Twenty concerns, derived at `7c1c1a9` from the eleven territories plus two local classes.
+This supersedes the territory catalog for this project. Every subsystem's Phase 3 must reach
+a terminal disposition on every concern that is active for it.
 
-| Code | Category | Question |
+A well-formed disposition here cites `file:symbol@sha`, states an evidence quality it can
+actually support, and is one of `confirmed-bug`, `confirmed-acceptable`, `ruled-out`,
+`out-of-scope`, or `unresolved-competition`.
+
+| Code | Territory | What would make it true here |
 |---|---|---|
-| [CC-1](concerns.md#cc-1) | cache-coherence | Derived state is served from SQL views over append-only event tables (`finding_state_current`, `file_standing`). Does any reader compute the same predicate inline instead of reading the view, so a schema change moves one and not the other? |
-| [RC-1](concerns.md#rc-1) | resource-lifecycle | The server holds one SQLite handle for the life of the process and also writes the storage directory's git repository. Can a handle outlive the file it was opened on, or a commit run against a directory another process is mutating? |
-| [BV-1](concerns.md#bv-1) | boundary-validation | Tool arguments carry workspace-relative paths, revisions, and output directories supplied by an agent. Is every one containment-asserted against the bound workspace or storage root before it reaches the filesystem? |
-| [EV-1](concerns.md#ev-1) | evidence-integrity | Claims and evidence are bound to git revisions. Is every recorded revision resolved in the bound workspace at write time, and is ancestry checked where the record's meaning depends on it? |
-| [GT-1](concerns.md#gt-1) | generated-artifact-drift | One vocabulary source feeds generated TypeScript and Python enum modules, SQL `CHECK` literals, tool validators, and hand-written `SKILL.md` prose. Can any of those four drift without a check naming which one diverged? |
-| [ZD-1](concerns.md#zd-1) | zero-denominator-verification | Several gates assert over records that may be absent. Can a gate pass because its subject is absent rather than because the property holds? Three such greens have already been found here (B03-2, B04-1, B04-3). |
+| `ID-1` | 1 · scope/context identity | A caller-supplied key (finding id, claim key, subsystem id, artifact path) is reused across a store generation, a binding, or a worktree without carrying what distinguishes them. |
+| `ID-2` | 1 · scope/context identity | A locus row is read back without the `ref_sha` it was recorded at, so a fact true at one revision is served as current. |
+| `VR-1` | 1 · scope/context identity (local) | A version, revision, or digest is stated in more than one place with no single source and no check binding them. |
+| `CC-1` | 2 · cache coherence | A generated artifact is not regenerated when its source changes and no `--check` detects it. |
+| `CC-2` | 2 · cache coherence | A derived view or dashboard counter disagrees with the tables it is computed from. |
+| `TB-1` | 3 · temporal bound | An exogenous subprocess is invoked with no timeout on a startup or handler path. |
+| `EP-1` | 4 · exceptional path | A failure part-way through a multi-file write leaves a partial store, docs tree, or host config with no restore. |
+| `EP-2` | 4 · exceptional path | An error path skips a lock release, session close, or storage commit the success path performs. |
+| `AL-1` | 5 · aliasing/ownership | Module-level mutable state is handed to a caller that can mutate the server's own copy. |
+| `IF-1` | 6 · incremental/full divergence | Incremental publish and `clean_publish` do not produce the same tree from the same store. |
+| `IF-2` | 6 · incremental/full divergence | The drift detector and a full reconciliation disagree about which files are stale. |
+| `AT-1` | 7 · atomicity | A multi-table mutation is not one transaction, so a failure leaves the store internally inconsistent. |
+| `AT-2` | 7 · atomicity | A storage Git commit and the DB mutation it records can diverge in either direction. |
+| `CR-1` | 8 · concurrency | Two processes bound to one store race on a write the lock table does not cover. |
+| `CR-2` | 8 · concurrency | Lazy first use races, or an interruption leaves an incomplete store a later open accepts. |
+| `RL-1` | 9 · resource lifecycle | A handle, child process, or temp directory is acquired without a guaranteed release on every exit path. |
+| `TR-1` | 10 · trust boundary | A model-authored tool argument reaches a path, a subprocess argument, or SQL without validation. |
+| `TR-2` | 10 · trust boundary | Stored content is rendered into an agent's context or into HTML as instruction or safe markup rather than as untrusted data. |
+| `SE-1` | 11 · seam contract | A contract stated on one side of a seam is not enforced on the other. |
+| `ZD-1` | local | A gate reports green while asserting over an empty set. |
 
-Territories disqualified, with the condition: distributed consensus (one process, one
-database); request-scoped tenancy (the server binds one workspace for its lifetime);
-client-side rendering state (the projection has a complete no-JavaScript reading path);
-schema migration under load (the schema is applied at open with `CREATE TABLE IF NOT EXISTS`).
+## Seam concerns
+
+`SC-N` codes are derived per seam during seam assessment, once both parties are `mapped`.
+They are not seeded here: an `SC` code names two specific parties, so seeding it against
+eleven subsystems would create a denominator it does not belong to.

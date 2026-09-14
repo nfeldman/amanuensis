@@ -40,18 +40,14 @@ Every page this conspectus publishes, in the order the record presents them. The
 | [Not yet surveyed](not-yet-surveyed.md) | The recorded edge of the map, each gap counted over the unit it occupies. |
 | [System boundaries](seams.md) | Shared objects and ordering assumptions where independently understandable subsystems meet. |
 | [Codebase glossary](vocabulary.md) | The project's own names, with the meanings Amanuensis observed in context. |
-| Subsystems · [Server runtime and tool dispatch](subsystems/b01-server-runtime-and-tool-dispatch.md) | Scope, structure, boundaries, defects, and the survey record for Server runtime and tool dispatch. |
-| Subsystems · [Repository binding and storage custody](subsystems/b02-repository-binding-and-storage-custody.md) | Scope, structure, boundaries, defects, and the survey record for Repository binding and storage custody. |
-| Subsystems · [Conspectus schema, vocabulary, and invariants](subsystems/b03-conspectus-schema-vocabulary-and-invariants.md) | Scope, structure, boundaries, defects, and the survey record for Conspectus schema, vocabulary, and invariants. |
-| Subsystems · [Survey record tools](subsystems/b04-survey-record-tools.md) | Scope, structure, boundaries, defects, and the survey record for Survey record tools. |
-| Subsystems · [Findings, dispositions, and resolution custody](subsystems/b05-findings-dispositions-and-resolution-custody.md) | Scope, structure, boundaries, defects, and the survey record for Findings, dispositions, and resolution custody. |
-| Subsystems · [Locus standing and the reader lenses](subsystems/b06-locus-standing-and-the-reader-lenses.md) | Scope, structure, boundaries, defects, and the survey record for Locus standing and the reader lenses. |
-| Subsystems · [Git state, staleness, and refresh](subsystems/b07-git-state-staleness-and-refresh.md) | Scope, structure, boundaries, defects, and the survey record for Git state, staleness, and refresh. |
-| Subsystems · [Materializer rendering pipeline](subsystems/b08-materializer-rendering-pipeline.md) | Scope, structure, boundaries, defects, and the survey record for Materializer rendering pipeline. |
-| Subsystems · [Projection read-back and publication custody](subsystems/b09-projection-read-back-and-publication-custody.md) | Scope, structure, boundaries, defects, and the survey record for Projection read-back and publication custody. |
-| Subsystems · [The Amanuensis skill](subsystems/b10-the-amanuensis-skill.md) | Scope, structure, boundaries, defects, and the survey record for The Amanuensis skill. |
-| Subsystems · [Development harness and gates](subsystems/b11-development-harness-and-gates.md) | Scope, structure, boundaries, defects, and the survey record for Development harness and gates. |
-| Subsystems · [Vendored research corpus](subsystems/b12-vendored-research-corpus.md) | Scope, structure, boundaries, defects, and the survey record for Vendored research corpus. |
+| Subsystems · [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | Scope, structure, boundaries, defects, and the survey record for Survey methodology and agent contracts. |
+| Subsystems · [Server core: repository binding, storage, schema, lifecycle](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md) | Scope, structure, boundaries, defects, and the survey record for Server core: repository binding, storage, schema, lifecycle. |
+| Subsystems · [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | Scope, structure, boundaries, defects, and the survey record for Knowledge tools and workflow API. |
+| Subsystems · [Reader lenses: standing, locus account, claims, edges, vocabulary](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) | Scope, structure, boundaries, defects, and the survey record for Reader lenses: standing, locus account, claims, edges, vocabulary. |
+| Subsystems · [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md) | Scope, structure, boundaries, defects, and the survey record for Materializer: human projection, read-back, HTML. |
+| Subsystems · [Packaging, installer, and host activation](subsystems/b06-packaging-installer-and-host-activation.md) | Scope, structure, boundaries, defects, and the survey record for Packaging, installer, and host activation. |
+| Subsystems · [Gates, evidence custody, and CI](subsystems/b07-gates-evidence-custody-and-ci.md) | Scope, structure, boundaries, defects, and the survey record for Gates, evidence custody, and CI. |
+| Subsystems · [Records: design, research, published projection, execution ledger](subsystems/b08-records-design-research-published-projection-execution-ledger.md) | Scope, structure, boundaries, defects, and the survey record for Records: design, research, published projection, execution ledger. |
 
 ### Unresolved
 

@@ -1,39 +1,45 @@
 # Master plan
 
-## corpus
+## api
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 5 | **[B-12](subsystems/b12-vendored-research-corpus.md)** | Vendored research corpus | ⚫ deferred | scholiast/** — a checked-in Scholiast survey of the AI-primary web platform landscape: prose, claim tables, and two capture scripts that were run once to produce them. | scholiast/ai-primary-web-platform-landscape/conspectus.md | 0 (0 open) |
+| 1 | **[B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)** | Reader lenses: standing, locus account, claims, edges, vocabulary | 🟢 mapped | mcp-server/src/standing.ts, vocabulary.ts, tools/locus.ts, tools/claims.ts, tools/xrefs.ts, tools/vocabulary.ts, contracts/locus-account.schema.json, contracts/locus-history.schema.json, contracts/attention.schema.json, contracts/conspectus-vocabulary.json | contracts/conspectus-vocabulary.json for the single enum source, then src/standing.ts for the state predicate, then tools/locus.ts (3607 lines) for describe_locus / get_attention / get_history. | 4 (4 open) |
+| 2 | **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | Knowledge tools and workflow API | 🟢 mapped | mcp-server/src/tools/ — every handler module except locus.ts, claims.ts, xrefs.ts and vocabulary.ts (which are [B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)): subsystems, files, evidence, dispositions, findings, resolution, concerns, contradictions, diagnosticity, field-notes, open-questions, seams, stale, impact, refresh, review, review-analysis, review-session, composition, codebase-brief, design-session, decisions, research, crosswalk, learning, evaluation, chorusmith-adapter, revalidation, compare, dashboard, artifacts, git, locks, logging, dispatch, project, storage-history, materialize. | tools/evidence.ts and tools/dispositions.ts — the evidence anchor is the methodology's load-bearing constraint; then tools/findings.ts and tools/resolution.ts for the resolution chain, then tools/subsystems.ts for the knowledge-depth gates. | 2 (2 open) |
 
-## harness
-
-| Priority | ID | Name | Status | Scope | Jump-in | Findings |
-|---|---|---|---|---|---|---|
-| 4 | **[B-11](subsystems/b11-development-harness-and-gates.md)** | Development harness and gates | 🟢 mapped | dev/*.mjs, mcp-server/scripts/*.mjs, mcp-server/test-*.mjs, materializer/test-*.py, .github/workflows/test.yml — the red-provable gates, the generated-artifact checkers, and the CI job list that runs them. | .github/workflows/test.yml, then dev/check-living-conspectus.mjs | 2 (2 open) |
-
-## materializer
+## core
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 3 | **[B-08](subsystems/b08-materializer-rendering-pipeline.md)** | Materializer rendering pipeline | 🟢 mapped | materializer/amanuensis_materializer/{core,renderers,html_projection,diagrams,slugs,xref,vocabulary,lint}.py and materializer/materialize.py — the read-only projection of the store into Markdown pages and a self-contained HTML index. | materializer/amanuensis_materializer/core.py, then materializer/amanuensis_materializer/renderers.py | 1 (1 open) |
-| 3 | **[B-09](subsystems/b09-projection-read-back-and-publication-custody.md)** | Projection read-back and publication custody | 🟢 mapped | materializer/amanuensis_materializer/{readback,manifest,db}.py and mcp-server/src/tools/materialize.ts — the three read-back axes, the projection contract, the manifest, and the tool that stages a publish into project storage. | materializer/amanuensis_materializer/readback.py, then mcp-server/src/tools/materialize.ts | 0 (0 open) |
+| 1 | **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | Server core: repository binding, storage, schema, lifecycle | 🟢 mapped | mcp-server/src/index.ts, db.ts, project.ts, session.ts, helpers.ts, invariants.ts, storage-git.ts, schema.sql | mcp-server/src/index.ts — the tool registry and dispatch loop; then project.ts for how a workspace becomes a bound store, then db.ts for the lazy open. | 3 (3 open) |
 
-## mcp-server
+## distribution
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 1 | **[B-01](subsystems/b01-server-runtime-and-tool-dispatch.md)** | Server runtime and tool dispatch | 🟢 mapped | mcp-server/src/index.ts, mcp-server/src/helpers.ts, mcp-server/src/session.ts — the stdio MCP server, the tool table it registers, the shared argument validators every tool handler calls, and session lifecycle. | mcp-server/src/index.ts, then mcp-server/src/helpers.ts | 1 (1 open) |
-| 1 | **[B-02](subsystems/b02-repository-binding-and-storage-custody.md)** | Repository binding and storage custody | 🟢 mapped | mcp-server/src/project.ts, mcp-server/src/db.ts, mcp-server/src/storage-git.ts, mcp-server/src/codex-host.ts — workspace selection, the immutable binding receipt, storage path containment, the SQLite handle, and the storage directory's own git repository. | mcp-server/src/project.ts, then mcp-server/src/db.ts | 0 (0 open) |
-| 1 | **[B-03](subsystems/b03-conspectus-schema-vocabulary-and-invariants.md)** | Conspectus schema, vocabulary, and invariants | 🟢 mapped | mcp-server/src/schema.sql, mcp-server/src/vocabulary.ts, mcp-server/src/invariants.ts, mcp-server/contracts/conspectus-vocabulary.json — the tables and views, the single enum source and its generated modules, and the phase prerequisites that gate every status advance. | mcp-server/src/schema.sql, then mcp-server/src/invariants.ts | 1 (1 open) |
-| 2 | **[B-04](subsystems/b04-survey-record-tools.md)** | Survey record tools | 🟢 mapped | mcp-server/src/tools/{subsystems,files,evidence,claims,xrefs,seams,vocabulary,artifacts}.ts — the writes a survey makes: the master plan, the file ledger, structured evidence, revision-bound claims, crossing edges, seams, terms, and prose artifacts. | mcp-server/src/tools/claims.ts, then mcp-server/src/tools/xrefs.ts | 2 (2 open) |
-| 2 | **[B-05](subsystems/b05-findings-dispositions-and-resolution-custody.md)** | Findings, dispositions, and resolution custody | 🟢 mapped | mcp-server/src/tools/{findings,resolution,dispositions,concerns,contradictions}.ts — concern dispositions, findings and their severity, the append-only resolution event spine, and the current-state views read from it. | mcp-server/src/tools/findings.ts, then mcp-server/src/tools/resolution.ts | 1 (1 open) |
-| 2 | **[B-06](subsystems/b06-locus-standing-and-the-reader-lenses.md)** | Locus standing and the reader lenses | 🟢 mapped | mcp-server/src/standing.ts, mcp-server/src/tools/locus.ts — describe_locus, the standing ladder and its authorization text, the compactness budget and omission ledger, and get_attention / get_history. | mcp-server/src/standing.ts, then mcp-server/src/tools/locus.ts | 0 (0 open) |
-| 3 | **[B-07](subsystems/b07-git-state-staleness-and-refresh.md)** | Git state, staleness, and refresh | 🟢 mapped | mcp-server/src/tools/{git,stale,refresh,impact}.ts — detect_changes against the recorded baseline, the stale reasons written into the file ledger, unattended refresh runs, and change-impact prediction. | mcp-server/src/tools/git.ts, then mcp-server/src/tools/stale.ts | 1 (1 open) |
+| 3 | **[B-06](subsystems/b06-packaging-installer-and-host-activation.md)** | Packaging, installer, and host activation | 🟢 mapped | mcp-server/src/cli.ts, mcp-server/src/codex-host.ts, mcp-server/scripts/ (prepack-bundle-assets.mjs, ensure-built.mjs, gen-tool-inventory.mjs, gen-vocabulary.mjs, check-*.mjs, historical-evaluation.mjs), mcp-server/package.json, mcp-server/contracts/activation-parity.schema.json, mcp-server/fixtures/activation/ | mcp-server/src/cli.ts — install, doctor, repair, upgrade, rollback, uninstall for each client adapter; then codex-host.ts for parent-workspace discovery. | 0 (0 open) |
 
 ## methodology
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 4 | **[B-10](subsystems/b10-the-amanuensis-skill.md)** | The Amanuensis skill | 🟢 mapped | .claude/skills/amanuensis/SKILL.md and .claude/skills/amanuensis/references/*.md — the phased survey methodology the coordinator executes, its routing table, and the per-phase instructions that decide which tools are called and in what order. | .claude/skills/amanuensis/SKILL.md, then .claude/skills/amanuensis/references/phase-2-structural.md | 1 (1 open) |
+| 4 | **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | Survey methodology and agent contracts | 🟢 mapped | .claude/skills/amanuensis/SKILL.md and .claude/skills/amanuensis/references/ (onboarding, subsystem-survey, phase-1 through phase-5, notes, memory-audit, refresh, open-questions, concern-territories, artifact-templates, reporting-style, setup) | SKILL.md — the routing table and the authorized-claims ladder; then references/subsystem-survey.md for the five-phase loop the ladder gates. | 1 (1 open) |
+
+## projection
+
+| Priority | ID | Name | Status | Scope | Jump-in | Findings |
+|---|---|---|---|---|---|---|
+| 2 | **[B-05](subsystems/b05-materializer-human-projection-read-back-html.md)** | Materializer: human projection, read-back, HTML | 🟢 mapped | materializer/materialize.py and materializer/amanuensis_materializer/ (core.py, db.py, renderers.py, html_projection.py, readback.py, manifest.py, diagrams.py, lint.py, slugs.py, vocabulary.py, xref.py) | materializer/amanuensis_materializer/core.py — the publish orchestration and the clean-publish contract; then readback.py for the three verification axes, then renderers.py / html_projection.py for the page set. | 0 (0 open) |
+
+## records
+
+| Priority | ID | Name | Status | Scope | Jump-in | Findings |
+|---|---|---|---|---|---|---|
+| 5 | **[B-08](subsystems/b08-records-design-research-published-projection-execution-ledger.md)** | Records: design, research, published projection, execution ledger | 🟢 mapped | design/ (reader-lenses, delightful-output-panel), scholiast/, dev/adr/, dev/roadmap.json and ROADMAP.md, docs/ (the checked-in projection), .pecia/ and dev/pecia-*.mjs, README.md, HISTORY.md, INSTALLATION.md, CONTRIBUTING.md | design/reader-lenses/spec.md — the most recent design record and the one the merged work implements; then .pecia/work.jsonl with dev/pecia-resolve-finding.mjs for how execution custody refers back to the conspectus. | 0 (0 open) |
+
+## validation
+
+| Priority | ID | Name | Status | Scope | Jump-in | Findings |
+|---|---|---|---|---|---|---|
+| 3 | **[B-07](subsystems/b07-gates-evidence-custody-and-ci.md)** | Gates, evidence custody, and CI | 🟢 mapped | dev/ (test-*.mjs gates, render-*.mjs and check-*.mjs projections, run-*.mjs harnesses, record-*.mjs receipt writers, conspectus/ A0 fixtures, activation-evidence/ receipts, hooks/pre-commit), mcp-server/test-*.mjs, materializer/test-*.py, .github/workflows/ | .github/workflows/test.yml for what actually runs, then dev/test-rebuild-coverage.mjs and dev/test-reader-lenses-dogfood.mjs as the shape every recent gate follows (two arms, a named red condition, and a declared false green). | 2 (2 open) |
 

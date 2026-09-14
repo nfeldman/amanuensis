@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Amanuensis HTML projection 1.14.0">
+<meta name="description" content="Scope, structure, boundaries, defects, and the survey record for Packaging, installer, and host activation.">
+<title>Packaging, installer, and host activation · amanuensis · Amanuensis</title>
+<script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --canvas: #f3f4ef;
+  --canvas-subtle: #eaeae6;
+  --surface: #fbfcf7;
+  --text: #1d261b;
+  --text-muted: #596153;
+  --text-subtle: #7a8273;
+  --rule: #cdd1c5;
+  --rule-strong: #a4ac9d;
+  --accent: #48651f;
+  --accent-strong: #314a16;
+  --accent-soft: #e4ebd3;
+  --signal: #9b5b27;
+  --quiet: #697263;
+  --survey-unmapped: #858b81;
+  --survey-scoping: #75836d;
+  --survey-structural: #637a55;
+  --survey-concerns: #536f3f;
+  --survey-adversarial: #42672a;
+  --survey-mapped: #315c18;
+  --survey-deferred: #7a7e75;
+  --severity-low: #767b75;
+  --severity-medium: #b07b00;
+  --severity-high: #bd5217;
+  --severity-critical: #aa2438;
+  --evidence-code: #3f611f;
+  --evidence-contract: #4d6a31;
+  --evidence-test: #5b7343;
+  --evidence-config: #687a56;
+  --evidence-doc: #737f65;
+  --evidence-comment: #7b8471;
+  --evidence-name: #82887a;
+  --evidence-pattern: #878b83;
+  --disposition-defect: #aa2438;
+  --disposition-acceptable: #4b6b2e;
+  --disposition-ruled-out: #616b5c;
+  --disposition-out-of-scope: #7d8380;
+  --disposition-ambiguous: #6f5b76;
+  --resolution-open: #98532f;
+  --resolution-pending: #806c27;
+  --resolution-closed: #3f6428;
+  --resolution-accepted: #5a7043;
+  --source-aligned: #607446;
+  --source-stale: #98532f;
+  --heading: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --rail: 17.25rem;
+  --measure: 120ch;
+  --page: 128rem;
+  --baseline: .25rem;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #171a15;
+  --canvas-subtle: #131510;
+  --surface: #20231d;
+  --text: #edf0e6;
+  --text-muted: #b7bdac;
+  --text-subtle: #929989;
+  --rule: #3b4234;
+  --rule-strong: #5d6651;
+  --accent: #b4d35d;
+  --accent-strong: #d5e88b;
+  --accent-soft: #35431f;
+  --signal: #d5a064;
+  --quiet: #a3aa98;
+  --survey-unmapped: #9ba093;
+  --survey-scoping: #a0ad83;
+  --survey-structural: #a5b977;
+  --survey-concerns: #aac56a;
+  --survey-adversarial: #b1d05e;
+  --survey-mapped: #b8dc55;
+  --survey-deferred: #9a9e95;
+  --severity-low: #a0a8a3;
+  --severity-medium: #e2bf4f;
+  --severity-high: #f09a58;
+  --severity-critical: #f27b88;
+  --evidence-code: #b4d171;
+  --evidence-contract: #afc775;
+  --evidence-test: #abc078;
+  --evidence-config: #a6b67c;
+  --evidence-doc: #a3ae82;
+  --evidence-comment: #a0a789;
+  --evidence-name: #9ea18f;
+  --evidence-pattern: #9b9d94;
+  --disposition-defect: #f27b88;
+  --disposition-acceptable: #afd378;
+  --disposition-ruled-out: #a6ae9c;
+  --disposition-out-of-scope: #8e9692;
+  --disposition-ambiguous: #b7a0bd;
+  --resolution-open: #d99468;
+  --resolution-pending: #c6ad61;
+  --resolution-closed: #b0d775;
+  --resolution-accepted: #bdcf98;
+  --source-aligned: #b3c581;
+  --source-stale: #d99468;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #171a15; --canvas-subtle: #131510; --surface: #20231d;
+    --text: #edf0e6; --text-muted: #b7bdac; --text-subtle: #929989;
+    --rule: #3b4234; --rule-strong: #5d6651;
+    --accent: #b4d35d; --accent-strong: #d5e88b; --accent-soft: #35431f;
+    --signal: #d5a064; --quiet: #a3aa98;
+    --survey-unmapped: #9ba093; --survey-scoping: #a0ad83;
+    --survey-structural: #a5b977; --survey-concerns: #aac56a;
+    --survey-adversarial: #b1d05e; --survey-mapped: #b8dc55; --survey-deferred: #9a9e95;
+    --severity-low: #a0a8a3; --severity-medium: #e2bf4f;
+    --severity-high: #f09a58; --severity-critical: #f27b88;
+    --evidence-code: #b4d171; --evidence-contract: #afc775; --evidence-test: #abc078;
+    --evidence-config: #a6b67c; --evidence-doc: #a3ae82; --evidence-comment: #a0a789;
+    --evidence-name: #9ea18f; --evidence-pattern: #9b9d94;
+    --disposition-defect: #f27b88; --disposition-acceptable: #afd378;
+    --disposition-ruled-out: #a6ae9c; --disposition-out-of-scope: #8e9692;
+    --disposition-ambiguous: #b7a0bd;
+    --resolution-open: #d99468; --resolution-pending: #c6ad61;
+    --resolution-closed: #b0d775; --resolution-accepted: #bdcf98;
+    --source-aligned: #b3c581; --source-stale: #d99468;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--canvas-subtle); }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--canvas);
+  font-family: var(--body);
+  font-size: 1rem;
+  line-height: 1.58;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  font-variant-ligatures: common-ligatures contextual;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-strong); text-decoration-thickness: .08em; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .14em; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed; left: 1rem; top: -5rem; z-index: 100;
+  padding: .55rem .8rem; background: var(--text); color: var(--canvas);
+}
+.skip-link:focus { top: 1rem; }
+.shell { min-height: 100vh; }
+.nav-rail {
+  position: fixed; inset: 0 auto 0 0; width: var(--rail); z-index: 20;
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding: 2rem 1.35rem 1.5rem;
+  background: var(--canvas-subtle); border-right: 1px solid var(--rule);
+}
+.brand { display: block; color: var(--text); text-decoration: none; margin: 0 0 1.6rem; }
+.brand-mark {
+  display: block; font: 600 1.35rem/1.05 var(--heading); letter-spacing: -.015em;
+}
+.brand-sub { display: block; margin-top: .32rem; color: var(--text-muted); font: .73rem/1.4 var(--body); }
+.search-label { display: block; margin-bottom: .35rem; color: var(--text-muted); font: .67rem/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.nav-search {
+  width: 100%; padding: .55rem .65rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--rule-strong); border-radius: 0; font: .82rem/1.3 var(--body);
+}
+.nav-search::placeholder { color: var(--text-subtle); }
+.rail-nav { margin-top: 1.5rem; }
+.nav-group { margin: 0 0 1.35rem; }
+.nav-group-title {
+  margin: 0 0 .32rem; color: var(--text-subtle);
+  font: 600 .64rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-item { margin: .08rem 0; }
+.nav-subgroup { margin: .5rem 0 0; }
+.nav-subgroup-title {
+  margin: 0 0 .2rem .45rem; color: var(--text-subtle);
+  font: 600 .62rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.nav-item[hidden], .nav-group[hidden], .nav-subgroup[hidden] { display: none; }
+.nav-link { display: grid; grid-template-columns: .55rem 1fr; gap: .48rem; padding: .5rem .45rem; color: var(--text-muted); text-decoration: none; border-radius: 0; }
+.nav-link:hover { color: var(--text); background: var(--surface); }
+.nav-link[aria-current="page"] { color: var(--accent-strong); }
+.nav-link[aria-current="page"] .nav-name { font-weight: 700; }
+.nav-tick { width: .34rem; height: .34rem; margin-top: .44rem; border: 1px solid var(--rule-strong); background: transparent; }
+.nav-link[aria-current="page"] .nav-tick { border-color: var(--accent); background: var(--accent); }
+.nav-tick.status-unmapped { border-color: var(--survey-unmapped); }
+.nav-tick.status-scoping { background: var(--survey-scoping); border-color: var(--survey-scoping); }
+.nav-tick.status-structural { background: var(--survey-structural); border-color: var(--survey-structural); }
+.nav-tick.status-concerns { background: var(--survey-concerns); border-color: var(--survey-concerns); }
+.nav-tick.status-adversarial { background: var(--survey-adversarial); border-color: var(--survey-adversarial); }
+.nav-tick.status-mapped { background: var(--survey-mapped); border-color: var(--survey-mapped); }
+.nav-tick.status-deferred { border-color: var(--survey-deferred); border-style: dashed; }
+.nav-name { display: block; font-size: .82rem; line-height: 1.3; }
+.nav-id { display: block; margin-top: .12rem; color: var(--text-subtle); font: .64rem/1.3 var(--mono); }
+.rail-foot { margin-top: auto; padding-top: 1.5rem; }
+.rail-actions { display: flex; gap: .5rem; align-items: center; }
+.quiet-button {
+  border: 1px solid var(--rule); padding: .36rem .5rem; color: var(--text-muted);
+  background: transparent; border-radius: 0; cursor: pointer; font: .68rem/1 var(--mono);
+}
+.quiet-button:hover { border-color: var(--accent); color: var(--accent-strong); }
+.rail-note { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.45 var(--mono); }
+
+.document { margin-left: var(--rail); min-height: 100vh; background: var(--surface); }
+.mobile-bar { display: none; }
+.document-inner { width: min(100%, var(--page)); margin: 0 auto; padding: 4.5rem clamp(2rem, 5vw, 6.5rem) 5.5rem; }
+.page-head { padding: 0 0 2.25rem; border-bottom: 1px solid var(--rule); }
+.eyebrow { margin: 0 0 1rem; color: var(--accent); font: 650 .69rem/1.3 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+h1 {
+  margin: 0; font: 600 clamp(2.8rem, 4.8vw, 5.2rem)/.98 var(--heading);
+  letter-spacing: -.042em; text-wrap: balance;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+}
+.page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
+.snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
+.snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
+.snapshot-item b { color: var(--text); font-weight: 650; }
+.freshness { display: inline-flex; gap: .38rem; align-items: center; }
+.freshness::before { content: ""; width: .45rem; height: .45rem; background: var(--source-aligned); border-radius: 50%; }
+.freshness.stale::before { background: var(--source-stale); }
+.freshness.unmeasured::before { background: var(--rule-strong); }
+
+.content { max-width: 100%; padding-top: .35rem; container: report / inline-size; }
+.content > section { position: relative; padding: 3rem 0; border-bottom: 1px solid var(--rule); }
+.content > section:last-child { border-bottom: 0; }
+.content-findings > section { padding: 2.4rem 0 .6rem; border-bottom: 0; }
+.content-findings .section-open { --enum-color: var(--resolution-open); }
+.content-findings .section-awaiting-verification { --enum-color: var(--resolution-pending); }
+.content-findings .section-verified-fixed { --enum-color: var(--resolution-closed); }
+.content-findings .section-ruled-out, .content-findings .section-accepted {
+  --enum-color: var(--resolution-accepted);
+}
+.content-findings section > h3 { --enum-color: var(--rule-strong); }
+.content-findings .section-open > h3, .content-findings .section-awaiting-verification > h3 {
+  border-left: .14em solid var(--enum-color); padding-left: .5rem;
+}
+.content-findings section > h2::before {
+  content: ""; display: inline-block; width: .14em; height: .72em;
+  margin-right: .42em; background: var(--enum-color); vertical-align: .02em;
+}
+.finding-subsystem-heading {
+  margin: 2rem 0 .55rem;
+  color: var(--text);
+  font: 600 clamp(1.25rem, 1.6vw, 1.6rem)/1.25 var(--heading);
+}
+.finding-subsystem-heading a { color: inherit; text-decoration-color: var(--rule-strong); }
+.finding-subsystem-heading + .record-list-finding { margin-top: 0; }
+.content > p, .content > ul, .content > ol, .content > blockquote { margin-left: 0; }
+h2, h3, h4, h5, h6 { position: relative; color: var(--text); text-wrap: balance; scroll-margin-top: 1.5rem; }
+h2 { margin: 0 0 1.25rem; font: 600 clamp(1.7rem, 1.2vw + 1.25rem, 2.15rem)/1.12 var(--heading); letter-spacing: -.018em; }
+h3 { margin: 2.1rem 0 .7rem; font: 650 1.05rem/1.3 var(--body); }
+h4 { margin: 1.65rem 0 .55rem; color: var(--accent-strong); font: 650 .9rem/1.35 var(--body); }
+h5, h6 { margin: 1.4rem 0 .5rem; font-size: .85rem; }
+.heading-anchor { position: absolute; left: -1.2rem; color: var(--text-subtle); text-decoration: none; opacity: 0; font-family: var(--mono); }
+:is(h2,h3,h4,h5,h6):hover .heading-anchor, .heading-anchor:focus { opacity: 1; }
+p { max-width: var(--measure); margin: 0 0 1rem; }
+strong { font-weight: 680; }
+em { font-family: var(--heading); }
+code {
+  padding: .08rem .25rem; color: var(--accent-strong); background: var(--accent-soft);
+  font: .82em/1.4 var(--mono); overflow-wrap: anywhere;
+}
+ul, ol { max-width: var(--measure); margin: .4rem 0 1.2rem; padding-left: 1.35rem; }
+li { padding-left: .25rem; margin: 0 0 .48rem; }
+li::marker { color: var(--accent); }
+blockquote { max-width: var(--measure); margin: 1.2rem 0; padding: .25rem 0 .25rem 1.2rem; border-left: 3px solid var(--accent); color: var(--text-muted); }
+blockquote p { margin: 0; font: italic 1rem/1.58 var(--heading); }
+.raw-prose-note { border-left-color: var(--signal); }
+
+.prose-flow {
+  max-width: var(--measure);
+  margin: 1rem 0 1.5rem;
+  orphans: 3;
+  widows: 3;
+}
+.prose-flow > p {
+  max-width: none;
+  margin: 0 0 1em;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+.prose-flow > p:last-child { margin-bottom: 0; }
+
+.table-wrap { width: 100%; margin: 1.1rem 0 1.5rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 0; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; line-height: 1.48; }
+caption { padding: .55rem 0; color: var(--text-subtle); text-align: left; font: .65rem/1.3 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+th { padding: .6rem .7rem; color: var(--text-muted); border-bottom: 1px solid var(--rule-strong); text-align: left; vertical-align: bottom; font: 650 .65rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+td { padding: .7rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+td:first-child, th:first-child { padding-left: .7rem; }
+.section-current-state .table-wrap { max-width: 54rem; }
+.section-current-state table { font-size: .92rem; }
+.section-current-state td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.coverage-index { margin: 1.1rem 0 1.8rem; }
+.coverage-summary {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+}
+.coverage-summary-item { min-width: 0; padding: .85rem 1rem; border-right: 1px solid var(--rule); }
+.coverage-summary-item:last-child { border-right: 0; }
+.coverage-summary-item strong { display: block; font: 600 1.45rem/1 var(--heading); }
+.coverage-summary-item span { display: block; margin-top: .32rem; color: var(--text-subtle); font: .61rem/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.coverage-intro { max-width: var(--measure); margin: 1rem 0 1.25rem; color: var(--text-muted); }
+.coverage-subsystem-list {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--rule-strong); border-left: 1px solid var(--rule);
+}
+.coverage-subsystem {
+  display: grid; grid-template-columns: minmax(12rem, .82fr) minmax(0, 1.18fr);
+  gap: .7rem 1rem; align-content: start; min-width: 0; padding: .8rem 1rem;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.coverage-subsystem-head { min-width: 0; }
+.coverage-subsystem-title { margin: 0; font: 650 .9rem/1.32 var(--body); text-wrap: pretty; }
+.coverage-subsystem-title a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-subsystem-id { display: block; margin-top: .22rem; color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.coverage-measure { min-width: 0; }
+.coverage-review-count { margin: 0; color: var(--text-muted); font: .67rem/1.35 var(--mono); }
+.coverage-progress { display: block; height: .22rem; margin-top: .42rem; background: var(--canvas-subtle); }
+.coverage-progress > span { display: block; height: 100%; background: var(--accent); }
+.coverage-outcome-counts { display: flex; flex-wrap: wrap; gap: .28rem .7rem; margin: .48rem 0 0; color: var(--text-subtle); font: .61rem/1.35 var(--mono); }
+.coverage-outcome-counts span::before { content: ""; display: inline-block; width: .42rem; height: .42rem; margin-right: .28rem; background: var(--enum-color); }
+.coverage-state-confirmed-bug { --enum-color: var(--disposition-defect); }
+.coverage-state-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.coverage-state-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.coverage-state-out-of-scope { --enum-color: var(--disposition-out-of-scope); }
+.coverage-state-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.coverage-state-unknown { --enum-color: var(--quiet); }
+.coverage-tokens { display: flex; flex-wrap: wrap; align-items: flex-start; align-self: start; gap: .32rem; grid-column: 1 / -1; }
+.coverage-token {
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 1.65rem;
+  padding: .22rem .38rem; border: 1px solid var(--rule); color: var(--text-muted);
+  background: var(--surface); text-decoration: none; font: .63rem/1.15 var(--mono);
+}
+.coverage-token:hover, .coverage-token:focus-visible { border-color: var(--enum-color); color: var(--text); }
+.coverage-token-mark, .coverage-matrix-mark {
+  display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem;
+  color: var(--enum-color); border: 1px solid currentColor; font: 700 .62rem/1 var(--mono);
+}
+.coverage-linchpin { color: var(--accent); font-size: .58rem; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: .48rem 1rem; margin: .85rem 0 0; color: var(--text-muted); font: .63rem/1.4 var(--mono); }
+.coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
+.coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
+.coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
+.coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
+.coverage-matrix { width: max-content; min-width: 100%; table-layout: fixed; }
+.coverage-matrix th, .coverage-matrix td { text-align: center; }
+.coverage-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 2.65rem; padding: .5rem .35rem; background: var(--canvas); }
+.coverage-matrix thead th:first-child { left: 0; z-index: 5; min-width: 18rem; text-align: left; }
+.coverage-matrix tbody th { position: sticky; left: 0; z-index: 2; width: 18rem; max-width: 18rem; padding: .5rem .65rem; background: var(--surface); text-align: left; text-transform: none; letter-spacing: 0; font: 650 .75rem/1.3 var(--body); }
+.coverage-matrix tbody th a { color: inherit; text-decoration-color: var(--rule-strong); }
+.coverage-matrix-subsystem-id { display: block; margin-top: .12rem; color: var(--text-subtle); font-size: .58rem; }
+.coverage-matrix td { width: 2.65rem; height: 2.25rem; padding: .25rem; }
+.coverage-matrix td > a { display: inline-grid; place-items: center; color: inherit; text-decoration: none; }
+.coverage-matrix-empty { color: var(--rule-strong); font-family: var(--mono); }
+
+.record-list { margin: 1.1rem 0 1.6rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.record {
+  display: grid; grid-template-columns: minmax(11.5rem, .34fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule);
+}
+.record:last-child { border-bottom: 0; }
+.record-meta { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.record-primary { margin: 0; color: var(--text); font: 600 1.08rem/1.25 var(--heading); overflow-wrap: anywhere; }
+.record-primary code { font-size: .75rem; }
+.record-facts { margin: .7rem 0 0; }
+.record-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55rem; align-items: center; padding: .23rem 0; }
+.record-facts dt, .record-label { color: var(--text-subtle); font: 600 .62rem/1.35 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.record-facts dd { min-width: 0; margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.record-facts :is(.status, .evidence-label, .severity) { max-width: none; white-space: nowrap; overflow-wrap: normal; }
+.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.record-field { min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid var(--rule); }
+.record-field:last-child { border-right: 0; }
+.record-field:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+.record-label { margin: 0 0 .48rem; }
+.record-copy { color: var(--text); line-height: 1.55; }
+.record-copy code { overflow-wrap: anywhere; }
+.record-body { min-width: 0; padding: 1.15rem 1.25rem 1.3rem; }
+.record-lede { max-width: var(--measure); margin: 0 0 1.25rem; color: var(--text); font: 600 1.15rem/1.38 var(--heading); }
+h1, h2, .brand-mark, .record-primary, .record-lede {
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures discretionary-ligatures;
+  font-feature-settings: "kern" 1, "liga" 1, "clig" 1;
+  text-rendering: optimizeLegibility;
+}
+.record-finding { display: block; }
+.record-finding .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .65rem 1.25rem; align-items: center;
+  padding: .85rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-finding .record-primary { align-self: start; margin-top: .08rem; }
+.record-finding .record-facts {
+  display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .4rem 1rem;
+  align-items: center; min-width: 0; margin: 0;
+}
+.record-finding .record-facts > div {
+  display: flex; gap: .35rem; align-items: center;
+  min-width: 0; padding: 0;
+}
+.record-finding .record-facts dd { overflow-wrap: normal; }
+.record-finding .record-fact-ref-sha code { white-space: nowrap; overflow-wrap: normal; }
+.record-finding .record-fact-status { justify-self: start; }
+.record-finding .record-fact-ref-sha { justify-self: end; }
+.record-finding .record-fact-status dt,
+.record-finding .record-fact-ref-sha dt {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.record-finding .record-fields { display: block; }
+.record-finding .record-field { max-width: var(--measure); padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); }
+.record-finding .record-field + .record-field { margin-top: 1rem; }
+.record-file-ledger { grid-template-columns: minmax(14rem, .42fr) minmax(0, 1fr); }
+.record-file-ledger .record-fields, .record-structural-inventory .record-fields, .record-concern-disposition .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern .record-fields, .record-territory .record-fields, .record-finding-summary .record-fields,
+.record-open-question .record-fields, .record-seam .record-fields { grid-template-columns: minmax(0, 1fr); }
+.record-concern-disposition { display: block; }
+.record-concern-disposition .record-meta {
+  display: grid; grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: .8rem 1.5rem; align-items: start;
+  padding: .9rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-disposition .record-primary { margin-top: .1rem; }
+.record-concern-disposition .record-facts {
+  display: flex; flex-wrap: wrap; gap: .48rem 1.35rem; align-items: center;
+  min-width: 0; margin: 0;
+}
+.record-concern-disposition .record-facts > div {
+  display: grid; grid-template-columns: auto auto; gap: .45rem;
+  align-items: center; min-width: max-content; padding: 0;
+}
+.record-concern-disposition .record-facts dd { overflow-wrap: normal; }
+.concern-family { margin: 2rem 0 2.6rem; }
+.concern-family-heading {
+  display: flex; flex-wrap: wrap; gap: .45rem .8rem; align-items: baseline;
+  margin: 0 0 .55rem; color: var(--text); font: 600 1.35rem/1.25 var(--heading);
+}
+.concern-territory { color: var(--text-subtle); font: .62rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.record-list-concern-checklist { margin-top: 0; }
+.record-concern-checklist { display: block; }
+.record-concern-checklist .record-meta {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: .6rem 1.25rem; align-items: center;
+  padding: .72rem 1rem; border-right: 0; border-bottom: 1px solid var(--rule);
+}
+.record-concern-checklist .record-primary { font-size: 1rem; }
+.record-concern-checklist .record-facts { min-width: 0; margin: 0; }
+.record-concern-checklist .record-facts > div {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem .5rem;
+  align-items: baseline; min-width: 0; padding: 0;
+}
+.record-concern-checklist .record-facts dd { overflow-wrap: normal; }
+.record-concern-checklist .record-body { padding: 1rem 1.1rem 1.15rem; }
+.record-probe { max-width: var(--measure); color: var(--text); font-size: .86rem; line-height: 1.58; }
+.record-file-ledger .record-primary code { color: var(--text); background: transparent; padding: 0; font: 600 .95rem/1.3 var(--heading); }
+.file-source-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.file-source-link::after { content: " ↗"; color: var(--accent); font: .68rem/1 var(--mono); }
+.identifier-definition {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: .06em;
+  text-underline-offset: .2em;
+  cursor: help;
+}
+a .identifier-definition { text-decoration-color: currentColor; }
+.record-subsystem { display: block; }
+.record-subsystem .record-meta { padding: 1.05rem 1rem .85rem; background: transparent; border-right: 0; border-bottom: 1px solid var(--rule); }
+.record-subsystem .record-primary { max-width: 48ch; font-size: 1.25rem; }
+.record-primary-link { color: inherit; text-decoration-color: var(--rule-strong); }
+.record-subsystem .record-facts { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center; margin-top: .55rem; }
+.record-subsystem .record-facts > div { display: flex; grid-template-columns: none; gap: .35rem; align-items: baseline; padding: 0; }
+.record-subsystem .record-facts dt { font-size: .58rem; }
+.record-subsystem .record-facts dd { font-size: .7rem; }
+.record-subsystem .record-fact-id dt, .record-subsystem .record-fact-status dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.record-subsystem .record-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.summary-list { max-width: 54rem; margin: 1rem 0 1.5rem; border-top: 1px solid var(--rule-strong); }
+.summary-list > div { display: grid; grid-template-columns: minmax(10rem, .42fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.summary-list dt, .summary-list dd { margin: 0; padding: .65rem .75rem; }
+.summary-list dt { color: var(--text-muted); font-weight: 650; }
+.summary-list dd { border-left: 1px solid var(--rule); }
+
+.runtime-boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.runtime-boundary-diagram { margin: 0; }
+.runtime-diagram-caption {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.runtime-diagram-caption strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.runtime-svg-scroll { max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--rule); }
+.runtime-boundary-svg { display: block; width: 100%; min-width: 52rem; height: auto; background: var(--surface); }
+.runtime-svg-lane { fill: color-mix(in srgb, var(--canvas-subtle) 44%, transparent); }
+.runtime-svg-lane-even { fill: color-mix(in srgb, var(--canvas-subtle) 72%, transparent); }
+.runtime-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-target { fill: var(--canvas-subtle); }
+.runtime-svg-edge { stroke: var(--accent); stroke-width: 1.5; }
+.runtime-svg-arrow { fill: var(--accent); }
+.runtime-svg-edge-label { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.runtime-svg-column-label {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.runtime-svg-title { fill: var(--text); font: 600 14px/1.3 var(--heading); }
+.runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
+.runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
+.runtime-boundary-details { display: grid; }
+.runtime-detail {
+  display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
+  min-width: 0; border-bottom: 1px solid var(--rule);
+}
+.runtime-detail:last-child { border-bottom: 0; }
+.runtime-detail:focus-within, .runtime-detail:hover { background: color-mix(in srgb, var(--accent-soft) 24%, transparent); }
+.runtime-detail-head { min-width: 0; padding: .72rem .85rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.runtime-detail-head h3 { margin: 0; color: var(--text); font: 600 .88rem/1.35 var(--heading); }
+.runtime-detail-language { display: block; margin-top: .28rem; color: var(--text-muted); font: .64rem/1.35 var(--mono); }
+.runtime-detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+.runtime-detail-body p { min-width: 0; margin: 0; padding: .66rem .78rem; border-right: 1px solid var(--rule); }
+.runtime-detail-body p:nth-child(2) { border-right: 0; }
+.runtime-detail-body .runtime-detail-note { grid-column: 1 / -1; border-top: 1px solid var(--rule); border-right: 0; }
+.runtime-detail-label {
+  display: block; margin-bottom: .2rem; color: var(--text-subtle);
+  font: 600 .58rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+
+.subsystem-atlas { margin: 1.2rem 0 1.7rem; }
+.atlas-summary, .topology-summary {
+  display: flex; flex-wrap: wrap; gap: .45rem 1rem; align-items: baseline;
+  padding: .65rem 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+  color: var(--text-muted); font-size: .78rem;
+}
+.atlas-summary strong, .topology-summary strong { color: var(--text); font: 600 1rem/1.3 var(--heading); }
+.atlas-regions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; border-left: 1px solid var(--rule); }
+.atlas-region { min-width: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.atlas-region-head {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  padding: .7rem .8rem; background: var(--canvas-subtle); border-bottom: 1px solid var(--rule);
+}
+.atlas-region-head h3 { margin: 0; color: var(--text); font: 600 .86rem/1.3 var(--heading); }
+.atlas-region-count { color: var(--text-subtle); font: .62rem/1.3 var(--mono); }
+.atlas-list { max-width: none; margin: 0; padding: 0; list-style: none; }
+.atlas-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; align-items: start;
+  min-height: 3.25rem; margin: 0; padding: .68rem .8rem; border-bottom: 1px solid var(--rule);
+}
+.atlas-item:last-child { border-bottom: 0; }
+.atlas-item:focus-within, .atlas-item:hover { background: color-mix(in srgb, var(--accent-soft) 32%, transparent); }
+.atlas-subsystem { min-width: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
+.atlas-subsystem strong { display: block; margin-bottom: .13rem; font: 650 .7rem/1.25 var(--mono); }
+.atlas-depth .status { padding: .08rem .28rem; font-size: .58rem; }
+
+.topology { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.topology-component {
+  display: grid; grid-template-columns: minmax(13rem, .32fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.topology-component:last-child { border-bottom: 0; }
+.topology-hub { min-width: 0; padding: 1rem; background: var(--canvas-subtle); border-right: 1px solid var(--rule); }
+.topology-hub-label, .topology-cross-label {
+  margin: 0 0 .48rem; color: var(--text-subtle);
+  font: 600 .61rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.topology-hub-title { margin: 0; color: var(--text-muted); font: .83rem/1.42 var(--body); }
+.topology-hub-title strong { display: block; margin-bottom: .2rem; font: 650 .78rem/1.25 var(--mono); }
+.topology-hub-count { margin: .7rem 0 0; color: var(--text-subtle); font: .64rem/1.4 var(--mono); }
+.topology-spokes { min-width: 0; }
+.topology-spoke {
+  display: grid; grid-template-columns: 3.1rem minmax(0, 1fr); min-width: 0;
+  border-bottom: 1px solid var(--rule);
+}
+.topology-spoke:last-child { border-bottom: 0; }
+.topology-spoke:focus-within, .topology-spoke:hover { background: color-mix(in srgb, var(--accent-soft) 28%, transparent); }
+.topology-edge-mark {
+  display: flex; align-items: center; justify-content: center; min-height: 5.1rem;
+  color: var(--accent); border-right: 1px solid var(--rule); font: 1.2rem/1 var(--heading);
+}
+.topology-edge-body { min-width: 0; padding: .78rem .9rem .85rem; }
+.topology-edge-head { display: flex; flex-wrap: wrap; gap: .4rem .65rem; align-items: baseline; margin: 0 0 .25rem; }
+.topology-edge-key { color: var(--accent-strong); font: 650 .7rem/1.3 var(--mono); }
+.topology-qualifier { color: var(--text-subtle); font: .61rem/1.3 var(--mono); }
+.topology-peer { margin: 0 0 .32rem; color: var(--text-muted); font-size: .8rem; }
+.topology-peer-label { margin-right: .28rem; color: var(--text-subtle); font: .61rem/1.3 var(--mono); text-transform: uppercase; }
+.topology-peer strong { font-family: var(--mono); font-size: .72rem; }
+.topology-object { max-width: 64ch; margin: 0; color: var(--text); font-size: .86rem; line-height: 1.5; }
+.topology-cross { grid-column: 1 / -1; padding: .8rem 1rem 1rem; background: color-mix(in srgb, var(--canvas-subtle) 55%, transparent); border-top: 1px solid var(--rule); }
+.topology-cross-list { display: grid; gap: .55rem; }
+.topology-cross-edge { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .7rem; align-items: center; }
+.topology-cross-edge .topology-node:last-child { text-align: right; }
+.topology-cross-relation { min-width: 7rem; color: var(--text-subtle); text-align: center; font: .62rem/1.35 var(--mono); }
+.topology-cross-relation strong { display: block; color: var(--accent-strong); }
+.topology-cross-object { display: block; max-width: 42ch; margin-top: .18rem; color: var(--text-muted); font-family: var(--body); font-size: .72rem; }
+
+.table-key { display: block; color: var(--text); font: 650 .76rem/1.35 var(--mono); letter-spacing: 0; text-transform: none; }
+.table-detail { display: block; margin-top: .28rem; color: var(--text-subtle); font: .68rem/1.4 var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.status, .evidence-label, .severity {
+  --enum-color: var(--quiet);
+  display: inline-flex; align-items: center; gap: .38rem; padding: .16rem .46rem;
+  color: color-mix(in srgb, var(--enum-color) 72%, var(--text));
+  background: color-mix(in srgb, var(--enum-color) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--enum-color) 68%, var(--rule));
+  border-radius: 0; white-space: nowrap; font: 650 .68rem/1.3 var(--mono); letter-spacing: .015em;
+}
+.status::before, .severity::before, .evidence-label::before { content: ""; flex: 0 0 auto; width: .43rem; height: .43rem; border-radius: 50%; background: var(--enum-color); }
+.status-unmapped { --enum-color: var(--survey-unmapped); }
+.status-scoping { --enum-color: var(--survey-scoping); }
+.status-structural { --enum-color: var(--survey-structural); }
+.status-concerns { --enum-color: var(--survey-concerns); }
+.status-adversarial { --enum-color: var(--survey-adversarial); }
+.status-mapped { --enum-color: var(--survey-mapped); }
+.status-deferred { --enum-color: var(--survey-deferred); border-style: dashed; }
+.status-confirmed-bug { --enum-color: var(--disposition-defect); }
+.status-confirmed-acceptable { --enum-color: var(--disposition-acceptable); }
+.status-ruled-out { --enum-color: var(--disposition-ruled-out); }
+.status-out-of-scope { --enum-color: var(--disposition-out-of-scope); border-style: dashed; }
+.status-unresolved-competition { --enum-color: var(--disposition-ambiguous); }
+.status-open { --enum-color: var(--resolution-open); }
+.status-fixed-pending-verification { --enum-color: var(--resolution-pending); }
+.status-fixed, .status-resolved, .status-verified-fixed { --enum-color: var(--resolution-closed); }
+.status-accepted { --enum-color: var(--resolution-accepted); }
+.severity-critical { --enum-color: var(--severity-critical); }
+.severity-high { --enum-color: var(--severity-high); }
+.severity-medium { --enum-color: var(--severity-medium); }
+.severity-low { --enum-color: var(--severity-low); }
+.evidence-label { border-style: dotted; }
+.evidence-code-verified { --enum-color: var(--evidence-code); }
+.evidence-contract-stated { --enum-color: var(--evidence-contract); }
+.evidence-test-observed { --enum-color: var(--evidence-test); }
+.evidence-config-asserted { --enum-color: var(--evidence-config); }
+.evidence-doc-asserted { --enum-color: var(--evidence-doc); }
+.evidence-comment-asserted { --enum-color: var(--evidence-comment); }
+.evidence-name-inferred { --enum-color: var(--evidence-name); }
+.evidence-pattern-matched { --enum-color: var(--evidence-pattern); }
+
+.figure { margin: 1.4rem 0 1.7rem; padding: 1rem 0 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.figure-label { margin: 0 0 .9rem; color: var(--text-subtle); font: .65rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.relationship-map { display: grid; gap: .55rem; }
+.relationship { display: grid; grid-template-columns: minmax(8rem, 1fr) 3.5rem minmax(8rem, 1fr); gap: .65rem; align-items: center; }
+.relationship-node { display: block; min-width: 0; padding: .65rem .75rem; border-left: 3px solid var(--accent); background: var(--canvas-subtle); text-decoration: none; }
+.relationship-node strong { display: block; color: var(--accent-strong); font: .74rem/1.3 var(--mono); }
+.relationship-node span { display: block; margin-top: .16rem; color: var(--text-muted); font-size: .78rem; overflow-wrap: anywhere; }
+.relationship-edge { color: var(--text-subtle); text-align: center; font: .62rem/1.15 var(--mono); }
+.relationship-edge b { display: block; color: var(--accent); font-size: 1.1rem; font-weight: 400; }
+.bar-chart { display: grid; gap: .6rem; }
+.bar-row { display: grid; grid-template-columns: minmax(7rem, 12rem) 1fr 3rem; gap: .7rem; align-items: center; }
+.bar-label, .bar-value { font: .7rem/1.3 var(--mono); }
+.bar-track { height: .5rem; background: var(--canvas-subtle); }
+.bar-fill { height: 100%; background: var(--accent); }
+.diagram-source, pre:not(.diagram-source) { max-width: 100%; overflow-x: auto; margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0; background: var(--canvas-subtle); color: var(--text); font: .75rem/1.55 var(--mono); white-space: pre-wrap; }
+
+.page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--text-subtle); font: .65rem/1.5 var(--mono); }
+.page-foot p { margin: 0; max-width: 52rem; }
+.page-foot a { color: inherit; }
+[hidden] { display: none !important; }
+
+/* Search results and the in-page filters. Ruled registers, not cards: a row
+   per result, one rule between them, no icon and no badge (§8.3). Every one of
+   these elements is built by script; nothing here is served hidden. */
+.search-status { margin: .55rem 0 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+.search-status:empty { display: none; }
+.search-results { margin: .5rem 0 0; padding: 0; max-height: 18rem; overflow-y: auto; list-style: none; border-top: 1px solid var(--rule); }
+.search-results:empty { display: none; border-top: 0; }
+.search-option { display: grid; grid-template-columns: 4.1rem 1fr; gap: .1rem .55rem; padding: .45rem .1rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.search-option[aria-selected="true"] { background: var(--canvas-subtle); box-shadow: inset 2px 0 0 var(--accent); }
+.search-option-kind { grid-row: 1 / span 2; color: var(--text-subtle); font: .6rem/1.5 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.search-option-label { color: var(--text); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.search-option-detail { grid-column: 2; color: var(--text-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.filter-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem 1.4rem; margin: 0 0 1.6rem; padding: .85rem 0 .95rem; border: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.filter-controls legend { padding: 0 .6rem 0 0; color: var(--text-subtle); font: .62rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.filter-facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.filter-label { color: var(--text-muted); font: .68rem/1.5 var(--mono); }
+.filter-options { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.filter-option { display: inline-flex; align-items: baseline; gap: .3rem; font-size: .75rem; }
+.filter-select { padding: .2rem .3rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--surface); color: var(--text); font: .75rem/1.4 var(--body); }
+.filter-status { flex-basis: 100%; margin: 0; color: var(--text-subtle); font: .68rem/1.4 var(--mono); }
+
+@media (max-width: 900px) {
+  .nav-rail { position: static; inset: auto; width: auto; max-height: none; }
+  .js .nav-rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); transform: translateX(-102%); transition: transform .18s ease; box-shadow: 0 0 0 999px transparent; }
+  .js body.nav-open .nav-rail { transform: translateX(0); box-shadow: 0 0 0 999px color-mix(in srgb, var(--text) 28%, transparent); }
+  .document { margin-left: 0; }
+  .js .mobile-bar { position: sticky; top: 0; z-index: 15; display: flex; justify-content: space-between; align-items: center; padding: .7rem 1rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+  :is(h2, h3, h4, h5, h6) { scroll-margin-top: 4.75rem; }
+  .mobile-brand { font: 600 1rem/1 var(--heading); }
+  .document-inner { padding: 2.5rem 1.35rem 4rem; }
+  .atlas-regions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container report (min-width: 120ch) {
+  .prose-flow {
+    max-width: none;
+    column-count: 2;
+    column-gap: clamp(2.75rem, 4.25cqi, 4.75rem);
+    column-rule: 1px solid var(--rule);
+  }
+}
+
+@container report (min-width: 190ch) {
+  .prose-flow { column-count: 3; }
+}
+
+@container report (min-width: 165ch) {
+  .coverage-subsystem-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container report (max-width: 92ch) {
+  .coverage-subsystem-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container report (max-width: 52ch) {
+  .record-finding .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-meta { grid-template-columns: minmax(0, 1fr); }
+  .record-concern-checklist .record-facts > div { justify-content: flex-start; }
+}
+
+@media (max-width: 620px) {
+  h1 { font-size: clamp(2.4rem, 12vw, 3.35rem); }
+  .runtime-detail { grid-template-columns: 1fr; }
+  .runtime-detail-head { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body { grid-template-columns: 1fr; }
+  .runtime-detail-body p { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .runtime-detail-body p:nth-child(2) { border-bottom: 0; }
+  .runtime-detail-body .runtime-detail-note { grid-column: auto; border-bottom: 0; }
+  .relationship { grid-template-columns: 1fr; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+  .relationship-edge { text-align: left; }
+  .relationship-edge b { display: inline; margin-right: .4rem; }
+  .bar-row { grid-template-columns: 7rem 1fr 2.5rem; }
+  .heading-anchor { display: none; }
+  .record { grid-template-columns: 1fr; }
+  .record-meta { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-concern-disposition .record-meta { grid-template-columns: 1fr; }
+  .record-fields { grid-template-columns: 1fr; }
+  .record-field { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .record-field:last-child { border-bottom: 0; }
+  .summary-list > div { grid-template-columns: 1fr; }
+  .summary-list dd { padding-top: 0; border-left: 0; }
+  .atlas-regions { grid-template-columns: 1fr; }
+  .topology-component { grid-template-columns: 1fr; }
+  .topology-hub { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .topology-cross-edge { grid-template-columns: 1fr; }
+  .topology-cross-edge .topology-node:last-child { text-align: left; }
+  .topology-cross-relation { text-align: left; }
+  .coverage-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-summary-item:nth-child(2) { border-right: 0; }
+  .coverage-summary-item:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+  .coverage-subsystem { grid-template-columns: 1fr; }
+  .coverage-tokens { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+@media print {
+  :root { --canvas: #fff; --surface: #fff; --text: #171b19; --text-muted: #4c5551; --rule: #c7ccc9; }
+  .nav-rail, .mobile-bar, .heading-anchor { display: none !important; }
+  .document { margin: 0; }
+  .document-inner { width: auto; padding: 0; }
+  .runtime-svg-scroll { overflow: visible; }
+  .runtime-boundary-svg { min-width: 0; }
+  .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body data-root="../">
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="shell">
+  <aside class="nav-rail" aria-label="amanuensis report navigation">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">amanuensis</span>
+      <span class="brand-sub">Architecture survey · Amanuensis</span>
+    </a>
+    <label class="search-label" for="conspectus-search">Find a page, file, or symbol <span aria-hidden="true">⌘K</span></label>
+    <input id="conspectus-search" class="nav-search" data-nav-search type="search" placeholder="Page, path, or symbol…" autocomplete="off">
+    <p class="search-status" data-search-status role="status" aria-live="polite"></p>
+    <nav class="rail-nav"><section class="nav-group"><h2 class="nav-group-title" id="nav-group-overview">Overview</h2><ul class="nav-list" aria-labelledby="nav-group-overview"><li class="nav-item" data-search="overview identity, four status dimensions, and one route into each lens."><a class="nav-link" href="../index.html" title="Identity, four status dimensions, and one route into each lens."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Overview</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-codebase">Codebase</h2><ul class="nav-list" aria-labelledby="nav-group-codebase"><li class="nav-item" data-search="architecture runtime shape, recorded edges, and boundaries, read as one connected system."><a class="nav-link" href="../architecture.html" title="Runtime shape, recorded edges, and boundaries, read as one connected system."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Architecture</span></span></a></li><li class="nav-item" data-search="subsystems every region, grouped by layer, with the scope recorded for it."><a class="nav-link" href="../master-plan.html" title="Every region, grouped by layer, with the scope recorded for it."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Subsystems</span></span></a></li><li class="nav-item" data-search="files one row per ledger file with owners, standing, and open defects."><a class="nav-link" href="../files.html" title="One row per ledger file with owners, standing, and open defects."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Files</span></span></a></li><li class="nav-item" data-search="not yet surveyed the recorded edge of the map, each gap counted over the unit it occupies."><a class="nav-link" href="../not-yet-surveyed.html" title="The recorded edge of the map, each gap counted over the unit it occupies."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Not yet surveyed</span></span></a></li><li class="nav-item" data-search="system boundaries shared objects and ordering assumptions where independently understandable subsystems meet."><a class="nav-link" href="../seams.html" title="Shared objects and ordering assumptions where independently understandable subsystems meet."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">System boundaries</span></span></a></li><li class="nav-item" data-search="codebase glossary the project&#x27;s own names, with the meanings amanuensis observed in context."><a class="nav-link" href="../vocabulary.html" title="The project&#x27;s own names, with the meanings Amanuensis observed in context."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Codebase glossary</span></span></a></li></ul><div class="nav-subgroup"><h3 class="nav-subgroup-title" id="nav-group-codebase-subsystems">Subsystems</h3><ul class="nav-list" aria-labelledby="nav-group-codebase-subsystems"><li class="nav-item" data-search="survey methodology and agent contracts b-01 scope, structure, boundaries, defects, and the survey record for survey methodology and agent contracts. mapped subsystems"><a class="nav-link" href="b01-survey-methodology-and-agent-contracts.html" title="Scope, structure, boundaries, defects, and the survey record for Survey methodology and agent contracts."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Survey methodology and agent contracts</span><span class="nav-id" data-identifier-defined>B-01</span></span></a></li><li class="nav-item" data-search="server core: repository binding, storage, schema, lifecycle b-02 scope, structure, boundaries, defects, and the survey record for server core: repository binding, storage, schema, lifecycle. mapped subsystems"><a class="nav-link" href="b02-server-core-repository-binding-storage-schema-lifecycle.html" title="Scope, structure, boundaries, defects, and the survey record for Server core: repository binding, storage, schema, lifecycle."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Server core: repository binding, storage, schema, lifecycle</span><span class="nav-id" data-identifier-defined>B-02</span></span></a></li><li class="nav-item" data-search="knowledge tools and workflow api b-03 scope, structure, boundaries, defects, and the survey record for knowledge tools and workflow api. mapped subsystems"><a class="nav-link" href="b03-knowledge-tools-and-workflow-api.html" title="Scope, structure, boundaries, defects, and the survey record for Knowledge tools and workflow API."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Knowledge tools and workflow API</span><span class="nav-id" data-identifier-defined>B-03</span></span></a></li><li class="nav-item" data-search="reader lenses: standing, locus account, claims, edges, vocabulary b-04 scope, structure, boundaries, defects, and the survey record for reader lenses: standing, locus account, claims, edges, vocabulary. mapped subsystems"><a class="nav-link" href="b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html" title="Scope, structure, boundaries, defects, and the survey record for Reader lenses: standing, locus account, claims, edges, vocabulary."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Reader lenses: standing, locus account, claims, edges, vocabulary</span><span class="nav-id" data-identifier-defined>B-04</span></span></a></li><li class="nav-item" data-search="materializer: human projection, read-back, html b-05 scope, structure, boundaries, defects, and the survey record for materializer: human projection, read-back, html. mapped subsystems"><a class="nav-link" href="b05-materializer-human-projection-read-back-html.html" title="Scope, structure, boundaries, defects, and the survey record for Materializer: human projection, read-back, HTML."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Materializer: human projection, read-back, HTML</span><span class="nav-id" data-identifier-defined>B-05</span></span></a></li><li class="nav-item" data-search="packaging, installer, and host activation b-06 scope, structure, boundaries, defects, and the survey record for packaging, installer, and host activation. mapped subsystems"><a class="nav-link" href="b06-packaging-installer-and-host-activation.html" title="Scope, structure, boundaries, defects, and the survey record for Packaging, installer, and host activation." aria-current="page"><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Packaging, installer, and host activation</span><span class="nav-id" data-identifier-defined>B-06</span></span></a></li><li class="nav-item" data-search="gates, evidence custody, and ci b-07 scope, structure, boundaries, defects, and the survey record for gates, evidence custody, and ci. mapped subsystems"><a class="nav-link" href="b07-gates-evidence-custody-and-ci.html" title="Scope, structure, boundaries, defects, and the survey record for Gates, evidence custody, and CI."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Gates, evidence custody, and CI</span><span class="nav-id" data-identifier-defined>B-07</span></span></a></li><li class="nav-item" data-search="records: design, research, published projection, execution ledger b-08 scope, structure, boundaries, defects, and the survey record for records: design, research, published projection, execution ledger. mapped subsystems"><a class="nav-link" href="b08-records-design-research-published-projection-execution-ledger.html" title="Scope, structure, boundaries, defects, and the survey record for Records: design, research, published projection, execution ledger."><span class="nav-tick status-mapped" aria-hidden="true"></span><span><span class="nav-name">Records: design, research, published projection, execution ledger</span><span class="nav-id" data-identifier-defined>B-08</span></span></a></li></ul></div></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-unresolved">Unresolved</h2><ul class="nav-list" aria-labelledby="nav-group-unresolved"><li class="nav-item" data-search="open findings defects open or awaiting verification at the checked revision."><a class="nav-link" href="../findings.html" title="Defects open or awaiting verification at the checked revision."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Open findings</span></span></a></li><li class="nav-item" data-search="disagreements where credible records disagree or the evidence does not discriminate between them."><a class="nav-link" href="../disagreements.html" title="Where credible records disagree or the evidence does not discriminate between them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Disagreements</span></span></a></li><li class="nav-item" data-search="decisions needed questions the survey could not settle, with the assumption used to keep moving."><a class="nav-link" href="../open-questions.html" title="Questions the survey could not settle, with the assumption used to keep moving."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Decisions needed</span></span></a></li><li class="nav-item" data-search="leads open observations that are not yet findings."><a class="nav-link" href="../field-notes.html" title="Open observations that are not yet findings."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Leads</span></span></a></li><li class="nav-item" data-search="stale knowledge examined files the repository has changed under, and scoped files that changed before anyone read them."><a class="nav-link" href="../stale.html" title="Examined files the repository has changed under, and scoped files that changed before anyone read them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Stale knowledge</span></span></a></li><li class="nav-item" data-search="hot spots where unresolved work and unread territory concentrate, as separate measures."><a class="nav-link" href="../hot-spots.html" title="Where unresolved work and unread territory concentrate, as separate measures."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Hot spots</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-history">History</h2><ul class="nav-list" aria-labelledby="nav-group-history"><li class="nav-item" data-search="resolved findings verified, ruled out, and accepted, each with the basis its resolution rests on."><a class="nav-link" href="../resolved-findings.html" title="Verified, ruled out, and accepted, each with the basis its resolution rests on."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved findings</span></span></a></li><li class="nav-item" data-search="resolution history the append-only account of how records reached their state."><a class="nav-link" href="../resolution-history.html" title="The append-only account of how records reached their state."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolution history</span></span></a></li><li class="nav-item" data-search="resolved leads and questions questions that were answered or dismissed, and leads that were closed."><a class="nav-link" href="../resolved-leads.html" title="Questions that were answered or dismissed, and leads that were closed."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Resolved leads and questions</span></span></a></li><li class="nav-item" data-search="sessions and publications what ran, when, and what it produced."><a class="nav-link" href="../sessions.html" title="What ran, when, and what it produced."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Sessions and publications</span></span></a></li><li class="nav-item" data-search="conflicting evidence resolved disagreements and the evidence that settled them."><a class="nav-link" href="../contradictions.html" title="Resolved disagreements and the evidence that settled them."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Conflicting evidence</span></span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title" id="nav-group-method">Method</h2><ul class="nav-list" aria-labelledby="nav-group-method"><li class="nav-item" data-search="reader&#x27;s guide every enum, what it authorizes, and what it cannot justify."><a class="nav-link" href="../how-to-read.html" title="Every enum, what it authorizes, and what it cannot justify."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Reader&#x27;s guide</span></span></a></li><li class="nav-item" data-search="review coverage which failure modes were tested where, and the disposition each one reached."><a class="nav-link" href="../concerns.html" title="Which failure modes were tested where, and the disposition each one reached."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review coverage</span></span></a></li><li class="nav-item" data-search="review checklist the concern set and its provenance."><a class="nav-link" href="../concern-checklist.html" title="The concern set and its provenance."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Review checklist</span></span></a></li><li class="nav-item" data-search="competing explanations index of evidence matrices and their outcomes."><a class="nav-link" href="../diagnosticity.html" title="Index of evidence matrices and their outcomes."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Competing explanations</span></span></a></li><li class="nav-item" data-search="onboarding record the repository boundary and initial decomposition that established this conspectus."><a class="nav-link" href="../onboarding-report.html" title="The repository boundary and initial decomposition that established this conspectus."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Onboarding record</span></span></a></li><li class="nav-item" data-search="where to begin a dated reading path recorded by an earlier session; it is survey history, not a current index."><a class="nav-link" href="../entry-point.html" title="A dated reading path recorded by an earlier session; it is survey history, not a current index."><span class="nav-tick" aria-hidden="true"></span><span><span class="nav-name">Where to begin</span></span></a></li></ul></section></nav>
+    <div class="rail-foot">
+      <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="b06-packaging-installer-and-host-activation.md">Markdown source</a></div>
+      <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
+    </div>
+  </aside>
+  <main class="document" id="content">
+    <div class="mobile-bar"><span class="mobile-brand">amanuensis</span><button class="quiet-button" type="button" data-nav-toggle aria-expanded="false">Browse</button></div>
+    <div class="document-inner">
+      <header class="page-head">
+        <p class="eyebrow">Subsystem · <span data-identifier-defined>B-06</span></p>
+        <h1>Packaging, installer, and host activation</h1>
+        <p class="page-hint">Scope, structure, boundaries, defects, and the survey record for Packaging, installer, and host activation.</p>
+        <div class="snapshot-strip">
+          <span class="snapshot-item"><b>Branch</b>&nbsp; main</span>
+          <span class="snapshot-item"><b>Checked</b>&nbsp; 7c1c1a9f5689</span>
+          <span class="snapshot-item"><b>As of</b>&nbsp; 2026-09-14 03:27:25</span>
+          <span class="snapshot-item"><span class="freshness">Stale: 0 with a survey obligation, 0 exempt, of 106 scoped files</span></span>
+          <span class="snapshot-item">Survey depth&nbsp; <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></span>
+        </div>
+      </header>
+      <article class="content content-subsystem"><p><strong>Status</strong>: <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span> <strong>Layer</strong>: distribution</p>
+<section class="section-scope">
+<h2 id="scope"><a class="heading-anchor" href="#scope" aria-label="Link to Scope">§</a>Scope</h2>
+<p>No purpose statement is recorded for this subsystem; the scope below states what it covers.</p>
+<p>mcp-server/src/cli.ts, mcp-server/src/codex-host.ts, mcp-server/scripts/ (prepack-bundle-assets.mjs, ensure-built.mjs, gen-tool-inventory.mjs, gen-vocabulary.mjs, check-*.mjs, historical-evaluation.mjs), mcp-server/package.json, mcp-server/contracts/activation-parity.schema.json, mcp-server/fixtures/activation/</p>
+</section>
+<section class="section-start-here">
+<h2 id="start-here"><a class="heading-anchor" href="#start-here" aria-label="Link to Start here">§</a>Start here</h2>
+<p>mcp-server/src/cli.ts — install, doctor, repair, upgrade, rollback, uninstall for each client adapter; then codex-host.ts for parent-workspace discovery.</p>
+</section>
+<section class="section-structure">
+<h2 id="structure"><a class="heading-anchor" href="#structure" aria-label="Link to Structure">§</a>Structure</h2>
+<p>What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.</p>
+<h3 id="key-types"><a class="heading-anchor" href="#key-types" aria-label="Link to Key types">§</a>Key types</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr>/key-type/mcp-server-src-codex-host-ts-startup-probe-timeout-ms</code></td><td data-label="Subject"><code>mcp-server/src/codex-host.ts:STARTUP_PROBE_TIMEOUT_MS</code></td><td data-label="Statement">The activation-path time bound is a single exported constant of 5000 milliseconds, defined in this subsystem and applied here and at all six subprocess sites in project.ts, each with killSignal SIGKILL. It is the repository's answer to a synchronous startup path: the calls stay blocking and are bounded rather than being made asynchronous. The constant is exported and one import away from index.ts, which does not use it — so the bound's coverage is a matter of which modules chose to import it rather than of where the boundary is.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>7c1c1a9f5689</code></td></tr></tbody></table></div>
+<h3 id="flow-steps"><a class="heading-anchor" href="#flow-steps" aria-label="Link to Flow steps">§</a>Flow steps</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr>/flow/digest-bound-repair/01</code></td><td data-label="Subject"><code>mcp-server/src/cli.ts:doctorReport</code></td><td data-label="Statement">Repairing host configuration is diagnosis-first and dry-run-first, and the two halves are bound together by a digest. <code>doctor</code> reports diagnoses each carrying a remediation; <code>--repair --dry-run</code> emits a plan bound to a digest of the configuration it inspected; <code>--apply-plan &amp;lt;id&amp;gt;</code> applies only that exact plan, so configuration that changed between diagnosis and repair is refused rather than rewritten under a stale reading. Every mutating action pushes a timestamped backup action ahead of itself, and configuration Amanuensis does not manage is reported with a remediation rather than rewritten.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>7c1c1a9f5689</code></td></tr></tbody></table></div>
+<h3 id="concurrency-invariants"><a class="heading-anchor" href="#concurrency-invariants" aria-label="Link to Concurrency invariants">§</a>Concurrency invariants</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr>/concurrency</code></td><td data-label="Subject"><code><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr></code></td><td data-label="Statement">The installer is a short-lived single-threaded CLI with no concurrency of its own, and it records that rather than omitting the category. Its exposure is interleaving with a human or another tool editing the same host configuration file, and that is addressed not by locking but by the digest: a plan is bound to the bytes it was computed from and refuses to apply against different bytes. The one shared resource it creates is the user-scoped MCP registration that every subsequent server process reads, which is the <a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a> seam.</td><td data-label="Epistemic kind">Inference</td><td data-label="Asserted at"><code>7c1c1a9f5689</code></td></tr></tbody></table></div>
+<h3 id="seam-contracts"><a class="heading-anchor" href="#seam-contracts" aria-label="Link to Seam contracts">§</a>Seam contracts</h3>
+<div class="table-wrap"><table><caption>structure</caption><thead><tr><th scope="col">Claim</th><th scope="col">Subject</th><th scope="col">Statement</th><th scope="col">Epistemic kind</th><th scope="col">Asserted at</th></tr></thead><tbody><tr><td data-label="Claim"><code><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr>/seam/<abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></code></td><td data-label="Subject"><code><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></code></td><td data-label="Statement">From this side, what <a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a> writes is a launch command and a scope, and deliberately not a workspace. A user-scoped Codex registration launches the server with no hard-coded repository path, so binding is decided by the cwd the host happens to be in, which is what lets one installation serve every repository. The installer therefore treats an explicit workspace argument in an existing registration as a diagnosis — inspectCodexRegistration and hasExplicitWorkspaceArgument exist to find one — rather than as configuration to preserve. What this side cannot guarantee is that the host launches in the directory the user means; that is the server's cwd resolution, and the trust state Codex keeps is a host-side effect outside the managed surface.</td><td data-label="Epistemic kind">Observation</td><td data-label="Asserted at"><code>7c1c1a9f5689</code></td></tr></tbody></table></div>
+</section>
+<section class="section-boundaries">
+<h2 id="boundaries"><a class="heading-anchor" href="#boundaries" aria-label="Link to Boundaries">§</a>Boundaries</h2>
+<h3 id="seams"><a class="heading-anchor" href="#seams" aria-label="Link to Seams">§</a>Seams</h3>
+<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">Seam</th><th scope="col">Shared object</th><th scope="col">Other party</th><th scope="col">Assessable</th></tr></thead><tbody><tr><td data-label="Seam"><strong><a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a></strong></td><td data-label="Shared object">Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)</td><td data-label="Other party"><strong><a href="b02-server-core-repository-binding-storage-schema-lifecycle.html"><abbr class="identifier-definition" title="B-02 — Server core: repository binding, storage, schema, lifecycle" aria-label="B-02 — Server core: repository binding, storage, schema, lifecycle">B-02</abbr></a></strong></td><td data-label="Assessable">both parties are <span class="status status-survey status-mapped" title="Survey complete through structural analysis, concern review, and adversarial challenge.">Mapped</span></td></tr></tbody></table></div>
+<h3 id="recorded-edges"><a class="heading-anchor" href="#recorded-edges" aria-label="Link to Recorded edges">§</a>Recorded edges</h3>
+<div class="table-wrap"><table><caption>boundaries</caption><thead><tr><th scope="col">From</th><th scope="col">→</th><th scope="col">To</th><th scope="col">Relationship</th><th scope="col">Strength</th><th scope="col">Context</th></tr></thead><tbody><tr><td data-label="From"><strong><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr></strong></td><td data-label="→">→</td><td data-label="To"><strong><a href="b01-survey-methodology-and-agent-contracts.html"><abbr class="identifier-definition" title="B-01 — Survey methodology and agent contracts" aria-label="B-01 — Survey methodology and agent contracts">B-01</abbr></a></strong></td><td data-label="Relationship">data-flow</td><td data-label="Strength"><span class="status status-survey status-structural" title="Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.">Structural</span></td><td data-label="Context">The installer copies the skill into each host's skill directory, so the methodology a host executes is a packaged copy of this repository's prose and can be a different version from the checkout that produced it. Read at mcp-server/src/cli.ts:findBundledSkill@7c1c1a9 which resolves the bundled skill source the install and upgrade paths walk.</td></tr><tr><td data-label="From"><strong><a href="b02-server-core-repository-binding-storage-schema-lifecycle.html"><abbr class="identifier-definition" title="B-02 — Server core: repository binding, storage, schema, lifecycle" aria-label="B-02 — Server core: repository binding, storage, schema, lifecycle">B-02</abbr></a></strong></td><td data-label="→">→</td><td data-label="To"><strong><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr></strong></td><td data-label="Relationship">dependency</td><td data-label="Strength"><span class="status status-survey status-structural" title="Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.">Structural</span></td><td data-label="Context">Workspace selection depends on the activation subsystem: when the Codex activation contract is set, the launch workspace comes from discoverCodexParentWorkspace rather than from process.cwd, and the startup probe bound the binding code applies is defined there too — mcp-server/src/index.ts:parseArgs@7c1c1a9 imports it from codex-host.js.</td></tr></tbody></table></div>
+</section>
+<section class="section-known-defects-here">
+<h2 id="known-defects-here"><a class="heading-anchor" href="#known-defects-here" aria-label="Link to Known defects here">§</a>Known defects here</h2>
+<p>No defect here is open or awaiting verification.</p>
+</section>
+<section class="section-standing">
+<h2 id="standing"><a class="heading-anchor" href="#standing" aria-label="Link to Standing">§</a>Standing</h2>
+<p><strong>Mapped</strong> — Survey complete through structural analysis, concern review, and adversarial challenge. It cannot justify that the reading is current at the repository head.</p>
+<dl class="summary-list" aria-label="standing"><div><dt>Files read</dt><dd>11 of 12 ledger rows</dd></div><div><dt>Files in scope, not yet read</dt><dd>1 of 12</dd></div><div><dt>Files excluded from the survey obligation</dt><dd>0 of 12</dd></div><div><dt>Ledger rows the repository has changed under</dt><dd>0 of 12</dd></div><div><dt>Active concerns with a disposition recorded here</dt><dd>21 of 30 — 1 confirmed-bug, 12 confirmed-acceptable, 1 ruled-out, 7 out-of-scope</dd></div><div><dt>Findings by resolution state</dt><dd>none recorded</dd></div><div><dt>Seams assessable from both sides</dt><dd>1 of 1</dd></div></dl>
+</section>
+<section class="section-survey-record">
+<h2 id="survey-record"><a class="heading-anchor" href="#survey-record" aria-label="Link to Survey record">§</a>Survey record</h2>
+<h3 id="file-ledger"><a class="heading-anchor" href="#file-ledger" aria-label="Link to File ledger">§</a>File ledger</h3>
+<div class="table-wrap"><table><caption>survey record</caption><thead><tr><th scope="col">Path</th><th scope="col">Classification</th><th scope="col">Why in scope</th><th scope="col">Examined at</th></tr></thead><tbody><tr><td data-label="Path"><span id="le-a461982e45" class="record-anchor"></span><code>mcp-server/scripts/historical-evaluation.mjs</code></td><td data-label="Classification">candidate</td><td data-label="Why in scope">The historical-evaluation instrument. Read for shape only.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-abf65fa2bb" class="record-anchor"></span><code>mcp-server/contracts/activation-parity.schema.json</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">The declared shape of a source-versus-packed parity result.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-2baed44e78" class="record-anchor"></span><code>mcp-server/package.json</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Declares the package version — one of the five places the version is stated, and the one that disagrees with the other four.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-cc326c9bae" class="record-anchor"></span><code>mcp-server/scripts/check-evidence-vocabulary.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Holds SKILL.md's hand-written evidence ladder to the vocabulary source.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-2f3c48c5f7" class="record-anchor"></span><code>mcp-server/scripts/check-sql-identifiers.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Asserts every SQL identifier the handlers use resolves against schema.sql.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-16fc8071b7" class="record-anchor"></span><code>mcp-server/scripts/check-tool-schemas.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Asserts every tool inputSchema is valid JSON Schema.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-52507995f6" class="record-anchor"></span><code>mcp-server/scripts/ensure-built.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">The build guard the packaged entry points depend on.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-791d96e38a" class="record-anchor"></span><code>mcp-server/scripts/gen-tool-inventory.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Generates DEVELOPMENT.md's tool inventory from the running server and fails CI on drift.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-8adf21ac82" class="record-anchor"></span><code>mcp-server/scripts/gen-vocabulary.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Generates both vocabulary modules and asserts the SQL CHECK literals agree.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-96d8069a30" class="record-anchor"></span><code>mcp-server/scripts/prepack-bundle-assets.mjs</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Regenerates the gitignored skill and materializer mirrors at npm pack time — the packed-versus-source parity surface.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-7962bc612b" class="record-anchor"></span><code>mcp-server/src/cli.ts</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">1494 lines: install, init, doctor, repair, upgrade, rollback and uninstall for the Claude, Codex and VS Code adapters, with the dry-run and backup machinery.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr><tr><td data-label="Path"><span id="le-e3284e0308" class="record-anchor"></span><code>mcp-server/src/codex-host.ts</code></td><td data-label="Classification">examined</td><td data-label="Why in scope">Codex parent-workspace discovery and the STARTUP_PROBE_TIMEOUT_MS constant the binding code imports.</td><td data-label="Examined at"><code>7c1c1a9f</code></td></tr></tbody></table></div>
+<h3 id="concern-review"><a class="heading-anchor" href="#concern-review" aria-label="Link to Concern review">§</a>Concern review</h3>
+<div class="record-list record-list-concern-disposition" role="list" aria-label="survey record"><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-al-1" data-record-label="concern disposition AL-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-al-1"><strong><a href="../concerns.html#al-1"><abbr class="identifier-definition" title="AL-1 — Aliasing And Ownership Violation: A module-level mutable object — a tool-definition array, a parsed contract, a vocabulary table, a cached project record — is handed to a caller or a handler that can mutate the server&#x27;s own copy, so one tool call…" aria-label="AL-1 — Aliasing And Ownership Violation: A module-level mutable object — a tool-definition array, a parsed contract, a vocabulary table, a cached project record — is handed to a caller or a handler that can mutate the server&#x27;s own copy, so one tool call…">AL-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-ruled-out" title="The candidate problem was overturned by evidence or adversarial review.">Ruled out</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">A one-shot CLI process with no long-lived shared state. Parsed configuration is read into fresh objects per command and compared through canonicalJson and sameJson rather than by mutating and re-reading, and the plan is built as a list of actions rather than by editing a shared document in place.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-at-1" data-record-label="concern disposition AT-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-at-1"><strong><a href="../concerns.html#at-1"><abbr class="identifier-definition" title="AT-1 — Atomicity Violation: A handler writing more than one table is not wrapped in a single SQLite transaction, so an invariant check or a constraint failure part-way leaves the store internally inconsistent — a finding with no opening resolution…" aria-label="AT-1 — Atomicity Violation: A handler writing more than one table is not wrapped in a single SQLite transaction, so an invariant check or a constraint failure part-way leaves the store internally inconsistent — a finding with no opening resolution…">AT-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">No database mutation happens here. The file-write atomicity question is <a href="../concerns.html#ep-1"><abbr class="identifier-definition" title="EP-1 — Exceptional Path Invariant Asymmetry: A failure part-way through a multi-file write leaves a partially written store, docs tree, or host configuration file, and no path restores the pre-operation state." aria-label="EP-1 — Exceptional Path Invariant Asymmetry: A failure part-way through a multi-file write leaves a partially written store, docs tree, or host configuration file, and no path restores the pre-operation state.">EP-1</abbr></a>'s and is dispositioned there.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-at-2" data-record-label="concern disposition AT-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-at-2"><strong><a href="../concerns.html#at-2"><abbr class="identifier-definition" title="AT-2 — Atomicity Violation: The storage Git commit and the database mutation it is meant to make recoverable can diverge: the commit runs but omits the mutation (WAL not checkpointed), or the mutation lands with no commit." aria-label="AT-2 — Atomicity Violation: The storage Git commit and the database mutation it is meant to make recoverable can diverge: the commit runs but omits the mutation (WAL not checkpointed), or the mutation lands with no commit.">AT-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Nothing here commits to the storage repository or checkpoints a WAL.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cc-1" data-record-label="concern disposition CC-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cc-1"><strong><a href="../concerns.html#cc-1"><abbr class="identifier-definition" title="CC-1 — Cache Coherence Failure: A generated artifact — docs/, DEVELOPMENT.md&#x27;s tool inventory, src/vocabulary.ts and vocabulary.py, ROADMAP.md, any dev/ receipt — is not regenerated when its source changes, and no check detects the drift." aria-label="CC-1 — Cache Coherence Failure: A generated artifact — docs/, DEVELOPMENT.md&#x27;s tool inventory, src/vocabulary.ts and vocabulary.py, ROADMAP.md, any dev/ receipt — is not regenerated when its source changes, and no check detects the drift.">CC-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Every generated artifact this subsystem produces has a paired --check that fails CI: the tool inventory is regenerated from the running server's tools/list response, both vocabulary modules from the JSON source, the SQL CHECK literals asserted against the same source, SKILL.md's evidence ladder held to it independently, and the packed skill and materializer mirrors regenerated at pack time from the repo-root sources and gitignored so they cannot be edited in place. The exception is the version, dispositioned under <a href="../concerns.html#vr-1"><abbr class="identifier-definition" title="VR-1 — Scope Context Identity Conflation: A version, revision, or digest is stated in more than one place with no single source and no check binding them, so the places drift." aria-label="VR-1 — Scope Context Identity Conflation: A version, revision, or digest is stated in more than one place with no single source and no check binding them, so the places drift.">VR-1</abbr></a>.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cc-2" data-record-label="concern disposition CC-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cc-2"><strong><a href="../concerns.html#cc-2"><abbr class="identifier-definition" title="CC-2 — Cache Coherence Failure: A derived SQL view (filestanding, findingstatecurrent, findingsummary, concerncoverage, hotsubsystems) or a derived counter on the dashboard disagrees with the tables it is computed from, so two readers of one store…" aria-label="CC-2 — Cache Coherence Failure: A derived SQL view (filestanding, findingstatecurrent, findingsummary, concerncoverage, hotsubsystems) or a derived counter on the dashboard disagrees with the tables it is computed from, so two readers of one store…">CC-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">No SQL view or dashboard counter is defined or derived here; the installer never opens the store.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cr-1" data-record-label="concern disposition CR-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cr-1"><strong><a href="../concerns.html#cr-1"><abbr class="identifier-definition" title="CR-1 — Concurrency Race Windows: Two server processes bound to one store — the documented case, since one Codex or Claude installation serves every repository and linked worktrees share a storage root — race on a write the activewritelocks table does…" aria-label="CR-1 — Concurrency Race Windows: Two server processes bound to one store — the documented case, since one Codex or Claude installation serves every repository and linked worktrees share a storage root — race on a write the activewritelocks table does…">CR-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The race that matters is a human or another tool editing the same host configuration between diagnosis and repair, and the digest closes it: a plan bound to the bytes it was computed from refuses to apply against different bytes. That is optimistic concurrency with detection rather than a lock, which is the right shape for a file the CLI does not own. Marked linchpin-dependent — no interleaved run was performed.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-cr-2" data-record-label="concern disposition CR-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-cr-2"><strong><a href="../concerns.html#cr-2"><abbr class="identifier-definition" title="CR-2 — Concurrency Race Windows: First use creates the store lazily." aria-label="CR-2 — Concurrency Race Windows: First use creates the store lazily.">CR-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The installer never creates a store; lazy first use is entirely <a href="b02-server-core-repository-binding-storage-schema-lifecycle.html"><abbr class="identifier-definition" title="B-02 — Server core: repository binding, storage, schema, lifecycle" aria-label="B-02 — Server core: repository binding, storage, schema, lifecycle">B-02</abbr></a>'s, and keeping the installer out of it is the property that makes activation setup-free.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-ep-1" data-record-label="concern disposition EP-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-ep-1"><strong><a href="../concerns.html#ep-1"><abbr class="identifier-definition" title="EP-1 — Exceptional Path Invariant Asymmetry: A failure part-way through a multi-file write leaves a partially written store, docs tree, or host configuration file, and no path restores the pre-operation state." aria-label="EP-1 — Exceptional Path Invariant Asymmetry: A failure part-way through a multi-file write leaves a partially written store, docs tree, or host configuration file, and no path restores the pre-operation state.">EP-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Every mutating action is preceded by a timestamped backup action in the same plan, plans are computed whole before anything is written, and unmanaged configuration is reported rather than rewritten. Marked linchpin-dependent because no partial apply was induced during this pass; the interruption evidence lives in <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s committed lifecycle receipts.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-ep-2" data-record-label="concern disposition EP-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-ep-2"><strong><a href="../concerns.html#ep-2"><abbr class="identifier-definition" title="EP-2 — Exceptional Path Invariant Asymmetry: An error path skips something the success path performs — releasing a write lock, closing a session, committing the storage snapshot, recording a dispatch landing." aria-label="EP-2 — Exceptional Path Invariant Asymmetry: An error path skips something the success path performs — releasing a write lock, closing a session, committing the storage snapshot, recording a dispatch landing.">EP-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The plan-then-apply shape means the error path is mostly "no plan, nothing written": diagnosis and planning are pure, and a refusal happens before any mutation. Where mutation has begun, the backup action precedes it, so the recovery material exists on the failure path by construction rather than by a catch block remembering to make it. Marked linchpin-dependent because no partial apply was induced.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-id-1" data-record-label="concern disposition ID-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-id-1"><strong><a href="../concerns.html#id-1"><abbr class="identifier-definition" title="ID-1 — Scope Context Identity Conflation: A record keyed by a caller-supplied identifier (findingid, claimkey, subsystem id, concern code, artifact path) is reused across a store generation, a repository binding, or a worktree without the key carrying the thing…" aria-label="ID-1 — Scope Context Identity Conflation: A record keyed by a caller-supplied identifier (findingid, claimkey, subsystem id, concern code, artifact path) is reused across a store generation, a repository binding, or a worktree without the key carrying the thing…">ID-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The identity this subsystem manages is the registration's scope, and it keeps the distinction the concern is about: a user-scoped entry deliberately carries no repository, a project-scoped one does, and canonicalGitRoot resolves a path to a canonical root rather than comparing strings. The failure mode this concern names — one identity standing in for several contexts — is what a user-scoped registration is designed to do safely, with the per-process binding receipt supplying the missing context at launch. Marked linchpin-dependent: this reading rests on the two subsystems agreeing, and only the installer's side was read here.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-id-2" data-record-label="concern disposition ID-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-id-2"><strong><a href="../concerns.html#id-2"><abbr class="identifier-definition" title="ID-2 — Scope Context Identity Conflation: An evidence, claim, or ledger row identifies a locus as filepath plus symbol but is read back without the revision it was recorded at, so a row that was true at refsha is served as current." aria-label="ID-2 — Scope Context Identity Conflation: An evidence, claim, or ledger row identifies a locus as filepath plus symbol but is read back without the revision it was recorded at, so a row that was true at refsha is served as current.">ID-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Nothing here records a revision-bound observation. The installer writes configuration and reads files; the revisions this concern is about are the conspectus's.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-if-1" data-record-label="concern disposition IF-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-if-1"><strong><a href="../concerns.html#if-1"><abbr class="identifier-definition" title="IF-1 — Incremental Full Path Divergence: The diff-aware incremental publish and cleanpublish do not produce the same tree from the same store state — a page, an anchor, a manifest entry, or a contract hash present under one and not the other." aria-label="IF-1 — Incremental Full Path Divergence: The diff-aware incremental publish and cleanpublish do not produce the same tree from the same store state — a page, an anchor, a manifest entry, or a contract hash present under one and not the other.">IF-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The divergence this subsystem can have is not incremental-versus-full but source-checkout-versus-packed-package, and it is treated as a first-class contract: the skill and materializer mirrors are regenerated at pack time from the repo-root sources and gitignored so they cannot be edited in place, and there is a declared parity contract plus a dedicated lifecycle parity gate. Marked linchpin-dependent because that gate needs registry access and was not run in this pass.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-if-2" data-record-label="concern disposition IF-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-if-2"><strong><a href="../concerns.html#if-2"><abbr class="identifier-definition" title="IF-2 — Incremental Full Path Divergence: The incremental drift detector (detectchanges, ledger-derived staleness) and a full reconciliation disagree about which scoped files are stale, so the backlog a refresh works is not the backlog that exists." aria-label="IF-2 — Incremental Full Path Divergence: The incremental drift detector (detectchanges, ledger-derived staleness) and a full reconciliation disagree about which scoped files are stale, so the backlog a refresh works is not the backlog that exists.">IF-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">No staleness is derived or read here; the installer never opens the store.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-rl-1" data-record-label="concern disposition RL-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-rl-1"><strong><a href="../concerns.html#rl-1"><abbr class="identifier-definition" title="RL-1 — Resource Lifecycle Asymmetry: A SQLite handle, a spawned child process, or a temporary directory is acquired without a guaranteed release on every exit path." aria-label="RL-1 — Resource Lifecycle Asymmetry: A SQLite handle, a spawned child process, or a temporary directory is acquired without a guaranteed release on every exit path.">RL-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">A short-lived CLI: no database handle, no long-lived process, subprocesses synchronous and reaped. The resources with an asymmetric lifetime are the timestamped backups it leaves behind, which are deliberate durable artifacts rather than leaks. Marked linchpin-dependent because uninstall's cleanup was read rather than exercised.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-sc-3" data-record-label="concern disposition SC-3"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-sc-3"><strong><a href="../concerns.html#sc-3"><abbr class="identifier-definition" title="SC-3 — Seam Contract Violations: S-03 (B-02 ↔ B-06): the installer writes no workspace and the server derives one from cwd." aria-label="SC-3 — Seam Contract Violations: S-03 (B-02 ↔ B-06): the installer writes no workspace and the server derives one from cwd.">SC-3</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">Assessed from <strong><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr></strong>'s side, same evidence. This party detects the mirror condition: inspectCodexRegistration and hasExplicitWorkspaceArgument exist to find a registration carrying a workspace and report it as a diagnosis with a digest-bound repair. So a stale pin is caught by the installer at diagnosis time and by the server at launch time, independently. Marked linchpin-dependent because the end-to-end agreement was read across two modules rather than exercised; <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s activation-contract gate is what exercises it and was not run in this pass.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-se-1" data-record-label="concern disposition SE-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-se-1"><strong><a href="../concerns.html#se-1"><abbr class="identifier-definition" title="SE-1 — Seam Contract Violations: A contract stated on one side of a seam is not enforced on the other: the skill&#x27;s prose promises a step the tools do not require, a JSON Schema declares a shape no validator checks, or a receipt asserts a property its…" aria-label="SE-1 — Seam Contract Violations: A contract stated on one side of a seam is not enforced on the other: the skill&#x27;s prose promises a step the tools do not require, a JSON Schema declares a shape no validator checks, or a receipt asserts a property its…">SE-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The <a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a> contract is stated on this side and checked on this side: the registration must carry no explicit workspace, and inspectCodexRegistration plus hasExplicitWorkspaceArgument exist to detect one and report it as a diagnosis. The server enforces the matching half by refusing a workspace argument that disagrees with the launch directory. Both ends therefore have a mechanical check on the same property, which is what this concern asks for. Marked linchpin-dependent because agreement was read across two modules rather than exercised end to end here; <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s activation-contract gate is what exercises it.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tb-1" data-record-label="concern disposition TB-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tb-1"><strong><a href="../concerns.html#tb-1"><abbr class="identifier-definition" title="TB-1 — Temporal Bound Violation: An exogenous subprocess — git, python3, lsof, ps, node, the pecia CLI — is invoked from a server startup path or a tool handler without a timeout, so a hung child hangs the MCP host&#x27;s request." aria-label="TB-1 — Temporal Bound Violation: An exogenous subprocess — git, python3, lsof, ps, node, the pecia CLI — is invoked from a server startup path or a tool handler without a timeout, so a hung child hangs the MCP host&#x27;s request.">TB-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The bound is defined and applied here, and codex-host.ts's own probe carries it with a SIGKILL. cli.ts's three subprocess calls have no timeout, but the CLI is a foreground command a user ran and can interrupt, not a server a host is waiting on, so an unbounded call there costs a hung terminal rather than a product that never becomes ready. The defect this concern names is live at index.ts and is filed as B02-R1; on this subsystem's own surface the bound exists and is applied where it matters.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tr-1" data-record-label="concern disposition TR-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tr-1"><strong><a href="../concerns.html#tr-1"><abbr class="identifier-definition" title="TR-1 — Trust Boundary Elision: Every tool argument is model-authored." aria-label="TR-1 — Trust Boundary Elision: Every tool argument is model-authored.">TR-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The CLI writes into directories a user owns, so path containment matters more here than anywhere else, and assertSafeRootPath plus isWithin guard the destinations. The values it handles come from a human on a command line rather than from a model, which is a weaker threat model than the server's. Marked linchpin-dependent because the uninstall and rollback paths, which delete rather than write, were read rather than exercised, and their custody is asserted by <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s test-installer and test-release-rollback gates.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-tr-2" data-record-label="concern disposition TR-2"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-tr-2"><strong><a href="../concerns.html#tr-2"><abbr class="identifier-definition" title="TR-2 — Trust Boundary Elision: Content stored by one writer and read back into another agent&#x27;s context or into generated HTML is treated as instruction or as safe markup rather than as untrusted data." aria-label="TR-2 — Trust Boundary Elision: Content stored by one writer and read back into another agent&#x27;s context or into generated HTML is treated as instruction or as safe markup rather than as untrusted data.">TR-2</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-acceptable" title="The observed behavior is real and judged to be intended or acceptable.">Accepted behavior</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div><div class="record-fact record-fact-linchpin"><dt>Linchpin dependency</dt><dd>🔗</dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The untrusted content here is other people's host configuration, and the CLI reads it to diagnose rather than to obey: publicRegistration exists to project a registration into a reportable shape, and unmanaged entries are described in a report rather than acted on. Marked linchpin-dependent because the report's own escaping and truncation were not examined.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-vr-1" data-record-label="concern disposition VR-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-vr-1"><strong><a href="../concerns.html#vr-1"><abbr class="identifier-definition" title="VR-1 — Scope Context Identity Conflation: A version, revision, or digest is stated in more than one place with no single source and no check binding them, so the places drift." aria-label="VR-1 — Scope Context Identity Conflation: A version, revision, or digest is stated in more than one place with no single source and no check binding them, so the places drift.">VR-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-confirmed-bug" title="A defect supported by evidence and retained after adversarial review.">Confirmed defect</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">This subsystem generates five artifacts and checks every one of them for drift — the tool inventory, both vocabulary modules, the SQL CHECK literals and SKILL.md's evidence ladder all have a --check that fails CI. The version is the one identity it declares and does not check, and it is the one that has drifted: package.json says 0.2.0-beta.2 while SERVER_VERSION, README.md, mcp-server/README.md and HISTORY.md all say beta.1. The pattern for fixing it already exists in this subsystem five times over. Recorded here as well as against <a href="b02-server-core-repository-binding-storage-schema-lifecycle.html"><abbr class="identifier-definition" title="B-02 — Server core: repository binding, storage, schema, lifecycle" aria-label="B-02 — Server core: repository binding, storage, schema, lifecycle">B-02</abbr></a> because the drift needs a check on this side; the finding is filed once, as B02-R3, where the literal lives.</div></div></div></article><article class="record record-concern-disposition" role="listitem" aria-labelledby="concern-disposition-zd-1" data-record-label="concern disposition ZD-1"><header class="record-meta"><h3 class="record-primary" id="concern-disposition-zd-1"><strong><a href="../concerns.html#zd-1"><abbr class="identifier-definition" title="ZD-1 — Validation Zero Denominator: A gate reports green while asserting over an empty set — the store it reads is absent, the query returns no rows, the fixture list is empty, or the missing-file exit is accepted as a red." aria-label="ZD-1 — Validation Zero Denominator: A gate reports green while asserting over an empty set — the store it reads is absent, the query returns no rows, the fixture list is empty, or the missing-file exit is accepted as a red.">ZD-1</abbr></a></strong></h3><dl class="record-facts"><div class="record-fact record-fact-classification"><dt>Verdict</dt><dd><span class="status status-disposition status-out-of-scope" title="The concern does not apply within this subsystem&#x27;s declared boundary.">Out of scope</span></dd></div><div class="record-fact record-fact-evidence-quality"><dt>Evidence</dt><dd><span class="evidence-label evidence-code-verified" title="The implementation was read and the stated behavior was verified directly.">Code verified</span></dd></div></dl></header><div class="record-fields"><div class="record-field"><p class="record-label">Rationale</p><div class="record-copy">The --check scripts here derive their denominator from a live source each run — the running server's tools/list, the vocabulary JSON, schema.sql — so an empty comparison would mean the source was empty, which is itself visible. Whether the repository's gates as a body can turn red is <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s question and is dispositioned there over the whole gate suite rather than over these five scripts.</div></div></div></article></div>
+<h3 id="survey-artifact"><a class="heading-anchor" href="#survey-artifact" aria-label="Link to Survey artifact">§</a>Survey artifact</h3>
+<h4 id="b-06-packaging-installer-and-host-activation"><a class="heading-anchor" href="#b-06-packaging-installer-and-host-activation" aria-label="Link to B-06 · Packaging, installer, and host activation">§</a><strong><abbr class="identifier-definition" title="B-06 — Packaging, installer, and host activation" aria-label="B-06 — Packaging, installer, and host activation">B-06</abbr></strong> · Packaging, installer, and host activation</h4>
+<p><strong>Revision read:</strong> <code>7c1c1a9</code> · <strong>Layer:</strong> distribution · <strong>Priority:</strong> 3</p>
+<h5 id="scope-2"><a class="heading-anchor" href="#scope-2" aria-label="Link to Scope">§</a>Scope</h5>
+<p><code>src/cli.ts</code> (1494 lines), <code>src/codex-host.ts</code>, seven scripts under <code>mcp-server/scripts/</code>, <code>package.json</code>, and the activation-parity contract. Twelve files, eleven <code>examined</code>; <code>scripts/historical-evaluation.mjs</code> is <code>candidate</code>, read for shape only.</p>
+<h5 id="observed-structure"><a class="heading-anchor" href="#observed-structure" aria-label="Link to Observed structure">§</a>Observed structure</h5>
+<div class="prose-flow"><p><strong>Repair is diagnosis-first, dry-run-first, and digest-bound.</strong> <code>doctor</code> reports diagnoses each carrying a remediation. <code>--repair --dry-run</code> emits a plan bound to a digest of the configuration it inspected. <code>--apply-plan &lt;id&gt;</code> applies only that exact plan, so configuration that changed between diagnosis and repair is refused rather than rewritten under a stale reading. Every mutating action pushes a timestamped backup ahead of itself, and configuration Amanuensis does not manage is reported with a remediation instead of being rewritten.</p><p><strong>The activation bound is one exported constant.</strong> <code>STARTUP_PROBE_TIMEOUT_MS = 5_000</code>, applied here and at all six subprocess sites in <code>project.ts</code>, each with <code>killSignal: &quot;SIGKILL&quot;</code>. The repository's answer to a synchronous startup path is to bound the blocking calls rather than make them asynchronous. The constant is exported and one import away from <code>index.ts</code>, which does not use it — so the bound's coverage is decided by which modules chose to import it, not by where the activation boundary is. That is finding B02-R1 seen from the other side.</p><p><strong>Generation has checks; version identity does not.</strong> <code>gen-tool-inventory.mjs</code>, <code>gen-vocabulary.mjs</code> (with <code>--check</code> and <code>--check-sql</code>), <code>check-evidence-vocabulary.mjs</code>, <code>check-sql-identifiers.mjs</code> and <code>check-tool-schemas.mjs</code> all fail CI on drift. <code>package.json</code>'s version has no such check, and it is the one that disagrees — see B02-R3.</p></div>
+<h5 id="concurrency"><a class="heading-anchor" href="#concurrency" aria-label="Link to Concurrency">§</a>Concurrency</h5>
+<p>A short-lived single-threaded CLI. Its exposure is interleaving with a human or another tool editing the same host configuration, addressed by the digest rather than by locking: a plan refuses to apply against bytes it was not computed from. The one shared resource it creates is the user-scoped registration every later server process reads — seam <a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a>.</p>
+<h5 id="seam-contract-offered-s-03"><a class="heading-anchor" href="#seam-contract-offered-s-03" aria-label="Link to Seam contract offered (S-03)">§</a>Seam contract offered (<a href="../seams.html#s-03"><abbr class="identifier-definition" title="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)" aria-label="S-03 — Server core: repository binding, storage, schema, lifecycle ↔ Packaging, installer, and host activation: Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)">S-03</abbr></a>)</h5>
+<p>The installer writes a <strong>launch command and a scope, and deliberately not a workspace.</strong> A user-scoped Codex registration carries no hard-coded repository path, which is what lets one installation serve every repository; an explicit workspace argument in an existing registration is therefore treated as a <em>diagnosis</em> rather than as configuration to preserve (<code>inspectCodexRegistration</code>, <code>hasExplicitWorkspaceArgument</code>). What this side cannot guarantee is that the host launches in the directory the user means — that is the server's cwd resolution — and Codex's own trust state is a host-side effect outside the managed surface.</p>
+<h5 id="inference-separated-from-observation"><a class="heading-anchor" href="#inference-separated-from-observation" aria-label="Link to Inference, separated from observation">§</a>Inference, separated from observation</h5>
+<p>The concurrency reading is an inference from the CLI's shape; no interleaved run was performed. No install, repair, upgrade or uninstall was executed during this pass — every reading here is from source, and the lifecycle evidence is <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s committed receipts.</p>
+<h5 id="open"><a class="heading-anchor" href="#open" aria-label="Link to Open">§</a><span class="status status-resolution status-open" title="No terminal resolution event has been recorded; the item is still open.">Open</span></h5>
+<p>Whether the packed package and the source checkout behave identically was not re-established here; <code>test-package-activation-parity.mjs</code> needs registry access and is <a href="b07-gates-evidence-custody-and-ci.html"><abbr class="identifier-definition" title="B-07 — Gates, evidence custody, and CI" aria-label="B-07 — Gates, evidence custody, and CI">B-07</abbr></a>'s to run.</p>
+</section></article>
+      <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="b06-packaging-installer-and-host-activation.md">Inspect Markdown</a></p></footer>
+    </div>
+  </main>
+</div>
+<script src="../search-index.js"></script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const themeButton = document.querySelector('[data-theme-toggle]');
+  const themeStorageKey = 'amanuensis-theme';
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+  let storedTheme = null;
+  try { storedTheme = localStorage.getItem(themeStorageKey); } catch (_) {}
+  if (storedTheme === 'light' || storedTheme === 'dark') root.dataset.theme = storedTheme;
+
+  const updateThemeLabel = () => {
+    if (!themeButton) return;
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    themeButton.textContent = dark ? 'Light theme' : 'Dark theme';
+    themeButton.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
+  };
+  const applyTheme = (theme) => {
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    else delete root.dataset.theme;
+    updateThemeLabel();
+  };
+  updateThemeLabel();
+  themeButton?.addEventListener('click', () => {
+    const dark = root.dataset.theme === 'dark' || (!root.dataset.theme && systemTheme.matches);
+    const theme = dark ? 'light' : 'dark';
+    applyTheme(theme);
+    try { localStorage.setItem(themeStorageKey, theme); } catch (_) {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== themeStorageKey) return;
+    applyTheme(event.newValue);
+  });
+  systemTheme.addEventListener?.('change', updateThemeLabel);
+
+  const menuButton = document.querySelector('[data-nav-toggle]');
+  const navRail = document.querySelector('.nav-rail');
+  const documentInner = document.querySelector('.document-inner');
+  const narrow = matchMedia('(max-width: 900px)');
+  const setMenuOpen = (open, restoreFocus = false) => {
+    const effectiveOpen = Boolean(open && narrow.matches);
+    body.classList.toggle('nav-open', effectiveOpen);
+    menuButton?.setAttribute('aria-expanded', String(effectiveOpen));
+    if (navRail) navRail.inert = narrow.matches && !effectiveOpen;
+    if (documentInner) documentInner.inert = effectiveOpen;
+    if (effectiveOpen) navRail?.querySelector('a, input, button')?.focus();
+    else if (restoreFocus) menuButton?.focus();
+  };
+  setMenuOpen(false);
+  menuButton?.addEventListener('click', () => setMenuOpen(!body.classList.contains('nav-open')));
+  navRail?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+  narrow.addEventListener?.('change', () => setMenuOpen(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && body.classList.contains('nav-open')) setMenuOpen(false, true);
+  });
+
+  // ---------------------------------------------------------------------
+  // Search over pages, ledger paths, and cited symbols (spec §8.1.1).
+  // The combobox is built here rather than served: an input announced as a
+  // combobox that no script can expand promises a control the reader does not
+  // have. Without script the rail still lists every page, and every result's
+  // target is reachable from it.
+  // ---------------------------------------------------------------------
+  const search = document.querySelector('[data-nav-search]');
+  const searchStatus = document.querySelector('[data-search-status]');
+  const locus = (window.__amanuensisLocusIndex && typeof window.__amanuensisLocusIndex === 'object')
+    ? window.__amanuensisLocusIndex : {};
+  const locusPaths = Array.isArray(locus.paths) ? locus.paths : [];
+  const locusSymbols = Array.isArray(locus.symbols) ? locus.symbols : [];
+  const RESULT_LIMIT = 24;
+  let listbox = null;
+  let options = [];
+  let activeIndex = -1;
+  let priorFocus = null;
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!target || target === search || target === document.body) return;
+    if (listbox && listbox.contains(target)) return;
+    priorFocus = target;
+  });
+
+  if (search && searchStatus) {
+    listbox = document.createElement('ul');
+    listbox.id = 'conspectus-search-results';
+    listbox.className = 'search-results';
+    listbox.setAttribute('role', 'listbox');
+    listbox.setAttribute('aria-label', 'Search results');
+    searchStatus.insertAdjacentElement('afterend', listbox);
+    search.setAttribute('role', 'combobox');
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-controls', listbox.id);
+    search.setAttribute('aria-activedescendant', '');
+    search.setAttribute('aria-autocomplete', 'list');
+    search.setAttribute('aria-haspopup', 'listbox');
+  }
+
+  const rootPrefix = body.dataset.root || '';
+  const entries = [];
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const link = item.querySelector('a');
+    if (!link) return;
+    const name = item.querySelector('.nav-name');
+    entries.push({
+      kind: 'Page',
+      label: name ? name.textContent.trim() : link.textContent.trim(),
+      detail: '',
+      haystack: (item.dataset.search || '').toLocaleLowerCase(),
+      href: link.getAttribute('href') || ''
+    });
+  });
+  locusPaths.forEach((item) => {
+    if (!item || typeof item.p !== 'string') return;
+    const owners = Array.isArray(item.o) ? item.o.join(', ') : '';
+    entries.push({
+      kind: 'File',
+      label: item.p,
+      detail: [owners, item.s || ''].filter(Boolean).join(' · '),
+      haystack: (item.p + ' ' + owners + ' ' + (item.s || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+  locusSymbols.forEach((item) => {
+    if (!item || typeof item.y !== 'string') return;
+    entries.push({
+      kind: 'Symbol',
+      label: item.y,
+      detail: item.p || '',
+      haystack: (item.y + ' ' + (item.p || '')).toLocaleLowerCase(),
+      href: rootPrefix + (item.h || '')
+    });
+  });
+
+  const closeList = (restoreFocus) => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-expanded', 'false');
+    search.setAttribute('aria-activedescendant', '');
+    searchStatus.textContent = '';
+    if (!restoreFocus) return;
+    if (priorFocus && priorFocus.isConnected && typeof priorFocus.focus === 'function') priorFocus.focus();
+    else search.blur();
+  };
+
+  const setActive = (index) => {
+    if (!options.length) return;
+    const next = ((index % options.length) + options.length) % options.length;
+    options.forEach((option, position) => {
+      option.setAttribute('aria-selected', position === next ? 'true' : 'false');
+    });
+    activeIndex = next;
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
+  };
+
+  const activate = (index) => {
+    const option = options[index];
+    if (!option) return;
+    const href = option.dataset.href || '';
+    closeList(false);
+    if (!href) return;
+    const parts = href.split('#');
+    const fragment = parts.length > 1 ? parts[1] : '';
+    const here = location.pathname.split('/').pop();
+    const target = parts[0] ? parts[0].split('/').pop() : here;
+    if (fragment && target === here) {
+      const node = document.getElementById(fragment);
+      if (node) {
+        if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        location.hash = '#' + fragment;
+        node.focus();
+        return;
+      }
+    }
+    location.href = href;
+  };
+
+  const renderResults = () => {
+    if (!listbox) return;
+    listbox.textContent = '';
+    options = [];
+    activeIndex = -1;
+    search.setAttribute('aria-activedescendant', '');
+    const needle = search.value.trim().toLocaleLowerCase();
+    if (!needle) {
+      search.setAttribute('aria-expanded', 'false');
+      searchStatus.textContent = '';
+      return;
+    }
+    const matches = entries.filter((entry) => entry.haystack.indexOf(needle) !== -1);
+    matches.slice(0, RESULT_LIMIT).forEach((entry, position) => {
+      const option = document.createElement('li');
+      option.id = 'conspectus-search-option-' + position;
+      option.className = 'search-option';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', 'false');
+      option.dataset.href = entry.href;
+      const kind = document.createElement('span');
+      kind.className = 'search-option-kind';
+      kind.textContent = entry.kind;
+      const label = document.createElement('span');
+      label.className = 'search-option-label';
+      label.textContent = entry.label;
+      option.append(kind, label);
+      if (entry.detail) {
+        const detail = document.createElement('span');
+        detail.className = 'search-option-detail';
+        detail.textContent = entry.detail;
+        option.append(detail);
+      }
+      option.addEventListener('click', () => activate(position));
+      listbox.append(option);
+      options.push(option);
+    });
+    search.setAttribute('aria-expanded', options.length ? 'true' : 'false');
+    if (!matches.length) searchStatus.textContent = 'No match in this projection.';
+    else if (matches.length > options.length) {
+      searchStatus.textContent = matches.length + ' matches, first ' + options.length + ' listed';
+    } else searchStatus.textContent = matches.length + (matches.length === 1 ? ' match' : ' matches');
+  };
+
+  search?.addEventListener('input', renderResults);
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!options.length) renderResults();
+      setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      if (!options.length) return;
+      event.preventDefault();
+      activate(activeIndex < 0 ? 0 : activeIndex);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeList(true);
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault(); search?.focus(); search?.select();
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // In-page filters (spec §8.1.2). Native controls in a labelled fieldset,
+  // built from the facets the projection stamped on the page; filtering is
+  // toggling `hidden` on the rows and on the containers and headings a fully
+  // hidden run leaves behind. Nothing is persisted: the state lives in the DOM
+  // for the life of the page.
+  // ---------------------------------------------------------------------
+  const filterScope = document.querySelector('[data-filter-scope]');
+  const filterRows = filterScope ? Array.from(filterScope.querySelectorAll('[data-filter-row]')) : [];
+  const splitFacet = (value) => (value || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (filterScope && filterRows.length) {
+    const scopeName = filterScope.dataset.filterScope || 'page';
+    const facets = [
+      { key: 'subsystem', prop: 'filterSubsystem', label: 'Subsystem', control: 'select', values: splitFacet(filterScope.dataset.facetSubsystem) },
+      { key: 'severity', prop: 'filterSeverity', label: 'Severity', control: 'checkbox', values: splitFacet(filterScope.dataset.facetSeverity) }
+    ].filter((facet) => facet.values.length > 1);
+    if (facets.length) {
+      const fieldset = document.createElement('fieldset');
+      fieldset.className = 'filter-controls';
+      fieldset.setAttribute('data-filter-controls', '');
+      const legend = document.createElement('legend');
+      legend.textContent = 'Narrow this page';
+      fieldset.append(legend);
+      const status = document.createElement('p');
+      status.className = 'filter-status';
+      status.setAttribute('data-filter-status', '');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const controls = [];
+
+      const rowValues = (row, prop) => splitFacet(row.dataset[prop]);
+      const keeps = (row) => controls.every((control) => {
+        const values = rowValues(row, control.prop);
+        if (control.select) {
+          const wanted = control.select.value;
+          return !wanted || values.indexOf(wanted) !== -1;
+        }
+        // A row that records no value on this facet cannot be excluded by it.
+        if (!values.length) return true;
+        const wanted = control.boxes.filter((box) => box.checked).map((box) => box.value);
+        return values.some((value) => wanted.indexOf(value) !== -1);
+      });
+      const prune = () => {
+        filterScope.querySelectorAll('.record-list, .table-wrap').forEach((group) => {
+          if (!group.querySelector('[data-filter-row]')) return;
+          group.hidden = !group.querySelector('[data-filter-row]:not([hidden])');
+        });
+        filterScope.querySelectorAll('h2, h3, h4, h5, h6').forEach((heading) => {
+          const level = Number(heading.tagName.slice(1));
+          let node = heading.nextElementSibling;
+          let total = 0;
+          let visible = 0;
+          while (node) {
+            const tag = node.tagName;
+            if (/^H[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
+            const rows = node.matches('[data-filter-row]')
+              ? [node]
+              : Array.from(node.querySelectorAll('[data-filter-row]'));
+            total += rows.length;
+            visible += rows.filter((row) => !row.hidden).length;
+            node = node.nextElementSibling;
+          }
+          if (total) heading.hidden = visible === 0;
+        });
+      };
+      const apply = () => {
+        let shown = 0;
+        filterRows.forEach((row) => {
+          const keep = keeps(row);
+          row.hidden = !keep;
+          if (keep) shown += 1;
+        });
+        prune();
+        status.textContent = shown + ' of ' + filterRows.length + ' rows shown';
+      };
+
+      facets.forEach((facet) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'filter-facet';
+        if (facet.control === 'select') {
+          const id = 'filter-' + scopeName + '-' + facet.key;
+          const label = document.createElement('label');
+          label.className = 'filter-label';
+          label.setAttribute('for', id);
+          label.textContent = facet.label;
+          const select = document.createElement('select');
+          select.id = id;
+          select.className = 'filter-select';
+          const every = document.createElement('option');
+          every.value = '';
+          every.textContent = 'Every ' + facet.label.toLocaleLowerCase();
+          select.append(every);
+          facet.values.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.append(option);
+          });
+          select.addEventListener('change', apply);
+          wrap.append(label, select);
+          controls.push({ prop: facet.prop, select: select });
+        } else {
+          const captionId = 'filter-' + scopeName + '-' + facet.key + '-label';
+          const caption = document.createElement('span');
+          caption.className = 'filter-label';
+          caption.id = captionId;
+          caption.textContent = facet.label;
+          const group = document.createElement('div');
+          group.className = 'filter-options';
+          group.setAttribute('role', 'group');
+          group.setAttribute('aria-labelledby', captionId);
+          const boxes = [];
+          facet.values.forEach((value, position) => {
+            const id = 'filter-' + scopeName + '-' + facet.key + '-' + position;
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.id = id;
+            box.value = value;
+            box.checked = true;
+            box.addEventListener('change', apply);
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.textContent = value;
+            const pair = document.createElement('span');
+            pair.className = 'filter-option';
+            pair.append(box, label);
+            group.append(pair);
+            boxes.push(box);
+          });
+          wrap.append(caption, group);
+          controls.push({ prop: facet.prop, boxes: boxes });
+        }
+        fieldset.append(wrap);
+      });
+      fieldset.append(status);
+      filterScope.prepend(fieldset);
+      apply();
+    }
+  }
+})();
+</script>
+</body>
+</html>

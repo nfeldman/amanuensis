@@ -1,148 +1,121 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-coverage-receipt/v1",
   "packet": "P17",
-  "recorded_at": "2026-09-12T14:59:15.857Z",
-  "repository_sha": "331078257db7b478aae4f97884fe00cbd90a6e24",
-  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
-  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+  "recorded_at": "2026-09-14T04:53:55.332Z",
+  "repository_sha": "dee59d3e019a6747af714aa5a44acbb774ff6d5f",
+  "workspace_path": "/Users/nfeldman/repos/amanuensis",
+  "storage_path": "/Users/nfeldman/repos/amanuensis/.amanuensis",
   "project_key": "github.com/nfeldman/amanuensis",
   "project_name": "amanuensis",
   "project_name_source": "initialization.json projectIdentity remote:github.com/nfeldman/amanuensis",
   "produced_by": "dev/record-rebuild-coverage.mjs",
   "onboarding": {
-    "session_id": "mtyc4dcu-04ike3jr",
-    "intent": "onboarding — claims-backed rebuild of the Amanuensis self-conspectus (reader-lenses P17)",
-    "onboarding_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-    "canonical_branch": "reader-lenses",
+    "session_id": "mu0ok6i1-uhwgqsb9",
+    "intent": "onboarding — clean-slate rebuild of the Amanuensis self-conspectus at 7c1c1a9",
+    "onboarding_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+    "canonical_branch": "main",
     "detected_branches": [
-      "main",
-      "reader-lenses",
-      "pecia-defect-projection",
-      "docs/readme-rewrite"
+      "main"
     ],
     "boundary": {
-      "scan_root": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
+      "scan_root": "/Users/nfeldman/repos/amanuensis",
       "excluded_paths": [
         ".amanuensis"
       ],
-      "tracked_files": 601,
+      "tracked_files": 599,
       "storage_tracked_files": 0
     },
     "artifacts": [
       {
         "path": "onboarding-report.md",
         "kind": "onboarding-report",
-        "content_hash": "137fb4f1cf3b461b8e98dbce9d15bfe11b4a4e0f7e3da8bb92d1490581f5bbe0",
-        "bytes": 4968,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-      },
-      {
-        "path": "master-plan.md",
-        "kind": "master-plan",
-        "content_hash": "55508900bfeafefae9ad039ca0bab8b92aad3147382983b77b112aa9d2a874f5",
-        "bytes": 3174,
-        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        "content_hash": "cf92088c8d2858924da8dc92231dedae065966fd31d8b17173bf23ea5959b413",
+        "bytes": 7652,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
       },
       {
         "path": "concern-checklist.md",
         "kind": "concern-checklist",
-        "content_hash": "e94150ceb4d2b308dfdc51e0183396c46b5e5bac5d01df7a96d252acb8517eb9",
-        "bytes": 2109,
-        "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+        "content_hash": "a12ece533be139bf6e16f67babd45089daeb4b2996487684938608cdd07376a4",
+        "bytes": 3540,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
       },
       {
-        "path": "entry-point.md",
-        "kind": "entry-point",
-        "content_hash": "b3fa83c47dad38fefeeda875cf1c1fdb6e5b97a7e92427a6040fb8dd420320ba",
-        "bytes": 3859,
-        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        "path": "master-plan.md",
+        "kind": "master-plan",
+        "content_hash": "fcc011a7558d99b5719fc3869edf92ebfb6b607431d48fece15e5050fb6a8395",
+        "bytes": 4338,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
       },
       {
         "path": "findings-index.md",
         "kind": "findings-index",
-        "content_hash": "694d9e2cd39c06e7f1a990fab491b027748126f14f115a12f8936504eb624108",
-        "bytes": 2568,
-        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        "content_hash": "befc2527064ae4deaf5a89ba1c5a4593b816e114734537c99fc66c81e0b18da0",
+        "bytes": 458,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+      },
+      {
+        "path": "entry-point.md",
+        "kind": "entry-point",
+        "content_hash": "a9d74a7c07026ffd4f8ae99501e5b19278ea49c3c39d32cd61697c2d93c9219a",
+        "bytes": 5398,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
       },
       {
         "path": "field-notes.md",
         "kind": "field-notes",
-        "content_hash": "fa1c045fbea4f40fd05874332ebc2cae55219f9c36b0f8010af7a8959ca3c6d2",
-        "bytes": 1040,
-        "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+        "content_hash": "1ddbd090e530a93cb50e64c4413259068cea19cffd81040ed3d71a86d6adcbdd",
+        "bytes": 2107,
+        "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
       }
     ],
     "decomposition": [
       {
-        "id": "B-01",
-        "name": "Server runtime and tool dispatch",
-        "layer": "mcp-server",
-        "priority": 1
-      },
-      {
         "id": "B-02",
-        "name": "Repository binding and storage custody",
-        "layer": "mcp-server",
-        "priority": 1
-      },
-      {
-        "id": "B-03",
-        "name": "Conspectus schema, vocabulary, and invariants",
-        "layer": "mcp-server",
+        "name": "Server core: repository binding, storage, schema, lifecycle",
+        "layer": "core",
         "priority": 1
       },
       {
         "id": "B-04",
-        "name": "Survey record tools",
-        "layer": "mcp-server",
+        "name": "Reader lenses: standing, locus account, claims, edges, vocabulary",
+        "layer": "api",
+        "priority": 1
+      },
+      {
+        "id": "B-03",
+        "name": "Knowledge tools and workflow API",
+        "layer": "api",
         "priority": 2
       },
       {
         "id": "B-05",
-        "name": "Findings, dispositions, and resolution custody",
-        "layer": "mcp-server",
+        "name": "Materializer: human projection, read-back, HTML",
+        "layer": "projection",
         "priority": 2
       },
       {
         "id": "B-06",
-        "name": "Locus standing and the reader lenses",
-        "layer": "mcp-server",
-        "priority": 2
+        "name": "Packaging, installer, and host activation",
+        "layer": "distribution",
+        "priority": 3
       },
       {
         "id": "B-07",
-        "name": "Git state, staleness, and refresh",
-        "layer": "mcp-server",
+        "name": "Gates, evidence custody, and CI",
+        "layer": "validation",
         "priority": 3
       },
       {
-        "id": "B-08",
-        "name": "Materializer rendering pipeline",
-        "layer": "materializer",
-        "priority": 3
-      },
-      {
-        "id": "B-09",
-        "name": "Projection read-back and publication custody",
-        "layer": "materializer",
-        "priority": 3
-      },
-      {
-        "id": "B-10",
-        "name": "The Amanuensis skill",
+        "id": "B-01",
+        "name": "Survey methodology and agent contracts",
         "layer": "methodology",
         "priority": 4
       },
       {
-        "id": "B-11",
-        "name": "Development harness and gates",
-        "layer": "harness",
-        "priority": 4
-      },
-      {
-        "id": "B-12",
-        "name": "Vendored research corpus",
-        "layer": "corpus",
+        "id": "B-08",
+        "name": "Records: design, research, published projection, execution ledger",
+        "layer": "records",
         "priority": 5
       }
     ]
@@ -150,1651 +123,1263 @@
   "batches": [
     {
       "n": 1,
-      "label": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist",
-      "storage_commit": "52c123f78de75ff25a66ff430577a679dfbce1e9",
-      "committed_at": "2026-09-12T08:05:01-04:00",
+      "label": "Rebuild batch 1 · onboarding: repository shape, runtime boundaries, stateful entities, 20 calibrated concerns, 8 subsystems, 10 seams",
+      "storage_commit": "04d843114332dc28cde9a2635fef12a36ec34248",
+      "committed_at": "2026-09-13T23:35:10-04:00",
       "subsystems": [],
       "kind": "onboarding"
     },
     {
       "n": 2,
-      "label": "Rebuild batch 2 · B-01, B-02, B-03 surveyed to structural with claims and cited edges",
-      "storage_commit": "887cad625eec373eb9b80c381bec87b8eafe597a",
-      "committed_at": "2026-09-12T08:10:06-04:00",
+      "label": "Rebuild batch 2 · B-02 and B-04 mapped: 11 claims, 8 edges, 40 dispositions, 7 findings",
+      "storage_commit": "19a965abda81f3b5ba5079a7f8881b38b0c832d0",
+      "committed_at": "2026-09-13T23:59:40-04:00",
       "subsystems": [
-        "B-01",
         "B-02",
-        "B-03"
+        "B-04"
       ]
     },
     {
       "n": 3,
-      "label": "Rebuild batch 3 · B-04, B-05, B-06 surveyed to structural with claims and cited edges",
-      "storage_commit": "96c429842c5e582b2265233f5ec75be4165c507d",
-      "committed_at": "2026-09-12T08:13:37-04:00",
+      "label": "Rebuild batch 3 · B-03 and B-05 mapped: knowledge tools and materializer, 10 claims, 4 edges, 40 dispositions, 2 findings",
+      "storage_commit": "416bf62ed8f875a1b5fbd488acdc6efab902fecd",
+      "committed_at": "2026-09-14T00:10:16-04:00",
       "subsystems": [
-        "B-04",
-        "B-05",
-        "B-06"
+        "B-03",
+        "B-05"
       ]
     },
     {
       "n": 4,
-      "label": "Rebuild batch 4 · B-07, B-08, B-09 surveyed to structural with claims and cited edges",
-      "storage_commit": "907c3b36cf0c0a7f18f3d0b40f4626a95fbec591",
-      "committed_at": "2026-09-12T08:16:15-04:00",
+      "label": "Rebuild batch 4 · B-06 and B-07 mapped: packaging and validation, 9 claims, 3 edges, 40 dispositions, 1 finding",
+      "storage_commit": "a6ec836d476287a058088ccffc41e2c0c642d45b",
+      "committed_at": "2026-09-14T00:19:55-04:00",
       "subsystems": [
-        "B-07",
-        "B-08",
-        "B-09"
+        "B-06",
+        "B-07"
       ]
     },
     {
       "n": 5,
-      "label": "Rebuild batch 5 · B-10, B-11 surveyed to structural with claims and cited edges",
-      "storage_commit": "d494da67c87d7dc4747f1044dec4dee6b6541bac",
-      "committed_at": "2026-09-12T08:18:12-04:00",
+      "label": "Rebuild batch 5 · B-01 mapped: the methodology, 4 claims, 20 dispositions, 1 finding",
+      "storage_commit": "f7e813702fd349b55f20465052718c10fc2b33fe",
+      "committed_at": "2026-09-14T00:24:41-04:00",
       "subsystems": [
-        "B-10",
-        "B-11"
+        "B-01"
       ]
     },
     {
       "n": 6,
-      "label": "Rebuild batch 6 · B-12 recorded and deferred with its reason, not omitted",
-      "storage_commit": "041b1a8cd2880cf7254264d91e11a7b81008a040",
-      "committed_at": "2026-09-12T08:18:55-04:00",
+      "label": "Rebuild batch 6 · B-08 mapped and all 10 seams assessed: SC-1 to SC-10 dispositioned on both parties",
+      "storage_commit": "426b5ec24991cbe24c27d6ce85dd04d2a92689ab",
+      "committed_at": "2026-09-14T00:31:54-04:00",
       "subsystems": [
-        "B-12"
+        "B-08"
       ]
     }
   ],
   "subsystems": [
     {
-      "id": "B-01",
-      "name": "Server runtime and tool dispatch",
+      "id": "B-02",
+      "name": "Server core: repository binding, storage, schema, lifecycle",
       "status": "mapped",
-      "layer": "mcp-server",
+      "layer": "core",
       "priority": 1,
       "files": {
-        "examined": 5,
-        "candidate": 1,
-        "deferred-with-reason": 1
+        "examined": 8
       },
       "claims": [
         {
-          "claim_id": "B-01-C07",
-          "claim_key": "B-01/concurrency",
+          "claim_id": "B-02-c5",
+          "claim_key": "B-02/concurrency",
           "subject_type": "subsystem",
-          "subject_id": "B-01",
+          "subject_id": "B-02",
           "epistemic_kind": "inference",
-          "statement": "One process, one stdio transport, one database handle: requests arrive on a single stdio stream and each handler runs to completion against the same synchronous better-sqlite3 connection, so there is no shared mutable state crossing threads. Concurrency, where it exists, is between separate server processes over one store file, not inside one.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "Within one process the store has a single writer: one handle, taken once, held for the life of the process, with SQLite in WAL mode. Across processes the model is different and weaker — several server processes can be bound to different repositories at once, and linked worktrees of one repository share a storage root, so two processes can hold handles to one store. Cross-process mutual exclusion is advisory rather than structural: it is expressed in the active_write_locks table, which a writer must choose to consult. The startup path is deliberately synchronous — execFileSync blocks the event loop — and the repository's answer to that is a time bound on each probe rather than asynchrony.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 3,
+              "id": 1,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "openDatabase",
+              "line_range": "44-56",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 4,
               "kind": "code-verified",
               "file_path": "mcp-server/src/index.ts",
-              "symbol": "main",
-              "line_range": "186-206",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "symbol": "main / ensureDatabase",
+              "line_range": "185-201",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
               "id": 6,
               "kind": "code-verified",
-              "file_path": "mcp-server/src/session.ts",
-              "symbol": "startSession",
-              "line_range": "3-7",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/project.ts",
+              "symbol": "STARTUP_PROBE_TIMEOUT_MS (applied)",
+              "line_range": "84-88, 438-442, 461-465, 470-474, 484-488, 512-516",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-01-C04",
-          "claim_key": "B-01/flow/tool-call/01",
+          "claim_id": "B-02-c2",
+          "claim_key": "B-02/flow/lazy-first-use/01",
           "subject_type": "symbol",
           "subject_id": "mcp-server/src/index.ts:main",
           "epistemic_kind": "observation",
-          "statement": "Step 1 of a tool call: the advertised list and the dispatch table are both built from one concatenation of the per-module ToolDefinition arrays, with the reader-lens tools first, and a Map keyed by tool name is what dispatch resolves against.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 3,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/index.ts",
-              "symbol": "main",
-              "line_range": "186-206",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-01-C05",
-          "claim_key": "B-01/flow/tool-call/02",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/index.ts:main",
-          "epistemic_kind": "observation",
-          "statement": "Step 2: arguments are validated against the tool's own inputSchema by an Ajv validator compiled once at startup with strict:true, so an unknown or mistyped argument is refused before any handler runs and a malformed schema fails the process rather than the call.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "The store is created and opened lazily behind a getter on the ServerContext, not at startup. main() holds `db` as null; the first handler that touches ctx.db triggers ensureProjectStorage — which probes with a candidate handle it opens and immediately closes — and then takes the real handle. Server startup therefore performs no database write, which is the mechanism by which one user-scoped installation can serve a repository it has never entered before without a setup command.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
               "id": 4,
               "kind": "code-verified",
               "file_path": "mcp-server/src/index.ts",
-              "symbol": "main (Ajv validator table)",
-              "line_range": "254-259",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "symbol": "main / ensureDatabase",
+              "line_range": "185-201",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-01-C02",
-          "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-servercontext",
+          "claim_id": "B-02-c3",
+          "claim_key": "B-02/flow/storage-commit/01",
           "subject_type": "symbol",
-          "subject_id": "mcp-server/src/helpers.ts:ServerContext",
+          "subject_id": "mcp-server/src/db.ts:checkpointDatabaseForStorageCommit",
           "epistemic_kind": "observation",
-          "statement": "ServerContext carries the resolved project, the database, and the current session id, and is the only channel a handler has to any of the three; a handler that needs the workspace path or the store reaches it through this object rather than through module state.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "Before the storage Git repository stages memory.db, every committed WAL frame is forced into the main database file by a TRUNCATE checkpoint, and a busy or partial result is raised as an error rather than reported. This closes the gap between the two halves of a checkpoint: the storage repository ignores the -wal and -shm sidecars, so without the forced checkpoint a phase commit could contain the prose a survey phase wrote while omitting the database rows it wrote.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
               "id": 2,
               "kind": "code-verified",
-              "file_path": "mcp-server/src/helpers.ts",
-              "symbol": "ServerContext",
-              "line_range": "14-19",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-01-C08",
-          "claim_key": "B-01/key-type/mcp-server-src-helpers-ts-tooldefinition",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/helpers.ts:ToolDefinition",
-          "epistemic_kind": "observation",
-          "statement": "ToolDefinition is the single shape every tool module exports and it has five members: name, description, inputSchema, a handler taking (args, ctx) in that order, and an optional `compact` flag the dispatcher reads to serialize that tool's text block without indentation. A tool is registered by being present in one of the arrays index.ts concatenates, not by any registration call of its own; and a tool that carries a wire budget is one that sets `compact`, so the budget is enforced on the bytes the host receives rather than promised in a comment.",
-          "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-          "evidence": [
-            {
-              "id": 63,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/helpers.ts",
-              "symbol": "ToolDefinition",
-              "line_range": "22-35",
-              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-            },
-            {
-              "id": 64,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/index.ts",
-              "symbol": "CallToolRequest handler (the compact flag at dispatch)",
-              "line_range": "299-307",
-              "ref_sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-01-C06",
-          "claim_key": "B-01/key-type/mcp-server-src-index-ts-toolannotations",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/index.ts:toolAnnotations",
-          "epistemic_kind": "observation",
-          "statement": "Advertised annotations are derived, not declared per tool: readOnlyHint from the get_/list_/lookup_ name prefixes plus an explicit READ_ONLY_TOOLS set, and destructiveHint true for everything outside ADDITIVE_TOOLS. The default is therefore destructive, and a new read tool is read-only only by carrying one of those prefixes or being named.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 5,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/index.ts",
-              "symbol": "toolAnnotations",
-              "line_range": "28-63",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-01-C03",
-          "claim_key": "B-01/state-container/mcp-server-src-index-ts-main",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/index.ts:main",
-          "epistemic_kind": "observation",
-          "statement": "main holds the process's only mutable state: a `db` binding that ensureDatabase opens on first use and returns thereafter, reached through a getter on ServerContext. Lifetime is per-process; it is never invalidated or reopened, so a store replaced underneath a running server would be written through a stale handle.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 3,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/index.ts",
-              "symbol": "main",
-              "line_range": "186-206",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-01",
-        "SM-03",
-        "SM-09"
-      ],
-      "artifact": {
-        "path": "B-01-server-runtime-and-tool-dispatch.md",
-        "content_hash": "cd3e9f496a1d3b624e691578d23f11a5aefe0913ce6d75641c12b169cbdb6325",
-        "bytes": 4950
-      }
-    },
-    {
-      "id": "B-02",
-      "name": "Repository binding and storage custody",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 1,
-      "files": {
-        "examined": 2,
-        "candidate": 2
-      },
-      "claims": [
-        {
-          "claim_id": "B-02-C05",
-          "claim_key": "B-02/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-02",
-          "epistemic_kind": "inference",
-          "statement": "The store is opened in WAL mode, so several processes may read while one writes; this is what lets a read-only reader open the same file as a running server. Coordination between processes is not provided by this subsystem — nothing here detects a second writer — and the one place where two processes must not overlap, replacing the store underneath a live handle, is handled by stopping the process rather than by a lock.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 3,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/index.ts",
-              "symbol": "main",
-              "line_range": "186-206",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 10,
-              "kind": "code-verified",
               "file_path": "mcp-server/src/db.ts",
-              "symbol": "openDatabase",
-              "line_range": "43-56",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "symbol": "checkpointDatabaseForStorageCommit",
+              "line_range": "296-312",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-02-C04",
-          "claim_key": "B-02/flow/storage-write/01",
+          "claim_id": "B-02-c4",
+          "claim_key": "B-02/key-type/mcp-server-src-project-ts-assertprojectbinding",
           "subject_type": "symbol",
-          "subject_id": "mcp-server/src/project.ts:resolveStorageOutputPath",
+          "subject_id": "mcp-server/src/project.ts:assertProjectBinding",
           "epistemic_kind": "observation",
-          "statement": "Step 1 of any tool-directed write into project storage: the binding is re-asserted, a relative path is resolved against project.storagePath rather than the workspace, and the result is containment-asserted. A tool asked for \"docs\" therefore writes .amanuensis/docs, and no argument can point it at the repository root.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "The per-process ProjectBindingReceipt (contract amanuensis-repository-binding/v1) is the identity a server process is held to for its whole life, and assertProjectBinding re-checks it on every tool call. It refuses on six independent axes: the four path and key fields must still equal the receipt, the workspace's realpath must still be the canonical root, the repository's identity and key must still describe the same project, storage must still be contained under the recorded storage root, the storage tree must still contain no symlink, and the storage identity must still match. Any drift raises rather than re-binds.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 9,
+              "id": 6,
               "kind": "code-verified",
               "file_path": "mcp-server/src/project.ts",
-              "symbol": "assertContainedPath",
-              "line_range": "255-276",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 12,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/project.ts",
-              "symbol": "resolveStorageOutputPath",
-              "line_range": "1003-1013",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "symbol": "STARTUP_PROBE_TIMEOUT_MS (applied)",
+              "line_range": "84-88, 438-442, 461-465, 470-474, 484-488, 512-516",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-02-C02",
-          "claim_key": "B-02/key-type/mcp-server-src-project-ts-assertcontainedpath",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/project.ts:assertContainedPath",
+          "claim_id": "B-02-c6",
+          "claim_key": "B-02/seam/S-01",
+          "subject_type": "seam",
+          "subject_id": "S-01",
           "epistemic_kind": "observation",
-          "statement": "Containment is asserted structurally, not by string prefix: the target must be strictly inside the canonical root, and every existing segment on the way is refused if it is a symbolic link, a non-directory, or resolves outside the root. A path that escapes by symlink is rejected at the segment that does it.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 9,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/project.ts",
-              "symbol": "assertContainedPath",
-              "line_range": "255-276",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-02-C01",
-          "claim_key": "B-02/key-type/mcp-server-src-project-ts-projectcontext",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/project.ts:ProjectContext",
-          "epistemic_kind": "observation",
-          "statement": "ProjectContext is fully readonly and carries a ProjectBindingReceipt with a contract version, the canonical root, the workspace instance id, the project identity and key, and the storage policy. The binding is therefore a value resolved once at startup, not a setting a later call can change.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 8,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/project.ts",
-              "symbol": "ProjectContext",
-              "line_range": "26-48",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-02-C03",
-          "claim_key": "B-02/state-container/mcp-server-src-db-ts-opendatabase",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/db.ts:openDatabase",
-          "epistemic_kind": "observation",
-          "statement": "openDatabase is the only place a connection is created: it sets WAL and foreign_keys, runs migrations before initializeSchema so additive columns exist before the indexes that name them, and then refuses the open if the applied schema did not leave file_standing and finding_state_current in place. Lifetime is per-process; nothing invalidates or reopens it.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 10,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/db.ts",
-              "symbol": "openDatabase",
-              "line_range": "43-56",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 11,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/db.ts",
-              "symbol": "REQUIRED_VIEWS",
-              "line_range": "32-41",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-01",
-        "SM-02",
-        "SM-06"
-      ],
-      "artifact": {
-        "path": "B-02-repository-binding-and-storage-custody.md",
-        "content_hash": "b815eaa57d68ccac031f5aaf38d3c94bed5c1c071579d7b6b68beae1d6501a8b",
-        "bytes": 4417
-      }
-    },
-    {
-      "id": "B-03",
-      "name": "Conspectus schema, vocabulary, and invariants",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 1,
-      "files": {
-        "examined": 3,
-        "candidate": 1
-      },
-      "claims": [
-        {
-          "claim_id": "B-03-C06",
-          "claim_key": "B-03/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-03",
-          "epistemic_kind": "inference",
-          "statement": "The invariants are checked in the same synchronous call that performs the write, against the same connection, so there is no window between a prerequisite passing and the row it authorized being inserted within one process. Across processes the guarantee is SQLite's, not this subsystem's.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 10,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/db.ts",
-              "symbol": "openDatabase",
-              "line_range": "43-56",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 14,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "requireStructuralClaim",
-              "line_range": "165-184",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-03-C03",
-          "claim_key": "B-03/flow/status-advance/01",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/invariants.ts:requireStructuralClaim",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of advancing to `structural`: the file ledger must be non-empty, and a count of current claims whose claim_key begins '<sid>/' must be greater than zero. The refusal names one claim as sufficient and says an empty category is recorded as an explicit negative rather than omitted, so the prerequisite is a floor and not a quota.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 14,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "requireStructuralClaim",
-              "line_range": "165-184",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-03-C04",
-          "claim_key": "B-03/key-type/mcp-server-contracts-conspectus-vocabulary-json-enums-evidence-kind",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/contracts/conspectus-vocabulary.json:enums.evidence_kind",
-          "epistemic_kind": "observation",
-          "statement": "Every enum value in the vocabulary source carries a label, a meaning, and a cannot_justify line, so the enum states what a value does not authorize as well as what it means. evidence_kind is where code-verified and contract-stated are defined as the two readings a file-anchored claim may rest on, with name-inferred present as a value that rule excludes.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 16,
-              "kind": "contract-stated",
-              "file_path": "mcp-server/contracts/conspectus-vocabulary.json",
-              "symbol": "enums.evidence_kind",
-              "line_range": "294-420",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-03-C02",
-          "claim_key": "B-03/key-type/mcp-server-src-invariants-ts-enforcemonotonictransition",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/invariants.ts:enforceMonotonicTransition",
-          "epistemic_kind": "observation",
-          "statement": "Status is monotonic by rank: a transition to a lower rank throws, so dependent dispositions and findings cannot be orphaned by a silent regression. `deferred` is exempt in both directions and is parking rather than a rank, which is why a deferred subsystem resumes at whatever depth it held.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 13,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "enforceMonotonicTransition",
-              "line_range": "123-143",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-03-C07",
-          "claim_key": "B-03/key-type/mcp-server-src-schema-sql-claims",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/schema.sql:claims",
-          "epistemic_kind": "observation",
-          "statement": "A claim is a row over a revision interval: claim_key plus subject, a statement, an epistemic_kind constrained by CHECK, and valid_from_sha / valid_until_sha. Only the interval's end is ever written after insertion: invalidation and supersession both UPDATE the predecessor's valid_until_sha, and supersession then inserts the successor, so the history is preserved by a controlled close-plus-insert rather than by immutability.",
-          "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642",
-          "evidence": [
-            {
-              "id": 93,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/schema.sql",
-              "symbol": "claims",
-              "line_range": "1019-1040",
-              "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642"
-            },
-            {
-              "id": 94,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/claims.ts",
-              "symbol": "invalidate_claim/supersede_claim",
-              "line_range": "553-553,629-629",
-              "ref_sha": "1542c61ee9ba61f9e100431d55d67aac0a063642"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-03-C05",
-          "claim_key": "B-03/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-03",
-          "epistemic_kind": "inference",
-          "statement": "B-03 holds no mutable state container of its own: schema.sql is applied at open and never mutated afterwards, invariants.ts is a set of pure predicates over rows passed in, and the generated vocabulary module is a frozen set of literals. The state this subsystem describes lives in the database, which B-02 owns the handle to.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 10,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/db.ts",
-              "symbol": "openDatabase",
-              "line_range": "43-56",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 13,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "enforceMonotonicTransition",
-              "line_range": "123-143",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 14,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "requireStructuralClaim",
-              "line_range": "165-184",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-02",
-        "SM-04",
-        "SM-08"
-      ],
-      "artifact": {
-        "path": "B-03-conspectus-schema-vocabulary-and-invariants.md",
-        "content_hash": "3632e2b5b9aa396c50453fa37c34d14fc6ca73fd000361012822af0eec4cd912",
-        "bytes": 4479
-      }
-    },
-    {
-      "id": "B-04",
-      "name": "Survey record tools",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 2,
-      "files": {
-        "examined": 3,
-        "candidate": 5
-      },
-      "claims": [
-        {
-          "claim_id": "B-04-C03",
-          "claim_key": "B-04/flow/record-an-edge/01",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/xrefs.ts:xrefTools",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of recording an edge: add_xref's inputSchema requires a context of at least one character carrying a citation token, with the pattern built from the same source string the handler enforces, so a host that validates its calls refuses an uncited edge before the call is made.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 20,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/xrefs.ts",
-              "symbol": "xrefTools (add_xref inputSchema)",
-              "line_range": "38-66",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-04-C04",
-          "claim_key": "B-04/flow/record-an-edge/02",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/helpers.ts:extractWorkspaceCitations",
-          "epistemic_kind": "observation",
-          "statement": "Step 2: the context is split on whitespace, each matching token's path is validated as a workspace source path, and its revision is resolved through the caller's probe. One unresolvable token refuses the whole value, so a single good citation cannot launder the rest. Symbol reachability is not checked, and the contract says so.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 19,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/helpers.ts",
-              "symbol": "extractWorkspaceCitations",
-              "line_range": "211-240",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-04-C05",
-          "claim_key": "B-04/flow/record-an-edge/03",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/xrefs.ts:resolvesInWorkspace",
-          "epistemic_kind": "observation",
-          "statement": "Step 3: the revision probe is `git rev-parse --verify <rev>^{commit}` run with cwd set to the bound workspace, so a sha that resolves only in some other repository is not a citation of this one. The comment records it as the eighth local copy of the probe, kept separate because each caller owns a different failure policy.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 21,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/xrefs.ts",
-              "symbol": "resolvesInWorkspace",
-              "line_range": "21-36",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-04-C02",
-          "claim_key": "B-04/key-type/mcp-server-src-tools-claims-ts-file-anchored-claim-key",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/claims.ts:FILE_ANCHORED_CLAIM_KEY",
-          "epistemic_kind": "observation",
-          "statement": "Which claims the strong rule applies to is decided by the claim_key's shape, not by an argument: only key-type, state-container and flow keys match. Concurrency and seam keys sit outside the pattern on purpose, because they are derived more often than read, and the accepted kinds are filtered out of the generated vocabulary so that dropping a kind from the enum shrinks this list with it.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 18,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/claims.ts",
-              "symbol": "FILE_ANCHORED_CLAIM_KEY",
-              "line_range": "40-59",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-04-C01",
-          "claim_key": "B-04/key-type/mcp-server-src-tools-claims-ts-requirefileanchoredevidence",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/claims.ts:requireFileAnchoredEvidence",
-          "epistemic_kind": "observation",
-          "statement": "The file-anchored check requires one attached evidence row to satisfy both halves at once: a kind in {code-verified, contract-stated} and a file_path equal to the path in subject_id. Two rows that each satisfy one half do not satisfy it together, and the refusal names the kinds it found, so a caller can see which half failed.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 17,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/claims.ts",
-              "symbol": "requireFileAnchoredEvidence",
-              "line_range": "73-92",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-04-C06",
-          "claim_key": "B-04/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-04",
-          "epistemic_kind": "inference",
-          "statement": "B-04 holds no mutable state container: every tool module here is a list of definitions whose handlers read arguments, validate them, and write rows through the context's connection. What persists is the database, and the handle to it belongs to B-02.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "From this side, the contract offered across S-01 is: one DB object, already migrated, with schema.sql applied and both required views proven present, foreign keys on, and WAL journalling. A handler may assume every table and view it names exists, because an open that could not establish that threw instead of returning. What this side does not offer is a transaction boundary — withTransaction is exported for a handler to use, not applied around dispatch — so atomicity across a handler's several writes is the handler's obligation, not this seam's.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
               "id": 1,
               "kind": "code-verified",
-              "file_path": "mcp-server/src/helpers.ts",
-              "symbol": "ToolDefinition",
-              "line_range": "22-36",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "openDatabase",
+              "line_range": "44-56",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 3,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "REQUIRED_VIEWS / requireViews",
+              "line_range": "38-42, 62-81",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-02-c1",
+          "claim_key": "B-02/state-container/mcp-server-src-db-ts-opendatabase",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/db.ts:openDatabase",
+          "epistemic_kind": "observation",
+          "statement": "openDatabase is the sole construction point for the server's one SQLite handle. It opens the file, sets journal_mode=WAL and foreign_keys=ON, runs additive and vocabulary migrations, applies the whole of schema.sql, and only then asserts that both required views survived the application — closing the handle before throwing if either did not. The ordering is deliberate and commented: migrations precede schema.sql so additive columns exist before its index statements reference them.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 1,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "openDatabase",
+              "line_range": "44-56",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 3,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "REQUIRED_VIEWS / requireViews",
+              "line_range": "38-42, 62-81",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-01",
+        "S-02",
+        "S-03",
+        "S-04",
+        "S-09"
+      ],
+      "artifact": {
+        "path": "B-02-server-core.md",
+        "content_hash": "135d05cb810b4dff7aa6a002b61bcf5ebf2b3c2336f562c6ba7ab41b8231ead1",
+        "bytes": 5230
+      }
+    },
+    {
+      "id": "B-04",
+      "name": "Reader lenses: standing, locus account, claims, edges, vocabulary",
+      "status": "mapped",
+      "layer": "api",
+      "priority": 1,
+      "files": {
+        "examined": 9,
+        "generated-ignore": 1
+      },
+      "claims": [
+        {
+          "claim_id": "B-04-c4",
+          "claim_key": "B-04/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-04",
+          "epistemic_kind": "inference",
+          "statement": "This subsystem has no concurrency of its own to describe, and records that rather than omitting the category. Its three reader tools are pure reads over the shared handle: the trace on every response reports model_calls: 0, no handler here spawns a worker or holds a lock, and the only writers in scope — add_claim, add_xref, record_claim_challenge — are ordinary synchronous handlers under B-02's single-writer model. The one ordering assumption it makes is temporal rather than concurrent: a claim's evidence must exist before the claim, and a closed claim must stop appearing as current on every reader surface.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 11,
+              "kind": "runtime-observed",
+              "file_path": "mcp-server/src/tools/locus.ts",
+              "symbol": "WIRE_BUDGET",
+              "line_range": "1190-1231",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 12,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/claims.ts",
+              "symbol": "FILE_ANCHORED_CLAIM_KEY",
+              "line_range": "52, 75-107",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-04-c3",
+          "claim_key": "B-04/flow/bounded-response/01",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/tools/locus.ts:describeLocus",
+          "epistemic_kind": "observation",
+          "statement": "describe_locus bounds its response against the whole emitted wire envelope — the text block plus the structuredContent that duplicates it — and the bound is WIRE_BUDGET (8192) plus WIRE_BUDGET_PER_OPTIONAL_SECTION (4096) for each optional section the caller requests. The allowance therefore scales with how much extra the caller asks for, while the fixed cost does not: the scaffolding for a locus with nothing recorded already measures 6860 wire bytes, so a default call on any ledgered locus exhausts 8192 before a single item and serves items: [] in all eight sections, while the same call naming three optional sections is bounded at 20480 and serves the account in full. Truncation is ordered and every omission is declared with an exact count, so the emptiness is always reported rather than hidden.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 11,
+              "kind": "runtime-observed",
+              "file_path": "mcp-server/src/tools/locus.ts",
+              "symbol": "WIRE_BUDGET",
+              "line_range": "1190-1231",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 16,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/locus.ts",
+              "symbol": "WIRE_BUDGET / OMITTED_IDS_LADDER",
+              "line_range": "1190-1231, 1440, 1574, 1659",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
               "id": 17,
               "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/claims.ts",
-              "symbol": "requireFileAnchoredEvidence",
-              "line_range": "73-92",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 20,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/xrefs.ts",
-              "symbol": "xrefTools (add_xref inputSchema)",
-              "line_range": "38-66",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-03"
-      ],
-      "artifact": {
-        "path": "B-04-survey-record-tools.md",
-        "content_hash": "4291a07a4299d918c3640fc3dcf5afbe49588ea8e8472196b1a92b1aac520853",
-        "bytes": 4178
-      }
-    },
-    {
-      "id": "B-05",
-      "name": "Findings, dispositions, and resolution custody",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 2,
-      "files": {
-        "examined": 1,
-        "candidate": 4
-      },
-      "claims": [
-        {
-          "claim_id": "B-05-C04",
-          "claim_key": "B-05/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-05",
-          "epistemic_kind": "inference",
-          "statement": "There is no locking around a finding's state because there is nothing to lock: the state is derived from an append-only table, so two writers produce two events and the view reports the later one rather than a lost update. Ordering is the insertion order of the events, within one synchronous connection.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 22,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/findings.ts",
-              "symbol": "findingTools (add_finding handler)",
-              "line_range": "158-170",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 23,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/schema.sql",
-              "symbol": "finding_state_current",
-              "line_range": "930-941",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-05-C03",
-          "claim_key": "B-05/flow/read-a-findings-state/01",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/findings.ts:findingTools",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of reading a finding's state: the reader joins finding_state_current rather than selecting findings.status, so the derived view is the single definition of the predicate and not one of two that can drift apart.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 24,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/findings.ts",
-              "symbol": "findingTools (get_findings reader)",
-              "line_range": "414-424",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-05-C01",
-          "claim_key": "B-05/key-type/mcp-server-src-schema-sql-finding-state-current",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/schema.sql:finding_state_current",
-          "epistemic_kind": "observation",
-          "statement": "A finding's resolution state is a view, not a column: COALESCE over finding_resolution_current with a CASE fallback from the legacy findings.status. Every finding therefore has exactly one state, and the legacy column survives only as the default for findings that never received an event.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 23,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/schema.sql",
-              "symbol": "finding_state_current",
-              "line_range": "930-941",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-05-C02",
-          "claim_key": "B-05/state-container/mcp-server-src-tools-findings-ts-findingtools",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/findings.ts:findingTools",
-          "epistemic_kind": "observation",
-          "statement": "The durable state these tools hold is the append-only finding_resolution_events table. Creating a finding inserts its first event in the same transaction, so a finding has a state from the moment it exists; nothing here updates or deletes an event, and a state change is another row. Lifetime is the store's; invalidation is by appending, never by rewriting.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 22,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/findings.ts",
-              "symbol": "findingTools (add_finding handler)",
-              "line_range": "158-170",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-05"
-      ],
-      "artifact": {
-        "path": "B-05-findings-dispositions-and-resolution-custody.md",
-        "content_hash": "a12adeec760c3229ae96845584f48f6f2f42fff9fa874d013109581c3e4d3ecb",
-        "bytes": 3418
-      }
-    },
-    {
-      "id": "B-06",
-      "name": "Locus standing and the reader lenses",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 2,
-      "files": {
-        "examined": 3
-      },
-      "claims": [
-        {
-          "claim_id": "B-06-C02",
-          "claim_key": "B-06/flow/describe-a-file/01",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/schema.sql:file_standing",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of answering about a file: the ledger row is mapped to a standing state by a CASE over classification and stale — absent, excluded, scoped-unread, examined, examined-stale — with the owning subsystem's status carried along as the authority ceiling. A path with no ledger row reaches no branch, which is what makes `unledgered` an answer rather than an error.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 26,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/schema.sql",
-              "symbol": "file_standing",
-              "line_range": "210-229",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-06-C03",
-          "claim_key": "B-06/flow/describe-a-file/02",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/locus.ts:WIRE_BUDGET",
-          "epistemic_kind": "observation",
-          "statement": "Step 2: the assembled account is bounded at 8192 bytes measured on what the host receives — the compact text block plus the structuredContent that repeats it — and the caller's locus is capped at 512 bytes because it is echoed into untruncatable parts of the response, where each byte costs four on the wire.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 27,
-              "kind": "code-verified",
               "file_path": "mcp-server/src/tools/locus.ts",
-              "symbol": "WIRE_BUDGET",
-              "line_range": "1171-1216",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "symbol": "describeLocus budget scaling",
+              "line_range": "1574",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-06-C01",
-          "claim_key": "B-06/key-type/mcp-server-src-standing-ts-standing-authority-order",
+          "claim_id": "B-04-c1",
+          "claim_key": "B-04/key-type/mcp-server-src-standing-ts-standingstate",
           "subject_type": "symbol",
-          "subject_id": "mcp-server/src/standing.ts:STANDING_AUTHORITY_ORDER",
+          "subject_id": "mcp-server/src/standing.ts:StandingState",
           "epistemic_kind": "observation",
-          "statement": "Standing is one of seven states with an explicit weakest-first authority order, so a file owned by several subsystems that disagree resolves to `mixed` authorizing only what its weakest owner authorizes. The comment records the ordering as a gap the specification left open, decided here rather than left to each caller.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 25,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/standing.ts",
-              "symbol": "STANDING_AUTHORITY_ORDER",
-              "line_range": "56-83",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-06-C04",
-          "claim_key": "B-06/key-type/mcp-server-src-tools-locus-ts-no-claims-statement",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/locus.ts:NO_CLAIMS_STATEMENT",
-          "epistemic_kind": "observation",
-          "statement": "A subsystem with no claims renders the literal \"Structural inventory not recorded as claims\" rather than an empty section, and any survey prose attached beside it carries a label saying it is not individually bound to a revision. Silence and absence are made distinguishable in the response itself.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 28,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/locus.ts",
-              "symbol": "NO_CLAIMS_STATEMENT",
-              "line_range": "476-482",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-06-C05",
-          "claim_key": "B-06/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-06",
-          "epistemic_kind": "inference",
-          "statement": "B-06 retains nothing between calls: describe_locus, get_attention and get_history each assemble an answer from views and tables and return it. The only per-call state is the section-build scratch inside one handler, and it does not outlive the response.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 26,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/schema.sql",
-              "symbol": "file_standing",
-              "line_range": "210-229",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 27,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/locus.ts",
-              "symbol": "WIRE_BUDGET",
-              "line_range": "1171-1216",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-04",
-        "SM-05"
-      ],
-      "artifact": {
-        "path": "B-06-locus-standing-and-the-reader-lenses.md",
-        "content_hash": "d132efaa14cff4f0ce8bc8dcd7a865f98b9c3bfb5174c19c27965e296538d449",
-        "bytes": 3527
-      }
-    },
-    {
-      "id": "B-07",
-      "name": "Git state, staleness, and refresh",
-      "status": "mapped",
-      "layer": "mcp-server",
-      "priority": 3,
-      "files": {
-        "examined": 1,
-        "candidate": 3
-      },
-      "claims": [
-        {
-          "claim_id": "B-07-C04",
-          "claim_key": "B-07/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-07",
-          "epistemic_kind": "inference",
-          "statement": "Reconciliation is one SQLite transaction over the whole ledger, so a reader never sees half a pass. The git subprocesses run before it, synchronously, against the bound workspace's working tree; a repository mutated between the diff and the transaction would be recorded at the revision the diff saw, not the one on disk.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 29,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/git.ts",
-              "symbol": "gitTools (detect_changes)",
-              "line_range": "236-266",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 30,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/git.ts",
-              "symbol": "gitTools (reconcileTx)",
-              "line_range": "267-290",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-07-C01",
-          "claim_key": "B-07/flow/detect-changes/01",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/git.ts:gitTools",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of detecting drift: ledger rows are grouped by the revision they were examined at and each group is diffed once against HEAD. A group whose diff throws — an examination commit no longer reachable — goes to `unverifiable`, never to `fresh`, so an unanswerable question is not recorded as a negative answer.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 29,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/git.ts",
-              "symbol": "gitTools (detect_changes)",
-              "line_range": "236-266",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-07-C02",
-          "claim_key": "B-07/flow/detect-changes/02",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/git.ts:gitTools",
-          "epistemic_kind": "observation",
-          "statement": "Step 2: one transaction writes git-drift, absent, or unverifiable-ref onto rows not already stale, and clears staleness on rows that match their examination commit again. Staleness is re-derived in both directions by the same rule, so a row is never left flagged as an obligation the evidence no longer supports.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 30,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/git.ts",
-              "symbol": "gitTools (reconcileTx)",
-              "line_range": "267-290",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-07-C03",
-          "claim_key": "B-07/state-container/mcp-server-src-tools-git-ts-gittools",
-          "subject_type": "symbol",
-          "subject_id": "mcp-server/src/tools/git.ts:gitTools",
-          "epistemic_kind": "observation",
-          "statement": "The state this subsystem owns is the staleness columns on file_ledger — stale, stale_since, stale_reason. They are populated only by the reconciliation transaction, live as long as the row, and are invalidated by the same pass that sets them when the file matches its examination commit again.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 30,
-              "kind": "code-verified",
-              "file_path": "mcp-server/src/tools/git.ts",
-              "symbol": "gitTools (reconcileTx)",
-              "line_range": "267-290",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [],
-      "artifact": {
-        "path": "B-07-git-state-staleness-and-refresh.md",
-        "content_hash": "38105f5cfe6625ee71a02a6ece63023b2735d74c38a002dec85698d682adfff4",
-        "bytes": 3284
-      }
-    },
-    {
-      "id": "B-08",
-      "name": "Materializer rendering pipeline",
-      "status": "mapped",
-      "layer": "materializer",
-      "priority": 3,
-      "files": {
-        "examined": 2,
-        "candidate": 3
-      },
-      "claims": [
-        {
-          "claim_id": "B-08-C04",
-          "claim_key": "B-08/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-08",
-          "epistemic_kind": "inference",
-          "statement": "The projection runs in its own process and reads a WAL store read-only, so it does not block a writing server and is not blocked by one. What it cannot do is see a consistent moment across a long publish: a writer that commits mid-run is visible to later queries and not to earlier ones, which is why the read-back compares finished bytes against a receipt rather than re-querying.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 31,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/db.py",
-              "symbol": "open_ro",
-              "line_range": "15-23",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 32,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/core.py",
-              "symbol": "Materializer.materialize",
-              "line_range": "259-277",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-08-C02",
-          "claim_key": "B-08/flow/publish/01",
-          "subject_type": "symbol",
-          "subject_id": "materializer/amanuensis_materializer/core.py:Materializer.materialize",
-          "epistemic_kind": "observation",
-          "statement": "Step 1 of a publish: the required views are probed before anything is rendered, and a non-empty result refuses the publish naming the views that are absent. The refusal is explicit about not falling back to an inline copy of the predicate — two copies of one definition being the drift the views exist to remove.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 32,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/core.py",
-              "symbol": "Materializer.materialize",
-              "line_range": "259-277",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-08-C01",
-          "claim_key": "B-08/key-type/materializer-amanuensis-materializer-db-py-open-ro",
-          "subject_type": "symbol",
-          "subject_id": "materializer/amanuensis_materializer/db.py:open_ro",
-          "epistemic_kind": "observation",
-          "statement": "The projection's only connection is opened read-only through a SQLite URI, so it cannot write to the store it reads and cannot create a view the store lacks. That is what makes the view probe a statement about the store's age rather than about a schema the reader could have repaired.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 31,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/db.py",
-              "symbol": "open_ro",
-              "line_range": "15-23",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-08-C03",
-          "claim_key": "B-08/state-container/materializer-amanuensis-materializer-core-py-materializer",
-          "subject_type": "symbol",
-          "subject_id": "materializer/amanuensis_materializer/core.py:Materializer",
-          "epistemic_kind": "observation",
-          "statement": "The Materializer holds the per-run state of a publish — the opened read-only connection, the page plan, and the summary of what was written. Lifetime is one invocation of the CLI; nothing is cached between runs, so a projection is always derived from the store as it stands when the process starts.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 31,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/db.py",
-              "symbol": "open_ro",
-              "line_range": "15-23",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 32,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/core.py",
-              "symbol": "Materializer.materialize",
-              "line_range": "259-277",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-06",
-        "SM-07"
-      ],
-      "artifact": {
-        "path": "B-08-materializer-rendering-pipeline.md",
-        "content_hash": "96f47bc3b39abfed628f84d9247a56020b1332007f62c74ec6e5b8a0971148b5",
-        "bytes": 3109
-      }
-    },
-    {
-      "id": "B-09",
-      "name": "Projection read-back and publication custody",
-      "status": "mapped",
-      "layer": "materializer",
-      "priority": 3,
-      "files": {
-        "examined": 1,
-        "candidate": 2
-      },
-      "claims": [
-        {
-          "claim_id": "B-09-C04",
-          "claim_key": "B-09/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-09",
-          "epistemic_kind": "inference",
-          "statement": "Verification is single-threaded and runs after the render in the same process, over files on disk. Its guarantee is about bytes, not about the store: it can show that what was written is what the contract recorded, and cannot show that the store did not change while the render ran.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 32,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/core.py",
-              "symbol": "Materializer.materialize",
-              "line_range": "259-277",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            },
-            {
-              "id": 33,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/readback.py",
-              "symbol": "write_contract",
-              "line_range": "184-205",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-09-C02",
-          "claim_key": "B-09/key-type/materializer-amanuensis-materializer-readback-py-ledger-stale-sections",
-          "subject_type": "symbol",
-          "subject_id": "materializer/amanuensis_materializer/readback.py:LEDGER_STALE_SECTIONS",
-          "epistemic_kind": "observation",
-          "statement": "Stale ledger rows are published under three headings keyed by classification — examined, candidate, and deferred-with-reason — each with its own denominator, because drift is marked on any row carrying a revision and a candidate row can be stale without anyone having read the file. Folding them together would assert a reading the ledger does not record.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 34,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/readback.py",
-              "symbol": "LEDGER_STALE_SECTIONS",
-              "line_range": "80-104",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-09-C01",
-          "claim_key": "B-09/key-type/materializer-amanuensis-materializer-readback-py-write-contract",
-          "subject_type": "symbol",
-          "subject_id": "materializer/amanuensis_materializer/readback.py:write_contract",
-          "epistemic_kind": "observation",
-          "statement": "The projection contract is a hash per published page, written at the end of a render. It is what the content axis compares finished bytes against, so a read-back is a comparison with a receipt rather than a second rendering — and a tree verified at one path can be shown to be the tree committed at another.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 33,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/readback.py",
-              "symbol": "write_contract",
-              "line_range": "184-205",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-09-C03",
-          "claim_key": "B-09/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-09",
-          "epistemic_kind": "inference",
-          "statement": "B-09 holds no in-memory state container. What persists is on disk: .projection-contract.json and .manifest.json beside the published pages. Both are written once per publish and read by the next verification, so the custody record outlives the process that made it.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 33,
-              "kind": "code-verified",
-              "file_path": "materializer/amanuensis_materializer/readback.py",
-              "symbol": "write_contract",
-              "line_range": "184-205",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        }
-      ],
-      "seams": [
-        "SM-07"
-      ],
-      "artifact": {
-        "path": "B-09-projection-read-back-and-publication-custody.md",
-        "content_hash": "755317dbb38dd1830057ed941b4ea5d16b0dab0dbf4573526d99e3df04cf324d",
-        "bytes": 3087
-      }
-    },
-    {
-      "id": "B-10",
-      "name": "The Amanuensis skill",
-      "status": "mapped",
-      "layer": "methodology",
-      "priority": 4,
-      "files": {
-        "examined": 3,
-        "candidate": 2
-      },
-      "claims": [
-        {
-          "claim_id": "B-10-C04",
-          "claim_key": "B-10/concurrency",
-          "subject_type": "subsystem",
-          "subject_id": "B-10",
-          "epistemic_kind": "inference",
-          "statement": "The skill permits phases to run as subagents, so two phase passes may be in flight at once against one store. Nothing in the prose coordinates them; the ordering that matters is enforced by the server's phase prerequisites, which refuse an advance whose deliverable is absent whatever order the passes finished in.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "Standing is a seven-value closed enum — unledgered, excluded, scoped-unread, examined, examined-stale, absent, mixed — with a separately declared total order, STANDING_AUTHORITY_ORDER, running weakest first: unledgered, excluded, absent, scoped-unread, then the two readings, dated before current. The ordering exists because `mixed` authorizes only what its weakest owner authorizes and the specification ranks nothing; the gap is filled in code and the comment says so rather than leaving each caller to guess. `deferred` is deliberately given no rank, because the status ladder does not rank it either.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
               "id": 14,
               "kind": "code-verified",
-              "file_path": "mcp-server/src/invariants.ts",
-              "symbol": "requireStructuralClaim",
-              "line_range": "165-184",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/standing.ts",
+              "symbol": "StandingState / STANDING_AUTHORITY_ORDER",
+              "line_range": "56-84",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
-              "id": 35,
-              "kind": "contract-stated",
-              "file_path": ".claude/skills/amanuensis/SKILL.md",
-              "symbol": "Autonomous phase execution",
-              "line_range": "108-135",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 15,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/standing.ts",
+              "symbol": "weakestOwnerStatus (deferred handling)",
+              "line_range": "760-800",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-10-C02",
-          "claim_key": "B-10/flow/survey-a-subsystem/01",
-          "subject_type": "symbol",
-          "subject_id": ".claude/skills/amanuensis/references/phase-2-structural.md:Record the inventory as claims",
+          "claim_id": "B-04-c5",
+          "claim_key": "B-04/seam/S-05",
+          "subject_type": "seam",
+          "subject_id": "S-05",
           "epistemic_kind": "observation",
-          "statement": "Step 1 of the structural phase's recording: five claim_key shapes are named, the symbol slug is the whole path:symbol pair so two files defining the same name cannot collide under one key, and a genuinely empty category is recorded as an explicit negative claim rather than omitted. The prose and the server's refusal say the same thing, in that order.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "From this side, the contract across S-05 is that contracts/conspectus-vocabulary.json is the only place an enum value is defined, and that four parties are held to it rather than two: the generated src/vocabulary.ts the server's validators read, the generated materializer vocabulary.py, the hand-maintained SQL CHECK literals in schema.sql, and SKILL.md's hand-written evidence ladder. Every value carries a label, a meaning, and a statement of what it cannot justify, so the vocabulary is an operational-definitions artifact and not merely a list of permitted strings. The generated modules are never edited; the SQL literals are, deliberately, because that file is applied to live databases on every open.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 36,
-              "kind": "contract-stated",
-              "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
-              "symbol": "Record the inventory as claims",
-              "line_range": "104-170",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-10-C01",
-          "claim_key": "B-10/key-type/claude-skills-amanuensis-skill-md-autonomous-phase-execution",
-          "subject_type": "symbol",
-          "subject_id": ".claude/skills/amanuensis/SKILL.md:Autonomous phase execution",
-          "epistemic_kind": "observation",
-          "statement": "The status ladder is published in the skill with a table of what each status authorizes, and the text states that autonomous execution does not relax it: a claim exceeding its source's status must be flagged speculative. The ladder is therefore a contract the prose asserts and the server separately enforces at each advance.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 35,
-              "kind": "contract-stated",
-              "file_path": ".claude/skills/amanuensis/SKILL.md",
-              "symbol": "Autonomous phase execution",
-              "line_range": "108-135",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
-            }
-          ]
-        },
-        {
-          "claim_id": "B-10-C03",
-          "claim_key": "B-10/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-10",
-          "epistemic_kind": "inference",
-          "statement": "B-10 holds no state at all: it is prose read into a model's context. Everything it establishes is held elsewhere — in the store the tools write, or in the session the coordinator keeps. That is also its failure mode: an instruction here is followed only as far as a reader follows it, which is why the rules that must not be optional are enforced by code instead.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
-          "evidence": [
-            {
-              "id": 35,
-              "kind": "contract-stated",
-              "file_path": ".claude/skills/amanuensis/SKILL.md",
-              "symbol": "Autonomous phase execution",
-              "line_range": "108-135",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 12,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/claims.ts",
+              "symbol": "FILE_ANCHORED_CLAIM_KEY",
+              "line_range": "52, 75-107",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
-              "id": 36,
-              "kind": "contract-stated",
-              "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
-              "symbol": "Record the inventory as claims",
-              "line_range": "104-170",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 14,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/standing.ts",
+              "symbol": "StandingState / STANDING_AUTHORITY_ORDER",
+              "line_range": "56-84",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-04-c2",
+          "claim_key": "B-04/state-container/mcp-server-src-tools-claims-ts-requirefileanchoredevidence",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/tools/claims.ts:requireFileAnchoredEvidence",
+          "epistemic_kind": "observation",
+          "statement": "add_claim carries exactly the two subtractive checks the specification names, and no more. subject_type is validated against the CLAIM_SUBJECT_TYPES enum from the vocabulary source. A claim whose claim_key matches the file-anchored category pattern is refused unless a single evidence row is both a strong kind (code-verified or contract-stated) and cites the file named in subject_id — two rows each satisfying one half do not satisfy it together, and the error names the kinds it found. What the pattern does not reach is the slug portion of the key: it stops at the category and its trailing slash.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 12,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/claims.ts",
+              "symbol": "FILE_ANCHORED_CLAIM_KEY",
+              "line_range": "52, 75-107",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         }
       ],
       "seams": [
-        "SM-08"
+        "S-02",
+        "S-05",
+        "S-06"
       ],
       "artifact": {
-        "path": "B-10-the-amanuensis-skill.md",
-        "content_hash": "0983da5845e2ac01701825ed1666afca914160ff687f59952e2b1741c68bc58c",
-        "bytes": 3430
+        "path": "B-04-reader-lenses.md",
+        "content_hash": "b30d08b68dd5b94ae50c9709a25125ccdd5d1271a22e2463cf407a13184eac32",
+        "bytes": 4810
       }
     },
     {
-      "id": "B-11",
-      "name": "Development harness and gates",
+      "id": "B-03",
+      "name": "Knowledge tools and workflow API",
       "status": "mapped",
-      "layer": "harness",
-      "priority": 4,
+      "layer": "api",
+      "priority": 2,
       "files": {
-        "examined": 5,
-        "candidate": 2
+        "examined": 14,
+        "candidate": 6
       },
       "claims": [
         {
-          "claim_id": "B-11-C04",
-          "claim_key": "B-11/concurrency",
+          "claim_id": "B-03-c4",
+          "claim_key": "B-03/concurrency",
           "subject_type": "subsystem",
-          "subject_id": "B-11",
+          "subject_id": "B-03",
           "epistemic_kind": "inference",
-          "statement": "CI jobs run in parallel over separate checkouts, so no gate may depend on another's side effects. Gates that need a store build one in a throwaway workspace; the ones that cannot spawn a real subject assert over a committed receipt instead, which is the same reason the store itself is never a CI denominator.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "Roughly forty handler modules share one connection and run one at a time within a process, because the MCP dispatcher awaits each handler and better-sqlite3 is synchronous. Multi-row mutations that must not be seen half-done are wrapped individually in db.transaction by the handler that owns them — reset_subsystem is the clearest case — rather than by a transaction around dispatch, so atomicity is per-handler and opt-in. Across processes, exclusion is advisory: acquire_lock and release_lock write and clear rows in active_write_locks, and nothing compels a writer to take one first.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 37,
-              "kind": "contract-stated",
-              "file_path": ".github/workflows/test.yml",
-              "symbol": "pecia-defects",
-              "line_range": "29-50",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 20,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/subsystems.ts",
+              "symbol": "reset_subsystem",
+              "line_range": "285-345",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
-              "id": 38,
+              "id": 21,
               "kind": "code-verified",
-              "file_path": "dev/test-rebuild-readback.mjs",
-              "symbol": "the two-arm gate header",
-              "line_range": "1-60",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/tools/dispositions.ts",
+              "symbol": "set_disposition",
+              "line_range": "26-95",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-11-C02",
-          "claim_key": "B-11/flow/prove-a-gate/01",
+          "claim_id": "B-03-c2",
+          "claim_key": "B-03/flow/status-ladder/01",
           "subject_type": "symbol",
-          "subject_id": "dev/test-rebuild-readback.mjs:the two-arm gate header",
+          "subject_id": "mcp-server/src/invariants.ts:enforcePhasePrerequisites",
           "epistemic_kind": "observation",
-          "statement": "Step 1 of a gate in this repository: the file states the conditions that turn it red and the false greens it cannot exclude, and scrubs the launcher's crash signatures out of its own output, so an absent deliverable reads as a failed assertion rather than as a gate that never reached one.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "Four of the five status transitions carry a mechanical prerequisite, each naming the deliverable of the phase being left: `structural` requires a non-empty file ledger and at least one current claim under the subsystem's prefix; `concerns` requires a registered subsystem-survey artifact; `adversarial` requires at least one disposition; `mapped` requires a recorded challenge outcome on every current claim. enforceForwardPrerequisites walks every rung between the current status and the target, so a skipped phase names itself rather than being silently jumped, and it treats an insert opening at a later status as an advance from unmapped because upsert_subsystem is a status writer too.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 38,
+              "id": 19,
               "kind": "code-verified",
-              "file_path": "dev/test-rebuild-readback.mjs",
-              "symbol": "the two-arm gate header",
-              "line_range": "1-60",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/invariants.ts",
+              "symbol": "enforcePhasePrerequisites / enforceForwardPrerequisites",
+              "line_range": "303-398",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-11-C01",
-          "claim_key": "B-11/key-type/github-workflows-test-yml-pecia-defects",
+          "claim_id": "B-03-c3",
+          "claim_key": "B-03/key-type/mcp-server-src-tools-subsystems-ts-reset-subsystem",
           "subject_type": "symbol",
-          "subject_id": ".github/workflows/test.yml:pecia-defects",
+          "subject_id": "mcp-server/src/tools/subsystems.ts:reset_subsystem",
           "epistemic_kind": "observation",
-          "statement": "A gate whose subject may be unavailable is opt-in at the job level rather than skipped inside a passing job: a skipped job reads as not-run, while a passing step that silently did nothing does not. The comment names three zero-denominator greens already found in this repository as the reason the distinction is made in the workflow rather than in the script.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "statement": "reset_subsystem is the only path that regresses knowledge depth, and it clears dependent rows in one transaction so an interrupted reset cannot leave a subsystem at an earlier status carrying survey output from a later one. Dispositions, findings, field notes, xrefs and artifacts always go; the file ledger and every claim under the subsystem's prefix go only when the target is scoping or earlier, on the stated reasoning that a reset below structural discards that phase. Claim matching uses substr rather than LIKE because a subsystem id may contain wildcard characters, and it removes historical versions with current ones so no history is left with a hole. The xref deletion matches either endpoint, so a reset also removes edges other subsystems recorded toward this one.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 37,
-              "kind": "contract-stated",
-              "file_path": ".github/workflows/test.yml",
-              "symbol": "pecia-defects",
-              "line_range": "29-50",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 20,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/subsystems.ts",
+              "symbol": "reset_subsystem",
+              "line_range": "285-345",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         },
         {
-          "claim_id": "B-11-C03",
-          "claim_key": "B-11/state-container",
-          "subject_type": "subsystem",
-          "subject_id": "B-11",
-          "epistemic_kind": "inference",
-          "statement": "B-11 keeps no live state. What it keeps are committed receipts and fixtures — the A0 historical baseline, the rebuild receipts, the generated tool inventory — each written once and re-read by a later run. A receipt is durable state with a stated expiry of meaning: it proves what was true when it was written and nothing about now.",
-          "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389",
+          "claim_id": "B-03-c5",
+          "claim_key": "B-03/seam/S-10",
+          "subject_type": "seam",
+          "subject_id": "S-10",
+          "epistemic_kind": "observation",
+          "statement": "From this side, what S-10's foreign reference resolves against is a finding id and its current resolution state, and this subsystem guarantees only the second of those. The resolution chain is append-only and its terminal states are meaningful: the resolver exits 0 only for verified-fixed or ruled-out, and fixed-pending-verification deliberately does not resolve, so Pecia inherits the distinction between claiming a repair and proving one rather than re-deciding it. What this side does not guarantee is that a finding id means the same thing over time. finding_id is caller-supplied, carries no store generation, and a rebuilt store may mint it again for an unrelated finding; the resolver reads whatever store is at .amanuensis/memory.db now and cannot tell one generation from another.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
           "evidence": [
             {
-              "id": 37,
-              "kind": "contract-stated",
-              "file_path": ".github/workflows/test.yml",
-              "symbol": "pecia-defects",
-              "line_range": "29-50",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "id": 19,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/invariants.ts",
+              "symbol": "enforcePhasePrerequisites / enforceForwardPrerequisites",
+              "line_range": "303-398",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             },
             {
-              "id": 38,
+              "id": 20,
               "kind": "code-verified",
-              "file_path": "dev/test-rebuild-readback.mjs",
-              "symbol": "the two-arm gate header",
-              "line_range": "1-60",
-              "ref_sha": "258ccd28fc199876e82655111d3e532b6757e389"
+              "file_path": "mcp-server/src/tools/subsystems.ts",
+              "symbol": "reset_subsystem",
+              "line_range": "285-345",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-03-c1",
+          "claim_key": "B-03/state-container/mcp-server-src-tools-dispositions-ts-set-disposition",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/tools/dispositions.ts:set_disposition",
+          "epistemic_kind": "observation",
+          "statement": "A disposition cannot be written without an evidence anchor, an evidence-quality tag, a rationale, a revision that resolves in the bound workspace, and a pass type. Three of its vocabulary-bearing fields — classification, evidence_quality and pass_type — go through requireEnum against the generated vocabulary source rather than being accepted as free text. The methodology's central constraint is therefore a refusal in code, not a request in prose.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 21,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/dispositions.ts",
+              "symbol": "set_disposition",
+              "line_range": "26-95",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-03-c6",
+          "claim_key": "B-03/state-container/mcp-server-src-tools-findings-ts-add-finding",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/tools/findings.ts:add_finding",
+          "epistemic_kind": "observation",
+          "statement": "add_finding writes the finding row and its opening resolution event in one step, so a finding cannot exist without a resolution state, and it resolves ref_sha at ingress as the revision that opening event is placed at. The identifier is taken from the caller through requireString with only a documented convention behind its shape, and the primary key on finding_id is the only uniqueness constraint it carries — scoped to one store, with nothing in the row recording which store generation minted it. That is the property S-10's foreign reference depends on and does not get.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 37,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/findings.ts",
+              "symbol": "add_finding",
+              "line_range": "72-200",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
             }
           ]
         }
       ],
       "seams": [
-        "SM-09"
+        "S-01",
+        "S-06",
+        "S-08",
+        "S-10"
       ],
       "artifact": {
-        "path": "B-11-development-harness-and-gates.md",
-        "content_hash": "54e5f6c5b06dd4e7e3967398c120b20741ba68486314cae489d336bb938f0554",
-        "bytes": 3753
+        "path": "B-03-knowledge-tools.md",
+        "content_hash": "bef6ba8824d8520f42425ce615e361ee3563b23cb226f4ad05e2ee52d014983c",
+        "bytes": 3817
       }
     },
     {
-      "id": "B-12",
-      "name": "Vendored research corpus",
-      "status": "deferred",
-      "layer": "corpus",
+      "id": "B-05",
+      "name": "Materializer: human projection, read-back, HTML",
+      "status": "mapped",
+      "layer": "projection",
+      "priority": 2,
+      "files": {
+        "examined": 8,
+        "candidate": 3,
+        "generated-ignore": 1
+      },
+      "claims": [
+        {
+          "claim_id": "B-05-c4",
+          "claim_key": "B-05/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-05",
+          "epistemic_kind": "inference",
+          "statement": "The materializer is a short-lived single-threaded process that reads and exits. Its only concurrency relationship is with the writer it shares a store with, and it is resolved by SQLite rather than by coordination: mode=ro with WAL means the reader does not block the writer and sees a consistent snapshot. It takes no lock and does not consult active_write_locks, so a render concurrent with a survey reflects whatever was committed when its queries ran — which is correct for a projection that is explicitly not authority and dated by the revision it records.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 22,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/db.py",
+              "symbol": "missing_views / REQUIRED_VIEWS",
+              "line_range": "42-88",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-05-c3",
+          "claim_key": "B-05/flow/clean-publish/01",
+          "subject_type": "symbol",
+          "subject_id": "materializer/amanuensis_materializer/core.py:Materializer",
+          "epistemic_kind": "observation",
+          "statement": "A publish renders every planned page, rewrites cross-links, writes the projection contract recording a sha256 per page, and only then runs the verifier — so the contract the content axis compares against describes the final bytes rather than an intermediate state, and a link rewrite that corrupted a page is caught rather than hidden by a stale hash. When verify_readback is set and the result is not ok, the publish does not promote. This ordering is what makes the two-step publication meaningful: dev/promote-docs.mjs refuses a source whose bytes have drifted from the contract it carries, which can only detect drift if the contract was written last.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 23,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/readback.py",
+              "symbol": "ProjectionVerifier",
+              "line_range": "1-10, 184-235",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 24,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/core.py",
+              "symbol": "Materializer.run",
+              "line_range": "407-430",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-05-c1",
+          "claim_key": "B-05/key-type/materializer-amanuensis-materializer-readback-py-projectionverifier",
+          "subject_type": "symbol",
+          "subject_id": "materializer/amanuensis_materializer/readback.py:ProjectionVerifier",
+          "epistemic_kind": "observation",
+          "statement": "Read-back is three independent axes, each answering a different question and each able to fail alone: state, that every authoritative object has exactly one durable marker in the output — not zero, and not two pages; coverage, that every planned page and every recorded local cross-link is present and resolves; content, that the finished page bytes match the receipt written after cross-link rewriting. write_contract records a sha256 per page, which is what makes the content axis a byte comparison rather than a second render compared to the first.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 23,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/readback.py",
+              "symbol": "ProjectionVerifier",
+              "line_range": "1-10, 184-235",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-05-c5",
+          "claim_key": "B-05/seam/S-04",
+          "subject_type": "seam",
+          "subject_id": "S-04",
+          "epistemic_kind": "observation",
+          "statement": "From this side, S-04 is a one-way dependency this party cannot repair. It opens the store read-only and applies no schema, so the two reader views exist only if the writer created them; a store last opened by an older server arrives without them. The response is to probe once at the start of a render and refuse, naming the cause and the fix — open it once with the current server — rather than inlining the view's predicate, because the same definition in two places is the drift the views were introduced to remove. The same two names are therefore declared independently on both sides of the process boundary, which is duplication accepted deliberately where a shared constant cannot cross.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 22,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/db.py",
+              "symbol": "missing_views / REQUIRED_VIEWS",
+              "line_range": "42-88",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-05-c2",
+          "claim_key": "B-05/state-container/materializer-amanuensis-materializer-db-py-open-ro",
+          "subject_type": "symbol",
+          "subject_id": "materializer/amanuensis_materializer/db.py:open_ro",
+          "epistemic_kind": "observation",
+          "statement": "The materializer holds the store read-only for the life of one render: it opens `file:<path>?mode=ro&amp;immutable=0` so a WAL reader does not block the writer, and it applies no schema. That makes it structurally incapable of repairing what it reads, which is why the required-view probe refuses rather than falling back — the module comment states that an inline copy of a view's predicate would put the same definition in two places, which is the drift the views were introduced to remove.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 22,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/db.py",
+              "symbol": "missing_views / REQUIRED_VIEWS",
+              "line_range": "42-88",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-04",
+        "S-05",
+        "S-07"
+      ],
+      "artifact": {
+        "path": "B-05-materializer.md",
+        "content_hash": "4e00ea4996f4c4afa2a298c4e4e55707055723f7c0af573ce5bbf4ded117a902",
+        "bytes": 3470
+      }
+    },
+    {
+      "id": "B-06",
+      "name": "Packaging, installer, and host activation",
+      "status": "mapped",
+      "layer": "distribution",
+      "priority": 3,
+      "files": {
+        "examined": 11,
+        "candidate": 1
+      },
+      "claims": [
+        {
+          "claim_id": "B-06-c3",
+          "claim_key": "B-06/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-06",
+          "epistemic_kind": "inference",
+          "statement": "The installer is a short-lived single-threaded CLI with no concurrency of its own, and it records that rather than omitting the category. Its exposure is interleaving with a human or another tool editing the same host configuration file, and that is addressed not by locking but by the digest: a plan is bound to the bytes it was computed from and refuses to apply against different bytes. The one shared resource it creates is the user-scoped MCP registration that every subsequent server process reads, which is the S-03 seam.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 25,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/cli.ts",
+              "symbol": "doctorReport / repair plan",
+              "line_range": "432-476, 613-920",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-06-c1",
+          "claim_key": "B-06/flow/digest-bound-repair/01",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/cli.ts:doctorReport",
+          "epistemic_kind": "observation",
+          "statement": "Repairing host configuration is diagnosis-first and dry-run-first, and the two halves are bound together by a digest. `doctor` reports diagnoses each carrying a remediation; `--repair --dry-run` emits a plan bound to a digest of the configuration it inspected; `--apply-plan &lt;id&gt;` applies only that exact plan, so configuration that changed between diagnosis and repair is refused rather than rewritten under a stale reading. Every mutating action pushes a timestamped backup action ahead of itself, and configuration Amanuensis does not manage is reported with a remediation rather than rewritten.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 25,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/cli.ts",
+              "symbol": "doctorReport / repair plan",
+              "line_range": "432-476, 613-920",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-06-c2",
+          "claim_key": "B-06/key-type/mcp-server-src-codex-host-ts-startup-probe-timeout-ms",
+          "subject_type": "symbol",
+          "subject_id": "mcp-server/src/codex-host.ts:STARTUP_PROBE_TIMEOUT_MS",
+          "epistemic_kind": "observation",
+          "statement": "The activation-path time bound is a single exported constant of 5000 milliseconds, defined in this subsystem and applied here and at all six subprocess sites in project.ts, each with killSignal SIGKILL. It is the repository's answer to a synchronous startup path: the calls stay blocking and are bounded rather than being made asynchronous. The constant is exported and one import away from index.ts, which does not use it — so the bound's coverage is a matter of which modules chose to import it rather than of where the boundary is.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 26,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/codex-host.ts",
+              "symbol": "STARTUP_PROBE_TIMEOUT_MS",
+              "line_range": "12, 34-56",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-06-c4",
+          "claim_key": "B-06/seam/S-03",
+          "subject_type": "seam",
+          "subject_id": "S-03",
+          "epistemic_kind": "observation",
+          "statement": "From this side, what S-03 writes is a launch command and a scope, and deliberately not a workspace. A user-scoped Codex registration launches the server with no hard-coded repository path, so binding is decided by the cwd the host happens to be in, which is what lets one installation serve every repository. The installer therefore treats an explicit workspace argument in an existing registration as a diagnosis — inspectCodexRegistration and hasExplicitWorkspaceArgument exist to find one — rather than as configuration to preserve. What this side cannot guarantee is that the host launches in the directory the user means; that is the server's cwd resolution, and the trust state Codex keeps is a host-side effect outside the managed surface.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 25,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/cli.ts",
+              "symbol": "doctorReport / repair plan",
+              "line_range": "432-476, 613-920",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 26,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/codex-host.ts",
+              "symbol": "STARTUP_PROBE_TIMEOUT_MS",
+              "line_range": "12, 34-56",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-03"
+      ],
+      "artifact": {
+        "path": "B-06-packaging-activation.md",
+        "content_hash": "66ea20c5b1598d762a31728368a0b7b6a609bebbf946f7d262c3e817afcdbb0f",
+        "bytes": 3392
+      }
+    },
+    {
+      "id": "B-07",
+      "name": "Gates, evidence custody, and CI",
+      "status": "mapped",
+      "layer": "validation",
+      "priority": 3,
+      "files": {
+        "examined": 11,
+        "candidate": 3
+      },
+      "claims": [
+        {
+          "claim_id": "B-07-c4",
+          "claim_key": "B-07/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-07",
+          "epistemic_kind": "inference",
+          "statement": "Gates run as independent short-lived processes and are designed not to share state: those that need a store build one in a throwaway workspace rather than using the repository's, and the rebuild procedure's own gate runs the real procedure against a temporary directory so the sequence is executed rather than described. The one shared-state hazard is a gate reading the live untracked store while a survey is writing it, which is why the live arm is read-only and secondary to the receipt arm. CI has no live store at all, so the concurrency exposure exists only on a developer machine.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 30,
+              "kind": "code-verified",
+              "file_path": "dev/test-rebuild-coverage.mjs",
+              "symbol": "two-arm contract header",
+              "line_range": "1-58",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-07-c2",
+          "claim_key": "B-07/flow/two-arm-gate/01",
+          "subject_type": "symbol",
+          "subject_id": "dev/test-rebuild-coverage.mjs:check",
+          "epistemic_kind": "observation",
+          "statement": "The recent gates share one shape, stated in each header, and it is a direct response to this repository's recorded zero-denominator failures. Each has two arms — a committed receipt whose every property is re-derived rather than trusted from a summary, and the live subject wherever one exists, held to the same invariants — and each prints which mode it ran in, because a receipt nobody can contradict is a claim about a claim. Each enumerates the conditions that turn it red and states the false greens it cannot exclude. Each scrubs launcher crash signatures from its output so an absent deliverable reads as a failed assertion rather than as a gate that never ran, and each asserts its own presence in the CI workflow.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 30,
+              "kind": "code-verified",
+              "file_path": "dev/test-rebuild-coverage.mjs",
+              "symbol": "two-arm contract header",
+              "line_range": "1-58",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-07-c1",
+          "claim_key": "B-07/key-type/github-workflows-test-yml-jobs-steps-run",
+          "subject_type": "symbol",
+          "subject_id": ".github/workflows/test.yml:jobs.steps.run",
+          "epistemic_kind": "observation",
+          "statement": "Of the 106 gate files in the tree — 41 under dev/, 58 under mcp-server/, 7 under materializer/ — exactly four do not run in CI, and three of those are performance suites deliberately excluded from the correctness list. The fourth is dev/test-activation-evidence.mjs. Every materializer test runs. Several recent gates additionally assert their own presence in this workflow as one of their red conditions, which makes \"the gate does not run in CI\" a failure the gate itself reports rather than a silence.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 29,
+              "kind": "code-verified",
+              "file_path": ".github/workflows/test.yml",
+              "symbol": "jobs.steps.run",
+              "line_range": "11-400",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-07-c5",
+          "claim_key": "B-07/seam/S-09",
+          "subject_type": "seam",
+          "subject_id": "S-09",
+          "epistemic_kind": "observation",
+          "statement": "From this side, S-09's problem is that the subject is untracked and CI never has it. The contract adopted is: write a receipt from the store at a stated revision, re-derive every property from the receipt rather than trusting a summary, additionally read the live store wherever one exists, and print which mode ran. The receipt arm is what CI executes; the live arm is what stops the receipt being unfalsifiable. The obligation this places on the other party is that the receipt must be regenerated whenever the store changes — and this rebuild demonstrated the failure mode: the dogfood gate's three live-store assertions went red purely because the committed receipt still described the discarded store, while its receipt arm stayed green.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 27,
+              "kind": "config-asserted",
+              "file_path": ".github/workflows/test.yml",
+              "symbol": "gate-coverage",
+              "line_range": "1-400",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 30,
+              "kind": "code-verified",
+              "file_path": "dev/test-rebuild-coverage.mjs",
+              "symbol": "two-arm contract header",
+              "line_range": "1-58",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-07-c3",
+          "claim_key": "B-07/state-container/dev-promote-docs-mjs-promote",
+          "subject_type": "symbol",
+          "subject_id": "dev/promote-docs.mjs:promote",
+          "epistemic_kind": "observation",
+          "statement": "Promotion refuses six things in a stated order chosen so that a refusal never depends on a store or an interpreter being present, and writes nothing until all six pass. It then stages a copy beside the destination, renames it into place, and holds the previous contents in a backup until the promoted tree has been verified at the destination path — a red post-promotion read-back restores the backup and exits non-zero. The bytes committed are therefore the bytes verified at the path they were committed to. Run during this pass: 67 files promoted, read-back green on all three axes at docs.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 28,
+              "kind": "code-verified",
+              "file_path": "dev/promote-docs.mjs",
+              "symbol": "refusal order",
+              "line_range": "22-48",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-09"
+      ],
+      "artifact": {
+        "path": "B-07-gates-ci.md",
+        "content_hash": "e6a2fc073f5284e5663514c3944d7517bac95694d60b17398d12d1dc301df2fc",
+        "bytes": 3783
+      }
+    },
+    {
+      "id": "B-01",
+      "name": "Survey methodology and agent contracts",
+      "status": "mapped",
+      "layer": "methodology",
+      "priority": 4,
+      "files": {
+        "examined": 12,
+        "candidate": 4
+      },
+      "claims": [
+        {
+          "claim_id": "B-01-c3",
+          "claim_key": "B-01/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-01",
+          "epistemic_kind": "inference",
+          "statement": "This subsystem is prose and executes nothing, so it has no concurrency of its own; the category is recorded rather than omitted. What it does have is a temporal contract that behaves like one: the skill instructs the coordinator to commit every checkpoint, on the stated grounds that the storage directory is a Git repository and commit_phase_gate is how the methodology recovers from a mid-session crash. Two agents surveying one repository at once is addressed nowhere in the prose, and the advisory lock the server provides is mentioned in no phase reference.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 33,
+              "kind": "contract-stated",
+              "file_path": ".claude/skills/amanuensis/SKILL.md",
+              "symbol": "authorized-claims",
+              "line_range": "128-152",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-01-c2",
+          "claim_key": "B-01/flow/authorized-claims-ladder/01",
+          "subject_type": "symbol",
+          "subject_id": ".claude/skills/amanuensis/SKILL.md:authorized-claims",
+          "epistemic_kind": "observation",
+          "statement": "The methodology's central epistemic constraint is a ladder tying authorized claims to recorded depth: unmapped authorizes none, scoping file scope only, structural types and flows but no correctness claims, concerns evidenced concern decisions, adversarial work in progress, mapped a workflow completion mark that the skill itself says is not proof every finding survived challenge — the underlying records govern. Enforcement is split: the server refuses status transitions whose deliverable is missing, and the rest is stated as an instruction to the model, which the skill frames honestly by requiring any claim exceeding its source's authorized level to be flagged as speculative.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 33,
+              "kind": "contract-stated",
+              "file_path": ".claude/skills/amanuensis/SKILL.md",
+              "symbol": "authorized-claims",
+              "line_range": "128-152",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-01-c1",
+          "claim_key": "B-01/key-type/claude-skills-amanuensis-references-phase-2-structural-md-symbol-slug",
+          "subject_type": "symbol",
+          "subject_id": ".claude/skills/amanuensis/references/phase-2-structural.md:symbol-slug",
+          "epistemic_kind": "observation",
+          "statement": "The stable claim_key rule is defined here and nowhere else that binds a writer. It specifies the slug as the whole path:symbol pair lowercased with non-alphanumerics collapsed, states why the path must be included — a symbol-only slug makes two files defining Config collide, and the unique index refuses the second reading rather than recording it, leaving the inventory silently short — and cites the incident that produced the rule. The server's add_claim validates the category prefix and stops, so this prose is the entire enforcement a writer sees at the moment of writing.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 31,
+              "kind": "contract-stated",
+              "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
+              "symbol": "symbol-slug",
+              "line_range": "107-132",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-01-c4",
+          "claim_key": "B-01/seam/S-08",
+          "subject_type": "seam",
+          "subject_id": "S-08",
+          "epistemic_kind": "observation",
+          "statement": "From this side, S-08 carries the fuller contract and the weaker enforcement, and the gap runs in both directions. The prose states obligations the server does not check — most consequentially the stable claim_key shape, which phase-2-structural.md defines with its rationale and which add_claim does not validate. And it offers capabilities the server refuses: phase-4-adversarial.md lists `overturned` as an outcome available when a claim is wrong at the current revision, which is exactly the case invalidate_claim rejects, so the pass is instructed to do something it cannot do. Both were met during this survey, at the moment of writing rather than in review.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 31,
+              "kind": "contract-stated",
+              "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
+              "symbol": "symbol-slug",
+              "line_range": "107-132",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 32,
+              "kind": "contract-stated",
+              "file_path": ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+              "symbol": "outcome vocabulary",
+              "line_range": "96-152",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-08"
+      ],
+      "artifact": {
+        "path": "B-01-methodology.md",
+        "content_hash": "5cd3d68a845469b5cd3e1b7b604cfd1d05aae1f01c8c859fc74d6c818f8ebdd9",
+        "bytes": 3189
+      }
+    },
+    {
+      "id": "B-08",
+      "name": "Records: design, research, published projection, execution ledger",
+      "status": "mapped",
+      "layer": "records",
       "priority": 5,
       "files": {
-        "deferred-with-reason": 3
+        "examined": 11,
+        "candidate": 3
       },
-      "claims": [],
-      "seams": [],
-      "artifact": null,
-      "deferred_reason": "Deferred, not omitted: 103 tracked files that no part of the running system imports or executes. Recorded so the census counts them rather than reporting complete coverage over a repository it never looked at."
+      "claims": [
+        {
+          "claim_id": "B-08-c3",
+          "claim_key": "B-08/concurrency",
+          "subject_type": "subsystem",
+          "subject_id": "B-08",
+          "epistemic_kind": "inference",
+          "statement": "These are records rather than running code, so the ordering that matters is between a record and the thing it describes, not between two processes. The Pecia ledger is append-only and treats closure as final, which makes ordering explicit rather than implicit. The one genuine multi-writer surface is the Pecia v2 timeline, which lives in Git's common directory rather than on a branch — the adoption record states that a clone must reconstruct or sync it before writing, and that the committed manifest is projection-only and deliberately does not claim machine-local timeline authority.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 35,
+              "kind": "contract-stated",
+              "file_path": "dev/pecia-dogfood.md",
+              "symbol": "operating-contract",
+              "line_range": "1-60",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-08-c2",
+          "claim_key": "B-08/flow/reference-not-copy/01",
+          "subject_type": "symbol",
+          "subject_id": "dev/pecia-dogfood.md:operating-contract",
+          "epistemic_kind": "observation",
+          "statement": "Execution custody refers rather than copies, and the two systems keep one distinction each rather than re-deciding the other's. Amanuensis owns finding state; Pecia owns scheduling. `fixed-pending-verification` maps to `in-progress` and never to `done`, because both systems independently refuse to let \"fixed\" mean \"verified\", and the resolver licenses a closure only for `verified-fixed` or `ruled-out`. Because Pecia treats closure as final, a finding that returns after its defect closed gets a successor carrying `discovered_from` rather than an illegal reopen, and a label resolves to that chain's tail. The successor mechanism exists on the ledger side only.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 35,
+              "kind": "contract-stated",
+              "file_path": "dev/pecia-dogfood.md",
+              "symbol": "operating-contract",
+              "line_range": "1-60",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-08-c4",
+          "claim_key": "B-08/seam/S-07",
+          "subject_type": "seam",
+          "subject_id": "S-07",
+          "epistemic_kind": "observation",
+          "statement": "From this side, the tracked docs tree is a committed artifact that no one edits by hand and that a gate holds to the contract the materializer wrote: every page the promoted contract names must byte-match at the path it was committed to, every promoted file must be tracked so the commit contains what was verified, and the destination must hold no file no contract page or receipt artifact claims. The obligation this side accepts is therefore to commit exactly what the promotion verified and nothing else — the docs tree is not a place to add a page.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 28,
+              "kind": "code-verified",
+              "file_path": "dev/promote-docs.mjs",
+              "symbol": "refusal order",
+              "line_range": "22-48",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            },
+            {
+              "id": 35,
+              "kind": "contract-stated",
+              "file_path": "dev/pecia-dogfood.md",
+              "symbol": "operating-contract",
+              "line_range": "1-60",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        },
+        {
+          "claim_id": "B-08-c1",
+          "claim_key": "B-08/state-container/pecia-work-jsonl-amanuensis-references",
+          "subject_type": "symbol",
+          "subject_id": ".pecia/work.jsonl:amanuensis-references",
+          "epistemic_kind": "observation",
+          "statement": "The committed ledger holds 163 records, 22 of which carry an `amanuensis:&lt;finding_id&gt;` foreign reference into the conspectus. Eight of those defects are closed, one is in-progress, and thirteen are open. The reference is attached as resolvable evidence only where it can resolve, because attaching it to open defects made `pecia audit` report legitimately-open work as unresolvable and destroyed the one signal that should mean a closure lost its licence. The eight closed records are therefore exactly the set whose closure licence depends on a finding the store must still hold.",
+          "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          "evidence": [
+            {
+              "id": 34,
+              "kind": "code-verified",
+              "file_path": ".pecia/work.jsonl",
+              "symbol": "amanuensis-references",
+              "line_range": "1-163",
+              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
+            }
+          ]
+        }
+      ],
+      "seams": [
+        "S-07",
+        "S-10"
+      ],
+      "artifact": {
+        "path": "B-08-records.md",
+        "content_hash": "7a314c3b6a9b9dc5bed07a0e2c506525df0015ec75763f67ee0e9773d500f0c1",
+        "bytes": 3439
+      }
     }
   ],
   "registry_ownership": {
     "mcp-server/src/index.ts": [
-      "B-01"
+      "B-02"
     ],
     "mcp-server/src/codex-host.ts": [
-      "B-02"
+      "B-06"
     ],
     "mcp-server/src/db.ts": [
       "B-02"
     ],
     "mcp-server/src/helpers.ts": [
-      "B-01",
-      "B-04"
+      "B-02"
     ],
     "mcp-server/src/project.ts": [
       "B-02"
     ],
-    "mcp-server/src/tools/artifacts.ts": [
-      "B-04"
-    ],
+    "mcp-server/src/tools/artifacts.ts": [],
     "mcp-server/src/tools/chorusmith-adapter.ts": [],
     "mcp-server/src/tools/claims.ts": [
       "B-04"
     ],
     "mcp-server/src/tools/codebase-brief.ts": [],
     "mcp-server/src/tools/compare.ts": [],
-    "mcp-server/src/tools/composition.ts": [],
+    "mcp-server/src/tools/composition.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/concerns.ts": [
-      "B-05"
+      "B-03"
     ],
     "mcp-server/src/tools/contradictions.ts": [
-      "B-05"
+      "B-03"
     ],
     "mcp-server/src/tools/crosswalk.ts": [],
-    "mcp-server/src/tools/dashboard.ts": [],
+    "mcp-server/src/tools/dashboard.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/decisions.ts": [],
     "mcp-server/src/tools/design-session.ts": [],
-    "mcp-server/src/tools/diagnosticity.ts": [],
+    "mcp-server/src/tools/diagnosticity.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/dispatch.ts": [],
     "mcp-server/src/tools/dispositions.ts": [
-      "B-05"
+      "B-03"
     ],
     "mcp-server/src/tools/evaluation.ts": [],
     "mcp-server/src/tools/evidence.ts": [
-      "B-04"
+      "B-03"
     ],
-    "mcp-server/src/tools/field-notes.ts": [],
+    "mcp-server/src/tools/field-notes.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/files.ts": [
-      "B-04"
+      "B-03"
     ],
     "mcp-server/src/tools/findings.ts": [
-      "B-05"
+      "B-03"
     ],
-    "mcp-server/src/tools/git.ts": [
-      "B-07"
-    ],
+    "mcp-server/src/tools/git.ts": [],
     "mcp-server/src/tools/impact.ts": [
-      "B-07"
+      "B-03"
     ],
     "mcp-server/src/tools/learning.ts": [],
-    "mcp-server/src/tools/locks.ts": [],
+    "mcp-server/src/tools/locks.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/locus.ts": [
-      "B-06"
+      "B-04"
     ],
     "mcp-server/src/tools/logging.ts": [],
     "mcp-server/src/tools/materialize.ts": [
-      "B-09"
+      "B-03"
     ],
-    "mcp-server/src/tools/open-questions.ts": [],
+    "mcp-server/src/tools/open-questions.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/project.ts": [],
     "mcp-server/src/tools/refresh.ts": [
-      "B-07"
+      "B-03"
     ],
     "mcp-server/src/tools/research.ts": [],
     "mcp-server/src/tools/resolution.ts": [
-      "B-05"
+      "B-03"
     ],
     "mcp-server/src/tools/revalidation.ts": [],
-    "mcp-server/src/tools/review-analysis.ts": [],
+    "mcp-server/src/tools/review-analysis.ts": [
+      "B-03"
+    ],
     "mcp-server/src/tools/review-session.ts": [],
     "mcp-server/src/tools/review.ts": [],
     "mcp-server/src/tools/seams.ts": [
-      "B-04"
+      "B-03"
     ],
     "mcp-server/src/tools/stale.ts": [
-      "B-07"
+      "B-03"
     ],
     "mcp-server/src/tools/storage-history.ts": [],
     "mcp-server/src/tools/subsystems.ts": [
+      "B-03"
+    ],
+    "mcp-server/src/tools/vocabulary.ts": [
       "B-04"
     ],
-    "mcp-server/src/tools/vocabulary.ts": [],
     "mcp-server/src/tools/xrefs.ts": [
       "B-04"
     ]
   },
   "registry_crossings": [
     {
-      "from_id": "B-01",
-      "to_id": "B-02",
+      "from_id": "B-02",
+      "to_id": "B-03",
       "via": [
-        "mcp-server/src/codex-host.ts",
-        "mcp-server/src/db.ts",
-        "mcp-server/src/project.ts"
+        "mcp-server/src/tools/composition.ts",
+        "mcp-server/src/tools/concerns.ts",
+        "mcp-server/src/tools/contradictions.ts",
+        "mcp-server/src/tools/dashboard.ts",
+        "mcp-server/src/tools/diagnosticity.ts",
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/tools/evidence.ts",
+        "mcp-server/src/tools/field-notes.ts",
+        "mcp-server/src/tools/files.ts",
+        "mcp-server/src/tools/findings.ts",
+        "mcp-server/src/tools/impact.ts",
+        "mcp-server/src/tools/locks.ts",
+        "mcp-server/src/tools/materialize.ts",
+        "mcp-server/src/tools/open-questions.ts",
+        "mcp-server/src/tools/refresh.ts",
+        "mcp-server/src/tools/resolution.ts",
+        "mcp-server/src/tools/review-analysis.ts",
+        "mcp-server/src/tools/seams.ts",
+        "mcp-server/src/tools/stale.ts",
+        "mcp-server/src/tools/subsystems.ts"
       ],
       "recorded": true
     },
     {
-      "from_id": "B-01",
+      "from_id": "B-02",
       "to_id": "B-04",
       "via": [
-        "mcp-server/src/helpers.ts",
-        "mcp-server/src/tools/artifacts.ts",
         "mcp-server/src/tools/claims.ts",
-        "mcp-server/src/tools/evidence.ts",
-        "mcp-server/src/tools/files.ts",
-        "mcp-server/src/tools/seams.ts",
-        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/tools/vocabulary.ts",
         "mcp-server/src/tools/xrefs.ts"
       ],
       "recorded": true
     },
     {
-      "from_id": "B-01",
-      "to_id": "B-05",
-      "via": [
-        "mcp-server/src/tools/concerns.ts",
-        "mcp-server/src/tools/contradictions.ts",
-        "mcp-server/src/tools/dispositions.ts",
-        "mcp-server/src/tools/findings.ts",
-        "mcp-server/src/tools/resolution.ts"
-      ],
-      "recorded": true
-    },
-    {
-      "from_id": "B-01",
+      "from_id": "B-02",
       "to_id": "B-06",
       "via": [
-        "mcp-server/src/tools/locus.ts"
-      ],
-      "recorded": true
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-07",
-      "via": [
-        "mcp-server/src/tools/git.ts",
-        "mcp-server/src/tools/impact.ts",
-        "mcp-server/src/tools/refresh.ts",
-        "mcp-server/src/tools/stale.ts"
-      ],
-      "recorded": true
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-09",
-      "via": [
-        "mcp-server/src/tools/materialize.ts"
+        "mcp-server/src/codex-host.ts"
       ],
       "recorded": true
     }
@@ -1802,85 +1387,15 @@
   "xrefs": [
     {
       "from_id": "B-01",
-      "to_id": "B-02",
+      "to_id": "B-03",
       "relationship": "dependency",
       "strength": "structural",
-      "context": "main resolves the binding and opens the store before any handler runs, so every tool call depends on B-02 having already decided which repository this process speaks for, read at mcp-server/src/index.ts:main@258ccd2",
+      "context": "The skill states the phase contract as prose and this subsystem enforces the subset of it that is mechanical, so a phase obligation the prose states and the code does not check is enforced only by a model choosing to comply. Read at mcp-server/src/invariants.ts:enforcePhasePrerequisites@7c1c1a9 which is the enforced subset in full: a ledger, a claim, an artifact, a disposition, and a challenge outcome.",
       "citations": [
         {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "main",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-04",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "the survey tools reach a client only by being concatenated into the one registry the server advertises and dispatches against, read at mcp-server/src/index.ts:main@258ccd2",
-      "citations": [
-        {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "main",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-05",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "the finding, disposition, concern, contradiction and resolution tools reach a client only through the single registry this module concatenates and dispatches against, so the resolution custody surface exists for a caller exactly when the registry carries it, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-      "citations": [
-        {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "allTools",
-          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        }
-      ]
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-06",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "the reader-lens tools are placed at the head of the advertised list deliberately — §5.5 makes list order the order a host reads — and describe_locus is also the one name the read-only annotation carve-out holds, so the registry decides both that the consumer route is reachable and that it is annotated as a query, read at mcp-server/src/index.ts:READ_ONLY_TOOLS@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-      "citations": [
-        {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "READ_ONLY_TOOLS",
-          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        }
-      ]
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-07",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "the git-state, staleness, change-impact and refresh tools are registered by this module and by nothing else, so the freshness surface a host can call is whatever the registry admits, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-      "citations": [
-        {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "allTools",
-          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
-        }
-      ]
-    },
-    {
-      "from_id": "B-01",
-      "to_id": "B-09",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "materialize_docs and verify_materialized_docs are dispatched through this registry, so the publication and read-back custody path is entered through the same validator and annotation rules every other tool call is, read at mcp-server/src/index.ts:allTools@0fee11b0fea10eb55d6113dd27b57ef3d41065d3",
-      "citations": [
-        {
-          "path": "mcp-server/src/index.ts",
-          "symbol": "allTools",
-          "sha": "0fee11b0fea10eb55d6113dd27b57ef3d41065d3"
+          "path": "mcp-server/src/invariants.ts",
+          "symbol": "enforcePhasePrerequisites",
+          "sha": "7c1c1a9"
         }
       ]
     },
@@ -1889,450 +1404,743 @@
       "to_id": "B-03",
       "relationship": "dependency",
       "strength": "structural",
-      "context": "the open applies schema.sql and then refuses itself if the required views are absent afterwards, so the store's shape is B-03's and the refusal is B-02's, read at mcp-server/src/db.ts:openDatabase@258ccd2",
+      "context": "index.ts imports roughly forty handler modules from tools/ and hands each the same DB getter, so every knowledge tool writes through the one handle this subsystem owns — read at mcp-server/src/index.ts:main@7c1c1a9 where allTools is assembled and ctx.db is defined as a lazy getter.",
       "citations": [
         {
-          "path": "mcp-server/src/db.ts",
-          "symbol": "openDatabase",
-          "sha": "258ccd2"
+          "path": "mcp-server/src/index.ts",
+          "symbol": "main",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
-      "from_id": "B-04",
-      "to_id": "B-01",
+      "from_id": "B-02",
+      "to_id": "B-04",
       "relationship": "dependency",
       "strength": "structural",
-      "context": "the edge contract is enforced by a shared helper the tool delegates to, not by the tool module itself, read at mcp-server/src/helpers.ts:extractWorkspaceCitations@258ccd2",
+      "context": "The reader-lens tools are registered first in the advertised list, deliberately, because list order is the order a host reads and the consumer route is the one a reader needs first. Read at mcp-server/src/index.ts:allTools@7c1c1a9 which places locusTools ahead of every other group with a comment citing spec section 5.5.",
       "citations": [
         {
-          "path": "mcp-server/src/helpers.ts",
-          "symbol": "extractWorkspaceCitations",
-          "sha": "258ccd2"
+          "path": "mcp-server/src/index.ts",
+          "symbol": "allTools",
+          "sha": "7c1c1a9"
+        }
+      ]
+    },
+    {
+      "from_id": "B-02",
+      "to_id": "B-05",
+      "relationship": "data-flow",
+      "strength": "structural",
+      "context": "The materializer opens this store from a second process and applies no schema of its own, so the two reader views exist only because this subsystem created them; that is why they are asserted on every open rather than assumed — mcp-server/src/db.ts:REQUIRED_VIEWS@7c1c1a9 names them and requireViews closes the handle and throws when either is absent.",
+      "citations": [
+        {
+          "path": "mcp-server/src/db.ts",
+          "symbol": "REQUIRED_VIEWS",
+          "sha": "7c1c1a9"
+        }
+      ]
+    },
+    {
+      "from_id": "B-02",
+      "to_id": "B-06",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "Workspace selection depends on the activation subsystem: when the Codex activation contract is set, the launch workspace comes from discoverCodexParentWorkspace rather than from process.cwd, and the startup probe bound the binding code applies is defined there too — mcp-server/src/index.ts:parseArgs@7c1c1a9 imports it from codex-host.js.",
+      "citations": [
+        {
+          "path": "mcp-server/src/index.ts",
+          "symbol": "parseArgs",
+          "sha": "7c1c1a9"
+        }
+      ]
+    },
+    {
+      "from_id": "B-03",
+      "to_id": "B-05",
+      "relationship": "data-flow",
+      "strength": "structural",
+      "context": "materialize_docs is a handler here that spawns the Python materializer as a child process and asserts the output path stays inside project storage, which is why the tool cannot be pointed at the tracked docs tree and promotion is a second explicit step. Read at mcp-server/src/tools/materialize.ts:resolveStorageOutputPath@7c1c1a9 which resolves a relative output_dir against storagePath and asserts containment.",
+      "citations": [
+        {
+          "path": "mcp-server/src/tools/materialize.ts",
+          "symbol": "resolveStorageOutputPath",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
       "from_id": "B-04",
       "to_id": "B-03",
-      "relationship": "dependency",
+      "relationship": "data-flow",
       "strength": "structural",
-      "context": "the accepted evidence kinds are filtered out of the generated vocabulary module rather than restated, so the enum source decides what a claim may rest on, read at mcp-server/src/tools/claims.ts:FILE_ANCHORED_EVIDENCE@258ccd2",
+      "context": "The reader route serves rows the survey handlers write: a claim binds evidence rows created by add_evidence and describe_locus reads them back as a locus account, so this subsystem's output is only as good as that subsystem's input. Read at mcp-server/src/tools/claims.ts:requireFileAnchoredEvidence@7c1c1a9 which resolves each evidence id and reads its kind and file_path.",
       "citations": [
         {
           "path": "mcp-server/src/tools/claims.ts",
-          "symbol": "FILE_ANCHORED_EVIDENCE",
-          "sha": "258ccd2"
+          "symbol": "requireFileAnchoredEvidence",
+          "sha": "7c1c1a9"
+        }
+      ]
+    },
+    {
+      "from_id": "B-04",
+      "to_id": "B-05",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "One enum source generates two modules in two languages, so the projection labels and orders values with the same table the server validates against; a value added on one side and not regenerated on the other is drift a --check exists to catch. Read at mcp-server/src/vocabulary.ts:SQL_CONSTRAINED_VOCABULARIES@7c1c1a9 which is the generated TypeScript half of that pair.",
+      "citations": [
+        {
+          "path": "mcp-server/src/vocabulary.ts",
+          "symbol": "SQL_CONSTRAINED_VOCABULARIES",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
       "from_id": "B-05",
-      "to_id": "B-06",
+      "to_id": "B-08",
       "relationship": "data-flow",
-      "strength": "observed",
-      "context": "the resolution state the findings tools append is what the attention lens partitions on, so an event written here changes which lens a finding appears in, read at mcp-server/src/schema.sql:finding_state_current@258ccd2",
+      "strength": "structural",
+      "context": "The rendered tree in project storage becomes the tracked docs tree only through a separate promotion step, and the projection contract written here is what that step re-verifies at the destination path before the bytes are committed. Read at materializer/amanuensis_materializer/readback.py:write_contract@7c1c1a9 which records a sha256 per page.",
       "citations": [
         {
-          "path": "mcp-server/src/schema.sql",
-          "symbol": "finding_state_current",
-          "sha": "258ccd2"
+          "path": "materializer/amanuensis_materializer/readback.py",
+          "symbol": "write_contract",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
       "from_id": "B-06",
-      "to_id": "B-03",
+      "to_id": "B-01",
       "relationship": "data-flow",
       "strength": "structural",
-      "context": "every file answer's standing state comes out of the view rather than from a predicate the reader recomputes, read at mcp-server/src/schema.sql:file_standing@258ccd2",
+      "context": "The installer copies the skill into each host's skill directory, so the methodology a host executes is a packaged copy of this repository's prose and can be a different version from the checkout that produced it. Read at mcp-server/src/cli.ts:findBundledSkill@7c1c1a9 which resolves the bundled skill source the install and upgrade paths walk.",
       "citations": [
         {
-          "path": "mcp-server/src/schema.sql",
-          "symbol": "file_standing",
-          "sha": "258ccd2"
+          "path": "mcp-server/src/cli.ts",
+          "symbol": "findBundledSkill",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
       "from_id": "B-07",
-      "to_id": "B-06",
-      "relationship": "data-flow",
-      "strength": "structural",
-      "context": "the stale flag and reason this pass writes are what turn an examined standing into examined-stale for every later answer, read at mcp-server/src/tools/git.ts:gitTools@258ccd2",
-      "citations": [
-        {
-          "path": "mcp-server/src/tools/git.ts",
-          "symbol": "gitTools",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-08",
       "to_id": "B-02",
-      "relationship": "data-flow",
-      "strength": "structural",
-      "context": "the projection reads the store the server owns, through a read-only URI that cannot create anything the store lacks, read at materializer/amanuensis_materializer/db.py:open_ro@258ccd2",
+      "relationship": "dependency",
+      "strength": "observed",
+      "context": "The gate that proves the activation path is time-bounded imports this subsystem's modules directly and runs them against a deliberately slow git on PATH, which makes the gate's coverage exactly the set of modules it imports. Read at mcp-server/test-startup-bounds.mjs:imports@7c1c1a9 which loads dist/codex-host.js and dist/project.js and nothing else.",
       "citations": [
         {
-          "path": "materializer/amanuensis_materializer/db.py",
-          "symbol": "open_ro",
-          "sha": "258ccd2"
+          "path": "mcp-server/test-startup-bounds.mjs",
+          "symbol": "imports",
+          "sha": "7c1c1a9"
+        }
+      ]
+    },
+    {
+      "from_id": "B-07",
+      "to_id": "B-05",
+      "relationship": "dependency",
+      "strength": "structural",
+      "context": "The promotion script drives the materializer's own read-back through its CLI in readback-only mode rather than reimplementing the three axes, so the gate and the projection agree by construction rather than by two implementations staying in step. Read at dev/promote-docs.mjs:promote@7c1c1a9 which invokes the same code path verify_materialized_docs executes.",
+      "citations": [
+        {
+          "path": "dev/promote-docs.mjs",
+          "symbol": "promote",
+          "sha": "7c1c1a9"
         }
       ]
     },
     {
       "from_id": "B-08",
-      "to_id": "B-04",
-      "relationship": "data-flow",
-      "strength": "observed",
-      "context": "the topology page is rendered from recorded xrefs rows and from nothing else, so an edge exists on the page because a survey recorded it here, read at mcp-server/src/tools/xrefs.ts:xrefTools@258ccd2",
-      "citations": [
-        {
-          "path": "mcp-server/src/tools/xrefs.ts",
-          "symbol": "xrefTools",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-08",
-      "to_id": "B-09",
-      "relationship": "data-flow",
-      "strength": "structural",
-      "context": "the rendered page list is what the contract is written over, so the render decides the denominator the read-back then verifies, read at materializer/amanuensis_materializer/readback.py:write_contract@258ccd2",
-      "citations": [
-        {
-          "path": "materializer/amanuensis_materializer/readback.py",
-          "symbol": "write_contract",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-09",
       "to_id": "B-03",
       "relationship": "dependency",
-      "strength": "observed",
-      "context": "the state axis's denominator is the stale ledger rows the schema defines, split by the classification column rather than pooled, read at materializer/amanuensis_materializer/readback.py:LEDGER_STALE_SECTIONS@258ccd2",
-      "citations": [
-        {
-          "path": "materializer/amanuensis_materializer/readback.py",
-          "symbol": "LEDGER_STALE_SECTIONS",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-10",
-      "to_id": "B-03",
-      "relationship": "dependency",
-      "strength": "observed",
-      "context": "the skill names enum values in prose and is the only hand-written party to the vocabulary contract, which is why a checker reads it independently of the generated copies, read at .claude/skills/amanuensis/SKILL.md:Autonomous@258ccd2",
-      "citations": [
-        {
-          "path": ".claude/skills/amanuensis/SKILL.md",
-          "symbol": "Autonomous",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-10",
-      "to_id": "B-04",
-      "relationship": "dependency",
       "strength": "structural",
-      "context": "the structural phase's instructions decide which tools a survey calls and with what claim_key shapes, so the record's form is set here before any handler sees it, read at .claude/skills/amanuensis/references/phase-2-structural.md:Record@258ccd2",
+      "context": "The Pecia ledger holds defect records whose evidence is the foreign reference amanuensis: plus a finding id, and a resolver opens this store to answer them, so a scheduling system outside the conspectus depends on this subsystem's finding ids and resolution states remaining meaningful. Read at mcp-server/src/tools/findings.ts:add_finding@7c1c1a9 where finding_id is taken from the caller with no generation component.",
       "citations": [
         {
-          "path": ".claude/skills/amanuensis/references/phase-2-structural.md",
-          "symbol": "Record",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-11",
-      "to_id": "B-01",
-      "relationship": "dependency",
-      "strength": "structural",
-      "context": "the gates drive spawned server processes over the protocol rather than importing handlers, so what they exercise is the built server a host would launch, read at dev/test-rebuild-readback.mjs:client@258ccd2",
-      "citations": [
-        {
-          "path": "dev/test-rebuild-readback.mjs",
-          "symbol": "client",
-          "sha": "258ccd2"
-        }
-      ]
-    },
-    {
-      "from_id": "B-11",
-      "to_id": "B-09",
-      "relationship": "data-flow",
-      "strength": "observed",
-      "context": "the living-conspectus gate reads the committed projection receipts as its denominator, so a publish that recorded nothing gives that gate nothing to check, read at dev/check-living-conspectus.mjs:main@258ccd2",
-      "citations": [
-        {
-          "path": "dev/check-living-conspectus.mjs",
-          "symbol": "main",
-          "sha": "258ccd2"
+          "path": "mcp-server/src/tools/findings.ts",
+          "symbol": "add_finding",
+          "sha": "7c1c1a9"
         }
       ]
     }
   ],
   "seams": [
     {
-      "id": "SM-01",
-      "shared_object": "ServerContext (the resolved project and the lazily opened database handle)",
-      "party_a": "B-01",
-      "party_b": "B-02"
-    },
-    {
-      "id": "SM-02",
-      "shared_object": "memory.db and the views initializeSchema creates on it",
+      "id": "S-01",
+      "shared_object": ".amanuensis/memory.db — the SQLite store, its schema, and the single open handle",
       "party_a": "B-02",
       "party_b": "B-03"
     },
     {
-      "id": "SM-03",
-      "shared_object": "the ToolDefinition registry (every tool module's exported array)",
-      "party_a": "B-01",
+      "id": "S-02",
+      "shared_object": "The tool registry and ServerContext handed to every handler by index.ts",
+      "party_a": "B-02",
       "party_b": "B-04"
     },
     {
-      "id": "SM-04",
-      "shared_object": "file_standing and finding_state_current (the two derived views)",
-      "party_a": "B-06",
-      "party_b": "B-03"
-    },
-    {
-      "id": "SM-05",
-      "shared_object": "finding_resolution_events and the current-state view over it",
-      "party_a": "B-05",
+      "id": "S-03",
+      "shared_object": "Host MCP configuration and the cwd the server is launched in (Codex config.toml, Claude .mcp.json, VS Code mcp.json)",
+      "party_a": "B-02",
       "party_b": "B-06"
     },
     {
-      "id": "SM-06",
-      "shared_object": "memory.db, opened read-only by the projection while the server holds it read-write",
-      "party_a": "B-08",
-      "party_b": "B-02"
+      "id": "S-04",
+      "shared_object": ".amanuensis/memory.db read read-only by the materializer, a separate Python process",
+      "party_a": "B-02",
+      "party_b": "B-05"
     },
     {
-      "id": "SM-07",
-      "shared_object": ".projection-contract.json (the per-page hash receipt)",
-      "party_a": "B-08",
-      "party_b": "B-09"
+      "id": "S-05",
+      "shared_object": "mcp-server/contracts/conspectus-vocabulary.json — the single enum source and its two generated modules",
+      "party_a": "B-04",
+      "party_b": "B-05"
     },
     {
-      "id": "SM-08",
-      "shared_object": "the conspectus vocabulary (enum values and what each authorizes)",
-      "party_a": "B-10",
+      "id": "S-06",
+      "shared_object": "The claims, claim_evidence, evidence and xrefs tables — written by the survey handlers, read by the reader route",
+      "party_a": "B-04",
       "party_b": "B-03"
     },
     {
-      "id": "SM-09",
-      "shared_object": "the built server at mcp-server/dist/index.js, spawned by gates over the MCP protocol",
-      "party_a": "B-11",
-      "party_b": "B-01"
+      "id": "S-07",
+      "shared_object": "The published projection tree — .amanuensis/docs rendered, then promoted to the tracked docs/",
+      "party_a": "B-05",
+      "party_b": "B-08"
+    },
+    {
+      "id": "S-08",
+      "shared_object": "The phase contract — stated as prose in the skill, enforced as prerequisites in the server",
+      "party_a": "B-01",
+      "party_b": "B-03"
+    },
+    {
+      "id": "S-09",
+      "shared_object": "Committed receipts under dev/ and design/, and the untracked live store they describe",
+      "party_a": "B-07",
+      "party_b": "B-02"
+    },
+    {
+      "id": "S-10",
+      "shared_object": "The `amanuensis:&lt;finding_id&gt;` foreign reference from the Pecia ledger into the conspectus",
+      "party_a": "B-08",
+      "party_b": "B-03"
     }
   ],
   "storage_history": [
     {
-      "sha": "e6e6391e51514d1bb17a224d00455a82694abd89",
-      "date": "2026-09-12T10:59:11-04:00",
-      "message": "session mtyiggow-9i3vr68s ended (completed)"
+      "sha": "dd01a21fd1f5eca1b0fa3501b9c589ac0ba882a3",
+      "date": "2026-09-14T00:51:20-04:00",
+      "message": "Corrected the last malformed claim key on B-08 and re-recorded its pass"
     },
     {
-      "sha": "94aae28ede3a160bffeecef7eac38aee01a139a7",
-      "date": "2026-09-12T10:58:14-04:00",
-      "message": "session mtyifaun-25lkyutz ended (completed)"
+      "sha": "48ee448d6f453da1cb6707ad965a88b5851e4dd6",
+      "date": "2026-09-14T00:46:41-04:00",
+      "message": "Corrected two malformed claim keys and recorded seam assessments in seam notes"
     },
     {
-      "sha": "5a12ed11d4c4b623a07b73f7b07f950e20b5f200",
-      "date": "2026-09-12T10:58:14-04:00",
-      "message": "P20 regeneration · 0 claim challenge outcomes transcribed from their probe notes, 1 registry crossings recorded"
+      "sha": "426b5ec24991cbe24c27d6ce85dd04d2a92689ab",
+      "date": "2026-09-14T00:31:54-04:00",
+      "message": "Rebuild batch 6 · B-08 mapped and all 10 seams assessed: SC-1 to SC-10 dispositioned on both parties"
     },
     {
-      "sha": "cf5cc7ed4b1e7bdcd690491d4d0b2f5677a9f596",
-      "date": "2026-09-12T10:58:14-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+      "sha": "f7e813702fd349b55f20465052718c10fc2b33fe",
+      "date": "2026-09-14T00:24:41-04:00",
+      "message": "Rebuild batch 5 · B-01 mapped: the methodology, 4 claims, 20 dispositions, 1 finding"
     },
     {
-      "sha": "275b82aeb82775c1f2574ca515febb7a988e70ea",
-      "date": "2026-09-12T10:52:23-04:00",
-      "message": "session mtyi7pwh-5cag5ago ended (completed)"
+      "sha": "a6ec836d476287a058088ccffc41e2c0c642d45b",
+      "date": "2026-09-14T00:19:55-04:00",
+      "message": "Rebuild batch 4 · B-06 and B-07 mapped: packaging and validation, 9 claims, 3 edges, 40 dispositions, 1 finding"
     },
     {
-      "sha": "54f5ee2b9cdfa1f384b6d9d0e37718cbc1c807f3",
-      "date": "2026-09-12T10:51:42-04:00",
-      "message": "session mtyi6u7d-zjcwsuvz ended (completed)"
+      "sha": "416bf62ed8f875a1b5fbd488acdc6efab902fecd",
+      "date": "2026-09-14T00:10:16-04:00",
+      "message": "Rebuild batch 3 · B-03 and B-05 mapped: knowledge tools and materializer, 10 claims, 4 edges, 40 dispositions, 2 findings"
     },
     {
-      "sha": "9569bf1898fb1c1f4128472fe7def5c63387e253",
-      "date": "2026-09-12T10:51:11-04:00",
-      "message": "session mtyi67ge-c4n4m29c ended (completed)"
+      "sha": "19a965abda81f3b5ba5079a7f8881b38b0c832d0",
+      "date": "2026-09-13T23:59:40-04:00",
+      "message": "Rebuild batch 2 · B-02 and B-04 mapped: 11 claims, 8 edges, 40 dispositions, 7 findings"
     },
     {
-      "sha": "7e774382b5e8fe34186101a49365cdf5d6ffe08b",
-      "date": "2026-09-12T10:51:11-04:00",
-      "message": "P20 regeneration · 53 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
+      "sha": "04d843114332dc28cde9a2635fef12a36ec34248",
+      "date": "2026-09-13T23:35:10-04:00",
+      "message": "Rebuild batch 1 · onboarding: repository shape, runtime boundaries, stateful entities, 20 calibrated concerns, 8 subsystems, 10 seams"
     },
     {
-      "sha": "18a3296de70ed6dc8f5543d49af9c91890b1a079",
-      "date": "2026-09-12T10:51:10-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
+      "sha": "96dbb3636115ed4218cc19958a5f9f91a980c120",
+      "date": "2026-09-13T23:22:59-04:00",
+      "message": "session mu0ogwcz-6cb1gqnr ended (completed)"
     },
     {
-      "sha": "0b084b394f63f1dc3351526cdf68b4174fa4d7da",
-      "date": "2026-09-12T10:51:06-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
-    },
-    {
-      "sha": "6edefce787b8544244dd7635d35711537b09ebac",
-      "date": "2026-09-12T10:45:56-04:00",
-      "message": "session mtyhzh5l-zpd2vmfp ended (completed)"
-    },
-    {
-      "sha": "31c3e0ae51441065cd36823eebb1b053294357da",
-      "date": "2026-09-12T10:45:56-04:00",
-      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
-    },
-    {
-      "sha": "408bdddc3c5c0386e98eb2391b825eb1ec4ec467",
-      "date": "2026-09-12T10:45:56-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
-    },
-    {
-      "sha": "7864b703bb22fa8a7569d1964248eb59422612ec",
-      "date": "2026-09-12T10:45:35-04:00",
-      "message": "session mtyhz0dy-j0u391g2 ended (completed)"
-    },
-    {
-      "sha": "6d2958afbb522b8f03be5c3f081042e6469d83e7",
-      "date": "2026-09-12T10:45:35-04:00",
-      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
-    },
-    {
-      "sha": "15eff1723aae1b5758b1063f31cd6ad6da27673d",
-      "date": "2026-09-12T10:45:34-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
-    },
-    {
-      "sha": "a6f6ee96818564512b7bf124816b753f142e1237",
-      "date": "2026-09-12T10:41:19-04:00",
-      "message": "session mtyhtj8d-3pwkwl91 ended (completed)"
-    },
-    {
-      "sha": "d7da702059975a746dd5261959b75d5243db0bfc",
-      "date": "2026-09-12T10:41:19-04:00",
-      "message": "P20 regeneration · 54 claim challenge outcomes transcribed from their probe notes, 4 registry crossings recorded"
-    },
-    {
-      "sha": "b8fa49adcc43a6ebe843a30f996ef3804af48cec",
-      "date": "2026-09-12T10:41:19-04:00",
-      "message": "Pre-regeneration snapshot (P20): before challenge outcomes and the registry edges"
-    },
-    {
-      "sha": "2d15fed7b5d465561464d6856663b0731a86aaa5",
-      "date": "2026-09-12T09:17:32-04:00",
-      "message": "session mtyetk3r-agx105wt ended (completed)"
-    },
-    {
-      "sha": "125d8cdb76cb7c82b325f1397b41d2a095cc1a90",
-      "date": "2026-09-12T09:14:58-04:00",
-      "message": "session mtydkog0-axpv7at9 ended (completed)"
-    },
-    {
-      "sha": "2d6dd87de6793322eab6d6c914766911b965299d",
-      "date": "2026-09-12T09:10:01-04:00",
-      "message": "Depth batch 4 · B-10, B-11 carried to mapped · 12 terminal dispositions, 3 confirmed bugs (B10-1 MEDIUM, B11-1 LOW, B11-2 LOW), 8 claim targets all survived"
-    },
-    {
-      "sha": "71352a50f48a17c6aa5a5e7ca40cc112005524f1",
-      "date": "2026-09-12T09:03:39-04:00",
-      "message": "Depth batch 3 · B-07, B-08, B-09 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B07-1 MEDIUM, B08-1 LOW), 12 claim targets all survived"
-    },
-    {
-      "sha": "c0f39267bf4d38c0a3205e4a898561b7cd8f251f",
-      "date": "2026-09-12T08:58:23-04:00",
-      "message": "Depth batch 2 · B-04, B-05, B-06 carried to mapped · 18 terminal dispositions, 3 confirmed bugs (B04-4 MEDIUM, B05-1 MEDIUM, B04-5 LOW scope-restricted), 15 claim targets all survived"
-    },
-    {
-      "sha": "440ab4a28c7d848828884daddf7a9026a88e73ef",
-      "date": "2026-09-12T08:51:59-04:00",
-      "message": "Depth batch 1 · B-01, B-02, B-03 carried to mapped · 18 terminal dispositions, 2 confirmed bugs (B01-1 MEDIUM, B03-4 LOW), 18 claim targets challenged with 1 overturned"
-    },
-    {
-      "sha": "18dd12993b4de980e84abd92bfe5638b9cef5051",
-      "date": "2026-09-12T08:24:54-04:00",
-      "message": "session mtyc4dcu-04ike3jr ended (completed — onboarding plus the structural phase of eleven subsystems; concerns, adversarial and packaging phases are not run in this packet)"
-    },
-    {
-      "sha": "041b1a8cd2880cf7254264d91e11a7b81008a040",
-      "date": "2026-09-12T08:18:55-04:00",
-      "message": "Rebuild batch 6 · B-12 recorded and deferred with its reason, not omitted"
-    },
-    {
-      "sha": "d494da67c87d7dc4747f1044dec4dee6b6541bac",
-      "date": "2026-09-12T08:18:12-04:00",
-      "message": "Rebuild batch 5 · B-10, B-11 surveyed to structural with claims and cited edges"
-    },
-    {
-      "sha": "907c3b36cf0c0a7f18f3d0b40f4626a95fbec591",
-      "date": "2026-09-12T08:16:15-04:00",
-      "message": "Rebuild batch 4 · B-07, B-08, B-09 surveyed to structural with claims and cited edges"
-    },
-    {
-      "sha": "96c429842c5e582b2265233f5ec75be4165c507d",
-      "date": "2026-09-12T08:13:37-04:00",
-      "message": "Rebuild batch 3 · B-04, B-05, B-06 surveyed to structural with claims and cited edges"
-    },
-    {
-      "sha": "887cad625eec373eb9b80c381bec87b8eafe597a",
-      "date": "2026-09-12T08:10:06-04:00",
-      "message": "Rebuild batch 2 · B-01, B-02, B-03 surveyed to structural with claims and cited edges"
-    },
-    {
-      "sha": "52c123f78de75ff25a66ff430577a679dfbce1e9",
-      "date": "2026-09-12T08:05:01-04:00",
-      "message": "Rebuild batch 1 · onboarding: the repository boundary, the twelve-subsystem decomposition, and the calibrated checklist"
-    },
-    {
-      "sha": "ed806bbe1067c66fd03dfa18f400409e254931f3",
-      "date": "2026-09-12T07:44:58-04:00",
-      "message": "session mtybir58-f38a9b9h ended (completed)"
-    },
-    {
-      "sha": "4df0b74e7e2cfd35b8acce2b970a8e829238b291",
-      "date": "2026-09-12T07:44:58-04:00",
+      "sha": "53ef631e165149649f9f9724cbc5e9782042e475",
+      "date": "2026-09-13T23:22:59-04:00",
       "message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild"
     },
     {
-      "sha": "9735d9cb392ef1c5d565baab941fb1e6e972acef",
-      "date": "2026-09-12T07:44:57-04:00",
-      "message": "session mtybiq1e-hj6rmlhx ended (completed)"
+      "sha": "dd003f11241491c1061c1b4def5cb8c8acfebaa9",
+      "date": "2026-09-13T23:22:57-04:00",
+      "message": "session mu0ogv1e-kwzpyk5i ended (completed)"
     },
     {
-      "sha": "7c79dd16af617614f71d7ef5d271d93ff3a0f253",
-      "date": "2026-09-12T07:44:57-04:00",
+      "sha": "c1112c105d47875692f3897040c8de55d414170f",
+      "date": "2026-09-13T23:22:57-04:00",
       "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
     },
     {
-      "sha": "a03d57954e5c3344c72d68f5f188616df7ae45ea",
-      "date": "2026-09-12T07:44:57-04:00",
+      "sha": "15292f8966b80873ec159993e8c86f118c27ec15",
+      "date": "2026-09-11T19:05:07-04:00",
+      "message": "session mtxkdl1l-zthu2ljl ended (completed)"
+    },
+    {
+      "sha": "12a528cf28c9736ce7fc53b0c7a542d4460988c8",
+      "date": "2026-09-11T19:05:07-04:00",
+      "message": "session mtxkbtsu-ke45coh0 ended (completed)"
+    },
+    {
+      "sha": "09031d5b685c15258eea85a0bd189d6699096def",
+      "date": "2026-09-11T19:03:46-04:00",
+      "message": "File five Amanuensis defects found by downstream use: B02-4, B03-7, B03-8, B01-1, B04-5"
+    },
+    {
+      "sha": "902a716cd36625a038c717e6e059d4a0c54ce125",
+      "date": "2026-08-29T04:16:18-04:00",
+      "message": "session mte2i1me-5fmqnys2 ended (completed)"
+    },
+    {
+      "sha": "96097ed37977e5e7f1bd7c82849bbb1d6678bf28",
+      "date": "2026-08-29T04:14:54-04:00",
+      "message": "Pre-repair snapshot: before stripping stray tool-call markup from records written this session"
+    },
+    {
+      "sha": "bd921f51e17c5183db2716e5b237f423ad9c3f14",
+      "date": "2026-08-29T04:13:06-04:00",
+      "message": "Refresh B-05 complete: 35/35 files re-examined; full obligation-bearing backlog discharged"
+    },
+    {
+      "sha": "d7bf60e05bb8febd21efaa661db930c1e9584154",
+      "date": "2026-08-29T04:09:04-04:00",
+      "message": "Refresh B-05 part 4: docs re-examined; generated-vs-hand-maintained drift pattern recorded"
+    },
+    {
+      "sha": "7b2d316da048da6a3a92b75379a6ba414ff3b820",
+      "date": "2026-08-29T04:07:58-04:00",
+      "message": "Refresh B-05 part 3: version drift traced across release surfaces; README, lockfile, cli.ts, scripts cleared"
+    },
+    {
+      "sha": "169949c87a62c2b9e6f8cf121a7a7a4560eb259d",
+      "date": "2026-08-29T04:06:01-04:00",
+      "message": "Refresh B-05 part 2: corrected field note 31 — evidence-vocabulary checker exists and is CI-enforced"
+    },
+    {
+      "sha": "417cb807ef7274ee8fb979a30d39c8d7742963bb",
+      "date": "2026-08-29T04:04:14-04:00",
+      "message": "Refresh B-05 part 1: B05-1 verified-fixed; B05-2 opened on SERVER_VERSION drift"
+    },
+    {
+      "sha": "c729b2a8364b4c2e98c1fc13f0df9411ac3fa880",
+      "date": "2026-08-29T04:02:30-04:00",
+      "message": "Refresh B-06 and B-08 complete: 11 files re-examined; B08-1 verified-fixed; B03-6 opened on repair-custody gap"
+    },
+    {
+      "sha": "6222842d7ed4ca399904e43a490fe544ec41c462",
+      "date": "2026-08-29T03:59:13-04:00",
+      "message": "Refresh B-04 complete: 9/9 files re-examined; B04-2, B04-3, B04-4 opened"
+    },
+    {
+      "sha": "72d28c8bbca86996b92d478600253995cb206eac",
+      "date": "2026-08-29T03:56:24-04:00",
+      "message": "Refresh B-04: B04-1 verified-fixed; B04-2 opened — published freshness badge reads the dead entries table on all 23 pages"
+    },
+    {
+      "sha": "98537686e1346379f0a4a135e0f61aab72caeeba",
+      "date": "2026-08-29T03:53:46-04:00",
+      "message": "Refresh B-01 complete: 9/9 skill contract files re-examined at 61bc6b5"
+    },
+    {
+      "sha": "eaea260c581f2b40fed93527a79ac27a05a97e6a",
+      "date": "2026-08-29T03:52:30-04:00",
+      "message": "Refresh B-03 complete: 13/13 files re-examined at 61bc6b5; refresh.ts promoted to examined"
+    },
+    {
+      "sha": "7d0f93a253c51d7967118eaa0f033256f9b8fd39",
+      "date": "2026-08-29T03:50:51-04:00",
+      "message": "Refresh B-03 part 1: B03-1/2/3/4 verified-fixed; B03-5 opened on unmeasured examination coverage"
+    },
+    {
+      "sha": "ed4b88841497284c651e5751ad0344741c604c49",
+      "date": "2026-08-29T03:46:45-04:00",
+      "message": "Refresh B-02 complete: 8/8 files re-examined at 61bc6b5; SI-2 re-affirmed"
+    },
+    {
+      "sha": "7a317cc80fc3043be4339242dc23927efc2d76a8",
+      "date": "2026-08-29T03:45:11-04:00",
+      "message": "Refresh B-02 part 1: codex-host, project, db, index re-examined; TB-1 corrected; B02-3 opened"
+    },
+    {
+      "sha": "336d16f57f521b74ab864132780b9e7274d0e53a",
+      "date": "2026-08-29T01:07:57-04:00",
+      "message": "session mtdx5gja-rcnh1g9j ended (completed)"
+    },
+    {
+      "sha": "1f3228243d6e27fbe8a223a76eb436fcd534f319",
+      "date": "2026-08-29T01:07:53-04:00",
+      "message": "Refresh route added at 7a010cd; field note 29 resolved"
+    },
+    {
+      "sha": "06600de191b8cefcf566af1808956d8a6a1c3dfe",
+      "date": "2026-08-29T01:05:35-04:00",
+      "message": "session mtdx2x07-grdwoyn8 ended (completed)"
+    },
+    {
+      "sha": "2b0a499a118f8d9b145c6f94274f60123da24ea1",
+      "date": "2026-08-29T01:05:34-04:00",
+      "message": "Field note 29: no routed refresh discharges staleness; measurement landed ahead of the loop"
+    },
+    {
+      "sha": "edcf3a0883ddb8d140feea6854b8d7eccf7f75a4",
+      "date": "2026-08-29T00:58:35-04:00",
+      "message": "session mtdwthc7-22zv23fd ended (completed)"
+    },
+    {
+      "sha": "63948d305180a2fce6775bf730d8eb27902df262",
+      "date": "2026-08-29T00:58:31-04:00",
+      "message": "B03-4 verified-fixed at 63b548b; staleness audited exact across all 502 rows"
+    },
+    {
+      "sha": "c5a68a1b75bda3c880dc648132f3d4cb40176f99",
+      "date": "2026-08-29T00:51:48-04:00",
+      "message": "session mtdwkxof-xzsc9h7a ended (completed)"
+    },
+    {
+      "sha": "c34229aa0726519ea011e5932aac359e7e87fc32",
+      "date": "2026-08-29T00:51:44-04:00",
+      "message": "Dogfood pass at adc4ce0: steps 1-6 pass; B03-4 recorded (staleness is path churn, not content drift)"
+    },
+    {
+      "sha": "6af33a26af904aa07695b907dede1bf669d0c949",
+      "date": "2026-08-29T00:42:20-04:00",
+      "message": "session mtdw8msa-txj2cg29 ended (completed)"
+    },
+    {
+      "sha": "054e730bf1cddfcb00acf22016a52c33d4e2d0df",
+      "date": "2026-08-29T00:42:17-04:00",
+      "message": "Staleness counts obligation only; field note 27 resolved at adc4ce0"
+    },
+    {
+      "sha": "278eda27ed866f087fe114ddaadf3cad221c4936",
+      "date": "2026-08-29T00:34:52-04:00",
+      "message": "session mtdvz3kb-yw1r47rx ended (completed)"
+    },
+    {
+      "sha": "6aa333428adcc0466e9afe9c010c39271db9d92d",
+      "date": "2026-08-29T00:34:49-04:00",
+      "message": "Change detection at 411821f; staleness-signal candidate concern recorded (field note 27)"
+    },
+    {
+      "sha": "debd6d97469014f6eeb79cf06ce8cec4cdce6581",
+      "date": "2026-08-28T22:54:51-04:00",
+      "message": "session mtdsdcac-73zjuefs ended (completed)"
+    },
+    {
+      "sha": "a37c0a333ec520a538db0e43559912bc5a33564c",
+      "date": "2026-08-28T22:54:49-04:00",
+      "message": "Dogfood at aba6d04: repaired engine reconciles its own conspectus 502/502, 11 phantom rows retired, staleness measured"
+    },
+    {
+      "sha": "f8bc3744453f418e5530376eea6260663083f4b1",
+      "date": "2026-08-28T20:59:32-04:00",
+      "message": "session mtdo9bzf-kyr739ab ended (completed)"
+    },
+    {
+      "sha": "aa8778d39178d8fd1e584a786396b42fdb4a099e",
+      "date": "2026-08-28T20:59:27-04:00",
+      "message": "B08-1 verified-fixed at 51fe14b; v0.2.0-beta.2 candidate prepared, publication held"
+    },
+    {
+      "sha": "21982a70401bd4d00fa205b3e8981921e86b091c",
+      "date": "2026-08-28T19:00:28-04:00",
+      "message": "session mtdk01un-wzi4zvv5 ended (completed)"
+    },
+    {
+      "sha": "43ea2649ac0107c9ef83284006a84061ca06d8f2",
+      "date": "2026-08-28T19:00:27-04:00",
+      "message": "B08-1 recorded: A22 pins the live Codex config, blocking beta.2 after a successful A25 re-measurement"
+    },
+    {
+      "sha": "74429c8bc1243a7db7caca1023336745af71652e",
+      "date": "2026-08-28T18:57:10-04:00",
+      "message": "session mtdjrswz-a7c33erw ended (completed)"
+    },
+    {
+      "sha": "ae3ccc805a05fdc6166668a22154fbf179c6b840",
+      "date": "2026-08-28T18:57:08-04:00",
+      "message": "A25 re-measured against the repaired startup path; A26 replay landed for 0.2.0-beta.2"
+    },
+    {
+      "sha": "70c8d13f79c1f2e9025fe6f1f6eeb813dbf24d3b",
+      "date": "2026-08-28T18:42:07-04:00",
+      "message": "session mtdjd1va-br47w098 ended (completed)"
+    },
+    {
+      "sha": "ce27d683ae80ababffa303ac3bb4a93290a1f203",
+      "date": "2026-08-28T18:42:06-04:00",
+      "message": "A1-A3 and B03-3 merged to main at 9c53be1; report republished with six findings verified-fixed"
+    },
+    {
+      "sha": "4e7a420036ff7de3c29d31f0ed94238532827137",
+      "date": "2026-08-28T16:05:33-04:00",
+      "message": "session mtddipf5-n50u2kbs ended (completed)"
+    },
+    {
+      "sha": "b0123aaccf8a13f7111d881cb6691a3a987342ad",
+      "date": "2026-08-28T16:05:31-04:00",
+      "message": "B02-2 and B03-3 repaired; B02-2 held on a branch pending A25 re-measurement"
+    },
+    {
+      "sha": "9626e1f30527467c5a6550b6ad732722268ab0c4",
+      "date": "2026-08-28T15:44:32-04:00",
+      "message": "session mtdctf01-zy3h2pcj ended (completed)"
+    },
+    {
+      "sha": "69dc949f32fa89ef2e45ec9500b68202635996c9",
+      "date": "2026-08-28T15:38:45-04:00",
+      "message": "A1-A3 closed: B03-1 and B03-2 verified-fixed at 7c80df4; staleness derives from the file ledger"
+    },
+    {
+      "sha": "a0d1b61660d0bcf9305b7b3f0af8397c5a12c5a3",
+      "date": "2026-08-28T00:56:33-04:00",
+      "message": "session mtch7cwg-avzwk44b ended (completed)"
+    },
+    {
+      "sha": "9c8729e0e5e4c8ae12b7cd87cada7500e66366b4",
+      "date": "2026-08-28T00:56:28-04:00",
+      "message": "Refresh complete at f848fc7: B04-1 and B05-1 verified-fixed, projection republished, site synced, PR #1 opened"
+    },
+    {
+      "sha": "d3fbb42d38ca4a1e0bf1a90b749267672d90e7eb",
+      "date": "2026-08-27T22:41:33-04:00",
+      "message": "session mtcc924k-zctfmz82 ended (completed)"
+    },
+    {
+      "sha": "3d9ac26f26397deadfd2434e84b7c46cf28c2fb5",
+      "date": "2026-08-27T22:41:31-04:00",
+      "message": "Finding B05-1 recorded (beta.1 published while roadmap and receipt assert not-published); A1-A3 reopening drafted"
+    },
+    {
+      "sha": "34455e450d32aff62881c4a4765ec69a4eebfcda",
+      "date": "2026-08-27T22:29:35-04:00",
+      "message": "session mtcc2gk8-e8sdpgrz ended (completed)"
+    },
+    {
+      "sha": "89a58835de1912ed477d6c2d00299d063f6e16e3",
+      "date": "2026-08-27T22:29:34-04:00",
+      "message": "Repair-path analysis: A1-A3 substrate built but workflow never migrated; roadmap baseline observation falsified by B03-2"
+    },
+    {
+      "sha": "692fbf43cee8ea9c46bfba3ef43c9f51bd139bc1",
+      "date": "2026-08-27T22:22:20-04:00",
+      "message": "session mtcaywtp-08doi35s ended (completed)"
+    },
+    {
+      "sha": "2b088c4efa0e2c9fdf9b74100f5cf7147a12c048",
+      "date": "2026-08-27T22:22:12-04:00",
+      "message": "Refresh complete: conspectus rebaselined 45a519c → 5694080, 23 pages republished clean, all read-back axes green"
+    },
+    {
+      "sha": "f0b5cff920d5b1aa0abaa3506565606b4e610a38",
+      "date": "2026-08-27T22:21:50-04:00",
+      "message": "Refresh checkpoint 6: B-01/B-05 activation contract verified in agreement (seam SM-10); subsystem records updated to 5694080"
+    },
+    {
+      "sha": "d1a7c6c60e6a66564f27b34e6fa73c152e2b2649",
+      "date": "2026-08-27T22:20:41-04:00",
+      "message": "Refresh checkpoint 5: B-08 surveyed to mapped — gates verified red-capable by execution, digest binding verified transitive; finding B03-3 (evidence-quality vocabulary mismatch) recorded"
+    },
+    {
+      "sha": "37a08df19902881b645984bfd670b3569ab3cd6f",
+      "date": "2026-08-27T22:15:04-04:00",
+      "message": "Refresh checkpoint 4: B-04 surveyed at 5694080 — finding B04-1 (published freshness claim unsubstantiated), seam SM-09 recorded"
+    },
+    {
+      "sha": "e7ec54382b09725c90ca8d877a68e95c8b43538d",
+      "date": "2026-08-27T22:13:49-04:00",
+      "message": "Refresh checkpoint 3: B-02 re-surveyed at 5694080 — EP-2/SI-1/AT-2 re-affirmed, TB-1 downgraded to confirmed-bug (finding B02-2), re-verification debt recorded"
+    },
+    {
+      "sha": "7d3d74be08be9674db5e8ffbd36afffb30531547",
+      "date": "2026-08-27T22:10:45-04:00",
+      "message": "Refresh checkpoint 2: findings B03-1 (ledger never reconciled against tree) and B03-2 (staleness surface inert) recorded with code-verified evidence"
+    },
+    {
+      "sha": "fdd419564b00903e8cdc777485a0aae855173725",
+      "date": "2026-08-27T22:06:20-04:00",
+      "message": "Refresh checkpoint 1: scope reconciliation to 5694080 — B-08 created (94 files), 197 unledgered files classified, 11 phantom rows identified"
+    },
+    {
+      "sha": "821936d22d473a104cfa15d6b9a6766d1f39e43a",
+      "date": "2026-08-27T21:58:46-04:00",
+      "message": "Pre-refresh snapshot: conspectus at baseline 45a519c before rebaseline to 5694080"
+    },
+    {
+      "sha": "71ebc1209af003ce2f233cdbe0153730c76b7af4",
+      "date": "2026-08-23T02:32:31-04:00",
+      "message": "session mt5dxjuv-kyu3kv53 ended (completed)"
+    },
+    {
+      "sha": "0922c3c60231c4c1f41b8521abeceba05de3c919",
+      "date": "2026-08-23T02:32:28-04:00",
+      "message": "session mt5en22p-bhc5m0oh ended (completed)"
+    },
+    {
+      "sha": "ca55f95e8f2afd07e0c783b7be8581599e4154bf",
+      "date": "2026-08-23T02:32:13-04:00",
+      "message": "Full survey · 7/7 mapped at e33bb5f · final readback green"
+    },
+    {
+      "sha": "598feb3e40dfb128c2d77d8e84de6480449b95a7",
+      "date": "2026-08-23T02:07:02-04:00",
+      "message": "Checkpoint · B-06 mapped · start B-07"
+    },
+    {
+      "sha": "9831a69003799041ff2dd8479a1152ce6fb86056",
+      "date": "2026-08-23T02:06:22-04:00",
+      "message": "session mt5e271s-uwd7er9m ended (completed)"
+    },
+    {
+      "sha": "a7d00169fb620a50c45370b886f27ed6ee96f58f",
+      "date": "2026-08-23T01:47:12-04:00",
+      "message": "Start full survey refresh at ca7b369"
+    },
+    {
+      "sha": "46c01d65666dd23ee38da68b98f6b69e3b2097e7",
+      "date": "2026-08-23T01:47:07-04:00",
+      "message": "session mt08p5nw-armau0yo ended (superseded by full-project refresh at ca7b369)"
+    },
+    {
+      "sha": "621866f6ad6e9e441b4985fe0858743db94f6d73",
+      "date": "2026-08-19T12:22:48-04:00",
+      "message": "Checkpoint terminal v2 audit and read-back at public main dc7a3fa"
+    },
+    {
+      "sha": "46931cb97ce2d37cdd358686a8eb102691a2d6ed",
+      "date": "2026-08-19T12:20:39-04:00",
+      "message": "Checkpoint final v2 truth read-back at public main dc7a3fa"
+    },
+    {
+      "sha": "533962b5d55edfe112caf6fff7fb82d0588bed63",
+      "date": "2026-08-19T12:12:25-04:00",
+      "message": "Checkpoint verified v2 integration evidence at public main 0e2dafb"
+    },
+    {
+      "sha": "cb0c45dbefde96e74e73f1dd587438b25ab11555",
+      "date": "2026-08-15T12:32:56-04:00",
+      "message": "session msul8pd7-sm41r909 ended (completed: v2.10 truth surfaces reconciled; B02-1 verified-fixed; projections read back at 457e1c1)"
+    },
+    {
+      "sha": "2b42eeca78dc29579f67e3b13c95a1c16daed82a",
+      "date": "2026-08-15T12:32:51-04:00",
+      "message": "reconcile practice catalog v2.10 claims and current read-back at Amanuensis 457e1c1"
+    },
+    {
+      "sha": "05b0f6cd7b4b6737864f7b5fa3d24aa9f63120da",
+      "date": "2026-08-15T12:26:16-04:00",
+      "message": "session mstb0rgd-8rt9z8z4 ended (completed: historical-case discovery landed in detector-versioned private successors)"
+    },
+    {
+      "sha": "fca5fddcd78e796d7e7e936ea25ac741de454f81",
+      "date": "2026-08-14T14:57:28-04:00",
+      "message": "Add write-back, nightly-distillation, and reorientation-session evidence to evaluation corpus"
+    },
+    {
+      "sha": "fe838a9e847a0ac1131bdf8b911a06028f8e8e63",
+      "date": "2026-08-14T14:52:49-04:00",
+      "message": "Record cross-project natural evaluation corpus and causal-attribution boundary"
+    },
+    {
+      "sha": "f1b3ebc2a9a9499f736cd1d9c2a78149ead92e3d",
+      "date": "2026-08-12T01:06:33-04:00",
+      "message": "session mspmmx4p-k1akg2p3 ended (completed)"
+    },
+    {
+      "sha": "539d45fafe65d375e8bc2abdded6b4e51e7705f4",
+      "date": "2026-08-12T01:06:32-04:00",
+      "message": "A0 baseline · 5 mapped subsystems, 5 assessed seams, 1 finding"
+    },
+    {
+      "sha": "d378e09824314406261847781af58f109a545ea0",
+      "date": "2026-08-12T00:47:15-04:00",
+      "message": "Integral seam pass · 5 of 5 assessable seams assessed at b8b566f"
+    },
+    {
+      "sha": "1c2ee1c090012a47d0ac48b430957482db8c8e2d",
+      "date": "2026-08-12T00:45:28-04:00",
+      "message": "Phase 5 · B-05 · mapped"
+    },
+    {
+      "sha": "a15c25b8cf8bbf7d3f98154fe1036d1f84933ea7",
+      "date": "2026-08-12T00:45:27-04:00",
+      "message": "Phase 5 · B-04 · mapped"
+    },
+    {
+      "sha": "1a45cef847ca83c2b2c6b6105e0e99eacaadd06d",
+      "date": "2026-08-12T00:45:26-04:00",
+      "message": "Phases 3-4 · B-04 · 16 dispositions, 1 unresolved"
+    },
+    {
+      "sha": "a00216c5a1403708f1c3b2537c88d6492ed1fe60",
+      "date": "2026-08-12T00:45:25-04:00",
+      "message": "Phase 5 · B-03 · mapped"
+    },
+    {
+      "sha": "5053353825dde34e90d3c1f1abe2a9bc0542789d",
+      "date": "2026-08-12T00:45:23-04:00",
+      "message": "Phase 5 · B-01 · mapped"
+    },
+    {
+      "sha": "941ae7c21ba04177a47af8e57d0de019505f263e",
+      "date": "2026-08-12T00:45:21-04:00",
+      "message": "Phase 1 · B-01 · 25 files scoped"
+    },
+    {
+      "sha": "1d59d35e9e296e268d8718b8261d4631a3bf2369",
+      "date": "2026-08-12T00:41:50-04:00",
+      "message": "Phase 5 · B-02 · mapped with 1 HIGH finding"
+    },
+    {
+      "sha": "11b4b939da421de12b46a58e4c9fab4b28dfe487",
+      "date": "2026-08-12T00:39:43-04:00",
+      "message": "Phase 2 · B-02 · core state, flows, concurrency, and SM-02 mapped"
+    },
+    {
+      "sha": "998090ec1384e84b325dbdc9ce67f8884c823a00",
+      "date": "2026-08-12T00:25:05-04:00",
+      "message": "Onboarding Phase 7 · artifacts and first materialization at b8b566f"
+    },
+    {
+      "sha": "b4e6471a7f79f40f07372956dc1cc5d101d69142",
+      "date": "2026-08-12T00:19:26-04:00",
+      "message": "Onboarding Phase 0 · orientation at b8b566f"
+    },
+    {
+      "sha": "a1e803f1c912498a9e6a9a21fd7ca2d6f496c51a",
+      "date": "2026-08-12T00:17:35-04:00",
       "message": "amanuensis: initialize storage"
     }
   ],
   "census": {
-    "subsystem_count": 12,
-    "structural_or_beyond": 11,
-    "deferred": 1,
-    "scoped_files": 58,
-    "claims": 53,
-    "claim_evidence": 78,
-    "xrefs": 20,
-    "seams": 9
+    "subsystem_count": 8,
+    "structural_or_beyond": 8,
+    "deferred": 0,
+    "scoped_files": 106,
+    "claims": 39,
+    "claim_evidence": 55,
+    "xrefs": 13,
+    "seams": 10
   },
   "fixtures_unchanged": {
     "checked": "sha256 of each A0 historical fixture after the rebuild (§12.3)",
