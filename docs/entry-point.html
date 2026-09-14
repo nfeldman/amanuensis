@@ -815,8 +815,8 @@ a .identifier-definition { text-decoration-color: currentColor; }
         </div>
       </header>
       <article class="content content-artifact"><p>Read this first. It is written so that an agent with no other context can answer four questions: what the system does, what to map first, what to read for a bug report, and what mode a feature request puts you in.</p>
-<section class="section-what-does-this-system-do">
-<h2 id="what-does-this-system-do"><a class="heading-anchor" href="#what-does-this-system-do" aria-label="Link to What does this system do?">§</a>What does this system do?</h2>
+<section class="section-what-is-this-codebase">
+<h2 id="what-is-this-codebase"><a class="heading-anchor" href="#what-is-this-codebase" aria-label="Link to What is this codebase?">§</a>What is this codebase?</h2>
 <p>Amanuensis produces a <strong>conspectus</strong> of a codebase: an evidence-backed, revision-bound record of what a system is, what is wrong with it, and what nobody has established yet — one that survives across sessions and across agents.</p>
 <p>It is three things that must agree:</p>
 <ol><li><strong>An MCP server</strong> (<code>mcp-server/</code>, TypeScript on Node 24) that owns a SQLite store at <code>&lt;repo&gt;/.amanuensis/memory.db</code> and exposes roughly two hundred tools. It is the authority. It enforces the data model: every claim cites <code>file:symbol@sha</code>, a subsystem's status caps what its agents may assert, dispositions and findings cannot be written without an evidence anchor, resolution history is append-only.</li><li><strong>A skill</strong> (<code>.claude/skills/amanuensis/</code>) — the phased methodology a coordinating agent executes: onboarding, then per subsystem scope → structural → concerns → adversarial → packaging, then refresh.</li><li><strong>A materializer</strong> (<code>materializer/</code>, Python) that renders the store into HTML and Markdown a person reads, and then reads its own output back on three axes before calling it published.</li></ol>

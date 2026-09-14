@@ -2,7 +2,7 @@
 
 ## Open
 
-_12 defect(s) with no recorded repair._
+_13 defect(s) with no recorded repair._
 
 ### High findings
 
@@ -12,6 +12,8 @@ _12 defect(s) with no recorded repair._
 |---|---|---|---|---|
 <!-- amanuensis:finding:3c8deef0011b6a98f5d8e61dd557b4e3432b67094c6ebed8b443007535a1e649 -->
 | <a id="b02-r1"></a>**B02-R1** | open | A git invocation on the server's startup path can block forever. If `git rev-parse --show-toplevel` hangs — a slow network filesystem, an unresponsive credential helper, a very large repository, a stale lock — the server never reaches a usable state and gives no diagnosis, because execFileSync blocks the Node event loop for the whole call. | index.ts:108 `gitRoot` calls `execFileSync("git", ["rev-parse","--show-toplevel"], { cwd, encoding, stdio })` with no `timeout` and no `killSignal`. It is reached four times before the store is bound: twice from `assertWorkspaceMatchesLaunch` (index.ts:128, :129), once for a Codex parent workspace (:174), and once at :180 as the default workspace selection — taken whenever there is no `--workspace` argument and no `AMANUENSIS_WORKSPACE` or `CLAUDE_PROJECT_DIR`, which is the documented Codex and Claude activation shape. The repair that bounded this class covered project.ts, where all six subprocess sites carry `STARTUP_PROBE_TIMEOUT_MS` and `killSignal: "SIGKILL"`, and codex-host.ts, which defines the constant. index.ts imports neither and was left unbounded. This is the repository's recorded recurrence of a repair scoped to the symbols a finding named rather than to the defect class. | `7c1c1a9f` |
+<!-- amanuensis:finding:5c243b65a2d50ee0353b922015bf537e0b888f611caefa11e54596e1b07a3ec4 -->
+| <a id="b02-r4"></a>**B02-R4** | open | Under Codex Desktop, the user-scoped registration launches the server with a process cwd of /. With no --workspace argument, no environment pin, and no --cd on the parent command, workspace resolution falls through to process-cwd-non-git and binds the filesystem root as project local:/ with storage path /.amanuensis. The skill's workspace-mismatch rule then stops the session, so every Codex Desktop session is unusable with the registration the installer writes by default, and a first write would attempt to create a store at the filesystem root. Observed 2026-09-13 23:36 in a Desktop session started in /Users/nfeldman/research and reproduced by direct launch; the pre-merge server binds identically. | parseArgs treats any directory that is not inside a Git repository, including /, as a legitimate non-Git workspace and never fails closed. The Codex activation contract adds a parent-process --cd recovery that only Codex CLI provides; Codex Desktop launches the server from an app-server process at / without --cd, so the recovery returns null. The server never requests MCP roots from the client, although the Codex binary implements the roots protocol, so the one channel through which Desktop could name the task repository is unused. The A22 real-host harness and the A25 evidence cover the CLI surface only; ADR-0021 recorded the Desktop case as an unverified counterpoint. | `dad71133` |
 
 #### [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md)
 

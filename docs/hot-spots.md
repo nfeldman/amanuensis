@@ -4,8 +4,8 @@ _Each column is one measure, read on its own. The rows are ordered by open criti
 
 | Subsystem | Open critical + high | Open medium + low | Awaiting verification | Undiscriminated | Weakest evidence quality | Unread files | Stale files | Unassessed seam sides |
 |---|---|---|---|---|---|---|---|---|
+| [Server core: repository binding, storage, schema, lifecycle](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md) **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | 2 | 2 | 0 | 0 | `test-observed` | 0/8 | 0 | 0/10 |
 | [Reader lenses: standing, locus account, claims, edges, vocabulary](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) **[B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)** | 2 | 2 | 0 | 0 | `runtime-observed` | 0/9 | 0 | 0/6 |
-| [Server core: repository binding, storage, schema, lifecycle](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md) **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | 1 | 2 | 0 | 0 | `test-observed` | 0/8 | 0 | 0/10 |
 | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | 1 | 1 | 0 | 0 | `code-verified` | 6/20 | 0 | 0/8 |
 | [Gates, evidence custody, and CI](subsystems/b07-gates-evidence-custody-and-ci.md) **[B-07](subsystems/b07-gates-evidence-custody-and-ci.md)** | 0 | 2 | 0 | 0 | `test-observed` | 3/14 | 0 | 0/2 |
 | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | 0 | 1 | 0 | 0 | `contract-stated` | 4/16 | 0 | 0/2 |

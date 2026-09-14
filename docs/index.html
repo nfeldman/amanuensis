@@ -817,23 +817,27 @@ a .identifier-definition { text-decoration-color: currentColor; }
       <article class="content content-overview"><p>An architecture survey of amanuensis, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.</p>
 <section class="section-what-is-this-codebase">
 <h2 id="what-is-this-codebase"><a class="heading-anchor" href="#what-is-this-codebase" aria-label="Link to What is this codebase?">§</a>What is this codebase?</h2>
-<p>No thesis section is recorded; add a 'What is this codebase?' section to <code>entry-point.md</code>.</p>
+<p>Amanuensis produces a <strong>conspectus</strong> of a codebase: an evidence-backed, revision-bound record of what a system is, what is wrong with it, and what nobody has established yet — one that survives across sessions and across agents.</p>
+<p>It is three things that must agree:</p>
+<ol><li><strong>An MCP server</strong> (<code>mcp-server/</code>, TypeScript on Node 24) that owns a SQLite store at <code>&lt;repo&gt;/.amanuensis/memory.db</code> and exposes roughly two hundred tools. It is the authority. It enforces the data model: every claim cites <code>file:symbol@sha</code>, a subsystem's status caps what its agents may assert, dispositions and findings cannot be written without an evidence anchor, resolution history is append-only.</li><li><strong>A skill</strong> (<code>.claude/skills/amanuensis/</code>) — the phased methodology a coordinating agent executes: onboarding, then per subsystem scope → structural → concerns → adversarial → packaging, then refresh.</li><li><strong>A materializer</strong> (<code>materializer/</code>, Python) that renders the store into HTML and Markdown a person reads, and then reads its own output back on three axes before calling it published.</li></ol>
+<p>The load-bearing idea is epistemic rather than technical: <em>authorized claims scale with recorded depth.</em> A subsystem at <span class="status status-survey status-scoping" title="Only the subsystem boundary and file scope are established so far.">Scoping</span> may state its file scope and nothing more. This is enforced in the server, not requested in prose, because the project's own history says that prose guards get violated and structural ones do not.</p>
+<p>What it is <strong>not</strong>: it never modifies the code it surveys. It reads source for evidence and writes only through its own tools.</p>
 </section>
 <section class="section-where-the-record-stands">
 <h2 id="where-the-record-stands"><a class="heading-anchor" href="#where-the-record-stands" aria-label="Link to Where the record stands">§</a>Where the record stands</h2>
 <p>Four dimensions, each read from durable records and each reported on its own terms. None of them is combined with another.</p>
 <h3 id="source-alignment"><a class="heading-anchor" href="#source-alignment" aria-label="Link to Source alignment">§</a>Source alignment</h3>
-<dl class="summary-list" aria-label="where the record stands"><div><dt>Checked at</dt><dd><code>7c1c1a9f5689</code> on <code>main</code>, 2026-09-14 03:27 UTC</dd></div><div><dt>Repository head</dt><dd><code>dee59d3e019a</code> — a different revision from the one the survey checked</dd></div><div><dt>Upstream head</dt><dd><code>01f778a768b6</code> — a different revision from the one the survey checked (<code>origin/main</code>)</dd></div><div><dt>Files carrying a survey obligation marked stale</dt><dd>0 of 104</dd></div><div><dt>Scoped files exempt from that obligation, marked stale</dt><dd>0 of 2</dd></div></dl>
+<dl class="summary-list" aria-label="where the record stands"><div><dt>Checked at</dt><dd><code>7c1c1a9f5689</code> on <code>main</code>, 2026-09-14 03:27 UTC</dd></div><div><dt>Repository head</dt><dd><code>d3aeeccad870</code> — a different revision from the one the survey checked</dd></div><div><dt>Upstream head</dt><dd><code>d3aeeccad870</code> — a different revision from the one the survey checked (<code>origin/main</code>)</dd></div><div><dt>Files carrying a survey obligation marked stale</dt><dd>0 of 104</dd></div><div><dt>Scoped files exempt from that obligation, marked stale</dt><dd>0 of 2</dd></div></dl>
 <h3 id="survey-coverage"><a class="heading-anchor" href="#survey-coverage" aria-label="Link to Survey coverage">§</a>Survey coverage</h3>
 <dl class="summary-list" aria-label="where the record stands"><div><dt>Subsystems by survey depth</dt><dd>8 mapped</dd></div><div><dt>Files read, of those carrying an obligation</dt><dd>84 of 104</dd></div><div><dt>Paths in scope with no ledger row</dt><dd>0</dd></div></dl>
 <h3 id="open-engineering-work"><a class="heading-anchor" href="#open-engineering-work" aria-label="Link to Open engineering work">§</a>Open engineering work</h3>
-<dl class="summary-list" aria-label="where the record stands"><div><dt>Findings open</dt><dd>12</dd></div><div><dt>Repairs awaiting verification</dt><dd>0</dd></div><div><dt>Contradictions unresolved</dt><dd>0</dd></div><div><dt>Decisions open</dt><dd>5</dd></div></dl>
+<dl class="summary-list" aria-label="where the record stands"><div><dt>Findings open</dt><dd>13</dd></div><div><dt>Repairs awaiting verification</dt><dd>0</dd></div><div><dt>Contradictions unresolved</dt><dd>0</dd></div><div><dt>Decisions open</dt><dd>5</dd></div></dl>
 <h3 id="publication-integrity"><a class="heading-anchor" href="#publication-integrity" aria-label="Link to Publication integrity">§</a>Publication integrity</h3>
-<dl class="summary-list" aria-label="where the record stands"><div><dt>State axis</dt><dd>green</dd></div><div><dt>Coverage axis</dt><dd>green</dd></div><div><dt>Content axis</dt><dd>green</dd></div><div><dt>Verified at</dt><dd>2026-09-14 04:52 UTC</dd></div></dl>
+<dl class="summary-list" aria-label="where the record stands"><div><dt>State axis</dt><dd>green</dd></div><div><dt>Coverage axis</dt><dd>green</dd></div><div><dt>Content axis</dt><dd>green</dd></div><div><dt>Verified at</dt><dd>2026-09-14 04:53 UTC</dd></div></dl>
 </section>
 <section class="section-findings-by-resolution-state">
 <h2 id="findings-by-resolution-state"><a class="heading-anchor" href="#findings-by-resolution-state" aria-label="Link to Findings by resolution state">§</a>Findings by resolution state</h2>
-<dl class="summary-list" aria-label="findings by resolution state"><div><dt><a href="findings.html">Open</a></dt><dd>12</dd></div><div><dt><a href="resolved-findings.html">Accepted</a></dt><dd>0</dd></div><div><dt><a href="resolved-findings.html">Ruled out</a></dt><dd>0</dd></div><div><dt><a href="findings.html">Unverified fix</a></dt><dd>0</dd></div><div><dt><a href="resolved-findings.html">Verified fixed</a></dt><dd>0</dd></div></dl>
+<dl class="summary-list" aria-label="findings by resolution state"><div><dt><a href="findings.html">Open</a></dt><dd>13</dd></div><div><dt><a href="resolved-findings.html">Accepted</a></dt><dd>0</dd></div><div><dt><a href="resolved-findings.html">Ruled out</a></dt><dd>0</dd></div><div><dt><a href="findings.html">Unverified fix</a></dt><dd>0</dd></div><div><dt><a href="resolved-findings.html">Verified fixed</a></dt><dd>0</dd></div></dl>
 </section>
 <section class="section-the-four-lenses">
 <h2 id="the-four-lenses"><a class="heading-anchor" href="#the-four-lenses" aria-label="Link to The four lenses">§</a>The four lenses</h2>
@@ -841,7 +845,7 @@ a .identifier-definition { text-decoration-color: currentColor; }
 </section>
 <section class="section-latest-session">
 <h2 id="latest-session"><a class="heading-anchor" href="#latest-session" aria-label="Link to Latest session">§</a>Latest session</h2>
-<p><code>onboarding — clean-slate rebuild of the Amanuensis self-conspectus at 7c1c1a9</code> — started 2026-09-14 03:25 UTC · <strong>active</strong></p>
+<p><code>Correct the entry-point thesis heading to the template&#x27;s &#x27;What is this codebase?&#x27; so the overview renders the recorded thesis; republish and promote docs; file the missing artifact-heading contract check as a finding</code> — started 2026-09-14 05:42 UTC · <strong>active</strong></p>
 </section></article>
       <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="index.md">Inspect Markdown</a></p></footer>
     </div>

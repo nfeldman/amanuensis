@@ -4,6 +4,7 @@ _Every state a finding or a contradiction was recorded in, newest first, with th
 
 | Recorded | Record | State | Session | Account |
 |---|---|---|---|---|
+| 2026-09-14 05:04 UTC | [B02-R4](findings.md#b02-r4) | `open` | `mu0s06eb-zblx9ra9` | Finding recorded as confirmed-bug |
 | 2026-09-14 04:44 UTC | [B01-R1](findings.md#b01-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
 | 2026-09-14 04:40 UTC | [B07-R2](findings.md#b07-r2) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
 | 2026-09-14 04:40 UTC | [B07-R1](findings.md#b07-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |

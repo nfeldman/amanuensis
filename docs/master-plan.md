@@ -11,7 +11,7 @@
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 1 | **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | Server core: repository binding, storage, schema, lifecycle | 🟢 mapped | mcp-server/src/index.ts, db.ts, project.ts, session.ts, helpers.ts, invariants.ts, storage-git.ts, schema.sql | mcp-server/src/index.ts — the tool registry and dispatch loop; then project.ts for how a workspace becomes a bound store, then db.ts for the lazy open. | 3 (3 open) |
+| 1 | **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | Server core: repository binding, storage, schema, lifecycle | 🟢 mapped | mcp-server/src/index.ts, db.ts, project.ts, session.ts, helpers.ts, invariants.ts, storage-git.ts, schema.sql | mcp-server/src/index.ts — the tool registry and dispatch loop; then project.ts for how a workspace becomes a bound store, then db.ts for the lazy open. | 4 (4 open) |
 
 ## distribution
 

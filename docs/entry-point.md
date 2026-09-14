@@ -4,7 +4,7 @@ Read this first. It is written so that an agent with no other context can answer
 questions: what the system does, what to map first, what to read for a bug report, and what
 mode a feature request puts you in.
 
-## What does this system do?
+## What is this codebase?
 
 Amanuensis produces a **conspectus** of a codebase: an evidence-backed, revision-bound record
 of what a system is, what is wrong with it, and what nobody has established yet — one that

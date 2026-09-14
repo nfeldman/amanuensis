@@ -51,11 +51,11 @@
     },
     {
       "path": "entry-point.html",
-      "content_hash": "322f543afd5c66d0cee8e545ac79b958af448f4b0a631f337771794fce38875e"
+      "content_hash": "26db47ee2f7513338b6ced0de2349d904cd9aa3cbe683364819a45a070017fe4"
     },
     {
       "path": "entry-point.md",
-      "content_hash": "8d321fb2770ede6d8877d12ebc9b5b9c9496b5acebdf34220d521e8f2ebedeaa"
+      "content_hash": "41280af1885935ba93d643bee532fea5a4be31abb97297c6ef26510a2d649b50"
     },
     {
       "path": "field-notes.html",
@@ -67,27 +67,27 @@
     },
     {
       "path": "files.html",
-      "content_hash": "18680fffb549cf52345cbdb564a2fb95fb37b4bd168edf8426297e0b3a178555"
+      "content_hash": "ef2f4c3c69378b8d7bb245194c17ed3b8f51ba4df59e0b560293d13078ac03ff"
     },
     {
       "path": "files.md",
-      "content_hash": "0b6d284131b59b3fa154314891129a4996232f65649f2574bfa8978aed5dc99c"
+      "content_hash": "37be89f3d71d608c58a05f5a93a963f1710d2055abc5cdf6c9447d98cc0e790a"
     },
     {
       "path": "findings.html",
-      "content_hash": "9c1b40f2c3f5b7fdd66e8d464cda841156a2ed5b1d7e1eae1fde7f71a10a6453"
+      "content_hash": "68c4c255a98aa6c82a6b55bd4de5a3660538856e08a0e878c449c8822f8de14a"
     },
     {
       "path": "findings.md",
-      "content_hash": "0a7aa99728ca467a511fcc9651ebb72c13d965c19e285748b23d66cc7b95a230"
+      "content_hash": "9db03522204331472c197d1ba1a71ce85232162b7b08e464adc65a4a1b059687"
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "3b3fad43f463af45a88a3ce698c6f1c767bac047159fce9c8f068792efc9752e"
+      "content_hash": "9d3b7d6bd26b1e91ddd8d0f897cd5e698d10f950a56475f99893dc8baf0364a2"
     },
     {
       "path": "hot-spots.md",
-      "content_hash": "c3647fe81bc62a95076c7295376c1d3ae0bbddbad9ab609fe915e6e8a3b88447"
+      "content_hash": "f76872901d4f7c52fb65a57c961b1e4f02b73f2c1e8a3e8851e96e85b09077f0"
     },
     {
       "path": "how-to-read.html",
@@ -99,19 +99,19 @@
     },
     {
       "path": "index.html",
-      "content_hash": "3ad57b887014861d5a32af43e6b88aa5d43f70f621a62c7024fc303a81a8bb40"
+      "content_hash": "50e7cc539ee3c2a378e2a2acc3ce046e5ad900b690ff1e2b161f767edfbd6b07"
     },
     {
       "path": "index.md",
-      "content_hash": "d064a92bb409bae17829c8032b953795cba212af8175de68739ba8d6a9498d9f"
+      "content_hash": "3175d39771f417b775598c8a35b367de0b33f517a6b4f5a38cf48adafff4682b"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "d6a5dfb8b7f102e5fcbe4adbf2623fabfbe41056c04fddb345e121f216d6c586"
+      "content_hash": "63f71b6d13f67c86b1a9eb475ebd5ecc62394bc91cca8ac7d9c1b2b2390fae53"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "f69be54af8e59d46f27e184a8f9cdb3dd02a0c5000c79215f6b4919c17647c28"
+      "content_hash": "39c26d355ee81a7094db14902d0d33582d3913d9897cf0eb1a3be42a6eb28846"
     },
     {
       "path": "not-yet-surveyed.html",
@@ -139,11 +139,11 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "97eda467617fbd2b5f7303e0d602990a60279ea337c46ce9889129b6b9a4bf4a"
+      "content_hash": "1181209efaca53fb7099ffefcfe0290065b172b99b1824687938d682969845f8"
     },
     {
       "path": "resolution-history.md",
-      "content_hash": "1843c76085aaa84c7d17870466af3f6e02d56d26e8d88a3ad41693dbe7023450"
+      "content_hash": "d39b66b55bd960612fe813bfaa2daba8bd9ff42b4663cecc8b36ba06285fed05"
     },
     {
       "path": "resolved-findings.html",
@@ -171,15 +171,15 @@
     },
     {
       "path": "search-index.js",
-      "content_hash": "6657352c6be72492ffe0796834d07e62c369f396a0a58d41d6ddb9cd8f55a3a0"
+      "content_hash": "e5d634b99566a308073a55d3ae9271b078533a7c97e85b145cb9a1e20bbd2fc1"
     },
     {
       "path": "sessions.html",
-      "content_hash": "52da4ffeff5419b16be6966620533788390cd40f810faf09847e54eb89f57f27"
+      "content_hash": "2adb8c5093fc3e7a613f8f684e531e0971385dab601e72c86fd0e2607613e10a"
     },
     {
       "path": "sessions.md",
-      "content_hash": "b5e5bd94431f69a60006dad7662fbaafd24f3a8722c49344e3342131febb8ce8"
+      "content_hash": "63a8d1e586cc1ac6894c60766e2493a1398b932c486994996493a32966b2a948"
     },
     {
       "path": "stale.html",
@@ -199,11 +199,11 @@
     },
     {
       "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
-      "content_hash": "5c6b42391b02402183565bf4ac16c0a4650ed8040a8d69212e7011e5fa58de65"
+      "content_hash": "18fa1fb01f6090d3d6527059d31408573c673ae1340f5d7252d20c851ec3a279"
     },
     {
       "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
-      "content_hash": "2baf93708a84a33c08532efa80e6b463460897543372a4edda6c509fc696ebe3"
+      "content_hash": "76d4e03189065de2c48b3db0fdb11623802b87a17b0ff7b794c5f07548521d19"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -7341,6 +7341,10 @@
     },
     {
       "source": "resolution-history.html",
+      "target": "findings.html#b02-r4"
+    },
+    {
+      "source": "resolution-history.html",
       "target": "findings.html#b03-r1"
     },
     {
@@ -7486,6 +7490,10 @@
     {
       "source": "resolution-history.md",
       "target": "findings.md#b02-r3"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b02-r4"
     },
     {
       "source": "resolution-history.md",
@@ -9457,6 +9465,10 @@
     },
     {
       "source": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
+      "target": "../findings.html#b02-r4"
+    },
+    {
+      "source": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
       "target": "../hot-spots.html"
     },
     {
@@ -9822,6 +9834,10 @@
     {
       "source": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
       "target": "../findings.md#b02-r3"
+    },
+    {
+      "source": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
+      "target": "../findings.md#b02-r4"
     },
     {
       "source": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",

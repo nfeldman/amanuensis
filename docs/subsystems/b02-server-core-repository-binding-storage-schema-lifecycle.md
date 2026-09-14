@@ -79,9 +79,10 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 ## Known defects here
 
-3 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
+4 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
 
 - A git invocation on the server's startup path can block forever. If `git rev-parse --show-toplevel` hangs — a slow network filesystem, an unresponsive credential helper, a very large repository, a stale lock — the server never reaches a usable state and gives no diagnosis, because execFileSync blocks the Node event loop for the whole call. — [B02-R1](../findings.md#b02-r1) · 🟠 HIGH · Open
+- Under Codex Desktop, the user-scoped registration launches the server with a process cwd of /. With no --workspace argument, no environment pin, and no --cd on the parent command, workspace resolution falls through to process-cwd-non-git and binds the filesystem root as project local:/ with storage path /.amanuensis. The skill's workspace-mismatch rule then stops the session, so every Codex Desktop session is unusable with the registration the installer writes by default, and a first write would attempt to create a store at the filesystem root. Observed 2026-09-13 23:36 in a Desktop session started in /Users/nfeldman/research and reproduced by direct launch; the pre-merge server binds identically. — [B02-R4](../findings.md#b02-r4) · 🟠 HIGH · Open
 - The gate that certifies "activation-path probes are time-bounded" passes while an unbounded probe sits on the activation path. Its green is true of what it measured and is read as true of the path. — [B02-R2](../findings.md#b02-r2) · 🟡 MEDIUM · Open
 - The server tells every host it is 0.2.0-beta.1 while the package it is built from is 0.2.0-beta.2. A user cannot determine which version they are running, and a bug report naming the version names the wrong one. — [B02-R3](../findings.md#b02-r3) · 🟡 MEDIUM · Open
 
@@ -96,7 +97,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files excluded from the survey obligation | 0 of 8 |
 | Ledger rows the repository has changed under | 0 of 8 |
 | Active concerns with a disposition recorded here | 25 of 30 — 3 confirmed-bug, 18 confirmed-acceptable, 1 ruled-out, 3 out-of-scope |
-| Findings by resolution state | 3 open |
+| Findings by resolution state | 4 open |
 | Seams assessable from both sides | 5 of 5 |
 
 ## Survey record
