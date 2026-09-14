@@ -494,14 +494,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 300,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "fefa0e875f5a46e84b16915cd1b43573a01a5575",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "f73725f",
+      "green_sha": "de7f126ba3a00c81ef16f9f1ad4d12d2933e769f",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Carried findings live outside the findings table so a carried id cannot collide with its successor, cannot be counted as a defect this survey found, and cannot make finding_resolution_current answer about a store that no longer exists. GATE CF2 asserts only properties of dev/pecia-resolve-finding.mjs, a deliverable of this packet, so it belongs here; by P9 it would be green on its first run."
+      "notes": "Carried findings live in carried_findings/carried_finding_outcomes/carried_finding_evidence/carry_runs plus a new single-row store_identity, all five CREATE ... IF NOT EXISTS with immutability and no-delete trigger pairs. Three gaps the spec left open were filled and are the things to look at first. (1) carry_runs is immutable by its own trigger, so imported_count cannot be incremented across calls; the carry is therefore three tools — begin_carry_run declares expected_count and imported_count, carry_finding refuses past imported_count, finish_carry_run refuses while expected, imported and the rows written disagree. (2) --carry-reason is required for every source kind, not only for none, because carry_runs.reason is NOT NULL for every kind. (3) §5.3's export-versus-store cross-check had no second input under a single --carry-from, so the driver gained --carry-verify-store <path>; a carry from a store records itself as its own witness. archivedStoreId separates three states, not two: no store_identity table selects the legacy derivation, a table with no row is refused rather than silently given a second identity. dev/check-store-fully-surveyed.mjs evaluates ADR-0001 clauses 1-4 and 7 from the store and reports clauses 5 and 6 unevaluable — never satisfied — when the store records no composition run or projection verification. Eighteen sabotages were run against the implementation; four survived and each named a gate gap now closed (the driver refusals must arrive before the discard; C7 writes exactly imported_count so only the expected/imported comparison can fire; A7 carries through the tool and reads findings; D8 and D9 read idx_carried_outcome_one and the current-session half of the successor rule). GATE CF2 ships and is proved here, green under five sabotages of its own."
     },
     {
       "id": "P5",
