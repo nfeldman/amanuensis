@@ -806,6 +806,69 @@ async function main(mods) {
         : `the archive's id is ${JSON.stringify(got)}, not ${wanted}; §5.3 derives it from the frozen git_state row when the store has no minted identity`;
     });
 
+    // F3/codex. §5.3 makes the legacy derivation "available only when the
+    // source is opened ?immutable=1", and C20 repeats it. `readonly: true` is
+    // not that: it opens a live file, replays its WAL, and sees every later
+    // write. A reviewer handed a *live* pre-identity store to the derivation,
+    // changed `git_state.last_checked_sha` through the ordinary tool, and
+    // watched the same store report two different identities — which is the
+    // one thing §5.3 says the field must never do.
+    check("B4a the legacy derivation refuses an ordinary live path and is reached only immutably", () => {
+      const missing = absent("carry_finding", "§5.3's derivation");
+      if (missing) return missing;
+      if (typeof mods.archivedStoreId !== "function") {
+        return "src/invariants.ts exports no archivedStoreId";
+      }
+      // A live pre-identity store: no store_identity table, and a git_state
+      // row this test is about to change under the derivation.
+      const live = join(scratch, "live-pre-identity.db");
+      one.db.pragma("wal_checkpoint(TRUNCATE)");
+      cpSync(one.project.dbPath, live);
+      const probe = openDatabase(live);
+      probe.exec("DROP TABLE store_identity");
+      probe.exec(
+        `INSERT INTO git_state (repo_id, canonical_branch, last_checked_sha, onboarding_sha)
+         VALUES ('default','main','1111111111111111111111111111111111111111','b8b566f')
+         ON CONFLICT(repo_id) DO UPDATE SET canonical_branch='main',
+           last_checked_sha='1111111111111111111111111111111111111111', onboarding_sha='b8b566f'`,
+      );
+      probe.pragma("wal_checkpoint(TRUNCATE)");
+      probe.close();
+
+      let openPath = null;
+      const refusedOpenPath = refusal(() => {
+        openPath = mods.archivedStoreId(live);
+        return null;
+      });
+      if (!refusedOpenPath) {
+        return (
+          `archivedStoreId named a live pre-identity store ${JSON.stringify(openPath)} through an ` +
+          "ordinary path. §5.3 makes the legacy form available only through an immutable open, " +
+          "because a live store's last_checked_sha moves and the id moves with it"
+        );
+      }
+      if (!/immutab/i.test(refusedOpenPath)) {
+        return `the refusal does not say what is missing: ${refusedOpenPath}`;
+      }
+
+      // The immutable door exists, and it is the one the carry uses.
+      let immutableId = null;
+      const refusedImmutable = refusal(() => {
+        immutableId = mods.archivedStoreId(live, { immutable: true });
+        return null;
+      });
+      if (refusedImmutable) {
+        return `the immutable open was refused as well, so nothing can name an archive: ${refusedImmutable}`;
+      }
+      const wanted = `store-legacy-${createHash("sha256")
+        .update("default|main|b8b566f|1111111111111111111111111111111111111111")
+        .digest("hex")
+        .slice(0, 16)}`;
+      return immutableId === wanted
+        ? null
+        : `the immutable open derived ${JSON.stringify(immutableId)}, not ${wanted}`;
+    });
+
     check("B5 a live store's id is the minted one, never the legacy derivation", () => {
       if (typeof mods.archivedStoreId !== "function") {
         return "src/invariants.ts exports no archivedStoreId";
