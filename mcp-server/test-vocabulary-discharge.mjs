@@ -61,6 +61,7 @@
 //   let a codebase-wide term discharge a subsystem               → B3
 //   let any declination row discharge, resolvable or not         → B4, E1
 //   read `vocabulary.subsystem_id` only, ignoring the scopes     → B5, D3
+//   skip carrying a pre-join-table row's scope into the table    → D6
 //   drop the citation parse from define_term                     → A1
 //   accept a malformed or unreachable revision                   → A2, A3
 //   skip the tree lookup (`cat-file -e <sha>:<path>`)            → A4
@@ -818,6 +819,36 @@ async function main(mods) {
       return rows.length === 1
         ? null
         : `the reset left ${rows.length} declination(s) where 1 stood; a kept record is what tells a later pass that someone already read this subsystem and concluded it coins nothing`;
+    });
+
+    check("D6 a term row written before the scope table keeps the scope it already had", () => {
+      // The row shape an existing store holds: `vocabulary.subsystem_id` and no
+      // scope row, because the join table did not exist when it was written.
+      // `define_term` must carry that scope into the table *before* its upsert
+      // moves the primary scope, or the first re-definition of a shared term
+      // revokes the older subsystem's discharge — the silent revocation D3
+      // covers only for terms written after the table arrived.
+      readyForStructural(ctx, "D-05", "src/a.ts");
+      readyForStructural(ctx, "D-06", "src/b.ts");
+      ctx.db
+        .prepare(
+          "INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen) VALUES (?, ?, ?, ?)",
+        )
+        .run("vd1-legacy", "a term an earlier store scoped by column alone", "D-05", `src/a.ts:a@${head}`);
+      const redefined = refusal(() =>
+        call(
+          "define_term",
+          { term: "vd1-legacy", gloss: "D-06 uses it too", subsystem_id: "D-06", first_seen: `src/a.ts:a@${head}` },
+          ctx,
+        ),
+      );
+      if (redefined) return `re-defining the legacy term for D-06 was refused: ${redefined}`;
+      const wrong = [];
+      const d05 = advanceToStructural(ctx, "D-05");
+      if (d05) wrong.push(`D-05's discharge was revoked by a re-definition it never saw: ${d05}`);
+      const d06 = advanceToStructural(ctx, "D-06");
+      if (d06) wrong.push(`D-06 could not advance on the term it just defined: ${d06}`);
+      return wrong.length === 0 ? null : wrong.join("; ");
     });
 
     check("D4 the store re-opens with the declination rows it already held", () => {
