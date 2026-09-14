@@ -67,6 +67,35 @@
 // `dev/test-survey-depth-red-gates.mjs`, which seeds faults into a synthetic
 // store; both are printed in the header when set, so a relocated run says so.
 //
+// **The receipt shape this arm recomputes from** (§7.5), for whoever writes
+// `design/survey-depth/acceptance-receipt.json`. Aggregate counts are not
+// enough for B3 or B4 — "does *this* disposition carry a resolvable row" and
+// "which record discharged *this* subsystem" are per-row questions:
+//
+//   { "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
+//     "repository_sha": "<40 hex, an ancestor of HEAD>",
+//     "blocking": {
+//       "B1": { "witness": { "detected_sha", "tree_digest", "ledger_digest",
+//                            "tracked_paths", "ledger_rows", "unledgered",
+//                            "absent", "exempt" } },
+//       "B2": { "examined": <n>, "obligation_bearing": <n> },
+//       "B3": { "dispositions": [ { "subsystem_id", "concern_code",
+//                                   "subsystem_status",
+//                                   "attachments": [ { "evidence_id", "ref_sha",
+//                                                      "resolved" } ] } ] },
+//       "B4": { "subsystems": [ { "id", "status",
+//                                 "terms": [ { "term", "first_seen" } ],
+//                                 "declination": { "id", "ref_sha", "session_id" } } ] },
+//       "B5": { "carried": [ { "archived_store_id", "archived_finding_id",
+//                              "outcome", "repaired_sha",
+//                              "evidence_revisions": [] } ] } },
+//     "reported": { … the axes below, by the fixture's own key names … } }
+//
+// A `verdict` field beside any of those is ignored on purpose. So is
+// `attachments[].resolved`: it says what was true when the receipt was written,
+// and a revision can be rewritten away afterwards, so every `ref_sha` is
+// re-resolved here.
+//
 // **False greens it cannot exclude.** The reported axes, by design. And B2
 // cannot distinguish a file that was read from a file marked `examined`: the
 // classification is an assertion, and this gate checks its coverage, not its
