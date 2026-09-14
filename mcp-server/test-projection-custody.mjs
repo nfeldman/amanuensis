@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
 import { ensureProjectStorage, resolveProject } from "./dist/project.js";
+import { gitTools } from "./dist/tools/git.js";
 import { materializeTools } from "./dist/tools/materialize.js";
 
 function assert(value, message) {
@@ -41,7 +42,7 @@ ensureProjectStorage(project, (dbPath) => openDatabase(dbPath).close());
 const storage = project.storagePath;
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: "projection-session" };
-const tools = new Map(materializeTools.map((tool) => [tool.name, tool]));
+const tools = new Map([...materializeTools, ...gitTools].map((tool) => [tool.name, tool]));
 const call = (name, args = {}) => tools.get(name).handler(args, ctx);
 
 try {
@@ -70,6 +71,17 @@ try {
      VALUES ('B-01-overview', 1, 'B-01', 'fixture.ts', 'hash', ?, 'verified',
              1, datetime('now'), 'fixture')`,
   ).run(sha);
+
+  // §3.3: publication is refused over a store that has not been reconciled
+  // against the repository at the revision it is about to stamp. The fixture
+  // ledgers its one tracked path and then runs the real reconciliation, so what
+  // this gate tests is still custody of the read-back and not the reconciliation.
+  call("set_git_state", { canonical_branch: "main", onboarding_sha: sha });
+  db.prepare(
+    `INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification, ref_sha)
+     VALUES ('B-01', 'fixture.ts', 'projection custody fixture', 'examined', ?)`,
+  ).run(sha);
+  call("detect_changes", { current_sha: sha });
 
   const published = call("materialize_docs", { clean_publish: true });
   assert(published.ok && published.published, JSON.stringify(published));

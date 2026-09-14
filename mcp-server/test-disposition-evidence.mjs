@@ -264,6 +264,15 @@ function main(mods) {
     );
   }
 
+  /** The §3.3 reconciliation the advance to `mapped` requires (P2). */
+  function reconcileStore(ctx) {
+    const sha = headSha(ctx);
+    if (!ctx.db.prepare("SELECT 1 FROM git_state WHERE repo_id='default'").get()) {
+      call("set_git_state", { canonical_branch: "main", onboarding_sha: sha }, ctx);
+    }
+    call("detect_changes", { current_sha: sha }, ctx);
+  }
+
   function seedChallenges(ctx, id) {
     const unchallenged = ctx.db
       .prepare(
@@ -828,6 +837,12 @@ function main(mods) {
       );
       if (toAdversarial !== null) return `the advance to 'adversarial' was refused: ${toAdversarial}`;
       seedChallenges(ctx, "B-01");
+      // §3.3, which P2 added to the same rung: `mapped` also requires the whole
+      // store to have been reconciled against the tree at HEAD. Taken here,
+      // after the last ledger write, because a reconciliation is invalidated by
+      // the next one. This control is about §2.3's attachment rule, so the
+      // reconciliation is a prerequisite it satisfies rather than one it tests.
+      reconcileStore(ctx);
       let result;
       const toMapped = refusal(() => {
         result = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
@@ -963,7 +978,7 @@ try {
     ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
       await import("./dist/project.js"));
     mods.invariants = await import("./dist/invariants.js");
-    const [artifacts, claims, concerns, dispositions, evidence, files, project, subsystems] =
+    const [artifacts, claims, concerns, dispositions, evidence, files, gitModule, project, subsystems] =
       await Promise.all([
         import("./dist/tools/artifacts.js"),
         import("./dist/tools/claims.js"),
@@ -971,6 +986,7 @@ try {
         import("./dist/tools/dispositions.js"),
         import("./dist/tools/evidence.js"),
         import("./dist/tools/files.js"),
+        import("./dist/tools/git.js"),
         import("./dist/tools/project.js"),
         import("./dist/tools/subsystems.js"),
       ]);
@@ -981,6 +997,7 @@ try {
       dispositions.dispositionTools,
       evidence.evidenceTools,
       files.fileTools,
+      gitModule.gitTools,
       project.projectTools,
       subsystems.subsystemTools,
     ];

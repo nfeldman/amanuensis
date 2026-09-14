@@ -20,6 +20,7 @@ import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
 import { findingTools } from "./dist/tools/findings.js";
+import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 
@@ -65,6 +66,7 @@ const allTools = new Map(
     ...claimTools,
     ...fileTools,
     ...artifactTools,
+    ...gitTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -193,6 +195,19 @@ function seedChallengeOutcomes(ctx, id) {
   }
 }
 
+// §3.3's own deliverable: `mapped` is the status that licenses the phrase
+// *fully surveyed*, so the whole store must have been reconciled against the
+// repository's tree at HEAD before any subsystem reaches it. Driven through the
+// same two tools a survey uses, and last — a reconciliation is invalidated by
+// the next ledger write, so it is taken once the ledger for this climb is final.
+function reconcileStore(ctx) {
+  const sha = headSha(ctx);
+  if (!ctx.db.prepare("SELECT 1 FROM git_state WHERE repo_id='default'").get()) {
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: sha }, ctx);
+  }
+  call("detect_changes", { current_sha: sha }, ctx);
+}
+
 // Convenience: advance a subsystem through the survey to a target depth,
 // satisfying every phase prerequisite along the way.
 //
@@ -269,6 +284,7 @@ function advanceTo(ctx, id, status) {
       // recorded challenge outcome before the subsystem may publish its
       // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
       seedChallengeOutcomes(ctx, id);
+      reconcileStore(ctx);
     }
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
@@ -1055,9 +1071,11 @@ t("phase prerequisites: happy path passes all gates", () => {
       ctx,
     );
     call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
-    // Phase 4's prerequisite: the structural account is challenged before it
-    // is published as mapped (§9.1).
+    // Phase 4's prerequisites: the structural account is challenged before it
+    // is published as mapped (§9.1), and the whole store has been reconciled
+    // against the repository's tree at HEAD (§3.3).
     seedChallengeOutcomes(ctx, "B-01");
+    reconcileStore(ctx);
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
   } finally {

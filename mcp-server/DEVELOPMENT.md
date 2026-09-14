@@ -413,7 +413,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 |---|---|
 | `get_git_state` | Return the stored git baseline (canonical branch, onboarding SHA, last-checked SHA, detected branches). |
 | `set_git_state` | Create or update the git baseline. On first call, onboarding_sha and canonical_branch are required. Subsequent calls may update any subset of fields. detected_branches is an array; stored as JSON. |
-| `detect_changes` | Compare current_sha against last_checked_sha for files tracked in the file_ledger. Marks affected entries stale and updates last_checked_sha. Requires the target workspace to be a git repo the server can shell out to. |
+| `detect_changes` | Reconcile the file_ledger against the tree at current_sha: mark drifted and absent entries stale, rewrite scope_gaps, update last_checked_sha, and record the reading as one append-only scope_reconciliations row carrying its counts and two witness digests. The advance to 'mapped' and materialize_docs both refuse a store with no standing reconciliation. Requires the target workspace to be a git repo the server can shell out to. |
 
 ### `impact` (3)
 
@@ -464,7 +464,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `materialize_docs` | Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. |
+| `materialize_docs` | Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. Refuses before rendering when the store has no standing reconciliation at HEAD, or when the standing one reports tracked paths with no ledger row or ledger rows the tree no longer carries: run detect_changes and assign or exempt every path it reports first. |
 | `verify_materialized_docs` | Read back existing HTML and Markdown projections inside the bound project storage without rendering or repairing them. Records state, coverage, and content mismatches as an auditable verification run and returns the HTML entrypoint; durable source truth is read-only. |
 
 ### `open-questions` (4)

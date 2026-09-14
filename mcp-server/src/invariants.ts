@@ -539,7 +539,15 @@ export function readReconciliationStanding(
     )?.detected_sha ?? null;
   const base = { standing: null, sha: null, lastCheckedSha, latestSha };
 
-  const resolved = resolveWorkspaceCommits(workspacePath, [revision]).get(revision) ?? null;
+  // Both revisions in one `git cat-file --batch-check`, for the reason §2.2
+  // batches a disposition's attachments: this predicate runs on every advance to
+  // `mapped` and on every publication, and a subprocess per revision puts a
+  // status advance's cost in the number of revisions it happens to compare.
+  const normalized = resolveWorkspaceCommits(
+    workspacePath,
+    lastCheckedSha === null ? [revision] : [revision, lastCheckedSha],
+  );
+  const resolved = normalized.get(revision) ?? null;
   if (resolved === null) {
     return {
       ...base,
@@ -551,9 +559,7 @@ export function readReconciliationStanding(
     return { ...base, sha: resolved, why: `the tree at ${resolved} could not be enumerated` };
   }
   const normalizedLastChecked =
-    lastCheckedSha === null
-      ? null
-      : (resolveWorkspaceCommits(workspacePath, [lastCheckedSha]).get(lastCheckedSha) ?? null);
+    lastCheckedSha === null ? null : (normalized.get(lastCheckedSha) ?? null);
   if (normalizedLastChecked !== resolved) {
     return {
       ...base,
