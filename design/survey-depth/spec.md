@@ -1254,10 +1254,8 @@ Plus the **row-level witnesses** without which B3 and B4 cannot be recomputed fr
 
 That is what makes this a baseline for the *next* rebuild rather than a one-time report: the
 comparison is repeatable at any later revision without the live store, and repeatable by
-recomputation rather than by trust. The gate's receipt arm
-asserts the same predicates over it, so the comparison is repeatable at any later revision
-without the live store — which is what makes this a baseline for the *next* rebuild rather than
-a one-time report.
+recomputation rather than by trust. The gate's receipt arm asserts the same predicates over the
+receipt that its live arm asserts over the store.
 
 ---
 

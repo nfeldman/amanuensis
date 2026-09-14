@@ -244,7 +244,14 @@ anywhere in the normative text — §8.9a now supplies all three, and C41 record
 the denominator document P10 reads and P11 does not rewrite. `GATE PA1` (P9) had a red condition in
 prose inside §8.9 but neither of the other two, and now has its own §8.9b. C34's evidence
 enumerated nine of the twelve packet gates; all twelve were checked against disk and `HEAD` and none
-exists, so the claim held and only its enumeration was short. What the sweep did not find is any
+exists, so the claim held and only its enumeration was short.
+
+The same sweep found two defects in `plan.json` that no review item had named. `completion.commands`
+ran ten of the twelve packet gates: `dev/test-carry-receipt.mjs` and `dev/test-pecia-carry-audit.mjs`
+were absent, so the lane could have reached completion with two of its own gates never run there;
+both are added. Four packets carried a regression command twice. §7.5 also held two consecutive
+sentences making the same claim, the first added by `3c4caf5` over the second without removing it —
+the appended-not-replaced artifact of the revision's own editing. What the sweep did not find is any
 packet gate whose red condition still rests on the absence of its file.
 
 What the revision did not close:

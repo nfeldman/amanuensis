@@ -135,5 +135,7 @@
 - `node dev/test-carried-finding-references.mjs`
 - `node dev/record-survey-depth-baseline.mjs --check`
 - `cd mcp-server && node test-existing-store-migration.mjs`
+- `node dev/test-carry-receipt.mjs`
+- `node dev/test-pecia-carry-audit.mjs`
 
 Final review: pending
