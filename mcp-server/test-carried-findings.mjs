@@ -75,7 +75,11 @@
 //   stop resolving repaired_sha                                  → D3
 //   drop the merge-base ancestry test from `repaired`            → D4
 //   accept a successor_id that names no findings row             → D6
-//   drop idx_carried_outcome_one                                 → D7
+//   drop idx_carried_outcome_one                                 → D8
+//   drop record_carried_outcome's standing-outcome check          → (nothing:
+//       idx_carried_outcome_one still refuses the write, so the property D7
+//       names still holds. It takes both guards going for a record to reach
+//       two outcomes, which is why D7 and D8 read one guard each.)
 //   derive the store id from git_state instead of minting it     → B2, B3
 //   drop the legacy fallback for a store with no identity row    → B4
 //   put carried rows in `findings`                               → A5
@@ -660,6 +664,57 @@ async function main(mods) {
     check("A6 carry_finding is on the tool surface", () =>
       absent("carry_finding", "§5.4's carry, and with it the retroactive path of §5.8"),
     );
+
+    check("A7 the tool's own carry writes no findings row", () => {
+      // A2 reads a record the fixture wrote; this reads one `carry_finding`
+      // wrote. Without it, a carry that *also* inserted into `findings` — so
+      // the carried defect were counted among the ones this survey found, and
+      // collided with its own successor's id — would leave every arm green.
+      const missing = absent("carry_finding", "§5.2's namespace separation");
+      if (missing) return missing;
+      let runId = null;
+      const began = refusal(() => {
+        runId = call(
+          "begin_carry_run",
+          {
+            source_kind: "store",
+            source_path: "/cf1/fixture/archive/memory.db",
+            archived_store_id: "store-namespacefixt",
+            archived_anchor: headSha(ctx),
+            reason: "a carry through the tool",
+            expected_count: 1,
+            imported_count: 1,
+          },
+          ctx,
+        ).carry_run_id;
+        return null;
+      });
+      if (began) return `begin_carry_run refused: ${began}`;
+      const before = ctx.db.prepare("SELECT COUNT(*) AS n FROM findings").get().n;
+      const carried = refusal(() =>
+        call(
+          "carry_finding",
+          {
+            carry_run_id: runId,
+            archived_finding_id: "B04-5",
+            subsystem_id: "B04",
+            severity: "HIGH",
+            symptom: "the archived symptom",
+            root_cause: "the archived cause",
+            archived_resolution: "open",
+          },
+          ctx,
+        ),
+      );
+      if (carried) return `carry_finding refused: ${carried}`;
+      if (ctx.db.prepare("SELECT finding_id FROM findings WHERE finding_id = 'B04-5'").get()) {
+        return "carry_finding wrote B04-5 into `findings`, where it is counted as a defect this survey found, collides with its own successor's id, and makes finding_resolution_current answer about a store that no longer exists";
+      }
+      const after = ctx.db.prepare("SELECT COUNT(*) AS n FROM findings").get().n;
+      return after === before
+        ? null
+        : `carry_finding added ${after - before} findings row(s); a carried record is an obligation to decide, not a finding this store confirmed`;
+    });
   }
 
   // ------------------------------------------------- B1..B5: store identity (§5.3)
@@ -892,6 +947,29 @@ async function main(mods) {
       return outcomeRows(id).length === 0 ? null : "the call was refused and the outcome row was written anyway";
     });
 
+    check("D9 successor-finding is refused when an earlier session filed the successor", () => {
+      if (missingTool) return missingTool;
+      // §5.4's rule is "an existing findings row in this store, **filed in the
+      // current session**". The successor *is* this pass's re-find; pointing at
+      // a finding an earlier pass filed records an association, not a re-find,
+      // and would let a carried obligation be discharged by a row that was
+      // already there when the carry ran.
+      const id = seedCarried(ctx, { archived_finding_id: "D9" });
+      seedFinding(ctx, "B03-D9", "cf1-some-older-session");
+      const said = outcome(id, {
+        outcome: "successor-finding",
+        successor_id: "B03-D9",
+        rationale: "a finding that was already here",
+        ref_sha: headSha(ctx),
+      });
+      if (!said) {
+        return "a carried finding was discharged into a successor an earlier session had filed; the successor is the re-find this pass made, and a row that predates the carry re-finds nothing";
+      }
+      return outcomeRows(id).length === 0
+        ? null
+        : "the call was refused and the outcome row was written anyway";
+    });
+
     check("D7 a carried record reaches exactly one outcome", () => {
       if (missingTool) return missingTool;
       const id = seedCarried(ctx, { archived_finding_id: "D7" });
@@ -910,6 +988,34 @@ async function main(mods) {
       });
       if (!second) {
         return "a second outcome was accepted for one carried record; §5.4 corrects a mistaken outcome by a new carried record from the same archive, which is visible, not by overwriting the decision";
+      }
+      const rows = outcomeRows(id);
+      return rows.length === 1
+        ? null
+        : `${rows.length} outcome rows stand for one carried record (${rows.map((r) => r.outcome).join(", ")})`;
+    });
+
+    check("D8 a second outcome written around the tool is refused by the index", () => {
+      // D7 reads the tool's refusal; this reads the substrate's. Either guard
+      // alone keeps D7 green, so without this arm a reviewer could drop
+      // `idx_carried_outcome_one` and leave the table able to hold two
+      // decisions for one record — for the carry, or for any later writer that
+      // does not go through `record_carried_outcome`.
+      const id = seedCarried(ctx, { archived_finding_id: "D8" });
+      const insert = (outcome) =>
+        refusal(() =>
+          ctx.db
+            .prepare(
+              `INSERT INTO carried_finding_outcomes (carried_id, outcome, rationale, session_id, ref_sha)
+               VALUES (?, ?, 'cf1 fixture', ?, ?)`,
+            )
+            .run(id, outcome, ctx.sessionId, headSha(ctx)),
+        );
+      const first = insert("ruled-out");
+      if (first) return `the first outcome row was refused: ${first}`;
+      const second = insert("repaired");
+      if (!second) {
+        return "the table accepted two outcome rows for one carried record; idx_carried_outcome_one is what makes 'exactly one' a fact about the store rather than a promise one tool keeps";
       }
       const rows = outcomeRows(id);
       return rows.length === 1
@@ -1164,6 +1270,12 @@ async function main(mods) {
     writeFileSync(join(workspace, "README.md"), `throwaway workspace for CF1 (${label})\n`);
     spawnSync("git", ["-C", workspace, "add", "-A"], { encoding: "utf8" });
     gitCommit(workspace, "seed");
+    // Seed the store the run would discard, so "it refused before the discard"
+    // is a statement about a store that existed to be lost. Without it a
+    // refusal raised *after* the deletion would look the same as one raised
+    // before, because there would be nothing there either way.
+    const project = resolveProject(workspace, { selectionSource: "cf1-carried-findings" });
+    ensureProjectStorage(project, (databasePath) => openDatabase(databasePath).close());
     return { root, workspace };
   }
   function runDriver(label, args, timeout = 600_000) {
@@ -1189,7 +1301,21 @@ async function main(mods) {
       workspace,
       dbPath: join(workspace, ".amanuensis", "memory.db"),
       receiptPath: join(root, "receipt.json"),
+      // A refusal that arrives after the discard has already cost the
+      // conspectus. `discarded` is the driver's own step line, so a refusal
+      // raised downstream of it is visible here.
+      discarded: /\bdiscarded\b/.test(String(run.stdout ?? "")),
+      storeSurvives: existsSync(join(workspace, ".amanuensis", "memory.db")),
     };
+  }
+  /** Null when the run refused before touching the store; the sentence otherwise. */
+  function refusedBeforeDiscard(run, what) {
+    if (run.discarded) {
+      return `the driver refused ${what} only after it had discarded the store; a carry source that cannot be read is a refusal that costs nothing before the snapshot and costs the conspectus after it`;
+    }
+    return run.storeSurvives
+      ? null
+      : `the driver refused ${what} but the store it would have discarded is gone`;
   }
   /** Rows the driver left behind, read through a fresh handle. */
   function readStore(dbPath, query, params = []) {
@@ -1219,9 +1345,10 @@ async function main(mods) {
     if (run.status === 0) {
       return "the driver discarded a conspectus without being told what to carry out of it; §5.4 makes --carry-from required because six baseline open findings were lost exactly this way";
     }
-    return /--carry-from/.test(run.said)
-      ? null
-      : `it exited ${run.status} for some other reason: ${run.said.slice(-220)}`;
+    if (!/--carry-from/.test(run.said)) {
+      return `it exited ${run.status} for some other reason: ${run.said.slice(-220)}`;
+    }
+    return refusedBeforeDiscard(run, "a missing --carry-from");
   });
 
   check("C2 --carry-from none is refused without --carry-reason", () => {
@@ -1231,9 +1358,10 @@ async function main(mods) {
     if (run.status === 0) {
       return "an empty carry was accepted with no reason; 'nothing to carry' is a judgment somebody makes, and an unreasoned empty carry is indistinguishable from a forgotten one";
     }
-    return /--carry-reason/.test(run.said)
-      ? null
-      : `it exited ${run.status} for some other reason: ${run.said.slice(-220)}`;
+    if (!/--carry-reason/.test(run.said)) {
+      return `it exited ${run.status} for some other reason: ${run.said.slice(-220)}`;
+    }
+    return refusedBeforeDiscard(run, "an unreasoned empty carry");
   });
 
   check("C4 an export with no archived_store_id is refused as a carry source", () => {
@@ -1276,9 +1404,90 @@ async function main(mods) {
     if (run.status === 0) {
       return "an export carrying no archived_store_id was accepted as a carry source; without it the carry cannot name the store the records came from, which is the one thing §5.3 exists to record";
     }
-    return /archived_store_id/.test(run.said)
+    if (!/archived_store_id/.test(run.said)) {
+      return `it exited ${run.status} without naming the missing field: ${run.said.slice(-220)}`;
+    }
+    return refusedBeforeDiscard(run, "an export with no archived_store_id");
+  });
+
+  check("G5 an export that carries archived_store_id is accepted as a carry source", () => {
+    // The refusal C4 reads is about the missing field, not about exports:
+    // §5.4 accepts either an archived store or an export carrying the field,
+    // and a gate that only ever refuses exports would let the second half of
+    // that sentence rot.
+    if (!driverPresent) return `${DRIVER_REL} is absent`;
+    if (!serverBuilt) return "the built server is absent";
+    const storeId = "store-legacyexportfx";
+    const exportPath = join(scratch, "export-with-identity.json");
+    writeFileSync(
+      exportPath,
+      `${JSON.stringify(
+        {
+          anchor: "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+          archived_store_id: storeId,
+          exported_at: "2026-09-13T00:00:00Z",
+          source: "cf1 fixture",
+          subsystems: [],
+          open_questions: [],
+          counts: { findings: 2 },
+          findings: [
+            {
+              finding_id: "EXP-1",
+              subsystem_id: "B03",
+              severity: "HIGH",
+              status: "confirmed-bug",
+              resolution_state: "open",
+              symptom: "an open defect the export carries",
+              root_cause: "the cause the export carries",
+              primary_files: [],
+              ref_sha: "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+            },
+            {
+              finding_id: "EXP-2",
+              subsystem_id: "B03",
+              severity: "LOW",
+              status: "ruled-out",
+              resolution_state: "ruled-out",
+              symptom: "a defect the archive had already overturned",
+              root_cause: "the cause the export carries",
+              primary_files: [],
+              ref_sha: "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const run = runDriver("export-with-identity", [
+      "--carry-from",
+      exportPath,
+      "--carry-reason",
+      "the archived store is not on this machine; the export is what survives",
+    ]);
+    if (run.status !== 0) {
+      return `an export carrying archived_store_id was refused (exit ${run.status}): ${run.said.slice(-260)}`;
+    }
+    const runs = readStore(run.dbPath, "SELECT * FROM carry_runs ORDER BY id");
+    if (!runs || runs.length !== 1) return `the rebuilt store holds ${runs?.length ?? "no readable"} carry_runs row(s)`;
+    if (runs[0].source_kind !== "export" || runs[0].archived_store_id !== storeId) {
+      return `the carry recorded source_kind ${JSON.stringify(runs[0].source_kind)} and archived_store_id ${JSON.stringify(runs[0].archived_store_id)}`;
+    }
+    const rows = readStore(
+      run.dbPath,
+      `SELECT cf.archived_finding_id AS id, o.outcome AS outcome
+         FROM carried_findings cf
+         LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+        ORDER BY cf.archived_finding_id`,
+    );
+    if (!rows || rows.length !== 2) return `the carry wrote ${rows?.length ?? "no readable"} record(s) for 2 exported findings`;
+    const byId = new Map(rows.map((row) => [row.id, row.outcome]));
+    if (byId.get("EXP-2") !== "archived-terminal") {
+      return `the export's ruled-out finding was carried with outcome ${JSON.stringify(byId.get("EXP-2") ?? null)}`;
+    }
+    return byId.get("EXP-1") === null || byId.get("EXP-1") === undefined
       ? null
-      : `it exited ${run.status} without naming the missing field: ${run.said.slice(-220)}`;
+      : `the export's open finding was pre-recorded ${JSON.stringify(byId.get("EXP-1"))}`;
   });
 
   // The archive the remaining C-arms carry from: a real store, frozen, holding
@@ -1455,6 +1664,7 @@ async function main(mods) {
 
     check("C7 a carry whose declared counts differ refuses to finish", () => {
       if (missingBegin) return missingBegin;
+      if (missingCarry) return missingCarry;
       if (missingFinish) return missingFinish;
       let runId = null;
       const began = refusal(() => {
@@ -1466,18 +1676,25 @@ async function main(mods) {
             archived_store_id: "store-partialfixture",
             archived_anchor: headSha(ctx),
             reason: "a partial carry",
-            expected_count: 22,
-            imported_count: 20,
+            expected_count: 2,
+            imported_count: 1,
           },
           ctx,
         ).carry_run_id;
         return null;
       });
       if (began) return `begin_carry_run refused a partial carry outright: ${began}`;
+      // Exactly `imported_count` records are written, so the rows agree with
+      // what the run committed to and the *only* disagreement left is the one
+      // between expected and imported. Without this the arm would stay green on
+      // C8's check alone, and dropping the expected/imported comparison would
+      // cost nothing.
+      const wrote = carryOne(runId, "C7-1");
+      if (wrote) return `the declared record was refused: ${wrote}`;
       const said = refusal(() => call("finish_carry_run", { carry_run_id: runId }, ctx));
       return said
         ? null
-        : "a carry that declared 22 expected and 20 imported finished clean; the disagreement is meant to be visible, and a finish that ignores it hides exactly the partial carry the two fields exist to show";
+        : "a carry that declared 2 expected and 1 imported, and wrote exactly that 1, finished clean; the disagreement is meant to be visible, and a finish that ignores it hides exactly the partial carry the two fields exist to show — the finding left behind is the one nothing will ask about again";
     });
 
     check("C8 a carry that wrote fewer records than it declared refuses to finish", () => {
