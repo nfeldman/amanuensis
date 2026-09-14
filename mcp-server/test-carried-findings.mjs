@@ -1558,6 +1558,54 @@ async function main(mods) {
     ]);
   })();
 
+  check("C10 an export whose archived_store_id disagrees with its store is refused", () => {
+    // §5.3: where the store itself is available the carry verifies the two
+    // agree. An export that names the wrong archive produces a carry that is
+    // internally consistent and wrong, and archived_store_id is the only field
+    // that separates the two stores — so a gate that only ever read the
+    // export's own claim would be trusting exactly the field under test.
+    if (!driverPresent) return `${DRIVER_REL} is absent`;
+    if (!serverBuilt) return "the built server is absent";
+    if (!archiveSummary.built) return "the archive fixture was not built";
+    const exportPath = join(scratch, "export-wrong-archive.json");
+    writeFileSync(
+      exportPath,
+      `${JSON.stringify(
+        {
+          anchor: archiveSummary.anchor,
+          archived_store_id: "store-someotherarchi",
+          exported_at: "2026-09-13T00:00:00Z",
+          source: "cf1 fixture",
+          subsystems: [],
+          open_questions: [],
+          counts: { findings: 0 },
+          findings: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const run = runDriver(
+      "export-wrong-archive",
+      [
+        "--carry-from",
+        exportPath,
+        "--carry-verify-store",
+        archiveSummary.path,
+        "--carry-reason",
+        "the export and the store should name one archive",
+      ],
+      180_000,
+    );
+    if (run.status === 0) {
+      return `an export declaring store-someotherarchi was carried from beside the store ${archiveSummary.identity}; the two name different archives and the carry took the export's word`;
+    }
+    if (!run.said.includes(archiveSummary.identity)) {
+      return `it exited ${run.status} without naming the store's own identity: ${run.said.slice(-240)}`;
+    }
+    return refusedBeforeDiscard(run, "an export that names a different archive");
+  });
+
   check("C5 a carry from an archived store writes the records and the run", () => {
     if (!carriedRun) return `${DRIVER_REL} or the built server is absent`;
     if (carriedRun.status !== 0) {

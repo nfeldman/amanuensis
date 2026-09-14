@@ -48,6 +48,7 @@
 //   node dev/rebuild-self-conspectus-store.mjs --confirm
 //                                              --carry-from <store|export|none>
 //                                              --carry-reason "<text>"
+//                                              [--carry-verify-store <path>]
 //                                              [--archive <dir>]
 //                                              [--receipt <path>]
 //                                              [--discard-populated-store]
@@ -314,6 +315,7 @@ async function resolveCarrySource() {
       kind: "none",
       path: null,
       archivedStoreId: null,
+      verifiedAgainst: null,
       anchor: null,
       reason,
       findings: [],
@@ -343,10 +345,50 @@ async function resolveCarrySource() {
     if (!Array.isArray(doc.findings)) {
       die(`refusing the carry source ${sourcePath}: it carries no findings array`);
     }
+    // §5.3: "where the store itself is available the carry verifies the two
+    // agree and refuses on a mismatch". The export is the weaker witness — it
+    // carries whatever its exporter wrote — so where the store it was taken
+    // from is also on this machine, the two are compared and a disagreement is
+    // a refusal. An export that names the wrong archive produces a carry that
+    // is internally consistent and wrong, and `archived_store_id` is the only
+    // field that separates the two stores.
+    let verifiedAgainst = null;
+    const verifyStore = arg("--carry-verify-store");
+    if (verifyStore) {
+      const storePath = resolve(verifyStore);
+      if (!existsSync(storePath)) die(`--carry-verify-store names no file: ${storePath}`);
+      let readArchivedStoreId;
+      try {
+        ({ archivedStoreId: readArchivedStoreId } = await import(
+          join(REPO, "mcp-server", "dist", "invariants.js")
+        ));
+      } catch (error) {
+        die(`the built server could not be loaded to verify the carry source: ${error.message}`);
+      }
+      let storeIdentity;
+      try {
+        storeIdentity = readArchivedStoreId(storePath);
+      } catch (error) {
+        die(`refusing to verify ${sourcePath} against ${storePath}: ${error.message}`);
+      }
+      if (storeIdentity !== archivedStoreId) {
+        die(
+          `refusing the carry source ${sourcePath}: it declares archived_store_id\n` +
+            `  ${archivedStoreId}\n` +
+            `but the store at ${storePath} is\n` +
+            `  ${storeIdentity}\n` +
+            "A carry that named the wrong archive produces records that are internally consistent\n" +
+            "and wrong, and archived_store_id is the only field that separates the two stores.",
+        );
+      }
+      verifiedAgainst = storePath;
+    }
+
     return {
       kind: "export",
       path: sourcePath,
       archivedStoreId,
+      verifiedAgainst,
       anchor: typeof doc.anchor === "string" ? doc.anchor : "",
       reason,
       findings: doc.findings.map((finding) => ({
@@ -380,6 +422,9 @@ async function resolveCarrySource() {
     kind: "store",
     path: sourcePath,
     archivedStoreId: archive.archived_store_id,
+    // The store *is* the witness: there is no second reading to disagree with,
+    // which is why §5.3's cross-check is an export-only concern.
+    verifiedAgainst: sourcePath,
     anchor: archive.archived_anchor,
     reason,
     findings: archive.findings,
@@ -692,6 +737,7 @@ const receipt = {
     source_kind: carry.kind,
     source_path: carry.path,
     archived_store_id: carry.archivedStoreId,
+    archived_store_id_verified_against: carry.verifiedAgainst,
     archived_anchor: carry.anchor,
     reason: carry.reason,
     carry_run_id: carryRun.carry_run_id,
