@@ -254,6 +254,17 @@ sentences making the same claim, the first added by `3c4caf5` over the second wi
 the appended-not-replaced artifact of the revision's own editing. What the sweep did not find is any
 packet gate whose red condition still rests on the absence of its file.
 
+A third sweep, this one driven by the launcher's now-explicit red-commit rule, found the protocol
+recorded in §8.0 was two-state where three of the gates are three-state. `GATE D0`, `GATE XS1` and
+`GATE CR1` each exit **2** in a `cannot run`, which is non-zero — so a launcher checking only the
+exit code would have accepted a gate that never read its inputs as that packet's red proof. That is
+the `MODULE_NOT_FOUND` failure one level up: the gate's *file* is present, its *inputs* are not, and
+nothing was asserted either way. §8.0 gains clause 3 making the red check a conjunction and naming
+the input each of the three requires, and it records that D0's red proof is machine-local — the
+store is untracked, so the same commit reports `cannot run` in a clean checkout. The same sweep
+found §8.0's enumeration ran "§8.1 to §8.9b", which silently excluded the one packet gate specified
+outside §8: D0's red conditions are §7.3's B1–B6. Both references now say §7.3 and §8.
+
 What the revision did not close:
 
 - **The two reviewers disagreed about 11 claims and the disagreement was never about the facts.**
@@ -303,3 +314,10 @@ What the revision did not close:
   obligations were still prose at the DDL level — tables declared append-only in a paragraph, with
   no trigger — and the revision replaced the paragraph with 12 triggers and the `IF NOT EXISTS`
   form the schema already requires. That is decision 2 being applied, not withdrawn.
+
+- **Whether a machine-local red proof is a red proof.** §8.0 clause 3 requires `GATE D0`'s red to
+  be taken where a live store exists, which is this worktree and not CI. The proof is real and it
+  is unreproducible by anyone who does not hold the store — the same property the untracked store
+  already forces on the depth measures themselves. Whether P10's red should instead be proved
+  against a synthetic store committed for the purpose, as `GATE D1` already does for B1–B6, is a
+  question the acceptance rebuild will be in a position to answer and this revision is not.

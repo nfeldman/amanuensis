@@ -1285,8 +1285,23 @@ fires *selectively*", one step earlier: an absent file does not prove even that.
    its must-stay-green control, against the **unchanged** implementation.
 2. **At HEAD**, after the implementation lands, the same command exits 0 and prints
    `GATE <packet-id> GREEN`.
+3. **A `cannot run` is never accepted as the red.** Three gates here declare a third state and
+   exit **2**: `GATE D0` (§7.1) when there is neither a live store nor a committed acceptance
+   receipt, `GATE XS1` (§8.0a) when the source store is unreadable on this machine, and
+   `GATE CR1` (§8.9a) when the archived store is unreadable. All three exit non-zero, so an exit
+   code alone cannot separate a refusal to measure from a measurement. The launcher's test is a
+   conjunction — non-zero **and** a last line beginning `GATE <packet-id> RED:` — so a `cannot run`
+   fails it, and that is the intended behaviour rather than a launcher fault: a gate that could not
+   read its inputs has asserted nothing, and accepting it would reproduce the `MODULE_NOT_FOUND`
+   error one level up, with the gate's *inputs* absent instead of the gate's *file*. The red proof
+   is therefore taken where those inputs are present, and each such gate names what its red
+   requires: XS1 a readable copy of the AxiomDB store, CR1 the readable archived store at
+   §7.2's path, and D0 the live store at `.amanuensis/memory.db` that **P8** initializes in this
+   worktree — untracked (`git ls-files .amanuensis` → 0), so D0's red proof is machine-local, and
+   in a clean checkout the same commit reports `cannot run`. A packet whose red proof needs an
+   input the machine does not have is blocked, not waived.
 
-**What this requires of every red condition in §8.1 to §8.9b.** Each must name the *assertion* that
+**What this requires of every red condition in §7.3 and §8.1 to §8.9b.** Each must name the *assertion* that
 fires — the call that should have been refused and was not, the row that should have been
 unwritable and was written — and must be reachable against the implementation as it stands before
 the packet. "The test file is absent" is not a red condition and is not accepted as one. Where a
@@ -1300,7 +1315,10 @@ and `gate.red_rejects` carries the crash signatures above.
 
 **What the launcher verifies, and the one gate it does not.** The protocol above is checked against
 each packet's `gate` field in `plan.json`, and the plan carries exactly one such field per packet,
-with no two packets sharing a test path. `GATE CF2` is the only gate this specification declares
+with no two packets sharing a test path. Eleven of the twelve packet gates are specified in this
+section; the twelfth is `GATE D0`, whose red conditions are §7.3's B1–B6 and whose red at **P10**
+is a property of the surveyed store, not of a missing file — its file is a **P5** deliverable and
+already exists at P10's red commit. `GATE CF2` is the only gate this specification declares
 that is not a packet gate: §8.9 places it in **P4**, whose gate field is `GATE CF1`. CF2's red is
 therefore shipped and proved inside P4's red commit and checked by P4's acceptance, and it runs as a
 regression command from P8 onward — a weaker proof than every other gate here receives, recorded

@@ -613,8 +613,8 @@ Evidence:
 Every gate's red commit ships the complete test, including its fixtures and its must-stay-green
 control, against the unchanged implementation. At the red commit the gate exits non-zero, prints
 `GATE <packet-id> RED: <reason>` as its last stdout line, and emits no crash signature; at HEAD it
-exits 0 and prints `GATE <packet-id> GREEN`. Every red condition in `spec.md` §8 names the
-assertion that fires, never the absence of the test file.
+exits 0 and prints `GATE <packet-id> GREEN`. Every red condition in `spec.md` §7.3 and §8 names
+the assertion that fires, never the absence of the test file.
 
 Evidence:
 - `spec.md` §8.0.
@@ -728,3 +728,23 @@ Evidence:
   written by reader-lenses P17 at `dee59d3e`.
 - `plan.json` P8 — `dev/record-carry-receipt.mjs`, `design/survey-depth/carry-receipt.json` and
   `dev/test-carry-receipt.mjs` are deliverables; P10 `depends_on` P8 and P11 `depends_on` P10.
+
+### C42
+
+A `cannot run` is never accepted as a gate's red proof. `GATE D0`, `GATE XS1` and `GATE CR1` each
+exit 2 in that state, so the launcher's red check is a conjunction: exit non-zero **and** a last
+stdout line beginning `GATE <packet-id> RED:`. Each of the three names the input its red requires —
+XS1 a readable copy of the AxiomDB store, CR1 the archived store at `spec.md` §7.2's path, D0 the
+live store `.amanuensis/memory.db` that P8 initializes in the lane worktree. A packet whose red
+proof needs an input the machine does not have is blocked, not waived.
+
+Evidence:
+- `spec.md` §8.0 clause 3; §7.1 candidate arm; §8.0a and §8.9a each state `cannot run` — never
+  green — when their store is unreadable on this machine.
+- The lane worktree holds no `.amanuensis` directory and `git ls-files .amanuensis` returns 0, so
+  D0's candidate arm has no live store until P8 initializes one; `plan.json` P11 writes
+  `design/survey-depth/acceptance-receipt.json`, after P10.
+- `plan.json` — P0, P8 and P10 `gate.red_expect` begin `GATE XS1 RED:`, `GATE CR1 RED:` and
+  `GATE D0 RED:`, none of which a `cannot run` line satisfies.
+- VP4(e) — a zero denominator is out-of-band, not a pass; VP4(f) — a kill proves a gate can fire,
+  never that it fires selectively.
