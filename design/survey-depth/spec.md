@@ -3,7 +3,7 @@
 - Status: normative for the `survey-depth` lane. Binding on every packet in `plan.json`.
 - Binding inputs: `design/survey-depth/README.md` (proposal), `design/survey-depth/decisions.md`
   (owner decisions). Where the proposal and the decisions differ, the decisions govern; §1.6
-  and §8.9 record the one place they do.
+  and §8.5 record the one place they do.
 - Base revision: `main` at `d2b1630`. Lane branch `survey-depth`.
 - Measurement session: `20260914-020500-design`. Every number in §1 was re-derived by this
   session against the two stores read-only; the queries are printed beside the values and
