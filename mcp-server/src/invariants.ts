@@ -374,6 +374,19 @@ function requireAttachedEvidence(
     }
   }
 
+  // The refusals cap their enumeration and so does this list: a status advance
+  // is not a paged reader, and a subsystem whose history was rewritten wholesale
+  // could otherwise return one line per attachment. The count is kept, so the
+  // scale is still visible; `get_disposition_evidence` has the rest.
+  if (warnings.length > NAMED_IN_REFUSAL) {
+    const elided = warnings.length - NAMED_IN_REFUSAL;
+    warnings.length = NAMED_IN_REFUSAL;
+    warnings.push(
+      `${elided} further attachment(s) of ${subsystemId} rest on revisions the workspace can no ` +
+        `longer reach; get_disposition_evidence names them.`,
+    );
+  }
+
   if (unattached.length > 0) {
     throw new ToolError(
       `cannot advance ${subsystemId} to '${targetStatus}': ${unattached.length} disposition(s) ` +
