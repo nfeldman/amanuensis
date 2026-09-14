@@ -1228,8 +1228,9 @@ recipe with an untested branch.
 ### 7.5 What it must turn green, and how the result is recorded
 
 The acceptance is `dev/test-survey-depth.mjs` green on **B1–B6** against the frozen baseline,
-with every reported axis printed. Plus, unchanged and still green: `dev/test-rebuild-coverage.mjs`,
-`dev/test-rebuild-readback.mjs`, `dev/test-reader-lenses-dogfood.mjs`, and the full CI list.
+with every reported axis printed. Plus, still green: `dev/test-rebuild-coverage.mjs`,
+`dev/test-reader-lenses-dogfood.mjs`, the full CI list, and `dev/test-rebuild-readback.mjs` as P4
+updated it (§8.10).
 
 The result is recorded in `design/survey-depth/acceptance-receipt.json`, written by
 `dev/record-survey-depth.mjs` and committed, carrying: the contract string
