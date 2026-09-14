@@ -482,6 +482,21 @@ CREATE TABLE IF NOT EXISTS vocabulary_scopes (
 CREATE INDEX IF NOT EXISTS idx_vocabulary_scopes_subsystem
     ON vocabulary_scopes(subsystem_id);
 
+-- Append-only, by the trigger rather than by this paragraph. A scope row is a
+-- subsystem's discharge of the §4.4 obligation: the reason it was allowed to
+-- advance to `structural`. `define_term` only ever writes one with
+-- `INSERT OR IGNORE` (src/tools/vocabulary.ts:123) and nothing edits or removes
+-- one, so an UPDATE or a DELETE here is a discharge being revoked or moved
+-- after the advance it licensed -- silently, which is the failure §4.4's join
+-- table was added to stop. Shipped without these two, this table was the one
+-- table the specification added that C38 did not hold for.
+CREATE TRIGGER IF NOT EXISTS vocabulary_scopes_is_immutable
+BEFORE UPDATE ON vocabulary_scopes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'a vocabulary scope is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS vocabulary_scopes_cannot_be_deleted
+BEFORE DELETE ON vocabulary_scopes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'a vocabulary scope cannot be deleted'); END;
+
 
 ----------------------------------------------------------------------
 -- VOCABULARY_DECLINATIONS: "this subsystem coins nothing", said out loud
