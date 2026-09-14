@@ -1288,7 +1288,7 @@ fires *selectively*", one step earlier: an absent file does not prove even that.
 2. **At HEAD**, after the implementation lands, the same command exits 0 and prints
    `GATE <packet-id> GREEN`.
 
-**What this requires of every red condition in §8.1 to §8.9.** Each must name the *assertion* that
+**What this requires of every red condition in §8.1 to §8.9b.** Each must name the *assertion* that
 fires — the call that should have been refused and was not, the row that should have been
 unwritable and was written — and must be reachable against the implementation as it stands before
 the packet. "The test file is absent" is not a red condition and is not accepted as one. Where a
@@ -1299,6 +1299,14 @@ an assertion the gate can make and print.
 
 Each packet's `gate.red_expect` in `plan.json` quotes the first line of the reason its red prints,
 and `gate.red_rejects` carries the crash signatures above.
+
+**What the launcher verifies, and the one gate it does not.** The protocol above is checked against
+each packet's `gate` field in `plan.json`, and the plan carries exactly one such field per packet,
+with no two packets sharing a test path. `GATE CF2` is the only gate this specification declares
+that is not a packet gate: §8.9 places it in **P4**, whose gate field is `GATE CF1`. CF2's red is
+therefore shipped and proved inside P4's red commit and checked by P4's acceptance, and it runs as a
+regression command from P8 onward — a weaker proof than every other gate here receives, recorded
+here rather than left to be discovered.
 
 ### 8.0a `GATE XS1` — `mcp-server/test-existing-store-migration.mjs`
 
@@ -1469,9 +1477,7 @@ arm narrows the window only where a store exists to read, which in CI it does no
 Every red condition below is a property of `dev/pecia-resolve-finding.mjs`, which P4 delivers. A
 gate asserting P4's behaviour cannot prove P9's: by the time P9 starts, the resolver has shipped
 and the gate is green on its first run, with no red commit available to it. It therefore belongs
-to P4, whose red it does prove. P9 keeps a gate of its own — `dev/test-pecia-carry-audit.mjs`,
-red when `dev/pecia-dogfood.md` leaves any of the eight `pc-*` records unaccounted (`pc-1a91`,
-`pc-207e`, `pc-707e`, `pc-80b8`, `pc-833d`, `pc-adce`, `pc-ae87`, `pc-d688`), which is P9's own
+to P4, whose red it does prove. P9 keeps a gate of its own, `GATE PA1` of §8.9b, which is P9's own
 deliverable and its own claim.
 
 
@@ -1485,6 +1491,33 @@ argument on any path; or returns an exit code outside {0,1,2}. Control: an id wi
 reference stopped resolving. An open Pecia record pointing at a destroyed finding is still
 invisible to the audit; this gate makes the resolver honest, and the remaining gap is candidate
 finding **B03-R2**, which the acceptance rebuild must carry forward rather than close.
+
+### 8.9a `GATE CR1` — `dev/test-carry-receipt.mjs`, in **P8**
+
+**Red when:** `design/survey-depth/carry-receipt.json` omits any finding id the archived store
+holds; records a `carried_id` that no `carried_findings` row has; records an archived resolution
+state that disagrees with the archive's own row for that id; or reports a row count that differs
+from the `carry_runs` row's `expected_count` and `imported_count`. Control: a receipt written from
+the archived store with all 22 ids present, every `carried_id` resolving, and 22 = 22 = 22 is green.
+Reports `cannot run` — never green — when the archived store is unreadable on this machine.
+
+**False green it cannot exclude:** the receipt is checked against the archive it names. A carry that
+named the wrong archive produces a receipt that is internally consistent and wrong; only the
+`archived_store_id` of §5.3 separates the two stores, and this gate trusts that field rather than
+re-deriving it.
+
+### 8.9b `GATE PA1` — `dev/test-pecia-carry-audit.mjs`, in **P9**
+
+**Red when:** `dev/pecia-dogfood.md` leaves a closed Pecia record unaccounted — any of the eight
+whose reference stopped resolving (`pc-1a91`, `pc-207e`, `pc-707e`, `pc-80b8`, `pc-833d`,
+`pc-adce`, `pc-ae87`, `pc-d688`), each of which must name the carried record and its outcome — or
+accounts for one by naming a `carried_id` that no `carried_findings` row has. Control: a dogfood
+document naming all eight, each with a resolving carried id, is green.
+
+**False green it cannot exclude:** `pecia audit` enumerates only *closed* records whose reference
+stopped resolving. An open Pecia record pointing at a destroyed finding is outside those eight and
+outside this gate; that gap is candidate finding **B03-R2**, which the acceptance rebuild carries
+forward rather than closes.
 
 ### 8.10 Gates that must stay green, unchanged
 

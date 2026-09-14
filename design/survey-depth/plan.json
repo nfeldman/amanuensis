@@ -711,7 +711,6 @@
         "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
         "cd mcp-server && npx biome check src/",
         "cd mcp-server && npm run build",
-        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
         "cd mcp-server && node test-vocabulary-source.mjs",
         "cd mcp-server && node test-consumer-route.mjs",
         "node dev/test-rebuild-readback.mjs",
@@ -746,7 +745,8 @@
       "claims": [
         "C25",
         "C30",
-        "C34"
+        "C34",
+        "C41"
       ],
       "depends_on": [
         "P5",
@@ -808,8 +808,7 @@
         "cd mcp-server && node test-carried-findings.mjs",
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "node dev/test-carried-finding-references.mjs",
-        "node dev/test-survey-depth-red-gates.mjs"
+        "node dev/test-carried-finding-references.mjs"
       ],
       "acceptance": [
         "The reader-lenses \u00a712.1 recipe runs in this worktree through step 6: snapshot, stop with an ESRCH pid probe and an lsof exclusivity check, delete, initialize and restart in a second process, carry, read back from a third. Snapshot and delete run unconditionally even though this worktree has no prior store.",
@@ -818,7 +817,8 @@
         "The third-process read-back returns the carried count through list_carried_findings within the envelope budget.",
         "Onboarding runs and detect_changes at HEAD writes a scope_reconciliations row whose tree_digest and ledger_digest re-derive; the calibrated concern checklist is written to mcp-server/contracts/concern-checklist.json with a --check.",
         "design/survey-depth/carry-receipt.json records every archived finding id, its archived resolution state, and its carried_id, so the survey packet's denominator is a document this packet committed and P11 does not rewrite.",
-        "Every gate this lane has shipped is green before the packet is accepted: XS1, SD1, SR1, VD1, CF1, PM1, RP1, CF2, D1."
+        "Every gate this lane has shipped is green before the packet is accepted: XS1, SD1, SR1, VD1, CF1, PM1, RP1, CF2, D1.",
+        "GATE CR1 is spec.md \u00a78.9a: red when carry-receipt.json omits an archived finding id, names a carried_id no carried_findings row has, disagrees with the archive's resolution state, or reports a count differing from carry_runs; it reports cannot run when the archive is unreadable."
       ],
       "needs_mcp": true,
       "budget_minutes": 180,
@@ -836,7 +836,8 @@
       "slice": "S4",
       "title": "Survey every subsystem and decide every carried finding",
       "claims": [
-        "C34"
+        "C34",
+        "C41"
       ],
       "depends_on": [
         "P8"
@@ -893,8 +894,7 @@
         "cd mcp-server && node test-carried-findings.mjs",
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "node dev/test-carried-finding-references.mjs",
-        "node dev/test-survey-depth-red-gates.mjs"
+        "node dev/test-carried-finding-references.mjs"
       ],
       "acceptance": [
         "Subsystems are surveyed through the skill in priority order, in batches, each behind its own storage checkpoint, mirroring the reader-lenses lane's per-subsystem batching.",
@@ -984,8 +984,7 @@
         "cd mcp-server && node test-carried-findings.mjs",
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "node dev/test-carried-finding-references.mjs",
-        "node dev/test-survey-depth-red-gates.mjs"
+        "node dev/test-carried-finding-references.mjs"
       ],
       "acceptance": [
         "materialize_docs(clean_publish=true) then dev/promote-docs.mjs, with the read-back re-run at docs/.",
@@ -1068,7 +1067,8 @@
       "acceptance": [
         "pecia audit is re-run over the rebuilt store and each of the eight closed records whose reference stopped resolving \u2014 pc-1a91, pc-207e, pc-707e, pc-80b8, pc-833d, pc-adce, pc-ae87, pc-d688 \u2014 is accounted for in dev/pecia-dogfood.md, naming the carried record and its outcome.",
         "The gate is red when any of those eight is unaccounted, which is this packet's own deliverable and its own claim.",
-        "The gate header records the remaining gap: pecia audit sees only closed records, so an open Pecia record pointing at a destroyed finding stays invisible (candidate finding B03-R2, carried not closed)."
+        "The gate header records the remaining gap: pecia audit sees only closed records, so an open Pecia record pointing at a destroyed finding stays invisible (candidate finding B03-R2, carried not closed).",
+        "GATE PA1 is spec.md \u00a78.9b, with its control (all eight named, each carried_id resolving) and its false green (open Pecia records are outside the audit) stated there."
       ],
       "needs_mcp": false,
       "budget_minutes": 120,

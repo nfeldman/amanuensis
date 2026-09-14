@@ -234,7 +234,20 @@ independently revertible; collapsing them would make a single red block all four
 ## 10. Unsettled after round 1
 
 The round-1 reviews are dispositioned in `reviews/round-1/dispositions.md`: 60 items applied,
-1 rejected. What the revision did not close:
+1 rejected.
+
+A second pass over the applied result swept the spec against the plan for gates the reviews had
+not reached, and found three the revision's own edits had left inconsistent. `GATE CR1`
+(`dev/test-carry-receipt.mjs`, P8) existed only in `plan.json`: the spec never declared it, so the
+gate the launcher would verify had no red condition, no control and no false-green statement
+anywhere in the normative text — §8.9a now supplies all three, and C41 records the carry receipt as
+the denominator document P10 reads and P11 does not rewrite. `GATE PA1` (P9) had a red condition in
+prose inside §8.9 but neither of the other two, and now has its own §8.9b. C34's evidence
+enumerated nine of the twelve packet gates; all twelve were checked against disk and `HEAD` and none
+exists, so the claim held and only its enumeration was short. What the sweep did not find is any
+packet gate whose red condition still rests on the absence of its file.
+
+What the revision did not close:
 
 - **The two reviewers disagreed about 11 claims and the disagreement was never about the facts.**
   On every one of C12, C13, C15, C20, C21, C29, C31, C32 and C33, codex overturned and claude
@@ -268,6 +281,15 @@ The round-1 reviews are dispositioned in `reviews/round-1/dispositions.md`: 60 i
   the rebuild's 6 in an evening, scaled to the 361 examined paths B2 requires. That is a better
   estimate than the 300 it replaces and it is still an estimate from two points. If P10 exhausts
   its budget the answer is more batches, not a lower B2: the fraction is frozen with the baseline.
+
+- **`GATE CF2` is proved red more weakly than every other gate here.** The launcher verifies the
+  red-then-green protocol against each packet's single `gate` field, and `plan-tool.mjs:221-224`
+  permits one per packet with no two sharing a test path. §8.9 argues CF2 belongs to P4 — the
+  resolver it tests ships there, so P9 would find it already green — but P4's gate field is CF1.
+  CF2's red is therefore shipped inside P4's red commit and checked by P4's acceptance, by hand,
+  and it runs as a regression command from P8 onward. §8.0 now says so. Whether the right repair is
+  a plan schema that admits two gates per packet, or a packet boundary drawn where each gate gets
+  its own red commit, is not settled here.
 
 - **Decision 2's fallback was not triggered.** `decisions.md` §2 ("Substrate, not prose") names no
   fallback, and no claim it rests on was overturned. What the reviews found is that four of its

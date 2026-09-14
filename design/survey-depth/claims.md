@@ -618,11 +618,13 @@ assertion that fires, never the absence of the test file.
 
 Evidence:
 - `spec.md` §8.0.
-- `plan.json` — every packet's `gate.test_path` is a file that does not exist at `ec11d3f`:
-  `test-disposition-evidence.mjs`, `test-scope-reconciliation.mjs`, `test-vocabulary-discharge.mjs`,
-  `test-carried-findings.mjs`, `test-survey-depth-red-gates.mjs`, `test-unmeasured-coverage.py`,
-  `test-refusal-parity.mjs`, `test-survey-depth-acceptance.mjs`,
-  `test-carried-finding-references.mjs`.
+- `plan.json` — all twelve packet `gate.test_path` values are files that exist neither on disk nor
+  in `HEAD` at `e6ce473`: `test-existing-store-migration.mjs`, `test-disposition-evidence.mjs`,
+  `test-scope-reconciliation.mjs`, `test-vocabulary-discharge.mjs`, `test-carried-findings.mjs`,
+  `test-survey-depth-red-gates.mjs`, `test-unmeasured-coverage.py`, `test-refusal-parity.mjs`,
+  `test-carry-receipt.mjs`, `test-survey-depth.mjs`, `test-survey-depth-acceptance.mjs`,
+  `test-pecia-carry-audit.mjs`; `test-carried-finding-references.mjs` is the same, and is the one
+  declared gate that is not a packet gate (`spec.md` §8.0, §8.9).
 - `plan.json` `gate.red_rejects` carries the crash signatures `MODULE_NOT_FOUND`,
   `Cannot find module`, `ENOENT`, `SyntaxError`, `ReferenceError`, `TypeError`,
   `is not a function`, `command not found`, `ModuleNotFoundError`, `ImportError`.
@@ -707,3 +709,22 @@ Evidence:
   `ruled-out`, `fixed-pending-verification`, `verified-fixed`.
 - `mcp-server/src/db.ts:154-192` — `migrateVocabularyChecks` reads the columns to migrate from the
   contract's own `sql` mappings, so an enum declared only inline never reaches an existing store.
+
+### C41
+
+`design/survey-depth/carry-receipt.json` is written by P8 and records, for every finding id the
+archived store holds, that id's archived resolution state and the `carried_id` of the record the
+carry wrote. P10's survey takes its denominator from that file; P11 records the acceptance receipts
+and does not rewrite it. `GATE CR1` — `dev/test-carry-receipt.mjs`, `spec.md` §8.9a — is red when
+the receipt omits an archived id, names a `carried_id` no `carried_findings` row has, disagrees with
+the archive's own resolution state, or reports a count differing from `carry_runs`.
+
+Evidence:
+- The archived store's `findings` table holds 22 rows (C25); `plan.json` P8 acceptance records
+  `expected_count` 22 equal to `imported_count` 22.
+- `dev/test-rebuild-depth.mjs:19-24` — "Every denominator this gate counts against is read from a
+  *different* committed document than the one under test … A numerator and its denominator that
+  shrink together prove nothing (GP24)"; `design/reader-lenses/rebuild-coverage-receipt.json` was
+  written by reader-lenses P17 at `dee59d3e`.
+- `plan.json` P8 — `dev/record-carry-receipt.mjs`, `design/survey-depth/carry-receipt.json` and
+  `dev/test-carry-receipt.mjs` are deliverables; P10 `depends_on` P8 and P11 `depends_on` P10.
