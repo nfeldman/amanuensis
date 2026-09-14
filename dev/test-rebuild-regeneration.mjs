@@ -537,6 +537,11 @@ check("recording the outcome admits the advance, and the transition is recorded"
   if (!written || typeof written.id !== "number") {
     return `record_claim_challenge returned ${JSON.stringify(written ?? null)} rather than the id of the row it wrote`;
   }
+  // §3.3 sits on the same rung: `mapped` also requires the whole store to have
+  // been reconciled against the tree at HEAD. Taken here, after the fixture's
+  // last ledger write, so the advance is refused only by the prerequisite this
+  // check is about.
+  call("detect_changes", { current_sha: fixture.head }, fixture.ctx);
   const denied = refusal("update_subsystem_status", { id: "B-R1", status: "mapped" }, fixture.ctx);
   if (denied !== null) return `the advance was still refused after the outcome was recorded: ${denied}`;
   const rows = fixture.db
