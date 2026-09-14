@@ -162,7 +162,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity] =
+  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -180,8 +180,9 @@ try {
       import("./dist/tools/open-questions.js"),
       import("./dist/tools/contradictions.js"),
       import("./dist/tools/diagnosticity.js"),
+      import("./dist/tools/carried.js"),
     ]);
-  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity };
+  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -201,6 +202,7 @@ const TOOL_SETS = () => [
   mods?.openQuestions?.openQuestionTools,
   mods?.contradictions?.contradictionTools,
   mods?.diagnosticity?.diagnosticityTools,
+  mods?.carried?.carriedTools,
 ];
 
 function tool(name) {
@@ -1039,6 +1041,20 @@ function validatorProbes() {
       tool: "update_subsystem_status",
       args: { id: "B-01", status: OUT_OF_SOURCE },
       enumName: "subsystem_status",
+    },
+    // The survey-depth lane's own enum. It reached the source with P4 and
+    // nothing probed it, which is the state this gate exists to refuse
+    // (F7/codex, slice-S1): `record_carried_outcome` is the one writer of
+    // §5.4's three outcomes, and its validator must refuse a fourth.
+    {
+      label: "record_carried_outcome.outcome",
+      tool: "record_carried_outcome",
+      args: {
+        carried_id: 1,
+        outcome: OUT_OF_SOURCE,
+        rationale: "a carried record decided with a word §5.4 does not carry",
+      },
+      enumName: "carried_finding_outcome",
     },
   ];
 }

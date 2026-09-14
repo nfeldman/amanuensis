@@ -437,11 +437,16 @@ export const carriedTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: (args, ctx) => {
-      const sessionId = requireActiveSession(ctx, "record_carried_outcome");
-      const carriedId = requireInt(args, "carried_id");
-      const carried = readCarried(ctx, carriedId);
+      // The arguments are validated before the store is read. A caller who
+      // names an outcome §5.4 does not carry gets that back, whatever else is
+      // wrong with the call — and a validator reachable only through an
+      // existing record is a validator nothing can probe, which is how this
+      // enum reached the source unprobed (F7/codex, slice-S1).
       const outcome = requireEnum(args, "outcome", CARRIED_FINDING_OUTCOMES);
+      const carriedId = requireInt(args, "carried_id");
       const rationale = requireString(args, "rationale");
+      const sessionId = requireActiveSession(ctx, "record_carried_outcome");
+      const carried = readCarried(ctx, carriedId);
       const suppliedRefSha = optString(args, "ref_sha");
 
       if (outcome === "archived-terminal") {
