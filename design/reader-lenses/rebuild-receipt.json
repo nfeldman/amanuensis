@@ -1,58 +1,129 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-receipt/v1",
   "packet": "P16",
-  "recorded_at": "2026-09-12T11:44:58.790Z",
-  "repository_sha": "b208b62ec0fa5651b2acc757739aedca5f0c2d30",
-  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
-  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+  "recorded_at": "2026-09-14T03:22:59.558Z",
+  "repository_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+  "workspace_path": "/Users/nfeldman/repos/amanuensis",
+  "storage_path": "/Users/nfeldman/repos/amanuensis/.amanuensis",
   "project_key": "github.com/nfeldman/amanuensis",
   "produced_by": "dev/rebuild-self-conspectus-store.mjs --confirm",
   "pre_rebuild": {
-    "store_present": false,
-    "db_exists": false,
-    "storage_entries": [],
+    "store_present": true,
+    "db_exists": true,
+    "storage_entries": [
+      ".DS_Store",
+      ".git",
+      ".gitignore",
+      ".storage-mode",
+      "B-01-survey-methodology-agent-contracts.md",
+      "B-02-mcp-core-persistence-lifecycle.md",
+      "B-03-knowledge-tools-workflow-api.md",
+      "B-04-diff-aware-materializer.md",
+      "B-05-packaging-installer-validation-docs.md",
+      "B-06-report-interface-design-and-validation-studies.md",
+      "B-07-embedded-research-surveys-and-platform-trials.md",
+      "B-08-activation-evidence-and-release-readiness.md",
+      "concern-checklist.md",
+      "docs",
+      "entry-point.md",
+      "field-notes.md",
+      "findings-index.md",
+      "initialization.json",
+      "master-plan.md",
+      "memory.db",
+      "memory.db-shm",
+      "memory.db-wal",
+      "onboarding-report.md",
+      "project_identity",
+      "seam-assessments-b8b566f.md",
+      "workspace_path"
+    ],
     "census": {
-      "subsystem_count": 0,
-      "mapped_count": 0,
-      "total_findings": 0,
-      "open_bugs": 0,
+      "subsystem_count": 8,
+      "mapped_count": 8,
+      "total_findings": 22,
+      "open_bugs": 13,
       "stale_entries": 0,
-      "scoped_files": 0,
-      "open_field_notes": 0,
+      "scoped_files": 503,
+      "open_field_notes": 16,
       "unresolved_contradictions": 0
     },
     "database_bytes": {
-      "memory.db": 1863680,
+      "memory.db": 2924544,
       "memory.db-wal": 0,
       "memory.db-shm": 32768
     },
-    "note": "This worktree carried no self-conspectus store before the rebuild: the branch's work had never opened one, so the snapshot records an empty store this packet initialized to run the procedure at the real path, and the discard removed that. The recoverability of a populated snapshot is proved in the gate's procedure arm, not here."
+    "note": "The store discarded here is the one this worktree carried before the rebuild."
   },
   "snapshot": {
     "tool": "commit_phase_gate",
     "label": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild",
     "committed": true,
-    "commit_sha": "7c79dd1",
+    "commit_sha": "c1112c1",
     "reason": "committed",
     "taken_before_deletion": true,
     "history_at_snapshot": [
       {
-        "sha": "7c79dd1",
-        "date": "2026-09-12T07:44:57-04:00",
+        "sha": "c1112c1",
+        "date": "2026-09-13T23:22:57-04:00",
         "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
       },
       {
-        "sha": "a03d579",
-        "date": "2026-09-12T07:44:57-04:00",
-        "message": "amanuensis: initialize storage"
+        "sha": "15292f8",
+        "date": "2026-09-11T19:05:07-04:00",
+        "message": "session mtxkdl1l-zthu2ljl ended (completed)"
+      },
+      {
+        "sha": "12a528c",
+        "date": "2026-09-11T19:05:07-04:00",
+        "message": "session mtxkbtsu-ke45coh0 ended (completed)"
+      },
+      {
+        "sha": "09031d5",
+        "date": "2026-09-11T19:03:46-04:00",
+        "message": "File five Amanuensis defects found by downstream use: B02-4, B03-7, B03-8, B01-1, B04-5"
+      },
+      {
+        "sha": "902a716",
+        "date": "2026-08-29T04:16:18-04:00",
+        "message": "session mte2i1me-5fmqnys2 ended (completed)"
+      },
+      {
+        "sha": "96097ed",
+        "date": "2026-08-29T04:14:54-04:00",
+        "message": "Pre-repair snapshot: before stripping stray tool-call markup from records written this session"
+      },
+      {
+        "sha": "bd921f5",
+        "date": "2026-08-29T04:13:06-04:00",
+        "message": "Refresh B-05 complete: 35/35 files re-examined; full obligation-bearing backlog discharged"
+      },
+      {
+        "sha": "d7bf60e",
+        "date": "2026-08-29T04:09:04-04:00",
+        "message": "Refresh B-05 part 4: docs re-examined; generated-vs-hand-maintained drift pattern recorded"
+      },
+      {
+        "sha": "7b2d316",
+        "date": "2026-08-29T04:07:58-04:00",
+        "message": "Refresh B-05 part 3: version drift traced across release surfaces; README, lockfile, cli.ts, scripts cleared"
+      },
+      {
+        "sha": "169949c",
+        "date": "2026-08-29T04:06:01-04:00",
+        "message": "Refresh B-05 part 2: corrected field note 31 — evidence-vocabulary checker exists and is CI-enforced"
       }
     ]
   },
   "stop": {
-    "server_pid": 14677,
+    "server_pid": 16169,
     "signal": "SIGTERM",
     "exited_before_deletion": true,
-    "pid_probe_after_exit": "ESRCH"
+    "pid_probe_after_exit": "ESRCH",
+    "exclusive_before_deletion": {
+      "other_holders": [],
+      "established_by": "lsof -t -w -- . ./memory.db ./memory.db-wal ./memory.db-shm"
+    }
   },
   "discard": {
     "removed": [
@@ -61,19 +132,36 @@
       "memory.db-shm"
     ],
     "survivors_of_partial_deletion": [
+      ".DS_Store",
       ".git",
       ".gitignore",
       ".storage-mode",
+      "B-01-survey-methodology-agent-contracts.md",
+      "B-02-mcp-core-persistence-lifecycle.md",
+      "B-03-knowledge-tools-workflow-api.md",
+      "B-04-diff-aware-materializer.md",
+      "B-05-packaging-installer-validation-docs.md",
+      "B-06-report-interface-design-and-validation-studies.md",
+      "B-07-embedded-research-surveys-and-platform-trials.md",
+      "B-08-activation-evidence-and-release-readiness.md",
+      "concern-checklist.md",
+      "docs",
+      "entry-point.md",
+      "field-notes.md",
+      "findings-index.md",
       "initialization.json",
+      "master-plan.md",
+      "onboarding-report.md",
       "project_identity",
+      "seam-assessments-b8b566f.md",
       "workspace_path"
     ],
     "removed_storage_directory": true,
-    "archive_path": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-reader-lenses/8616248b-3b9d-4ea8-9530-7f8f5fae2985/scratchpad/pre-rebuild-archive-2",
+    "archive_path": "/Users/nfeldman/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9-script",
     "reason": "Removing only memory.db, -wal and -shm leaves initialization.json naming a missing database, and the next open fails with a storage-marker error; removing the marker as well fails differently, because the incomplete-store rollback refuses a directory it did not create. The directory is archived whole and removed whole, and its Git history is carried back into the store that replaces it."
   },
   "reinitialize": {
-    "server_pid": 14836,
+    "server_pid": 16350,
     "cold_db_exists": false,
     "views_created": [
       "active_write_locks",
@@ -100,8 +188,8 @@
       "projectIdentity": "remote:github.com/nfeldman/amanuensis",
       "projectKey": "github.com/nfeldman/amanuensis",
       "storagePolicy": "worktree-local",
-      "canonicalRoot": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
-      "workspaceInstanceId": "17326a6e8bdd",
+      "canonicalRoot": "/Users/nfeldman/repos/amanuensis",
+      "workspaceInstanceId": "6137b84720d4",
       "database": "memory.db"
     },
     "marker_validates": true,
@@ -120,8 +208,8 @@
   "readback": {
     "get_project_info": {
       "project_key": "github.com/nfeldman/amanuensis",
-      "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses",
-      "storage_path": "/Users/nfeldman/automation/claude/amanuensis-reader-lenses/.amanuensis",
+      "workspace_path": "/Users/nfeldman/repos/amanuensis",
+      "storage_path": "/Users/nfeldman/repos/amanuensis/.amanuensis",
       "db_exists": true
     },
     "get_dashboard": {
@@ -148,29 +236,59 @@
     "read_by_a_further_process": true
   },
   "history_restored": {
-    "restored_from": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-reader-lenses/8616248b-3b9d-4ea8-9530-7f8f5fae2985/scratchpad/pre-rebuild-archive-2/.git",
-    "snapshot_sha": "7c79dd1",
+    "restored_from": "/Users/nfeldman/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9-script/.git",
+    "snapshot_sha": "c1112c1",
     "head_message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild",
     "commits": [
       {
-        "sha": "4df0b74",
-        "date": "2026-09-12T07:44:58-04:00",
+        "sha": "53ef631",
+        "date": "2026-09-13T23:22:59-04:00",
         "message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild"
       },
       {
-        "sha": "9735d9c",
-        "date": "2026-09-12T07:44:57-04:00",
-        "message": "session mtybiq1e-hj6rmlhx ended (completed)"
+        "sha": "dd003f1",
+        "date": "2026-09-13T23:22:57-04:00",
+        "message": "session mu0ogv1e-kwzpyk5i ended (completed)"
       },
       {
-        "sha": "7c79dd1",
-        "date": "2026-09-12T07:44:57-04:00",
+        "sha": "c1112c1",
+        "date": "2026-09-13T23:22:57-04:00",
         "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
       },
       {
-        "sha": "a03d579",
-        "date": "2026-09-12T07:44:57-04:00",
-        "message": "amanuensis: initialize storage"
+        "sha": "15292f8",
+        "date": "2026-09-11T19:05:07-04:00",
+        "message": "session mtxkdl1l-zthu2ljl ended (completed)"
+      },
+      {
+        "sha": "12a528c",
+        "date": "2026-09-11T19:05:07-04:00",
+        "message": "session mtxkbtsu-ke45coh0 ended (completed)"
+      },
+      {
+        "sha": "09031d5",
+        "date": "2026-09-11T19:03:46-04:00",
+        "message": "File five Amanuensis defects found by downstream use: B02-4, B03-7, B03-8, B01-1, B04-5"
+      },
+      {
+        "sha": "902a716",
+        "date": "2026-08-29T04:16:18-04:00",
+        "message": "session mte2i1me-5fmqnys2 ended (completed)"
+      },
+      {
+        "sha": "96097ed",
+        "date": "2026-08-29T04:14:54-04:00",
+        "message": "Pre-repair snapshot: before stripping stray tool-call markup from records written this session"
+      },
+      {
+        "sha": "bd921f5",
+        "date": "2026-08-29T04:13:06-04:00",
+        "message": "Refresh B-05 complete: 35/35 files re-examined; full obligation-bearing backlog discharged"
+      },
+      {
+        "sha": "d7bf60e",
+        "date": "2026-08-29T04:09:04-04:00",
+        "message": "Refresh B-05 part 4: docs re-examined; generated-vs-hand-maintained drift pattern recorded"
       }
     ]
   },
