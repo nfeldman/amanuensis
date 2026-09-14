@@ -15,21 +15,38 @@ Revisions are resolved in this worktree with `git ls-tree -r --name-only <rev> |
 
 ### C1
 
-The depth measures are the ten statements in `spec.md` §1.2 (D1–D12), frozen with the baseline,
-and `dev/test-survey-depth.mjs` executes exactly those and no others.
+The depth measures are the twelve statements D1–D12 in `spec.md` §1.2, frozen with the baseline.
+`dev/test-survey-depth.mjs` executes those twelve as its reported and comparison layer, and
+separately evaluates the six acceptance predicates B1–B6 of §7.3, which are per-record obligations
+rather than measures and are listed under their own key in the fixture and the receipt.
 
 Evidence:
-- `spec.md:§1.2`; the SQL is carried verbatim into `dev/survey-depth-baseline.json` (`spec.md:§7.2`).
+- `spec.md:§1.2` — D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12; the SQL is carried verbatim
+  into `dev/survey-depth-baseline.json` (`spec.md:§7.2`).
+- `spec.md` §7.3: B3 joins `dispositions` to `subsystems` and resolves each attachment's `ref_sha`;
+  B4 reads `vocabulary_declinations`; B5 and B6 read `carried_findings`. No D-measure expresses any
+  of them.
+- `spec.md` §1.6 lists "the finding accounting of §5" as blocking beside the D-measures.
 - `SELECT COALESCE(last_checked_sha,'(null)')||' / '||COALESCE(onboarding_sha,'(null)') FROM git_state;`
   → baseline `61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27 / b8b566f`; candidate
   `7c1c1a9f5689d396487072d012abe6fafd5f348c / 7c1c1a9f5689d396487072d012abe6fafd5f348c`.
 
 ### C2
 
-Every coverage fraction takes its denominator from the repository's tracked paths at the store's
-reconciled revision, never from `file_ledger`'s own row count.
+Every **tracked-file coverage fraction** takes its denominator from the repository's tracked paths
+at the store's reconciled revision, never from `file_ledger`'s own row count. D6 and D7% are
+per-disposition ratios and are not tracked-file coverage fractions. The obligation-bearing
+predicate that D2 subtracts is generated from `conspectus-vocabulary.json`'s `obligation_bearing`
+field, not transcribed.
 
 Evidence:
+- `mcp-server/contracts/conspectus-vocabulary.json` `file_classification`: `obligation_bearing` is
+  false for `generated-ignore`, `vendor-ignore` and `irrelevant`, and **true** for `candidate`,
+  `examined` and `deferred-with-reason`.
+- AxiomDB `SELECT COUNT(*) FROM file_ledger WHERE classification='deferred-with-reason';` → 35.
+- Neither store's classification histogram (`spec.md` §1.3) contains a `deferred-with-reason` row,
+  so the derivation changes no value in §1.3.
+- `spec.md` §1.2 D6 is `D4 / D5` and D7% is `D7 / D5`, both over `dispositions`.
 - Over ledger rows:
   `SELECT printf('%.2f',100.0*SUM(classification='examined')/SUM(classification IS NULL OR classification IN ('candidate','examined'))) FROM file_ledger;`
   → baseline `59.57`, candidate `80.77`.
@@ -140,10 +157,14 @@ Evidence:
 ### C9
 
 An advance to `concerns`, `adversarial` or `mapped` refuses when any disposition of that
-subsystem has no attached evidence row, or has one whose `ref_sha` does not resolve in the bound
-workspace. The two cases produce different messages.
+subsystem has **no** attached evidence row whose `ref_sha` resolves in the bound workspace. A
+disposition with at least one resolvable attachment passes even when another attachment's revision
+is unreachable; the unreachable attachment is reported, not refused. The two cases produce
+different messages.
 
 Evidence:
+- `spec.md` §2.3 — the predicate is "at least one `disposition_evidence` row whose
+  `evidence.ref_sha` resolves".
 - `mcp-server/src/invariants.ts:303-359` — `enforcePhasePrerequisites`; `:378-391` walks every
   intermediate rung.
 - `mcp-server/src/helpers.ts:127-145` — `resolveWorkspaceCommit`.
@@ -156,11 +177,19 @@ Evidence:
 
 ### C10
 
-No store is migrated, backfilled or rewritten. The obligation binds at the next status advance
-and at the next publication. The AxiomDB store receives the same obligations with no grace path;
-a refresh that cannot meet them reports red and publishes nothing.
+No existing domain row is migrated, backfilled or rewritten. The schema is additively migrated on
+the next open of any store, and that migration is tested against a copy of the AxiomDB store. The
+obligation binds at the next status advance and at the next publication. The AxiomDB store receives
+the same obligations with no grace path; a refresh that cannot meet them reports red and publishes
+nothing.
 
 Evidence:
+- `mcp-server/src/db.ts:46-58` — `openDatabase` runs `runMigrations` then `initializeSchema` on
+  every open; `:84-89` re-execs `schema.sql`; `:154-192` `migrateVocabularyChecks` rebuilds
+  `CHECK`-constrained tables on existing stores.
+- AxiomDB, read-only: 166 dispositions, 54 unattached, 35 of 35 subsystems `mapped`, 1718
+  `scope_gaps` rows, and `SELECT COUNT(*) FROM sqlite_master WHERE name IN
+  ('scope_reconciliations','carried_findings');` → 0.
 - `README.md` §4 — "Proposed: the same obligations; a refresh that cannot meet them reports red
   rather than publishing."
 - `decisions.md` §1 — "Fix the tool, not the data."
@@ -172,10 +201,16 @@ Evidence:
 
 ### C11
 
-Reconciliation is recorded in a new append-only `scope_reconciliations` table written by
-`detect_changes`, not inferred from the presence of `scope_gaps` rows.
+Reconciliation is recorded in a new `scope_reconciliations` table written by `detect_changes`, not
+inferred from the presence of `scope_gaps` rows. The table is append-only by
+`scope_reconciliation_is_immutable` and `scope_reconciliation_cannot_be_deleted`, declared in
+`schema.sql` beside it, and it stores a tree digest and a ledger digest beside the counts.
 
 Evidence:
+- `mcp-server/src/schema.sql:2622-2627` — the `<name>_is_immutable` / `<name>_cannot_be_deleted`
+  pair, one of 269 triggers in the file.
+- `mcp-server/src/tools/git.ts:91-96` — `set_git_state` "Subsequent calls may update any subset of
+  fields", so `last_checked_sha` alone cannot stand for a reconciliation.
 - `mcp-server/src/tools/git.ts:303-312` — `DELETE FROM scope_gaps` then re-insert; the table
   describes the tree now, and is empty both when nothing is wrong and when nothing was checked.
 - `SELECT COUNT(*) FROM scope_gaps;` → 0 in both stores, while the candidate has 501 unledgered
@@ -188,10 +223,15 @@ Evidence:
 
 ### C12
 
-A store is reconciled at revision R exactly when a `scope_reconciliations` row has
-`detected_sha = R`, `git_state.last_checked_sha = R`, and R resolves in the bound workspace.
+A store is reconciled at revision R exactly when R resolves and is normalized to its full 40-hex
+commit id; a `scope_reconciliations` row has `detected_sha` equal to it;
+`git_state.last_checked_sha` equals it; and the row's `tree_digest` and `ledger_digest` still match
+digests re-derived now from `git ls-tree -r --name-only R` and from `file_ledger`. Reconciliation
+enumerates R's tree, never the index.
 
 Evidence:
+- `mcp-server/src/tools/git.ts:220-222` — `detect_changes` today runs `git ls-files`, which reads
+  the index, not R's tree.
 - `spec.md` §3.3.
 - `dev/adr/0001-living-conspectus-terms.md:19-21` clause 1 — "Its inventory names R and its
   immutable tree. Every tracked path in the pinned inventory has exactly one subsystem
@@ -200,10 +240,15 @@ Evidence:
 
 ### C13
 
-The advance to `mapped` and `materialize_docs` refuse an unreconciled store. The advance to
-`structural` does not.
+The advance to `mapped` and `materialize_docs` refuse an unreconciled store; the advance to
+`structural` does not. `materialize_docs` and the fully-surveyed predicate additionally refuse a
+reconciliation reporting nonzero `unledgered` or `absent`; the advance to `mapped` does not.
 
 Evidence:
+- `dev/adr/0001-living-conspectus-terms.md:19` clause 1 — "Every tracked path in the pinned
+  inventory has exactly one subsystem assignment or an explicit exclusion with owner and reason";
+  `:20` clause 2 is the per-subsystem clause.
+- Candidate: 501 unledgered tracked paths at `7c1c1a9` with 8 of 8 subsystems already `mapped`.
 - `mcp-server/src/invariants.ts:351-354` — the `mapped` case, where `requireChallengedClaims`
   already sits.
 - `README.md` §4 — "Proposed: the predicate, so a rebuild can progress subsystem by subsystem."
@@ -214,10 +259,13 @@ Evidence:
 ### C14
 
 The projection prints `not measured`, naming the revision and the reason, wherever a coverage
-figure has no standing reconciliation, and `_tracked_paths` reads the reconciliation record
-rather than the ledger.
+figure has no standing reconciliation, and `_tracked_paths` reads the reconciliation record rather
+than the ledger. The change alters the "Files read, of those carrying an obligation" denominator
+for any store with unledgered paths, so the gate's controls are two fixtures rather than one.
 
 Evidence:
+- `materializer/amanuensis_materializer/renderers.py:415` — `obligation_files` is
+  `SUM(CASE WHEN {OBLIGATION_BEARING_SQL} … ) FROM file_ledger`, over ledger rows; `:630` reads it.
 - `materializer/amanuensis_materializer/renderers.py:750-753` — `"Paths in scope with no ledger
   row", str(unledgered["n"] or 0)`; the candidate's published overview therefore prints `0`.
 - `renderers.py:717-728` — the staleness row's existing `"not measured by this projection"`
@@ -229,10 +277,15 @@ Evidence:
 
 ### C15
 
-`define_term` requires an active session, validates `first_seen` as a `file:symbol@sha` citation,
-and stores `ref_sha` resolved.
+`define_term` requires an active session, parses `first_seen` as a `file:symbol@sha` citation,
+**resolves** the token's revision and verifies the token's path exists in that revision's tree, and
+stores `ref_sha` resolved. A supplied anchor that does not resolve refuses the call; an absent
+anchor stores an unanchored term that discharges nothing.
 
 Evidence:
+- `mcp-server/src/helpers.ts:180-207` — `requireWorkspaceCitation` checks `indexOf(":")`,
+  `lastIndexOf("@")` and path syntax; it runs no git and performs no tree lookup.
+- `mcp-server/src/tools/vocabulary.ts:20` — `required: ["term", "gloss"]`.
 - `mcp-server/src/tools/vocabulary.ts:21-43` — no `requireActiveSession`, no citation validation,
   no revision resolution.
 - `mcp-server/src/helpers.ts:225` — `CITATION_TOKEN_SOURCE`.
@@ -242,11 +295,14 @@ Evidence:
 
 ### C16
 
-A new append-only `vocabulary_declinations` table and a `decline_domain_vocabulary` tool record a
-reasoned "no domain vocabulary" per subsystem; the tool refuses when the subsystem already has an
-anchored term.
+A new `vocabulary_declinations` table and a `decline_domain_vocabulary` tool record a reasoned "no
+domain vocabulary" per subsystem; the tool refuses when the subsystem already has an anchored term.
+The table is append-only by `vocab_declination_is_immutable` and
+`vocab_declination_cannot_be_deleted`, declared in `schema.sql` beside it.
 
 Evidence:
+- `mcp-server/src/schema.sql:2622-2627` — the immutability trigger pair.
+- `spec.md` §8.3 — `GATE VD1` is red when a declination is updatable or deletable.
 - `decisions.md` §3 — "satisfied either by real records with resolvable anchors or by an
   explicit, reasoned declaration that none apply."
 - GP18 — ruled-out records are kept, not deleted.
@@ -254,10 +310,16 @@ Evidence:
 
 ### C17
 
-The advance to `structural` refuses a subsystem with neither an anchored term scoped to it nor a
-declination. A codebase-wide term (`subsystem_id IS NULL`) satisfies no subsystem's obligation.
+The advance to `structural` refuses a subsystem with neither an anchored term scoped to it nor an
+effective declination whose `ref_sha` still resolves. A codebase-wide term (`subsystem_id IS NULL`)
+satisfies no subsystem's obligation. Scoping is per `(term, subsystem)`, so re-defining a shared
+term for one subsystem cannot silently revoke another's discharge.
 
 Evidence:
+- `mcp-server/src/schema.sql:406` — `term TEXT PRIMARY KEY`, one row per term.
+- `mcp-server/src/tools/vocabulary.ts:36` — the upsert sets
+  `subsystem_id = COALESCE(excluded.subsystem_id, vocabulary.subsystem_id)`, so a non-null
+  `subsystem_id` on a re-definition overwrites the existing scope.
 - `mcp-server/src/invariants.ts:309-322` — the `structural` case, where `requireStructuralClaim`
   already sits.
 - `mcp-server/src/schema.sql` `vocabulary.subsystem_id` — "NULL = codebase-wide, else scoped".
@@ -267,9 +329,13 @@ Evidence:
 ### C18
 
 A declined subsystem is rendered with its reason, session and revision. "Declined" and "not
-recorded" are distinct renderings and are never collapsed.
+recorded" are distinct renderings and are never collapsed. Where a subsystem holds both anchored
+terms and a declination, the terms render as the current state and the declination renders beneath
+them as superseded history.
 
 Evidence:
+- `spec.md` §4.3 — a declination is kept across a reset and a later term may be defined, so both
+  records can coexist.
 - `spec.md` §4.5.
 - VP4(e) — the silent-failure state must not be representable as a valid in-band reading.
 
@@ -287,22 +353,41 @@ Evidence:
 
 ### C20
 
-A carried record names the store it came from, via `archived_store_id` = `store-` plus the first
-16 hex of SHA-256 over `<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`.
+A carried record names the store it came from via `archived_store_id`. Every store mints an
+immutable `store_generation` at schema creation and `archived_store_id` is `store-` plus its first
+16 hex. For an archive frozen before that field existed, `archived_store_id` is
+`store-legacy-` plus the first 16 hex of SHA-256 over that archive's frozen
+`<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`, available only when the source
+is opened `?immutable=1`. An export carries `archived_store_id` as a required contract field.
 
 Evidence:
 - Candidate finding B03-R1: "`finding_id` carries no store generation, so a rebuilt store can
   silently re-satisfy a closed Pecia reference."
+- `mcp-server/src/tools/git.ts:91-96` — `set_git_state` "Subsequent calls may update any subset of
+  fields", so a live store's `last_checked_sha` changes and the derived id changes with it; two
+  rebuilds sharing the tuple yield one id.
 - Baseline `git_state` → `default | main | b8b566f | 61bc6b5c…`; candidate →
-  `default | main | 7c1c1a9… | 7c1c1a9…`; the two rows differ, so the derivation separates them.
+  `default | main | 7c1c1a9… | 7c1c1a9…`.
+- `old-findings-7c1c1a9.json` top-level keys → `anchor, counts, exported_at, findings,
+  open_questions, source, subsystems`; a substring search of the whole file for `repo_id`,
+  `canonical_branch`, `onboarding_sha`, `last_checked_sha`, `git_state` and `archived_store_id`
+  returns none. Its `anchor` is `7c1c1a9f…`, not the archived store's `last_checked_sha`
+  `61bc6b5c…`.
 
 ### C21
 
-Reinitialization requires `--carry-from <archived store | export>`; `--carry-from none` records
-an explicit reasoned empty carry. All archived findings are carried, terminal ones pre-recorded
-with their archived outcome.
+Reinitialization requires `--carry-from`, naming an archived store or an export carrying
+`archived_store_id`; `--carry-from none` requires `--carry-reason` and records an explicit reasoned
+empty carry in `carry_runs`. All archived findings are carried, with `expected_count` and
+`imported_count` recorded separately. A finding the archive had already closed is pre-recorded with
+the outcome `archived-terminal`, which the carry alone writes and which is not one of the three
+authority-bearing outcomes.
 
 Evidence:
+- `old-findings-7c1c1a9.json` `resolution_state` histogram → `open` 13, `verified-fixed` 8,
+  `fixed-pending-verification` 1.
+- `spec.md` §8.4 — `GATE CF1` is red when `record_carried_outcome` accepts `repaired` with no
+  post-repair evidence.
 - `dev/rebuild-self-conspectus-store.mjs` — snapshot, stop, delete, reinitialize; no carry step.
 - `design/reader-lenses/spec.md:1346-1374` §12.1 — the seven-step recipe, no carry step.
 - `~/.claude/automations/amanuensis-clean-slate/archive/old-findings-7c1c1a9.json` — keys
@@ -314,11 +399,15 @@ Evidence:
 
 ### C22
 
-A carried finding reaches exactly one of three terminal outcomes: `successor-finding` (naming a
-finding filed in this store), `ruled-out` (requiring evidence collected in the current session),
-`repaired` (requiring a resolving commit **and** an attached evidence row at or after it).
+A carried finding reaches exactly one terminal outcome. Three are authority-bearing and written by
+`record_carried_outcome`: `successor-finding` (naming a finding filed in this store), `ruled-out`
+(requiring evidence collected in the current session and attached through `carried_finding_evidence`),
+`repaired` (requiring a resolving `repaired_sha` **and** an attached evidence row whose revision is
+a descendant of or equal to it, tested with `git merge-base --is-ancestor`). The fourth,
+`archived-terminal`, is written only by the carry.
 
 Evidence:
+- `spec.md` §5.4 named `carried_finding_evidence`; `spec.md` §5.2 now declares it.
 - `mcp-server/src/invariants.ts:422-447` — `requireOverturnEvidence`: "Overturning requires
   evidence, not vibes"; evidence must carry the current `session_id`.
 - `dev/adr/0001-living-conspectus-terms.md:46-48` §Verified-fixed — "A code change, a developer
@@ -329,11 +418,19 @@ Evidence:
 
 ### C23
 
-ADR-0001's *fully surveyed* predicate gains clause 7: every carried finding has a terminal
-outcome. It is enforced at the whole-store predicate, not at `mapped` for the carried finding's
-subsystem.
+ADR-0001's *fully surveyed* predicate gains clause 7: every carried finding has a terminal outcome.
+It is enforced at the whole-store predicate, not at `mapped` for the carried finding's subsystem.
+The whole-store predicate is given a store-scoped implementation,
+`dev/check-store-fully-surveyed.mjs`, which evaluates an open store read-only;
+`dev/check-living-conspectus.mjs` continues to read the frozen A0 fixture and is not retargeted.
 
 Evidence:
+- `dev/check-living-conspectus.mjs:723` resolves its fixture to `dev/conspectus/self-baseline.json`
+  and `main()` calls `evaluateConspectus(manifest)` over the parsed JSON, not over a store.
+- `dev/test-living-conspectus.mjs:8-15` imports the same `evaluateConspectus` and mutates the same
+  fixture; `design/reader-lenses/spec.md` §12.3 forbids retargeting it.
+- `grep -rn "fully.surveyed\|fullySurveyed" mcp-server/src/` → one hit, `vocabulary.ts:1296`, a
+  phrase inside a word list.
 - `dev/adr/0001-living-conspectus-terms.md:19-30` — the six existing clauses.
 - `dev/adr/0001-living-conspectus-terms.md:56-60` — the obligation-id table; the new shape is
   `carried:<archived_store_id>:<archived_finding_id>`.
@@ -344,10 +441,13 @@ Evidence:
 
 `dev/pecia-resolve-finding.mjs` looks up `findings` first, then `carried_findings`: a
 `successor-finding` outcome re-runs the lookup against the successor and answers with its state;
-`ruled-out` and `repaired` exit 0; an undecided carried record exits 1. Exit codes and the
-no-echo rule are unchanged.
+`ruled-out`, `repaired` and `archived-terminal` exit 0; an undecided carried record exits 1. An id
+matching carried records from more than one archive exits 2 and asks for the store-qualified form.
+Exit codes and the no-echo rule are unchanged.
 
 Evidence:
+- `spec.md` §5.2 — `carried_findings` is `UNIQUE (archived_store_id, archived_finding_id)`, so an
+  unqualified id can match rows from two archives.
 - `dev/pecia-resolve-finding.mjs:29` — "Exit codes: 0 resolved · 1 not resolved · 2 cannot run."
 - `dev/pecia-resolve-finding.mjs:31-33` — "It deliberately never prints its argument … pecia
   decision pc-cdb8."
@@ -359,10 +459,15 @@ Evidence:
 
 ### C25
 
-The six findings the 2026-09-14 rebuild lost are carried retroactively by the acceptance
-rebuild's carry step from the archived export, not by writing to the primary checkout's store.
+The six findings the 2026-09-14 rebuild lost are carried retroactively by the acceptance rebuild's
+carry step from the archived **store**, not from the export and not by writing to the primary
+checkout's store.
 
 Evidence:
+- The archived store's `findings` table holds all 22 rows with `finding_id`, `subsystem_id`,
+  `symptom`, `root_cause`, `severity`, `status`, `primary_files`, `ref_sha` and `pass_type`, and
+  `finding_resolution_current` supplies `resolution_state`; its `git_state` row supplies the legacy
+  `archived_store_id`. The export supplies no store identity.
 - `decisions.md` §6 — the primary checkout and its rebuilt store are read-only for the lane.
 - `old-findings-7c1c1a9.json` holds all six with full text:
   `B03-5 HIGH open`, `B03-6 MEDIUM open`, `B03-7 MEDIUM open`, `B03-8 MEDIUM open`,
@@ -372,11 +477,16 @@ Evidence:
 
 ### C26
 
-Eight named passages in the skill's references and `SKILL.md` change to state the new refusals in
+Eleven named passages in the skill's references and `SKILL.md` change to state the new refusals in
 the server's own words; no sentence describing a surviving behaviour is removed and nothing is
-softened.
+softened. The parity check derives a candidate refusal set from the server's own thrown messages
+and reports every entry with no register row.
 
 Evidence:
+- `.claude/skills/amanuensis/references/phase-1-scope.md:58` calls
+  `define_term(term, gloss, expansion, subsystem_id, first_seen, ref_sha)`;
+  `references/phase-2-structural.md:24` and `references/phase-3-concerns.md:120` name `define_term`
+  again. None of the three was in the eight-entry register.
 - `spec.md` §6.1 table; `decisions.md` §2.
 - Current text: `references/phase-2-structural.md:171-176`; `references/phase-3-concerns.md:63-82`;
   `references/refresh.md:30-46`; `references/phase-4-adversarial.md`; `references/onboarding.md`;
@@ -413,15 +523,18 @@ Evidence:
 
 ### C29
 
-The depth gate's blocking axes are B1 reconciliation standing, B2 examined fraction ≥ 0.5957,
+The depth gate's blocking axes are B1 reconciliation standing with zero unledgered and zero absent
+paths, B2 examined fraction ≥ 0.5957,
 B3 every disposition in a subsystem at `concerns`+ evidence-backed with a resolving `ref_sha`,
 B4 every subsystem at `structural`+ discharged or declined, B5 all 13 baseline open findings
 carried with a terminal outcome, B6 no undecided carried record.
 
 Evidence:
 - `spec.md` §7.3; the 13 ids are C4's list.
-- Applied to the candidate as measured, each of B1, B2, B3, B4, B5 is red: 501 unledgered vs 0
-  recorded; 13.88 % vs 59.57 %; 177 of 180 unattached; 0 terms and 0 declinations over 8 mapped
+- `dev/adr/0001-living-conspectus-terms.md:19` clause 1 — exactly one assignment or explicit
+  exclusion per tracked path.
+- Applied to the candidate as measured, each of B1, B2, B3, B4, B5 is red: 501 unledgered against a
+  required 0; 13.88 % vs 59.57 %; 177 of 180 unattached; 0 terms and 0 declinations over 8 mapped
   subsystems; 0 carried records against 13 baseline open findings.
 
 ### C30
@@ -440,8 +553,10 @@ Evidence:
 
 The acceptance result is recorded in `design/survey-depth/acceptance-receipt.json` under the
 contract `amanuensis-survey-depth/acceptance-receipt/v1`, carrying every blocking axis with its
-verdict and every reported axis with its delta, so the comparison is repeatable without the live
-store.
+verdict, every reported axis with its delta, and the row-level witnesses each blocking predicate is
+recomputed from — per-disposition attachment `ref_sha` values for B3, per-subsystem term anchors and
+declination records for B4, the reconciliation's two digests for B1, and the carried table for
+B5/B6. The gate recomputes each predicate from those rows and never reads a recorded verdict field.
 
 Evidence:
 - `dev/test-rebuild-depth.mjs:92-98` — the `RECEIPT_CONTRACT` /
@@ -453,9 +568,11 @@ Evidence:
 
 Every gate prints `GATE <id> RED: <reason>` or `GATE <id> GREEN` as its single last stdout line,
 scrubs launcher crash signatures, names a must-stay-green control, and states in its header the
-false green it cannot exclude.
+false green it cannot exclude. `GATE A1` gains the control it lacked, paired with a seeded
+forged-green receipt.
 
 Evidence:
+- `spec.md` §8.1, §8.2, §8.3, §8.4, §8.5, §8.6, §8.7 and §8.9 each name a control; §8.8 named none.
 - `mcp-server/test-locus-standing.mjs:1450`, `:1455` — the `GATE P6 RED:` / `GATE P6 GREEN`
   protocol.
 - `dev/test-rebuild-depth.mjs:176-201` — the `SCRUB` table, `emit`, `check`.
@@ -465,11 +582,21 @@ Evidence:
 
 ### C33
 
-No existing gate, test or read-back axis is weakened. `dev/test-rebuild-depth.mjs` changes only
-by reading two hard-coded literals from a declared source instead of from its own body, and its
-`a disposition carries no attached evidence` assertion is untouched.
+No existing gate, test or read-back axis is weakened. `dev/test-rebuild-depth.mjs` changes only by
+reading two hard-coded literals from `mcp-server/contracts/concern-checklist.json`, a standalone
+committed contract no rebuild packet rewrites, and its `a disposition carries no attached evidence`
+assertion is untouched. `design/reader-lenses/rebuild-coverage-receipt.json` is not a deliverable of
+any rebuild packet. `dev/test-rebuild-readback.mjs` changes only by passing an explicit reasoned
+empty carry and asserting the record it writes.
 
 Evidence:
+- `design/reader-lenses/rebuild-coverage-receipt.json` — `packet` `P17`, `repository_sha`
+  `dee59d3e019a6747af714aa5a44acbb774ff6d5f`; a document a different run produced.
+- `dev/test-rebuild-readback.mjs:541-552` and `:686-699` spawn the rebuild driver with
+  `--confirm --workspace --archive --receipt` and no `--carry-from`, and `:584`, `:596`, `:622`,
+  `:720`, `:737` assert it exited 0.
+- Running `node dev/test-rebuild-depth.mjs` in this worktree at `ec11d3f` → `GATE P19 RED: … 8
+  failed assertion(s)`.
 - `dev/test-rebuild-depth.mjs:104` — `const CHECKLIST_CONCERNS = ["BV-1","CC-1","EV-1","GT-1","RC-1","ZD-1"];`
 - `dev/test-rebuild-depth.mjs:24-28` — the GP24 property the literal protects: "reading it from
   the same document that reports the coverage would let a dropped concern shrink both halves at
@@ -480,3 +607,103 @@ Evidence:
 - Candidate finding B07-R2: "The depth gate hard-codes the discarded survey's concern codes and a
   colliding finding-id shape."
 - `.github/workflows/test.yml:255`, `:260`, `:266`, `:274` — the four rebuild gates in CI.
+
+### C34
+
+Every gate's red commit ships the complete test, including its fixtures and its must-stay-green
+control, against the unchanged implementation. At the red commit the gate exits non-zero, prints
+`GATE <packet-id> RED: <reason>` as its last stdout line, and emits no crash signature; at HEAD it
+exits 0 and prints `GATE <packet-id> GREEN`. Every red condition in `spec.md` §8 names the
+assertion that fires, never the absence of the test file.
+
+Evidence:
+- `spec.md` §8.0.
+- `plan.json` — every packet's `gate.test_path` is a file that does not exist at `ec11d3f`:
+  `test-disposition-evidence.mjs`, `test-scope-reconciliation.mjs`, `test-vocabulary-discharge.mjs`,
+  `test-carried-findings.mjs`, `test-survey-depth-red-gates.mjs`, `test-unmeasured-coverage.py`,
+  `test-refusal-parity.mjs`, `test-survey-depth-acceptance.mjs`,
+  `test-carried-finding-references.mjs`.
+- `plan.json` `gate.red_rejects` carries the crash signatures `MODULE_NOT_FOUND`,
+  `Cannot find module`, `ENOENT`, `SyntaxError`, `ReferenceError`, `TypeError`,
+  `is not a function`, `command not found`, `ModuleNotFoundError`, `ImportError`.
+- VP4(f) — a kill proves a gate can fire, never that it fires selectively.
+
+### C35
+
+The additive schema migration is gated against a copy of an existing populated store, not asserted.
+Packet P0 copies the AxiomDB store to temporary storage and tests table creation, refusal behaviour,
+non-mutation of existing rows, and clean-publish rollback.
+
+Evidence:
+- AxiomDB, read-only: 166 dispositions, 54 unattached, 35 of 35 subsystems `mapped`, 295 ledger rows
+  over 187 distinct paths, 53 paths owned by more than one subsystem, 1718 `scope_gaps` rows, 41
+  vocabulary rows, 35 `deferred-with-reason` paths, and `SELECT COUNT(*) FROM sqlite_master WHERE
+  name IN ('scope_reconciliations','carried_findings');` → 0.
+- `mcp-server/src/db.ts:46-58`, `:84-89`, `:154-192`.
+- `decisions.md` §6 places the AxiomDB repository outside the lane's custody; the copy is read once
+  and written nowhere.
+
+### C36
+
+`dev/test-survey-depth.mjs` exits 2 `cannot run` when it has neither a live store nor a committed
+acceptance receipt, and `dev/record-survey-depth-baseline.mjs --check` exits 2 when the archived
+store is unreadable. Neither reports green in those states.
+
+Evidence:
+- `spec.md` §7.1 candidate arm; §7.2's archive path
+  `~/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db` is a machine-local
+  absolute path outside the repository.
+- `dev/receipt-provenance.mjs` — `resolveRevisions`, `historyIsComplete`, the existing
+  `cannot run` precedent.
+- VP4(e) — a zero denominator is out-of-band, not a pass.
+
+### C37
+
+`set_disposition` resolves the distinct `ref_sha` values among the evidence rows it attaches in one
+batched `git cat-file --batch-check`, not one `resolveWorkspaceCommit` per id.
+
+Evidence:
+- `mcp-server/src/helpers.ts:110-125` — the subprocess "is paid on every durable write" and cannot
+  be cached; `:127-145` is one `spawnSync` per call.
+- `mcp-server/test-perf-ceilings.mjs:187` — `ceiling("set_disposition (resolves ref_sha)", 200, …)`;
+  `:171-184` records the measured cost as 6.35-6.50 ms and the ceiling as ~31×, "tighter in
+  multiples than every other entry in this section".
+
+### C38
+
+Every table this specification adds is declared with `CREATE TABLE IF NOT EXISTS` and carries a
+`<name>_is_immutable` / `<name>_cannot_be_deleted` trigger pair declared beside it. The trigger,
+not the prose, is what makes the table append-only.
+
+Evidence:
+- `mcp-server/src/db.ts:85-88` — "The schema is written with CREATE ... IF NOT EXISTS throughout, so
+  we can run it on every open"; `:89` execs `schema.sql` on every `openDatabase`.
+- `grep -c '^CREATE' mcp-server/src/schema.sql` → 517; `grep -c '^CREATE.*IF NOT EXISTS'` → 516.
+- `mcp-server/src/schema.sql:2622-2627` — the trigger pair, one of 269 in the file.
+- `decisions.md` §2.
+
+### C39
+
+`spec.md` §5.6's carried-obligation projection is delivered by P6, which depends on P4, and
+`readback.py` gains a carried-record census beside its existing ones.
+
+Evidence:
+- `materializer/amanuensis_materializer/readback.py:252-262` — `_finding_partition_census`,
+  `_ledger_stale_census` and `_locus_index_census` enumerate findings, stale entries and the locus
+  index from the database; none sees a carried row.
+
+### C40
+
+`carried_finding_outcome` is declared in `mcp-server/contracts/conspectus-vocabulary.json` and
+`carried_findings.archived_resolution` takes its `CHECK` from the contract's existing
+`finding_resolution_state`. The two files `scripts/gen-vocabulary.mjs` generates are deliverables of
+every packet that changes the contract.
+
+Evidence:
+- `mcp-server/scripts/gen-vocabulary.mjs:28-31` — writes `mcp-server/src/vocabulary.ts` and
+  `materializer/amanuensis_materializer/vocabulary.py`; `--check-sql` asserts the schema's `CHECK`
+  literals match the source.
+- `mcp-server/contracts/conspectus-vocabulary.json` `finding_resolution_state` → `open`, `accepted`,
+  `ruled-out`, `fixed-pending-verification`, `verified-fixed`.
+- `mcp-server/src/db.ts:154-192` — `migrateVocabularyChecks` reads the columns to migrate from the
+  contract's own `sql` mappings, so an enum declared only inline never reaches an existing store.

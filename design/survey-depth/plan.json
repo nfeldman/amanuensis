@@ -4,8 +4,9 @@
   "slices": [
     {
       "id": "S1",
-      "title": "Substrate obligations: dispositions, reconciliation, vocabulary, carried findings",
+      "title": "Substrate obligations: existing stores, dispositions, reconciliation, vocabulary, carried findings",
       "packets": [
+        "P0",
         "P1",
         "P2",
         "P3",
@@ -50,6 +51,8 @@
       "title": "Acceptance rebuild and the Pecia reconciliation of the carried findings",
       "packets": [
         "P8",
+        "P10",
+        "P11",
         "P9"
       ],
       "review": {
@@ -62,6 +65,66 @@
   ],
   "packets": [
     {
+      "id": "P0",
+      "slice": "S1",
+      "title": "Additive migration on an existing populated store",
+      "claims": [
+        "C10",
+        "C35",
+        "C38"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/db.ts",
+        "mcp-server/test-existing-store-migration.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-existing-store-migration.mjs",
+        "command": "cd mcp-server && node test-existing-store-migration.mjs",
+        "red_expect": "GATE XS1 RED: opening a populated store rewrote an existing row",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-storage-git.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs"
+      ],
+      "acceptance": [
+        "A copy of ~/repos/axiomdb/.amanuensis/memory.db is taken to temporary storage; the source is opened read-only and never written (decisions.md \u00a76).",
+        "Opening the copy runs runMigrations and initializeSchema and creates every table this lane adds, with no existing dispositions, evidence, file_ledger or vocabulary row altered or deleted \u2014 asserted by a row-level digest taken before and after.",
+        "A second open of the same copy succeeds: every new CREATE carries IF NOT EXISTS (spec.md \u00a73.2).",
+        "Each new table's immutability and no-delete triggers fire on the copy: an UPDATE and a DELETE both raise.",
+        "The copy's 54 unattached dispositions do not vanish; the next advance of a subsystem holding one is refused with the \u00a72.3 message, and materialize_docs(clean_publish=true) leaves the previous output untouched on that red (ADR-0005).",
+        "The gate reports cannot run, not green, when the AxiomDB store is unreadable on this machine."
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "The obligations bind AxiomDB immediately and with no grace path (decisions.md \u00a71, README \u00a74), and its shape is the adversarial one: 295 ledger rows over 187 distinct paths with 53 multiply-owned, 1718 scope gaps, 35 deferred-with-reason paths. Asserting the migration against a fresh fixture would test the one store shape that cannot fail."
+    },
+    {
       "id": "P1",
       "slice": "S1",
       "title": "Evidence-backed dispositions",
@@ -70,14 +133,27 @@
         "C8",
         "C9",
         "C10",
-        "C32"
+        "C32",
+        "C34",
+        "C37"
       ],
-      "depends_on": [],
+      "depends_on": [
+        "P0"
+      ],
       "deliverables": [
         "mcp-server/src/tools/dispositions.ts",
         "mcp-server/src/invariants.ts",
         "mcp-server/test-disposition-evidence.mjs",
         "mcp-server/DEVELOPMENT.md",
+        "mcp-server/test-invariants.mjs",
+        "mcp-server/test-residual-hardening.mjs",
+        "mcp-server/test-perf-ceilings.mjs",
+        "mcp-server/test-vocabulary-source.mjs",
+        "mcp-server/test-perf-tier2.mjs",
+        "mcp-server/test-consumer-route.mjs",
+        "mcp-server/test-cloud-e2e.mjs",
+        "mcp-server/test-smoke.mjs",
+        "dev/test-rebuild-regeneration.mjs",
         ".github/workflows/test.yml"
       ],
       "gate": {
@@ -114,19 +190,29 @@
         "cd mcp-server && node test-structural-claims.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs",
+        "cd mcp-server && node test-perf-ceilings.mjs",
+        "cd mcp-server && node test-perf-tier2.mjs",
+        "cd mcp-server && node test-consumer-route.mjs",
+        "cd mcp-server && node test-cloud-e2e.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs"
       ],
       "acceptance": [
-        "set_disposition requires evidence_ids with at least one existing id and writes dispositions plus disposition_evidence in one transaction (spec.md §2.2).",
+        "set_disposition requires evidence_ids with at least one existing id and writes dispositions plus disposition_evidence in one transaction (spec.md \u00a72.2).",
         "A refused set_disposition leaves neither the disposition nor any attachment behind.",
-        "evidence_quality stronger than the strongest attached kind is refused with the §2.2 message.",
-        "enforcePhasePrerequisites refuses concerns/adversarial/mapped for a subsystem holding a disposition with no attached row, and separately for one whose attached ref_sha does not resolve (spec.md §2.3).",
+        "evidence_quality stronger than the strongest attached kind is refused with the \u00a72.2 message.",
+        "enforcePhasePrerequisites refuses concerns/adversarial/mapped for a subsystem holding a disposition with no attached row, and separately for one whose attached ref_sha does not resolve (spec.md \u00a72.3).",
         "The gate ships a must-stay-green control: a subsystem whose dispositions are all attached advances.",
-        "The gate header states the vacuity at the advance to concerns (spec.md §8.1).",
-        "No existing store is migrated, backfilled or rewritten (spec.md §2.4)."
+        "The gate header states the vacuity at the advance to concerns (spec.md \u00a78.1).",
+        "No existing store is migrated, backfilled or rewritten (spec.md \u00a72.4).",
+        "The distinct ref_sha values of the named evidence rows are resolved in one batched git cat-file --batch-check, not one resolveWorkspaceCommit per id (spec.md \u00a72.2); test-perf-ceilings.mjs stays green.",
+        "All nine existing set_disposition call sites pass evidence_ids and stay green: test-invariants, test-residual-hardening, test-perf-ceilings, test-vocabulary-source, test-perf-tier2, test-consumer-route, test-cloud-e2e, test-smoke, dev/test-rebuild-regeneration.",
+        "A disposition with one resolvable and one unresolvable attachment advances; the unresolvable one is reported, not refused (spec.md \u00a72.3).",
+        "The gate's red commit ships the complete test against the unchanged implementation and prints GATE SD1 RED with no crash signature (spec.md \u00a78.0)."
       ],
       "needs_mcp": false,
-      "budget_minutes": 150,
+      "budget_minutes": 240,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -134,7 +220,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The §2.3 refusal is vacuous at the advance to concerns; the first real bite is at adversarial. That is stated in the gate header rather than papered over."
+      "notes": "The \u00a72.3 refusal is vacuous at the advance to concerns; the first real bite is at adversarial. That is stated in the gate header rather than papered over. Nine existing test files call set_disposition; making evidence_ids required breaks every one, so all nine are deliverables and the five that were missing are in the regression list."
     },
     {
       "id": "P2",
@@ -143,9 +229,13 @@
       "claims": [
         "C11",
         "C12",
-        "C13"
+        "C13",
+        "C34",
+        "C38"
       ],
-      "depends_on": [],
+      "depends_on": [
+        "P1"
+      ],
       "deliverables": [
         "mcp-server/src/schema.sql",
         "mcp-server/src/db.ts",
@@ -190,15 +280,20 @@
         "node dev/test-reader-lenses-dogfood.mjs"
       ],
       "acceptance": [
-        "detect_changes writes exactly one append-only scope_reconciliations row per invocation, inside the transaction that rewrites scope_gaps (spec.md §3.2).",
+        "detect_changes writes exactly one append-only scope_reconciliations row per invocation, inside the transaction that rewrites scope_gaps (spec.md \u00a73.2).",
         "The row's counts agree with a re-derivation from git ls-files in the fixture repository.",
-        "Reconciled-at-R is the three-condition predicate of spec.md §3.3 and a reconciliation at A does not satisfy a publication at B.",
-        "The advance to mapped and materialize_docs both refuse an unreconciled store with the §3.3 messages; the advance to structural does not.",
+        "Reconciled-at-R is the three-condition predicate of spec.md \u00a73.3 and a reconciliation at A does not satisfy a publication at B.",
+        "The advance to mapped and materialize_docs both refuse an unreconciled store with the \u00a73.3 messages; the advance to structural does not.",
         "Control: a reconciled store advances and publishes.",
-        "REQUIRED_VIEWS and the migration path in db.ts create the table on an existing store without rewriting any row."
+        "initializeSchema creates scope_reconciliations on the next open of an existing store with no row rewritten; REQUIRED_VIEWS is untouched because the change adds no view (src/db.ts:44, :61-82, :84-89).",
+        "The DDL uses CREATE ... IF NOT EXISTS throughout and ships scope_reconciliation_is_immutable and scope_reconciliation_cannot_be_deleted; the trigger, not the prose, is what makes the table append-only.",
+        "detect_changes enumerates git ls-tree -r --name-only at the resolved revision, not git ls-files, and stores tree_digest and ledger_digest beside the counts.",
+        "Reconciled-at-R re-derives both digests, so a reconciliation goes stale as soon as the ledger is mutated under it.",
+        "materialize_docs and the fully-surveyed predicate additionally refuse a reconciliation reporting nonzero unledgered or absent (spec.md \u00a73.3a); the advance to mapped does not.",
+        "The gate seeds duplicate ledger ownership, a correct-but-nonzero gap, index/tree divergence, an abbreviated sha, and a stale reconciliation after ledger mutation (spec.md \u00a78.2)."
       ],
       "needs_mcp": false,
-      "budget_minutes": 150,
+      "budget_minutes": 200,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -215,9 +310,14 @@
       "claims": [
         "C15",
         "C16",
-        "C17"
+        "C17",
+        "C34",
+        "C38",
+        "C40"
       ],
-      "depends_on": [],
+      "depends_on": [
+        "P2"
+      ],
       "deliverables": [
         "mcp-server/src/schema.sql",
         "mcp-server/src/db.ts",
@@ -225,6 +325,10 @@
         "mcp-server/src/invariants.ts",
         "mcp-server/contracts/conspectus-vocabulary.json",
         "mcp-server/test-vocabulary-discharge.mjs",
+        "mcp-server/DEVELOPMENT.md",
+        "mcp-server/src/index.ts",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/amanuensis_materializer/vocabulary.py",
         ".github/workflows/test.yml"
       ],
       "gate": {
@@ -263,15 +367,20 @@
         "node dev/test-reader-lenses-dogfood.mjs"
       ],
       "acceptance": [
-        "define_term requires an active session, validates first_seen with requireWorkspaceCitation(strict), and stores ref_sha resolved (spec.md §4.2).",
-        "vocabulary_declinations is append-only and decline_domain_vocabulary refuses a subsystem that already has an anchored term (spec.md §4.3).",
-        "The advance to structural refuses a subsystem with neither an anchored term scoped to it nor a declination; a codebase-wide term does not satisfy it (spec.md §4.4).",
+        "define_term requires an active session, parses first_seen with requireWorkspaceCitation(strict), resolves the token's revision, and verifies the token's path exists in that revision's tree with git cat-file -e (spec.md \u00a74.2).",
+        "vocabulary_declinations is append-only and decline_domain_vocabulary refuses a subsystem that already has an anchored term (spec.md \u00a74.3).",
+        "The advance to structural refuses a subsystem with neither an anchored term scoped to it nor a declination; a codebase-wide term does not satisfy it (spec.md \u00a74.4).",
         "Control: a subsystem with one anchored term advances, and so does one with only a declination.",
         "The declination kind is declared in contracts/conspectus-vocabulary.json and both gen-vocabulary checks pass.",
-        "No numeric minimum is introduced anywhere: one term is enough and none is a legitimate answer."
+        "No numeric minimum is introduced anywhere: one term is enough and none is a legitimate answer.",
+        "Scoping is per (term, subsystem): re-defining a shared term cannot silently revoke another subsystem's discharge (spec.md \u00a74.4).",
+        "The declination the prerequisite reads is the effective one, whose ref_sha still resolves; older rows are history and discharge nothing.",
+        "vocabulary_declinations ships its immutability and no-delete triggers and CREATE ... IF NOT EXISTS.",
+        "decline_domain_vocabulary is registered in src/index.ts and gen-tool-inventory.mjs --check passes over a regenerated DEVELOPMENT.md; a tool declared but not advertised is a finding.",
+        "gen-vocabulary.mjs regenerates src/vocabulary.ts and materializer/amanuensis_materializer/vocabulary.py and both --check and --check-sql pass."
       ],
       "needs_mcp": false,
-      "budget_minutes": 120,
+      "budget_minutes": 180,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -291,19 +400,30 @@
         "C21",
         "C22",
         "C23",
-        "C24"
+        "C24",
+        "C34",
+        "C38",
+        "C40"
       ],
-      "depends_on": [],
+      "depends_on": [
+        "P3"
+      ],
       "deliverables": [
         "mcp-server/src/schema.sql",
         "mcp-server/src/db.ts",
         "mcp-server/src/tools/carried.ts",
         "mcp-server/src/invariants.ts",
+        "mcp-server/src/index.ts",
         "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/DEVELOPMENT.md",
         "dev/rebuild-self-conspectus-store.mjs",
         "dev/pecia-resolve-finding.mjs",
-        "dev/check-living-conspectus.mjs",
+        "dev/check-store-fully-surveyed.mjs",
         "dev/adr/0001-living-conspectus-terms.md",
+        "dev/test-rebuild-readback.mjs",
+        "dev/test-carried-finding-references.mjs",
         "mcp-server/test-carried-findings.mjs",
         ".github/workflows/test.yml"
       ],
@@ -345,16 +465,25 @@
         "node dev/test-reader-lenses-dogfood.mjs"
       ],
       "acceptance": [
-        "carried_findings and carried_finding_outcomes exist with the shapes of spec.md §5.2, outside the findings namespace.",
-        "archived_store_id is derived as spec.md §5.3 and separates the baseline store from the candidate store.",
+        "carried_findings and carried_finding_outcomes exist with the shapes of spec.md \u00a75.2, outside the findings namespace.",
+        "archived_store_id is derived as spec.md \u00a75.3 and separates the baseline store from the candidate store.",
         "rebuild-self-conspectus-store.mjs requires --carry-from and accepts either an archived store or an export; --carry-from none records an explicit reasoned empty carry.",
-        "record_carried_outcome enforces the three outcomes' authority rules (spec.md §5.4), one outcome per record, and no deletion.",
+        "record_carried_outcome enforces the three outcomes' authority rules (spec.md \u00a75.4), one outcome per record, and no deletion.",
         "The fully-surveyed predicate gains clause 7 and emits the obligation id carried:<store>:<id>; it is not enforced at mapped.",
-        "dev/pecia-resolve-finding.mjs follows the §5.7 lookup order, keeps exit codes 0/1/2, and never prints its argument.",
-        "Control: a store whose carried records all carry terminal outcomes is fully surveyed on clause 7."
+        "dev/pecia-resolve-finding.mjs follows the \u00a75.7 lookup order, keeps exit codes 0/1/2, and never prints its argument.",
+        "Control: a store whose carried records all carry terminal outcomes is fully surveyed on clause 7.",
+        "carried_finding_evidence and carry_runs are declared with the other two tables; all four use CREATE ... IF NOT EXISTS and ship their immutability and no-delete triggers.",
+        "archived_store_id is a minted store_generation, or store-legacy- over a frozen archive's git_state; an export without archived_store_id is refused as a carry source (spec.md \u00a75.3).",
+        "--carry-from none requires --carry-reason and writes a carry_runs row; expected_count and imported_count are recorded separately and a carry refuses to finish while they differ.",
+        "A finding the archive had already closed is pre-recorded archived-terminal, which only the carry writes; record_carried_outcome refuses it.",
+        "repaired requires the attached evidence revision to be a descendant of or equal to repaired_sha, tested with git merge-base --is-ancestor.",
+        "attach_carried_evidence and list_carried_findings are registered in src/index.ts; the list tool pages within the 8192-byte envelope budget and the carried count is read back from a third process.",
+        "dev/check-store-fully-surveyed.mjs evaluates an open store read-only and carries clause 7 over a nonempty undecided set; dev/check-living-conspectus.mjs still reads the frozen A0 fixture and is not retargeted.",
+        "dev/test-rebuild-readback.mjs passes --carry-from none --carry-reason in both driver arms, asserts the carry_runs row was written, and keeps a separate missing-argument refusal case.",
+        "GATE CF2 lives here, where dev/pecia-resolve-finding.mjs's change can turn it red; an id matching carried records from two archives exits 2."
       ],
       "needs_mcp": false,
-      "budget_minutes": 180,
+      "budget_minutes": 300,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -362,7 +491,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Carried findings live outside the findings table so a carried id cannot collide with its successor, cannot be counted as a defect this survey found, and cannot make finding_resolution_current answer about a store that no longer exists."
+      "notes": "Carried findings live outside the findings table so a carried id cannot collide with its successor, cannot be counted as a defect this survey found, and cannot make finding_resolution_current answer about a store that no longer exists. GATE CF2 asserts only properties of dev/pecia-resolve-finding.mjs, a deliverable of this packet, so it belongs here; by P9 it would be green on its first run."
     },
     {
       "id": "P5",
@@ -376,7 +505,9 @@
         "C5",
         "C6",
         "C28",
-        "C29"
+        "C29",
+        "C34",
+        "C36"
       ],
       "depends_on": [
         "P1",
@@ -420,19 +551,25 @@
         "node dev/test-living-conspectus.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/record-survey-depth-baseline.mjs --check"
       ],
       "acceptance": [
         "dev/survey-depth-baseline.json carries the D1-D12 SQL verbatim, the archived store identity and anchor, and the thirteen baseline open finding ids; it is regenerable and --checkable.",
-        "dev/test-survey-depth.mjs turns red on each of B1-B6 seeded independently (spec.md §7.3) and green on the must-stay-green control store.",
+        "dev/test-survey-depth.mjs turns red on each of B1-B6 seeded independently (spec.md \u00a77.3) and green on the must-stay-green control store.",
         "The gate reports RED, never green, when the baseline fixture is absent or unreadable.",
         "Every fraction is printed with its denominator; a zero denominator is out of band.",
         "The reported axes (D1, D4, D5, D6, D7%, D8, D9, D10, D11 and the histograms) are printed with signed deltas and turn nothing red.",
         "Both arms exist: a baseline arm over the fixture and a candidate arm over the live store or the acceptance receipt, asserting agreement when both are present.",
-        "The gate runs in .github/workflows/test.yml."
+        "The gate runs in .github/workflows/test.yml.",
+        "The exempt set of D2 is derived from conspectus-vocabulary.json's obligation_bearing field; a deferred-with-reason path is obligation-bearing, and a regression asserts it.",
+        "B1 requires zero unledgered and zero absent at the acceptance revision, not merely a recorded count that matches the tree (spec.md \u00a77.3).",
+        "The candidate arm exits 2 cannot run with neither a live store nor a committed receipt, and GATE D1 asserts that state rather than green.",
+        "record-survey-depth-baseline.mjs --check exits 2, never 0, when the archived store is unreadable; it is in this packet's regression list and in completion.commands.",
+        "Every blocking verdict is recomputed from the receipt's row-level witnesses, never read from a recorded verdict field."
       ],
       "needs_mcp": false,
-      "budget_minutes": 150,
+      "budget_minutes": 200,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -448,11 +585,14 @@
       "title": "The projection renders 'not measured'",
       "claims": [
         "C14",
-        "C18"
+        "C18",
+        "C34",
+        "C39"
       ],
       "depends_on": [
         "P2",
-        "P3"
+        "P3",
+        "P4"
       ],
       "deliverables": [
         "materializer/amanuensis_materializer/renderers.py",
@@ -496,15 +636,19 @@
         "node dev/test-reader-lenses-dogfood.mjs"
       ],
       "acceptance": [
-        "_tracked_paths reads the standing reconciliation and returns None (not 0) for an unreconciled store (spec.md §3.4).",
+        "_tracked_paths reads the standing reconciliation and returns None (not 0) for an unreconciled store (spec.md \u00a73.4).",
         "The overview's 'Paths in scope with no ledger row' and 'Files read, of those carrying an obligation' print 'not measured' with the revision and the reason when unreconciled.",
         "'Not yet surveyed' section 1 routes an unreconciled store into the existing _gap_denominator sentence with the revision named.",
-        "A declined subsystem renders its reason, session and revision; 'declined' and 'not recorded' are distinct and never collapsed (spec.md §4.5).",
+        "A declined subsystem renders its reason, session and revision; 'declined' and 'not recorded' are distinct and never collapsed (spec.md \u00a74.5).",
         "The read-back's coverage axis counts a 'not measured' row as present-and-honest, never as a satisfied coverage claim, and no read-back axis is weakened.",
-        "Control: a reconciled store renders byte-identically to today against a committed fixture."
+        "Two controls: a reconciled store with zero unledgered paths renders byte-identically to today against a committed fixture, and a reconciled store with unledgered > 0 renders against the new denominator with the old value recorded in the gate header as the intended change.",
+        "Where a subsystem holds both anchored terms and a declination, the terms render as current and the declination beneath them as superseded history (spec.md \u00a74.5).",
+        "spec.md \u00a75.6's Carried obligations section renders on the Unresolved lens and the History pages in both formats, and readback.py gains a carried-record census beside _finding_partition_census, _ledger_stale_census and _locus_index_census.",
+        "Carried defects undecided is its own overview row and is never summed into Findings open.",
+        "The gate seeds a state, a coverage and a content fault against the carried markers."
       ],
       "needs_mcp": false,
-      "budget_minutes": 120,
+      "budget_minutes": 180,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -512,7 +656,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "renderers.py:2689-2708 currently reconstructs the tracked universe from the ledger it is measuring, so the candidate's overview prints 0 against 501 unledgered paths. The denominator moves to the witnessed record."
+      "notes": "renderers.py:2689-2708 currently reconstructs the tracked universe from the ledger it is measuring, so the candidate's overview prints 0 against 501 unledgered paths. The denominator moves to the witnessed record. The old single control was unsatisfiable for any store the change affects: renderers.py:415 computes obligation_files over file_ledger rows, so the new denominator differs by exactly the unledgered count and a byte-identical assertion passes only at zero unledgered."
     },
     {
       "id": "P7",
@@ -520,7 +664,8 @@
       "title": "Skill parity and the refusal-parity check",
       "claims": [
         "C26",
-        "C27"
+        "C27",
+        "C34"
       ],
       "depends_on": [
         "P1",
@@ -530,6 +675,7 @@
       ],
       "deliverables": [
         ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/phase-1-scope.md",
         ".claude/skills/amanuensis/references/phase-2-structural.md",
         ".claude/skills/amanuensis/references/phase-3-concerns.md",
         ".claude/skills/amanuensis/references/phase-4-adversarial.md",
@@ -573,15 +719,17 @@
         "node dev/test-reader-lenses-dogfood.mjs"
       ],
       "acceptance": [
-        "Each of the eight passages in spec.md §6.1 states the server's refusal in the server's own words; nothing describing a surviving behaviour is removed or softened.",
+        "Each of the eleven passages in spec.md \u00a76.1 states the server's refusal in the server's own words; nothing describing a surviving behaviour is removed or softened.",
         "contracts/refusal-parity.json registers all four new refusals plus the two existing ones this lane touches.",
         "check-refusal-parity.mjs fails naming the entry id and the side that lost the phrase, and runs in CI beside check-evidence-vocabulary.mjs.",
         "The gate proves the check turns red when a registered phrase is deleted from a reference and, separately, from the server file.",
         "Control: the register at HEAD passes.",
-        "The gate header states that a refusal nobody registers drifts freely (spec.md §8.7)."
+        "The gate header states that a refusal nobody registers drifts freely (spec.md \u00a78.7).",
+        "check-refusal-parity.mjs derives a candidate refusal set from the server's own ToolError messages and reports every one with no register entry; the derived set is empty at HEAD.",
+        "phase-1-scope.md:58, phase-2-structural.md:24 and phase-3-concerns.md:120 each carry the define_term anchor obligation; the derived check is what found them."
       ],
       "needs_mcp": false,
-      "budget_minutes": 120,
+      "budget_minutes": 150,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -594,12 +742,11 @@
     {
       "id": "P8",
       "slice": "S4",
-      "title": "Acceptance rebuild in the lane worktree",
+      "title": "Reinitialize, carry, and onboard in the lane worktree",
       "claims": [
         "C25",
         "C30",
-        "C31",
-        "C33"
+        "C34"
       ],
       "depends_on": [
         "P5",
@@ -607,12 +754,185 @@
         "P7"
       ],
       "deliverables": [
+        "mcp-server/contracts/concern-checklist.json",
+        "dev/record-carry-receipt.mjs",
+        "design/survey-depth/carry-receipt.json",
+        "dev/test-carry-receipt.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-carry-receipt.mjs",
+        "command": "node dev/test-carry-receipt.mjs",
+        "red_expect": "GATE CR1 RED: the carry receipt does not account for every archived finding",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-survey-depth-red-gates.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-survey-depth-red-gates.mjs"
+      ],
+      "acceptance": [
+        "The reader-lenses \u00a712.1 recipe runs in this worktree through step 6: snapshot, stop with an ESRCH pid probe and an lsof exclusivity check, delete, initialize and restart in a second process, carry, read back from a third. Snapshot and delete run unconditionally even though this worktree has no prior store.",
+        "The carry reads the archived store at archive/store-7c1c1a9/memory.db opened ?immutable=1 \u2014 not the export, which carries no store identity \u2014 and writes 22 carried records with a store-legacy- archived_store_id derived from its frozen git_state row.",
+        "carry_runs records source_kind='store', the path, the archived anchor, the reason, and expected_count 22 equal to imported_count 22.",
+        "The third-process read-back returns the carried count through list_carried_findings within the envelope budget.",
+        "Onboarding runs and detect_changes at HEAD writes a scope_reconciliations row whose tree_digest and ledger_digest re-derive; the calibrated concern checklist is written to mcp-server/contracts/concern-checklist.json with a --check.",
+        "design/survey-depth/carry-receipt.json records every archived finding id, its archived resolution state, and its carried_id, so the survey packet's denominator is a document this packet committed and P11 does not rewrite.",
+        "Every gate this lane has shipped is green before the packet is accepted: XS1, SD1, SR1, VD1, CF1, PM1, RP1, CF2, D1."
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 180,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Split out of a single 300-minute packet that combined reinitialization, a whole-repository survey, 22 adjudications, publication, promotion and three receipts. The checklist lands here, in a standalone contract, rather than in design/reader-lenses/rebuild-coverage-receipt.json: that receipt was written by reader-lenses P17 at dee59d3e and dev/test-rebuild-depth.mjs:19-24 depends on the denominator coming from a document the run under test did not produce."
+    },
+    {
+      "id": "P10",
+      "slice": "S4",
+      "title": "Survey every subsystem and decide every carried finding",
+      "claims": [
+        "C34"
+      ],
+      "depends_on": [
+        "P8"
+      ],
+      "deliverables": [
+        "design/survey-depth/survey-progress.json",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-survey-depth.mjs",
+        "command": "node dev/test-survey-depth.mjs",
+        "red_expect": "GATE SD RED: the candidate store does not meet the frozen baseline on B1",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-survey-depth-red-gates.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-survey-depth-red-gates.mjs"
+      ],
+      "acceptance": [
+        "Subsystems are surveyed through the skill in priority order, in batches, each behind its own storage checkpoint, mirroring the reader-lenses lane's per-subsystem batching.",
+        "Every unledgered path is assigned or exempted before any subsystem reaches mapped; the standing reconciliation reports zero unledgered and zero absent at HEAD.",
+        "Every disposition carries at least one attached evidence row whose ref_sha resolves (spec.md \u00a72), and every subsystem at structural or later has an anchored term or an effective declination (spec.md \u00a74).",
+        "All 22 carried findings reach a terminal outcome through record_carried_outcome or the carry's archived-terminal pre-record, including B03-5, B03-6, B03-7, B03-8, B04-5 and B07-1; the carry receipt from P8 is the denominator.",
+        "D3% over tracked paths at HEAD reaches at least 0.5957, which at D2 = 605 is at least 361 examined paths.",
+        "dev/test-survey-depth.mjs is GREEN on B1-B6 against the frozen baseline, with every reported axis printed with its signed delta."
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 420,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Sized from the baseline's measured cost, not from the shallow rebuild's: the baseline store reached 221 examined paths over 35 sessions spanning 2026-08-12 to 2026-09-11, while the clean-slate rebuild reached 84 over 6 sessions in one evening. B2 needs at least 361 examined paths, more than four times what the rebuild this replaces achieved. A single-session budget for that work is a budget for failing it."
+    },
+    {
+      "id": "P11",
+      "slice": "S4",
+      "title": "Publish, promote, and record the acceptance receipts",
+      "claims": [
+        "C31",
+        "C33",
+        "C34"
+      ],
+      "depends_on": [
+        "P10"
+      ],
+      "deliverables": [
         "dev/record-survey-depth.mjs",
         "design/survey-depth/acceptance-receipt.json",
         "dev/test-survey-depth-acceptance.mjs",
         "dev/test-rebuild-depth.mjs",
         "design/reader-lenses/rebuild-depth-receipt.json",
-        "design/reader-lenses/rebuild-coverage-receipt.json",
         "docs/",
         ".github/workflows/test.yml"
       ],
@@ -656,23 +976,27 @@
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
         "node dev/test-reader-lenses-dogfood.mjs",
-        "node dev/test-survey-depth.mjs",
         "node dev/test-survey-depth-red-gates.mjs",
-        "node dev/test-rebuild-depth.mjs"
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-survey-depth-red-gates.mjs"
       ],
       "acceptance": [
-        "The reader-lenses §12.1 recipe runs in this worktree with the carry step inserted after initialization and before any survey work; snapshot and delete run unconditionally even though this worktree has no prior store.",
-        "The carry reads archive/old-findings-7c1c1a9.json and writes 22 carried records anchored at 7c1c1a9f5689d396487072d012abe6fafd5f348c.",
-        "Every subsystem is surveyed through the skill under spec.md §2, §3, §4 and §5; detect_changes runs at HEAD and every unledgered path is assigned or exempted before any subsystem reaches mapped.",
-        "All 22 carried findings reach a terminal outcome, including B03-5, B03-6, B03-7, B03-8, B04-5 and B07-1.",
         "materialize_docs(clean_publish=true) then dev/promote-docs.mjs, with the read-back re-run at docs/.",
-        "dev/test-survey-depth.mjs is GREEN on B1-B6 against the frozen baseline, with every reported axis printed.",
-        "design/survey-depth/acceptance-receipt.json is written under contract amanuensis-survey-depth/acceptance-receipt/v1 and carries every blocking axis with its verdict and every reported axis with its delta.",
-        "dev/test-rebuild-depth.mjs is GREEN: its two hard-coded literals are read from a declared source and the GP24 separation of denominator and reported document is preserved; no other assertion of it is changed.",
+        "design/survey-depth/acceptance-receipt.json is written under contract amanuensis-survey-depth/acceptance-receipt/v1 and carries every blocking axis with its verdict, every reported axis with its delta, and the row-level witnesses of spec.md \u00a77.5.",
+        "GATE A1 ships its must-stay-green control \u2014 the committed receipt at HEAD validates \u2014 paired with two seeded forged-green receipts it must turn red on.",
+        "dev/test-rebuild-depth.mjs is GREEN: CHECKLIST_CONCERNS and the finding-id shape are read from mcp-server/contracts/concern-checklist.json, which P8 committed and this packet does not rewrite, so the GP24 separation of denominator and reported document is preserved; no other assertion of it changes.",
+        "design/reader-lenses/rebuild-coverage-receipt.json is not rewritten by this lane and is not a deliverable of any packet.",
         "dev/test-rebuild-coverage.mjs, dev/test-rebuild-readback.mjs and dev/test-reader-lenses-dogfood.mjs stay GREEN."
       ],
       "needs_mcp": true,
-      "budget_minutes": 300,
+      "budget_minutes": 180,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -680,7 +1004,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "dev/test-rebuild-depth.mjs (P19) is RED on this branch at fb9f1c4 with eight failed assertions over the reader-lenses-era receipt; this packet re-records that receipt for its own rebuild and widens the two B07-R2 literals. dev/test-rebuild-regeneration.mjs (P20) is RED for an unrelated registry_ownership denominator and is out of this lane's scope; it is named in no regression list."
+      "notes": "dev/test-rebuild-depth.mjs is RED on this branch before the lane starts \u2014 8 failed assertions over the reader-lenses-era receipt \u2014 so it belongs in this packet's acceptance, which is where a gate a packet is expected to turn green belongs, and in no regression list. dev/test-rebuild-regeneration.mjs stays RED for an unrelated registry_ownership denominator and is out of scope."
     },
     {
       "id": "P9",
@@ -688,21 +1012,22 @@
       "title": "Pecia reconciliation of the carried findings",
       "claims": [
         "C24",
-        "C25"
+        "C25",
+        "C34"
       ],
       "depends_on": [
-        "P8"
+        "P11"
       ],
       "deliverables": [
-        "dev/test-carried-finding-references.mjs",
         "dev/amanuensis-defects-to-pecia.mjs",
         "dev/pecia-dogfood.md",
+        "dev/test-pecia-carry-audit.mjs",
         ".github/workflows/test.yml"
       ],
       "gate": {
-        "test_path": "dev/test-carried-finding-references.mjs",
-        "command": "node dev/test-carried-finding-references.mjs",
-        "red_expect": "GATE CF2 RED: an undecided carried finding resolved a Pecia reference",
+        "test_path": "dev/test-pecia-carry-audit.mjs",
+        "command": "node dev/test-pecia-carry-audit.mjs",
+        "red_expect": "GATE PA1 RED: dev/pecia-dogfood.md leaves a closed Pecia record unaccounted",
         "red_rejects": [
           "MODULE_NOT_FOUND",
           "Cannot find module",
@@ -730,15 +1055,19 @@
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
         "node dev/test-reader-lenses-dogfood.mjs",
-        "node dev/test-survey-depth.mjs",
-        "node dev/test-rebuild-depth.mjs"
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-survey-depth-red-gates.mjs"
       ],
       "acceptance": [
-        "The resolver exits 1 for an id whose only record is an undecided carried finding, and 0 for one whose carried record is ruled-out or repaired.",
-        "A successor-finding outcome is followed into the successor and answered with its state.",
-        "Exit codes stay within {0,1,2} and the resolver prints its argument on no path.",
-        "Control: an id with a live verified-fixed finding still exits 0 and an unknown id still exits 1.",
-        "pecia audit is re-run over the rebuilt store and each previously unresolvable amanuensis: reference is accounted for in dev/pecia-dogfood.md.",
+        "pecia audit is re-run over the rebuilt store and each of the eight closed records whose reference stopped resolving \u2014 pc-1a91, pc-207e, pc-707e, pc-80b8, pc-833d, pc-adce, pc-ae87, pc-d688 \u2014 is accounted for in dev/pecia-dogfood.md, naming the carried record and its outcome.",
+        "The gate is red when any of those eight is unaccounted, which is this packet's own deliverable and its own claim.",
         "The gate header records the remaining gap: pecia audit sees only closed records, so an open Pecia record pointing at a destroyed finding stays invisible (candidate finding B03-R2, carried not closed)."
       ],
       "needs_mcp": false,
@@ -750,7 +1079,7 @@
       "green_sha": "",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Runs after the acceptance rebuild because the carried records it reconciles are written by that rebuild's carry step; this worktree has no store before it."
+      "notes": "GATE CF2 moved to P4, where dev/pecia-resolve-finding.mjs is a deliverable and its change can turn the gate red. By the time this packet starts that behaviour has shipped, so a gate asserting it would be green on its first run."
     }
   ],
   "completion": {
@@ -851,7 +1180,9 @@
       "cd mcp-server && node scripts/check-refusal-parity.mjs",
       "cd mcp-server && node test-refusal-parity.mjs",
       "node dev/test-survey-depth-acceptance.mjs",
-      "node dev/test-carried-finding-references.mjs"
+      "node dev/test-carried-finding-references.mjs",
+      "node dev/record-survey-depth-baseline.mjs --check",
+      "cd mcp-server && node test-existing-store-migration.mjs"
     ]
   },
   "final_review": {
