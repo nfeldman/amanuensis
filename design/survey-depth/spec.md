@@ -970,6 +970,18 @@ comment at `:24-28` protects — the denominator still comes from a *different* 
 than the one under test. Its remaining assertions, including `a disposition carries no attached
 evidence`, are untouched: that assertion is this lane's own thesis and it was already right.
 
+**Two gates are already red on this branch at `fb9f1c4`, before the lane starts**, and neither
+red is caused by anything specified here. `dev/test-rebuild-depth.mjs` fails eight assertions
+over the reader-lenses-era receipt this branch carries (`d2b1630` is a descendant of the
+reader-lenses merge `7c1c1a9` and predates the clean-slate rebuild's commits); the acceptance
+rebuild re-records that receipt for its own rebuild and must turn it green. `dev/test-rebuild-
+regeneration.mjs` fails one assertion — `registry_ownership resolves 4 owning subsystem(s); a
+denominator that names one subsystem cannot show a missing edge` — which is the decomposition
+question the clean-slate report raised and is **out of this lane's scope**. Neither appears in
+any packet's regression list, because a regression list is a promise about gates that are green
+when the packet starts. `dev/test-rebuild-regeneration.mjs` stays in `completion.commands`, where
+it is the launcher's and the owner's business rather than a packet's.
+
 ---
 
 ## 9. What this specification does not settle

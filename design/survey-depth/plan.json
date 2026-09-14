@@ -1,0 +1,862 @@
+{
+  "version": 1,
+  "branch": "survey-depth",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Substrate obligations: dispositions, reconciliation, vocabulary, carried findings",
+      "packets": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S2",
+      "title": "The depth gate and the projection's 'not measured' rendering",
+      "packets": [
+        "P5",
+        "P6"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S3",
+      "title": "Skill parity and its check",
+      "packets": [
+        "P7"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Acceptance rebuild and the Pecia reconciliation of the carried findings",
+      "packets": [
+        "P8",
+        "P9"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    }
+  ],
+  "packets": [
+    {
+      "id": "P1",
+      "slice": "S1",
+      "title": "Evidence-backed dispositions",
+      "claims": [
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C32"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/tools/dispositions.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/test-disposition-evidence.mjs",
+        "mcp-server/DEVELOPMENT.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-disposition-evidence.mjs",
+        "command": "cd mcp-server && node test-disposition-evidence.mjs",
+        "red_expect": "GATE SD1 RED: a disposition was answered from nothing",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-mcp-compatibility.mjs",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "set_disposition requires evidence_ids with at least one existing id and writes dispositions plus disposition_evidence in one transaction (spec.md §2.2).",
+        "A refused set_disposition leaves neither the disposition nor any attachment behind.",
+        "evidence_quality stronger than the strongest attached kind is refused with the §2.2 message.",
+        "enforcePhasePrerequisites refuses concerns/adversarial/mapped for a subsystem holding a disposition with no attached row, and separately for one whose attached ref_sha does not resolve (spec.md §2.3).",
+        "The gate ships a must-stay-green control: a subsystem whose dispositions are all attached advances.",
+        "The gate header states the vacuity at the advance to concerns (spec.md §8.1).",
+        "No existing store is migrated, backfilled or rewritten (spec.md §2.4)."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "The §2.3 refusal is vacuous at the advance to concerns; the first real bite is at adversarial. That is stated in the gate header rather than papered over."
+    },
+    {
+      "id": "P2",
+      "slice": "S1",
+      "title": "Scope reconciliation before authority",
+      "claims": [
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/src/tools/git.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/materialize.ts",
+        "mcp-server/test-scope-reconciliation.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-scope-reconciliation.mjs",
+        "command": "cd mcp-server && node test-scope-reconciliation.mjs",
+        "red_expect": "GATE SR1 RED: the store was not reconciled at the published revision",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-storage-git.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "detect_changes writes exactly one append-only scope_reconciliations row per invocation, inside the transaction that rewrites scope_gaps (spec.md §3.2).",
+        "The row's counts agree with a re-derivation from git ls-files in the fixture repository.",
+        "Reconciled-at-R is the three-condition predicate of spec.md §3.3 and a reconciliation at A does not satisfy a publication at B.",
+        "The advance to mapped and materialize_docs both refuse an unreconciled store with the §3.3 messages; the advance to structural does not.",
+        "Control: a reconciled store advances and publishes.",
+        "REQUIRED_VIEWS and the migration path in db.ts create the table on an existing store without rewriting any row."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "A reconciliation must be its own record: a perfectly reconciled store has zero scope_gaps rows, so presence-of-a-gap-row reads a complete reconciliation as a missing one (VP4(e))."
+    },
+    {
+      "id": "P3",
+      "slice": "S1",
+      "title": "Vocabulary: discharge or decline",
+      "claims": [
+        "C15",
+        "C16",
+        "C17"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/src/tools/vocabulary.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/test-vocabulary-discharge.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-vocabulary-discharge.mjs",
+        "command": "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "red_expect": "GATE VD1 RED: a subsystem reached structural having neither defined a term nor declined",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "define_term requires an active session, validates first_seen with requireWorkspaceCitation(strict), and stores ref_sha resolved (spec.md §4.2).",
+        "vocabulary_declinations is append-only and decline_domain_vocabulary refuses a subsystem that already has an anchored term (spec.md §4.3).",
+        "The advance to structural refuses a subsystem with neither an anchored term scoped to it nor a declination; a codebase-wide term does not satisfy it (spec.md §4.4).",
+        "Control: a subsystem with one anchored term advances, and so does one with only a declination.",
+        "The declination kind is declared in contracts/conspectus-vocabulary.json and both gen-vocabulary checks pass.",
+        "No numeric minimum is introduced anywhere: one term is enough and none is a legitimate answer."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Existing vocabulary rows are never rewritten; the anchored predicate simply reads false for them until a term is redefined. The baseline's four terms have anchors that do not parse as citation tokens."
+    },
+    {
+      "id": "P4",
+      "slice": "S1",
+      "title": "Findings carry forward across a reinitialization",
+      "claims": [
+        "C19",
+        "C20",
+        "C21",
+        "C22",
+        "C23",
+        "C24"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/src/tools/carried.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "dev/rebuild-self-conspectus-store.mjs",
+        "dev/pecia-resolve-finding.mjs",
+        "dev/check-living-conspectus.mjs",
+        "dev/adr/0001-living-conspectus-terms.md",
+        "mcp-server/test-carried-findings.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-carried-findings.mjs",
+        "command": "cd mcp-server && node test-carried-findings.mjs",
+        "red_expect": "GATE CF1 RED: a carried finding has no terminal outcome",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "node dev/test-amanuensis-pecia-defects.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "carried_findings and carried_finding_outcomes exist with the shapes of spec.md §5.2, outside the findings namespace.",
+        "archived_store_id is derived as spec.md §5.3 and separates the baseline store from the candidate store.",
+        "rebuild-self-conspectus-store.mjs requires --carry-from and accepts either an archived store or an export; --carry-from none records an explicit reasoned empty carry.",
+        "record_carried_outcome enforces the three outcomes' authority rules (spec.md §5.4), one outcome per record, and no deletion.",
+        "The fully-surveyed predicate gains clause 7 and emits the obligation id carried:<store>:<id>; it is not enforced at mapped.",
+        "dev/pecia-resolve-finding.mjs follows the §5.7 lookup order, keeps exit codes 0/1/2, and never prints its argument.",
+        "Control: a store whose carried records all carry terminal outcomes is fully surveyed on clause 7."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 180,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Carried findings live outside the findings table so a carried id cannot collide with its successor, cannot be counted as a defect this survey found, and cannot make finding_resolution_current answer about a store that no longer exists."
+    },
+    {
+      "id": "P5",
+      "slice": "S2",
+      "title": "The depth gate and its frozen baseline",
+      "claims": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C28",
+        "C29"
+      ],
+      "depends_on": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "deliverables": [
+        "dev/record-survey-depth-baseline.mjs",
+        "dev/survey-depth-baseline.json",
+        "dev/test-survey-depth.mjs",
+        "dev/test-survey-depth-red-gates.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-survey-depth-red-gates.mjs",
+        "command": "node dev/test-survey-depth-red-gates.mjs",
+        "red_expect": "GATE D1 RED: the depth gate did not turn red on a seeded",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node test-invariants.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "dev/survey-depth-baseline.json carries the D1-D12 SQL verbatim, the archived store identity and anchor, and the thirteen baseline open finding ids; it is regenerable and --checkable.",
+        "dev/test-survey-depth.mjs turns red on each of B1-B6 seeded independently (spec.md §7.3) and green on the must-stay-green control store.",
+        "The gate reports RED, never green, when the baseline fixture is absent or unreadable.",
+        "Every fraction is printed with its denominator; a zero denominator is out of band.",
+        "The reported axes (D1, D4, D5, D6, D7%, D8, D9, D10, D11 and the histograms) are printed with signed deltas and turn nothing red.",
+        "Both arms exist: a baseline arm over the fixture and a candidate arm over the live store or the acceptance receipt, asserting agreement when both are present.",
+        "The gate runs in .github/workflows/test.yml."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "The packet's own gate is the red-gates test, since the deliverable is itself a gate. Seeded faults are chosen independently at the executed boundary, not by a marker the depth gate writes for itself (VP4 v2.15)."
+    },
+    {
+      "id": "P6",
+      "slice": "S2",
+      "title": "The projection renders 'not measured'",
+      "claims": [
+        "C14",
+        "C18"
+      ],
+      "depends_on": [
+        "P2",
+        "P3"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/test-unmeasured-coverage.py",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "materializer/test-unmeasured-coverage.py",
+        "command": "cd materializer && python3 test-unmeasured-coverage.py",
+        "red_expect": "GATE PM1 RED: an unreconciled store rendered a coverage number",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "_tracked_paths reads the standing reconciliation and returns None (not 0) for an unreconciled store (spec.md §3.4).",
+        "The overview's 'Paths in scope with no ledger row' and 'Files read, of those carrying an obligation' print 'not measured' with the revision and the reason when unreconciled.",
+        "'Not yet surveyed' section 1 routes an unreconciled store into the existing _gap_denominator sentence with the revision named.",
+        "A declined subsystem renders its reason, session and revision; 'declined' and 'not recorded' are distinct and never collapsed (spec.md §4.5).",
+        "The read-back's coverage axis counts a 'not measured' row as present-and-honest, never as a satisfied coverage claim, and no read-back axis is weakened.",
+        "Control: a reconciled store renders byte-identically to today against a committed fixture."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "renderers.py:2689-2708 currently reconstructs the tracked universe from the ledger it is measuring, so the candidate's overview prints 0 against 501 unledgered paths. The denominator moves to the witnessed record."
+    },
+    {
+      "id": "P7",
+      "slice": "S3",
+      "title": "Skill parity and the refusal-parity check",
+      "claims": [
+        "C26",
+        "C27"
+      ],
+      "depends_on": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".claude/skills/amanuensis/references/phase-3-concerns.md",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+        ".claude/skills/amanuensis/references/refresh.md",
+        ".claude/skills/amanuensis/references/onboarding.md",
+        ".claude/skills/amanuensis/references/artifact-templates.md",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/scripts/check-refusal-parity.mjs",
+        "mcp-server/test-refusal-parity.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-refusal-parity.mjs",
+        "command": "cd mcp-server && node test-refusal-parity.mjs",
+        "red_expect": "GATE RP1 RED: the parity check passed with a registered phrase missing",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-consumer-route.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs"
+      ],
+      "acceptance": [
+        "Each of the eight passages in spec.md §6.1 states the server's refusal in the server's own words; nothing describing a surviving behaviour is removed or softened.",
+        "contracts/refusal-parity.json registers all four new refusals plus the two existing ones this lane touches.",
+        "check-refusal-parity.mjs fails naming the entry id and the side that lost the phrase, and runs in CI beside check-evidence-vocabulary.mjs.",
+        "The gate proves the check turns red when a registered phrase is deleted from a reference and, separately, from the server file.",
+        "Control: the register at HEAD passes.",
+        "The gate header states that a refusal nobody registers drifts freely (spec.md §8.7)."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "The reference edits and the check are one packet because the edits alone are prose that drifts and the check alone fails on its first run (GP37)."
+    },
+    {
+      "id": "P8",
+      "slice": "S4",
+      "title": "Acceptance rebuild in the lane worktree",
+      "claims": [
+        "C25",
+        "C30",
+        "C31",
+        "C33"
+      ],
+      "depends_on": [
+        "P5",
+        "P6",
+        "P7"
+      ],
+      "deliverables": [
+        "dev/record-survey-depth.mjs",
+        "design/survey-depth/acceptance-receipt.json",
+        "dev/test-survey-depth-acceptance.mjs",
+        "dev/test-rebuild-depth.mjs",
+        "design/reader-lenses/rebuild-depth-receipt.json",
+        "design/reader-lenses/rebuild-coverage-receipt.json",
+        "docs/",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-survey-depth-acceptance.mjs",
+        "command": "node dev/test-survey-depth-acceptance.mjs",
+        "red_expect": "GATE A1 RED: the acceptance receipt does not bind to this repository and store",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "ruff check materializer/",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-derived-staleness.mjs",
+        "cd mcp-server && node test-smoke.mjs",
+        "node dev/check-living-conspectus.mjs",
+        "node dev/test-living-conspectus.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-survey-depth.mjs",
+        "node dev/test-survey-depth-red-gates.mjs",
+        "node dev/test-rebuild-depth.mjs"
+      ],
+      "acceptance": [
+        "The reader-lenses §12.1 recipe runs in this worktree with the carry step inserted after initialization and before any survey work; snapshot and delete run unconditionally even though this worktree has no prior store.",
+        "The carry reads archive/old-findings-7c1c1a9.json and writes 22 carried records anchored at 7c1c1a9f5689d396487072d012abe6fafd5f348c.",
+        "Every subsystem is surveyed through the skill under spec.md §2, §3, §4 and §5; detect_changes runs at HEAD and every unledgered path is assigned or exempted before any subsystem reaches mapped.",
+        "All 22 carried findings reach a terminal outcome, including B03-5, B03-6, B03-7, B03-8, B04-5 and B07-1.",
+        "materialize_docs(clean_publish=true) then dev/promote-docs.mjs, with the read-back re-run at docs/.",
+        "dev/test-survey-depth.mjs is GREEN on B1-B6 against the frozen baseline, with every reported axis printed.",
+        "design/survey-depth/acceptance-receipt.json is written under contract amanuensis-survey-depth/acceptance-receipt/v1 and carries every blocking axis with its verdict and every reported axis with its delta.",
+        "dev/test-rebuild-depth.mjs is GREEN: its two hard-coded literals are read from a declared source and the GP24 separation of denominator and reported document is preserved; no other assertion of it is changed.",
+        "dev/test-rebuild-coverage.mjs, dev/test-rebuild-readback.mjs and dev/test-reader-lenses-dogfood.mjs stay GREEN."
+      ],
+      "needs_mcp": true,
+      "budget_minutes": 300,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "dev/test-rebuild-depth.mjs (P19) is RED on this branch at fb9f1c4 with eight failed assertions over the reader-lenses-era receipt; this packet re-records that receipt for its own rebuild and widens the two B07-R2 literals. dev/test-rebuild-regeneration.mjs (P20) is RED for an unrelated registry_ownership denominator and is out of this lane's scope; it is named in no regression list."
+    },
+    {
+      "id": "P9",
+      "slice": "S4",
+      "title": "Pecia reconciliation of the carried findings",
+      "claims": [
+        "C24",
+        "C25"
+      ],
+      "depends_on": [
+        "P8"
+      ],
+      "deliverables": [
+        "dev/test-carried-finding-references.mjs",
+        "dev/amanuensis-defects-to-pecia.mjs",
+        "dev/pecia-dogfood.md",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "dev/test-carried-finding-references.mjs",
+        "command": "node dev/test-carried-finding-references.mjs",
+        "red_expect": "GATE CF2 RED: an undecided carried finding resolved a Pecia reference",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && npm run build",
+        "node dev/test-amanuensis-pecia-defects.mjs",
+        "node dev/test-pecia-roadmap.mjs && node dev/test-pecia-roadmap-red-gates.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-resolution-proof.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-rebuild-coverage.mjs",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-survey-depth.mjs",
+        "node dev/test-rebuild-depth.mjs"
+      ],
+      "acceptance": [
+        "The resolver exits 1 for an id whose only record is an undecided carried finding, and 0 for one whose carried record is ruled-out or repaired.",
+        "A successor-finding outcome is followed into the successor and answered with its state.",
+        "Exit codes stay within {0,1,2} and the resolver prints its argument on no path.",
+        "Control: an id with a live verified-fixed finding still exits 0 and an unknown id still exits 1.",
+        "pecia audit is re-run over the rebuilt store and each previously unresolvable amanuensis: reference is accounted for in dev/pecia-dogfood.md.",
+        "The gate header records the remaining gap: pecia audit sees only closed records, so an open Pecia record pointing at a destroyed finding stays invisible (candidate finding B03-R2, carried not closed)."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "Runs after the acceptance rebuild because the carried records it reconciles are written by that rebuild's carry step; this worktree has no store before it."
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/render-roadmap.mjs --check",
+      "node dev/test-roadmap.mjs",
+      "node dev/test-pecia-roadmap.mjs && node dev/test-pecia-roadmap-red-gates.mjs",
+      "node dev/check-living-conspectus.mjs",
+      "node dev/test-living-conspectus.mjs",
+      "node dev/test-amanuensis-pecia-defects.mjs",
+      "cd mcp-server && npx biome check src/",
+      "cd mcp-server && npm run build",
+      "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+      "cd mcp-server && node scripts/check-tool-schemas.mjs",
+      "cd mcp-server && node test-mcp-compatibility.mjs",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd mcp-server && node test-storage-git.mjs",
+      "cd mcp-server && node test-cloud-storage.mjs",
+      "cd mcp-server && node test-autoprogress.mjs",
+      "cd mcp-server && node test-compare.mjs",
+      "cd mcp-server && node test-priority.mjs",
+      "cd mcp-server && node test-cloud-e2e.mjs",
+      "cd mcp-server && node test-installer.mjs",
+      "cd mcp-server && node test-activation-contract.mjs",
+      "cd mcp-server && node test-activation-doctor.mjs",
+      "cd mcp-server && node test-workspace-binding.mjs",
+      "cd mcp-server && node test-codex-parent-workspace.mjs",
+      "cd mcp-server && node test-nested-activation-binding.mjs",
+      "cd mcp-server && node test-first-use-laziness.mjs",
+      "cd mcp-server && node test-first-use-recovery.mjs",
+      "node dev/check-codex-host-evidence.mjs --receipt dev/activation-evidence/a22-codex-host.json && node dev/test-codex-host-evidence-red-gates.mjs",
+      "cd mcp-server && node test-package-artifact.mjs",
+      "cd mcp-server && node test-package-activation-parity.mjs",
+      "node dev/test-package-activation-parity-red-gates.mjs",
+      "node dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json && node dev/test-activation-operating-envelope-red-gates.mjs && node dev/test-activation-operating-trust-cleanup.mjs",
+      "cd mcp-server && node test-release-rollback.mjs",
+      "node dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json && node dev/test-friction-free-release-readiness-red-gates.mjs && node dev/render-friction-free-release-readiness.mjs --check",
+      "cd mcp-server && node test-adversarial-correctness.mjs",
+      "cd mcp-server && node test-invariants.mjs",
+      "cd mcp-server && node test-derived-staleness.mjs",
+      "cd mcp-server && node test-startup-bounds.mjs",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node test-vocabulary-source.mjs",
+      "cd mcp-server && node test-finding-partition.mjs",
+      "cd mcp-server && node test-locus-index-view.mjs",
+      "cd mcp-server && node test-locus-standing.mjs",
+      "cd mcp-server && node test-locus-compactness.mjs",
+      "cd mcp-server && node test-residual-hardening.mjs",
+      "cd mcp-server && node test-temporal-claims.mjs",
+      "cd mcp-server && node test-structural-claims.mjs",
+      "cd mcp-server && node test-phase2-claims-gate.mjs",
+      "cd mcp-server && node test-edge-contract.mjs",
+      "cd mcp-server && node test-attention-history.mjs",
+      "cd mcp-server && node test-consumer-route.mjs",
+      "node dev/test-rebuild-readback.mjs",
+      "node dev/test-rebuild-coverage.mjs",
+      "node dev/test-rebuild-depth.mjs",
+      "node dev/test-reader-lenses-dogfood.mjs",
+      "node dev/test-rebuild-regeneration.mjs",
+      "cd mcp-server && node test-change-impact.mjs",
+      "cd mcp-server && node test-revalidation-scheduler.mjs",
+      "cd mcp-server && node test-resolution-proof.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-refresh-recovery.mjs",
+      "cd mcp-server && node test-review-brief.mjs",
+      "cd mcp-server && node test-review-analysis.mjs",
+      "cd mcp-server && node test-composition.mjs",
+      "cd mcp-server && node test-review-session.mjs",
+      "cd mcp-server && node test-codebase-brief.mjs",
+      "cd mcp-server && node test-design-session.mjs",
+      "cd mcp-server && node test-decisions.mjs",
+      "cd mcp-server && node test-research-broker.mjs",
+      "cd mcp-server && node test-crosswalk-qualification.mjs",
+      "cd mcp-server && node test-learning-ledger.mjs",
+      "cd mcp-server && node test-operating-envelope.mjs",
+      "cd mcp-server && node test-chorusmith-adapter.mjs",
+      "cd mcp-server && node test-historical-evaluation.mjs",
+      "cd mcp-server && node test-adversarial-security.mjs",
+      "cd mcp-server && node test-perf-ceilings.mjs",
+      "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+      "ruff check materializer/",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-readback.py",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-history-and-disagreements.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd mcp-server && node test-disposition-evidence.mjs",
+      "cd mcp-server && node test-scope-reconciliation.mjs",
+      "cd mcp-server && node test-vocabulary-discharge.mjs",
+      "cd mcp-server && node test-carried-findings.mjs",
+      "node dev/test-survey-depth.mjs",
+      "node dev/test-survey-depth-red-gates.mjs",
+      "cd materializer && python3 test-unmeasured-coverage.py",
+      "cd mcp-server && node scripts/check-refusal-parity.mjs",
+      "cd mcp-server && node test-refusal-parity.mjs",
+      "node dev/test-survey-depth-acceptance.mjs",
+      "node dev/test-carried-finding-references.mjs"
+    ]
+  },
+  "final_review": {
+    "status": "pending",
+    "reviewed_sha": "",
+    "findings": 0
+  }
+}
