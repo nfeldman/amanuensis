@@ -258,7 +258,13 @@ function main(mods) {
       ledger_rows: ledgerPaths.size,
       unledgered: tracked.filter((p) => !ledgerPaths.has(p)).length,
       absent: rows.filter((r) => !trackedSet.has(r.file_path)).length,
-      exempt: rows.filter((r) => trackedSet.has(r.file_path) && EXEMPT.has(r.classification)).length,
+      // Distinct paths, not rows: §3.2's `exempt` is one side of the tracked-set
+      // intersection, and a path owned twice is one path.
+      exempt: new Set(
+        rows
+          .filter((r) => trackedSet.has(r.file_path) && EXEMPT.has(r.classification))
+          .map((r) => r.file_path),
+      ).size,
       tree_digest: digest([...tracked].sort()),
       ledger_digest: digest(rows.map((r) => `${r.file_path}${NUL}${r.classification ?? ""}`).sort()),
     };

@@ -7,6 +7,8 @@
 // status determines what claims the agents are authorized to make about
 // it. Claims exceeding the authorized level must be rejected at the
 // write path.
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import type { DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
 import { resolveWorkspaceCommits, ToolError } from "./helpers.js";
@@ -407,6 +409,273 @@ function requireAttachedEvidence(
   return warnings;
 }
 
+// ---------------------------------------------------------------------------
+// §3 Scope reconciliation before authority
+// ---------------------------------------------------------------------------
+
+/**
+ * One reading of the repository's tracked paths against the file ledger, at one
+ * revision, as `scope_reconciliations` stores it.
+ */
+export interface ScopeReconciliation {
+  id: number;
+  detected_sha: string;
+  tree_digest: string;
+  ledger_digest: string;
+  tracked_paths: number;
+  ledger_rows: number;
+  unledgered: number;
+  absent: number;
+  exempt: number;
+}
+
+/**
+ * A path set, as one hash. Sorted so the digest is a statement about the set
+ * and not about the order git or SQLite happened to return it in, and joined on
+ * NUL because that is the one byte a repository path cannot contain.
+ */
+const NUL = "\u0000";
+function digestOf(parts: readonly string[]): string {
+  return createHash("sha256")
+    .update([...parts].sort().join(NUL))
+    .digest("hex");
+}
+
+/** §3.2's `tree_digest`: the tracked path set the counts were taken over. */
+export function trackedPathDigest(paths: readonly string[]): string {
+  return digestOf(paths);
+}
+
+/**
+ * §3.2's `ledger_digest`: the ledger the counts were taken against.
+ *
+ * Over (path, classification) pairs, one entry per ledger row, so a second
+ * owner for a path, a re-classification, an added path and a dropped path all
+ * move it. Re-assigning a row from one subsystem to another with the same
+ * classification does not, which is the one ledger mutation a standing
+ * reconciliation survives; `test-scope-reconciliation.mjs` records that as a
+ * false green it cannot exclude.
+ */
+export function ledgerDigest(db: DB): string {
+  const rows = db.prepare("SELECT file_path, classification FROM file_ledger").all() as Array<{
+    file_path: string;
+    classification: string | null;
+  }>;
+  return digestOf(rows.map((row) => `${row.file_path}${NUL}${row.classification ?? ""}`));
+}
+
+/**
+ * The paths a revision's **tree** carries.
+ *
+ * `git ls-files` reads the index — the working tree's staged state, which moves
+ * under an unrelated `git add` and does not describe the revision at all. A
+ * coverage fraction stamped with R may only be taken over R's own immutable
+ * tree (§3.3, `dev/adr/0001-living-conspectus-terms.md:19`). `-z` because git
+ * quotes any path it cannot print literally, and a quoted path is a different
+ * string from the one the ledger stores.
+ */
+export function listTrackedPaths(workspacePath: string, revision: string): string[] | null {
+  const result = spawnSync("git", ["ls-tree", "-r", "--name-only", "-z", revision], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error || result.status !== 0) return null;
+  return String(result.stdout ?? "")
+    .split(NUL)
+    .filter((path) => path.length > 0);
+}
+
+/** Whether a store is *reconciled at R*, and when it is not, why not. */
+export type ReconciliationStanding = {
+  standing: ScopeReconciliation | null;
+  sha: string | null;
+  why: string | null;
+  lastCheckedSha: string | null;
+  latestSha: string | null;
+};
+
+function readLastCheckedSha(db: DB): string | null {
+  return (
+    (
+      db.prepare("SELECT last_checked_sha FROM git_state WHERE repo_id = 'default'").get() as
+        | { last_checked_sha: string | null }
+        | undefined
+    )?.last_checked_sha ?? null
+  );
+}
+
+/**
+ * §3.3, mechanically. A store is **reconciled at revision R** exactly when R
+ * resolves and is normalized to its full 40-hex commit id; a
+ * `scope_reconciliations` row carries that sha; `git_state.last_checked_sha`,
+ * normalized the same way, equals it; and the row's two digests still match
+ * digests re-derived **now** from the tree at R and from `file_ledger`.
+ *
+ * Conditions 4 and 5 are what make the reading stand rather than merely have
+ * happened: the first catches a row taken over a tree the revision does not
+ * produce, the second catches the ordinary case — every later
+ * `add_files_to_scope` or classification change invalidates the standing
+ * reconciliation, and the store reverts to *unreconciled at R* until
+ * `detect_changes` runs again. A store that has been edited since it last
+ * checked itself against the tree has not checked itself against the tree.
+ *
+ * The standing reconciliation is the most recent row that satisfies all of
+ * them, so a forged or superseded row cannot displace a genuine one: it simply
+ * does not qualify.
+ */
+export function readReconciliationStanding(
+  db: DB,
+  workspacePath: string,
+  revision: string,
+): ReconciliationStanding {
+  const lastCheckedSha = readLastCheckedSha(db);
+  const latestSha =
+    (
+      db.prepare("SELECT detected_sha FROM scope_reconciliations ORDER BY id DESC LIMIT 1").get() as
+        | { detected_sha: string }
+        | undefined
+    )?.detected_sha ?? null;
+  const base = { standing: null, sha: null, lastCheckedSha, latestSha };
+
+  const resolved = resolveWorkspaceCommits(workspacePath, [revision]).get(revision) ?? null;
+  if (resolved === null) {
+    return {
+      ...base,
+      why: `${revision} does not resolve to a commit in the bound workspace ${workspacePath}`,
+    };
+  }
+  const tracked = listTrackedPaths(workspacePath, resolved);
+  if (tracked === null) {
+    return { ...base, sha: resolved, why: `the tree at ${resolved} could not be enumerated` };
+  }
+  const normalizedLastChecked =
+    lastCheckedSha === null
+      ? null
+      : (resolveWorkspaceCommits(workspacePath, [lastCheckedSha]).get(lastCheckedSha) ?? null);
+  if (normalizedLastChecked !== resolved) {
+    return {
+      ...base,
+      sha: resolved,
+      why: `git_state.last_checked_sha is ${lastCheckedSha ?? "unset"}`,
+    };
+  }
+  const treeDigest = trackedPathDigest(tracked);
+  const currentLedgerDigest = ledgerDigest(db);
+  const row = db
+    .prepare(
+      `SELECT id, detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,
+              unledgered, absent, exempt
+         FROM scope_reconciliations
+        WHERE detected_sha = ? AND tree_digest = ? AND ledger_digest = ?
+        ORDER BY id DESC LIMIT 1`,
+    )
+    .get(resolved, treeDigest, currentLedgerDigest) as ScopeReconciliation | undefined;
+  if (row) return { standing: row, sha: resolved, why: null, lastCheckedSha, latestSha };
+
+  // No qualifying row. Name which condition failed, because the repairs read
+  // differently: a store that never reconciled at R and one whose ledger moved
+  // under the row both run detect_changes, but a reader told only
+  // "unreconciled" cannot tell a first reading from a lost one.
+  const atSha = db
+    .prepare(
+      "SELECT tree_digest FROM scope_reconciliations WHERE detected_sha = ? ORDER BY id DESC",
+    )
+    .all(resolved) as Array<{ tree_digest: string }>;
+  let why = "no reconciliation has been recorded at that revision";
+  if (atSha.length > 0) {
+    why = atSha.some((candidate) => candidate.tree_digest === treeDigest)
+      ? "the file ledger has changed since the reconciliation recorded there was taken"
+      : "the reconciliation recorded there was taken over a different tree";
+  }
+  return { ...base, sha: resolved, why };
+}
+
+/**
+ * §3.3's first refusal: the advance to `mapped`.
+ *
+ * `mapped` is the status that licenses the phrase *fully surveyed*
+ * (`dev/adr/0001-living-conspectus-terms.md:19`, clause 1), and a subsystem
+ * cannot reach it while the store cannot say what the inventory was. It binds
+ * at `mapped` rather than at `structural` because the reconciliation is a
+ * whole-store fact and belongs at the whole-store claim; refusing earlier would
+ * stop a rebuild progressing subsystem by subsystem (README §4).
+ *
+ * *Reconciled* is weaker than *complete*, and only the second licenses
+ * publication (§3.3a): a store that accurately records 501 unledgered paths is
+ * reconciled, and this advance accepts it. {@link requireCompleteReconciliation}
+ * is where clause 1 binds in full.
+ *
+ * Without a bound workspace there is no tree to compare against, so the check
+ * reports rather than refuses — the treatment §2.3 already gives an unresolved
+ * revision. Every status writer in this server passes one
+ * (`src/tools/subsystems.ts:127`, `:201`).
+ */
+export function requireReconciledStore(
+  db: DB,
+  subsystemId: string,
+  workspacePath: string | null,
+): string[] {
+  if (workspacePath === null) {
+    return [
+      `${subsystemId} advanced to 'mapped' without a bound workspace, so §3.3's reconciliation ` +
+        `was not checked: the store's coverage denominator is unverified for this advance.`,
+    ];
+  }
+  const reading = readReconciliationStanding(db, workspacePath, "HEAD");
+  if (reading.standing !== null) return [];
+  const named = reading.sha ?? "HEAD";
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'mapped': the store has not been reconciled against the ` +
+      `repository at ${named} — ${reading.why}. Run detect_changes(current_sha=${named}) and ` +
+      `assign or exempt every unledgered path it reports; a subsystem cannot be mapped while ` +
+      `the store cannot say what the tree contains.`,
+  );
+}
+
+/**
+ * §3.3 and §3.3a's second refusal: publication, and any other whole-store claim
+ * that rests on the phrase *fully surveyed*.
+ *
+ * Returns the refusal message, or `null` when the store may publish. The two
+ * refusals are separate because the repairs differ: an unreconciled store has
+ * no denominator at all, and a reconciled store reporting a nonzero
+ * `unledgered` or `absent` has one over a tree nobody finished inventorying.
+ * Publication is the whole-store claim, and a coverage fraction over a tree 501
+ * of whose paths nobody assigned or excluded is a fraction of a set the store
+ * never inventoried.
+ *
+ * `operation` names the caller so the sentence reads as that caller's refusal;
+ * §5.5's fully-surveyed predicate is the other one.
+ */
+export function requireCompleteReconciliation(
+  db: DB,
+  workspacePath: string,
+  revision: string,
+  operation: string,
+): string | null {
+  const reading = readReconciliationStanding(db, workspacePath, revision);
+  if (reading.standing === null) {
+    const named = reading.sha ?? revision;
+    return (
+      `${operation} refuses: the store has not been reconciled against the repository at ` +
+      `${named} (git_state.last_checked_sha=${reading.lastCheckedSha ?? "unset"}, latest ` +
+      `reconciliation at ${reading.latestSha ?? "none"}) — ${reading.why}. Coverage published ` +
+      `over an unreconciled ledger is a fraction of itself. Run detect_changes first.`
+    );
+  }
+  const { unledgered, absent } = reading.standing;
+  if (unledgered === 0 && absent === 0) return null;
+  return (
+    `${operation} refuses: the standing reconciliation at ${reading.sha} reports ${unledgered} ` +
+    `tracked path(s) with no ledger row and ${absent} ledger row(s) the tree no longer carries. ` +
+    `Every tracked path needs exactly one subsystem assignment or an explicit exclusion with a ` +
+    `reason before coverage over that tree is published (ADR-0001, Fully surveyed, clause 1). ` +
+    `detect_changes names every one in unledgered_paths and absent_ledger_paths.`
+  );
+}
+
 /**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
@@ -426,10 +695,12 @@ function requireAttachedEvidence(
  *
  * `concerns`, `adversarial` and `mapped` additionally require that every
  * disposition the subsystem holds carries at least one attached evidence row
- * whose revision resolves (§2.3, {@link requireAttachedEvidence}). Returns the
- * lines the advance should report — today, attachments whose revision the
- * workspace can no longer reach on a disposition that still has a resolvable
- * one. An empty array is the ordinary result.
+ * whose revision resolves (§2.3, {@link requireAttachedEvidence}), and `mapped`
+ * alone requires the whole store to be reconciled against the repository at
+ * HEAD (§3.3, {@link requireReconciledStore}). Returns the lines the advance
+ * should report — attachments whose revision the workspace can no longer reach
+ * on a disposition that still has a resolvable one, and an advance checked
+ * without a bound workspace. An empty array is the ordinary result.
  *
  * When an agent skips phases (e.g. unmapped→concerns), every intermediate
  * status's prerequisites are checked in order, so the first missing one
@@ -441,6 +712,7 @@ export function enforcePhasePrerequisites(
   targetStatus: SubsystemStatus,
   workspacePath: string | null = null,
 ): string[] {
+  const reported: string[] = [];
   switch (targetStatus) {
     case "structural": {
       const { n } = db
@@ -486,6 +758,11 @@ export function enforcePhasePrerequisites(
     }
     case "mapped": {
       requireChallengedClaims(db, subsystemId);
+      // §3.3, beside the challenge check and after it: an unchallenged claim is
+      // this subsystem's own missing pass, and naming it first tells the caller
+      // to do the thing only it can do. The reconciliation is a whole-store
+      // fact and is the second sentence, not the first.
+      reported.push(...requireReconciledStore(db, subsystemId, workspacePath));
       break;
     }
     default:
@@ -496,9 +773,9 @@ export function enforcePhasePrerequisites(
   // skipped: "the concerns pass never ran" is a different repair from "the
   // concerns pass ran and answered one of them from nothing".
   if (targetStatus === "concerns" || targetStatus === "adversarial" || targetStatus === "mapped") {
-    return requireAttachedEvidence(db, subsystemId, targetStatus, workspacePath);
+    reported.push(...requireAttachedEvidence(db, subsystemId, targetStatus, workspacePath));
   }
-  return [];
+  return reported;
 }
 
 /**

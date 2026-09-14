@@ -192,6 +192,47 @@ CREATE TABLE IF NOT EXISTS scope_gaps (
     PRIMARY KEY (file_path, kind)
 );
 
+-- One reading of the repository's tracked paths against the file ledger, at one
+-- revision. A *perfectly* reconciled store has zero `scope_gaps` rows, so "a gap
+-- row exists at R" reads a complete reconciliation as a missing one: the count
+-- zero and the absence of a reading are different facts and are stored
+-- differently (VP4(e), finding B03-5). `detect_changes` writes exactly one row
+-- per invocation, inside the transaction that rewrites `scope_gaps`, and the
+-- history of those rows is the record of when the map was last checked against
+-- the tree.
+--
+-- The two digests, not the six counts, are the witness. Counts go stale
+-- silently: a later `set_disposition` or `add_files_to_scope` changes the ledger
+-- without touching the row that claims to describe it. `tree_digest` pins the
+-- path set the counts were taken over and `ledger_digest` pins the ledger they
+-- were taken against, so a standing reconciliation can be told from a stale one
+-- (design/survey-depth/spec.md §3.2, §3.3).
+CREATE TABLE IF NOT EXISTS scope_reconciliations (
+    id              INTEGER PRIMARY KEY,
+    detected_sha    TEXT    NOT NULL,   -- resolved, 40 hex, from rev-parse <R>^{commit}
+    tree_digest     TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined tracked path set
+    ledger_digest   TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined (path, classification)
+    tracked_paths   INTEGER NOT NULL,   -- |git ls-tree -r --name-only detected_sha|
+    ledger_rows     INTEGER NOT NULL,   -- distinct file_ledger.file_path
+    unledgered      INTEGER NOT NULL,   -- tracked with no ledger row
+    absent          INTEGER NOT NULL,   -- ledger rows the tree no longer carries
+    exempt          INTEGER NOT NULL,   -- tracked and ledgered with an exempting classification
+    session_id      TEXT,
+    detected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_scope_reconciliations_sha
+    ON scope_reconciliations(detected_sha);
+
+-- Append-only, by the trigger rather than by this paragraph: a reconciliation
+-- that can be edited after the fact is not a record of when the map was checked.
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_is_immutable
+BEFORE UPDATE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_cannot_be_deleted
+BEFORE DELETE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
+
 -- Per-owner standing: what a reader is entitled to claim about one file on
 -- the authority of one subsystem's examination of it. One row per file_ledger
 -- row, and no new table -- every column the CASE reads is already stored.

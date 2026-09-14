@@ -246,8 +246,14 @@ function runMigrations(db: DB): void {
     );
   }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
-  // schema.sql handle the new index and scope_gaps on the next
-  // initializeSchema pass — no explicit add here.
+  // schema.sql handle the new index, scope_gaps and scope_reconciliations on
+  // the next initializeSchema pass — no explicit add here. A new *table* needs
+  // no migration entry and no REQUIRED_VIEWS entry: `initializeSchema` re-execs
+  // schema.sql on every open (:84-89) and `requireSchemaObjects` then refuses
+  // the open if the table did not arrive, so an existing populated store gains
+  // scope_reconciliations the next time it is opened with no domain row
+  // rewritten. REQUIRED_VIEWS (:44, :61-82) stays as it is because the
+  // survey-depth lane's §3 adds no view.
   //
   // 4. CHECK-constrained vocabularies — a widened enum reaches an existing
   // store only through a table rebuild.
