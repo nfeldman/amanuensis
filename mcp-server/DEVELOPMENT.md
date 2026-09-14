@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
+_202 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -597,11 +597,12 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 | `set_subsystem_priority` | Set a subsystem's survey priority (1 = survey first). Pass `priority: null` to clear. The coordinator assigns these during onboarding Phase 5 (ranking every identified subsystem by how much downstream work depends on it) and may refine them later when new dependencies are discovered or a human answers a `priority-ranking` open question. |
 | `reset_subsystem` | Discard a subsystem's survey artifacts and reset its status to an earlier phase. This is the only path that regresses a subsystem's knowledge depth — the normal update_subsystem_status tool rejects regressions. reset_subsystem deletes dependent rows (dispositions, findings, field-notes, xrefs, artifact manifest entries for this subsystem) so the conspectus remains internally consistent with the new status. The reason is recorded for audit; supply enough context that a future analyst understands why the earlier survey was discarded. |
 
-### `vocabulary` (3)
+### `vocabulary` (4)
 
 | Tool | Description |
 |---|---|
-| `define_term` | Record a domain-vocabulary term used in this codebase. gloss is a one-sentence compressed definition (enough to use the term); expansion is the full explanation (enough to teach it). subsystem_id scopes a term; omit for codebase-wide terms. first_seen is a file:symbol@sha anchor. |
+| `define_term` | Record a domain-vocabulary term used in this codebase. gloss is a one-sentence compressed definition (enough to use the term); expansion is the full explanation (enough to teach it). subsystem_id scopes a term; omit for codebase-wide terms, which discharge no subsystem's structural obligation. first_seen is a file:symbol@sha anchor whose revision must resolve and whose path must exist in that revision's tree; a term recorded without one is stored and anchors nothing. |
+| `decline_domain_vocabulary` | Declare that a subsystem carries no domain vocabulary of its own, with the reason it does not. This is the other way to discharge the structural phase's vocabulary obligation: one term is enough, there is no quota, and 'none' is a real and common answer that has to be said out loud rather than left as silence. The record is append-only and is kept when a later pass does find a term. Refused for a subsystem that already has an anchored term. |
 | `lookup_term` | Return a vocabulary entry (or null). Used by the notes agent to answer 'what does X mean here?' |
 | `list_vocabulary` | List vocabulary. If subsystem_id is given, returns codebase-wide terms AND terms scoped to that subsystem (the set an agent operating inside a subsystem should know). Otherwise returns everything. |
 

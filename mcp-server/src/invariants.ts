@@ -11,7 +11,13 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import type { DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
-import { resolveWorkspaceCommits, ToolError } from "./helpers.js";
+import {
+  isCitationToken,
+  resolveWorkspaceAnchors,
+  resolveWorkspaceCommits,
+  ToolError,
+} from "./helpers.js";
+import type { VocabularyDischarge } from "./vocabulary.js";
 
 export type SubsystemStatus =
   | "unmapped"
@@ -182,6 +188,195 @@ function requireStructuralClaim(db: DB, subsystemId: string): void {
       `contracts through add_claim before the subsystem is advanced. One claim is ` +
       `enough; a category that is genuinely empty is recorded as an explicit ` +
       `negative claim rather than omitted.`,
+  );
+}
+
+/**
+ * One subsystem's standing against §4.4's vocabulary obligation, re-derived
+ * from the rows rather than read from a flag.
+ *
+ * Three states, never two (spec.md §4.5): `terms` when at least one term scoped
+ * to the subsystem still **anchors** — its `first_seen` parses, its revision is
+ * reachable, and its path exists in that revision's tree; `declined` when no
+ * term anchors but a `vocabulary_declinations` row for the subsystem still
+ * resolves; `not-recorded` when nobody has answered the question either way.
+ *
+ * *Anchored* is recomputed at every read, and deliberately so. `define_term`
+ * refuses an anchor that does not resolve, but a store carries rows written
+ * before that refusal existed — the archived baseline holds four terms whose
+ * anchors are not citation tokens at all — and a revision that resolved when the
+ * term was written can be rewritten away afterwards. The predicate reads false
+ * for such a row without rewriting it: the row stays visible and countable, and
+ * is worth nothing until the term is redefined at an anchor that opens.
+ *
+ * The **effective** declination is the most recent row whose `ref_sha` still
+ * resolves. §4.3 keeps declinations across a subsystem reset, which is right — a
+ * ruled-out record is kept (GP18) — but a kept record is history, and history
+ * does not discharge a new pass. A newer row anchored to a collected revision
+ * therefore does not invalidate an older one that still opens; it is the one
+ * that renders as history.
+ *
+ * Scoping is per `(term, subsystem)`. `vocabulary.subsystem_id` is one scope,
+ * `vocabulary_scopes` carries the rest, and a codebase-wide term
+ * (`subsystem_id IS NULL`, no scope row) satisfies no subsystem's obligation: a
+ * term that belongs to everything tells a reader nothing about the subsystem
+ * that just advanced.
+ *
+ * Without a bound workspace there is no git to resolve against, so the row half
+ * still binds — a term whose anchor parses, or a declination — and `checked` is
+ * false, which is the treatment §2.3 already gives an unresolved revision.
+ */
+export interface VocabularyDeclination {
+  id: number;
+  subsystem_id: string;
+  reason: string;
+  session_id: string;
+  ref_sha: string;
+  declared_at: string;
+}
+
+export interface VocabularyDischargeReading {
+  state: VocabularyDischarge;
+  /** Terms scoped to the subsystem whose anchor resolves, in name order. */
+  anchoredTerms: string[];
+  /** Terms scoped to the subsystem whose anchor does not, or that carry none. */
+  unanchoredTerms: string[];
+  /** The most recent declination whose `ref_sha` resolves, or null. */
+  declination: VocabularyDeclination | null;
+  /** Declinations the workspace can no longer reach, newest first. */
+  unreachableDeclinations: VocabularyDeclination[];
+  /** False when there was no workspace to resolve revisions against. */
+  checked: boolean;
+}
+
+export function readVocabularyDischarge(
+  db: DB,
+  workspacePath: string | null,
+  subsystemId: string,
+): VocabularyDischargeReading {
+  const terms = db
+    .prepare(
+      `SELECT v.term AS term, v.first_seen AS first_seen
+         FROM vocabulary v
+        WHERE v.subsystem_id = ?
+           OR EXISTS (SELECT 1 FROM vocabulary_scopes s
+                       WHERE s.term = v.term AND s.subsystem_id = ?)
+        ORDER BY v.term`,
+    )
+    .all(subsystemId, subsystemId) as Array<{ term: string; first_seen: string | null }>;
+  const declinations = db
+    .prepare(
+      `SELECT id, subsystem_id, reason, session_id, ref_sha, declared_at
+         FROM vocabulary_declinations
+        WHERE subsystem_id = ?
+        ORDER BY id DESC`,
+    )
+    .all(subsystemId) as VocabularyDeclination[];
+
+  const anchors = terms.map((row) => row.first_seen ?? "");
+  const resolvedAnchors =
+    workspacePath === null
+      ? new Map<string, boolean>()
+      : resolveWorkspaceAnchors(workspacePath, anchors);
+  const resolvedShas =
+    workspacePath === null
+      ? new Map<string, string | null>()
+      : resolveWorkspaceCommits(
+          workspacePath,
+          declinations.map((row) => row.ref_sha),
+        );
+
+  const anchoredTerms: string[] = [];
+  const unanchoredTerms: string[] = [];
+  for (const row of terms) {
+    const parses = isCitationToken(row.first_seen);
+    const anchored =
+      workspacePath === null ? parses : (resolvedAnchors.get(row.first_seen ?? "") ?? false);
+    (anchored ? anchoredTerms : unanchoredTerms).push(row.term);
+  }
+
+  let declination: VocabularyDeclination | null = null;
+  const unreachableDeclinations: VocabularyDeclination[] = [];
+  for (const row of declinations) {
+    const resolves = workspacePath === null ? true : Boolean(resolvedShas.get(row.ref_sha));
+    if (resolves && declination === null) declination = row;
+    else if (!resolves) unreachableDeclinations.push(row);
+  }
+
+  const state: VocabularyDischarge =
+    anchoredTerms.length > 0 ? "terms" : declination !== null ? "declined" : "not-recorded";
+  return {
+    state,
+    anchoredTerms,
+    unanchoredTerms,
+    declination,
+    unreachableDeclinations,
+    checked: workspacePath !== null,
+  };
+}
+
+/**
+ * §4.4, checked at the advance to `structural`, after the claim the phase owes.
+ *
+ * Discharge or decline, never a floor (decisions.md §3). The structural pass is
+ * the one that reads a subsystem closely enough to know the words its code
+ * coins, and before this it was in no tool precondition, no status gate and no
+ * rebuild gate: the candidate store reached eight mapped subsystems with zero
+ * vocabulary rows and nothing said so. What binds here is that the question was
+ * *answered*, in one of the two ways an honest answer can take.
+ *
+ * **One term is enough and no count is required.** A quota over a field the
+ * writer must author is the fabrication-to-order hazard BP4 names, and the same
+ * reasoning {@link requireStructuralClaim} records applies word for word: a
+ * subsystem that genuinely coins nothing records that as an explicit negative —
+ * here a declination with its reason — rather than inventing a term to clear a
+ * bar. Whether the declination is *true* is a judgement the substrate cannot
+ * check; it can require that it be made, attributed and dated, and that is the
+ * scope limit GP8 draws, accepted rather than pretended past.
+ *
+ * Returns the line the advance should report when there was no workspace to
+ * resolve against, and refuses otherwise. An empty array is the ordinary result.
+ */
+function requireVocabularyDischarge(
+  db: DB,
+  subsystemId: string,
+  workspacePath: string | null,
+): string[] {
+  const reading = readVocabularyDischarge(db, workspacePath, subsystemId);
+  if (reading.state !== "not-recorded") {
+    if (!reading.checked) {
+      return [
+        `${subsystemId} advanced to 'structural' without a bound workspace, so §4.4's anchors ` +
+          `were not resolved: whether its ${reading.state === "terms" ? "term" : "declination"} ` +
+          `still opens at the revision it names is unverified for this advance.`,
+      ];
+    }
+    return [];
+  }
+  // Name what *was* found and rejected. "Nothing is recorded" and "four terms
+  // are recorded and none of their anchors opens" are the same refusal and
+  // entirely different repairs.
+  const rejected: string[] = [];
+  if (reading.unanchoredTerms.length > 0) {
+    rejected.push(
+      `${reading.unanchoredTerms.length} term(s) scoped here carry no anchor that resolves ` +
+        `(${reading.unanchoredTerms.slice(0, 5).join(", ")})`,
+    );
+  }
+  if (reading.unreachableDeclinations.length > 0) {
+    const newest = reading.unreachableDeclinations[0] as VocabularyDeclination;
+    rejected.push(
+      `the newest declination is anchored at ${newest.ref_sha.slice(0, 7)}, which the workspace ` +
+        `can no longer reach`,
+    );
+  }
+  const found = rejected.length > 0 ? ` What is recorded: ${rejected.join("; ")}.` : "";
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'structural': the structural pass neither defined a ` +
+      `domain term for this subsystem nor declared that it has none. Either define_term with a ` +
+      `first_seen anchor that resolves, or decline_domain_vocabulary with the reason none ` +
+      `applies. One term is enough; there is no quota, and "none" is a real and common answer ` +
+      `that has to be said out loud.${found}`,
   );
 }
 
@@ -692,6 +887,8 @@ export function requireCompleteReconciliation(
  * | structural    | ≥1 file_ledger row (scoper ran add_files_to_scope)     |
  * |               |   AND ≥1 current claim keyed `<sid>/…` (the structural |
  * |               |   phase recorded its inventory through add_claim)      |
+ * |               |   AND an anchored term scoped to it or an effective     |
+ * |               |   declination — discharge or decline, never a floor     |
  * | concerns      | ≥1 artifacts row kind='subsystem-survey' (structural   |
  * |               |   phase wrote and registered its narrative document)   |
  * | adversarial   | ≥1 dispositions row (concerns pass ran set_disposition)|
@@ -732,6 +929,11 @@ export function enforcePhasePrerequisites(
         );
       }
       requireStructuralClaim(db, subsystemId);
+      // §4.4, after the claim: the missing claim is the phase's own deliverable
+      // and names the pass that did not run, so it is the first thing a caller
+      // is told. The vocabulary obligation is the second sentence of the same
+      // phase, not a different one.
+      reported.push(...requireVocabularyDischarge(db, subsystemId, workspacePath));
       break;
     }
     case "concerns": {

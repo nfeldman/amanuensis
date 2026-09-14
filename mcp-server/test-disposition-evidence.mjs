@@ -297,6 +297,23 @@ function main(mods) {
   }
 
   /** Climb to `concerns` without writing a disposition of any kind. */
+
+  // §4.4's own deliverable, checked at the same advance the claim is: the
+  // structural pass either records a domain term whose anchor resolves or
+  // declares the subsystem carries none. These fixture subsystems coin no word
+  // of their own, so they say so — which is an answer, not a gap.
+  function dischargeVocabulary(ctx, id) {
+    call(
+      "decline_domain_vocabulary",
+      {
+        subsystem_id: id,
+        reason: "fixture subsystem: its one seeded file coins no term of its own",
+        ref_sha: headSha(ctx),
+      },
+      ctx,
+    );
+  }
+
   function climbToConcerns(ctx, id) {
     const filePath = `src/${id}/index.ts`;
     call("upsert_subsystem", { id, name: `${id} fixture`, status: "unmapped" }, ctx);
@@ -311,6 +328,7 @@ function main(mods) {
       ctx,
     );
     seedClaim(ctx, id);
+    dischargeVocabulary(ctx, id);
     call("update_subsystem_status", { id, status: "structural" }, ctx);
     call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
     call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -735,6 +753,7 @@ function main(mods) {
       ctx,
     );
     seedClaim(ctx, "B-02");
+    dischargeVocabulary(ctx, "B-02");
     call("update_subsystem_status", { id: "B-02", status: "structural" }, ctx);
     call("register_artifact", { path: "B-02-survey.md", kind: "subsystem-survey", subsystem_id: "B-02" }, ctx);
     addConcern(ctx, "CC-1");
@@ -978,7 +997,7 @@ try {
     ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
       await import("./dist/project.js"));
     mods.invariants = await import("./dist/invariants.js");
-    const [artifacts, claims, concerns, dispositions, evidence, files, gitModule, project, subsystems] =
+    const [artifacts, claims, concerns, dispositions, evidence, files, gitModule, project, subsystems, vocabulary] =
       await Promise.all([
         import("./dist/tools/artifacts.js"),
         import("./dist/tools/claims.js"),
@@ -989,6 +1008,7 @@ try {
         import("./dist/tools/git.js"),
         import("./dist/tools/project.js"),
         import("./dist/tools/subsystems.js"),
+        import("./dist/tools/vocabulary.js"),
       ]);
     mods.toolArrays = [
       artifacts.artifactTools,
@@ -1000,6 +1020,7 @@ try {
       gitModule.gitTools,
       project.projectTools,
       subsystems.subsystemTools,
+      vocabulary.vocabularyTools,
     ];
   } catch (error) {
     failures.push(`L1 the server build could not be loaded: ${scrub(error?.message ?? error)}`);

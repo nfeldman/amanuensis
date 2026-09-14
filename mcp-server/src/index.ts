@@ -32,6 +32,10 @@ const SERVER_VERSION = "0.2.0-beta.1";
 // successor writes. These hints inform hosts; they are not authorization.
 const ADDITIVE_TOOLS = new Set([
   "add_claim",
+  // `vocabulary_declinations` is append-only in the substrate, by the trigger
+  // pair `schema.sql` ships rather than by this list (spec.md §4.3): the tool
+  // inserts one row and no path in the server can update or delete it.
+  "decline_domain_vocabulary",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);

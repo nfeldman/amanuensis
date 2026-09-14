@@ -23,6 +23,7 @@ import { findingTools } from "./dist/tools/findings.js";
 import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 let passed = 0,
   failed = 0;
@@ -58,6 +59,7 @@ const allTools = new Map(
   [
     ...projectTools,
     ...subsystemTools,
+    ...vocabularyTools,
     ...concernTools,
     ...dispositionTools,
     ...findingTools,
@@ -169,6 +171,27 @@ function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
   );
 }
 
+// §4.4's own deliverable, checked at the same advance: the structural pass
+// either records a domain term whose anchor resolves or declares the subsystem
+// carries none. Discharge or decline, never a floor — a fixture subsystem coins
+// no word of its own, so it says so, which is the ordinary answer rather than a
+// gap. Idempotent: the declination is append-only and one is enough.
+function seedVocabularyDischarge(ctx, id) {
+  const held = ctx.db
+    .prepare("SELECT COUNT(*) AS n FROM vocabulary_declinations WHERE subsystem_id = ?")
+    .get(id);
+  if (held.n > 0) return;
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: id,
+      reason: "fixture subsystem: its seeded files coin no term of their own",
+      ref_sha: headSha(ctx),
+    },
+    ctx,
+  );
+}
+
 // Phase 4's own deliverable: every current `<sid>/` claim needs a recorded
 // challenge outcome before the subsystem may advance to `mapped`. A survived
 // outcome is the ordinary result and the one a fixture climb produces.
@@ -241,6 +264,8 @@ function advanceTo(ctx, id, status) {
       );
       // Structural prerequisite: ≥1 current claim keyed `<sid>/`.
       seedStructuralClaim(ctx, id);
+      // …and the vocabulary obligation the same advance now carries.
+      seedVocabularyDischarge(ctx, id);
     }
     if (order[i] === "concerns") {
       // Structural prerequisite: subsystem-survey artifact registered.
@@ -934,6 +959,7 @@ t("advance to 'structural' without a current <sid>/ claim is rejected", () => {
       "claim_key beginning 'B-01/'",
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assert(
       readStatus(ctx, "B-01") === "structural",
@@ -980,6 +1006,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
@@ -1002,6 +1029,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -1046,6 +1074,7 @@ t("phase prerequisites: happy path passes all gates", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",

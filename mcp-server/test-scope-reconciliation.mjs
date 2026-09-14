@@ -381,6 +381,22 @@ function main(mods) {
    * prerequisite is satisfied through the tool a survey would use, including
    * §2.2's `evidence_ids`, so a refusal here is this packet's and not P1's.
    */
+  // §4.4's own deliverable, checked at the same advance the claim is: the
+  // structural pass either records a domain term whose anchor resolves or
+  // declares the subsystem carries none. These fixture subsystems coin no word
+  // of their own, so they say so — which is an answer, not a gap.
+  function dischargeVocabulary(ctx, id) {
+    call(
+      "decline_domain_vocabulary",
+      {
+        subsystem_id: id,
+        reason: "fixture subsystem: its seeded files coin no term of their own",
+        ref_sha: headSha(ctx),
+      },
+      ctx,
+    );
+  }
+
   let seededConcerns = 0;
   function climbToAdversarial(ctx, id, filePath) {
     call("upsert_subsystem", { id, name: `${id} fixture`, status: "unmapped" }, ctx);
@@ -395,6 +411,7 @@ function main(mods) {
       ctx,
     );
     seedClaim(ctx, id, filePath);
+    dischargeVocabulary(ctx, id);
     call("update_subsystem_status", { id, status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -1129,6 +1146,7 @@ try {
       materialize,
       project,
       subsystems,
+      vocabulary,
     ] = await Promise.all([
       import("./dist/tools/artifacts.js"),
       import("./dist/tools/claims.js"),
@@ -1140,6 +1158,7 @@ try {
       import("./dist/tools/materialize.js"),
       import("./dist/tools/project.js"),
       import("./dist/tools/subsystems.js"),
+      import("./dist/tools/vocabulary.js"),
     ]);
     mods.toolArrays = [
       artifacts.artifactTools,
@@ -1152,6 +1171,7 @@ try {
       materialize.materializeTools,
       project.projectTools,
       subsystems.subsystemTools,
+      vocabulary.vocabularyTools,
     ];
   } catch (error) {
     failures.push(`L1 the server build could not be loaded: ${scrub(error?.message ?? error)}`);

@@ -63,6 +63,13 @@ SUBSYSTEM_STATUSES: tuple[str, ...] = (
     "deferred",
 )
 
+# vocabulary_discharge — vocabulary axis.
+VOCABULARY_DISCHARGES: tuple[str, ...] = (
+    "terms",
+    "declined",
+    "not-recorded",
+)
+
 # evidence_kind — evidence axis.
 EVIDENCE_KINDS: tuple[str, ...] = (
     "code-verified",
@@ -484,6 +491,30 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "This subsystem is intentionally outside the active survey plan.",
                 "cannot_justify": "anything about this subsystem's behavior",
                 "authorizes": "nothing",
+            },
+        ),
+    },
+    "vocabulary_discharge": {
+        "axis": "vocabulary",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "terms",
+                "label": "Terms recorded",
+                "meaning": "The subsystem carries at least one vocabulary term scoped to it whose first_seen anchor still resolves: the token parses, its revision is reachable, and its path exists in that revision's tree.",
+                "cannot_justify": "that the recorded terms are the ones a reader most needs, or that the list is complete; one anchored term discharges the obligation and no count is required",
+            },
+            {
+                "value": "declined",
+                "label": "Declared none",
+                "meaning": "A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own.",
+                "cannot_justify": "that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing",
+            },
+            {
+                "value": "not-recorded",
+                "label": "Not recorded",
+                "meaning": "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
+                "cannot_justify": "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'",
             },
         ),
     },

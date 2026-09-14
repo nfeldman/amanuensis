@@ -142,7 +142,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools] =
+  const [db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools, vocabulary] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -153,8 +153,9 @@ try {
       import("./dist/tools/claims.js"),
       import("./dist/tools/evidence.js"),
       import("./dist/tools/project.js"),
+      import("./dist/tools/vocabulary.js"),
     ]);
-  mods = { db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools };
+  mods = { db, project, invariants, subsystems, files, artifacts, claims, evidence, projectTools, vocabulary };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -167,6 +168,7 @@ function toolNamed(name) {
     mods?.claims?.claimTools,
     mods?.evidence?.evidenceTools,
     mods?.projectTools?.projectTools,
+    mods?.vocabulary?.vocabularyTools,
   ];
   for (const group of groups) {
     if (!Array.isArray(group)) continue;
@@ -293,6 +295,19 @@ function scopedSubsystem(id) {
           why_in_scope: "gate fixture",
         },
       ],
+    },
+    fixture.ctx,
+  );
+  // §4.4, discharged the way a subsystem that coins no word of its own does.
+  // It is recorded here rather than at each advance because every scenario
+  // below reaches `structural` through this same helper, and the vocabulary
+  // refusal is checked after the claim refusal this gate is about.
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: id,
+      reason: "gate fixture: its one scoped file coins no term of its own",
+      ref_sha: fixture.base,
     },
     fixture.ctx,
   );

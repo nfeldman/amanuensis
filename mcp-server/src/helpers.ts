@@ -284,6 +284,11 @@ export const CITATION_TOKEN_SOURCE = "[^\\s:]+(?:/[^\\s:]+)*:[^\\s@]+@[0-9a-fA-F
 
 const CITATION_TOKEN = new RegExp(`^${CITATION_TOKEN_SOURCE}$`);
 
+/** Does the whole value match §9.2's one-token citation grammar? */
+export function isCitationToken(value: unknown): boolean {
+  return typeof value === "string" && CITATION_TOKEN.test(value);
+}
+
 /**
  * The tokens of `value` that match the grammar, deduplicated, in prose order.
  *
@@ -336,6 +341,93 @@ export function parseCitation(token: string): {
     symbol: colon === -1 ? null : citation.slice(colon + 1),
     revision,
   };
+}
+
+/**
+ * Does `path` exist in the tree at `revision`?
+ *
+ * §4.2's third step, and the one `requireWorkspaceCitation` cannot take: that
+ * helper reads `indexOf(":")` and `lastIndexOf("@")` and validates path
+ * *syntax*, so `src/nothing-here.ts:ghost@0000000` parses. Parsing is not
+ * resolution, and an anchor pointing at a path the named revision never carried
+ * is an anchor no later reader can open.
+ *
+ * `git cat-file -e <revision>:<path>` is the whole question: it exits 0 when
+ * the object exists in that revision's tree and non-zero otherwise, and it is
+ * live at every call for the reason {@link resolveWorkspaceCommit} gives.
+ */
+export function workspaceTreeHasPath(
+  workspacePath: string,
+  revision: string,
+  path: string,
+): boolean {
+  const result = spawnSync("git", ["cat-file", "-e", `${revision}:${path}`], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    stdio: ["ignore", "ignore", "ignore"],
+  });
+  return result.status === 0;
+}
+
+/**
+ * Which of these stored `file:symbol@sha` anchors still resolve, in **one**
+ * subprocess.
+ *
+ * An anchor resolves when all three of §4.2's conditions hold: the token parses
+ * as a citation, its revision is reachable in the bound workspace, and its path
+ * exists in that revision's tree. Asking `<revision>:<path>` answers all three
+ * at once — an unreachable revision and an absent path are both reported
+ * `missing` — which is what a predicate over a whole subsystem's terms needs.
+ * The per-anchor form above stays separate because `define_term` refuses with a
+ * different sentence for each failure, and a caller told only "does not
+ * resolve" cannot tell a rebased revision from a typo'd path.
+ *
+ * One subprocess for the set, not one per row, for the reason
+ * {@link resolveWorkspaceCommits} gives: a status advance's cost must not be a
+ * function of how many terms the subsystem recorded.
+ *
+ * Returns one entry per **distinct** requested value. A token that does not
+ * parse is `false` without asking git.
+ */
+export function resolveWorkspaceAnchors(
+  workspacePath: string,
+  anchors: readonly string[],
+): Map<string, boolean> {
+  const resolved = new Map<string, boolean>();
+  const askable: string[] = [];
+  const questions: string[] = [];
+  for (const anchor of anchors) {
+    if (resolved.has(anchor)) continue;
+    resolved.set(anchor, false);
+    if (typeof anchor !== "string" || !CITATION_TOKEN.test(anchor)) continue;
+    const { path, revision } = parseCitation(anchor);
+    if (!path || !revision) continue;
+    askable.push(anchor);
+    questions.push(`${revision}:${path}`);
+  }
+  if (askable.length === 0) return resolved;
+
+  const result = spawnSync("git", ["cat-file", "--batch-check"], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    input: `${questions.join("\n")}\n`,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.error || result.status !== 0) return resolved;
+
+  // One answer line per question, in order: `<sha> <type> <size>` when the
+  // object is there, `<question> missing` when it is not. Any type counts:
+  // `cat-file -e` succeeds for a tree as well as a blob, and this is the same
+  // question asked in bulk, not a narrower one.
+  const lines = String(result.stdout ?? "")
+    .split("\n")
+    .filter((line) => line.length > 0);
+  for (let i = 0; i < askable.length && i < lines.length; i++) {
+    if (/^[0-9a-f]{40} \w+ \d+$/.test(lines[i] as string)) {
+      resolved.set(askable[i] as string, true);
+    }
+  }
+  return resolved;
 }
 
 /**

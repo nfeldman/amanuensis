@@ -459,6 +459,66 @@ CREATE INDEX IF NOT EXISTS idx_vocabulary_subsystem ON vocabulary(subsystem_id);
 
 
 ----------------------------------------------------------------------
+-- VOCABULARY_SCOPES: which subsystems a term belongs to
+----------------------------------------------------------------------
+-- `vocabulary.term` is the table's primary key and `define_term` upserts
+-- `subsystem_id = COALESCE(excluded.subsystem_id, vocabulary.subsystem_id)`,
+-- so one term row can name exactly one subsystem. Re-defining a term shared
+-- between A and B for B therefore moved it off A -- silently, after A had
+-- already advanced on it, revoking A's discharge with no signal at the moment
+-- it happened (design/survey-depth/spec.md §4.4).
+--
+-- A term may be scoped to any number of subsystems, and this is where that is
+-- recorded. `vocabulary.subsystem_id` is kept as the primary scope for readers
+-- that already select on it; the scope set, not that column, is what the
+-- §4.4 prerequisite reads.
+CREATE TABLE IF NOT EXISTS vocabulary_scopes (
+    term          TEXT    NOT NULL,   -- vocabulary.term
+    subsystem_id  TEXT    NOT NULL,   -- one subsystem this term belongs to
+    scoped_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (term, subsystem_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocabulary_scopes_subsystem
+    ON vocabulary_scopes(subsystem_id);
+
+
+----------------------------------------------------------------------
+-- VOCABULARY_DECLINATIONS: "this subsystem coins nothing", said out loud
+----------------------------------------------------------------------
+-- The generative obligation a structural pass carries is discharge *or*
+-- decline, never a floor (design/survey-depth/decisions.md §3). A subsystem
+-- whose code coins no term of its own is an ordinary and common answer, and the
+-- only way to tell it apart from a subsystem nobody asked is to make someone
+-- say it, at a revision, in a session that can be named.
+--
+-- Append-only: never updated, never deleted. A later pass that *does* find a
+-- term simply defines it; the declination stays as the record of what an
+-- earlier reader concluded and when, and a subsystem reset does not erase it,
+-- for the reason GP18 gives -- a ruled-out record is kept, not deleted.
+CREATE TABLE IF NOT EXISTS vocabulary_declinations (
+    id            INTEGER PRIMARY KEY,
+    subsystem_id  TEXT    NOT NULL,
+    reason        TEXT    NOT NULL,   -- prose; why this subsystem carries no domain vocabulary
+    session_id    TEXT    NOT NULL,
+    ref_sha       TEXT    NOT NULL,   -- resolved, the revision the judgment was made at
+    declared_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocab_declinations_subsystem
+    ON vocabulary_declinations(subsystem_id);
+
+-- Append-only by the trigger rather than by the paragraph above: a judgment
+-- that can be edited after the fact is not a record of what a reader concluded.
+CREATE TRIGGER IF NOT EXISTS vocab_declination_is_immutable
+BEFORE UPDATE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS vocab_declination_cannot_be_deleted
+BEFORE DELETE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
 -- ENTRY_VERSIONS: cheap time-travel (append-only snapshots)
 ----------------------------------------------------------------------
 -- Before any UPDATE to entries, a trigger copies the old row here.

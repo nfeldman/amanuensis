@@ -298,6 +298,31 @@
         }
       ]
     },
+    "vocabulary_discharge": {
+      "axis": "vocabulary",
+      "const_name": "VOCABULARY_DISCHARGES",
+      "note": "The three states a subsystem's domain vocabulary can be in at the advance to 'structural'. Discharge or decline, never a floor: one anchored term is enough, 'none' is a real and common answer that has to be said out loud, and a subsystem nobody asked is a third state that is never collapsed into the second.",
+      "values": [
+        {
+          "value": "terms",
+          "label": "Terms recorded",
+          "meaning": "The subsystem carries at least one vocabulary term scoped to it whose first_seen anchor still resolves: the token parses, its revision is reachable, and its path exists in that revision's tree.",
+          "cannot_justify": "that the recorded terms are the ones a reader most needs, or that the list is complete; one anchored term discharges the obligation and no count is required"
+        },
+        {
+          "value": "declined",
+          "label": "Declared none",
+          "meaning": "A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own.",
+          "cannot_justify": "that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing"
+        },
+        {
+          "value": "not-recorded",
+          "label": "Not recorded",
+          "meaning": "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
+          "cannot_justify": "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'"
+        }
+      ]
+    },
     "evidence_kind": {
       "axis": "evidence",
       "const_name": "EVIDENCE_KINDS",
