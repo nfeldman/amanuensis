@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -22,6 +22,26 @@ function findSchemaPath(): string {
   throw new Error(
     `amanuensis-memory: cannot locate schema.sql. Searched: ${candidates.join(", ")}`,
   );
+}
+
+let schemaTextCache: { key: string; text: string } | null = null;
+
+/**
+ * `schema.sql`, read once per open rather than once per reader.
+ *
+ * Three readers want it now — the apply, the vocabulary rebuild, and the
+ * post-apply check — and re-reading 2,600 lines three times on every open is
+ * paid by every tool call that opens a store. Keyed on size and mtime so an
+ * edit during a long-lived process is still picked up.
+ */
+function readSchemaText(): string {
+  const path = findSchemaPath();
+  const stats = statSync(path);
+  const key = `${path}:${stats.size}:${stats.mtimeMs}`;
+  if (schemaTextCache?.key === key) return schemaTextCache.text;
+  const text = readFileSync(path, "utf8");
+  schemaTextCache = { key, text };
+  return text;
 }
 
 export type DB = Database.Database;
@@ -54,8 +74,87 @@ export function openDatabase(dbPath: string): DB {
   // work in the common case.
   runMigrations(db);
   initializeSchema(db);
+  requireSchemaObjects(db);
   requireViews(db);
   return db;
+}
+
+/**
+ * One object `schema.sql` declares, as `sqlite_master` records it.
+ */
+interface DeclaredObject {
+  type: "table" | "view" | "index" | "trigger";
+  name: string;
+}
+
+let declaredCache: { text: string; objects: DeclaredObject[] } | null = null;
+
+/**
+ * Every table, view, index and trigger `schema.sql` declares at statement
+ * level.
+ *
+ * Exported so a gate can check the store against the schema's own
+ * declarations rather than against a second list that would drift from it.
+ */
+export function declaredSchemaObjects(schemaSql: string): DeclaredObject[] {
+  if (declaredCache?.text === schemaSql) return declaredCache.objects;
+  const pattern =
+    /^CREATE\s+(?:UNIQUE\s+)?(TABLE|VIEW|INDEX|TRIGGER)\s+(?:IF\s+NOT\s+EXISTS\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gim;
+  const objects: DeclaredObject[] = [];
+  for (const match of schemaSql.matchAll(pattern)) {
+    const kind = match[1];
+    const name = match[2];
+    if (kind === undefined || name === undefined) continue;
+    objects.push({ type: kind.toLowerCase() as DeclaredObject["type"], name });
+  }
+  declaredCache = { text: schemaSql, objects };
+  return objects;
+}
+
+/**
+ * Fail the open when schema application did not leave every declared object in
+ * place, as the declared kind.
+ *
+ * `initializeSchema` applies `schema.sql` on every open and reports nothing
+ * about what arrived. That is usually harmless and once is not: `CREATE TABLE
+ * IF NOT EXISTS t` is a silent no-op when the name `t` is already held by an
+ * object of another kind, so an open can return a store missing a declared
+ * table and report success. Every later read of that table then fails
+ * somewhere else, with the store blamed for a schema defect — the same silent
+ * loss `requireViews` was added to stop for the two views the materializer
+ * reads, unguarded for the other 515 objects.
+ *
+ * This matters here rather than in the abstract because the survey-depth lane
+ * adds tables to stores that already exist and are already populated, with no
+ * grace path (`decisions.md` §1, `README.md` §4): a table that does not arrive
+ * has to be a refused open, not a silence. Reading the declarations out of
+ * `schema.sql` keeps the check from becoming a second list to maintain — a
+ * table declared there is covered the moment it is declared.
+ */
+function requireSchemaObjects(db: DB): void {
+  const declared = declaredSchemaObjects(readSchemaText());
+  const live = new Map<string, string>();
+  for (const row of db.prepare("SELECT type, name FROM sqlite_master").all() as {
+    type: string;
+    name: string;
+  }[]) {
+    live.set(row.name, row.type);
+  }
+  const wrong: string[] = [];
+  for (const object of declared) {
+    const actual = live.get(object.name);
+    if (actual === undefined) wrong.push(`${object.type} ${object.name} (absent)`);
+    else if (actual !== object.type)
+      wrong.push(`${object.type} ${object.name} (present as ${actual})`);
+  }
+  if (wrong.length > 0) {
+    db.close();
+    throw new Error(
+      `amanuensis-memory: applying schema.sql left ${wrong.length} of ${declared.length} declared ` +
+        `object(s) absent or of the wrong kind: ${wrong.slice(0, 8).join(", ")}` +
+        `${wrong.length > 8 ? `, and ${wrong.length - 8} more` : ""}`,
+    );
+  }
 }
 
 /**
@@ -84,8 +183,7 @@ function requireViews(db: DB): void {
 function initializeSchema(db: DB): void {
   // The schema is written with CREATE ... IF NOT EXISTS throughout, so we
   // can run it on every open — both fresh init and existing DBs are handled.
-  const schemaSql = readFileSync(findSchemaPath(), "utf8");
-  db.exec(schemaSql);
+  db.exec(readSchemaText());
 }
 
 /**
@@ -171,7 +269,7 @@ function runMigrations(db: DB): void {
  * vocabulary added there is migrated without a second list to maintain.
  */
 function migrateVocabularyChecks(db: DB): void {
-  const schemaText = readFileSync(findSchemaPath(), "utf8");
+  const schemaText = readSchemaText();
   for (const [table, column, canonical] of vocabularySqlBindings()) {
     if (!hasTable(db, table)) continue;
     const live = liveCreateSql(db, table);
