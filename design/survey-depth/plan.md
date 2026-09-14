@@ -6,7 +6,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P0 | Additive migration on an existing populated store | ready | — | `mcp-server/test-existing-store-migration.mjs` | C10, C35, C38 |
+| P0 | Additive migration on an existing populated store | ready | — | `mcp-server/test-existing-store-migration.mjs` | C10, C35, C38, C42 |
 | P1 | Evidence-backed dispositions | ready | P0 | `mcp-server/test-disposition-evidence.mjs` | C7, C8, C9, C10, C32, C34, C37 |
 | P2 | Scope reconciliation before authority | ready | P1 | `mcp-server/test-scope-reconciliation.mjs` | C11, C12, C13, C34, C38 |
 | P3 | Vocabulary: discharge or decline | ready | P2 | `mcp-server/test-vocabulary-discharge.mjs` | C15, C16, C17, C34, C38, C40 |
@@ -16,7 +16,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P5 | The depth gate and its frozen baseline | ready | P1, P2, P3, P4 | `dev/test-survey-depth-red-gates.mjs` | C1, C2, C3, C4, C5, C6, C28, C29, C34, C36 |
+| P5 | The depth gate and its frozen baseline | ready | P1, P2, P3, P4 | `dev/test-survey-depth-red-gates.mjs` | C1, C2, C3, C4, C5, C6, C28, C29, C34, C36, C42 |
 | P6 | The projection renders 'not measured' | ready | P2, P3, P4 | `materializer/test-unmeasured-coverage.py` | C14, C18, C34, C39 |
 
 ## S3 · Skill parity and its check (review: pending)
@@ -29,8 +29,8 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P8 | Reinitialize, carry, and onboard in the lane worktree | ready | P5, P6, P7 | `dev/test-carry-receipt.mjs` | C25, C30, C34, C41 |
-| P10 | Survey every subsystem and decide every carried finding | ready | P8 | `dev/test-survey-depth.mjs` | C34, C41 |
+| P8 | Reinitialize, carry, and onboard in the lane worktree | ready | P5, P6, P7 | `dev/test-carry-receipt.mjs` | C25, C30, C34, C41, C42 |
+| P10 | Survey every subsystem and decide every carried finding | ready | P8 | `dev/test-survey-depth.mjs` | C34, C41, C42 |
 | P11 | Publish, promote, and record the acceptance receipts | ready | P10 | `dev/test-survey-depth-acceptance.mjs` | C31, C33, C34 |
 | P9 | Pecia reconciliation of the carried findings | ready | P11 | `dev/test-pecia-carry-audit.mjs` | C24, C25, C34 |
 

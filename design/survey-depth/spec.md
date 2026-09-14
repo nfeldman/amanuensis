@@ -201,9 +201,9 @@ not a pass (VP4(e)).
 
 ### 1.6 Which measures may turn a gate red
 
-`decisions.md` §3 forbids numeric minimums on generative obligations; the proposal's §3.5 lists
-`field notes` and `vocabulary terms` among the axes a rebuild must "meet or exceed". These
-conflict. The decisions govern, and the resolution is:
+`decisions.md` §3 forbids numeric minimums on generative obligations; the proposal's §3 item 5
+(`README.md:97-102`) lists `field notes` and `vocabulary terms` among the axes a rebuild must
+"meet or exceed". These conflict. The decisions govern, and the resolution is:
 
 - **Blocking axes** (§7.3) are not measures at all. They are coverage of an enumerable
   denominator, or per-record obligations the gate evaluates beside the measures:

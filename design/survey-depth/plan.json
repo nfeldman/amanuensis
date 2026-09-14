@@ -71,7 +71,8 @@
       "claims": [
         "C10",
         "C35",
-        "C38"
+        "C38",
+        "C42"
       ],
       "depends_on": [],
       "deliverables": [
@@ -507,7 +508,8 @@
         "C28",
         "C29",
         "C34",
-        "C36"
+        "C36",
+        "C42"
       ],
       "depends_on": [
         "P1",
@@ -746,7 +748,8 @@
         "C25",
         "C30",
         "C34",
-        "C41"
+        "C41",
+        "C42"
       ],
       "depends_on": [
         "P5",
@@ -837,7 +840,8 @@
       "title": "Survey every subsystem and decide every carried finding",
       "claims": [
         "C34",
-        "C41"
+        "C41",
+        "C42"
       ],
       "depends_on": [
         "P8"
