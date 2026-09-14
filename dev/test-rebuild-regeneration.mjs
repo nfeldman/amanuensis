@@ -474,6 +474,7 @@ function subsystemAtAdversarial(id, { claimKey } = {}) {
       concern_code: "FIXTURE-1",
       classification: "ruled-out",
       evidence: `${filePath}:Unit${slug}@${fixture.base}`,
+      evidence_ids: [evidenceId],
       evidence_quality: "code-verified",
       linchpin_dependent: false,
       rationale: "gate fixture disposition",

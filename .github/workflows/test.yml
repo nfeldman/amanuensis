@@ -230,6 +230,12 @@ jobs:
       - name: Invariants — knowledge-depth gates + monotonic transitions
         working-directory: mcp-server
         run: node test-invariants.mjs
+      # GATE SD1 (design/survey-depth/spec.md §8.1). Its fixtures are a
+      # temporary git workspace and a store it creates itself, so unlike GATE
+      # XS1 above it needs nothing this runner does not already have.
+      - name: Evidence-backed dispositions — set_disposition's inputs and the advance refusal
+        working-directory: mcp-server
+        run: node test-disposition-evidence.mjs
       - name: Derived staleness — ledger drift and scope reconciliation
         working-directory: mcp-server
         run: node test-derived-staleness.mjs

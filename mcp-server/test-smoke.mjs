@@ -219,6 +219,7 @@ run("set_disposition", {
   concern_code: "CC-1",
   classification: "ruled-out",
   evidence: "scheduler/main.ts:runJob@deadbeef",
+  evidence_ids: [smokeEvidence.id],
   evidence_quality: "code-verified",
   linchpin_dependent: false,
   rationale: "no cache in this subsystem",
@@ -404,7 +405,16 @@ run("verify_finding_fix", {
   evidence_id: fixEvidence.id,
   verification_note: "smoke repair verification",
 }, (r) => r.ok && r.resolution_state === "verified-fixed");
-run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, (r) => r.length === 1 && r[0].role === "supports");
+// Two attachments, not one: set_disposition now writes the reading it was
+// given (§2.2) and `attach_evidence_to_disposition` added the second above.
+run(
+  "get_disposition_evidence",
+  { subsystem_id: "B-01", concern_code: "CC-1" },
+  (r) =>
+    r.length === 2 &&
+    r.every((row) => row.role === "supports") &&
+    [smokeEvidence.id, ev1.id].every((id) => r.some((row) => row.id === id)),
+);
 run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 2);
 // Three rows on this path now: the disposition citation, the fix
 // verification, and Phase 2's structural-claim evidence.

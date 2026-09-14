@@ -353,7 +353,7 @@ _201 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence (file:symbol@sha), evidence_quality (how solid that evidence is), a rationale, and the pass that produced it. ref_sha must resolve to a commit in the bound workspace and is stored resolved. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
+| `set_disposition` | Record how a concern applies to a subsystem. Every disposition must carry evidence_ids (at least one recorded evidence row, attached as it is written), evidence (file:symbol@sha), evidence_quality (no stronger than the strongest attached row's kind), a rationale, and the pass that produced it. ref_sha and every attached row's revision must resolve to a commit in the bound workspace. This is the primary DB analog of the subsystem survey's Concern Disposition Table. |
 | `get_dispositions` | Return dispositions. Filter by subsystem_id, concern_code, or both. Omit both to return everything (useful for adversarial review across the conspectus). |
 | `get_concern_coverage` | Return the concern × subsystem matrix (active concerns × registered subsystems) with current disposition or '—' for unexamined cells. Used to produce the materialized heatmap. |
 

@@ -8,8 +8,8 @@ import {
   requireWorkspaceCitation,
   resolveWorkspaceCommit,
   resolveWorkspaceCommits,
-  ToolError,
   type ToolDefinition,
+  ToolError,
 } from "../helpers.js";
 import { requireActiveSession, requireSubsystemStatus } from "../invariants.js";
 // A disposition's evidence_quality names the strongest evidence row attached to

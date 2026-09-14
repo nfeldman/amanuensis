@@ -557,6 +557,7 @@ function main(mods) {
     addConcern(ctx, "CC-2");
     const first = addEvidence(ctx, "src/B-01/index.ts", "code-verified");
     const second = addEvidence(ctx, "src/B-01/index.ts", "test-observed");
+    const third = addEvidence(ctx, "src/B-01/index.ts", "code-verified");
 
     check("E7 control: a well-formed call writes the disposition and one attachment per id", () => {
       const result = call(
@@ -598,7 +599,12 @@ function main(mods) {
           call(
             "set_disposition",
             disposition(ctx, "B-01", "CC-2", {
-              evidence_ids: [second],
+              // A third `code-verified` row, so nothing earlier in the handler
+              // can refuse this call: the ladder check would have turned this
+              // assertion vacuous — the write would never reach the attachment
+              // the trigger is here to refuse, and a non-transactional
+              // implementation would pass unnoticed.
+              evidence_ids: [third],
               classification: "confirmed-bug",
               rationale: "the rewrite the rollback must undo",
             }),
@@ -610,6 +616,9 @@ function main(mods) {
       }
       if (message === null) {
         return "the attachment insert was refused by SQLite and set_disposition still reported success";
+      }
+      if (!message.includes("sd1 probe refuses the attachment")) {
+        return `the call was refused before it reached the attachment, so the rollback was never exercised: ${message}`;
       }
       const after = dispositionRow(ctx, "B-01", "CC-2");
       if (!after) return "the rollback removed the disposition the earlier accepted call had written";
@@ -927,6 +936,16 @@ function main(mods) {
 
     if (observed === null) notes.push("B1 did not run, so the subprocess census is unmeasured");
   }
+
+  // ----------------------------------------------------------------- C1: in CI
+
+  check("C1 this gate runs in CI (spec.md §8)", () => {
+    const workflow = join(here, "..", ".github", "workflows", "test.yml");
+    if (!existsSync(workflow)) return ".github/workflows/test.yml is absent";
+    return readFileSync(workflow, "utf8").includes("node test-disposition-evidence.mjs")
+      ? null
+      : "the workflow does not run this gate, so a break lands on a branch no run reports";
+  });
 
   for (const cleanup of cleanups) cleanup();
   rmSync(scratch, { recursive: true, force: true });

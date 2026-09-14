@@ -441,12 +441,22 @@ function findingArgs(id, refSha) {
   };
 }
 
-function dispositionArgs(refSha) {
+// §2.2: a disposition names at least one recorded reading, and the server
+// attaches it as it writes. Every probe below is about something else — a
+// revision, an enum value — so each names a reading that is itself valid, and
+// the refusal it asserts stays the only thing wrong with the call.
+function anchorEvidenceId(ctx, refSha) {
+  const result = call("add_evidence", evidenceArgs(refSha), ctx);
+  return result.ok ? result.value.id : null;
+}
+
+function dispositionArgs(refSha, evidenceIds) {
   return {
     subsystem_id: "B-01",
     concern_code: "SC-1",
     classification: "ruled-out",
     evidence: `src/ledger.ts:row@${refSha}`,
+    evidence_ids: evidenceIds,
     evidence_quality: "code-verified",
     rationale: "the writer is bounded by the ledger row count",
     ref_sha: refSha,
@@ -477,7 +487,11 @@ check("add_finding refuses an unresolved ref_sha", () => {
 check("set_disposition refuses an unresolved ref_sha", () => {
   const blocked = needFixture();
   if (blocked) return blocked;
-  const result = call("set_disposition", dispositionArgs(UNRESOLVABLE), fixture.ctx);
+  const result = call(
+    "set_disposition",
+    dispositionArgs(UNRESOLVABLE, [anchorEvidenceId(fixture.ctx, fixture.head)]),
+    fixture.ctx,
+  );
   return result.ok
     ? `set_disposition stored an unresolved ref_sha ${UNRESOLVABLE}, which resolves to no commit in the bound workspace`
     : null;
@@ -505,7 +519,11 @@ check("the three writers store the resolved revision, so revision_bound is backe
   if (!evidenceResult.ok) bad.push(`add_evidence refused a resolvable revision — ${evidenceResult.error}`);
   const findingResult = call("add_finding", findingArgs("B01-1", abbreviated), fixture.ctx);
   if (!findingResult.ok) bad.push(`add_finding refused a resolvable revision — ${findingResult.error}`);
-  const dispositionResult = call("set_disposition", dispositionArgs(abbreviated), fixture.ctx);
+  const dispositionResult = call(
+    "set_disposition",
+    dispositionArgs(abbreviated, [evidenceResult.value.id]),
+    fixture.ctx,
+  );
   if (!dispositionResult.ok)
     bad.push(`set_disposition refused a resolvable revision — ${dispositionResult.error}`);
   if (bad.length) return bad.join("; ");
@@ -594,7 +612,7 @@ check("a writer refuses a revision that has stopped resolving since it was cache
   if (second.ok) bad.push("add_evidence accepted a revision that no longer resolves");
   const finding = call("add_finding", findingArgs("B01-PRUNED", scratch.doomed), scratch.ctx);
   if (finding.ok) bad.push("add_finding accepted a revision that no longer resolves");
-  const disposition = call("set_disposition", dispositionArgs(scratch.doomed), scratch.ctx);
+  const disposition = call("set_disposition", dispositionArgs(scratch.doomed, [first.value.id]), scratch.ctx);
   if (disposition.ok) bad.push("set_disposition accepted a revision that no longer resolves");
   if (bad.length) return bad.join("; ");
 
@@ -929,13 +947,13 @@ function validatorProbes() {
     {
       label: "set_disposition.classification",
       tool: "set_disposition",
-      args: { ...dispositionArgs(head), classification: OUT_OF_SOURCE },
+      args: { ...dispositionArgs(head, [anchorEvidenceId(fixture.ctx, head)]), classification: OUT_OF_SOURCE },
       enumName: "disposition_classification",
     },
     {
       label: "set_disposition.evidence_quality",
       tool: "set_disposition",
-      args: { ...dispositionArgs(head), evidence_quality: OUT_OF_SOURCE },
+      args: { ...dispositionArgs(head, [anchorEvidenceId(fixture.ctx, head)]), evidence_quality: OUT_OF_SOURCE },
       enumName: "evidence_quality",
     },
     {

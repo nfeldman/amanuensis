@@ -127,6 +127,8 @@ function headSha(ws) {
   ).trim();
 }
 
+// Returns the evidence id it recorded: §2.2 makes `set_disposition` name at
+// least one reading, and the disposition below rests on the same one.
 function seedStructuralClaim(ws, ctx, subsystemId) {
   const sha = headSha(ws);
   const evidenceId = call(
@@ -154,6 +156,7 @@ function seedStructuralClaim(ws, ctx, subsystemId) {
     },
     ctx,
   );
+  return evidenceId;
 }
 
 // ---- Simulate one full workflow run ----
@@ -181,7 +184,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
-    seedStructuralClaim(target, ctx, "B-01");
+    const readingId = seedStructuralClaim(target, ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -210,6 +213,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
         concern_code: "CC-1",
         classification: "confirmed-acceptable",
         evidence: `main.ts:root@${headSha(target)}`,
+        evidence_ids: [readingId],
         evidence_quality: "name-inferred",
         rationale: "name suggests bounded; verified by reviewer's answer to OQ",
         ref_sha: headSha(target),
@@ -298,7 +302,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
       call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
       call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
-      seedStructuralClaim(ws, ctx, "B-01");
+      const reading = seedStructuralClaim(ws, ctx, "B-01");
       call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
       call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -310,6 +314,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
           concern_code: "CC-1",
           classification: "ruled-out",
           evidence: "x",
+          evidence_ids: [reading],
           evidence_quality: "code-verified",
           rationale: "r",
           ref_sha: headSha(ws),

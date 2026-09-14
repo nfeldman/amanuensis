@@ -116,6 +116,23 @@ function headSha(ctx) {
   ).trim();
 }
 
+// §2.2: a disposition names the readings it rests on, and the server attaches
+// them as it writes it. Every fixture that records a disposition records one
+// first, through the same write path a survey would use.
+function fixtureEvidence(ctx, filePath = "fixture.ts") {
+  return call(
+    "add_evidence",
+    {
+      file_path: filePath,
+      symbol: "fixture",
+      line_range: "1-4",
+      ref_sha: headSha(ctx),
+      kind: "code-verified",
+    },
+    ctx,
+  ).id;
+}
+
 // Phase 2's own deliverable: advancing to `structural` requires at least one
 // current claim whose claim_key begins `<sid>/`. Seeded through add_claim so
 // the fixture exercises the same write path a survey would.
@@ -236,6 +253,7 @@ function advanceTo(ctx, id, status) {
             concern_code: "FIXTURE-1",
             classification: "ruled-out",
             evidence: `src/${id}/index.ts:fixture@fixture-ref`,
+            evidence_ids: [fixtureEvidence(ctx, `src/${id}/index.ts`)],
             evidence_quality: "code-verified",
             linchpin_dependent: false,
             rationale: "fixture disposition for advanceTo",
@@ -447,6 +465,7 @@ t("set_disposition positive path works at concerns status", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "x",
+        evidence_ids: [fixtureEvidence(ctx)],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -612,6 +631,7 @@ t("reset_subsystem clears dependents and allows regression", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "x",
+        evidence_ids: [fixtureEvidence(ctx)],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -642,6 +662,14 @@ t("reset_subsystem clears dependents and allows regression", () => {
     assert(r.deleted.dispositions === 1);
     assert(r.deleted.findings === 1);
     assert(r.new_status === "structural");
+    // §2.2 gave every disposition an attachment, so the cascade the schema
+    // declares is now load-bearing: an orphaned `disposition_evidence` row
+    // would make the next disposition at the same (subsystem, concern) look
+    // pre-attached to a reading the reset discarded.
+    const orphans = ctx.db
+      .prepare("SELECT COUNT(*) AS n FROM disposition_evidence WHERE subsystem_id = 'B-01'")
+      .get().n;
+    assert(orphans === 0, `reset left ${orphans} attachment(s) behind for B-01`);
     // Subsequent set_disposition should be rejected because B-01 is now structural.
     assertThrows(
       () =>
@@ -830,6 +858,7 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "a.ts:f@abc",
+        evidence_ids: [ev.id],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -1016,6 +1045,7 @@ t("phase prerequisites: happy path passes all gates", () => {
         concern_code: "CC-gate",
         classification: "ruled-out",
         evidence: "a.ts:f@r",
+        evidence_ids: [fixtureEvidence(ctx, "a.ts")],
         evidence_quality: "code-verified",
         linchpin_dependent: false,
         rationale: "test",
