@@ -1,0 +1,491 @@
+# Aggregate of independent design reviews
+
+Reviewers (N=2, exact fan-in): codex, claude.
+No deliberation round; verdicts are laid side by side, never merged.
+
+## Verdicts per claim
+
+| Claim | codex | claude |
+|---|---|---|
+| C1 | overturned | overturned |
+| C2 | qualified | upheld |
+| C3 | upheld | upheld |
+| C4 | upheld | upheld |
+| C5 | upheld | upheld |
+| C6 | upheld | upheld |
+| C7 | upheld | upheld |
+| C8 | upheld | upheld |
+| C9 | qualified | upheld |
+| C10 | qualified | upheld |
+| C11 | qualified | qualified |
+| C12 | overturned | upheld |
+| C13 | overturned | upheld |
+| C14 | qualified | upheld |
+| C15 | overturned | upheld |
+| C16 | upheld | qualified |
+| C17 | qualified | qualified |
+| C18 | qualified | upheld |
+| C19 | upheld | upheld |
+| C20 | overturned | overturned |
+| C21 | overturned | upheld |
+| C22 | qualified | qualified |
+| C23 | qualified | qualified |
+| C24 | qualified | upheld |
+| C25 | qualified | upheld |
+| C26 | qualified | upheld |
+| C27 | upheld | upheld |
+| C28 | upheld | upheld |
+| C29 | overturned | upheld |
+| C30 | upheld | upheld |
+| C31 | overturned | upheld |
+| C32 | overturned | upheld |
+| C33 | overturned | qualified |
+
+## Items requiring a disposition
+
+### C1/codex — overturned
+
+Evidence: `spec.md:50-112` defines twelve measures, D1–D12, while `spec.md:758-775` adds six distinct blocking predicates B1–B6.
+
+Proposed change: Say “twelve frozen measures”; distinguish measurement queries from additional acceptance predicates.
+
+### C1/claude — overturned
+
+Evidence: `spec.md` §1.2 defines **twelve** measures D1–D12 (D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12), not ten; counted as SQL statements it is 13. And "executes exactly those and no others" contradicts the same spec: §7.3's B3 needs `dispositions JOIN subsystems` filtered on `status IN ('concerns','adversarial','mapped')` plus `ref_sha` resolution, B4 needs `vocabulary_declinations`, B5/B6 need `carried_findings`/`carried_finding_outcomes` — none of which any D-measure expresses. §1.6 itself concedes this: "the finding accounting of §5, which is an enumeration with one obligation per baseline finding" is listed as blocking beside the D-measures.
+
+Proposed change: Restate as: "The depth measures are the twelve statements D1–D12 in §1.2, frozen with the baseline. `dev/test-survey-depth.mjs` executes those verbatim as its reported and comparison layer, plus the four per-record predicates of §7.3 (B3–B6), which are obligations rather than measures and are listed separately in the fixture."
+
+### C2/codex — qualified
+
+Evidence: `spec.md:82,90` defines D6 and D7% over dispositions, not tracked paths. Also `mcp-server/contracts/conspectus-vocabulary.json:224-228` marks `deferred-with-reason` obligation-bearing, while `spec.md:64-66` exempts it.
+
+Proposed change: Limit the rule to tracked-file coverage fractions; derive exemptions from the single-source `obligation_bearing` field.
+
+### C9/codex — qualified
+
+Evidence: `spec.md:264-265` requires at least one resolvable attachment, but the claim’s “has one whose ref_sha does not resolve” can mean any bad attachment, including a mixed good/bad set.
+
+Proposed change: State explicitly that a disposition passes when at least one attachment resolves; separately report unreachable attachments.
+
+### C10/codex — qualified
+
+Evidence: `mcp-server/src/db.ts:46-58,84-100` runs migrations and schema initialization on every existing store; `:137-192` can backfill and rebuild tables. P2 also requires additive table creation on existing stores.
+
+Proposed change: Say that existing domain rows are not rewritten for these obligations; acknowledge additive schema migration and test it separately.
+
+### C11/codex — qualified
+
+Evidence: The proposed DDL in `spec.md:324-337` has no update/delete triggers, and SR1 at `spec.md:849-855` does not test immutability.
+
+Proposed change: Enforce append-only behavior with triggers and add update/delete sabotage cases.
+
+### C11/claude — qualified
+
+Evidence: Mechanism upheld: `git.ts:303-312` is `DELETE FROM scope_gaps` then re-insert inside `reconcileTx`; `scope_gaps` is 0 in both stores while the candidate has 501 unledgered paths; `renderers.py:2689-2708` rebuilds the universe from `scope_gaps` plus the ledger; and `set_git_state` (`git.ts:91-141`) lets any caller write `last_checked_sha`, so that field alone cannot stand in for a reconciliation. But "append-only" is prose only: `spec.md` §3.2 ships bare DDL with no triggers, while `src/schema.sql` carries 269 triggers and enforces append-only with the `*_is_immutable` / `*_cannot_be_deleted` pair (e.g. `:2622-2627`). `decisions.md` §2 requires substrate, not prose.
+
+Proposed change: Add to the qualification: "append-only once `scope_reconciliations_is_immutable` (BEFORE UPDATE) and `scope_reconciliations_cannot_be_deleted` (BEFORE DELETE) are declared in `schema.sql` alongside the table, matching `:2622-2627`."
+
+### C12/codex — overturned
+
+Evidence: `git.ts:215-240` derives counts from mutable `git ls-files`, not revision R’s immutable tree. The three-condition predicate also survives later ledger mutation and does not prove complete assignment.
+
+Proposed change: Resolve R to a full SHA, enumerate `git ls-tree` at R, store a path-set witness/hash, and invalidate standing when relevant ledger state changes.
+
+### C13/codex — overturned
+
+Evidence: ADR-0001 requires every tracked path to have exactly one assignment or explicit exclusion, but `spec.md:350-368` permits mapped/publication with correctly recorded nonzero `unledgered` or `absent` counts.
+
+Proposed change: Require zero unresolved scope gaps and exactly-one assignment-or-exclusion before mapped or publication.
+
+### C14/codex — qualified
+
+Evidence: `scope_reconciliations` stores only aggregate counts. D2 requires tracked-set intersections, and live ledger classifications can change after the recorded reconciliation.
+
+Proposed change: Use a witnessed path set or hash and invalidate/reconcile after ledger mutations before rendering numeric coverage.
+
+### C15/codex — overturned
+
+Evidence: `spec.md:423-430` calls `requireWorkspaceCitation`, but `helpers.ts:180-208` checks delimiters and path syntax only; it does not resolve the embedded revision or prove the path exists there. `first_seen` and `ref_sha` also remain optional.
+
+Proposed change: Parse the canonical citation grammar, resolve its revision, verify the path in that tree, and define when unanchored terms may be stored but cannot discharge the gate.
+
+### C16/claude — qualified
+
+Evidence: Design upheld (`decisions.md` §3; candidate `SELECT COUNT(*) FROM vocabulary` → 0 across 8 `mapped` subsystems). But `spec.md` §4.3's DDL declares append-only only in prose and ships no trigger, while `GATE VD1` (§8.3) is red "when a declination is updatable or deletable" — a condition the specified schema cannot satisfy. `src/schema.sql:2622-2627` is the repository's own mechanism.
+
+Proposed change: Add: "append-only once `vocab_declination_is_immutable` and `vocab_declination_cannot_be_deleted` triggers are declared with the table."
+
+### C17/codex — qualified
+
+Evidence: `spec.md:446-449` preserves declinations across resets, while the proposed prerequisite accepts any declination without rechecking its revision or effective standing.
+
+Proposed change: Require the effective declination’s revision to remain resolvable; preserve older rows as history without letting stale history silently discharge a new pass.
+
+### C17/claude — qualified
+
+Evidence: The gate point is sound (`invariants.ts:309-322`; `schema.sql:410` "NULL = codebase-wide, else scoped"; `references/phase-2-structural.md:169-176` carries no gate). But `schema.sql:406` is `term TEXT PRIMARY KEY` and `vocabulary.ts:33-36` upserts `subsystem_id = COALESCE(excluded.subsystem_id, vocabulary.subsystem_id)`: one term row can be scoped to exactly one subsystem, and re-defining a shared term for subsystem B silently moves it off subsystem A, revoking A's discharge after A has advanced — with B4 (§7.3) then red over the finished store and no signal at the moment it happened.
+
+Proposed change: Add: "…scoped to it, where scoping is per-(term, subsystem) rather than the single `vocabulary.subsystem_id` column — either a `vocabulary_scopes` join table, or `define_term` refuses to re-scope a term that already discharges another subsystem's obligation."
+
+### C18/codex — qualified
+
+Evidence: `spec.md:446-453` permits a term to be defined after a declination, so both records can coexist, but `spec.md:477-488` does not define which current rendering wins.
+
+Proposed change: Define effective-state precedence: render current terms when present and show superseded declinations as history.
+
+### C20/codex — overturned
+
+Evidence: The proposed hash identifies a mutable git-state tuple, not a store generation: one store changes identity when `last_checked_sha` changes, while two rebuilds with the same tuple collide. The accepted JSON export does not contain that tuple.
+
+Proposed change: Persist a random immutable store-generation UUID and include it in every archive/export and carried record.
+
+### C20/claude — overturned
+
+Evidence: The carry path the spec itself mandates cannot compute the id. `§5.8` step 1 and P8's acceptance both say `--carry-from …/old-findings-7c1c1a9.json`, and that export's top-level keys are exactly `['anchor','exported_at','source','subsystems','findings','open_questions','counts']`. Substring tests over the whole file returned False for `repo_id`, `canonical_branch`, `onboarding_sha`, `last_checked_sha` and `git_state` — none of the four inputs is present. Its `anchor` is `7c1c1a9f…` (the repo HEAD at export), whereas the archived store's `git_state` row is `default | main | b8b566f | 61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27`, so the anchor is not a substitute either.
+
+Proposed change: Either (a) require `--carry-from` to name an archived **store** whenever the id must be derived, and regenerate the export with a `git_state` block (or a precomputed `archived_store_id`) before it may be used; or (b) define `archived_store_id` as a field of the export contract, written by the exporter, and have the carry verify it against the store when one is available. `dev/survey-depth-baseline.json`'s `archived_store_id` and B5's matching key must be derived the same way.
+
+### C21/codex — overturned
+
+Evidence: The export’s keys are only `anchor`, `counts`, `exported_at`, `findings`, `open_questions`, `source`, and `subsystems`, so its store ID cannot be recomputed. Also `spec.md:560-564` pre-records archived verified-fixed rows as repaired before survey, contradicting the current-evidence requirement at `:575-578`; no table records a reasoned empty carry.
+
+Proposed change: Add a carry-run manifest with source identity, reason, expected/imported counts, and imported archival states; leave all current-store outcomes undecided until current authority rules are met.
+
+### C22/codex — qualified
+
+Evidence: `spec.md:571-578` names a `carried_finding_evidence` join but supplies no DDL or attachment contract, and “at or after” is undefined on a Git DAG.
+
+Proposed change: Specify the join/API and define post-repair as `repaired_sha` being an ancestor of the attached evidence revision.
+
+### C22/claude — qualified
+
+Evidence: `invariants.ts:422-447` is `requireOverturnEvidence` as quoted, and ADR-0001 `:42-44` / `:46-48` are §Resolved and §Verified-fixed. But the authority rules bind only `record_carried_outcome`: `spec.md` §5.4 bullet 1 has the **carry** pre-record terminal archived findings with outcome `repaired`/`ruled-out` "with a rationale naming the archive". The export's `resolution_state` histogram is `open 13, verified-fixed 8, fixed-pending-verification 1`, so 8 records would reach `repaired` with no resolving commit checked and no attached post-repair evidence — exactly what `GATE CF1` (§8.4) is red for when `record_carried_outcome` does it.
+
+Proposed change: Add: "…when written by `record_carried_outcome`. The carry's pre-recorded outcomes are a distinct outcome value (e.g. `archived-terminal`) that is terminal for `pecia` resolution but is not one of the three, so the gate's authority assertions stay total."
+
+### C23/codex — qualified
+
+Evidence: `dev/check-living-conspectus.mjs:238-466` evaluates a supplied manifest, not the live store; the plan does not define a DB-to-manifest carried-record census.
+
+Proposed change: Require the whole-store adapter to enumerate every carried row from the store or receipt and add a nonempty undecided sabotage case.
+
+### C23/claude — qualified
+
+Evidence: ADR-0001 `:21-26` holds the six clauses and `:56-60` the obligation-id table, as cited. But the "whole-store predicate" §5.5 names has no store-scoped implementation: `dev/check-living-conspectus.mjs:723` defaults to `dev/conspectus/self-baseline.json`, the immutable A0 JSON fixture at `b8b566f` that `design/reader-lenses/spec.md` §12.3 forbids retargeting, and `dev/test-living-conspectus.mjs:8-15` imports `evaluateConspectus` and mutates that same fixture. `grep -rn "fully.surveyed|fullySurveyed" mcp-server/src/` returns only `vocabulary.ts:1296`, a phrase in a word list. So clause 7 would be vacuous wherever it is enforced today.
+
+Proposed change: Add: "…enforced at the whole-store predicate, which this lane must first give a store-scoped implementation (a `fully_surveyed` evaluation over an open store, in `invariants.ts` or a new `dev/check-store-fully-surveyed.mjs`); `check-living-conspectus.mjs` reads only the frozen A0 fixture and cannot carry the clause."
+
+### C24/codex — qualified
+
+Evidence: `carried_findings` is unique by store plus archived ID, but `spec.md:621-626` resolves using archived ID alone. Multiple archives may therefore produce ambiguous matches.
+
+Proposed change: Require a store-qualified reference or define ambiguity as a refusal rather than choosing an arbitrary carried record.
+
+### C25/codex — qualified
+
+Evidence: The export contains the six findings and anchor, but lacks the store-generation identity required by C20.
+
+Proposed change: Extend or pair the export with authenticated generation metadata before using it as the retroactive source.
+
+### C26/codex — qualified
+
+Evidence: `phase-1-scope.md:58` also invokes changed `define_term` behavior but is absent from `spec.md:663-672`; coordinator and packaging call sites are likewise outside the eight-entry register.
+
+Proposed change: Generate an affected-caller inventory and update every caller that can encounter a new refusal.
+
+### C29/codex — overturned
+
+Evidence: B1 at `spec.md:762-764` requires the recorded unledgered count merely to equal the tree-derived count; a correctly recorded value of 501 passes despite ADR-0001’s complete-inventory requirement.
+
+Proposed change: Make B1 require zero unledgered and absent paths plus exactly one assignment or reasoned exclusion per tracked path.
+
+### C31/codex — overturned
+
+Evidence: `spec.md:816-824` records verdicts and aggregate counts, but B3 requires per-disposition attachment SHAs and B4 requires term-anchor or declination witnesses. Those predicates cannot be independently recomputed from the stated receipt.
+
+Proposed change: Store canonical row-level witnesses and hashes for every blocking predicate; recompute verdicts rather than trusting recorded verdict fields.
+
+### C32/codex — overturned
+
+Evidence: Gate A1 at `spec.md:931-940` states a red condition and false green but names no must-stay-green control.
+
+Proposed change: Add a valid-receipt control and require every gate specification and test to exercise its control.
+
+### C33/codex — overturned
+
+Evidence: `dev/test-rebuild-readback.mjs:541-552,686-699` invokes the rebuild driver without `--carry-from`; making that option mandatory breaks this existing gate, yet P4 does not list the test as a deliverable to update.
+
+Proposed change: Update the gate to pass an explicit reasoned empty carry while retaining a separate missing-argument refusal test; document this as a widening.
+
+### C33/claude — qualified
+
+Evidence: `dev/test-rebuild-depth.mjs:104` is the `CHECKLIST_CONCERNS` literal, and running the gate here printed both quoted FAILs plus `B-02/AL-1 carries no attached evidence row`; `.github/workflows/test.yml:255, :260, :266, :274` are the four rebuild gates. But the declared source §8.10 chooses is "the committed coverage receipt", and `plan.json` P8's deliverables list **both** `design/reader-lenses/rebuild-depth-receipt.json` and `design/reader-lenses/rebuild-coverage-receipt.json`. One packet, one rebuild, both documents — so the denominator and the document under test stop being independent and a dropped concern shrinks both halves at once, which is the GP24 property `:19-24` says the literal exists to protect. That is a weakening of an existing gate.
+
+Proposed change: Add: "…provided the declared source is a document the acceptance rebuild does not itself re-record. Read the checklist from a standalone committed contract (e.g. `mcp-server/contracts/concern-checklist.json`, regenerated only by an explicit onboarding-calibration step and `--check`ed in CI), and drop `design/reader-lenses/rebuild-coverage-receipt.json` from P8's deliverables."
+
+### D1/codex — plan defect (high)
+
+Location: `spec.md:4-6` binding inputs
+
+Evidence: `test -e design/survey-depth/README.md` failed; the directory contains only claims, decisions, plan, and spec files. Numerous claims rely on that absent proposal.
+
+Proposed change: Commit the binding proposal or remove it as a binding input and reproduce every governing requirement in present artifacts.
+
+### D2/codex — plan defect (high)
+
+Location: P2 gate SR1 and acceptance
+
+Evidence: P2 re-derives from mutable `git ls-files` and accepts any matching unledgered count. AxiomDB already has 295 ledger rows but only 187 distinct paths and 1,718 unledgered gaps, exposing duplicate ownership and nonzero-gap cases the gate would not reject.
+
+Proposed change: Test immutable-tree enumeration, full-SHA normalization, duplicate ownership, correct-but-nonzero gaps, index/tree divergence, and stale reconciliation after ledger mutation.
+
+### D3/codex — plan defect (high)
+
+Location: P3 gate VD1
+
+Evidence: VD1 tests unresolved citation revisions but not a citation whose path is absent at that revision; `requireWorkspaceCitation` performs no resolution or tree lookup.
+
+Proposed change: Add missing-path, malformed-SHA, mismatched-anchor, and unreachable-revision red cases plus a valid anchored control.
+
+### D4/codex — plan defect (high)
+
+Location: P4 carry contract
+
+Evidence: The accepted export lacks the four fields needed for `archived_store_id`; pre-recorded repaired outcomes conflict with current evidence; `--carry-from none` has no specified reason argument or durable record.
+
+Proposed change: Add immutable store-generation and carry-run schemas, explicit empty-carry reason syntax, source/import counts, and separate archived versus current outcomes.
+
+### D5/codex — plan defect (high)
+
+Location: P4 deliverables and tool contract
+
+Evidence: `spec.md:571-573` requires `carried_finding_evidence`, but §5.2 and P4 acceptance specify only two tables. No attachment tool or compact paginated read/list tool is defined. The promised third-process carried-count read-back consequently has no named surface.
+
+Proposed change: Specify the join DDL, attachment and reader tools, pagination/byte budgets, response compactness, and third-process read-back test.
+
+### D6/codex — plan defect (high)
+
+Location: P3/P4 generated tool inventory
+
+Evidence: P3 and P4 add tools, but their deliverables omit `mcp-server/DEVELOPMENT.md`; P4 also omits `mcp-server/src/index.ts`. `gen-tool-inventory.mjs:60-80` rejects tools declared but not advertised and checks the generated inventory.
+
+Proposed change: Add registration and regenerated inventory deliverables to both packets; require inventory sabotage tests.
+
+### D7/codex — plan defect (high)
+
+Location: P4/P6 projection and read-back
+
+Evidence: `spec.md:603-610` requires carried obligations on Unresolved and History pages, but P6 depends only on P2/P3 and covers only reconciliation/vocabulary. `readback.py:252-292` independently censuses findings and stale entries, not carried records.
+
+Proposed change: Make P6 depend on P4; implement both-format carried markers, state/coverage/content-axis sabotage tests, semantic headings, keyboard navigation, and a complete no-JavaScript reading path.
+
+### D8/codex — plan defect (high)
+
+Location: P5/P8 receipt arm and A1
+
+Evidence: The receipt contract contains aggregate attached counts and recorded verdicts, not the evidence revisions, vocabulary anchors, or declination records needed to evaluate B3/B4. A1 can therefore validate a self-reported green receipt.
+
+Proposed change: Record canonical witnesses and independently recompute every predicate; seed a forged-green receipt that must turn A1 red.
+
+### D9/codex — plan defect (high)
+
+Location: P5 D2/B2 implementation
+
+Evidence: `conspectus-vocabulary.json:224-228` makes `deferred-with-reason` obligation-bearing, but `spec.md:64-66` hard-codes it as exempt. AxiomDB contains 35 such paths.
+
+Proposed change: Generate the exemption predicate from the canonical vocabulary contract and add a deferred-path regression.
+
+### D10/codex — plan defect (high)
+
+Location: P4 regression `dev/test-rebuild-readback.mjs`
+
+Evidence: Existing driver invocations at lines 541-552 and 686-699 omit the newly mandatory carry argument. P4 runs this regression but does not deliver its required update.
+
+Proposed change: Add the test to P4 deliverables, pass explicit empty carry in positive controls, and retain a missing-argument red case.
+
+### D11/codex — plan defect (medium)
+
+Location: P7 refusal-parity gate
+
+Evidence: The hand-maintained register cannot turn red for an omitted refusal, as `spec.md:702-704` admits; `phase-1-scope.md:58` is already an unregistered affected caller.
+
+Proposed change: Derive the refusal inventory from structured server declarations and compare its complete ID set with every affected skill caller.
+
+### D12/codex — plan defect (medium)
+
+Location: S1 dependencies
+
+Evidence: P1–P4 all have empty dependencies while P1–P4 overlap `invariants.ts` and workflow files, and P2–P4 overlap `schema.sql` and `db.ts`. They are simultaneously ready in one slice.
+
+Proposed change: Serialize overlapping packets or split shared schema/invariant/CI integration into an explicit dependency packet.
+
+### D13/codex — plan defect (high)
+
+Location: Cross-store compatibility
+
+Evidence: C10 imposes immediate obligations on AxiomDB, yet no packet tests an existing-store copy. Read-only queries found 166 dispositions, 54 unattached, 35 mapped subsystems, 1,718 scope gaps, and no proposed tables.
+
+Proposed change: Copy the AxiomDB store to temporary storage and gate additive migration, refusal behavior, non-mutation of existing rows, and clean-publish rollback.
+
+### D14/codex — plan defect (medium)
+
+Location: P8 budget and recovery boundary
+
+Evidence: One 300-minute packet combines destructive reinitialization, a complete repository survey, 22 independent adjudications, publication, promotion, three receipts, and regression repair.
+
+Proposed change: Split reinitialization/carry, subsystem survey batches, carried adjudication, and final publication/receipt into separately gated packets.
+
+### D15/codex — plan defect (medium)
+
+Location: Gate A1
+
+Evidence: Unlike SD1, SR1, VD1, CF1, PM1, RP1, and CF2, `spec.md:931-940` names no selective green control for A1.
+
+Proposed change: Add a valid bound receipt control and a paired forged-receipt failure.
+
+### D16/codex — plan defect (medium)
+
+Location: P8 regression list
+
+Evidence: P8 does not rerun new gates SD1, SR1, VD1, CF1, PM1, RP1, or CF2 even though it rebuilds the store, rewrites receipts/docs, and changes CI. They run only at final completion.
+
+Proposed change: Run every new substrate, projection, parity, and receipt gate inside P8 before accepting its rebuild.
+
+### D1/claude — plan defect (high)
+
+Location: plan.json packet P1 deliverables and regression
+
+Evidence: Making `evidence_ids` required breaks every existing caller. `grep -rln set_disposition mcp-server/*.mjs dev/*.mjs` returns 9 files with real call sites: `test-invariants.mjs` (19 refs), `test-residual-hardening.mjs` (12, e.g. `:477-482` `dispositionArgs(...)`), `test-perf-ceilings.mjs` (3), `test-vocabulary-source.mjs` (2), `test-perf-tier2.mjs` (2), `test-consumer-route.mjs` (2), `test-cloud-e2e.mjs` (2), `test-smoke.mjs` (1), `dev/test-rebuild-regeneration.mjs` (1). P1's deliverables name no existing test file, and its regression list omits `test-residual-hardening.mjs`, `test-perf-ceilings.mjs`, `test-perf-tier2.mjs`, `test-consumer-route.mjs` and `test-cloud-e2e.mjs` entirely.
+
+Proposed change: Add those five commands to P1's regression list and the seven affected test files to P1's deliverables; raise `budget_minutes` accordingly. Do the same for the §2.3 advance refusal, which also breaks any fixture that advances a subsystem holding unattached dispositions.
+
+### D2/claude — plan defect (high)
+
+Location: plan.json packet P1 gate and regression
+
+Evidence: `mcp-server/test-perf-ceilings.mjs:187` is `ceiling("set_disposition (resolves ref_sha)", 200, …)` and its call at `:189-200` passes no `evidence_ids`. The comment at `:171-184` states the 200 ms ceiling is "~31×" a measured 6.35-6.50 ms single `git rev-parse`, and `helpers.ts:114-125` says the subprocess "is paid on every durable write". `spec.md` §2.2 step 2 adds one `resolveWorkspaceCommit` per evidence id, so the call becomes N+1 subprocesses. That gate is in no packet's regression list.
+
+Proposed change: Add `cd mcp-server && node test-perf-ceilings.mjs` to P1's regression list, and have §2.2 resolve the named rows in one batched `git cat-file --batch-check` (or re-check only distinct `ref_sha` values) rather than one `rev-parse` per id.
+
+### D3/claude — plan defect (high)
+
+Location: plan.json packet P8 budget_minutes 300
+
+Evidence: B2 requires the rebuilt store to reach `D3% >= 0.5957` over tracked paths at HEAD: at D2=605 that is >=361 examined files, at a baseline-like exempt count (D2~480) still >=286. The clean-slate rebuild it replaces produced 84 examined in 98 minutes (`report.md:19, :29`; candidate `SELECT MIN(started_at), MAX(started_at) FROM sessions` → `2026-09-14 03:22:59 .. 05:50:37`, 6 sessions). The store that did reach 59.57 % holds 35 sessions spanning `2026-08-12 .. 2026-09-11`. P8 must additionally attach evidence to every disposition (baseline: 133 evidence rows for 128 dispositions), discharge vocabulary for 8 subsystems, decide 22 carried findings, publish, promote and write two receipts.
+
+Proposed change: Split P8 into a carry-and-onboarding packet, one batched survey packet per subsystem group (mirroring reader-lenses' `step 6 is batched per subsystem`), and a publish/receipt packet; size each from the baseline's measured 35-session cost rather than from the shallow rebuild's 98 minutes.
+
+### D4/claude — plan defect (high)
+
+Location: plan.json packet P9 gate
+
+Evidence: `GATE CF2`'s red conditions (`spec.md` §8.9) are all properties of `dev/pecia-resolve-finding.mjs`, which is a **P4** deliverable (`plan.json` P4.deliverables includes `dev/pecia-resolve-finding.mjs`; P4's acceptance says "follows the §5.7 lookup order"). P9's deliverables are `dev/test-carried-finding-references.mjs`, `dev/amanuensis-defects-to-pecia.mjs`, `dev/pecia-dogfood.md`, `.github/workflows/test.yml` — none of which the gate asserts. When P9 starts, P4 has already shipped the behaviour, so the gate is green on its first run and cannot turn red before P9's implementation.
+
+Proposed change: Move `dev/test-carried-finding-references.mjs` into P4, where its red proves P4's resolver change; leave P9 as the Pecia-audit reconciliation with a gate that asserts P9's own deliverable — that `dev/pecia-dogfood.md` accounts for each of the eight `pc-*` records `report.md:53-56` names, red when one is unaccounted.
+
+### D5/claude — plan defect (high)
+
+Location: plan.json packet P8 deliverables
+
+Evidence: P8 lists `design/reader-lenses/rebuild-depth-receipt.json` **and** `design/reader-lenses/rebuild-coverage-receipt.json`, while `spec.md` §8.10 moves `CHECKLIST_CONCERNS` out of `dev/test-rebuild-depth.mjs:104` and into "the committed coverage receipt's declared checklist". `dev/test-rebuild-depth.mjs:19-24` states the property this destroys: "Every denominator this gate counts against is read from a *different* committed document than the one under test … A numerator and its denominator that shrink together prove nothing (GP24)." Today that independence is real: the coverage receipt's `repository_sha` is `dee59d3e…` and `produced_by` is `dev/record-rebuild-coverage.mjs` from packet P17.
+
+Proposed change: Keep the checklist out of both receipts: put it in a standalone `mcp-server/contracts/concern-checklist.json` with a `--check`, and remove `rebuild-coverage-receipt.json` from P8's deliverables so the coverage receipt stays a document a different run produced.
+
+### D6/claude — plan defect (high)
+
+Location: plan.json packet P4 deliverables
+
+Evidence: C21 and `spec.md` §5.4 make `--carry-from` required on `dev/rebuild-self-conspectus-store.mjs`. `dev/test-rebuild-readback.mjs:541-554` spawns that driver as `--confirm --workspace … --archive … --receipt …` with no `--carry-from`, and asserts its success at `:584`, `:596`, `:622`, `:720` and `:737` ("the driver exited …"). `:494-500` records why the gate drives the real script rather than reimplementing it (F1/codex). P4's regression list contains `node dev/test-rebuild-readback.mjs` but its deliverables do not contain that file, so the packet is specified to break a gate it promises stays green.
+
+Proposed change: Add `dev/test-rebuild-readback.mjs` to P4's deliverables, with the driver arm passing `--carry-from none --carry-reason "throwaway workspace has no predecessor"`, and add an assertion that the empty-carry record was written — otherwise the `--carry-from none` branch is the untested branch VP4 warns about.
+
+### D7/claude — plan defect (medium)
+
+Location: plan.json packet P4 deliverables
+
+Evidence: P4 introduces `mcp-server/src/tools/carried.ts` but does not list `mcp-server/src/index.ts`. Tool modules reach the MCP surface only through that file: `src/index.ts:80` and `:105` import `dispositionTools` / `vocabularyTools` and `:234`, `:237` spread them into the tool array. Without the edit, `carry_finding` and `record_carried_outcome` are unreachable and `test-carried-findings.mjs` cannot call them.
+
+Proposed change: Add `mcp-server/src/index.ts` to P4's deliverables.
+
+### D8/claude — plan defect (medium)
+
+Location: plan.json packets P3 and P4 deliverables
+
+Evidence: Both add tools to the MCP surface (`decline_domain_vocabulary`; `carry_finding`, `record_carried_outcome`) and both list `cd mcp-server && node scripts/gen-tool-inventory.mjs --check` in their own regression lists. That script regenerates the block between `<!-- TOOL-INVENTORY-START -->` (`mcp-server/DEVELOPMENT.md:200`) and `:615` and exits 1 if it would change (`scripts/gen-tool-inventory.mjs:16-18, :27`). `mcp-server/DEVELOPMENT.md` appears only in P1's deliverables.
+
+Proposed change: Add `mcp-server/DEVELOPMENT.md` to P3's and P4's deliverables.
+
+### D9/claude — plan defect (medium)
+
+Location: plan.json packets P3 and P4 deliverables
+
+Evidence: Both list `mcp-server/contracts/conspectus-vocabulary.json` as a deliverable (P3's acceptance: "The declination kind is declared in contracts/conspectus-vocabulary.json"), and both run `gen-vocabulary.mjs --check` and `--check-sql` as regressions. `scripts/gen-vocabulary.mjs:28-31` writes **two** generated files — `mcp-server/src/vocabulary.ts` and `materializer/amanuensis_materializer/vocabulary.py` — and `--check-sql` asserts the schema's `CHECK` literals match the source. Neither generated file is in any packet's deliverables, and `spec.md` §5.2's `carried_finding_outcomes.outcome CHECK` introduces a new enum while `carried_findings.archived_resolution` is left uncheckable even though `finding_resolution_state` already exists in the contract.
+
+Proposed change: Add `mcp-server/src/vocabulary.ts` and `materializer/amanuensis_materializer/vocabulary.py` to P3's and P4's deliverables; declare `carried_finding_outcome` in the contract and give `archived_resolution` a `CHECK` drawn from the existing `finding_resolution_state` enum.
+
+### D10/claude — plan defect (medium)
+
+Location: spec.md §3.2, §4.3, §5.2 DDL (binding on P2, P3, P4)
+
+Evidence: All four new tables and their indexes are written as bare `CREATE TABLE` / `CREATE INDEX` / `CREATE UNIQUE INDEX`. `src/db.ts:85-88` reads: "The schema is written with CREATE … IF NOT EXISTS throughout, so we can run it on every open", and runs `db.exec(schemaSql)` on every `openDatabase`. 516 of the 517 `^CREATE` statements in `src/schema.sql` use `IF NOT EXISTS` (the exception at `:538` is preceded by `DROP VIEW IF EXISTS` at `:537`). Copied verbatim, the second open of any store throws. The same DDL also ships no `*_is_immutable` / `*_cannot_be_deleted` triggers, though `GATE SR1`, `VD1` and `CF1` are each red when a row proves updatable or deletable and `schema.sql:2622-2627` is the established pattern among its 269 triggers.
+
+Proposed change: Rewrite all four DDL blocks with `IF NOT EXISTS` and add the immutability and no-delete trigger pair for each; state in P2/P3/P4's acceptance that the trigger, not the prose, is what makes the table append-only.
+
+### D11/claude — plan defect (medium)
+
+Location: plan.json packets P8 and P9 regression
+
+Evidence: `spec.md` §8.10 states of `dev/test-rebuild-depth.mjs` and `dev/test-rebuild-regeneration.mjs`: "Neither appears in any packet's regression list, because a regression list is a promise about gates that are green when the packet starts." P8's regression list contains `node dev/test-rebuild-depth.mjs` and P9's does too; both also contain `node dev/test-survey-depth.mjs`, which cannot be green before P8's own rebuild writes the candidate/receipt. Running the gate here confirms it is red: `GATE P19 RED: … 10 failed assertion(s)`.
+
+Proposed change: Remove `node dev/test-rebuild-depth.mjs` and `node dev/test-survey-depth.mjs` from P8's and P9's regression lists; they already appear in P8's acceptance, which is the right place for a gate the packet is expected to turn green.
+
+### D12/claude — plan defect (medium)
+
+Location: plan.json packet P6 acceptance, last bullet
+
+Evidence: The control "a reconciled store renders byte-identically to today against a committed fixture" is unsatisfiable for any reconciled store with unledgered paths. `spec.md` §3.4 bullet 2 changes the "Files read, of those carrying an obligation" denominator to D2 over the standing reconciliation, and §1.2 D2 says "A tracked path with no ledger row is obligation-bearing". Today that denominator is `alignment["obligation_files"]` (`renderers.py:630`), computed at `:415` as `SUM(CASE WHEN {OBLIGATION_BEARING_SQL} …) FROM file_ledger` — ledger rows only. So the two numbers differ by exactly the unledgered count, and the control passes only on a fixture with zero unledgered paths, i.e. the one store shape the change does not affect.
+
+Proposed change: Restate the control as two fixtures: a reconciled store with zero unledgered paths, asserted byte-for-byte against today's output; and a reconciled store with unledgered > 0, asserted against the new denominator with the old value recorded in the gate's header as the intended change.
+
+### D13/claude — plan defect (medium)
+
+Location: plan.json packet P5 deliverables and completion.commands
+
+Evidence: `spec.md` §7.2 requires `dev/survey-depth-baseline.json` to be "regenerable and `--check`able, so it cannot drift from the archive (GP28)", and C27 states the coverage axis "asks whether the `--check` exists, runs in the gate runner, and is in the repair path". `plan.json` `completion.commands` holds 97 entries and none matches `record-survey-depth-baseline`; no packet's regression list contains it either. It also could not run in CI as specified: the archive is `~/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db`, a machine-local absolute path outside the repository.
+
+Proposed change: Add `node dev/record-survey-depth-baseline.mjs --check` to P5's regression list and to `completion.commands`, and have it report `cannot run` (exit 2), not green, when the archive is absent — so the check is honest off this machine instead of silently vacuous.
+
+### D14/claude — plan defect (medium)
+
+Location: plan.json packet P5 deliverables (.github/workflows/test.yml)
+
+Evidence: P5 adds `dev/test-survey-depth.mjs` to CI, and `GATE D1` (§8.5) is red "when it is absent from CI". But `spec.md` §7.1's candidate arm reads "the live store … and otherwise the committed acceptance receipt (§7.5)", and that receipt is a P8 deliverable. Between P5 and P8, the gate has no candidate at all and B1-B6 cannot pass, so CI is knowingly red across P6, P7 and P8 and stops being a usable signal for them.
+
+Proposed change: Give the candidate arm an explicit `cannot run` (exit 2) state, distinct from red, for "no live store and no committed receipt", and have `GATE D1` assert that state is reached rather than green; or defer the CI registration of `dev/test-survey-depth.mjs` to P8 and have `GATE D1` assert registration at that point.
+
+### D15/claude — plan defect (low)
+
+Location: plan.json packet P2 acceptance, last bullet
+
+Evidence: "REQUIRED_VIEWS and the migration path in db.ts create the table on an existing store without rewriting any row." `src/db.ts:44` is `export const REQUIRED_VIEWS = ["file_standing", "finding_state_current"] as const`; `:61-82` only asserts those views exist and throws otherwise. It creates nothing, and it covers views, not tables. New tables arrive through `initializeSchema` re-running `schema.sql` (`:84-89`); `runMigrations` (`:102`) exists for columns and indexes on pre-existing databases.
+
+Proposed change: Restate as: "`initializeSchema` creates `scope_reconciliations` on the next open of an existing store, with no row rewritten; `REQUIRED_VIEWS` is untouched because the change adds no view."
+
+## Summary
+
+```json
+{
+  "codex": {
+    "overturned": 10,
+    "qualified": 12,
+    "upheld": 11,
+    "plan_defects": 16
+  },
+  "claude": {
+    "overturned": 2,
+    "qualified": 6,
+    "upheld": 25,
+    "plan_defects": 15
+  }
+}
+```
