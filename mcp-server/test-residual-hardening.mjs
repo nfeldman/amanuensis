@@ -1140,6 +1140,8 @@ const NOT_A_TOOL_INPUT = {
   lens: "a design-session label outside the conspectus writers",
   omission_reason: "emitted by the budget ledger, never accepted from a caller",
   attention_label: "computed by get_attention from durable rows, never accepted from a caller",
+  vocabulary_discharge:
+    "derived per subsystem from the vocabulary and declination rows at the advance to 'structural', never accepted from a caller; the discharge gate drives that surface",
 };
 
 check("every vocabulary the source carries is probed or declared not to be an input", () => {

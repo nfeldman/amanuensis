@@ -285,7 +285,7 @@ try {
 }
 if (built.ok) {
   try {
-    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools] =
+    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary] =
       await Promise.all([
         import("../mcp-server/dist/db.js"),
         import("../mcp-server/dist/project.js"),
@@ -298,8 +298,9 @@ if (built.ok) {
         import("../mcp-server/dist/tools/dispositions.js"),
         import("../mcp-server/dist/tools/concerns.js"),
         import("../mcp-server/dist/tools/git.js"),
+        import("../mcp-server/dist/tools/vocabulary.js"),
       ]);
-    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools };
+    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary };
   } catch (e) {
     loadError = e && e.message ? e.message : String(e);
   }
@@ -329,6 +330,7 @@ function toolNamed(name) {
     mods?.dispositions?.dispositionTools,
     mods?.concerns?.concernTools,
     mods?.gitTools?.gitTools,
+    mods?.vocabulary?.vocabularyTools,
   ];
   for (const group of groups) {
     if (!Array.isArray(group)) continue;
@@ -461,6 +463,17 @@ function subsystemAtAdversarial(id, { claimKey } = {}) {
       epistemic_kind: "observation",
       ref_sha: fixture.base,
       evidence_ids: [evidenceId],
+    },
+    ctx,
+  );
+  // §4.4: the structural pass discharges its vocabulary obligation or declares
+  // the subsystem has none. A fixture subsystem coins no word of its own.
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: id,
+      reason: "regeneration fixture: its seeded file coins no term of its own",
+      ref_sha: fixture.base,
     },
     ctx,
   );

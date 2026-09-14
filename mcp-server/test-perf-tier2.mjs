@@ -22,6 +22,7 @@ import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 const allTools = new Map(
   [
@@ -35,6 +36,7 @@ const allTools = new Map(
     ...artifactTools,
     ...evidenceTools,
     ...claimTools,
+    ...vocabularyTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -86,6 +88,9 @@ for (let i = 0; i < 40; i++) {
   // below has one to name.
   subsystemEvidence.push(evidenceId);
   call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
+  // §4.4: the structural pass discharges its vocabulary obligation or declares
+  // the subsystem has none. A fixture subsystem coins no word of its own.
+  call("decline_domain_vocabulary", { subsystem_id: id, reason: "perf fixture: its one file coins no term of its own", ref_sha: seedSha }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
