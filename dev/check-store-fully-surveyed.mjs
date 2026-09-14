@@ -43,6 +43,7 @@
 // tree (ADR-0001 clause 1, spec.md §3.3).
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
@@ -155,18 +156,126 @@ function trackedPathsAt(revision) {
     .filter((path) => path.length > 0);
 }
 
+/** `git rev-parse <r>^{commit}`, or null when nothing in this workspace answers to it. */
+function resolveRevision(revision) {
+  const result = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${revision}^{commit}`], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error || result.status !== 0) return null;
+  const sha = String(result.stdout ?? "").trim();
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+}
+
+/**
+ * §3.2's two digests, re-derived here rather than imported.
+ *
+ * The server computes them in `mcp-server/src/invariants.ts`; this file reads
+ * them back from a different implementation on purpose. A predicate that
+ * re-derives a digest with the same code that wrote it compares a value with
+ * itself and both sides move together (GP24) -- so the formula is restated:
+ * SHA-256 over the sorted, NUL-joined parts, one part per tracked path, and
+ * one `<path>NUL<classification>` part per ledger row.
+ */
+function digestOf(parts) {
+  return createHash("sha256").update([...parts].sort().join("\u0000")).digest("hex");
+}
+
+/**
+ * Is a reconciliation *standing* at R? §3.3's five conditions, and only a row
+ * meeting all five is one (`the most recent such row`).
+ *
+ * Clause 1 used to skip this entirely: it took the newest reconciliation row,
+ * enumerated the tree at whatever revision that row named, and re-derived the
+ * ledger-against-tree comparison itself. That answers a true question about
+ * some revision, and it is not clause 1 -- a store whose ledger has been edited
+ * since it last checked itself against the tree has not checked itself against
+ * the tree, and §3.3a binds publication and this predicate to the reading, not
+ * to a fresh comparison the predicate makes for itself (F5/codex, C13).
+ */
+function standingReconciliation(revision) {
+  const resolved = resolveRevision(revision);
+  if (resolved === null) {
+    return { row: null, sha: null, why: `${revision} does not resolve to a commit in ${workspacePath}` };
+  }
+  const tracked = trackedPathsAt(resolved);
+  if (tracked === null) {
+    return { row: null, sha: resolved, why: `the tree at ${resolved.slice(0, 7)} could not be enumerated` };
+  }
+  const gitState = (rows("SELECT last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1") ?? [])[0];
+  const lastChecked = gitState?.last_checked_sha ?? null;
+  const normalizedLastChecked = lastChecked === null ? null : resolveRevision(lastChecked);
+  if (normalizedLastChecked !== resolved) {
+    return {
+      row: null,
+      sha: resolved,
+      why: `git_state.last_checked_sha is ${lastChecked ?? "unset"}, not ${resolved.slice(0, 7)}`,
+    };
+  }
+  const treeDigest = digestOf(tracked);
+  const ledgerDigest = digestOf(
+    (rows("SELECT file_path, classification FROM file_ledger") ?? []).map(
+      (row) => `${row.file_path}\u0000${row.classification ?? ""}`,
+    ),
+  );
+  const row = (
+    rows(
+      `SELECT * FROM scope_reconciliations
+        WHERE detected_sha = ? AND tree_digest = ? AND ledger_digest = ?
+        ORDER BY id DESC LIMIT 1`,
+      resolved,
+      treeDigest,
+      ledgerDigest,
+    ) ?? []
+  )[0];
+  if (!row) {
+    const atSha = rows("SELECT tree_digest FROM scope_reconciliations WHERE detected_sha = ?", resolved) ?? [];
+    const why =
+      atSha.length === 0
+        ? `no reconciliation has been recorded at ${resolved.slice(0, 7)}`
+        : atSha.some((candidate) => candidate.tree_digest === treeDigest)
+          ? "the file ledger has changed since the reconciliation recorded there was taken"
+          : "the reconciliation recorded there was taken over a different tree";
+    return { row: null, sha: resolved, why };
+  }
+  return { row, sha: resolved, why: null, tracked };
+}
+
 {
-  const reconciliation = tableExists("scope_reconciliations")
+  const gitState = (rows("SELECT last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1") ?? [])[0];
+  const latest = tableExists("scope_reconciliations")
     ? (rows("SELECT * FROM scope_reconciliations ORDER BY id DESC LIMIT 1") ?? [])[0]
     : undefined;
-  const revision = arg("--revision", reconciliation?.detected_sha ?? null);
-  const tracked = revision ? trackedPathsAt(revision) : null;
+  // R is the revision the *store* says it checked. The newest reconciliation's
+  // own sha is the fallback only when git_state carries none, and §3.3's
+  // condition 3 then requires the two to agree anyway.
+  const revision = arg("--revision", gitState?.last_checked_sha ?? latest?.detected_sha ?? null);
+  const standing = revision ? standingReconciliation(revision) : { row: null, sha: null, why: null };
+  const tracked = standing.tracked ?? null;
   if (!revision) {
     clause(1, "inventory names R and every tracked path has one destination", {
       satisfied: false,
       considered: 0,
       missing: ["inventory:revision"],
-      note: "the store records no scope reconciliation, so there is no revision its inventory is taken over; §3.3 makes the reading the record",
+      note: "the store records no checked revision and no scope reconciliation, so there is no revision its inventory is taken over; §3.3 makes the reading the record",
+    });
+  } else if (standing.row === null) {
+    clause(1, "inventory names R and every tracked path has one destination", {
+      satisfied: false,
+      considered: 0,
+      missing: ["inventory:reconciliation"],
+      note: `the store is not reconciled at ${revision.slice(0, 7)} under §3.3's five conditions: ${standing.why}`,
+    });
+  } else if (Number(standing.row.unledgered ?? 0) !== 0 || Number(standing.row.absent ?? 0) !== 0) {
+    // §3.3a: reconciled is weaker than complete, and only complete licenses
+    // *fully surveyed*. A store that accurately records 501 unledgered paths is
+    // reconciled and clause 1 is false for it.
+    clause(1, "inventory names R and every tracked path has one destination", {
+      satisfied: false,
+      considered: Number(standing.row.tracked_paths ?? 0),
+      missing: ["inventory:unledgered"],
+      note: `the standing reconciliation at ${standing.sha.slice(0, 7)} reports ${standing.row.unledgered} tracked path(s) with no ledger row and ${standing.row.absent} ledger row(s) the tree no longer carries; every tracked path needs exactly one subsystem assignment or an explicit exclusion with a reason before coverage over that tree is published`,
     });
   } else if (tracked === null) {
     clause(1, "inventory names R and every tracked path has one destination", {
@@ -200,7 +309,7 @@ function trackedPathsAt(revision) {
       satisfied: missing.length === 0,
       considered: tracked.length,
       missing,
-      note: `evaluated over the tree at ${revision.slice(0, 7)}`,
+      note: `evaluated over the tree at ${revision.slice(0, 7)}, against the standing reconciliation recorded there`,
     });
   }
 }
@@ -243,12 +352,54 @@ function trackedPathsAt(revision) {
   ) ?? []) {
     dispositions.set(`${row.subsystem_id}/${row.concern_code}`, row);
   }
+
+  // *Evidence-backed* is not *has an attachment row*. §2.3 already refuses the
+  // advance for a disposition whose attached ref_sha does not resolve, and
+  // §7.3's B3 states the same predicate over the finished store: "at least one
+  // attached evidence row whose ref_sha resolves". Counting attachments let a
+  // disposition answered at a revision this repository does not carry satisfy
+  // clause 3 (F6/codex, C23).
+  //
+  // One `git cat-file --batch-check` over the distinct revisions, not one
+  // subprocess per attachment: the store under audit may hold thousands.
+  const attachments = new Map();
+  for (const row of rows(
+    `SELECT de.subsystem_id, de.concern_code, e.ref_sha
+       FROM disposition_evidence de
+       JOIN evidence e ON e.id = de.evidence_id`,
+  ) ?? []) {
+    const key = `${row.subsystem_id}/${row.concern_code}`;
+    if (!attachments.has(key)) attachments.set(key, []);
+    attachments.get(key).push(row.ref_sha ?? "");
+  }
+  const distinct = [...new Set([...attachments.values()].flat().filter((sha) => sha.length > 0))];
+  const resolves = new Set();
+  if (distinct.length > 0) {
+    const probe = spawnSync("git", ["cat-file", "--batch-check"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+      input: `${distinct.join("\n")}\n`,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (!probe.error && typeof probe.stdout === "string") {
+      for (const [index, line] of probe.stdout.split("\n").entries()) {
+        const sha = distinct[index];
+        if (sha !== undefined && line.length > 0 && !/\bmissing\b/.test(line)) resolves.add(sha);
+      }
+    }
+  }
+
   const missing = [];
   for (const subsystemId of subsystems) {
     for (const code of active) {
-      const row = dispositions.get(`${subsystemId}/${code}`);
+      const key = `${subsystemId}/${code}`;
+      const row = dispositions.get(key);
       if (!row || !TERMINAL.has(row.classification) || Number(row.attached ?? 0) === 0) {
-        missing.push(`concern:${subsystemId}/${code}:disposition`);
+        missing.push(`concern:${key}:disposition`);
+        continue;
+      }
+      if (!(attachments.get(key) ?? []).some((sha) => resolves.has(sha))) {
+        missing.push(`concern:${key}:evidence-revision`);
       }
     }
   }
