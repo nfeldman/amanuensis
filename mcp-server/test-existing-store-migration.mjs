@@ -422,11 +422,6 @@ function main(Database, openDatabase, materializeTools, resolveProject, ensurePr
         db.close();
         return `the copy's dispositions.evidence_quality CHECK admits ${canonical?.length ?? "no"} value(s); the seed needs the wider canonical shape to narrow`;
       }
-      objectsBefore = db
-        .prepare("SELECT type, name FROM sqlite_master WHERE tbl_name='dispositions' ORDER BY type, name")
-        .all()
-        .map((r) => `${r.type}:${r.name}`)
-        .join(",");
       const columns = db
         .prepare("SELECT name FROM pragma_table_info('dispositions')")
         .all()
@@ -446,6 +441,21 @@ function main(Database, openDatabase, materializeTools, resolveProject, ensurePr
       db.exec('DROP TABLE "dispositions"');
       db.exec('ALTER TABLE dispositions__xs1_narrow RENAME TO "dispositions"');
       db.exec("COMMIT");
+      // An index and a trigger the canonical CREATE cannot put back. Without
+      // them the "indexes and triggers survive" half of this assertion is
+      // vacuous on `dispositions`, whose only other object is the autoindex
+      // the CREATE recreates by itself — and a rebuild that dropped every
+      // trigger would pass unnoticed.
+      db.exec("CREATE INDEX idx_xs1_dispositions_probe ON dispositions(concern_code)");
+      db.exec(
+        "CREATE TRIGGER xs1_dispositions_probe BEFORE DELETE ON dispositions " +
+          "FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'xs1 probe'); END",
+      );
+      objectsBefore = db
+        .prepare("SELECT type, name FROM sqlite_master WHERE tbl_name='dispositions' ORDER BY type, name")
+        .all()
+        .map((r) => `${r.type}:${r.name}`)
+        .join(",");
       db.close();
     }
     const seeded = domainDigest(narrowed);
