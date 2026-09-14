@@ -214,14 +214,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 240,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "744eedcfe405d6ee1979abef2d8d11b869ba1f09",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "6cf6a1dea4859b56bb430bdb0c2b0ec197277f62",
+      "green_sha": "cddc01c0bc692787e14dfa2112eb98767803047e",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The §2.3 refusal is vacuous at the advance to concerns; the first real bite is at adversarial. That is stated in the gate header rather than papered over. Nine existing test files call set_disposition; making evidence_ids required breaks every one, so all nine are deliverables and the five that were missing are in the regression list."
+      "notes": "GATE SD1 ships 21 assertions: set_disposition's four refusals with nothing left behind, the one-transaction write proved by a probe trigger that refuses the attachment, the §2.3 advance refusal at all three rungs and through both status doors and enforcePhasePrerequisites directly, the mixed resolvable/unreachable control that advances and reports, and C37's batching measured with a git shim on PATH. Three choices the spec left open: helpers.ts gains resolveWorkspaceCommits (no packet owns that file; it is the honest home beside the singular form's ceiling comment) and subsystems.ts passes the workspace and surfaces the reported lines (no packet lists it either, and the check cannot reach git without it); the §2.4 sentence about materialize_docs is read as P2's, since §3.3a specifies the publication predicate and P2 owns materialize.ts. test-consumer-route names set_disposition only in prose and its write-tool list, so it has no call site and is green unchanged. The gate's E8 was vacuous at the red commit (its second call over-claimed and was refused by the ladder before reaching the write) and was fixed in b3d226c; it now requires the refusal to be the probe trigger's own and turns red when db.transaction is removed. dev/test-rebuild-regeneration.mjs still reports one failure, over design/reader-lenses/rebuild-coverage-receipt.json's registry_ownership; its inputs are byte-identical to the packet's start commit, so it predates P1 — it is in completion.commands, not in any packet's regression list."
     },
     {
       "id": "P2",
