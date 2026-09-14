@@ -1161,6 +1161,30 @@ async function main(mods) {
         : null;
     });
 
+    check("E3 the refusal names the records it is about", () => {
+      // §5.5 quotes the sentence, and a sentence that says "2 carried findings
+      // have no terminal outcome — ." has told the reader the count and
+      // withheld everything they would need to act on it.
+      if (!existsSync(join(REPO, CHECKER_REL))) return `${CHECKER_REL} is absent`;
+      undecided.db.pragma("wal_checkpoint(TRUNCATE)");
+      const run = spawnSync(
+        process.execPath,
+        [join(REPO, CHECKER_REL), "--store", undecided.project.dbPath, "--clause", "7"],
+        { cwd: REPO, encoding: "utf8", timeout: 120_000 },
+      );
+      const said = scrub(run.stdout ?? "");
+      const absentIds = ["B03-6", "B04-5"].filter((id) => !said.includes(id));
+      if (absentIds.length) {
+        return `the refusal does not name ${absentIds.join(", ")}: ${said.slice(-240) || "(silent)"}`;
+      }
+      if (!said.includes("HIGH") || !said.includes(storeA)) {
+        return "the refusal names neither the severity nor the store each record came from, which is what tells a reader which obligation to take first";
+      }
+      return /re-found as a successor finding, ruled out with evidence .*, or marked repaired/.test(said)
+        ? null
+        : "the refusal does not say what would discharge the obligation; a red with no destination is the state ADR-0001's obligation table exists to remove";
+    });
+
     check("G3 clause 7 does not bind at `mapped`", () => {
       // README §4 and decisions.md §1: a rebuild must be able to progress
       // subsystem by subsystem, so the carried obligation is a whole-store
