@@ -171,6 +171,7 @@ try {
     composition,
     analysis,
     materialize,
+    gitModule,
   ] = await Promise.all([
     import("./dist/db.js"),
     import("./dist/project.js"),
@@ -183,6 +184,7 @@ try {
     import("./dist/tools/composition.js"),
     import("./dist/tools/review-analysis.js"),
     import("./dist/tools/materialize.js"),
+    import("./dist/tools/git.js"),
   ]);
   mods = {
     db,
@@ -196,6 +198,7 @@ try {
     composition,
     analysis,
     materialize,
+    gitModule,
   };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
@@ -260,6 +263,7 @@ function buildFixture() {
       ...mods.composition.compositionTools,
       ...mods.analysis.reviewAnalysisTools,
       ...mods.materialize.materializeTools,
+      ...mods.gitModule.gitTools,
     ].map((tool) => [tool.name, tool]),
   );
   const call = (name, args = {}) => {
@@ -376,6 +380,14 @@ function buildFixture() {
 
   // One impact run both review readers below are compiled against.
   call("predict_change_impact", { base_sha: base, head_sha: head, run_id: "partition-impact" });
+
+  // §3.3: the projection arm below publishes, and publication is refused over a
+  // store that has not been reconciled against the repository at the revision it
+  // stamps. `src/control.ts` is the workspace's only tracked path and the ledger
+  // already carries it, so the reading comes out clean; taken last, after every
+  // ledger write, because the next one would invalidate it.
+  call("set_git_state", { canonical_branch: "main", onboarding_sha: base });
+  call("detect_changes", { current_sha: head });
 
   return { root, workspace, base, fixSha, head, project, db, ctx, tools, call };
 }

@@ -462,9 +462,18 @@ function main(mods) {
     );
 
     check("A2 the row is written inside the transaction that rewrites scope_gaps", () => {
-      // An ABORT on the insert must take the whole reconciliation with it. If
-      // the row were written outside the transaction, `DELETE FROM scope_gaps`
-      // would already have committed and the gap rows would be gone.
+      // An ABORT on the insert must take the whole reconciliation with it. The
+      // blocked run is aimed at a *new* commit carrying a *new* unledgered
+      // path, so a write that landed outside the transaction is visible twice
+      // over: the gap rows would have been rebuilt against the new tree, and
+      // last_checked_sha would have moved to the new revision. Run against the
+      // same revision the fixture already reconciled at, both would come out
+      // byte-identical and the assertion would pass over an insert that had
+      // escaped the transaction entirely.
+      const ws = ctx.project.workspacePath;
+      writeFileSync(join(ws, "atomicity.ts"), "export const atomicity = true;\n");
+      git(ws, "add", "atomicity.ts");
+      gitCommit(ws, "a path the ledger does not carry, at a revision it has not seen");
       const gapsBefore = ctx.db.prepare("SELECT COUNT(*) AS n FROM scope_gaps").get().n;
       if (gapsBefore === 0) {
         return "the fixture left no scope_gaps row, so atomicity is untested here";
