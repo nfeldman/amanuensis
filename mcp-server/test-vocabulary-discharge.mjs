@@ -70,6 +70,8 @@
 //   store the anchor as typed instead of resolved                → A7
 //   drop either declination trigger                              → D1, D2
 //   delete declinations on reset_subsystem                       → D5
+//   return ok from decline_domain_vocabulary without a row       → C1
+//   supply a default reason instead of requiring one             → C4
 //   let decline_domain_vocabulary answer over an anchored term   → C2
 //   stop resolving the declination's ref_sha                     → C3
 //   declare the tool without advertising it                      → C5
