@@ -387,14 +387,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "46879bb208d0dbc482a195ba3976fe6adbbd522d",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "7d2d34d4abdcbdfaf34a100d956f512693354e07",
+      "green_sha": "d6d2ca69874a58218f0ccde17bf185bb920f7a8b",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Existing vocabulary rows are never rewritten; the anchored predicate simply reads false for them until a term is redefined. The baseline's four terms have anchors that do not parse as citation tokens."
+      "notes": "Scoping uses §4.4's primary fix, the vocabulary_scopes join table, not the narrower refusal fallback: vocabulary.subsystem_id stays the primary scope, define_term carries a pre-join-table row's scope into the table before its upsert moves that column, and list_vocabulary now reads the scope set. Gaps filled and recorded here: first_seen is stored with the path normalized and the revision resolved to 40 hex (§4.2 says that only of ref_sha); the effective declination is the newest row whose ref_sha resolves, so a later unreachable row does not un-discharge an intact earlier one; decline_domain_vocabulary's optional session_id must name the active session; and the contract gains a vocabulary_discharge enum (terms/declined/not-recorded) so §4.5's three states have one source in both languages. Nine other files' fixtures now discharge before advancing to structural (test-invariants, test-smoke, test-phase2-claims-gate, test-cloud-e2e, both perf tests, dev/test-rebuild-regeneration and the P1/P2 gates) and test-residual-hardening declares the new enum a non-input; nothing was weakened, and dev/test-rebuild-regeneration is back to its single pre-existing §8.10 failure."
     },
     {
       "id": "P4",
