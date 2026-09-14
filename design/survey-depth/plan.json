@@ -586,14 +586,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 200,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "e4fc5ff7dcd02ceefd47155c61dac44842d2723d",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "c07ffe75910888dc6231d11340675396cff29507",
+      "green_sha": "b946eb2b2a4ca357be9c58dea0ec4e575c36d9b2",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The packet's own gate is the red-gates test, since the deliverable is itself a gate. Seeded faults are chosen independently at the executed boundary, not by a marker the depth gate writes for itself (VP4 v2.15)."
+      "notes": "GATE D0 (dev/test-survey-depth.mjs) and its fixture; GATE D1 is the packet gate. The fixture reproduces every §1.3 baseline value exactly (503/503/0 unledgered, 371 obligation-bearing, 221 examined = 59.57%, 133/128, 112 attached, 36 field notes, 16/12 open questions, 4 anchored terms, the thirteen open finding ids) and its archived_store_id store-legacy-36f2623f4d9afe92 is cross-checked against the server's own archivedStoreId() where mcp-server/dist is built. Two gaps the spec left open and how they were filled: the candidate is relocated for testing by one env var (AMANUENSIS_DEPTH_WORKSPACE) that moves the store, the receipt and the candidate's git together, so no arm can be swapped alone, and both paths are printed in the header; and the §7.5 receipt shape D0 recomputes from is written out in D0's header as the contract P11 must write to. Reviewers should look first at the eleven seeded arms in D1 — each builds its own store, seeds one fault at the executed boundary, and requires D0's red to NAME the seeded predicate — and at the three forged-receipt arms, which are what prove no blocking verdict is read from a recorded field."
     },
     {
       "id": "P6",
