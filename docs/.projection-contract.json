@@ -3,7 +3,7 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "d0f55aceecee7e5348a1d2220f48fd2c64b3b236cc1105582cbfba32e72a81f8"
+      "content_hash": "b49767c5d9fdd89e63985e4b6f79af1f709ca9a68eeb79a8e5d56a0e4620b45a"
     },
     {
       "path": "architecture.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "a5a1741b2ea36a36b6081d20968908b5249911cc3f895b22e0a489a8065f74a0"
+      "content_hash": "908dd69f9318b463a5f13245ff3b7e797e4bbde79d6b045f49a2124bdd01c453"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "1002e0c3ead54cd23704263778e53b1a2098799666ecb026458cb506fd5a35d1"
+      "content_hash": "f89cc97bd68c2b4bf7ecc870b4986322a680c32f44c92133f7fa8c53e4421878"
     },
     {
       "path": "concerns.md",
@@ -27,7 +27,7 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "303e9868ea760a69e6026ae3128d17f8370fc2884cc18a747e5ed72eee4b1059"
+      "content_hash": "f944c51fb4ecb9ecfcabfc9b9bd8e53b8645e0fdc3b60d32bfcb2c2aab1f0d6b"
     },
     {
       "path": "contradictions.md",
@@ -35,7 +35,7 @@
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "1e382d200422dd8640df115f3255afe1c8e35477b793e842875c92756b5b0dd5"
+      "content_hash": "842e717b03bd0ce9bc2cd995ffd002b2a460fba579231314a6e1aa017f6333f8"
     },
     {
       "path": "diagnosticity.md",
@@ -43,7 +43,7 @@
     },
     {
       "path": "disagreements.html",
-      "content_hash": "e446c485a33bff192398bfdc701cc7ad6fa576e2e86c8c595d12de4fcd09e678"
+      "content_hash": "5daddfb64c7499e6e4ed4807470c10f8ca6f3f785cbc6e75d895a678cdb68200"
     },
     {
       "path": "disagreements.md",
@@ -51,7 +51,7 @@
     },
     {
       "path": "entry-point.html",
-      "content_hash": "26db47ee2f7513338b6ced0de2349d904cd9aa3cbe683364819a45a070017fe4"
+      "content_hash": "d6eb51177df647ff410fcfcaa6012c36fbe252b4eccf78535e084b04bcfe8387"
     },
     {
       "path": "entry-point.md",
@@ -59,7 +59,7 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "ff7ec0961fb08d14c799af53c5f10330519c8e576a4b82079a56eeacdab98e12"
+      "content_hash": "06cc7561bed79f0d60dbaa19dc2c9bd184187632dd4eced180683cd453df7090"
     },
     {
       "path": "field-notes.md",
@@ -67,7 +67,7 @@
     },
     {
       "path": "files.html",
-      "content_hash": "fe7f8ecce6572eb7ba87d4cf244ee18c05bc91f4962430a99176cf7865223e00"
+      "content_hash": "51dad81b1688322360fce0eb6133707eb81088ff3cf69055beb0b949f1f465fe"
     },
     {
       "path": "files.md",
@@ -75,7 +75,7 @@
     },
     {
       "path": "findings.html",
-      "content_hash": "635aa5a16564e3010076380a447e137a6f2b1788a0e2b8f308c3d6ff589d9fab"
+      "content_hash": "33bde5e0b783bdead8f2ce1e2ddaa5129d097d3a8f9edff7a6adb2ba6331ede0"
     },
     {
       "path": "findings.md",
@@ -83,31 +83,31 @@
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "6367749a9abaa8ac2b291f3c83297d3510d3a7b12642e59a2d95ca8e16cdd2b3"
+      "content_hash": "816bc01a5f4e0c9bc0a1d44335571b12155aa76160aabe068d7e6c04544e58a7"
     },
     {
       "path": "hot-spots.md",
-      "content_hash": "4a1ebfefbdb790c49525ddc54fb8c3579dc6e35945e09edc0b29ed03c57a0e1e"
+      "content_hash": "eb6a603d6168ff9ac6ecc2a13f70e905375ae9f26f007b269a8af848325a011d"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "067bb517fcf94b7a2f340a8436cecfd6bc97cdd713f3c81f9164f2bb2d5450b7"
+      "content_hash": "c7be94a15acbfd3423cc809ad5c17a6408ff9bedbe58800b5502d25171a01673"
     },
     {
       "path": "how-to-read.md",
-      "content_hash": "8de3539c609997f00be44af9113ab6c28cc34512fd89eb512c8815f4f0760390"
+      "content_hash": "85cdeee22d9c2675299321bf74e953f17b1227ec8ada41f451f9dcdc0e7c6f87"
     },
     {
       "path": "index.html",
-      "content_hash": "8435df6acc260dec88f1f4103c54fadf1f850ebbe6dad95f57173aa919ce7dc2"
+      "content_hash": "d9ced9402147e4dc396244407f310a0c6d51c142423a63e83d93fa2350a6bd31"
     },
     {
       "path": "index.md",
-      "content_hash": "2e7bfe97f38b3a1a711ec990c5a5c434da95c1463faaa48683fb44ccfe745372"
+      "content_hash": "c0f0a555949c368bde49a4980c3c79c51633a2d5a34d543c9d1bddf9aff01548"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "d478b38a1ad236844b3706d43e34f639117b9cd3be2c548dd19ff3588329578f"
+      "content_hash": "b129c38ec6c7578de025b290f2b9cd6126e4bf0ca1a52f49e6bb4b565963be78"
     },
     {
       "path": "master-plan.md",
@@ -115,15 +115,15 @@
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "7dac793eefa3f1af40fce5b8d77abf578b617dbb7de2826cba53d1e263f2c9b1"
+      "content_hash": "153d7d8364179cb288ba55c6c1ba22a8330dc3f4474d50e4e0556f89ff0bd1bb"
     },
     {
       "path": "not-yet-surveyed.md",
-      "content_hash": "583d1508c124d06f166aae0598cb2994bfadbfe91adef815cf7181561b5474ec"
+      "content_hash": "8fe920849d85b0b47b1d8c82daaba32b5efd61fb745afcaba0fafd9e24994950"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "99b0fe7cf43a8beb13d461af41aa87484ccf4dfe58b1f6d542069f308a494192"
+      "content_hash": "af569c48030c7d1cc53acbb7824b474478151d1e5232cb998c8f1075e84eee60"
     },
     {
       "path": "onboarding-report.md",
@@ -131,7 +131,7 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "ee772db1787c7bdcff6b0764836120cd3c02ab0c36c731e426863a3a845aeb45"
+      "content_hash": "6f0a2e9823d0afce6612ae3b3d3e3be365035c893b5da5f072ebea89f5d992b0"
     },
     {
       "path": "open-questions.md",
@@ -139,7 +139,7 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "584886bfac1373751de84b1f91113f8b8924a991499f755d99f46aba97b99f20"
+      "content_hash": "0205a8f5262ff73edbb5e0ea8e9dfd17b6825940a9d45a181bb237f647e14516"
     },
     {
       "path": "resolution-history.md",
@@ -147,7 +147,7 @@
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "9f92c526cbc6595d79c77cc4956910b6dc62ff6b50f1502d447d18187f9fc8f0"
+      "content_hash": "b600c4b3532fd68e82e71360ded09ede765656c23480dc03ff5b87b5b23bd86c"
     },
     {
       "path": "resolved-findings.md",
@@ -155,7 +155,7 @@
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "fd0e39af3c7dc16579a9c742ca247b1a24bdf0bd93868f5924585d099492a8d8"
+      "content_hash": "154b14e3c7913bda0ecad5a306a238c12a3a2eedd1d2fe960352004421341f41"
     },
     {
       "path": "resolved-leads.md",
@@ -163,7 +163,7 @@
     },
     {
       "path": "seams.html",
-      "content_hash": "482afaf6ec5c347e69cf1745b354b2cb37495daf82aaf6b35eaf4e682d2f9ec1"
+      "content_hash": "25bbc7c7623d974089327d6d00274f1e4c7c876bb05c62736e5f35b01aa2fae7"
     },
     {
       "path": "seams.md",
@@ -175,15 +175,15 @@
     },
     {
       "path": "sessions.html",
-      "content_hash": "25a2c1d3391d0b7316ffb98a09f1f298115d7eae14c019c51a73f0fe5cddacdb"
+      "content_hash": "7e4b71ab7fbf6406fc36e55577a4314b84a1e476eb2f5c0ecce845473443e0ab"
     },
     {
       "path": "sessions.md",
-      "content_hash": "8e15c1ae8bacadc73bb07067ad91031dd8444b6e2189ae73db5a1b1ca80fdeaa"
+      "content_hash": "6d6f340a7b34d38495cf0bc5b893ef2ab53ece7f7f8f8fb0a6637f5fdf4a5661"
     },
     {
       "path": "stale.html",
-      "content_hash": "97f017b8e276ddbfe2363830eb8c71747eef5bcf4b73e98bee4541bb0d36af7d"
+      "content_hash": "7e390edf407aa1625b41049808a85a57629ce1cd829a3fa96f7432ca14622457"
     },
     {
       "path": "stale.md",
@@ -191,7 +191,7 @@
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "31a72e53a1e934da46879d8d079fe4a4fba42063b74ce75b81198c7d2a4923da"
+      "content_hash": "0ad9e580df2e0cb136f3bb5c71dc2efd47121abe056faaecc465a7098bec0cc9"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -199,7 +199,7 @@
     },
     {
       "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
-      "content_hash": "18fa1fb01f6090d3d6527059d31408573c673ae1340f5d7252d20c851ec3a279"
+      "content_hash": "6c4e22a83593e816d8f7d9ee7e90a75a049f8a5baec9919a912c87a5b61a88ba"
     },
     {
       "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
@@ -207,7 +207,7 @@
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "487b6fc2359a1d84c272dea13ed4ae543af68ed550310382f3d1feaf26721e71"
+      "content_hash": "b538ee08e5d69e008773ef1235e25f4b6909f8a842375d915e5cd0742ee8f83b"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
@@ -215,7 +215,7 @@
     },
     {
       "path": "subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html",
-      "content_hash": "0c427b8dd2f34e658deb881cb04698bb22b7a0fe7d321bc57a0b99f60e01130e"
+      "content_hash": "05214a0b2bff59bebeb48626eedc2c5fe40325cfd3fbea090b31045b3c78fec9"
     },
     {
       "path": "subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md",
@@ -223,7 +223,7 @@
     },
     {
       "path": "subsystems/b05-materializer-human-projection-read-back-html.html",
-      "content_hash": "95ff6d58562234e1b4b204fbfa9971d9b10647699d9ddc7d5b3eed8bbb501388"
+      "content_hash": "a29c64cdbf6d066cd85f1d59a6e6ac865b2f3b2b225e0760c06586bac5f87dd4"
     },
     {
       "path": "subsystems/b05-materializer-human-projection-read-back-html.md",
@@ -231,7 +231,7 @@
     },
     {
       "path": "subsystems/b06-packaging-installer-and-host-activation.html",
-      "content_hash": "0460aa8b731e563d580455a329b7c3249c296a14759f6c6db79fba20422371cf"
+      "content_hash": "1b4183e43cb86bf03e79145eb75c70090ff4c8a46e9f0f55469a06b0ec763c94"
     },
     {
       "path": "subsystems/b06-packaging-installer-and-host-activation.md",
@@ -239,7 +239,7 @@
     },
     {
       "path": "subsystems/b07-gates-evidence-custody-and-ci.html",
-      "content_hash": "4dc001cd925760b57bda3470a0424e847f7a0adc50c27e9172ab7908f0d1938a"
+      "content_hash": "464a60375a6c97dc8471db1df04bb4d54fe01b94b1635532bdf1a6f8b22515c0"
     },
     {
       "path": "subsystems/b07-gates-evidence-custody-and-ci.md",
@@ -247,7 +247,7 @@
     },
     {
       "path": "subsystems/b08-records-design-research-published-projection-execution-ledger.html",
-      "content_hash": "3dc58a25208f55396b27d20d97a3cfe5f6e1b146f10ad392f0a5394891ca6e0e"
+      "content_hash": "ac1316d01e5098547cd6b41ebd3f4a8f66bb36eef39848581781bfbe62dc5206"
     },
     {
       "path": "subsystems/b08-records-design-research-published-projection-execution-ledger.md",
@@ -255,7 +255,7 @@
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "72315bb71a6af207dc7e52d7cda1ae5cf3e6d840f39eef8653ccea311494e644"
+      "content_hash": "c201e60a86680e76121a61aca1d35739d8741cf3330812bd1550adb713ca3e76"
     },
     {
       "path": "vocabulary.md",

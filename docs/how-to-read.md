@@ -1,24 +1,5 @@
 # How to read this conspectus
 
-An Amanuensis conspectus is a **persistent, evidence-driven architectural
-record** of a codebase. This site is the human-facing view; behind it sits a
-SQLite database that every claim on the site was generated from. Every
-assertion carries provenance: who recorded it, when, against which revision,
-with what evidence, and at what depth of survey.
-
-The record is organized as four lenses and an entrance. **Codebase** is the
-account of what the project is and which of its territory no one has read.
-**Unresolved** is what has not reached a terminal, evidence-backed state at the
-checked revision. **History** is what has, plus the append-only account of how,
-for the two record families that keep one. **Method** — these pages — is the
-apparatus by which you judge how far the rest of the record can be trusted.
-
-Two habits make the rest of it readable. Read a claim against the survey depth
-of the subsystem it is about: survey depth is the knowledge-depth contract, and
-it fixes what claims about that region you should accept at all. And read every
-state below for what it *cannot* justify as much as for what it can — that
-column is the whole point of the vocabulary.
-
 
 ## What to look at first
 
@@ -28,7 +9,7 @@ Every page this conspectus publishes, in the order the record presents them. The
 
 | Page | What it carries |
 |---|---|
-| [Overview](index.md) | Identity, four status dimensions, and one route into each lens. |
+| [Overview](index.md) |  |
 
 ### Codebase
 
@@ -74,7 +55,7 @@ Every page this conspectus publishes, in the order the record presents them. The
 
 | Page | What it carries |
 |---|---|
-| [Reader's guide](how-to-read.md) | Every enum, what it authorizes, and what it cannot justify. |
+| [Reader's guide](how-to-read.md) |  |
 | [Review coverage](concerns.md) | Which failure modes were tested where, and the disposition each one reached. |
 | [Review checklist](concern-checklist.md) | The concern set and its provenance. |
 | [Competing explanations](diagnosticity.md) | Index of evidence matrices and their outcomes. |
@@ -385,20 +366,3 @@ Every value below is generated from the vocabulary contract, version `1.0.0` —
 | `awaiting-verification` | Awaiting verification | A finding whose current resolution state is fixed-pending-verification. | that the defect is gone at the repository head |
 | `undiscriminated` | Undiscriminated | Two or more credible accounts stand and the record does not say which of them the evidence picks out. | any one of the competing accounts |
 
-## Reproducing what you are reading
-
-Anyone with the surveyed revision (the `ref_sha` on findings and evidence), the
-Amanuensis version that ran the survey, and enough budget to drive a model
-through the same phases can replay it and see whether their conclusions
-overlap. Non-determinism means the two runs will not be identical; structural
-overlap is the expected property, and the `compare_conspectuses` tool measures
-it.
-
-## If something here looks wrong
-
-Say so. Reader-surfaced disagreement is a first-class signal: a reviewer who
-disagrees with a finding should open an issue against this conspectus, and the
-next survey session records the disagreement as a lead or converts it into an
-evidence matrix if the argument looks strong enough to compete with the
-existing finding. A record that refuses to hear its readers is one that should
-not be trusted.

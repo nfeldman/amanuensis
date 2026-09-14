@@ -1,6 +1,6 @@
 # amanuensis
 
-An architecture survey of amanuensis, recorded by Amanuensis. The durable records are authoritative; every page here is derived from them.
+An architecture survey of amanuensis, recorded by Amanuensis.
 
 ## What is this codebase?
 
@@ -32,14 +32,12 @@ writes only through its own tools.
 
 ## Where the record stands
 
-Four dimensions, each read from durable records and each reported on its own terms. None of them is combined with another.
-
 ### Source alignment
 
 | Metric | Value |
 |---|---|
 | Checked at | `7c1c1a9f5689` on `main`, 2026-09-14 03:27 UTC |
-| Repository head | `f731fb001165` — a different revision from the one the survey checked |
+| Repository head | `d6dd42157680` — a different revision from the one the survey checked |
 | Upstream head | `d3aeeccad870` — a different revision from the one the survey checked (`origin/main`) |
 | Files carrying a survey obligation marked stale | 0 of 104 |
 | Scoped files exempt from that obligation, marked stale | 0 of 2 |
@@ -68,7 +66,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-14 05:42 UTC |
+| Verified at | 2026-09-14 05:45 UTC |
 
 ## Findings by resolution state
 
@@ -89,5 +87,5 @@ Four dimensions, each read from durable records and each reported on its own ter
 
 ## Latest session
 
-`Republish docs including finding B05-R1, promote with a promotion receipt, re-record the dogfood receipt, and verify the P18 gate before committing` — started 2026-09-14 05:45 UTC · **active**
+`Strip hand-written filler prose from the projection (page hints, reader's guide intro and closing, overview lede, hot-spot and not-yet-surveyed intros, rail note, footer sentence); republish, promote, re-record the dogfood receipt` — started 2026-09-14 05:50 UTC · **active**
 

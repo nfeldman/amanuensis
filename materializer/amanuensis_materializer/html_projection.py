@@ -2883,10 +2883,10 @@ def _nav_item(page: SitePage, current: SitePage) -> str:
     search = " ".join(
         filter(None, (page.label, page.record_id, page.hint, page.status, page.subgroup))
     ).lower()
-    title = html.escape(page.hint, quote=True)
+    title_attr = f' title="{html.escape(page.hint, quote=True)}"' if page.hint else ""
     return (
         f'<li class="nav-item" data-search="{html.escape(search, quote=True)}">'
-        f'<a class="nav-link" href="{html.escape(href, quote=True)}" title="{title}"{selected}>'
+        f'<a class="nav-link" href="{html.escape(href, quote=True)}"{title_attr}{selected}>'
         f'<span class="nav-tick{status_class}" aria-hidden="true"></span>'
         f'<span><span class="nav-name">{html.escape(page.label)}</span>{record}</span></a></li>'
     )
@@ -2969,6 +2969,7 @@ def _shell(
         # in generated or vendored territory is reported, not counted against it.
         freshness_class = "freshness stale" if stale_entries else "freshness"
     display_title = page.title or source_title
+    hint_para = f'<p class="page-hint">{html.escape(page.hint)}</p>' if page.hint else ""
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
@@ -3006,7 +3007,7 @@ def _shell(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Amanuensis HTML projection {HTML_PROJECTION_VERSION}">
-<meta name="description" content="{html.escape(page.hint, quote=True)}">
+<meta name="description" content="{html.escape(page.hint or display_title, quote=True)}">
 <title>{html.escape(display_title)} · {html.escape(project_name)} · Amanuensis</title>
 <script>document.documentElement.classList.add('js');try{{const t=localStorage.getItem('amanuensis-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script>
 <style>{_CSS}</style>
@@ -3025,7 +3026,6 @@ def _shell(
     <nav class="rail-nav">{nav}</nav>
     <div class="rail-foot">
       <div class="rail-actions"><button class="quiet-button" type="button" data-theme-toggle>Theme</button><a class="quiet-button" href="{html.escape(md_link, quote=True)}">Markdown source</a></div>
-      <p class="rail-note">A derived reading surface. Durable records remain authoritative.</p>
     </div>
   </aside>
   <main class="document" id="content">
@@ -3034,7 +3034,7 @@ def _shell(
       <header class="page-head">
         <p class="eyebrow">{eyebrow}</p>
         <h1>{html.escape(display_title)}</h1>
-        <p class="page-hint">{html.escape(page.hint)}</p>
+        {hint_para}
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
@@ -3044,7 +3044,7 @@ def _shell(
         </div>
       </header>
       <article class="content content-{html.escape(slugify(page.kind), quote=True)}"{filter_attrs}>{body}</article>
-      <footer class="page-foot"><p>This HTML and its Markdown companion are regenerated from the same conspectus state and verified after cross-link resolution.</p><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
+      <footer class="page-foot"><p><a href="{html.escape(md_link, quote=True)}">Inspect Markdown</a></p></footer>
     </div>
   </main>
 </div>

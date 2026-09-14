@@ -436,7 +436,7 @@ def main() -> None:
         # Sanity-check that the content actually landed.
         htr = (docs / "how-to-read.md").read_text()
         assert "How to read this conspectus" in htr
-        assert "knowledge-depth contract" in htr
+        assert "### Subsystem status" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
         assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"
         assert "\x00" not in (docs / "how-to-read.html").read_text(), "xref placeholders leaked into HTML"

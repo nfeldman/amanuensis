@@ -678,8 +678,7 @@ def render_index(
     out = [
         f"# {name}",
         "",
-        f"An architecture survey of {name}, recorded by Amanuensis. The durable"
-        " records are authoritative; every page here is derived from them.",
+        f"An architecture survey of {name}, recorded by Amanuensis.",
         "",
         # 2. Thesis — by heading, from entry-point.md, or the named instruction.
         "## What is this codebase?",
@@ -688,9 +687,6 @@ def render_index(
         "",
         # 3. Four status dimensions, each a separate named fact.
         "## Where the record stands",
-        "",
-        "Four dimensions, each read from durable records and each reported on its"
-        " own terms. None of them is combined with another.",
         "",
         "### Source alignment",
         "",
@@ -2314,46 +2310,9 @@ def _ledger_stale_table(
 # missing from the guide without the generator changing.
 HOW_TO_READ_INTRO = """\
 # How to read this conspectus
-
-An Amanuensis conspectus is a **persistent, evidence-driven architectural
-record** of a codebase. This site is the human-facing view; behind it sits a
-SQLite database that every claim on the site was generated from. Every
-assertion carries provenance: who recorded it, when, against which revision,
-with what evidence, and at what depth of survey.
-
-The record is organized as four lenses and an entrance. **Codebase** is the
-account of what the project is and which of its territory no one has read.
-**Unresolved** is what has not reached a terminal, evidence-backed state at the
-checked revision. **History** is what has, plus the append-only account of how,
-for the two record families that keep one. **Method** — these pages — is the
-apparatus by which you judge how far the rest of the record can be trusted.
-
-Two habits make the rest of it readable. Read a claim against the survey depth
-of the subsystem it is about: survey depth is the knowledge-depth contract, and
-it fixes what claims about that region you should accept at all. And read every
-state below for what it *cannot* justify as much as for what it can — that
-column is the whole point of the vocabulary.
 """
 
-HOW_TO_READ_CLOSING = """\
-## Reproducing what you are reading
-
-Anyone with the surveyed revision (the `ref_sha` on findings and evidence), the
-Amanuensis version that ran the survey, and enough budget to drive a model
-through the same phases can replay it and see whether their conclusions
-overlap. Non-determinism means the two runs will not be identical; structural
-overlap is the expected property, and the `compare_conspectuses` tool measures
-it.
-
-## If something here looks wrong
-
-Say so. Reader-surfaced disagreement is a first-class signal: a reviewer who
-disagrees with a finding should open an issue against this conspectus, and the
-next survey session records the disagreement as a lead or converts it into an
-evidence matrix if the argument looks strong enough to compete with the
-existing finding. A record that refuses to hear its readers is one that should
-not be trusted.
-"""
+HOW_TO_READ_CLOSING = ""
 
 
 def _enum_heading(name: str) -> str:
@@ -2826,12 +2785,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
     out = [
         "# Not yet surveyed",
         "",
-        "The recorded edge of the map at"
-        f" {_short(checked)} on `{branch}`. Each section counts the unit its gap"
-        " actually occupies and carries that unit's denominator: a file that no"
-        " one has read, a seam side no one has assessed, and a concern no one has"
-        " dispositioned here are three different kinds of not-knowing, and none of"
-        " them is evidence about the others.",
+        f"Counted at {_short(checked)} on `{branch}`.",
         "",
     ]
 
@@ -3347,12 +3301,7 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     )
 
     out += [
-        "_Each column is one measure, read on its own. The rows are ordered by open"
-        " critical and high defects, then by open medium and low, then by the"
-        " fraction of this region no one has read, then by identifier — four keys"
-        " applied in turn, not one number. There is no combined score, because"
-        " unresolved work and unread territory are different kinds of not-done and"
-        " no arithmetic turns them into one._",
+        "_Rows are ordered by open critical and high defects, then open medium and low, then the unread fraction._",
         "",
     ]
 

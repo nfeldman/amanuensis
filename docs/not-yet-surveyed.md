@@ -1,6 +1,6 @@
 # Not yet surveyed
 
-The recorded edge of the map at `7c1c1a9f5689` on `main`. Each section counts the unit its gap actually occupies and carries that unit's denominator: a file that no one has read, a seam side no one has assessed, and a concern no one has dispositioned here are three different kinds of not-knowing, and none of them is evidence about the others.
+Counted at `7c1c1a9f5689` on `main`.
 
 ## Paths with no ledger row
 

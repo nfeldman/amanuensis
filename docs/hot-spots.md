@@ -1,6 +1,6 @@
 # Hot spots
 
-_Each column is one measure, read on its own. The rows are ordered by open critical and high defects, then by open medium and low, then by the fraction of this region no one has read, then by identifier — four keys applied in turn, not one number. There is no combined score, because unresolved work and unread territory are different kinds of not-done and no arithmetic turns them into one._
+_Rows are ordered by open critical and high defects, then open medium and low, then the unread fraction._
 
 | Subsystem | Open critical + high | Open medium + low | Awaiting verification | Undiscriminated | Weakest evidence quality | Unread files | Stale files | Unassessed seam sides |
 |---|---|---|---|---|---|---|---|---|

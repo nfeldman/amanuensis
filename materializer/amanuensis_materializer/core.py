@@ -491,7 +491,7 @@ class Materializer:
         plan.extend(
             page
             for page in [
-                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="Identity, four status dimensions, and one route into each lens.", group="Overview", kind="overview"),
+                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="", group="Overview", kind="overview"),
                 PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
                 PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
                 PagePlan("files.md", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", group="Codebase", kind="files"),
@@ -513,7 +513,7 @@ class Materializer:
                 # and from this plan (§7.8), so it reads `plan` — complete by the
                 # time any page is built — rather than a hand-written route list
                 # a new page could be left out of.
-                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read the conspectus", label="Reader's guide", hint="Every enum, what it authorizes, and what it cannot justify.", group="Method", kind="guide"),
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read the conspectus", label="Reader's guide", hint="", group="Method", kind="guide"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", group="Method", kind="coverage"),
                 passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", group="Method", kind="diagnosticity"),
