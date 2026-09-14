@@ -201,9 +201,9 @@ not a pass (VP4(e)).
 
 ### 1.6 Which measures may turn a gate red
 
-`decisions.md` §3 forbids numeric minimums on generative obligations; the proposal's §3 item 5
-(`README.md:97-102`) lists `field notes` and `vocabulary terms` among the axes a rebuild must
-"meet or exceed". These conflict. The decisions govern, and the resolution is:
+`decisions.md` §3 forbids numeric minimums on generative obligations; item 5 of the proposal's §3
+("Depth gate against the baseline") lists `field notes` and `vocabulary terms` among the axes a
+rebuild must "meet or exceed". These conflict. The decisions govern, and the resolution is:
 
 - **Blocking axes** (§7.3) are not measures at all. They are coverage of an enumerable
   denominator, or per-record obligations the gate evaluates beside the measures:
@@ -1323,6 +1323,16 @@ that is not a packet gate: §8.9 places it in **P4**, whose gate field is `GATE 
 therefore shipped and proved inside P4's red commit and checked by P4's acceptance, and it runs as a
 regression command from P8 onward — a weaker proof than every other gate here receives, recorded
 here rather than left to be discovered.
+
+**Every packet re-runs the gates it depends on.** A packet's regression list contains the gate
+command of every packet it transitively depends on. Without that closure a gate goes red in the
+packet that broke it and is not run again until some later packet happens to list it, so the red is
+attributed to the wrong change and discovered at the wrong time — the failure the reader-lenses lane
+recorded when its `P2` gate had been red since `P8`. The serialized S1 packets share
+`mcp-server/src/invariants.ts`, `src/schema.sql` and `src/db.ts`, which is the coupling that makes
+the closure load-bearing rather than ceremonial. `GATE CF2` remains the one
+exception, for the reason just given: it is not a packet gate and runs as a regression command from
+**P8** onward.
 
 ### 8.0a `GATE XS1` — `mcp-server/test-existing-store-migration.mjs`
 

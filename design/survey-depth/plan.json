@@ -278,7 +278,9 @@
         "cd mcp-server && node test-refresh-recovery.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs"
       ],
       "acceptance": [
         "detect_changes writes exactly one append-only scope_reconciliations row per invocation, inside the transaction that rewrites scope_gaps (spec.md \u00a73.2).",
@@ -365,7 +367,10 @@
         "cd mcp-server && node test-structural-claims.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs"
       ],
       "acceptance": [
         "define_term requires an active session, parses first_seen with requireWorkspaceCitation(strict), resolves the token's revision, and verifies the token's path exists in that revision's tree with git cat-file -e (spec.md \u00a74.2).",
@@ -463,7 +468,11 @@
         "node dev/test-amanuensis-pecia-defects.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs"
       ],
       "acceptance": [
         "carried_findings and carried_finding_outcomes exist with the shapes of spec.md \u00a75.2, outside the findings namespace.",
@@ -554,7 +563,12 @@
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
         "node dev/test-reader-lenses-dogfood.mjs",
-        "node dev/record-survey-depth-baseline.mjs --check"
+        "node dev/record-survey-depth-baseline.mjs --check",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs"
       ],
       "acceptance": [
         "dev/survey-depth-baseline.json carries the D1-D12 SQL verbatim, the archived store identity and anchor, and the thirteen baseline open finding ids; it is regenerable and --checkable.",
@@ -635,7 +649,12 @@
         "cd mcp-server && node test-projection-custody.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs"
       ],
       "acceptance": [
         "_tracked_paths reads the standing reconciliation and returns None (not 0) for an unreconciled store (spec.md \u00a73.4).",
@@ -717,7 +736,12 @@
         "cd mcp-server && node test-consumer-route.mjs",
         "node dev/test-rebuild-readback.mjs",
         "node dev/test-rebuild-coverage.mjs",
-        "node dev/test-reader-lenses-dogfood.mjs"
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-disposition-evidence.mjs",
+        "cd mcp-server && node test-scope-reconciliation.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-carried-findings.mjs"
       ],
       "acceptance": [
         "Each of the eleven passages in spec.md \u00a76.1 states the server's refusal in the server's own words; nothing describing a surviving behaviour is removed or softened.",
@@ -898,7 +922,8 @@
         "cd mcp-server && node test-carried-findings.mjs",
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "node dev/test-carried-finding-references.mjs"
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-carry-receipt.mjs"
       ],
       "acceptance": [
         "Subsystems are surveyed through the skill in priority order, in batches, each behind its own storage checkpoint, mirroring the reader-lenses lane's per-subsystem batching.",
@@ -988,7 +1013,9 @@
         "cd mcp-server && node test-carried-findings.mjs",
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
-        "node dev/test-carried-finding-references.mjs"
+        "node dev/test-carried-finding-references.mjs",
+        "node dev/test-carry-receipt.mjs",
+        "node dev/test-survey-depth.mjs"
       ],
       "acceptance": [
         "materialize_docs(clean_publish=true) then dev/promote-docs.mjs, with the read-back re-run at docs/.",
@@ -1066,7 +1093,10 @@
         "cd materializer && python3 test-unmeasured-coverage.py",
         "cd mcp-server && node test-refusal-parity.mjs",
         "node dev/test-carried-finding-references.mjs",
-        "node dev/test-survey-depth-red-gates.mjs"
+        "node dev/test-survey-depth-red-gates.mjs",
+        "node dev/test-carry-receipt.mjs",
+        "node dev/test-survey-depth.mjs",
+        "node dev/test-survey-depth-acceptance.mjs"
       ],
       "acceptance": [
         "pecia audit is re-run over the rebuilt store and each of the eight closed records whose reference stopped resolving \u2014 pc-1a91, pc-207e, pc-707e, pc-80b8, pc-833d, pc-adce, pc-ae87, pc-d688 \u2014 is accounted for in dev/pecia-dogfood.md, naming the carried record and its outcome.",

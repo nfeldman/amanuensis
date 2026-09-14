@@ -265,6 +265,19 @@ store is untracked, so the same commit reports `cannot run` in a clean checkout.
 found §8.0's enumeration ran "§8.1 to §8.9b", which silently excluded the one packet gate specified
 outside §8: D0's red conditions are §7.3's B1–B6. Both references now say §7.3 and §8.
 
+A fourth sweep asked the obvious follow-on question — if the launcher verifies each packet's gate,
+what re-runs it afterwards — and found the plan had no closure. P2 through P7 ran none of their
+predecessors' lane gates, and P10, P11 and P9 ran neither `dev/test-carry-receipt.mjs` nor
+`dev/test-survey-depth.mjs`; only P8 carried the full set, because D16/codex fixed P8 by name before
+`GATE CR1` and `GATE D0` existed as packet gates. This is the failure the reader-lenses lane already
+paid for, and it is visible in that lane's own `plan.json`: P2's gate runs in exactly one later
+packet's regression list, P21, the last packet, and 20 of its 21 packets omit at least one
+predecessor's gate. The four S1 packets here share `invariants.ts`, `schema.sql` and `db.ts`, so a
+P3 change that breaks `GATE SD1` would have been attributed to P8. Every packet's regression list
+now contains the gate of every packet it transitively depends on; §8.0 states the rule and C43
+records it. `GATE CF2` stays outside the closure, which is the weaker treatment §8.0 already
+records for it.
+
 What the revision did not close:
 
 - **The two reviewers disagreed about 11 claims and the disagreement was never about the facts.**

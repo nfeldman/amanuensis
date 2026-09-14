@@ -748,3 +748,21 @@ Evidence:
   `GATE D0 RED:`, none of which a `cannot run` line satisfies.
 - VP4(e) — a zero denominator is out-of-band, not a pass; VP4(f) — a kill proves a gate can fire,
   never that it fires selectively.
+
+### C43
+
+Every packet's regression list contains the gate command of every packet it transitively depends
+on. `GATE CF2` is the exception: it is not a packet gate and runs as a regression command from P8
+onward.
+
+Evidence:
+- `plan.json` — the closure holds for all twelve packets; before this revision P2 through P7 ran
+  none of their predecessors' lane gates, and P10, P11 and P9 ran neither `dev/test-carry-receipt.mjs`
+  (P8) nor `dev/test-survey-depth.mjs` (P10).
+- `plan.json` S1 is serialized P0 to P1 to P2 to P3 to P4, and those packets share
+  `mcp-server/src/invariants.ts`, `src/schema.sql` and `src/db.ts`.
+- `design/reader-lenses/plan.json` — P2's gate `cd mcp-server && node test-finding-partition.mjs`
+  appears in exactly one later packet's regression list (P21, the last packet), and 20 of that
+  lane's 21 packets omit at least one predecessor's gate.
+- `spec.md` §8.0.
+
