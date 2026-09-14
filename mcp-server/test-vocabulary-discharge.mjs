@@ -68,6 +68,7 @@
 //   drop requireActiveSession from define_term                   → A6
 //   store the anchor as typed instead of resolved                → A7
 //   drop either declination trigger                              → D1, D2
+//   delete declinations on reset_subsystem                       → D5
 //   let decline_domain_vocabulary answer over an anchored term   → C2
 //   stop resolving the declination's ref_sha                     → C3
 //   declare the tool without advertising it                      → C5
@@ -794,6 +795,29 @@ async function main(mods) {
       const d03 = advanceToStructural(ctx, "D-03");
       if (d03) wrong.push(`D-03 could not advance on the term it just defined: ${d03}`);
       return wrong.length === 0 ? null : wrong.join("; ");
+    });
+
+    check("D5 a subsystem reset does not erase the declination", () => {
+      // §4.3, and GP18's rule underneath it: a ruled-out record is kept, not
+      // deleted. `reset_subsystem` discards the artifacts of a survey pass so
+      // the conspectus stays consistent with the earlier status; the judgement
+      // that this subsystem coins nothing is not one of them.
+      readyForStructural(ctx, "D-04");
+      seedDeclination(ctx, "D-04", head, "the judgement a later reset must not erase");
+      const advance = advanceToStructural(ctx, "D-04");
+      if (advance) return `D-04 could not advance on its declination: ${advance}`;
+      const said = refusal(() =>
+        call(
+          "reset_subsystem",
+          { id: "D-04", to_status: "scoping", reason: "redo the structural pass from scoping" },
+          ctx,
+        ),
+      );
+      if (said) return `reset_subsystem refused: ${said}`;
+      const rows = declinationsOf(ctx, "D-04");
+      return rows.length === 1
+        ? null
+        : `the reset left ${rows.length} declination(s) where 1 stood; a kept record is what tells a later pass that someone already read this subsystem and concluded it coins nothing`;
     });
 
     check("D4 the store re-opens with the declination rows it already held", () => {

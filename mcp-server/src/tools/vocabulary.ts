@@ -7,6 +7,7 @@ import {
   requireString,
   requireWorkspaceCitation,
   resolveWorkspaceCommit,
+  type ServerContext,
   type ToolDefinition,
   ToolError,
   workspaceTreeHasPath,
@@ -34,7 +35,7 @@ import { readVocabularyDischarge, requireActiveSession } from "../invariants.js"
  * later reader comparing revisions has a commit to compare rather than a prefix
  * to guess at, and a prefix that is unambiguous today need not stay so.
  */
-function resolveAnchor(ctx: Parameters<ToolDefinition["handler"]>[1], value: string): string {
+function resolveAnchor(ctx: ServerContext, value: string): string {
   const parsed = requireWorkspaceCitation(value, "first_seen", { strict: true });
   if (!isCitationToken(parsed)) {
     throw new ToolError(
