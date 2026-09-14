@@ -2064,6 +2064,68 @@ async function main(mods) {
         : "record_carried_outcome is advertised as read-only; it writes a durable terminal outcome";
     });
 
+    // F4/codex. The drop loop stopped at `page.length > 1`, so one record that
+    // is over budget by itself stayed in — a 9,000-character
+    // archived_finding_id produced an 18,428-byte envelope against 8,192.
+    check("F4 one oversized record is refused at the writer and never overruns the page", () => {
+      const big = world("oversized");
+      const storeE = "store-oversizedfix00";
+      const longId = `OVER-${"x".repeat(9000)}`;
+      const runId = call(
+        "begin_carry_run",
+        {
+          source_kind: "store",
+          source_path: big.project.dbPath,
+          archived_store_id: storeE,
+          reason: "the oversized-id probe",
+          expected_count: 1,
+          imported_count: 1,
+        },
+        big,
+      ).carry_run_id;
+      const said = refusal(() =>
+        call(
+          "carry_finding",
+          {
+            carry_run_id: runId,
+            archived_finding_id: longId,
+            subsystem_id: "B03",
+            severity: "HIGH",
+            symptom: "a symptom",
+            root_cause: "a cause",
+            archived_resolution: "open",
+          },
+          big,
+        ),
+      );
+      if (!said) {
+        return `carry_finding accepted a ${longId.length}-character archived_finding_id; the compact page repeats it once per row, so one record puts the page over the envelope on its own`;
+      }
+      if (!/archived_finding_id/.test(said)) {
+        return `the refusal does not name the field: ${said}`;
+      }
+      // A store written before the bound existed still has to be listable, so
+      // the row goes in under the tool and the page is read back through it.
+      seedCarried(big, {
+        archived_finding_id: longId,
+        archived_store_id: storeE,
+        symptom: `a symptom ${"y".repeat(4000)}`,
+      });
+      const page = call("list_carried_findings", {}, big);
+      const bytes =
+        Buffer.byteLength(JSON.stringify(page, null, 2), "utf8") +
+        Buffer.byteLength(JSON.stringify(page), "utf8");
+      if (bytes > 8192) {
+        return `one page cost ${bytes} bytes against the 8192-byte budget with a single record in it; a page that cannot be made to fit must be cut down, not served`;
+      }
+      if ((page.carried ?? []).length !== 1) {
+        return `the page dropped its only record rather than compacting it: ${JSON.stringify(page).slice(0, 160)}`;
+      }
+      return page.compacted === 1
+        ? null
+        : "the page fits but does not say a record was cut down, so a reader cannot tell a short symptom from a removed one";
+    });
+
     check("F2 list_carried_findings pages within the 8192-byte envelope", () => {
       if (session.error) return `the tool list could not be read — ${scrub(session.error)}`;
       const first = session.results?.[0];

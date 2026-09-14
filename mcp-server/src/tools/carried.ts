@@ -107,6 +107,16 @@ function envelopeBytes(payload: unknown): number {
   );
 }
 
+/**
+ * The longest an id a compact page must carry may be.
+ *
+ * `archived_finding_id` is an identifier — `B03-5`, `B07-1` — and the compact
+ * page repeats it once per row. Unbounded, one record is enough to put the
+ * page over the wire budget on its own: a 9,000-character id produced an
+ * 18,428-byte envelope against a budget of 8,192 (F4/codex, slice-S1).
+ */
+const MAX_ID_LENGTH = 200;
+
 /** The first line of a symptom, which is what a compact page carries. */
 function firstLine(text: string): string {
   const line = String(text ?? "").split("\n")[0] ?? "";
@@ -246,6 +256,15 @@ export const carriedTools: ToolDefinition[] = [
       }
 
       const archivedFindingId = requireString(args, "archived_finding_id");
+      if (archivedFindingId.length > MAX_ID_LENGTH) {
+        throw new ToolError(
+          `archived_finding_id is ${archivedFindingId.length} characters. It is the archive's own ` +
+            `id for the finding — 'B03-5', 'B07-1' — and the compact page repeats it once per row, ` +
+            `so a value this long puts a single record over the ${WIRE_BUDGET}-byte response ` +
+            `envelope by itself. At most ${MAX_ID_LENGTH} characters; the account of the defect ` +
+            `belongs in symptom and root_cause.`,
+        );
+      }
       const subsystemId = requireString(args, "subsystem_id");
       const severity = requireEnum(args, "severity", SEVERITIES);
       const symptom = requireString(args, "symptom");
@@ -645,9 +664,11 @@ export const carriedTools: ToolDefinition[] = [
       // page is a reader that can page; a list tool that returns 22 full
       // findings in one envelope is a tool nothing can call twice.
       let truncated = hasMore;
+      let compacted = 0;
       const build = () => ({
         carried: page,
         count: page.length,
+        ...(compacted > 0 ? { compacted } : {}),
         ...(truncated && page.length > 0
           ? { next_cursor: String(page[page.length - 1]?.carried_id ?? "") }
           : {}),
@@ -655,6 +676,20 @@ export const carriedTools: ToolDefinition[] = [
       while (page.length > 1 && envelopeBytes(build()) > WIRE_BUDGET) {
         page.pop();
         truncated = true;
+      }
+      // The loop stops at one record, and one record can be over budget by
+      // itself — the writer's bound is new, and a store carrying a row written
+      // before it must still be listable. Dropping the last row would answer a
+      // page request with an empty page and no way forward, so the row is cut
+      // down instead and the count of cut rows is published: a reader who needs
+      // the whole value asks get_carried_finding for it.
+      const last = page[0];
+      if (page.length === 1 && last !== undefined && envelopeBytes(build()) > WIRE_BUDGET) {
+        last.symptom = "";
+        compacted = 1;
+        if (last.archived_finding_id.length > MAX_ID_LENGTH) {
+          last.archived_finding_id = `${last.archived_finding_id.slice(0, MAX_ID_LENGTH)}…`;
+        }
       }
       return build();
     },
