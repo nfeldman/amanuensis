@@ -69,7 +69,9 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 ## Known defects here
 
-No defect here is open or awaiting verification.
+1 defect here is open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
+
+- A clean publish, its promotion to docs/, and the published site can all be green while the overview's thesis slot shows the placeholder "No thesis section is recorded; add a 'What is this codebase?' section to entry-point.md." The clean-slate rebuild of 2026-09-13 produced exactly this on the public site: the survey was complete and the thesis existed, but under the heading "What does this system do?", which the renderer does not recognize. — [B05-R1](../findings.md#b05-r1) · 🟡 MEDIUM · Open
 
 ## Standing
 
@@ -82,7 +84,7 @@ No defect here is open or awaiting verification.
 | Files excluded from the survey obligation | 1 of 12 |
 | Ledger rows the repository has changed under | 0 of 12 |
 | Active concerns with a disposition recorded here | 23 of 30 — 16 confirmed-acceptable, 2 ruled-out, 4 out-of-scope, 1 unresolved-competition |
-| Findings by resolution state | none recorded |
+| Findings by resolution state | 1 open |
 | Seams assessable from both sides | 3 of 3 |
 
 ## Survey record

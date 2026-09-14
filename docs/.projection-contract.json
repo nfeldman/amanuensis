@@ -67,27 +67,27 @@
     },
     {
       "path": "files.html",
-      "content_hash": "ef2f4c3c69378b8d7bb245194c17ed3b8f51ba4df59e0b560293d13078ac03ff"
+      "content_hash": "fe7f8ecce6572eb7ba87d4cf244ee18c05bc91f4962430a99176cf7865223e00"
     },
     {
       "path": "files.md",
-      "content_hash": "37be89f3d71d608c58a05f5a93a963f1710d2055abc5cdf6c9447d98cc0e790a"
+      "content_hash": "27563225b4888e73f8cb12c59f0c726bd86c8ad0df3327957ccd3dd7eea78cc0"
     },
     {
       "path": "findings.html",
-      "content_hash": "68c4c255a98aa6c82a6b55bd4de5a3660538856e08a0e878c449c8822f8de14a"
+      "content_hash": "635aa5a16564e3010076380a447e137a6f2b1788a0e2b8f308c3d6ff589d9fab"
     },
     {
       "path": "findings.md",
-      "content_hash": "9db03522204331472c197d1ba1a71ce85232162b7b08e464adc65a4a1b059687"
+      "content_hash": "c96e898f03d13c82c3d27a73d116564affd8c8db0b82d8426f4bbf0b60b55767"
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "9d3b7d6bd26b1e91ddd8d0f897cd5e698d10f950a56475f99893dc8baf0364a2"
+      "content_hash": "6367749a9abaa8ac2b291f3c83297d3510d3a7b12642e59a2d95ca8e16cdd2b3"
     },
     {
       "path": "hot-spots.md",
-      "content_hash": "f76872901d4f7c52fb65a57c961b1e4f02b73f2c1e8a3e8851e96e85b09077f0"
+      "content_hash": "4a1ebfefbdb790c49525ddc54fb8c3579dc6e35945e09edc0b29ed03c57a0e1e"
     },
     {
       "path": "how-to-read.html",
@@ -99,19 +99,19 @@
     },
     {
       "path": "index.html",
-      "content_hash": "50e7cc539ee3c2a378e2a2acc3ce046e5ad900b690ff1e2b161f767edfbd6b07"
+      "content_hash": "8435df6acc260dec88f1f4103c54fadf1f850ebbe6dad95f57173aa919ce7dc2"
     },
     {
       "path": "index.md",
-      "content_hash": "3175d39771f417b775598c8a35b367de0b33f517a6b4f5a38cf48adafff4682b"
+      "content_hash": "2e7bfe97f38b3a1a711ec990c5a5c434da95c1463faaa48683fb44ccfe745372"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "63f71b6d13f67c86b1a9eb475ebd5ecc62394bc91cca8ac7d9c1b2b2390fae53"
+      "content_hash": "d478b38a1ad236844b3706d43e34f639117b9cd3be2c548dd19ff3588329578f"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "39c26d355ee81a7094db14902d0d33582d3913d9897cf0eb1a3be42a6eb28846"
+      "content_hash": "9391633e40bb91d7afc3447aff82b4fb83b58906b28f2432cd815ff3eeb4466b"
     },
     {
       "path": "not-yet-surveyed.html",
@@ -139,11 +139,11 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "1181209efaca53fb7099ffefcfe0290065b172b99b1824687938d682969845f8"
+      "content_hash": "584886bfac1373751de84b1f91113f8b8924a991499f755d99f46aba97b99f20"
     },
     {
       "path": "resolution-history.md",
-      "content_hash": "d39b66b55bd960612fe813bfaa2daba8bd9ff42b4663cecc8b36ba06285fed05"
+      "content_hash": "f9de29aafa4ff3b52241dcc4bd8f13c5540520993e68d102d3cc9e1a5bda9e31"
     },
     {
       "path": "resolved-findings.html",
@@ -171,15 +171,15 @@
     },
     {
       "path": "search-index.js",
-      "content_hash": "e5d634b99566a308073a55d3ae9271b078533a7c97e85b145cb9a1e20bbd2fc1"
+      "content_hash": "3c2cb45563be7b71cc358ad4b72542d4c5b4ebe91b25e40a74893f7ff59ddc1f"
     },
     {
       "path": "sessions.html",
-      "content_hash": "2adb8c5093fc3e7a613f8f684e531e0971385dab601e72c86fd0e2607613e10a"
+      "content_hash": "25a2c1d3391d0b7316ffb98a09f1f298115d7eae14c019c51a73f0fe5cddacdb"
     },
     {
       "path": "sessions.md",
-      "content_hash": "63a8d1e586cc1ac6894c60766e2493a1398b932c486994996493a32966b2a948"
+      "content_hash": "8e15c1ae8bacadc73bb07067ad91031dd8444b6e2189ae73db5a1b1ca80fdeaa"
     },
     {
       "path": "stale.html",
@@ -223,11 +223,11 @@
     },
     {
       "path": "subsystems/b05-materializer-human-projection-read-back-html.html",
-      "content_hash": "f8e8f0dd7330e3dba8a420e8e0e276f7d9fd300ac12722279ec41c7a0814b185"
+      "content_hash": "95ff6d58562234e1b4b204fbfa9971d9b10647699d9ddc7d5b3eed8bbb501388"
     },
     {
       "path": "subsystems/b05-materializer-human-projection-read-back-html.md",
-      "content_hash": "93d041e48420a465836785a789557663f697a6ca042b864648384282bb8d548a"
+      "content_hash": "0358c49c84e8875c65638ac476bfd168e6907d3d9955135aabcedadf26032f59"
     },
     {
       "path": "subsystems/b06-packaging-installer-and-host-activation.html",
@@ -4929,6 +4929,10 @@
     },
     {
       "source": "findings.html",
+      "target": "subsystems/b05-materializer-human-projection-read-back-html.html"
+    },
+    {
+      "source": "findings.html",
       "target": "subsystems/b06-packaging-installer-and-host-activation.html"
     },
     {
@@ -4982,6 +4986,10 @@
     {
       "source": "findings.md",
       "target": "subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md"
+    },
+    {
+      "source": "findings.md",
+      "target": "subsystems/b05-materializer-human-projection-read-back-html.md"
     },
     {
       "source": "findings.md",
@@ -7369,6 +7377,10 @@
     },
     {
       "source": "resolution-history.html",
+      "target": "findings.html#b05-r1"
+    },
+    {
+      "source": "resolution-history.html",
       "target": "findings.html#b07-r1"
     },
     {
@@ -7518,6 +7530,10 @@
     {
       "source": "resolution-history.md",
       "target": "findings.md#b04-r4"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b05-r1"
     },
     {
       "source": "resolution-history.md",
@@ -11325,6 +11341,14 @@
     },
     {
       "source": "subsystems/b05-materializer-human-projection-read-back-html.html",
+      "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b05-materializer-human-projection-read-back-html.html",
+      "target": "../findings.html#b05-r1"
+    },
+    {
+      "source": "subsystems/b05-materializer-human-projection-read-back-html.html",
       "target": "../hot-spots.html"
     },
     {
@@ -11602,6 +11626,14 @@
     {
       "source": "subsystems/b05-materializer-human-projection-read-back-html.md",
       "target": "../concerns.md#zd-1"
+    },
+    {
+      "source": "subsystems/b05-materializer-human-projection-read-back-html.md",
+      "target": "../findings.md"
+    },
+    {
+      "source": "subsystems/b05-materializer-human-projection-read-back-html.md",
+      "target": "../findings.md#b05-r1"
     },
     {
       "source": "subsystems/b05-materializer-human-projection-read-back-html.md",

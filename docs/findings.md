@@ -2,7 +2,7 @@
 
 ## Open
 
-_13 defect(s) with no recorded repair._
+_14 defect(s) with no recorded repair._
 
 ### High findings
 
@@ -64,6 +64,13 @@ _13 defect(s) with no recorded repair._
 | <a id="b04-r3"></a>**B04-R3** | open | `add_claim` accepts a `claim_key` whose slug does not identify the subject, and the writer only learns the rule from a gate that runs long after the record is durable — at which point the record cannot be corrected without discarding the whole structural phase. | The stable-key rule lives on the wrong side of the seam. `FILE_ANCHORED_CLAIM_KEY` (claims.ts:52) matches only the category and its trailing slash, so the server validates that a key *is* a key-type, state-container or flow claim and never what it names. `dev/test-rebuild-coverage.mjs:keyShapeFailure` recomputes the stable key as the slug of the whole `path:symbol` pair and requires exact equality, with a comment recording that a slug built from the symbol alone once made two `Config` types collide and silently shortened a subsystem's inventory. Both were exercised here: the server accepted `B-02/state-container/openDatabase`, which the gate's rule refuses. Because `claim_key` carries a unique index and is what makes a later reading supersede rather than duplicate, an unstable key is not cosmetic — it is a silent collision across files. The correction path compounds it: `invalidate_claim` and `supersede_claim` both need a strictly later commit (B04-R2), and `supersede_claim` preserves the `claim_key` that is the wrong field anyway, so `reset_subsystem` — which discards every claim, disposition, edge and ledger row for the subsystem — is the only route. | `7c1c1a9f` |
 <!-- amanuensis:finding:4517db145592d447a60f8d6004a74cc678cc8a478626110583f9ff3fbedff01c -->
 | <a id="b04-r4"></a>**B04-R4** | open | A hung `git` invocation inside a tool handler blocks that call indefinitely. Because the calls are synchronous and block the Node event loop, the whole server stops answering, not just the one request. | Revision resolution runs `git rev-parse` from the handler path with no `timeout` and no `killSignal`. In this subsystem that is two call sites in `tools/xrefs.ts`, three in `tools/claims.ts` and two in `standing.ts`. Across the whole of `mcp-server/src` there are about sixty subprocess call sites and only two modules mention a timeout at all — `project.ts` (six sites) and `codex-host.ts`, which are the startup-path modules the earlier repair covered. The exposure is broader than the startup case because `requireResolvedSha` deliberately resolves live on every durable write with no memoization, so every claim, evidence row, disposition and finding pays a subprocess. | `7c1c1a9f` |
+
+#### [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md)
+
+| ID | Status | Symptom | Root cause | Ref SHA |
+|---|---|---|---|---|
+<!-- amanuensis:finding:a247e548df4419686248d7e0efb8e9ccb19a31d3669107703838094830dd217e -->
+| <a id="b05-r1"></a>**B05-R1** | open | A clean publish, its promotion to docs/, and the published site can all be green while the overview's thesis slot shows the placeholder "No thesis section is recorded; add a 'What is this codebase?' section to entry-point.md." The clean-slate rebuild of 2026-09-13 produced exactly this on the public site: the survey was complete and the thesis existed, but under the heading "What does this system do?", which the renderer does not recognize. | The heading contract exists in two places that never meet: the skill's artifact template prescribes "What is this codebase?" as prose, and read_thesis extracts by that exact heading, but register_artifact and rehash_artifact validate nothing about an entry-point artifact's sections, and the publish read-back axes compare projection against store without asserting the thesis slot is filled. A variant heading therefore passes every gate and reaches readers as a placeholder. | `d3aeecc` |
 
 #### [Gates, evidence custody, and CI](subsystems/b07-gates-evidence-custody-and-ci.md)
 

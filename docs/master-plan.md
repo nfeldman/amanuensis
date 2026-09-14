@@ -29,7 +29,7 @@
 
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
-| 2 | **[B-05](subsystems/b05-materializer-human-projection-read-back-html.md)** | Materializer: human projection, read-back, HTML | 🟢 mapped | materializer/materialize.py and materializer/amanuensis_materializer/ (core.py, db.py, renderers.py, html_projection.py, readback.py, manifest.py, diagrams.py, lint.py, slugs.py, vocabulary.py, xref.py) | materializer/amanuensis_materializer/core.py — the publish orchestration and the clean-publish contract; then readback.py for the three verification axes, then renderers.py / html_projection.py for the page set. | 0 (0 open) |
+| 2 | **[B-05](subsystems/b05-materializer-human-projection-read-back-html.md)** | Materializer: human projection, read-back, HTML | 🟢 mapped | materializer/materialize.py and materializer/amanuensis_materializer/ (core.py, db.py, renderers.py, html_projection.py, readback.py, manifest.py, diagrams.py, lint.py, slugs.py, vocabulary.py, xref.py) | materializer/amanuensis_materializer/core.py — the publish orchestration and the clean-publish contract; then readback.py for the three verification axes, then renderers.py / html_projection.py for the page set. | 1 (1 open) |
 
 ## records
 

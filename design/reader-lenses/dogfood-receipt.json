@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-14T04:53:44.267Z",
-  "repository_sha": "dee59d3e019a6747af714aa5a44acbb774ff6d5f",
+  "recorded_at": "2026-09-14T05:46:00.974Z",
+  "repository_sha": "f731fb001165ecd4bac8c52e380863b04222e28d",
   "workspace_path": "/Users/nfeldman/repos/amanuensis",
   "storage_path": "/Users/nfeldman/repos/amanuensis/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
@@ -21,7 +21,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 20322,
+      "wire_bytes": 20472,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -65,8 +65,8 @@
           "revision": {
             "checked_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
             "checked_at": "2026-09-14 03:27:25",
-            "repository_head": "dee59d3e019a6747af714aa5a44acbb774ff6d5f",
-            "origin_head": "01f778a768b63eeb0cacf71c6ddd7ee68a0edb7e",
+            "repository_head": "f731fb001165ecd4bac8c52e380863b04222e28d",
+            "origin_head": "d3aeeccad8705f61868090d6619e307644a80783",
             "agrees": false,
             "unchecked_since": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           },
@@ -78,7 +78,7 @@
               "last_checked_at": "2026-09-14 03:27:25"
             },
             "staleness_measured": true,
-            "evidence_rows": 3,
+            "evidence_rows": 5,
             "claims_recorded": 2
           },
           "unknown": [],
@@ -133,7 +133,7 @@
             "as_of": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           },
           "defects": {
-            "census": 3,
+            "census": 4,
             "recorded": true,
             "requested": false,
             "as_of_supported": true,
@@ -208,7 +208,7 @@
             "as_of": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           },
           "history_pointer": {
-            "census": 4,
+            "census": 6,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
@@ -235,24 +235,24 @@
               }
             ],
             "counts": {
-              "finding_resolution_events": 3,
-              "sessions": 1
+              "finding_resolution_events": 4,
+              "sessions": 2
             },
             "session_attribution": "by-citation",
             "as_of": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           }
         },
         "census": {
-          "total": 29,
+          "total": 32,
           "by_section": {
             "purpose": 1,
             "structure": 2,
-            "defects": 3,
+            "defects": 4,
             "reviews": 2,
             "boundaries": 10,
             "terms": 0,
             "leads": 1,
-            "history_pointer": 4,
+            "history_pointer": 6,
             "unknown": 6
           }
         },
@@ -283,9 +283,10 @@
           {
             "section": "defects",
             "reason": "policy",
-            "count": 3,
+            "count": 4,
             "ids": [
               "defects:B02-R1",
+              "defects:B02-R4",
               "defects:B02-R2",
               "defects:B02-R3"
             ],
@@ -312,9 +313,11 @@
           {
             "section": "history_pointer",
             "reason": "budget",
-            "count": 2,
+            "count": 4,
             "ids": [
+              "history:event/13",
               "history:event/1",
+              "history:session/mu0s06eb-zblx9ra9",
               "history:session/mu0ok6i1-uhwgqsb9"
             ],
             "ids_truncated": false
@@ -324,8 +327,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 9754,
-          "response_bytes": 20322,
+          "payload_bytes": 9826,
+          "response_bytes": 20472,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": true,
@@ -398,8 +401,8 @@
           "revision": {
             "checked_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
             "checked_at": "2026-09-14 03:27:25",
-            "repository_head": "dee59d3e019a6747af714aa5a44acbb774ff6d5f",
-            "origin_head": "01f778a768b63eeb0cacf71c6ddd7ee68a0edb7e",
+            "repository_head": "f731fb001165ecd4bac8c52e380863b04222e28d",
+            "origin_head": "d3aeeccad8705f61868090d6619e307644a80783",
             "agrees": false,
             "unchecked_since": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           },
@@ -710,8 +713,8 @@
           "revision": {
             "checked_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
             "checked_at": "2026-09-14 03:27:25",
-            "repository_head": "dee59d3e019a6747af714aa5a44acbb774ff6d5f",
-            "origin_head": "01f778a768b63eeb0cacf71c6ddd7ee68a0edb7e",
+            "repository_head": "f731fb001165ecd4bac8c52e380863b04222e28d",
+            "origin_head": "d3aeeccad8705f61868090d6619e307644a80783",
             "agrees": false,
             "unchecked_since": "7c1c1a9f5689d396487072d012abe6fafd5f348c"
           },
@@ -967,7 +970,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 12162,
+    "wire_bytes": 12236,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -989,7 +992,7 @@
       "checked_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
       "sections": {
         "open": {
-          "census": 12,
+          "census": 14,
           "recorded": true,
           "requested": true,
           "items": [
@@ -1003,19 +1006,19 @@
               "authored": "code"
             },
             {
-              "finding_id": "B03-R1",
+              "finding_id": "B02-R4",
               "label": "open",
               "severity": "HIGH",
-              "subsystem_id": "B-03",
-              "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
+              "subsystem_id": "B-02",
+              "ref_sha": "dad71133c3c35b0c8d766a6f2cd5a31c9bcb0f34",
               "revision_bound": true,
               "authored": "code"
             },
             {
-              "finding_id": "B04-R1",
+              "finding_id": "B03-R1",
               "label": "open",
               "severity": "HIGH",
-              "subsystem_id": "B-04",
+              "subsystem_id": "B-03",
               "ref_sha": "7c1c1a9f5689d396487072d012abe6fafd5f348c",
               "revision_bound": true,
               "authored": "code"
@@ -1126,6 +1129,26 @@
           "requested": true,
           "items": [
             {
+              "subsystem_id": "B-02",
+              "open_critical_high": 2,
+              "open_medium_low": 2,
+              "awaiting_verification": 0,
+              "undiscriminated": 0,
+              "weakest_confirmed_bug_evidence": "test-observed",
+              "unread": {
+                "candidate": 0,
+                "obligation_bearing": 8
+              },
+              "stale_files": 0,
+              "unassessed_seam_sides": {
+                "sides": 0,
+                "of": 10
+              },
+              "ref_sha": null,
+              "revision_bound": false,
+              "authored": "code"
+            },
+            {
               "subsystem_id": "B-04",
               "open_critical_high": 2,
               "open_medium_low": 2,
@@ -1140,26 +1163,6 @@
               "unassessed_seam_sides": {
                 "sides": 0,
                 "of": 6
-              },
-              "ref_sha": null,
-              "revision_bound": false,
-              "authored": "code"
-            },
-            {
-              "subsystem_id": "B-02",
-              "open_critical_high": 1,
-              "open_medium_low": 2,
-              "awaiting_verification": 0,
-              "undiscriminated": 0,
-              "weakest_confirmed_bug_evidence": "test-observed",
-              "unread": {
-                "candidate": 0,
-                "obligation_bearing": 8
-              },
-              "stale_files": 0,
-              "unassessed_seam_sides": {
-                "sides": 0,
-                "of": 10
               },
               "ref_sha": null,
               "revision_bound": false,
@@ -1192,9 +1195,9 @@
         }
       },
       "census": {
-        "total": 32,
+        "total": 34,
         "by_section": {
-          "open": 12,
+          "open": 14,
           "awaiting_verification": 0,
           "undiscriminated": 1,
           "decisions": 5,
@@ -1207,8 +1210,9 @@
         {
           "section": "open",
           "reason": "budget",
-          "count": 9,
+          "count": 11,
           "ids": [
+            "finding:B04-R1",
             "finding:B04-R2",
             "finding:B01-R1",
             "finding:B02-R2",
@@ -1216,6 +1220,7 @@
             "finding:B03-R2",
             "finding:B04-R3",
             "finding:B04-R4",
+            "finding:B05-R1",
             "finding:B07-R2",
             "finding:B07-R1"
           ],
@@ -1251,8 +1256,8 @@
           "count": 5,
           "ids": [
             "subsystem:B-07",
-            "subsystem:B-01",
             "subsystem:B-05",
+            "subsystem:B-01",
             "subsystem:B-08",
             "subsystem:B-06"
           ],
@@ -1263,8 +1268,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5735,
-        "response_bytes": 12162,
+        "payload_bytes": 5770,
+        "response_bytes": 12236,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1291,6 +1296,10 @@
       "resolution_state": "open"
     },
     {
+      "finding_id": "B02-R4",
+      "resolution_state": "open"
+    },
+    {
       "finding_id": "B03-R1",
       "resolution_state": "open"
     },
@@ -1312,6 +1321,10 @@
     },
     {
       "finding_id": "B04-R4",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B05-R1",
       "resolution_state": "open"
     },
     {
@@ -1341,7 +1354,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-ae124b3d-3ce6-44c9-b35f-93fa6875deee",
+      "projection_run_id": "projection-6e19bdc6-d3a0-407f-9544-8297ac1f9e0d",
       "pages_rendered": 32,
       "html_pages_rendered": 32,
       "summary": {
@@ -1377,17 +1390,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-ae124b3d-3ce6-44c9-b35f-93fa6875deee"
+        "projection_run_id": "projection-6e19bdc6-d3a0-407f-9544-8297ac1f9e0d"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "b5e3a55fae09b8cbc8f1f543ee577e23f0654d748e3f2cae97b057f82c983f63",
-      "manifest_sha256": "3718fdcf027f3ea8e47754b2d9931f416d7dd31096482620104365b19cc14980",
+      "projection_contract_sha256": "1d9363aafcf36574cf5e0e8611670bfd7f41021f744a53ff016a7edf6305476d",
+      "manifest_sha256": "be04d3eabd7e27222373855cd4387413e919306efb7435095ce59114342b89d7",
       "page_count": 65,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-14T04:53:43.586Z",
+      "promoted_at": "2026-09-14T05:46:00.102Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",

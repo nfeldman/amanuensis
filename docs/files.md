@@ -5,7 +5,7 @@
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
 | <a id="f-a7c652762b"></a>`.claude/skills/amanuensis/SKILL.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-017d152868) | Examined | `7c1c1a9f` | 0 |
-| <a id="f-3a6f56ce8c"></a>`.claude/skills/amanuensis/references/artifact-templates.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-592927548e) | In scope, not yet read | `7c1c1a9f` | 0 |
+| <a id="f-3a6f56ce8c"></a>`.claude/skills/amanuensis/references/artifact-templates.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-592927548e) | In scope, not yet read | `7c1c1a9f` | 1 |
 | <a id="f-01232726e7"></a>`.claude/skills/amanuensis/references/concern-territories.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-18b6f1fc80) | Examined | `7c1c1a9f` | 0 |
 | <a id="f-d9f9a9a0dc"></a>`.claude/skills/amanuensis/references/memory-audit.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-87251d5427) | In scope, not yet read | `7c1c1a9f` | 0 |
 | <a id="f-2253c44398"></a>`.claude/skills/amanuensis/references/notes.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-6a8610a679) | Examined | `7c1c1a9f` | 0 |
@@ -52,7 +52,7 @@
 | <a id="f-33c2ca086d"></a>`materializer/amanuensis_materializer/lint.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-610d7cd955) | Examined | `7c1c1a9f` | 0 |
 | <a id="f-dbe02837ab"></a>`materializer/amanuensis_materializer/manifest.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-ebf0697c78) | Examined | `7c1c1a9f` | 0 |
 | <a id="f-e38072d03d"></a>`materializer/amanuensis_materializer/readback.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-beff4a666d) | Examined | `7c1c1a9f` | 0 |
-| <a id="f-3050a98470"></a>`materializer/amanuensis_materializer/renderers.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-64c8700835) | In scope, not yet read | `7c1c1a9f` | 0 |
+| <a id="f-3050a98470"></a>`materializer/amanuensis_materializer/renderers.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-64c8700835) | In scope, not yet read | `7c1c1a9f` | 1 |
 | <a id="f-91e672d1a7"></a>`materializer/amanuensis_materializer/slugs.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-2a6856e520) | Examined | `7c1c1a9f` | 0 |
 | <a id="f-58e6bc5395"></a>`materializer/amanuensis_materializer/vocabulary.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-198ab52db0) | Excluded | `7c1c1a9f` | 0 |
 | <a id="f-53c190d57b"></a>`materializer/amanuensis_materializer/xref.py` | [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md#le-b5528c0f23) | Examined | `7c1c1a9f` | 0 |

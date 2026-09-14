@@ -39,7 +39,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 | Metric | Value |
 |---|---|
 | Checked at | `7c1c1a9f5689` on `main`, 2026-09-14 03:27 UTC |
-| Repository head | `d3aeeccad870` — a different revision from the one the survey checked |
+| Repository head | `f731fb001165` — a different revision from the one the survey checked |
 | Upstream head | `d3aeeccad870` — a different revision from the one the survey checked (`origin/main`) |
 | Files carrying a survey obligation marked stale | 0 of 104 |
 | Scoped files exempt from that obligation, marked stale | 0 of 2 |
@@ -56,7 +56,7 @@ Four dimensions, each read from durable records and each reported on its own ter
 
 | Metric | Value |
 |---|---|
-| Findings open | 13 |
+| Findings open | 14 |
 | Repairs awaiting verification | 0 |
 | Contradictions unresolved | 0 |
 | Decisions open | 5 |
@@ -68,13 +68,13 @@ Four dimensions, each read from durable records and each reported on its own ter
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-14 04:53 UTC |
+| Verified at | 2026-09-14 05:42 UTC |
 
 ## Findings by resolution state
 
 | Metric | Value |
 |---|---|
-| [Open](findings.md) | 13 |
+| [Open](findings.md) | 14 |
 | [Accepted](resolved-findings.md) | 0 |
 | [Ruled out](resolved-findings.md) | 0 |
 | [Unverified fix](findings.md) | 0 |
@@ -89,5 +89,5 @@ Four dimensions, each read from durable records and each reported on its own ter
 
 ## Latest session
 
-`Correct the entry-point thesis heading to the template's 'What is this codebase?' so the overview renders the recorded thesis; republish and promote docs; file the missing artifact-heading contract check as a finding` — started 2026-09-14 05:42 UTC · **active**
+`Republish docs including finding B05-R1, promote with a promotion receipt, re-record the dogfood receipt, and verify the P18 gate before committing` — started 2026-09-14 05:45 UTC · **active**
 
