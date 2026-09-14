@@ -1124,8 +1124,22 @@ export function archivedStoreId(sourcePath: string): string {
     );
   }
   try {
-    const minted = readMintedGeneration(db);
-    if (minted !== null) return `store-${minted.slice(0, 16)}`;
+    const identity = readIdentityState(db);
+    if (identity.kind === "minted") return `store-${identity.value.slice(0, 16)}`;
+    if (identity.kind === "empty") {
+      // The table is here and the row is not. That is not a store frozen before
+      // the column existed — it is one whose identity went missing, most likely
+      // a `memory.db` copied away from the `-wal` that carried the mint. The
+      // legacy derivation would name it anyway, and name it *differently* from
+      // the store it was copied from, so it is refused here rather than allowed
+      // to invent a second identity for one archive.
+      throw new ToolError(
+        `the carry source at ${sourcePath} carries a store_identity table with no row. A store ` +
+          `frozen before that table existed has no table at all; one that has the table and no ` +
+          `row has lost its identity, and deriving a legacy id for it would name the same archive ` +
+          `twice. Copy the archive whole — memory.db together with its -wal and -shm — and re-run.`,
+      );
+    }
     const git = db
       .prepare(
         "SELECT repo_id, canonical_branch, onboarding_sha, last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1",
@@ -1162,22 +1176,33 @@ export function archivedStoreId(sourcePath: string): string {
 
 /** This store's own §5.3 identity, or null on a store that predates the table. */
 export function storeIdentity(db: DB): string | null {
-  const minted = readMintedGeneration(db);
-  return minted === null ? null : `store-${minted.slice(0, 16)}`;
+  const identity = readIdentityState(db);
+  return identity.kind === "minted" ? `store-${identity.value.slice(0, 16)}` : null;
 }
 
-function readMintedGeneration(db: DB): string | null {
+/**
+ * Three states, never two.
+ *
+ * `absent` is a store frozen before `store_identity` existed, and is what
+ * selects §5.3's legacy derivation. `empty` is a store that has the table and
+ * lost the row — a different fact, answered differently, because collapsing the
+ * two would let one archive be named twice under two different schemes.
+ */
+type IdentityState = { kind: "minted"; value: string } | { kind: "absent" } | { kind: "empty" };
+
+function readIdentityState(db: DB): IdentityState {
+  let row: { store_generation: string | null } | undefined;
   try {
-    const row = db.prepare("SELECT store_generation FROM store_identity WHERE id = 1").get() as
+    row = db.prepare("SELECT store_generation FROM store_identity WHERE id = 1").get() as
       | { store_generation: string | null }
       | undefined;
-    const value = row?.store_generation ?? null;
-    return typeof value === "string" && value.length > 0 ? value : null;
   } catch {
-    // A store frozen before the table existed. That absence is what selects
-    // the legacy derivation, so it is an answer rather than a failure.
-    return null;
+    return { kind: "absent" };
   }
+  const value = row?.store_generation ?? null;
+  return typeof value === "string" && value.length > 0
+    ? { kind: "minted", value }
+    : { kind: "empty" };
 }
 
 /**
