@@ -9,7 +9,7 @@
 // write path.
 import type { DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
-import { ToolError } from "./helpers.js";
+import { resolveWorkspaceCommits, ToolError } from "./helpers.js";
 
 export type SubsystemStatus =
   | "unmapped"
@@ -280,6 +280,121 @@ export function recordStatusTransition(
 }
 
 /**
+ * §2.3, checked at every advance to `concerns`, `adversarial` and `mapped`.
+ *
+ * Every row in `dispositions` for this subsystem must carry **at least one**
+ * `disposition_evidence` row whose `evidence.ref_sha` resolves in the bound
+ * workspace. At least one, not all: a disposition carrying two attachments, one
+ * resolvable and one whose revision was rewritten away, passes — the concern is
+ * still answered against a reading someone can open, and refusing it would make
+ * an ordinary rebase retroactively unmap a subsystem whose evidence is intact.
+ * The unreachable attachment is returned as a warning instead, so the advance
+ * says it rather than swallowing it.
+ *
+ * The two refusals are separate because the repairs differ: a disposition with
+ * no attachment is attached, one whose revisions are all unreachable is re-read
+ * at a reachable commit. Naming them in one message would tell a reader to do
+ * the wrong thing to half the rows.
+ *
+ * `workspacePath` is how the revisions are resolved, and every status writer in
+ * this server passes it. Without one the attachment half still binds — it is a
+ * question about rows, not about git — and the revisions are reported as
+ * unchecked rather than silently treated as reachable.
+ *
+ * Every distinct revision the subsystem's attachments name is resolved in one
+ * `git cat-file --batch-check` (see `resolveWorkspaceCommits`); one subprocess
+ * per attached row would put a status advance's cost in the subsystem's size.
+ */
+const NAMED_IN_REFUSAL = 25;
+function nameRows(rows: readonly string[]): string {
+  if (rows.length <= NAMED_IN_REFUSAL) return rows.join(", ");
+  return (
+    `${rows.slice(0, NAMED_IN_REFUSAL).join(", ")}, and ${rows.length - NAMED_IN_REFUSAL} more ` +
+    `(get_dispositions names every one)`
+  );
+}
+
+function requireAttachedEvidence(
+  db: DB,
+  subsystemId: string,
+  targetStatus: SubsystemStatus,
+  workspacePath: string | null,
+): string[] {
+  const rows = db
+    .prepare(
+      `SELECT d.concern_code AS code, e.ref_sha AS ref_sha
+         FROM dispositions d
+         LEFT JOIN disposition_evidence de
+           ON de.subsystem_id = d.subsystem_id AND de.concern_code = d.concern_code
+         LEFT JOIN evidence e ON e.id = de.evidence_id
+        WHERE d.subsystem_id = ?
+        ORDER BY d.concern_code`,
+    )
+    .all(subsystemId) as Array<{ code: string; ref_sha: string | null }>;
+  if (rows.length === 0) return [];
+
+  const attachedShas = new Map<string, string[]>();
+  for (const row of rows) {
+    const shas = attachedShas.get(row.code) ?? [];
+    if (row.ref_sha) shas.push(row.ref_sha);
+    attachedShas.set(row.code, shas);
+  }
+
+  const reachable =
+    workspacePath === null
+      ? new Map<string, string | null>()
+      : resolveWorkspaceCommits(workspacePath, [...attachedShas.values()].flat());
+
+  const unattached: string[] = [];
+  const unreachable: string[] = [];
+  const warnings: string[] = [];
+  for (const [code, shas] of attachedShas) {
+    if (shas.length === 0) {
+      unattached.push(`${subsystemId}/${code}`);
+      continue;
+    }
+    if (workspacePath === null) {
+      warnings.push(
+        `${subsystemId}/${code} carries ${shas.length} attached revision(s) that were not ` +
+          `resolved: this advance was checked without a bound workspace.`,
+      );
+      continue;
+    }
+    const lost = shas.filter((sha) => !reachable.get(sha));
+    if (lost.length === shas.length) {
+      for (const sha of lost) unreachable.push(`${subsystemId}/${code}@${sha}`);
+      continue;
+    }
+    for (const sha of lost) {
+      warnings.push(
+        `${subsystemId}/${code}@${sha} rests on a revision the workspace can no longer reach. ` +
+          `The disposition still carries a resolvable reading, so the advance stands; re-read at ` +
+          `a reachable commit to restore the second one.`,
+      );
+    }
+  }
+
+  if (unattached.length > 0) {
+    throw new ToolError(
+      `cannot advance ${subsystemId} to '${targetStatus}': ${unattached.length} disposition(s) ` +
+        `were answered from nothing — ${nameRows(unattached)}. Every concern this subsystem has ` +
+        `dispositioned must carry at least one attached evidence row whose ref_sha resolves. ` +
+        `Record the reading with add_evidence and link it with attach_evidence_to_disposition, ` +
+        `or pass evidence_ids to set_disposition.`,
+    );
+  }
+  if (unreachable.length > 0) {
+    throw new ToolError(
+      `cannot advance ${subsystemId} to '${targetStatus}': ${unreachable.length} disposition(s) ` +
+        `rest on evidence whose revision is no longer reachable — ${nameRows(unreachable)}. ` +
+        `Re-read at a reachable commit and attach the new evidence; an unreachable anchor cannot ` +
+        `be verified in place.`,
+    );
+  }
+  return warnings;
+}
+
+/**
  * Enforce that advancing a subsystem to a higher status requires evidence
  * that the prior phase ran. Called only for genuine forward transitions
  * (targetRank > currentRank); no-ops and deferred toggles are exempt.
@@ -296,6 +411,13 @@ export function recordStatusTransition(
  * |               |   challenge outcome — the adversarial pass ran over   |
  * |               |   the account the advance is about to publish         |
  *
+ * `concerns`, `adversarial` and `mapped` additionally require that every
+ * disposition the subsystem holds carries at least one attached evidence row
+ * whose revision resolves (§2.3, {@link requireAttachedEvidence}). Returns the
+ * lines the advance should report — today, attachments whose revision the
+ * workspace can no longer reach on a disposition that still has a resolvable
+ * one. An empty array is the ordinary result.
+ *
  * When an agent skips phases (e.g. unmapped→concerns), every intermediate
  * status's prerequisites are checked in order, so the first missing one
  * produces a clear error pointing at the skipped phase.
@@ -304,7 +426,8 @@ export function enforcePhasePrerequisites(
   db: DB,
   subsystemId: string,
   targetStatus: SubsystemStatus,
-): void {
+  workspacePath: string | null = null,
+): string[] {
   switch (targetStatus) {
     case "structural": {
       const { n } = db
@@ -356,6 +479,13 @@ export function enforcePhasePrerequisites(
       // 'unmapped', 'scoping', 'deferred' — no prerequisites.
       break;
   }
+  // Last, so the first refusal a caller sees is still the phase that was
+  // skipped: "the concerns pass never ran" is a different repair from "the
+  // concerns pass ran and answered one of them from nothing".
+  if (targetStatus === "concerns" || targetStatus === "adversarial" || targetStatus === "mapped") {
+    return requireAttachedEvidence(db, subsystemId, targetStatus, workspacePath);
+  }
+  return [];
 }
 
 /**
@@ -374,20 +504,30 @@ export function enforcePhasePrerequisites(
  * writer honours and another walks around is not enforced, and `upsert_subsystem`
  * is a status writer as much as `update_subsystem_status` is (slice-S3,
  * F3/codex).
+ *
+ * Returns the lines each rung asked the advance to report, de-duplicated:
+ * a jump from `structural` to `mapped` checks §2.3 at all three rungs and would
+ * otherwise say the same thing about the same attachment three times.
+ * `workspacePath` is what those rungs resolve recorded revisions against.
  */
 export function enforceForwardPrerequisites(
   db: DB,
   subsystemId: string,
   previousStatus: SubsystemStatus | null,
   targetStatus: SubsystemStatus,
-): void {
+  workspacePath: string | null = null,
+): string[] {
   const from = previousStatus ?? "unmapped";
   const currentRank = STATUS_ORDER.indexOf(from as Exclude<SubsystemStatus, "deferred">);
   const targetRank = STATUS_ORDER.indexOf(targetStatus as Exclude<SubsystemStatus, "deferred">);
-  if (currentRank < 0 || targetRank <= currentRank) return;
+  if (currentRank < 0 || targetRank <= currentRank) return [];
+  const reported = new Set<string>();
   for (const status of STATUS_ORDER.slice(currentRank + 1, targetRank + 1)) {
-    enforcePhasePrerequisites(db, subsystemId, status);
+    for (const line of enforcePhasePrerequisites(db, subsystemId, status, workspacePath)) {
+      reported.add(line);
+    }
   }
+  return [...reported];
 }
 
 /**

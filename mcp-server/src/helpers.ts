@@ -144,6 +144,64 @@ export function resolveWorkspaceCommit(
   return sha;
 }
 
+/**
+ * Resolve many revisions in **one** subprocess, for the writers that read a
+ * whole set of recorded revisions rather than one supplied by the caller.
+ *
+ * `resolveWorkspaceCommit` above is the single-value form and is deliberately
+ * uncached: revalidating a cached answer costs the same `rev-parse` the cache
+ * avoided, so the subprocess is paid on every durable write. That is affordable
+ * once per call and not affordable N+1 times. `set_disposition` now names a set
+ * of evidence rows (§2.2) and a status advance reads every attached revision a
+ * subsystem holds (§2.3); at one subprocess per row, an ordinary
+ * multi-evidence disposition would approach the 200 ms ceiling
+ * `test-perf-ceilings.mjs:187` reads this writer against — a ceiling
+ * `:171-184` records as ~31× a measured 6.35-6.50 ms single subprocess, the
+ * tightest multiple in that section. `git cat-file --batch-check` answers the
+ * whole set in one process and is as live as `rev-parse`: it reads the object
+ * store at call time and reports a collected commit as `missing`.
+ *
+ * Returns one entry per **distinct** requested value: the resolved
+ * 40-character object name, or `null` when the workspace cannot reach it.
+ * Callers decide whether an unreachable revision refuses or is reported.
+ */
+export function resolveWorkspaceCommits(
+  workspacePath: string,
+  requested: readonly string[],
+): Map<string, string | null> {
+  const resolved = new Map<string, string | null>();
+  const askable: string[] = [];
+  for (const value of requested) {
+    if (resolved.has(value)) continue;
+    resolved.set(value, null);
+    // `--batch-check` is newline-delimited, so a value carrying whitespace
+    // would desync every answer after it from its question. Rows written
+    // through `add_evidence` are stored resolved and cannot; a row written
+    // around the tool can, and is reported unresolvable rather than trusted.
+    if (value.length > 0 && !/\s/.test(value)) askable.push(value);
+  }
+  if (askable.length === 0) return resolved;
+
+  const result = spawnSync("git", ["cat-file", "--batch-check"], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    input: `${askable.map((value) => `${value}^{commit}`).join("\n")}\n`,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  if (result.error || result.status !== 0) return resolved;
+
+  // One answer line per question, in order: `<sha> commit <size>` when the
+  // object is there, `<question> missing` when it is not.
+  const lines = String(result.stdout ?? "")
+    .split("\n")
+    .filter((line) => line.length > 0);
+  for (let i = 0; i < askable.length && i < lines.length; i++) {
+    const match = /^([0-9a-f]{40}) commit \d+$/.exec(lines[i] as string);
+    if (match) resolved.set(askable[i] as string, match[1] as string);
+  }
+  return resolved;
+}
+
 export function requireString(args: Record<string, unknown>, key: string): string {
   const v = args[key];
   if (typeof v !== "string" || v.length === 0) {

@@ -124,7 +124,13 @@ export const subsystemTools: ToolDefinition[] = [
       // `structural`, whose prerequisites are the only record that the
       // scoping and structural phases ran at all. A fresh insert is held
       // to the same bar as an advance: both arrive at the same state.
-      enforceForwardPrerequisites(ctx.db, id, previousStatus, status);
+      const reported = enforceForwardPrerequisites(
+        ctx.db,
+        id,
+        previousStatus,
+        status,
+        ctx.project.workspacePath,
+      );
 
       // COALESCE on the UPDATE path: omitted priority leaves the
       // prior value alone. Pass explicit priority=null in the future
@@ -155,7 +161,11 @@ export const subsystemTools: ToolDefinition[] = [
         tool: "upsert_subsystem",
         sessionId: ctx.sessionId,
       });
-      return ok();
+      // §2.3's non-refusing half: an attachment whose revision the workspace can
+      // no longer reach, on a disposition that still carries a resolvable one.
+      // Reported rather than swallowed, and omitted entirely when there is
+      // nothing to say.
+      return reported.length > 0 ? ok({ reported }) : ok();
     },
   },
   {
@@ -188,7 +198,13 @@ export const subsystemTools: ToolDefinition[] = [
       // Enforce that each newly-reached status has the prior phase's evidence.
       // Checked after the monotonic guard so regression attempts are caught first.
       // Skipped for deferred toggles (both directions) and no-op same-status writes.
-      enforceForwardPrerequisites(ctx.db, id, currentStatus, status);
+      const reported = enforceForwardPrerequisites(
+        ctx.db,
+        id,
+        currentStatus,
+        status,
+        ctx.project.workspacePath,
+      );
 
       ctx.db
         .prepare("UPDATE subsystems SET status=?, updated_at=datetime('now') WHERE id=?")
@@ -200,7 +216,10 @@ export const subsystemTools: ToolDefinition[] = [
         tool: "update_subsystem_status",
         sessionId: ctx.sessionId,
       });
-      return ok({ previous_status: currentStatus });
+      // §2.3's non-refusing half — see `upsert_subsystem` above.
+      return reported.length > 0
+        ? ok({ previous_status: currentStatus, reported })
+        : ok({ previous_status: currentStatus });
     },
   },
   {
