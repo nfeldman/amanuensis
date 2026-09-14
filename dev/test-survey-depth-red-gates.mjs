@@ -364,7 +364,10 @@ function buildCase(name, options = {}) {
 
     // The ledger. B2's seed reclassifies five examined rows down to `candidate`,
     // which drops the examined fraction to 7/17 = 41.18% — below the frozen
-    // 59.57% and nothing else.
+    // 59.57% and nothing else. `B2-zero` classifies every tracked path exempt,
+    // which leaves the fraction with no denominator at all: 0/0 is out of band,
+    // not a pass (VP4(e), §1.4), and a gate that treated it as one would report
+    // a store nobody read as fully covered.
     const demoted = seed === "B2" ? 5 : 0;
     let seenExamined = 0;
     const insertLedger = db.prepare(
@@ -376,6 +379,7 @@ function buildCase(name, options = {}) {
         seenExamined += 1;
         if (seenExamined <= demoted) actual = "candidate";
       }
+      if (seed === "B2-zero") actual = "generated-ignore";
       insertLedger.run(
         path.startsWith("defer/") ? "S-02" : "S-01",
         path,
@@ -825,6 +829,7 @@ const SEEDS = [
     "a ledger edited after the reading, so the recorded reconciliation no longer stands",
   ],
   ["B2", "B2", "five examined paths reclassified, dropping the fraction below the baseline"],
+  ["B2", "B2-zero", "every tracked path classified exempt, so the fraction has no denominator"],
   ["B3", "B3", "a disposition in a mapped subsystem with nothing attached"],
   ["B3", "B3-unresolvable", "an attachment whose revision this workspace cannot resolve"],
   ["B4", "B4", "a subsystem past structural with neither an anchored term nor a declination"],
@@ -1098,6 +1103,22 @@ check("a forged-green receipt whose B1 witness records 501 unledgered is red", (
   if (made.error) return made.error;
   const wrong = expectRed(runDepthGate({ root: made.root }), "B1");
   return wrong ? `a recorded 501 unledgered passed as green — ${wrong}` : null;
+});
+
+check("a receipt bound to no revision of this repository is red", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-unbound", {
+    forge: (receipt) => {
+      receipt.repository_sha = "0".repeat(40);
+    },
+  });
+  if (made.error) return made.error;
+  const run = runDepthGate({ root: made.root });
+  if (run.status === 0) {
+    return `the gate exited 0 over a receipt whose repository_sha is forty zeroes — ${describe(run)}`;
+  }
+  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  return null;
 });
 
 check("a forged-green receipt whose B3 witness cites an unreachable revision is red", () => {

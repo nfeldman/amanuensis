@@ -373,11 +373,15 @@ if (failures.length) {
   );
 }
 
-if (!historyIsComplete(REPO)) {
+for (const [label, root] of [
+  ["this repository", REPO],
+  ["the candidate's workspace", CANDIDATE_ROOT],
+]) {
+  if (historyIsComplete(root)) continue;
   cannotRun(
-    "revision ancestry is not evaluable in a shallow clone, so neither the fixture's anchor nor " +
-      "the candidate's revisions can be resolved — check out with full history (`fetch-depth: 0` " +
-      "in CI, a non-shallow clone locally)",
+    `revision ancestry is not evaluable in a shallow clone of ${label}, so the revisions the ` +
+      "fixture and the candidate bind themselves to cannot be resolved — check out with full " +
+      "history (`fetch-depth: 0` in CI, a non-shallow clone locally)",
   );
 }
 
@@ -800,6 +804,26 @@ if (hasReceipt) {
         `not ${RECEIPT_CONTRACT}, so what its fields mean is undeclared`,
     );
   }
+  // The receipt binds itself to a revision, and that binding is resolved rather
+  // than pattern-matched. A gate that only checked for forty hex digits accepts
+  // forty zeroes, which is what slice-S6's independent review demonstrated —
+  // `dev/receipt-provenance.mjs`'s own header records it (F1/F2). A receipt
+  // whose `repository_sha` names no commit on this branch reports on a tree
+  // nobody here has.
+  {
+    const bound = resolveRevisions(
+      CANDIDATE_ROOT,
+      [receipt?.repository_sha],
+      "the acceptance receipt's repository_sha",
+    );
+    if (bound) {
+      red(
+        `${bound}. The receipt is the only witness the candidate arm has where no live store exists; ` +
+          "one that binds itself to nothing reports on a tree nobody here carries.",
+      );
+    }
+  }
+
   const blocking = receipt?.blocking ?? {};
 
   // --- B1 ------------------------------------------------------------------
