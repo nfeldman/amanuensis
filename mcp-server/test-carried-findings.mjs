@@ -797,7 +797,7 @@ async function main(mods) {
       }
       let got = null;
       const said = refusal(() => {
-        got = mods.archivedStoreId(archive);
+        got = mods.archivedStoreId(archive, { immutable: true });
         return null;
       });
       if (said) return `deriving the archive's id failed: ${said}`;

@@ -9,6 +9,7 @@
 // write path.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { resolve as resolvePath } from "node:path";
 import SqliteDatabase from "better-sqlite3";
 import type { DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
@@ -1111,8 +1112,103 @@ export function requireOverturnEvidence(
  * because an open through `openDatabase` would mint the very row whose absence
  * selects the legacy form, and would silently turn every archive into a
  * first-form store the moment it was read.
+ *
+ * `readonly: true` is not, however, what §5.3 asks for on the legacy path. It
+ * opens a live file: it takes locks, replays the `-wal`, and sees whatever a
+ * concurrent writer has committed. §5.3 makes the legacy form "available only
+ * when the source is opened `?immutable=1`", and a reviewer showed why — a
+ * live pre-identity store handed to this function was named, and naming it
+ * again after an ordinary `set_git_state` produced a different id for the same
+ * store (F3/codex, slice S1). So the legacy derivation is reached only through
+ * `{ immutable: true }`, which opens `file:<path>?immutable=1` — SQLite's own
+ * frozen-snapshot mode, which takes no lock and replays no WAL — and an
+ * ordinary path is refused before it can be named.
+ *
+ * The declaration is not taken on trust. The tuple read through the immutable
+ * open is compared with the tuple a live read-only open sees, and a
+ * disagreement means the `-wal` carries a change to the very row the id is
+ * derived from: the source is not frozen, and it is refused rather than named.
  */
-export function archivedStoreId(sourcePath: string): string {
+/** §5.3's identity tuple, `<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`. */
+function readIdentityTuple(db: DB, sourcePath: string, through: string): string {
+  const git = db
+    .prepare(
+      "SELECT repo_id, canonical_branch, onboarding_sha, last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1",
+    )
+    .get() as
+    | {
+        repo_id: string | null;
+        canonical_branch: string | null;
+        onboarding_sha: string | null;
+        last_checked_sha: string | null;
+      }
+    | undefined;
+  if (!git) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} carries neither a store_identity row nor a git_state ` +
+        `row through ${through}, so it cannot be named. A carried record must name the store it ` +
+        `came from (§5.3).`,
+    );
+  }
+  return [
+    git.repo_id ?? "",
+    git.canonical_branch ?? "",
+    git.onboarding_sha ?? "",
+    git.last_checked_sha ?? "",
+  ].join("|");
+}
+
+/**
+ * The same tuple, read through `file:<path>?immutable=1` — SQLite's frozen
+ * snapshot: no lock taken, no `-wal` replayed, no concurrent writer observed.
+ *
+ * `better-sqlite3` cannot open a URI (11.10.0 treats `file:…` as a literal
+ * filename and reports that the directory does not exist), so the immutable
+ * read goes through `node:sqlite`, which does. It is reached with
+ * `process.getBuiltinModule` rather than a top-level import so that loading
+ * this module still works on a runtime that does not carry it; a runtime that
+ * cannot open a source immutably is told so instead of being handed the
+ * `readonly: true` fallback §5.3 refuses.
+ */
+function readImmutableIdentityTuple(sourcePath: string): string {
+  const absolute = resolvePath(sourcePath);
+  const sqlite = (
+    process as unknown as { getBuiltinModule?: (id: string) => unknown }
+  ).getBuiltinModule?.("node:sqlite") as
+    | { DatabaseSync: new (location: string, options?: unknown) => DB }
+    | undefined;
+  if (!sqlite?.DatabaseSync) {
+    throw new ToolError(
+      `this runtime (${process.version}) carries no node:sqlite, so the carry source at ` +
+        `${sourcePath} cannot be opened immutably, and §5.3's legacy derivation is available ` +
+        `only through an immutable open. Run the carry on a runtime that has it.`,
+    );
+  }
+  // A SQLite URI: '?' and '#' end the path, so they are the two characters
+  // that must be escaped in it.
+  const uri = `file:${encodeURI(absolute).replace(/\?/g, "%3f").replace(/#/g, "%23")}?immutable=1`;
+  let db: DB;
+  try {
+    db = new sqlite.DatabaseSync(uri, { readOnly: true });
+  } catch (error) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} could not be opened immutably: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  try {
+    return readIdentityTuple(db, sourcePath, "the immutable open");
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* the read already happened; a close failure changes no answer */
+    }
+  }
+}
+
+export function archivedStoreId(sourcePath: string, options: { immutable?: boolean } = {}): string {
   let db: DB | null = null;
   try {
     db = new SqliteDatabase(sourcePath, { readonly: true, fileMustExist: true });
@@ -1140,31 +1236,28 @@ export function archivedStoreId(sourcePath: string): string {
           `twice. Copy the archive whole — memory.db together with its -wal and -shm — and re-run.`,
       );
     }
-    const git = db
-      .prepare(
-        "SELECT repo_id, canonical_branch, onboarding_sha, last_checked_sha FROM git_state ORDER BY repo_id LIMIT 1",
-      )
-      .get() as
-      | {
-          repo_id: string | null;
-          canonical_branch: string | null;
-          onboarding_sha: string | null;
-          last_checked_sha: string | null;
-        }
-      | undefined;
-    if (!git) {
+    if (options.immutable !== true) {
       throw new ToolError(
-        `the carry source at ${sourcePath} carries neither a store_identity row nor a git_state ` +
-          `row, so it cannot be named. A carried record must name the store it came from (§5.3).`,
+        `the carry source at ${sourcePath} carries no store_identity table, so naming it means ` +
+          `§5.3's legacy derivation over its git_state row — and that derivation is available ` +
+          `only when the source is opened immutably. A live store's last_checked_sha moves under ` +
+          `set_git_state and its derived id moves with it, so the same store would be named twice. ` +
+          `Open it as the frozen archive it is (archivedStoreId(path, { immutable: true })), or ` +
+          `carry from a store that minted an identity.`,
       );
     }
-    const tuple = [
-      git.repo_id ?? "",
-      git.canonical_branch ?? "",
-      git.onboarding_sha ?? "",
-      git.last_checked_sha ?? "",
-    ].join("|");
-    return `store-legacy-${createHash("sha256").update(tuple).digest("hex").slice(0, 16)}`;
+    const live = readIdentityTuple(db, sourcePath, "the live read-only open");
+    const frozen = readImmutableIdentityTuple(sourcePath);
+    if (live !== frozen) {
+      throw new ToolError(
+        `the carry source at ${sourcePath} was declared a frozen archive and is not one: its ` +
+          `git_state row reads '${frozen}' in the database file and '${live}' once the -wal is ` +
+          `replayed. §5.3's legacy id is derived from a frozen row; a row that two reads of the ` +
+          `same file disagree about would name this archive twice. Checkpoint and re-freeze the ` +
+          `archive, or carry from a store that minted an identity.`,
+      );
+    }
+    return `store-legacy-${createHash("sha256").update(frozen).digest("hex").slice(0, 16)}`;
   } finally {
     try {
       db.close();
@@ -1302,12 +1395,15 @@ export interface ArchivedFinding {
  * neither drops a finding nor duplicates one, and *every* archived finding is
  * carried whatever its state (spec.md §5.4).
  */
-export function readArchivedStore(sourcePath: string): {
+export function readArchivedStore(
+  sourcePath: string,
+  options: { immutable?: boolean } = {},
+): {
   archived_store_id: string;
   archived_anchor: string;
   findings: ArchivedFinding[];
 } {
-  const archivedStore = archivedStoreId(sourcePath);
+  const archivedStore = archivedStoreId(sourcePath, options);
   let db: DB;
   try {
     db = new SqliteDatabase(sourcePath, { readonly: true, fileMustExist: true });

@@ -367,7 +367,7 @@ async function resolveCarrySource() {
       }
       let storeIdentity;
       try {
-        storeIdentity = readArchivedStoreId(storePath);
+        storeIdentity = readArchivedStoreId(storePath, { immutable: true });
       } catch (error) {
         die(`refusing to verify ${sourcePath} against ${storePath}: ${error.message}`);
       }
@@ -414,7 +414,7 @@ async function resolveCarrySource() {
   }
   let archive;
   try {
-    archive = readArchivedStore(sourcePath);
+    archive = readArchivedStore(sourcePath, { immutable: true });
   } catch (error) {
     die(`refusing the carry source ${sourcePath}: ${error.message}`);
   }
