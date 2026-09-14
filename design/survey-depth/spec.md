@@ -49,8 +49,15 @@ a different tree is a number about two trees.
 
 ### 1.2 The frozen measures
 
-Each measure is one SQL statement over one store, or one statement plus `git ls-tree -r
---name-only R`. `dev/test-survey-depth.mjs` (§7) executes exactly these and no others.
+There are **twelve** measures, D1–D12. Each is one SQL statement over one store, or one
+statement plus `git ls-tree -r --name-only R`; D9 is reported as two statements over the same
+table. `dev/test-survey-depth.mjs` (§7) executes these twelve as its baseline and comparison
+layer, and **separately** evaluates the six acceptance predicates B1–B6 of §7.3. Those are
+per-record obligations, not measures: B3 joins `dispositions` to `subsystems` and resolves each
+`ref_sha`, B4 reads `vocabulary_declinations`, and B5 and B6 read `carried_findings`. No
+D-measure expresses any of them, and the fixture (§7.2) lists them under their own key so a
+reader is never told the gate runs twelve statements when it runs twelve statements and six
+predicates.
 
 **D1 — ledger rows.**
 ```sql
@@ -62,11 +69,24 @@ minus those whose ledger classification exempts them from the obligation to be r
 ```
 tracked   = git ls-tree -r --name-only R
 exempt    = SELECT DISTINCT file_path FROM file_ledger
-              WHERE classification IN ('generated-ignore','vendor-ignore','irrelevant','deferred-with-reason')
+              WHERE classification IN (<the classifications the contract marks
+                                       obligation_bearing = false>)
 D2        = |tracked| - |tracked ∩ exempt|
 ```
 A tracked path with no ledger row is obligation-bearing. That is the whole point: an
 unclassified file is unread, not exempt.
+
+**The exempt set is generated, never transcribed.** `mcp-server/contracts/conspectus-vocabulary.json`
+carries an `obligation_bearing` boolean on every `file_classification` value, and it is the single
+source (GP28): at `d2b1630` it marks `generated-ignore`, `vendor-ignore` and `irrelevant` false and
+`candidate`, `examined` and **`deferred-with-reason`** true. An earlier draft of this section
+hard-coded `deferred-with-reason` as exempt, which contradicted the contract and would have exempted
+35 paths in the AxiomDB store from the obligation the contract says they carry. The predicate is
+derived from the contract through `mcp-server/src/vocabulary.ts` and
+`materializer/amanuensis_materializer/vocabulary.py`, the two files `scripts/gen-vocabulary.mjs`
+generates, so a classification added or reclassified there reaches this measure with no second list
+to maintain. Neither store's histogram (§1.3) contains a `deferred-with-reason` row, so no value in
+§1.3 changes; the derivation does.
 
 **D3 — examined tracked paths at R, and the examined fraction.**
 ```
@@ -185,7 +205,8 @@ not a pass (VP4(e)).
 `field notes` and `vocabulary terms` among the axes a rebuild must "meet or exceed". These
 conflict. The decisions govern, and the resolution is:
 
-- **Blocking axes** (§7.3) are coverage of an enumerable denominator or per-record obligations:
+- **Blocking axes** (§7.3) are not measures at all. They are coverage of an enumerable
+  denominator, or per-record obligations the gate evaluates beside the measures:
   D3% against the frozen baseline fraction; reconciliation standing D12; D7 as a per-disposition
   predicate, not a ratio; vocabulary as discharge-or-decline per subsystem, not a count; and
   the finding accounting of §5, which is an enumeration with one obligation per baseline finding.
@@ -224,9 +245,20 @@ evidence_ids: { type: "array", items: { type: "integer" }, minItems: 1 }
 Handler order, after the existing session, concern-exists, depth and revision checks:
 
 1. Every id in `evidence_ids` names a row in `evidence`. A missing id refuses the whole call.
-2. Every named row's `ref_sha` resolves to a commit in the bound workspace, via
-   `resolveWorkspaceCommit` (`mcp-server/src/helpers.ts:127-145`). An unresolvable row refuses
-   the whole call.
+2. Every named row's `ref_sha` resolves to a commit in the bound workspace. The **distinct**
+   `ref_sha` values among the named rows are resolved in **one** `git cat-file --batch-check`
+   over the bound workspace, not one `resolveWorkspaceCommit` per id. An unresolvable row
+   refuses the whole call, naming the row and its sha.
+
+   The batching is not an optimization detail; it is what keeps an existing gate honest.
+   `resolveWorkspaceCommit` (`mcp-server/src/helpers.ts:127-145`) spawns `git rev-parse` and
+   cannot be cached — the comment at `:110-125` explains why, and ends "the subprocess is
+   therefore paid on every durable write". `mcp-server/test-perf-ceilings.mjs:187` reads
+   `set_disposition` against a 200 ms ceiling that `:171-184` records as ~31× a measured
+   6.35-6.50 ms single subprocess, the tightest multiple in that section. One subprocess per
+   evidence id would make the call N+1 subprocesses and put that ceiling within reach of an
+   ordinary multi-evidence disposition. `cd mcp-server && node test-perf-ceilings.mjs` is in
+   P1's regression list for exactly this reason.
 3. `evidence_quality` is no stronger than the strongest `kind` among the named rows, on the
    ladder in `mcp-server/src/vocabulary.ts`. A disposition may under-claim; it may not over-claim.
 4. The `dispositions` upsert and one `disposition_evidence` insert per id run in **one
@@ -261,12 +293,19 @@ row is kind '<actual>'. Lower the claim or attach the stronger reading.
 `enforcePhasePrerequisites` (`mcp-server/src/invariants.ts:303-359`) gains a check that runs for
 target status `concerns`, `adversarial` and `mapped`:
 
-> Every row in `dispositions` for this subsystem has at least one `disposition_evidence` row
+> Every row in `dispositions` for this subsystem has **at least one** `disposition_evidence` row
 > whose `evidence.ref_sha` resolves to a commit in the bound workspace.
 
-Rows whose `ref_sha` no longer resolves — the repository's history was rewritten, the commit was
-garbage-collected — are named individually in the refusal, because the repair differs: a missing
-attachment is attached, an unreachable revision is re-read at a reachable one.
+**At least one, not all.** A disposition carrying two attachments, one resolvable and one whose
+revision was rewritten away, **passes**: the concern is still answered against a reading someone
+can open. The unresolvable attachment is still reported — the advance prints it as a warning line
+naming `<sid>/<code>@<sha>` — but it does not refuse, because refusing it would make an ordinary
+rebase retroactively unmap a subsystem whose evidence is intact. Only a disposition with **no**
+resolvable attachment refuses.
+
+Rows whose attachments *all* fail to resolve — the repository's history was rewritten, the commit
+was garbage-collected — are named individually in the refusal, because the repair differs: a
+missing attachment is attached, an unreachable revision is re-read at a reachable one.
 
 ```
 cannot advance <sid> to '<target>': <n> disposition(s) were answered from nothing —
@@ -285,9 +324,20 @@ a subsystem jumping `structural → mapped` is checked at all three.
 
 ### 2.4 Migration for existing stores
 
-No column changes and no backfill. `dispositions` and `disposition_evidence` keep their shapes,
-existing rows are never rewritten, and no store is upgraded in place. The obligation binds at
-the **next status advance** and at the **next publication** (§3), so:
+No column changes and no backfill of **domain rows**. `dispositions` and `disposition_evidence`
+keep their shapes and no existing disposition, evidence row or attachment is rewritten, deleted or
+re-derived. The obligation binds at the **next status advance** and at the **next publication**
+(§3), so:
+
+The **schema** is a different matter and this specification does not pretend otherwise.
+`openDatabase` runs `runMigrations` and then `initializeSchema` on **every** open
+(`mcp-server/src/db.ts:46-58`), `initializeSchema` re-execs the whole of `schema.sql` (`:84-89`),
+and `migrateVocabularyChecks` rebuilds a `CHECK`-constrained table on an existing store when the
+contract widens an enum (`:137-192`). Every table this specification adds therefore arrives on an
+existing store the next time it is opened, additively and without touching a domain row. That
+migration is **tested on a copy of a real existing store**, not asserted: packet P0 copies the
+AxiomDB store to temporary storage and gates additive creation, refusal behaviour, non-mutation of
+existing rows, and clean-publish rollback.
 
 - The candidate store's 177 unattached dispositions do not vanish and are not deleted. Its eight
   subsystems are already `mapped`, so no advance is pending; the next *refresh* that advances
@@ -322,10 +372,12 @@ candidate's overview prints `Paths in scope with no ledger row: 0` (`renderers.p
 New table, append-only, one row per `detect_changes` run:
 
 ```sql
-CREATE TABLE scope_reconciliations (
+CREATE TABLE IF NOT EXISTS scope_reconciliations (
     id              INTEGER PRIMARY KEY,
-    detected_sha    TEXT    NOT NULL,   -- resolved, 40 hex
-    tracked_paths   INTEGER NOT NULL,   -- |git ls-files| at detected_sha
+    detected_sha    TEXT    NOT NULL,   -- resolved, 40 hex, from rev-parse <R>^{commit}
+    tree_digest     TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined tracked path set
+    ledger_digest   TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined (path, classification)
+    tracked_paths   INTEGER NOT NULL,   -- |git ls-tree -r --name-only detected_sha|
     ledger_rows     INTEGER NOT NULL,   -- distinct file_ledger.file_path
     unledgered      INTEGER NOT NULL,   -- tracked with no ledger row
     absent          INTEGER NOT NULL,   -- ledger rows the tree no longer carries
@@ -333,8 +385,36 @@ CREATE TABLE scope_reconciliations (
     session_id      TEXT,
     detected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX idx_scope_reconciliations_sha ON scope_reconciliations(detected_sha);
+CREATE INDEX IF NOT EXISTS idx_scope_reconciliations_sha
+    ON scope_reconciliations(detected_sha);
+
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_is_immutable
+BEFORE UPDATE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_cannot_be_deleted
+BEFORE DELETE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
 ```
+
+Three properties of that block are load-bearing and were absent from an earlier draft.
+
+**`IF NOT EXISTS` throughout.** `src/db.ts:85-88` states the contract — "The schema is written with
+CREATE … IF NOT EXISTS throughout, so we can run it on every open" — and `:89` execs the file on
+every `openDatabase`. 516 of `schema.sql`'s 517 `^CREATE` statements carry it, the single exception
+being preceded by a `DROP VIEW IF EXISTS`. Bare DDL copied into that file throws on the second open
+of any store. The same applies to §4.3's and §5.2's blocks.
+
+**The triggers, not the prose, are what make the table append-only.** `schema.sql:2622-2627` is the
+repository's established `<name>_is_immutable` / `<name>_cannot_be_deleted` pair, one of 269
+triggers in that file. `GATE SR1` (§8.2) is red when a reconciliation row proves updatable or
+deletable, and a table declared append-only only in a paragraph cannot satisfy it.
+`decisions.md` §2 asks for substrate, not prose.
+
+**The two digests, not the counts, are the witness.** Six integers cannot answer D2, which is a
+*set* intersection, and they go stale silently: a later `set_disposition` or `add_files_to_scope`
+changes the ledger without touching the row that claims to describe it. `tree_digest` pins the path
+set the counts were taken over, and `ledger_digest` pins the ledger they were taken against, so
+§3.3 can tell a standing reconciliation from a stale one.
 
 It is a separate record rather than an inference over `scope_gaps` for one reason: a *perfectly*
 reconciled store has zero `scope_gaps` rows, so "a gap row exists at R" would read a complete
@@ -349,13 +429,32 @@ reconciliations is itself the record of when the map was last checked against th
 
 A store is **reconciled at revision R** exactly when:
 
-1. a `scope_reconciliations` row exists whose `detected_sha` equals R, and
-2. `git_state.last_checked_sha` equals R, and
-3. R resolves to a commit in the bound workspace.
+1. R resolves to a commit in the bound workspace, and R is normalized to the **full 40-hex**
+   commit id it resolves to before any comparison — an abbreviation, a tag or a branch name is
+   resolved first, never string-matched;
+2. a `scope_reconciliations` row exists whose `detected_sha` equals that full sha;
+3. `git_state.last_checked_sha`, normalized the same way, equals it;
+4. the row's `tree_digest` equals the digest re-derived now from `git ls-tree -r --name-only <R>`;
+   and
+5. the row's `ledger_digest` equals the digest re-derived now from `file_ledger`.
 
 The most recent such row is the **standing reconciliation**. `tracked_paths` from that row is
 the denominator of every coverage fraction (§1.4). When no such row exists the store is
 **unreconciled at R** and has no denominator.
+
+**The tree at R, not the index.** `detect_changes` today enumerates `git ls-files`
+(`mcp-server/src/tools/git.ts:220-222`), which reads the *index* — the working tree's staged state,
+which moves under an unrelated `git add` and does not describe R's tree at all. It enumerates
+`git ls-tree -r --name-only <R>` instead, which is R's immutable tree and the only object a
+coverage fraction stamped with R may be taken over.
+
+**Conditions 4 and 5 are what make the reading stand.** A reconciliation is a comparison of two
+sets at a moment. Condition 4 catches R's tree being re-pointed under the row; condition 5 catches
+the ledger changing after the row was written, which is the ordinary case — every subsequent
+`add_files_to_scope` or classification change invalidates the standing reconciliation and the
+store reverts to *unreconciled at R* until `detect_changes` runs again. That is the intended
+behaviour: a store that has been edited since it last checked itself against the tree has not
+checked itself against the tree.
 
 Two operations refuse an unreconciled store:
 
@@ -380,6 +479,34 @@ published over an unreconciled ledger is a fraction of itself. Run detect_change
 
 Refusing `mapped` rather than `structural` keeps a rebuild able to progress subsystem by
 subsystem; the reconciliation is a whole-store fact and belongs at the whole-store claim.
+
+### 3.3a Reconciled is weaker than complete, and only one of them licenses *fully surveyed*
+
+Being *reconciled at R* says the ledger and the tree were compared and the record of that
+comparison still stands. It does **not** say the comparison came out clean. A store that records
+`unledgered = 501` accurately is reconciled; ADR-0001 clause 1 — "Every tracked path in the pinned
+inventory has exactly one subsystem assignment or an explicit exclusion with owner and reason"
+(`dev/adr/0001-living-conspectus-terms.md:19`) — is nevertheless false for it.
+
+The two predicates therefore bind at different places, and an earlier draft collapsed them:
+
+- **Advance to `mapped`** requires only *reconciled at R*. ADR-0001's per-subsystem clause is
+  clause 2, not clause 1, and `README.md` §4 and `decisions.md` §1 both require a rebuild to be
+  able to progress subsystem by subsystem. A subsystem cannot be held hostage to a path in some
+  other subsystem's territory.
+- **`materialize_docs`** and the **fully-surveyed predicate** require *reconciled at R* **and**
+  `unledgered = 0` **and** `absent = 0` in the standing reconciliation — that is, clause 1 in
+  full. Publication is the whole-store claim, and a published coverage fraction over a tree 501
+  of whose paths nobody assigned or excluded is a fraction of a set the store never inventoried.
+
+```
+materialize_docs refuses: the standing reconciliation at <sha> reports <n> tracked path(s) with
+no ledger row and <m> ledger row(s) the tree no longer carries. Every tracked path needs exactly
+one subsystem assignment or an explicit exclusion with a reason before coverage over that tree is
+published (ADR-0001, Fully surveyed, clause 1). get_scope_gaps names them.
+```
+
+§7.3's B1 asserts the same thing over the finished store, for the same reason.
 
 ### 3.4 The projection renders "not measured"
 
@@ -421,18 +548,35 @@ four, none of whose anchors is in `file:symbol@sha` form.
 ### 4.2 `define_term` anchors resolve
 
 `define_term` gains, in this order: `requireActiveSession`; `first_seen`, when supplied, is
-validated with `requireWorkspaceCitation(value, "first_seen", { strict: true })` so it is a
-real `file:symbol@sha` token; `ref_sha`, when supplied, is resolved by `resolveWorkspaceCommit`
-and stored resolved. A term whose anchor does not resolve is refused, not stored unanchored.
+**parsed** with `requireWorkspaceCitation(value, "first_seen", { strict: true })`; `ref_sha`, when
+supplied, is resolved by `resolveWorkspaceCommit` and stored resolved.
 
-A term is **anchored** when `first_seen` parses as a citation token, its path exists in the tree
-at the token's revision, and that revision resolves. Existing rows are never rewritten; the
-predicate simply reads false for them until the term is redefined.
+**Parsing is not resolution, and the difference is the whole obligation.**
+`requireWorkspaceCitation` (`mcp-server/src/helpers.ts:180-207`) takes `indexOf(":")` and
+`lastIndexOf("@")` and validates the path *syntax*. It does not run git, does not resolve the
+revision the token names, and does not ask whether the path exists in that revision's tree. A
+`first_seen` of `src/nothing-here.ts:ghost@0000000` passes it. So `define_term` gains a third
+step of its own, after the parse:
+
+> **Resolve the anchor.** The token's revision is resolved with `resolveWorkspaceCommit`, and the
+> token's path is looked up in that revision's tree with `git cat-file -e <sha>:<path>`. Both must
+> succeed.
+
+A term is **anchored** when all three hold: the token parses, its revision resolves, and its path
+exists in the tree at that revision. Nothing else is anchored.
+
+A `define_term` call that supplies a `first_seen` which does not resolve is **refused** — a
+malformed anchor is a typo to fix, not a record to keep. A call that supplies **no** `first_seen`
+is **accepted and stored unanchored**, because the codebase already holds four such rows in the
+baseline and an existing survey path writes them; an unanchored term is simply a term that
+discharges no obligation. §4.4's prerequisite, §7.3's B4 and the D10 measure all read *anchored*,
+so an unanchored row is visible, countable, and worth nothing. Existing rows are never rewritten;
+the predicate reads false for them until the term is redefined with an anchor that resolves.
 
 ### 4.3 The declination record
 
 ```sql
-CREATE TABLE vocabulary_declinations (
+CREATE TABLE IF NOT EXISTS vocabulary_declinations (
     id            INTEGER PRIMARY KEY,
     subsystem_id  TEXT    NOT NULL,
     reason        TEXT    NOT NULL,   -- prose; why this subsystem carries no domain vocabulary
@@ -440,7 +584,15 @@ CREATE TABLE vocabulary_declinations (
     ref_sha       TEXT    NOT NULL,   -- resolved, the revision the judgment was made at
     declared_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX idx_vocab_declinations_subsystem ON vocabulary_declinations(subsystem_id);
+CREATE INDEX IF NOT EXISTS idx_vocab_declinations_subsystem
+    ON vocabulary_declinations(subsystem_id);
+
+CREATE TRIGGER IF NOT EXISTS vocab_declination_is_immutable
+BEFORE UPDATE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS vocab_declination_cannot_be_deleted
+BEFORE DELETE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
 ```
 
 Append-only: never updated, never deleted. A later pass that *does* find a term simply defines
@@ -461,8 +613,8 @@ A subsystem cannot both carry domain vocabulary and declare it has none.
 
 `enforcePhasePrerequisites`'s `structural` case gains, after `requireStructuralClaim`:
 
-> The subsystem has at least one anchored `vocabulary` row (scoped to it by `subsystem_id`), or
-> at least one `vocabulary_declinations` row.
+> The subsystem has at least one anchored `vocabulary` row **scoped to it**, or at least one
+> `vocabulary_declinations` row **whose `ref_sha` still resolves in the bound workspace**.
 
 ```
 cannot advance <sid> to 'structural': the structural pass neither defined a domain term for
@@ -474,7 +626,38 @@ there is no quota, and "none" is a real and common answer that has to be said ou
 Codebase-wide terms (`subsystem_id IS NULL`) satisfy no subsystem's obligation. A term that
 belongs to everything tells a reader nothing about the subsystem that just advanced.
 
+**Scoping is per `(term, subsystem)`, not per term.** `vocabulary.term` is the table's primary key
+(`mcp-server/src/schema.sql:406`) and `define_term`'s upsert sets
+`subsystem_id = COALESCE(excluded.subsystem_id, vocabulary.subsystem_id)`
+(`mcp-server/src/tools/vocabulary.ts:36`). One term row can therefore be scoped to exactly one
+subsystem, and re-defining a term shared between A and B for B **moves it off A** — silently,
+after A has already advanced on it. A's discharge is revoked with no signal at the moment it
+happens, and B4 (§7.3) turns red over the finished store with no way to see when it broke.
+
+The fix is a `vocabulary_scopes(term, subsystem_id)` join table, declared with the same
+`IF NOT EXISTS` and written by `define_term`: a term may be scoped to any number of subsystems and
+`vocabulary.subsystem_id` is kept as the primary scope for compatibility with existing readers. If
+the join table is judged too large a change for P3, the fallback is narrower and must be stated in
+the same commit: `define_term` **refuses** to re-scope a term whose current `subsystem_id` names a
+subsystem at `structural` or later that has no other anchored term, naming both subsystems in the
+refusal. Silent revocation is the one outcome neither option permits.
+
+**The declination's revision must still resolve.** §4.3 keeps declinations across a subsystem
+reset, which is right — a ruled-out record is kept (GP18). But a kept record is history, and
+history does not discharge a new pass. The prerequisite reads the **effective** declination: the
+most recent row for the subsystem whose `ref_sha` resolves. Older rows, and rows anchored to a
+revision the repository no longer has, render as history (§4.5) and satisfy nothing.
+
 ### 4.5 How the projection renders a declination
+
+**Effective state first, history beneath it.** A subsystem can hold both anchored terms and a
+declination — §4.3 deliberately permits a later pass to define a term without erasing the earlier
+judgment — so the projection needs a precedence rule rather than two sections that each claim to
+be the answer. The rule: **current anchored terms win.** A subsystem with at least one anchored
+term renders its vocabulary section normally, and any declination renders *below it* under
+`Superseded: this subsystem previously declared no domain vocabulary`, with its reason, session and
+revision. A subsystem with no anchored term renders the declination as its vocabulary section. The
+three states — terms, declined, not recorded — are never collapsed into two.
 
 A declined subsystem is rendered, not omitted. On the subsystem page, in place of the vocabulary
 section:
@@ -504,7 +687,7 @@ halves.
 ### 5.2 The carried-finding record
 
 ```sql
-CREATE TABLE carried_findings (
+CREATE TABLE IF NOT EXISTS carried_findings (
     carried_id           INTEGER PRIMARY KEY,
     archived_finding_id  TEXT    NOT NULL,  -- the id in the archived store, e.g. 'B03-5'
     archived_store_id    TEXT    NOT NULL,  -- identity of the store it came from (§5.3)
@@ -513,8 +696,10 @@ CREATE TABLE carried_findings (
     severity             TEXT    NOT NULL CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
     symptom              TEXT    NOT NULL,
     root_cause           TEXT    NOT NULL,
-    archived_resolution  TEXT    NOT NULL,  -- resolution_state as archived: open, fixed-pending-
-                                            -- verification, verified-fixed, ruled-out, accepted
+    carry_run_id         INTEGER NOT NULL REFERENCES carry_runs(id) ON DELETE RESTRICT,
+    archived_resolution  TEXT    NOT NULL CHECK (archived_resolution IN
+                            ('open','accepted','ruled-out',
+                             'fixed-pending-verification','verified-fixed')),
     archived_ref_sha     TEXT,
     primary_files        TEXT,              -- JSON array, as archived
     carried_at           TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -522,11 +707,11 @@ CREATE TABLE carried_findings (
     UNIQUE (archived_store_id, archived_finding_id)
 );
 
-CREATE TABLE carried_finding_outcomes (
+CREATE TABLE IF NOT EXISTS carried_finding_outcomes (
     id            INTEGER PRIMARY KEY,
     carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
     outcome       TEXT    NOT NULL CHECK (outcome IN
-                            ('successor-finding','ruled-out','repaired')),
+                            ('successor-finding','ruled-out','repaired','archived-terminal')),
     successor_id  TEXT,        -- findings.finding_id, required for 'successor-finding'
     repaired_sha  TEXT,        -- resolved commit, required for 'repaired'
     rationale     TEXT    NOT NULL,
@@ -534,8 +719,85 @@ CREATE TABLE carried_finding_outcomes (
     ref_sha       TEXT    NOT NULL,
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
-CREATE UNIQUE INDEX idx_carried_outcome_one ON carried_finding_outcomes(carried_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_one
+    ON carried_finding_outcomes(carried_id);
+
+-- The evidence join §5.4's `ruled-out` and `repaired` authority rules require.
+-- An earlier draft named it and never declared it.
+CREATE TABLE IF NOT EXISTS carried_finding_evidence (
+    carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    role          TEXT    NOT NULL DEFAULT 'supports',
+    attached_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (carried_id, evidence_id)
+);
+
+-- One row per invocation of the carry, including a reasoned empty one. Without
+-- it "nothing was carried" and "nobody ran a carry" are the same reading (VP4(e)).
+CREATE TABLE IF NOT EXISTS carry_runs (
+    id                INTEGER PRIMARY KEY,
+    source_kind       TEXT    NOT NULL CHECK (source_kind IN ('store','export','none')),
+    source_path       TEXT,               -- NULL only for source_kind='none'
+    archived_store_id TEXT,               -- NULL only for source_kind='none'
+    archived_anchor   TEXT,               -- the archive's anchor revision
+    reason            TEXT    NOT NULL,   -- required for every kind; the only field 'none' has
+    expected_count    INTEGER NOT NULL,   -- findings the source declares
+    imported_count    INTEGER NOT NULL,   -- carried_findings rows this run wrote
+    session_id        TEXT,
+    ran_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS carried_finding_is_immutable
+BEFORE UPDATE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_cannot_be_deleted
+BEFORE DELETE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_is_immutable
+BEFORE UPDATE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_cannot_be_deleted
+BEFORE DELETE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_is_immutable
+BEFORE UPDATE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_cannot_be_deleted
+BEFORE DELETE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run cannot be deleted'); END;
 ```
+
+`expected_count` and `imported_count` are separate fields so a partial carry is a visible
+disagreement rather than a silent one; `carry_finding` refuses once `imported_count` is reached and
+the carry refuses to finish while they differ.
+
+**Both enums are declared in the contract, not inline.**
+`mcp-server/contracts/conspectus-vocabulary.json` is the single enum source and
+`scripts/gen-vocabulary.mjs --check-sql` asserts every `CHECK` literal in `schema.sql` matches it
+(`:28-31` also generates `mcp-server/src/vocabulary.ts` and
+`materializer/amanuensis_materializer/vocabulary.py`, both of which P3 and P4 therefore deliver).
+So `carried_finding_outcome` is added to the contract with the four values above, and
+`archived_resolution` takes its `CHECK` from the contract's existing `finding_resolution_state`,
+whose five values are exactly the five an earlier draft wrote out in a comment. An enum declared
+only in a `CREATE TABLE` body is invisible to `migrateVocabularyChecks` (`src/db.ts:154-192`),
+which reads the columns to migrate from the contract's own `sql` mappings — so an inline `CHECK`
+would never reach an existing store.
+
+### 5.2a Reading and attaching
+
+Two tools, because §7.4 step 6 promises a third-process read-back of the carried count and §5.4's
+authority rules require an attachment surface, and an earlier draft named neither:
+
+- **`attach_carried_evidence(carried_id, evidence_id, role?)`** — the `finding_evidence` shape,
+  writing `carried_finding_evidence`. `role` defaults to `supports`.
+- **`list_carried_findings(outcome?, subsystem_id?, limit?, cursor?)`** — a compact page of
+  carried records: `carried_id`, `archived_finding_id`, `archived_store_id`, `severity`,
+  `outcome` or `undecided`, and the first line of `symptom`. Default `limit` 25, hard maximum 100,
+  and the response is truncated to the same 8192-byte envelope budget the other list tools observe,
+  with `next_cursor` when it truncates. `symptom` and `root_cause` in full come from
+  `get_carried_finding(carried_id)`, one record per call. A reader that must page is a reader that
+  can page; a list tool that returns 22 full findings in one envelope is a tool nothing can call
+  twice.
 
 Carried findings live in their own table rather than in `findings`. A carried record is an
 **obligation to decide**, not a finding this store confirmed; putting it in `findings` would let
@@ -544,24 +806,68 @@ make `finding_resolution_current` answer about a store that no longer exists.
 
 ### 5.3 Store identity
 
-`archived_store_id` is the SHA-256 of the archived store's `git_state` row rendered as
-`<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`, truncated to 16 hex
-characters, prefixed `store-`. It is written into the successor by the carry, and recomputed
-from the archive on demand, so a carried record can always be traced to the store it came from.
-This is what candidate finding **B03-R1** asks for: a finding id with no store generation lets a
-rebuilt store silently re-satisfy a closed reference.
+A carried record must name the store it came from, and the name must not change under it. That is
+what candidate finding **B03-R1** asks for: a finding id with no store generation lets a rebuilt
+store silently re-satisfy a closed reference.
+
+**Minted, not derived.** Every store mints a `store_generation` — a random 128-bit value, rendered
+as 32 hex characters — once, in `initializeSchema`, on the open that creates it, and stores it in a
+single-row `store_identity` table declared with the same `IF NOT EXISTS` and the same immutability
+triggers as everything else in §3.2. `archived_store_id` is `store-` plus the first 16 hex of that
+value. It is written into the successor by the carry and never recomputed, because there is nothing
+to recompute: identity is a fact the store carries, not a function of its mutable state.
+
+An earlier draft derived it as the SHA-256 of `<repo_id>|<canonical_branch>|<onboarding_sha>|<last_checked_sha>`,
+and that derivation fails in both directions. `set_git_state` lets any caller update
+`last_checked_sha` — its own description reads "Subsequent calls may update any subset of fields"
+(`mcp-server/src/tools/git.ts:91-96`) — so a store's identity changes every time it reconciles, and
+an id written into a successor last week cannot be recomputed from the source today. And two
+clean-slate rebuilds of the same repository at the same revision produce the same tuple, so they
+**collide**: exactly the confusion the field exists to prevent.
+
+**The legacy fallback, for the one archive that predates this.** The archived store at
+`…/archive/store-7c1c1a9/memory.db` was frozen before `store_identity` existed and is immutable —
+it cannot be given one now. For a source with no `store_identity` row, `archived_store_id` is the
+SHA-256 digest of that store's `git_state` row, in the format above, truncated the same way and
+prefixed `store-legacy-`. That derivation is sound *for an archive*, because an archive's
+`git_state` is frozen along with the rest of it; it is unsound for a live store, which is why it is
+available only when the source is opened `?immutable=1` and why the prefix says so. The baseline
+store's row is `default | main | b8b566f | 61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27`; the fixture
+(§7.2) records the resulting id so the gate compares an id rather than re-deriving one.
+
+**The export must carry it.** An export cannot derive either form:
+`old-findings-7c1c1a9.json`'s top-level keys are exactly `anchor`, `counts`, `exported_at`,
+`findings`, `open_questions`, `source`, `subsystems`, and a substring search of the whole file finds
+none of `repo_id`, `canonical_branch`, `onboarding_sha`, `last_checked_sha` or `git_state`. Its
+`anchor` is `7c1c1a9f…`, the repository HEAD at export, which is not the archived store's
+`last_checked_sha` `61bc6b5c…` and so is not a substitute. The export contract therefore gains a
+required top-level `archived_store_id`, written by the exporter from the store it is exporting, and
+`--carry-from <export>` **refuses** an export that lacks it, naming the field. Where the store
+itself is available the carry verifies the two agree and refuses on a mismatch.
 
 ### 5.4 Who writes what
 
 - **Reinitialization writes the carry.** `dev/rebuild-self-conspectus-store.mjs` gains a required
   `--carry-from <path>`, accepting either an archived store (read `?immutable=1`) or an export
-  in the shape of `old-findings-7c1c1a9.json`. It refuses to reinitialize without one; `--carry-
-  from none` is accepted and records an explicit, reasoned empty carry so "nothing to carry" is
-  said rather than assumed. Every archived finding whose `resolution_state` is not terminal in
-  the archive (`open` or `fixed-pending-verification`) is carried. Terminal ones
-  (`verified-fixed`, `ruled-out`, `accepted`) are carried too but pre-recorded with outcome
-  `repaired`/`ruled-out` and a rationale naming the archive, so the Pecia resolver (§5.7) can
-  still answer about them.
+  carrying `archived_store_id` under §5.3's contract. It refuses to reinitialize without one.
+  `--carry-from none` is accepted **only together with `--carry-reason "<text>"`**, and the pair
+  writes a `carry_runs` row with `source_kind='none'`, the reason, and both counts zero. Without
+  the reason the driver refuses: "nothing to carry" is a judgment somebody makes, and an
+  unreasoned empty carry is indistinguishable from a forgotten one. Every archived finding is
+  carried, whatever its archived `resolution_state`, and `carry_runs.expected_count` records how
+  many the source declared.
+- **An archived terminal finding is pre-recorded `archived-terminal`, not `repaired`.** The three
+  outcomes below are *authority-bearing*: each asserts something about **this** store, with a rule
+  that says who may assert it and on what evidence. A finding the archive had already closed
+  asserts nothing about this store — nobody here checked a commit or read a repaired path. The
+  export's histogram is `open 13`, `verified-fixed 8`, `fixed-pending-verification 1`; pre-recording
+  those 8 as `repaired` would put 8 rows into a state whose rule requires a resolving commit and an
+  attached post-repair reading, with neither present. `GATE CF1` (§8.4) is red when
+  `record_carried_outcome` does precisely that, so the carry would have been writing rows the
+  gate exists to reject. `archived-terminal` carries the archived state and a rationale naming
+  the archive, is terminal for §5.7's resolver and for clause 7 (§5.5), and is not writable by
+  `record_carried_outcome` at all — only the carry writes it, and only for a finding the source
+  records as `verified-fixed`, `ruled-out` or `accepted`.
 - **New tool `carry_finding(...)`**, one carried record per call, so any reinitialization path —
   not only this script — can write the carry, and so the retroactive path (§5.8) exists.
 - **New tool `record_carried_outcome(carried_id, outcome, …)`** writes the terminal outcome.
@@ -573,9 +879,16 @@ rebuilt store silently re-satisfy a closed reference.
     `finding_evidence`). This is `requireOverturnEvidence`'s rule (`invariants.ts:422-447`)
     applied to the carried case: overturning requires evidence, not vibes.
   - `repaired` — requires `repaired_sha` to resolve in the bound workspace **and** at least one
-    attached evidence row whose `ref_sha` resolves at or after that commit. A claimed repair with
-    no post-repair reading is `fixed-pending-verification` in ADR-0001's vocabulary, never a
+    `carried_finding_evidence` row whose evidence `ref_sha` resolves and is a **descendant of or
+    equal to** `repaired_sha`. "At or after" has no meaning on a Git DAG until it is said which
+    relation is meant; this one is ancestry, tested with
+    `git merge-base --is-ancestor <repaired_sha> <evidence_sha>`, so a reading taken on a sibling
+    branch that never contained the repair does not discharge it. A claimed repair with no
+    post-repair reading is `fixed-pending-verification` in ADR-0001's vocabulary, never a
     discharge.
+  `archived-terminal` is written by the carry alone and is refused here, naming the carry as its
+  only writer.
+
   One outcome per carried record (`idx_carried_outcome_one`), and outcomes are never deleted. A
   mistaken outcome is corrected by a new carried record from the same archive, which is visible.
 
@@ -589,9 +902,25 @@ ADR-0001's *fully surveyed* predicate gains a seventh clause:
 
 Enforced at the whole-store predicate, **not** at `mapped` for the carried finding's subsystem,
 per `README.md` §4's proposal: a rebuild must be able to progress subsystem by subsystem. The
-checker (`dev/check-living-conspectus.mjs` and the depth gate, §7) emits the obligation id shape
-`carried:<archived_store_id>:<archived_finding_id>`, matching ADR-0001's "every red has a
-destination" table.
+obligation id shape is `carried:<archived_store_id>:<archived_finding_id>`, matching ADR-0001's
+"every red has a destination" table.
+
+**The whole-store predicate has no store-scoped implementation today, and this lane must write
+one.** `dev/check-living-conspectus.mjs` is not it: `:723` resolves its fixture to
+`dev/conspectus/self-baseline.json` and `main()` calls `evaluateConspectus(manifest)` over the
+parsed JSON. It evaluates a **supplied manifest**, never an open store, and that manifest is the
+immutable A0 historical fixture at `b8b566f` which `design/reader-lenses/spec.md` §12.3 forbids
+retargeting or regenerating — `dev/test-living-conspectus.mjs:8-15` imports the same
+`evaluateConspectus` and mutates the same fixture. Nor does the server carry the predicate:
+`grep -rn "fully.surveyed\|fullySurveyed" mcp-server/src/` returns one hit, `vocabulary.ts:1296`,
+which is the phrase inside a word list. Clause 7 added to a predicate with no store-scoped
+implementation would be vacuous wherever it was enforced.
+
+So P4 delivers `dev/check-store-fully-surveyed.mjs`: the six existing clauses plus clause 7,
+evaluated against an **open store** read-only, emitting the same obligation ids, with clause 7's
+census enumerating every `carried_findings` row from the store itself. §7.3's B6 uses the same
+census over the store or, in CI where no store exists, over the acceptance receipt's carried table.
+`dev/check-living-conspectus.mjs` keeps reading the frozen A0 fixture and is not retargeted.
 
 ```
 not fully surveyed at <sha>: <n> carried finding(s) have no terminal outcome —
@@ -601,6 +930,12 @@ that resolves. A discarded defect is not a decided one.
 ```
 
 ### 5.6 What the projection shows
+
+This section is delivered by **P6**, not by P4: it is renderer and read-back work, and P6 is the
+projection packet. P6 therefore depends on P4 as well as P2 and P3, and `readback.py` gains a
+carried-record census beside the ones it already runs — `_finding_partition_census`,
+`_ledger_stale_census` and `_locus_index_census` (`readback.py:252-262`) enumerate findings, stale
+entries and the locus index from the database and none of them sees a carried row.
 
 A **Carried obligations** section on the Unresolved lens and on the History pages, listing every
 carried record with its archived id, store, severity, symptom, and either its outcome or the
@@ -618,7 +953,13 @@ contract unchanged (0 resolved · 1 not resolved · 2 cannot run):
 
 1. `findings` / `finding_resolution_current` for `<id>` — unchanged. `verified-fixed` or
    `ruled-out` → exit 0.
-2. Otherwise `carried_findings` where `archived_finding_id = <id>`:
+2. Otherwise `carried_findings` where `archived_finding_id = <id>`. The table is unique by
+   `(archived_store_id, archived_finding_id)`, so an id alone can match rows carried from two
+   different archives. **An ambiguous match is a refusal, never a choice**: the resolver exits 2
+   (`cannot run`) with stderr `<n> carried records share that id; qualify it as
+   <store-id>:<finding-id>`, and it accepts the qualified form as its argument. Picking the newest,
+   or the first, would let one archive's decision answer for another's defect. With exactly one
+   match:
    - a `successor-finding` outcome → re-run step 1 against `successor_id` and answer with its
      result. The reference follows the finding into its successor.
    - a `ruled-out` outcome → exit 0.
@@ -637,10 +978,17 @@ The candidate store has no carried records because it was built before this spec
 lane does not write to it (`decisions.md` §6). The retroactive path is therefore:
 
 1. The acceptance rebuild (§7.4) runs in **this worktree** with
-   `--carry-from ~/.claude/automations/amanuensis-clean-slate/archive/old-findings-7c1c1a9.json`.
-   That export carries all 22 archived findings with `resolution_state`, `symptom`, `root_cause`,
-   `primary_files` and `ref_sha` — every field `carried_findings` needs — anchored at
-   `7c1c1a9f5689d396487072d012abe6fafd5f348c`.
+   `--carry-from ~/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db`,
+   the archived **store**, opened `?immutable=1`.
+
+   Not the export. `old-findings-7c1c1a9.json` carries all 22 findings with `resolution_state`,
+   `symptom`, `root_cause`, `primary_files` and `ref_sha`, but it carries no store identity and
+   predates the contract field §5.3 adds, so the carry could not name the store the records came
+   from — the one thing §5.3 exists to record. The archived store carries every field the export
+   does (`findings` holds `finding_id`, `subsystem_id`, `symptom`, `root_cause`, `severity`,
+   `status`, `primary_files`, `ref_sha`, `pass_type`, and `finding_resolution_current` supplies
+   `resolution_state`) **and** the `git_state` row from which the legacy `archived_store_id`
+   derives. `carry_runs` records `source_kind='store'` and that path.
 2. The rebuild's survey decides each of the 13 archived open findings, and in particular the six
    the 2026-09-14 rebuild lost. The expected outcomes, to be confirmed or contradicted by the
    rebuild rather than assumed by this specification: `B03-5` has a successor in the candidate's
@@ -669,10 +1017,20 @@ words. Line numbers are at `d2b1630`.
 | `references/refresh.md` | new §Reinitialization | Reinitialization carries prior findings; `--carry-from` is required; the three terminal outcomes and who may write each; fully-surveyed refuses while any is undecided. |
 | `references/onboarding.md` | Phase 5 / status ladder | The four new refusals listed where the ladder is introduced. |
 | `references/artifact-templates.md` | subsystem-survey template | A **Domain vocabulary** section that is filled with terms or with the declination and its reason. |
+| `references/phase-1-scope.md` | §3 Seed vocabulary, `:53-58` | The `define_term` call gains the anchor obligation: `first_seen` must be a `file:symbol@sha` whose revision resolves and whose path exists there, or the call is refused. |
+| `references/phase-2-structural.md` | §1, `:24` | The same, where `define_term` is first named. |
+| `references/phase-3-concerns.md` | `:120` | The same, where `define_term` is named again. |
 | `.claude/skills/amanuensis/SKILL.md` | the refusal summary | One line per new refusal. |
 
 No sentence is removed that describes a behaviour that still exists. Nothing in the references
 is softened.
+
+The last three rows are the correction to an eight-entry register that named only the passage a
+refusal was *designed* against. `phase-1-scope.md:58` instructs
+`define_term(term, gloss, expansion, subsystem_id, first_seen, ref_sha)` — a call the server will
+start refusing — and it was absent; so were `phase-2-structural.md:24` and
+`phase-3-concerns.md:120`. A caller that a change breaks is an affected caller wherever it lives,
+and §6.2's inventory is what finds the next one.
 
 ### 6.2 The parity check
 
@@ -699,9 +1057,20 @@ states plainly what that does and does not buy — it catches a reference edited
 with the server, and it cannot tell whether either side is *right*. That limit is why the check
 is cheap: the register is the artifact under review, not a model's judgment of similarity.
 
-A new refusal that is not in the register is caught by the check's second assertion only if
-someone adds it; §8.7 records that false green. The packet's acceptance requires the register to
-name all four new refusals plus the two existing ones the lane touches.
+**The candidate set is derived, so an omission is a finding rather than silence.** A register
+compared only against itself cannot report what nobody wrote down — §8.7 records that false green,
+and `phase-1-scope.md:58` is the proof it was already happening. So the check gains a third
+assertion with a generated left-hand side: `check-refusal-parity.mjs` scans
+`mcp-server/src/invariants.ts` and `mcp-server/src/tools/*.ts` for `ToolError` messages beginning
+`cannot advance`, `refuses:` or `requires`, and reports every such message with no register entry
+whose `server.phrase` occurs in it. It also reports every skill reference that names a tool whose
+handler throws a registered refusal and that carries no registered phrase — which is what finds
+`phase-1-scope.md`.
+
+That derivation is lexical and it is not complete: a refusal phrased outside those three openings
+is invisible to it, and §8.7 says so. It converts the failure mode from *silent* to *narrower*,
+which is the honest claim. The packet's acceptance requires the register to name all four new
+refusals plus the two existing ones the lane touches, and requires the derived set to be empty.
 
 ---
 
@@ -718,7 +1087,20 @@ absence in CI.
   identity (§5.3) and anchor.
 - **Candidate arm.** Reads the live store at `.amanuensis/memory.db` when one is present, and
   otherwise the committed acceptance receipt (§7.5). When both are present it asserts both and
-  requires them to agree; a receipt nobody can contradict is a claim about a claim.
+  requires them to agree; a receipt nobody can contradict is a claim about a claim. When
+  **neither** is present the arm is `cannot run` and the gate exits **2**, printing
+  `GATE D1 CANNOT RUN: no live store and no committed acceptance receipt`. That is a third state,
+  distinct from red and from green, and it is the state CI is in between the packet that
+  registers this gate and the packet that writes the receipt. Without it the gate is knowingly
+  red for three packets and stops being a signal for any of them; with it the absence is
+  reported as an absence, which is VP4(e) applied to the gate's own inputs.
+
+  `GATE D1` (§8.5) asserts that the arm reaches `cannot run` — not green — in that window, so the
+  third state cannot be used to hide a real red.
+
+- **Blocking predicates.** The twelve measures are the comparison layer. The six predicates B1–B6
+  of §7.3 are evaluated separately, over rows rather than over counts, and they are what turn the
+  gate red. §7.2's fixture and §7.5's receipt keep them under their own keys for that reason.
 
 The gate resolves every revision through `dev/receipt-provenance.mjs` (`resolveRevisions`,
 `historyIsComplete`) exactly as the reader-lenses gates do, so a shallow clone reports
@@ -755,13 +1137,33 @@ session. The fixture is regenerable and `--check`able, so it cannot drift from t
 (GP28), and regenerating it against a *different* store changes `archived_store_id`, which the
 gate rejects.
 
+**`--check` must be able to say it cannot run.** The archive lives at
+`~/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db`: a machine-local
+absolute path outside the repository. On CI, on another machine, or after the archive is moved,
+`node dev/record-survey-depth-baseline.mjs --check` exits **2** with
+`cannot run: the archived store is not readable at <path>`. It never exits 0. A `--check` that
+silently passes where it cannot read its source is the zero-denominator green this repository has
+recorded three times, and a check whose only honest answer off this machine is "green" is not a
+check. It is in P5's regression list and in `completion.commands` so the exit-2 path is exercised
+by the launcher rather than assumed.
+
 ### 7.3 What turns the depth gate red
 
 Blocking, per §1.6:
 
-1. **B1 Reconciliation.** The candidate is reconciled at its checked revision (§3.3), and the
-   standing reconciliation's `unledgered` equals the count re-derived from `git ls-tree` at that
-   revision. A store whose reconciliation record disagrees with the tree is red.
+1. **B1 Reconciliation and complete inventory.** The candidate is reconciled at its checked
+   revision under §3.3's five conditions; the standing reconciliation's `unledgered` and `absent`
+   both equal the counts re-derived from `git ls-tree -r --name-only` at that revision; **and both
+   are zero**. A store whose record disagrees with the tree is red, and so is one whose record
+   agrees with the tree and says 501.
+
+   The zero is not extra strictness, it is ADR-0001 clause 1
+   (`dev/adr/0001-living-conspectus-terms.md:19`): "Every tracked path in the pinned inventory has
+   exactly one subsystem assignment or an explicit exclusion with owner and reason." An earlier
+   draft required only that the recorded count match the tree, which a correctly recorded 501
+   satisfies — and 501 is exactly the candidate's number. The acceptance rebuild claims to be
+   fully surveyed; clause 1 is part of what that means. §3.3a binds the same predicate at
+   publication, where the rebuild meets it first.
 2. **B2 Examined fraction.** `D3% ≥ 0.5957`, both sides computed over the tracked denominator at
    each store's own reconciled revision. Printed as `candidate 13.88% vs baseline 59.57%
    (−45.69 pp)` whichever way it lands.
@@ -776,6 +1178,14 @@ Blocking, per §1.6:
 
 Reported, never red: D1, D4, D5, D6, D7%, D8, D9, D10, D11, both classification histograms, and
 the claim/xref/session counts, each with its baseline and a signed delta.
+
+**Every predicate is recomputed, never read.** B1–B6 are evaluated over rows — the reconciliation
+row and a fresh `git ls-tree`, each disposition with its attachments' `ref_sha` values, each
+subsystem with its anchored terms and effective declination, each carried record with its outcome.
+Where the candidate arm reads the receipt rather than a live store (§7.1), it recomputes them from
+the **row-level witnesses** §7.5 requires the receipt to carry, and **never** from a recorded
+verdict field. A gate that reads a receipt's `"verdict": "green"` validates a self-report; that is
+the false green `GATE A1` seeds a forged receipt against (§8.8).
 
 The gate prints the denominator beside every fraction and treats a zero denominator as
 out-of-band, not as a pass (VP4(e)).
@@ -818,7 +1228,24 @@ The result is recorded in `design/survey-depth/acceptance-receipt.json`, written
 `amanuensis-survey-depth/acceptance-receipt/v1`; the repository sha; the store identity and
 checked revision; every blocking axis with its value, its baseline and its verdict; every
 reported axis with its delta; per-subsystem status, disposition count and attached count; the
-carried-finding table with each outcome; and the reconciliation record. The gate's receipt arm
+carried-finding table with each outcome; and the reconciliation record.
+
+Plus the **row-level witnesses** without which B3 and B4 cannot be recomputed from it:
+
+- **B3** — one row per disposition: `subsystem_id`, `concern_code`, the subsystem's status, and
+  the `ref_sha` of every attached evidence row with whether each resolved at write time. Aggregate
+  attached counts cannot answer "does *this* disposition carry a resolvable row".
+- **B4** — one row per subsystem: its anchored terms with each term's `first_seen` token, and its
+  effective declination's `id`, `ref_sha` and `session_id`. A per-subsystem boolean cannot answer
+  which record discharged it.
+- **B1** — the standing reconciliation's `detected_sha`, `tree_digest` and `ledger_digest`, so the
+  digests can be re-derived at any later revision that still has the tree.
+- **B5/B6** — the full carried table with `archived_store_id`, `archived_finding_id`, outcome, and
+  for `repaired` the `repaired_sha` and the attached evidence revisions.
+
+That is what makes this a baseline for the *next* rebuild rather than a one-time report: the
+comparison is repeatable at any later revision without the live store, and repeatable by
+recomputation rather than by trust. The gate's receipt arm
 asserts the same predicates over it, so the comparison is repeatable at any later revision
 without the live store — which is what makes this a baseline for the *next* rebuild rather than
 a one-time report.
@@ -829,7 +1256,40 @@ a one-time report.
 
 Every gate is a new file, prints `GATE <id> RED: <reason>` on failure and `GATE <id> GREEN` on
 success as its single last stdout line, scrubs launcher crash signatures from its messages
-(`dev/test-rebuild-depth.mjs:176-196`), and is added to `.github/workflows/test.yml`.
+(`dev/test-rebuild-depth.mjs:176-196`), names a must-stay-green control, states in its header the
+false green it cannot exclude, and is added to `.github/workflows/test.yml`.
+
+### 8.0 The red commit protocol
+
+Every gate in this specification is a **new file**. Left to itself, each packet's red commit would
+therefore fail by `MODULE_NOT_FOUND` — the test does not exist yet — and a launcher watching only
+for a nonzero exit would accept that as the gate's red proof. It is not one. A missing file proves
+the file is missing; it proves nothing about whether the assertion inside it can fire, which is the
+only thing a red proof is for. This is VP4(f)'s "a kill proves a gate *can* fire, never that it
+fires *selectively*", one step earlier: an absent file does not prove even that.
+
+**The launcher enforces, and every packet's gate must satisfy:**
+
+1. **At the red commit** the gate file **exists and runs**. It exits non-zero, prints
+   `GATE <packet-id> RED: <reason>` as its last stdout line, and its output contains **no crash
+   signature** — none of `MODULE_NOT_FOUND`, `Cannot find module`, `ENOENT`, `SyntaxError`,
+   `ReferenceError`, `TypeError`, `is not a function`, `command not found`, `ModuleNotFoundError`,
+   `ImportError`. The red commit therefore ships the **complete test**, including its fixtures and
+   its must-stay-green control, against the **unchanged** implementation.
+2. **At HEAD**, after the implementation lands, the same command exits 0 and prints
+   `GATE <packet-id> GREEN`.
+
+**What this requires of every red condition in §8.1 to §8.9.** Each must name the *assertion* that
+fires — the call that should have been refused and was not, the row that should have been
+unwritable and was written — and must be reachable against the implementation as it stands before
+the packet. "The test file is absent" is not a red condition and is not accepted as one. Where a
+red condition depends on a table the packet itself creates, the test creates that table in its own
+fixture so the assertion is about behaviour rather than about schema arrival; where it depends on a
+tool the packet itself adds, the red arm asserts the tool is **absent from `tools/list`**, which is
+an assertion the gate can make and print.
+
+Each packet's `gate.red_expect` in `plan.json` quotes the first line of the reason its red prints,
+and `gate.red_rejects` carries the crash signatures above.
 
 ### 8.1 `GATE SD1` — `mcp-server/test-disposition-evidence.mjs`
 
@@ -849,22 +1309,35 @@ first real bite is at `adversarial`, whose existing prerequisite is ≥1 disposi
 ### 8.2 `GATE SR1` — `mcp-server/test-scope-reconciliation.mjs`
 
 **Red when:** `detect_changes` returns without writing exactly one `scope_reconciliations` row;
-the row's counts disagree with a re-derivation from `git ls-files` in the fixture repo; an
-advance to `mapped` succeeds on an unreconciled store; `materialize_docs` renders on an
-unreconciled store; or a reconciliation at revision A satisfies a publication at revision B.
-Control: a reconciled store advances and publishes.
+the row's counts disagree with a re-derivation from `git ls-tree -r --name-only <R>` in the fixture
+repo; an `UPDATE` or a `DELETE` on a `scope_reconciliations` row succeeds; a reconciliation row
+whose `detected_sha` is an abbreviation satisfies a full-sha comparison, or the reverse; a store
+with **duplicate ledger ownership** — one path owned by two subsystems, which the AxiomDB store
+holds for 53 of its 187 distinct paths — reconciles without reporting it; a **correct but nonzero**
+`unledgered` count publishes (§3.3a); the index and the tree disagree and the reconciliation
+follows the index; a reconciliation stands after the ledger has been mutated under it; an advance
+to `mapped` succeeds on an unreconciled store; `materialize_docs` renders on an unreconciled store;
+or a reconciliation at revision A satisfies a publication at revision B.
+Control: a reconciled store with zero unledgered and zero absent paths advances and publishes.
 
 **False green it cannot exclude:** that the unledgered paths were *assigned well*. Reconciliation
 proves the ledger and the tree were compared, not that a file landed in the right subsystem.
 
 ### 8.3 `GATE VD1` — `mcp-server/test-vocabulary-discharge.mjs`
 
-**Red when:** `define_term` stores a `first_seen` that is not a citation token or whose revision
-does not resolve; `define_term` runs without an active session; an advance to `structural`
-succeeds for a subsystem with neither an anchored term nor a declination; a codebase-wide term
-satisfies a subsystem's obligation; `decline_domain_vocabulary` succeeds for a subsystem that has
-an anchored term; or a declination is updatable or deletable. Control: a subsystem with one
-anchored term advances, and so does one with only a declination.
+**Red when:** `define_term` stores a `first_seen` that is not a citation token; one whose revision
+is **malformed** (not 7–40 hex); one whose revision is well-formed but **unreachable** in the bound
+workspace; one whose revision resolves but whose **path does not exist in that revision's tree** —
+the case `requireWorkspaceCitation` cannot see, since it runs no git at all
+(`src/helpers.ts:180-207`); or one whose `ref_sha` **mismatches** the revision inside its own
+`first_seen` token. Also red when `define_term` runs without an active session; when re-scoping a
+term **silently revokes** another subsystem's discharge (§4.4); when an advance to `structural`
+succeeds for a subsystem with neither an anchored term nor an effective declination; when a
+codebase-wide term satisfies a subsystem's obligation; when a declination whose `ref_sha` no longer
+resolves satisfies one; when `decline_domain_vocabulary` succeeds for a subsystem that has an
+anchored term; or when a declination row proves updatable or deletable.
+Control: a subsystem with one **valid anchored** term advances — the anchor's revision resolves and
+its path exists in that tree — and so does one with only a declination whose `ref_sha` resolves.
 
 **False green it cannot exclude:** whether the declination is *true*. "This subsystem has no
 domain vocabulary" is a judgment; the substrate can require that it be made, attributed and
@@ -873,13 +1346,19 @@ rather than pretending past it.
 
 ### 8.4 `GATE CF1` — `mcp-server/test-carried-findings.mjs`
 
-**Red when:** reinitialization runs without `--carry-from`; a carried record is writable twice
-for the same `(archived_store_id, archived_finding_id)`; `record_carried_outcome` accepts
-`ruled-out` with no current-session evidence, `repaired` with an unresolvable sha or no
-post-repair evidence, or `successor-finding` naming an absent finding; a second outcome is
-accepted for one carried record; a carried record is deletable; or the fully-surveyed predicate
-returns true with an undecided carried record. Control: a store whose carried records all have
-terminal outcomes is fully surveyed on that clause.
+**Red when:** reinitialization runs without `--carry-from`; `--carry-from none` is accepted
+without `--carry-reason`, or is accepted and writes no `carry_runs` row; a carry finishes with
+`imported_count` unequal to `expected_count`; a carried record is writable twice for the same
+`(archived_store_id, archived_finding_id)`; `record_carried_outcome` accepts `ruled-out` with no
+current-session evidence attached through `carried_finding_evidence`, `repaired` with an
+unresolvable sha or with evidence whose revision is **not a descendant of or equal to**
+`repaired_sha`, `successor-finding` naming an absent finding, or `archived-terminal` at all; a
+second outcome is accepted for one carried record; a carried record, outcome or carry run proves
+updatable or deletable; an export lacking `archived_store_id` is accepted as a carry source; or the
+store-scoped fully-surveyed predicate returns true with an undecided carried record — asserted over
+a store holding a **nonempty** undecided set, so the clause cannot pass by having nothing to check.
+Control: a store whose carried records all have terminal outcomes is fully surveyed on that clause,
+and one whose only outcomes are `archived-terminal` is too.
 
 **False green it cannot exclude:** whether the successor finding is *the same defect*. The
 substrate records that a decision was made with an anchor; a session that files an unrelated
@@ -890,7 +1369,11 @@ finding as the successor satisfies it. §5.6's projection exists so a reader can
 The gate *for* the depth gate. **Red when:** `dev/test-survey-depth.mjs` fails to turn red on
 each of B1–B6 seeded independently into a synthetic store; when it turns red on the must-stay-
 green control store; when it reports green with an absent or unreadable baseline; when it reports
-a fraction without its denominator; or when it is absent from CI. One seeded fault per axis, each
+green with neither a live store nor a committed receipt, rather than exiting 2 `cannot run` (§7.1);
+when it reports a blocking verdict read from the receipt's recorded verdict field rather than
+recomputed from §7.5's witnesses; when it reports a fraction without its denominator; when
+`dev/record-survey-depth-baseline.mjs --check` exits 0 with the archive unreadable rather than
+exiting 2; or when it is absent from CI. One seeded fault per axis, each
 independently chosen at the executed boundary rather than by a marker the gate itself writes
 (VP4 v2.15).
 
@@ -910,8 +1393,17 @@ unreconciled store; the coverage denominator is drawn from the ledger rather tha
 reconciliation; `Not yet surveyed` §1 prints a denominator for an unreconciled store; the
 `not measured` sentence omits the revision or the reason; a declined subsystem renders as though
 it were never asked; or the read-back's coverage axis counts a `not measured` row as satisfied.
-Control: a reconciled store renders exactly the numbers it renders today, asserted byte-for-byte
-against a fixture.
+Two controls, because one fixture cannot carry both halves. **(a)** A reconciled store with
+**zero** unledgered paths renders exactly the numbers it renders today, asserted byte-for-byte
+against a committed fixture. **(b)** A reconciled store with unledgered **greater than zero**
+renders against the *new* denominator, with the old value recorded in the gate's header as the
+intended change. The second fixture is not optional: today's "Files read, of those carrying an
+obligation" denominator is `obligation_files`, computed at `renderers.py:415` as
+`SUM(CASE WHEN {OBLIGATION_BEARING_SQL} …) FROM file_ledger` — over ledger rows — and read at
+`:630`. §3.4 moves it to D2 over the standing reconciliation, and the two differ by exactly the
+unledgered count. A byte-identical control is therefore satisfiable **only** on a zero-unledgered
+fixture, which is the one store shape this change does not affect: the control as first written
+could not have failed.
 
 **False green it cannot exclude:** it asserts the rendering of a store it is handed. A
 reconciliation record that is itself wrong renders faithfully and wrongly; `GATE SR1` owns that.
@@ -936,10 +1428,27 @@ blocking axis as green whose recorded value fails the baseline comparison, omits
 carried findings, records a carried finding with no outcome, or disagrees with the live store
 where one is present. Also red when the receipt's repository sha does not resolve on this branch.
 
+**Control:** the committed receipt at HEAD, bound to this repository and to the acceptance store,
+validates — and is the only receipt that does. Paired with it, a **seeded forged-green receipt**:
+a copy of the valid receipt whose B2 `verdict` is flipped to `green` while its recorded
+`examined_fraction` stays below the baseline, and a second copy whose per-disposition witness rows
+name a `ref_sha` that does not resolve while its B3 verdict reads green. A1 must turn red on both.
+A1 was the only gate in this section with no control, which is the failure VP4(f) names: a gate
+whose green nothing can distinguish from a gate that always greens.
+
 **False green it cannot exclude:** a receipt proves what was true when it was written. The live
 arm narrows the window only where a store exists to read, which in CI it does not.
 
-### 8.9 `GATE CF2` — `dev/test-carried-finding-references.mjs`
+### 8.9 `GATE CF2` — `dev/test-carried-finding-references.mjs`, in **P4**
+
+Every red condition below is a property of `dev/pecia-resolve-finding.mjs`, which P4 delivers. A
+gate asserting P4's behaviour cannot prove P9's: by the time P9 starts, the resolver has shipped
+and the gate is green on its first run, with no red commit available to it. It therefore belongs
+to P4, whose red it does prove. P9 keeps a gate of its own — `dev/test-pecia-carry-audit.mjs`,
+red when `dev/pecia-dogfood.md` leaves any of the eight `pc-*` records unaccounted (`pc-1a91`,
+`pc-207e`, `pc-707e`, `pc-80b8`, `pc-833d`, `pc-adce`, `pc-ae87`, `pc-d688`), which is P9's own
+deliverable and its own claim.
+
 
 **Red when:** `dev/pecia-resolve-finding.mjs` exits 0 for an id whose only record is an undecided
 carried finding; exits 1 for an id whose carried record has a `ruled-out` or `repaired` outcome;
@@ -961,26 +1470,58 @@ finding **B03-R2**, which the acceptance rebuild must carry forward rather than 
 `mcp-server/test-finding-partition.mjs`, and the materializer's seven Python gates. No axis of
 any of them is weakened or removed.
 
-**One existing gate changes**, and only by widening: `dev/test-rebuild-depth.mjs` hard-codes
-`CHECKLIST_CONCERNS = ["BV-1","CC-1","EV-1","GT-1","RC-1","ZD-1"]` (`:104`) and a finding-id
-shape `<subsystem-id-compact>-<N>` that the clean-slate survey deliberately did not use
-(candidate finding **B07-R2**). Both literals are read from the committed coverage receipt's
-declared checklist and from a declared id convention instead, keeping the GP24 property the
-comment at `:24-28` protects — the denominator still comes from a *different* committed document
-than the one under test. Its remaining assertions, including `a disposition carries no attached
-evidence`, are untouched: that assertion is this lane's own thesis and it was already right.
+**Two existing gates change, and only by widening.**
+
+`dev/test-rebuild-depth.mjs` hard-codes `CHECKLIST_CONCERNS = ["BV-1","CC-1","EV-1","GT-1","RC-1","ZD-1"]`
+(`:104`) and a finding-id shape `<subsystem-id-compact>-<N>` that the clean-slate survey
+deliberately did not use (candidate finding **B07-R2**). Both literals move out of the test body —
+but **not** into `design/reader-lenses/rebuild-coverage-receipt.json`, which an earlier draft named.
+The comment at `:19-24` states the property that would destroy: "Every denominator this gate counts
+against is read from a *different* committed document than the one under test … A numerator and its
+denominator that shrink together prove nothing (GP24)." That independence is real today — the
+coverage receipt's `repository_sha` is `dee59d3e…` and it was written by P17 of the reader-lenses
+lane — and it survives only while the rebuild packet does not rewrite it. So:
+
+- The checklist moves to **`mcp-server/contracts/concern-checklist.json`**, a standalone committed
+  contract regenerated only by an explicit onboarding-calibration step and `--check`ed in CI. The
+  id convention moves beside it. Neither is a receipt and neither is rewritten by a rebuild.
+- `design/reader-lenses/rebuild-coverage-receipt.json` is **removed from the rebuild packets'
+  deliverables**. It stays a document a different run produced, which is the whole of its value
+  here.
+
+Its remaining assertions, including `a disposition carries no attached evidence`, are untouched:
+that assertion is this lane's own thesis and it was already right.
+
+`dev/test-rebuild-readback.mjs` spawns the rebuild driver directly at `:541-552` and `:686-699` with
+`--confirm --workspace --archive --receipt` and no `--carry-from`, and asserts it exits 0 (`:584`,
+`:596`, `:622`, `:720`, `:737`). §5.4 makes `--carry-from` required, so the gate breaks. The comment
+at `:494-500` records why it drives the real script rather than reimplementing it (F1/codex), so the
+answer is to update the invocations, not to weaken them: both arms pass
+`--carry-from none --carry-reason "throwaway workspace has no predecessor"`, a new assertion checks
+the `carry_runs` row was written — otherwise the `--carry-from none` branch is a branch nothing
+tests — and a separate arm keeps the missing-argument refusal red. The file is a **P4 deliverable**;
+an earlier draft had P4 promising it stayed green while specifying the change that breaks it.
 
 **Two gates are already red on this branch at `fb9f1c4`, before the lane starts**, and neither
 red is caused by anything specified here. `dev/test-rebuild-depth.mjs` fails eight assertions
 over the reader-lenses-era receipt this branch carries (`d2b1630` is a descendant of the
-reader-lenses merge `7c1c1a9` and predates the clean-slate rebuild's commits); the acceptance
+reader-lenses merge `7c1c1a9` and predates the clean-slate rebuild's commits); re-run in this
+worktree at `ec11d3f` it still prints `GATE P19 RED: … 8 failed assertion(s)`. The acceptance
 rebuild re-records that receipt for its own rebuild and must turn it green. `dev/test-rebuild-
 regeneration.mjs` fails one assertion — `registry_ownership resolves 4 owning subsystem(s); a
 denominator that names one subsystem cannot show a missing edge` — which is the decomposition
-question the clean-slate report raised and is **out of this lane's scope**. Neither appears in
-any packet's regression list, because a regression list is a promise about gates that are green
-when the packet starts. `dev/test-rebuild-regeneration.mjs` stays in `completion.commands`, where
-it is the launcher's and the owner's business rather than a packet's.
+question the clean-slate report raised and is **out of this lane's scope**.
+
+A regression list is a promise about gates that are **green when the packet starts**, so neither
+belongs in one — and an earlier draft asserted that while the plan put `node dev/test-rebuild-depth.mjs`
+in two packets' regression lists and `node dev/test-survey-depth.mjs`, which cannot be green until
+the rebuild writes its candidate, in two more. Both are removed from every regression list. Each
+appears in the **acceptance** of the packet expected to turn it green, which is where a gate a
+packet is supposed to fix belongs. `dev/test-rebuild-regeneration.mjs` stays in
+`completion.commands`, where it is the launcher's and the owner's business rather than a packet's.
+It also holds a `set_disposition` call site (`dev/test-rebuild-regeneration.mjs`), so it is a P1
+deliverable even though it is nobody's regression: a caller a change breaks must be updated whether
+or not it was passing.
 
 ---
 
