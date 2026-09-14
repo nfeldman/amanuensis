@@ -172,6 +172,14 @@ process.on("warning", () => {});
 // ---------------------------------------------------------------------------
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-d1-"));
 process.on("exit", () => {
+  // `AMANUENSIS_D1_KEEP_SCRATCH` leaves the seeded workspaces behind so a
+  // reviewer can run the depth gate against one by hand and read its output.
+  if (process.env.AMANUENSIS_D1_KEEP_SCRATCH) {
+    // stderr, not stdout: the status line is the last thing on stdout, and a
+    // debugging convenience does not get to come after it.
+    process.stderr.write(`scratch kept at ${scratch}\n`);
+    return;
+  }
   try {
     rmSync(scratch, { recursive: true, force: true });
   } catch {
@@ -536,18 +544,11 @@ function buildCase(name, options = {}) {
     const omitted = seed === "B5" ? carriedIds[0] : null;
     const storeIdForRows =
       seed === "B5-otherstore" ? "store-legacy-someotherstore" : archivedStoreId;
-    let first = true;
     for (const id of carriedIds) {
       if (id === omitted) continue;
       const carriedId = Number(
         insertCarried.run(id, storeIdForRows, archivedAnchor, carryRunId, sha).lastInsertRowid,
       );
-      // B6's seed: one carried record nobody decided.
-      if (seed === "B6" && first) {
-        first = false;
-        continue;
-      }
-      first = false;
       insertOutcome.run(
         carriedId,
         "ruled-out",
@@ -556,6 +557,13 @@ function buildCase(name, options = {}) {
         "re-read at this revision and not reproduced",
         sha,
       );
+    }
+    // B6's seed: a carried record nobody decided. It is deliberately **not** one
+    // of the baseline's open thirteen — §5.8 carries every archived finding,
+    // whatever its archived state, and leaving one of the thirteen undecided
+    // would fire B5 too, so a red on that store would prove nothing about B6.
+    if (seed === "B6") {
+      insertCarried.run("B02-9", storeIdForRows, archivedAnchor, carryRunId, sha);
     }
   } catch (error) {
     try {
@@ -761,16 +769,21 @@ check("every printed fraction carries its denominator", () => {
   if (!controlRun.last.startsWith("GATE D0 ")) {
     return `the control run printed no GATE D0 status line, so there are no fractions to read — ${describe(controlRun)}`;
   }
+  // A rendered percentage always carries two decimals; an axis label like `D7%`
+  // does not, so the two cannot be confused.
   const offenders = [];
+  let rendered = 0;
   for (const line of controlRun.stdout.split("\n")) {
-    for (const match of line.matchAll(/%/g)) {
-      const tail = line.slice(match.index + 1);
+    for (const match of line.matchAll(/\d+\.\d+%/g)) {
+      rendered += 1;
+      const tail = line.slice(match.index + match[0].length);
       if (!/^\s*\(\d+\/\d+\)/.test(tail)) offenders.push(line.trim());
     }
   }
   if (offenders.length) {
     return `${offenders.length} percentage(s) print without an (n/d) denominator; first: ${JSON.stringify(offenders[0].slice(0, 160))}`;
   }
+  if (rendered === 0) return "the gate printed no percentage at all, so nothing was compared";
   return null;
 });
 
