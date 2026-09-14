@@ -1248,6 +1248,151 @@ async function main(mods) {
         : "the refusal does not say what would discharge the obligation; a red with no destination is the state ADR-0001's obligation table exists to remove";
     });
 
+    // F5/codex. Clause 1 re-derived the ledger-against-tree comparison itself
+    // and never read the reconciliation it was standing on, so a store whose
+    // standing reconciliation had gone stale under it — §3.3's conditions 4 and
+    // 5, the ones that make the reading *stand* — reported satisfied anyway.
+    // C13 and §3.3a bind the whole-store predicate to the same five conditions
+    // materialize_docs is bound to, plus zero `unledgered` and zero `absent`.
+    check("E4 clause 1 stands on a standing reconciliation, not on any row at the revision", () => {
+      if (!existsSync(join(REPO, CHECKER_REL))) return `${CHECKER_REL} is absent`;
+      const clauseOne = (ctx) => {
+        const result = runChecker(ctx);
+        if (result.report === null) {
+          return { error: `${CHECKER_REL} printed no parseable report (exit ${result.status})` };
+        }
+        const one = (result.report.clauses ?? []).find((entry) => Number(entry.clause) === 1);
+        return one ? { one } : { error: "the report carries no clause 1" };
+      };
+
+      // Control first: a store whose reconciliation was written by the real
+      // detect_changes over a ledger that covers the tree. Clause 1 holds here
+      // before and after the sharpening, so the assertion cannot pass by
+      // refusing everything.
+      const good = world("clause1-standing");
+      good.db
+        .prepare("INSERT INTO subsystems (id, name, status) VALUES ('B03','B03 fixture','scoping')")
+        .run();
+      good.db
+        .prepare(
+          "INSERT INTO file_ledger (subsystem_id, file_path, classification) VALUES ('B03','src/a.ts','examined')",
+        )
+        .run();
+      call("set_git_state", { canonical_branch: "main", onboarding_sha: headSha(good) }, good);
+      call("detect_changes", { current_sha: headSha(good) }, good);
+      const control = clauseOne(good);
+      if (control.error) return control.error;
+      if (control.one.satisfied !== true) {
+        return `clause 1 refused a store reconciled at its own checked revision with every tracked path ledgered: ${JSON.stringify(control.one.note ?? control.one.missing)}`;
+      }
+
+      // The subject: the same shape, except that the only reconciliation at the
+      // revision was taken over a different tree and a different ledger. §3.3
+      // conditions 4 and 5 fail, so nothing stands and there is no denominator.
+      const stale = world("clause1-stale");
+      stale.db
+        .prepare("INSERT INTO subsystems (id, name, status) VALUES ('B03','B03 fixture','scoping')")
+        .run();
+      stale.db
+        .prepare(
+          "INSERT INTO file_ledger (subsystem_id, file_path, classification) VALUES ('B03','src/a.ts','examined')",
+        )
+        .run();
+      const head = headSha(stale);
+      call("set_git_state", { last_checked_sha: head }, stale);
+      stale.db
+        .prepare(
+          `INSERT INTO scope_reconciliations
+             (detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,
+              unledgered, absent, exempt, session_id)
+           VALUES (?, 'bad-tree', 'bad-ledger', 1, 1, 0, 0, 0, ?)`,
+        )
+        .run(head, stale.sessionId);
+      const subject = clauseOne(stale);
+      if (subject.error) return subject.error;
+      if (subject.one.satisfied !== false) {
+        return (
+          "clause 1 reported satisfied over a store whose only reconciliation at the revision " +
+          "records tree_digest 'bad-tree' and ledger_digest 'bad-ledger'. §3.3's conditions 4 " +
+          "and 5 are what make the reading stand: a store edited since it last checked itself " +
+          "against the tree has not checked itself against the tree, and a coverage fraction " +
+          "stamped with R may only be taken over R's own tree"
+        );
+      }
+      return null;
+    });
+
+    // F6/codex. Clause 3 counted attachments and stopped there, so a
+    // disposition attached to evidence at a revision that does not exist was
+    // "evidence-backed". §7.3's B3 states the same predicate the other way:
+    // "at least one attached evidence row whose ref_sha resolves".
+    check("E5 clause 3 requires an attachment whose revision resolves in the workspace", () => {
+      if (!existsSync(join(REPO, CHECKER_REL))) return `${CHECKER_REL} is absent`;
+      const ctx = world("clause3-unresolvable");
+      const head = headSha(ctx);
+      ctx.db
+        .prepare("INSERT INTO subsystems (id, name, status) VALUES ('B03','B03 fixture','concerns')")
+        .run();
+      ctx.db
+        .prepare("INSERT INTO concerns (code, origin, status) VALUES ('CF1-C','seeded','active')")
+        .run();
+      ctx.db
+        .prepare(
+          "INSERT INTO dispositions (subsystem_id, concern_code, classification) VALUES ('B03','CF1-C','ruled-out')",
+        )
+        .run();
+      // A revision-shaped sha that no object in this workspace answers to.
+      const gone = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+      const unreachable = ctx.db
+        .prepare(
+          "INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind) VALUES ('src/a.ts','a','1-1',?, 'code-verified')",
+        )
+        .run(gone).lastInsertRowid;
+      ctx.db
+        .prepare(
+          "INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B03','CF1-C',?,'supports')",
+        )
+        .run(unreachable);
+
+      const readClause = () => {
+        const result = runChecker(ctx);
+        if (result.report === null) return { error: `${CHECKER_REL} printed no parseable report (exit ${result.status})` };
+        const three = (result.report.clauses ?? []).find((entry) => Number(entry.clause) === 3);
+        return three ? { three } : { error: "the report carries no clause 3" };
+      };
+      const before = readClause();
+      if (before.error) return before.error;
+      if (before.three.satisfied !== false) {
+        return (
+          "clause 3 reported satisfied over a disposition whose only attachment names " +
+          `${gone.slice(0, 8)}…, which git cat-file -e refuses. An attachment count is not ` +
+          "evidence: §2.3 already refuses the advance for a disposition whose attached ref_sha " +
+          "does not resolve, and §7.3's B3 re-asserts it over the finished store"
+        );
+      }
+      if (!(before.three.missing ?? []).some((id) => String(id).includes("B03/CF1-C"))) {
+        return `clause 3 did not name the disposition: ${JSON.stringify(before.three.missing ?? [])}`;
+      }
+
+      // Control: the same disposition, one attachment that resolves. Clause 3
+      // holds, so the sharpening refuses unreachable evidence and nothing else.
+      const reachable = ctx.db
+        .prepare(
+          "INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind) VALUES ('src/a.ts','a','1-1',?, 'code-verified')",
+        )
+        .run(head).lastInsertRowid;
+      ctx.db
+        .prepare(
+          "INSERT INTO disposition_evidence (subsystem_id, concern_code, evidence_id, role) VALUES ('B03','CF1-C',?,'supports')",
+        )
+        .run(reachable);
+      const after = readClause();
+      if (after.error) return after.error;
+      return after.three.satisfied === true
+        ? null
+        : `clause 3 still refuses the disposition after a resolvable attachment was added: ${JSON.stringify(after.three.missing ?? [])}`;
+    });
+
     check("G3 clause 7 does not bind at `mapped`", () => {
       // README §4 and decisions.md §1: a rebuild must be able to progress
       // subsystem by subsystem, so the carried obligation is a whole-store
