@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_202 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
+_209 tools across 43 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -208,6 +208,18 @@ _202 tools across 42 groups. Generated from `tools/list` — do not hand-edit._
 | `register_artifact` | Record that a prose artifact exists and capture its content hash. `path` is relative to the project storage directory. If the file exists, its size and sha256 are computed automatically. This is the source of truth the diff-aware materializer uses to decide what to re-render. |
 | `list_artifacts` | List registered prose artifacts. Filter by kind ('subsystem-survey', 'findings-index', etc.) and/or subsystem_id. |
 | `rehash_artifact` | Re-read an artifact from disk and update its stored content_hash + bytes. Called by the agents right after writing an artifact file so the materializer's diff check reflects the current contents. |
+
+### `carried` (7)
+
+| Tool | Description |
+|---|---|
+| `begin_carry_run` | Open the record of one carry: which archive is being carried from, why, how many findings it declares (expected_count), and how many this run commits to writing (imported_count). Every reinitialization writes one, including a reasoned empty one with source_kind 'none' and both counts zero — without it 'nothing was carried' and 'nobody ran a carry' are the same reading. The row is append-only; carry_finding refuses past imported_count and finish_carry_run refuses while the counts and the rows disagree. |
+| `carry_finding` | Carry one finding out of an archived conspectus into this store, as an obligation to decide rather than a finding this store confirmed. Every archived finding is carried whatever its archived resolution state; one the archive had already closed is recorded with the outcome 'archived-terminal' by this call, which is the only writer of that outcome. A carried record is unique by (archived_store_id, archived_finding_id) and is never updated or deleted. |
+| `finish_carry_run` | Close one carry, refusing while the run's declared counts and the records it wrote disagree. A partial carry is meant to be a visible disagreement rather than a silent one, so this reports expected_count, imported_count and the rows written, and refuses unless all three agree. |
+| `attach_carried_evidence` | Attach an evidence row to a carried finding, the way attach_evidence_to_finding attaches one to a finding. This is the surface the 'ruled-out' and 'repaired' authority rules read: ruling a carried finding out requires evidence collected in the current session, and marking it repaired requires an attached reading taken at a revision that is a descendant of, or equal to, the repair. The attachment is append-only. |
+| `record_carried_outcome` | Record what became of one carried finding. Three outcomes, each asserting something about THIS store: 'successor-finding' requires successor_id to name a findings row filed in this session; 'ruled-out' requires at least one evidence row collected in the current session and attached through attach_carried_evidence; 'repaired' requires repaired_sha to resolve in the bound workspace AND an attached evidence row whose revision is a descendant of, or equal to, it. The fourth outcome, 'archived-terminal', is written by carry_finding alone and is refused here. One outcome per carried record, and outcomes are never deleted — a mistaken one is corrected by a new carried record from the same archive. |
+| `list_carried_findings` | A compact page of the findings this store carried out of a prior conspectus, with each record's terminal outcome or the word 'undecided'. Default limit 25, hard maximum 100, truncated to the response budget the other list tools observe, with next_cursor when it truncates. symptom and root_cause in full come from get_carried_finding, one record per call. |
+| `get_carried_finding` | One carried record in full — symptom, root cause, the archive it came from, the revision it was recorded at, and its terminal outcome if it has one. The compact page comes from list_carried_findings; this is the per-record read. |
 
 ### `chorusmith-adapter` (8)
 

@@ -538,6 +538,12 @@ async function runDriver() {
     }
   }
 
+  // §5.4 makes `--carry-from` required: a reinitialization that carries nothing
+  // out of the conspectus it discards is how six open findings were lost. A
+  // throwaway workspace genuinely has no predecessor, so this arm passes the
+  // explicit reasoned empty carry rather than the argument being absent — and
+  // the missing-argument refusal keeps its own arm below, so `--carry-from
+  // none` is not the branch nothing tests.
   const run = spawnSync(
     process.execPath,
     [
@@ -549,9 +555,14 @@ async function runDriver() {
       archive,
       "--receipt",
       receiptPath,
+      "--carry-from",
+      "none",
+      "--carry-reason",
+      "throwaway workspace has no predecessor",
     ],
     { cwd: REPO, encoding: "utf8", timeout: 600_000 },
   );
+  trace.storePath = join(workspace, ".amanuensis", "memory.db");
   trace.exitStatus = run.status;
   trace.stdout = scrub(run.stdout ?? "");
   trace.stderr = scrub((run.stderr ?? "").trim().slice(-600));
@@ -695,6 +706,10 @@ await check(`${DRIVER_REL} refuses to delete a store another process holds open`
         join(root, "archive"),
         "--receipt",
         join(root, "receipt.json"),
+        "--carry-from",
+        "none",
+        "--carry-reason",
+        "throwaway workspace has no predecessor",
       ],
       { cwd: REPO, encoding: "utf8", timeout: 600_000 },
     );
@@ -730,6 +745,100 @@ await check(`${DRIVER_REL} reinitializes and reads back an empty store`, () => {
     return `the driver read back ${readback.subsystems} subsystem(s) from a store it had just emptied`;
   }
   return null;
+});
+
+await check(`${DRIVER_REL} records the explicit reasoned empty carry it was given`, () => {
+  // Without this the `--carry-from none` branch is a branch nothing tests: the
+  // arm above would pass whether the driver wrote a carry_runs row or silently
+  // ignored the argument, and "nothing was carried" and "nobody ran a carry"
+  // would stay the same reading (design/survey-depth/spec.md §5.2, VP4(e)).
+  if (driver.blocked) return driver.blocked;
+  if (driver.exitStatus !== 0) return `the driver exited ${driver.exitStatus}`;
+  const carry = driver.receipt?.carry ?? null;
+  if (!carry) return "the driver's receipt records no carry";
+  if (carry.source_kind !== "none") {
+    return `the receipt records source_kind ${JSON.stringify(carry.source_kind ?? null)}, not 'none'`;
+  }
+  if (carry.reason !== "throwaway workspace has no predecessor") {
+    return `the receipt records the reason ${JSON.stringify(carry.reason ?? null)}, not the one the caller gave`;
+  }
+  if (carry.expected_count !== 0 || carry.imported_count !== 0 || carry.carried_rows !== 0) {
+    return `the empty carry recorded expected=${carry.expected_count}, imported=${carry.imported_count}, rows=${carry.carried_rows}`;
+  }
+  const probe = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      'const D=require("better-sqlite3");const db=new D(process.argv[1],{readonly:true});' +
+        'process.stdout.write(JSON.stringify(db.prepare("SELECT source_kind, reason, expected_count, imported_count FROM carry_runs ORDER BY id").all()));',
+      driver.storePath,
+    ],
+    { cwd: join(REPO, "mcp-server"), encoding: "utf8" },
+  );
+  let rows = null;
+  try {
+    rows = probe.status === 0 ? JSON.parse(probe.stdout) : null;
+  } catch {
+    rows = null;
+  }
+  if (!Array.isArray(rows)) {
+    return `the rebuilt store's carry_runs could not be read back: ${scrub((probe.stderr ?? "").trim().slice(-200))}`;
+  }
+  if (rows.length !== 1) {
+    return `the rebuilt store holds ${rows.length} carry_runs row(s); one invocation writes exactly one`;
+  }
+  return rows[0].source_kind === "none" && rows[0].reason === "throwaway workspace has no predecessor"
+    ? null
+    : `the row read back from the store is ${JSON.stringify(rows[0])}`;
+});
+
+await check(`${DRIVER_REL} refuses to reinitialize with no --carry-from at all`, () => {
+  // The missing-argument case, kept separate from the arm above: §5.4 makes
+  // the argument required, and a driver that accepted its absence would
+  // discard a conspectus without being told what it owes its predecessor.
+  if (!existsSync(join(REPO, DRIVER_REL))) return `the rebuild driver is absent at ${DRIVER_REL}`;
+  const root = scratch("p16-no-carry-");
+  const workspace = join(root, "workspace");
+  mkdirSync(workspace, { recursive: true });
+  for (const args of [
+    ["init", "-q", workspace],
+    ["-C", workspace, "config", "user.email", "p16-gate@invalid"],
+    ["-C", workspace, "config", "user.name", "P16 gate"],
+  ]) {
+    if (spawnSync("git", args, { encoding: "utf8" }).status !== 0) {
+      return "could not prepare a throwaway workspace for the missing-argument case";
+    }
+  }
+  writeFileSync(join(workspace, "README.md"), "throwaway workspace for the P16 refusal arm\n");
+  for (const args of [
+    ["-C", workspace, "add", "-A"],
+    ["-C", workspace, "commit", "-q", "-m", "seed"],
+  ]) {
+    if (spawnSync("git", args, { encoding: "utf8" }).status !== 0) {
+      return "could not seed a throwaway workspace for the missing-argument case";
+    }
+  }
+  const run = spawnSync(
+    process.execPath,
+    [
+      join(REPO, DRIVER_REL),
+      "--confirm",
+      "--workspace",
+      workspace,
+      "--archive",
+      join(root, "archive"),
+      "--receipt",
+      join(root, "receipt.json"),
+    ],
+    { cwd: REPO, encoding: "utf8", timeout: 600_000 },
+  );
+  if (run.status === 0) {
+    return "the driver reinitialized with no --carry-from; the argument is required because a reinitialization discards a conspectus and inherits its open findings";
+  }
+  const said = scrub(`${run.stderr ?? ""}${run.stdout ?? ""}`);
+  return said.includes("--carry-from")
+    ? null
+    : `it exited ${run.status} for some other reason: ${said.trim().slice(-200)}`;
 });
 
 await check(`${DRIVER_REL} leaves the snapshot reachable from the store that replaced it`, () => {

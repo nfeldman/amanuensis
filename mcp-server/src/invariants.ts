@@ -1269,10 +1269,13 @@ export interface ArchivedFinding {
  * `openDatabase` would mint the identity row whose absence selects the legacy
  * form, turning every archive into a first-form store the moment it was read.
  *
- * `resolution_state` is the same COALESCE the resolver and `finding_state_current`
- * use, so an archive written before resolution events existed still reports a
- * state rather than a NULL, and *every* archived finding is carried whatever
- * its state (spec.md §5.4).
+ * `resolution_state` comes from `finding_state_current`, the view that carries
+ * the legacy-status fallback exactly once: a second copy of that CASE here
+ * would be the duplicated fallback `test-finding-partition.mjs` exists to
+ * refuse, and would let an archive read one state on this path and another on
+ * every other. The view returns exactly one row per `findings` row, so the join
+ * neither drops a finding nor duplicates one, and *every* archived finding is
+ * carried whatever its state (spec.md §5.4).
  */
 export function readArchivedStore(sourcePath: string): {
   archived_store_id: string;
@@ -1297,14 +1300,9 @@ export function readArchivedStore(sourcePath: string): {
     const rows = db
       .prepare(
         `SELECT f.finding_id, f.subsystem_id, f.symptom, f.root_cause, f.severity,
-                f.ref_sha, f.primary_files,
-                COALESCE(r.resolution_state,
-                         CASE f.status WHEN 'fixed'                THEN 'fixed-pending-verification'
-                                       WHEN 'ruled-out'            THEN 'ruled-out'
-                                       WHEN 'confirmed-acceptable' THEN 'accepted'
-                                       ELSE 'open' END) AS resolution_state
+                f.ref_sha, f.primary_files, s.resolution_state
            FROM findings f
-           LEFT JOIN finding_resolution_current r ON r.finding_id = f.finding_id
+           JOIN finding_state_current s ON s.finding_id = f.finding_id
           ORDER BY f.finding_id`,
       )
       .all() as Array<{

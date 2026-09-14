@@ -24,8 +24,11 @@ A conspectus is **fully surveyed at revision R** exactly when all of the followi
 4. Every declared seam names two mapped endpoints and has an evidence-bearing integral assessment.
 5. Every expected work item appears in the dispatched, landed, and scored sets of every run. Equality, not non-emptiness, is the contract.
 6. A clean export agrees with durable state on three independent axes: state, coverage, and content.
+7. Every carried finding has a terminal outcome. A store that discarded a prior conspectus is not fully surveyed until it has decided what became of every open defect that conspectus held. Each is re-found as a successor finding filed here, ruled out with evidence collected here, or marked repaired at a commit that resolves with a reading taken at or after it; a finding the archive had already closed carries the archive's own state and is terminal without re-deciding it. Enforced at the whole-store predicate and *not* at `mapped` for the carried finding's subsystem, so a rebuild can progress subsystem by subsystem. A discarded defect is not a decided one.
 
 Fully surveyed does not mean defect-free, question-free, or safe at revisions other than R.
+
+Clause 7 was added in the survey-depth lane (`design/survey-depth/spec.md` §5.5), after a clean-slate rebuild discarded six open findings — `B03-5`, `B03-6`, `B03-7`, `B03-8`, `B04-5`, `B07-1` — which were neither re-found nor ruled out. `pecia audit` flags only *closed* records whose reference stopped resolving, so an open finding's destruction was invisible to every check this repository had. The store-scoped implementation is `dev/check-store-fully-surveyed.mjs`; `dev/check-living-conspectus.mjs` continues to evaluate the frozen A0 manifest at `b8b566f` and is not retargeted.
 
 ### Current
 
@@ -67,6 +70,7 @@ The checker emits stable IDs so every red has a destination:
 | Replication | `run:unchanged-replicates:minimum-two` |
 | Control presence | `control:<class>:specified` |
 | Projection read-back | `export:<state|coverage|content>:read-back` |
+| Carried-finding outcome | `carried:<archived_store_id>:<archived_finding_id>` |
 
 The A0 checker deliberately does not decide whether an authored disposition is *true*. That is a generative field and is validated by the survey’s evidence/adversarial method. The checker enforces that the field exists, is terminal, is grounded, and remains reconciled. This is the catalog’s stated scope boundary for GP8.
 
