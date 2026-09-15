@@ -602,11 +602,15 @@ function buildCase(name, options = {}) {
 // Driving D0. Its stdout and stderr are captured, never inherited, so a crash
 // inside it reaches this gate's output only through scrub().
 // ---------------------------------------------------------------------------
-function runDepthGate({ root = null, baseline = null, extraEnv = {} } = {}) {
+function runDepthGate({ root = null, baseline = undefined, extraEnv = {} } = {}) {
   const env = { ...process.env, NODE_NO_WARNINGS: "1", ...extraEnv };
   if (root) env.AMANUENSIS_DEPTH_WORKSPACE = root;
   else delete env.AMANUENSIS_DEPTH_WORKSPACE;
-  if (baseline !== null) env.AMANUENSIS_DEPTH_BASELINE = baseline;
+  // `undefined` means "this case is not about the fixture": hand D0 the
+  // re-anchored synthetic baseline. `null` still means the committed one, and
+  // the cases that seed an absent or forged fixture pass their own path.
+  const chosen = baseline === undefined ? SYNTHETIC_BASELINE : baseline;
+  if (chosen !== null) env.AMANUENSIS_DEPTH_BASELINE = chosen;
   else delete env.AMANUENSIS_DEPTH_BASELINE;
   const result = spawnSync("node", [join(REPO, DEPTH_GATE_REL)], {
     cwd: REPO,
@@ -684,8 +688,37 @@ const carriedIds = Array.isArray(baseline?.blocking?.open_findings)
   : [];
 const archivedStoreId =
   typeof baseline?.archived_store_id === "string" ? baseline.archived_store_id : "store-absent";
+// D1 drives D0 against **synthetic** workspaces, but D0 resolves the fixture's
+// `checked_sha` against *this* repository. Reading it from the committed
+// fixture made every green expectation here depend on the review checkout
+// carrying 61bc6b5 in its history: in a history-free snapshot — a `git archive`
+// plus a fresh `git init`, which is what a reviewer is handed — D0 correctly
+// refuses to certify a revision it cannot see, and all 22 of D1's greens fail
+// for a reason that is about the checkout rather than about the gate
+// (F8/codex). So D1 writes its own baseline, identical to the committed one
+// except that its anchor is this checkout's HEAD, which resolves and is an
+// ancestor of HEAD in every checkout. The committed fixture is still read and
+// still asserted about; it is no longer what D0 is handed.
+const repoHead = (() => {
+  const result = git(REPO, "rev-parse", "HEAD");
+  const sha = String(result.stdout ?? "").trim();
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+})();
 const archivedAnchor =
-  typeof baseline?.checked_sha === "string" ? baseline.checked_sha : "0".repeat(40);
+  repoHead ?? (typeof baseline?.checked_sha === "string" ? baseline.checked_sha : "0".repeat(40));
+
+/** The committed fixture, re-anchored to a revision every checkout carries. */
+const SYNTHETIC_BASELINE = (() => {
+  if (!baseline || !repoHead) return null;
+  const path = join(scratch, "synthetic-baseline.json");
+  try {
+    mkdirSync(scratch, { recursive: true });
+    writeFileSync(path, `${JSON.stringify({ ...baseline, checked_sha: repoHead }, null, 2)}\n`);
+  } catch {
+    return null;
+  }
+  return path;
+})();
 
 check("the committed fixture reads as JSON and declares the baseline contract", () => {
   if (baselineError) return baselineError;
