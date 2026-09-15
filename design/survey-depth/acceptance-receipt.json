@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "3fafe14c94c38c5ef8ad57326272f76231bd039b",
+  "repository_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
   "recorded_at": "2026-09-15",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
+    "checked_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,73 +21,73 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
-        "tree_digest": "6b2149145d35797151faa7a7baa93dfcb1314a5161064f31fb856b9da36bab04",
-        "ledger_digest": "0fdb811f9728e2ae1e5c8cc89a72d5a1ef8071fb96fadfb1cfd2f8b8d7eb754c",
+        "detected_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
+        "tree_digest": "4021124580d0ac7771a4a492999e1e473be198edfdf9782bb3a26b46c5f6d31d",
+        "ledger_digest": "0dc48627a4ca677e047e08bff87c131d5c09e8040faec5533bd1870404f91721",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/artifact-templates.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/concern-territories.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/memory-audit.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/notes.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/onboarding.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/open-questions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/phase-1-scope.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/phase-3-concerns.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/phase-4-adversarial.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/phase-5-packaging.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/refresh.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/reporting-style.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/setup.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".claude/skills/amanuensis/references/subsystem-survey.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".github/FUNDING.yml",
@@ -103,11 +103,11 @@
           },
           {
             "file_path": ".github/workflows/published-smoke.yml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".github/workflows/test.yml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".gitignore",
@@ -398,6 +398,10 @@
             "classification": "candidate"
           },
           {
+            "file_path": "design/survey-depth/acceptance-receipt.json",
+            "classification": "examined"
+          },
+          {
             "file_path": "design/survey-depth/carry-receipt.json",
             "classification": "candidate"
           },
@@ -474,6 +478,10 @@
             "classification": "candidate"
           },
           {
+            "file_path": "design/survey-depth/survey-progress.json",
+            "classification": "examined"
+          },
+          {
             "file_path": "dev/activation-evidence/a19-user-scoped-contract.json",
             "classification": "candidate"
           },
@@ -491,79 +499,79 @@
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/configuration-conflict.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/configuration-conflict.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/interrupted-a.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/interrupted-a.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-a-resume.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-a-resume.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-a.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-a.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-b.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/repository-b.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.sanitization.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/storage-readback.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/worktree-a.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/worktree-a.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a23-zero-touch-lifecycle.json",
@@ -579,171 +587,171 @@
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.launch-audit.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.launch-audit.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.jsonl",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.stderr.log",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.store-custody.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "dev/activation-evidence/a26-candidate-suite.json",
@@ -767,87 +775,87 @@
           },
           {
             "file_path": "dev/adr/0001-living-conspectus-terms.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0002-temporal-claim-model.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0003-predict-before-apply-change-impact.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0004-obligation-custody-and-reconciliation.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0005-resolution-proof-and-projection-readback.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0006-unattended-refresh-authority-and-recovery.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0007-impact-aware-review-brief.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0008-independent-review-custody-and-blinding.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0009-integral-head-composition-fan-in.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0010-derived-review-surface-and-semantic-readback.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0011-codebase-brief-contract.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0012-independent-dialectical-design.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0013-decision-acceptance-and-premise-custody.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0014-decision-bounded-research-custody.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0015-identity-first-crosswalk-and-qualified-methods.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0016-typed-revisable-learning-ledger.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0017-stratified-operating-envelope.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0018-chorusmith-adapter-parity-boundary.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0019-qualified-natural-history-corpus.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0020-practice-catalog-v2.10-reconciliation.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0021-friction-free-codex-activation.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/amanuensis-defects-to-pecia.mjs",
@@ -964,6 +972,10 @@
           {
             "file_path": "dev/record-survey-depth-baseline.mjs",
             "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-survey-depth.mjs",
+            "classification": "examined"
           },
           {
             "file_path": "dev/refresh-a22-evidence.mjs",
@@ -1359,27 +1371,27 @@
           },
           {
             "file_path": "materializer/.gitignore",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/__init__.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/core.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/db.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/diagrams.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/html_projection.py",
@@ -1387,11 +1399,11 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/lint.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/manifest.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/readback.py",
@@ -1403,7 +1415,7 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/slugs.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/vocabulary.py",
@@ -1411,15 +1423,15 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/xref.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/materialize.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/pyproject.toml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-history-and-disagreements.py",
@@ -1515,11 +1527,11 @@
           },
           {
             "file_path": "mcp-server/contracts/concern-checklist.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/conspectus-vocabulary.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/historical-evaluation-corpus.schema.json",
@@ -1659,7 +1671,7 @@
           },
           {
             "file_path": "mcp-server/scripts/check-refusal-parity.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/check-sql-identifiers.mjs",
@@ -1679,7 +1691,7 @@
           },
           {
             "file_path": "mcp-server/scripts/gen-vocabulary.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/historical-evaluation.mjs",
@@ -1691,59 +1703,59 @@
           },
           {
             "file_path": "mcp-server/src/cli.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/codebase-brief-contract.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/codex-host.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/db.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/helpers.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/index.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/invariants.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/project.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/schema.sql",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/session.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/standing.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/storage-git.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/artifacts.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/carried.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/chorusmith-adapter.ts",
@@ -1751,27 +1763,27 @@
           },
           {
             "file_path": "mcp-server/src/tools/claims.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/codebase-brief.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/compare.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/composition.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/concerns.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/contradictions.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/crosswalk.ts",
@@ -1779,11 +1791,11 @@
           },
           {
             "file_path": "mcp-server/src/tools/dashboard.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/decisions.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/design-session.ts",
@@ -1791,15 +1803,15 @@
           },
           {
             "file_path": "mcp-server/src/tools/diagnosticity.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/dispatch.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/dispositions.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/evaluation.ts",
@@ -1807,27 +1819,27 @@
           },
           {
             "file_path": "mcp-server/src/tools/evidence.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/field-notes.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/files.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/findings.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/git.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/impact.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/learning.ts",
@@ -1835,7 +1847,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/locks.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/locus.ts",
@@ -1843,19 +1855,19 @@
           },
           {
             "file_path": "mcp-server/src/tools/logging.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/materialize.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/open-questions.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/project.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/refresh.ts",
@@ -1867,7 +1879,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/resolution.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/revalidation.ts",
@@ -1879,7 +1891,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/review-session.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/review.ts",
@@ -1887,31 +1899,31 @@
           },
           {
             "file_path": "mcp-server/src/tools/seams.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/stale.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/storage-history.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/subsystems.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/vocabulary.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/xrefs.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/vocabulary.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/test-activation-contract.mjs",
@@ -2191,7 +2203,7 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/capture-component-landscape.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/claims.md",
@@ -2315,11 +2327,11 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/dist/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/dist/methods.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/src/pages/index.astro",
@@ -2339,19 +2351,19 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/classic-filter.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/methods.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/report.css",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/src/index.njk",
@@ -2363,11 +2375,11 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/dist/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/dist/report-filter.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/src/report-filter.js",
@@ -2375,19 +2387,19 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/client.adcc8ae6.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/runtime.607a8173.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/stdlib.c27a8c1f.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/observablehq.config.js",
@@ -2399,7 +2411,7 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/package-lock.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/package.json",
@@ -2411,27 +2423,27 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/assets/index-C358O-a9.css",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/assets/index-DZwiDhHX.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/index.html",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/report-filter.js",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/report.css",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/index.html",
@@ -2443,7 +2455,7 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/package-lock.json",
-            "classification": "candidate"
+            "classification": "generated-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/package.json",
@@ -2463,7 +2475,7 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/scripts/capture-registry.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/client.tsx",
@@ -2471,19 +2483,19 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/button.tsx",
-            "classification": "candidate"
+            "classification": "vendor-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/input.tsx",
-            "classification": "candidate"
+            "classification": "vendor-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/label.tsx",
-            "classification": "candidate"
+            "classification": "vendor-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/table.tsx",
-            "classification": "candidate"
+            "classification": "vendor-ignore"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/index.css",
@@ -2535,7 +2547,7 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/verify-trial-snapshot.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/vocabulary.md",
@@ -2586,19 +2598,19 @@
             "classification": "candidate"
           }
         ],
-        "tracked_paths": 640,
-        "ledger_rows": 640,
+        "tracked_paths": 643,
+        "ledger_rows": 643,
         "unledgered": 0,
         "absent": 0,
-        "exempt": 69,
-        "session_id": "mu252s7d-jpylag0r"
+        "exempt": 154,
+        "session_id": "mu274z8h-ylgc5fy0"
       }
     },
     "B2": {
       "verdict": "red",
-      "examined": 0,
-      "obligation_bearing": 571,
-      "fraction": 0,
+      "examined": 106,
+      "obligation_bearing": 489,
+      "fraction": 0.2167689161554192,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -2607,49 +2619,862 @@
     },
     "B3": {
       "verdict": "green",
-      "dispositions": []
+      "dispositions": [
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "AT-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 24,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "AT-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 27,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "CC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 24,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "CR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "EP-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "IF-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "RL-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "SC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 24,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "SI-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "SI-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 24,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 26,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "TB-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 25,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-01",
+          "concern_code": "TR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "doc-asserted",
+          "attachments": [
+            {
+              "evidence_id": 27,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "AT-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 1,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "AT-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 2,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 3,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "CC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 1,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "CR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 3,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 7,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "EP-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 5,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "IF-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 1,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "RL-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 1,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 5,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "SC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 1,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 6,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "SI-1",
+          "subsystem_status": "adversarial",
+          "disposition": "ruled-out",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 7,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "SI-2",
+          "subsystem_status": "adversarial",
+          "disposition": "ruled-out",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 4,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "TB-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 4,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-02",
+          "concern_code": "TR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "ruled-out",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 8,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "AT-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 12,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 13,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "AT-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 13,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "CC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 13,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 18,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "CR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 12,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "EP-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 12,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "IF-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 13,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "RL-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 16,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "SC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 15,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 18,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "SI-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 19,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "SI-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 15,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 17,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "TB-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-bug",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 17,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-03",
+          "concern_code": "TR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 16,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 19,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "AT-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "AT-2",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "CC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-bug",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 28,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 29,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "CR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "EP-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "IF-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "RL-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "SC-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 28,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "SI-1",
+          "subsystem_status": "adversarial",
+          "disposition": "out-of-scope",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "SI-2",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "TB-1",
+          "subsystem_status": "adversarial",
+          "disposition": "confirmed-acceptable",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-04",
+          "concern_code": "TR-1",
+          "subsystem_status": "adversarial",
+          "disposition": "ruled-out",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 30,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 31,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-05",
+          "concern_code": "SC-1",
+          "subsystem_status": "concerns",
+          "disposition": "confirmed-bug",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 32,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            },
+            {
+              "evidence_id": 33,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        },
+        {
+          "subsystem_id": "B-07",
+          "concern_code": "TB-1",
+          "subsystem_status": "concerns",
+          "disposition": "confirmed-bug",
+          "evidence_quality": "code-verified",
+          "attachments": [
+            {
+              "evidence_id": 34,
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "resolved": true
+            }
+          ]
+        }
+      ]
     },
     "B4": {
       "verdict": "green",
       "subsystems": [
         {
           "id": "B-01",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
-          "terms": [],
+          "status": "adversarial",
+          "dispositions": 12,
+          "attached": 12,
+          "terms": [
+            {
+              "term": "discharge or decline",
+              "first_seen": ".claude/skills/amanuensis/references/phase-2-structural.md:vocabulary@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            },
+            {
+              "term": "refusal parity",
+              "first_seen": ".claude/skills/amanuensis/references/onboarding.md:phase-5-draft-master-plan@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            }
+          ],
           "declination": null
         },
         {
           "id": "B-02",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
-          "terms": [],
+          "status": "adversarial",
+          "dispositions": 12,
+          "attached": 12,
+          "terms": [
+            {
+              "term": "independent storage mode",
+              "first_seen": "mcp-server/src/storage-git.ts:repoState@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            },
+            {
+              "term": "store generation",
+              "first_seen": "mcp-server/src/db.ts:mintStoreIdentity@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            }
+          ],
           "declination": null
         },
         {
           "id": "B-03",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
-          "terms": [],
+          "status": "adversarial",
+          "dispositions": 12,
+          "attached": 12,
+          "terms": [
+            {
+              "term": "verification object",
+              "first_seen": "mcp-server/src/tools/composition.ts:dispatchIntegral@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            },
+            {
+              "term": "wire budget",
+              "first_seen": "mcp-server/src/tools/carried.ts:WIRE_BUDGET@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            }
+          ],
           "declination": null
         },
         {
           "id": "B-04",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
-          "terms": [],
+          "status": "adversarial",
+          "dispositions": 12,
+          "attached": 12,
+          "terms": [
+            {
+              "term": "page plan",
+              "first_seen": "materializer/amanuensis_materializer/core.py:PagePlan@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            }
+          ],
           "declination": null
         },
         {
           "id": "B-05",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
-          "terms": [],
+          "status": "concerns",
+          "dispositions": 1,
+          "attached": 1,
+          "terms": [
+            {
+              "term": "generated copy, asserted schema",
+              "first_seen": "mcp-server/scripts/gen-vocabulary.mjs:loadSource@c0734040022f0e1f1b9d8c480259f6142a875fca"
+            }
+          ],
           "declination": null
         },
         {
@@ -2662,11 +3487,16 @@
         },
         {
           "id": "B-07",
-          "status": "unmapped",
-          "dispositions": 0,
-          "attached": 0,
+          "status": "concerns",
+          "dispositions": 1,
+          "attached": 1,
           "terms": [],
-          "declination": null
+          "declination": {
+            "id": 1,
+            "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu274z8h-ylgc5fy0",
+            "reason": "This subsystem is an embedded corpus of completed research surveys and captured platform trials, not a component of the product. Its vocabulary is the vocabulary of the domains it surveyed — web component registries, island architectures, trial snapshots — and those terms belong to the surveys' own vocabulary.md files, where each survey already defines them for its own readers. Recording them here would create a second glossary of terms this codebase does not implement, scoped to a subsystem whose files the product never loads. The three files read at this pass carry no internal jargon of their own: they are capture scripts named for what they capture."
+          }
         },
         {
           "id": "B-08",
@@ -2687,7 +3517,7 @@
       ]
     },
     "B5": {
-      "verdict": "red",
+      "verdict": "green",
       "baseline_open_findings": [
         "B01-1",
         "B02-3",
@@ -2710,9 +3540,11 @@
           "archived_finding_id": "B01-1",
           "subsystem_id": "B-01",
           "archived_resolution": "open",
-          "outcome": null,
-          "repaired_sha": null,
-          "evidence_revisions": []
+          "outcome": "repaired",
+          "repaired_sha": "1d6516aee47fd7be8cc87e94ee6bca93869916ea",
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 2,
@@ -2730,9 +3562,11 @@
           "archived_finding_id": "B02-2",
           "subsystem_id": "B-02",
           "archived_resolution": "fixed-pending-verification",
-          "outcome": null,
-          "repaired_sha": null,
-          "evidence_revisions": []
+          "outcome": "repaired",
+          "repaired_sha": "56940800af7a4c99980a4e09a41559bb65891153",
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 4,
@@ -2740,9 +3574,11 @@
           "archived_finding_id": "B02-3",
           "subsystem_id": "B-02",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 5,
@@ -2750,9 +3586,11 @@
           "archived_finding_id": "B02-4",
           "subsystem_id": "B-02",
           "archived_resolution": "open",
-          "outcome": null,
-          "repaired_sha": null,
-          "evidence_revisions": []
+          "outcome": "repaired",
+          "repaired_sha": "34a8762d0c05a0fa7d2a8b39ad520b8440dcfd94",
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 6,
@@ -2800,9 +3638,11 @@
           "archived_finding_id": "B03-5",
           "subsystem_id": "B-03",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 11,
@@ -2810,9 +3650,11 @@
           "archived_finding_id": "B03-6",
           "subsystem_id": "B-03",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 12,
@@ -2820,9 +3662,11 @@
           "archived_finding_id": "B03-7",
           "subsystem_id": "B-03",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 13,
@@ -2830,9 +3674,11 @@
           "archived_finding_id": "B03-8",
           "subsystem_id": "B-03",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 14,
@@ -2850,9 +3696,11 @@
           "archived_finding_id": "B04-2",
           "subsystem_id": "B-04",
           "archived_resolution": "open",
-          "outcome": null,
-          "repaired_sha": null,
-          "evidence_revisions": []
+          "outcome": "repaired",
+          "repaired_sha": "3f8b7f39ee85a532ce607ea9bad033f416fe6279",
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 16,
@@ -2860,9 +3708,11 @@
           "archived_finding_id": "B04-3",
           "subsystem_id": "B-04",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 17,
@@ -2870,9 +3720,11 @@
           "archived_finding_id": "B04-4",
           "subsystem_id": "B-04",
           "archived_resolution": "open",
-          "outcome": null,
-          "repaired_sha": null,
-          "evidence_revisions": []
+          "outcome": "repaired",
+          "repaired_sha": "3f8b7f39ee85a532ce607ea9bad033f416fe6279",
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 18,
@@ -2880,9 +3732,11 @@
           "archived_finding_id": "B04-5",
           "subsystem_id": "B-04",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 19,
@@ -2900,9 +3754,11 @@
           "archived_finding_id": "B05-2",
           "subsystem_id": "B-05",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 21,
@@ -2910,9 +3766,11 @@
           "archived_finding_id": "B07-1",
           "subsystem_id": "B-07",
           "archived_resolution": "open",
-          "outcome": null,
+          "outcome": "successor-finding",
           "repaired_sha": null,
-          "evidence_revisions": []
+          "evidence_revisions": [
+            "c0734040022f0e1f1b9d8c480259f6142a875fca"
+          ]
         },
         {
           "carried_id": 22,
@@ -2927,30 +3785,34 @@
       ]
     },
     "B6": {
-      "verdict": "red",
-      "undecided": 14
+      "verdict": "green",
+      "undecided": 0
     }
   },
   "reported": {
-    "ledger_rows": 640,
-    "evidence": 0,
-    "dispositions": 0,
-    "attached_dispositions": 0,
-    "disposition_evidence_rows": 0,
-    "field_notes": 0,
+    "ledger_rows": 643,
+    "evidence": 34,
+    "dispositions": 50,
+    "attached_dispositions": 50,
+    "disposition_evidence_rows": 65,
+    "field_notes": 1,
     "open_questions_all": 1,
     "open_questions_open": 1,
-    "anchored_terms": 0,
-    "open_findings": 0,
+    "anchored_terms": 8,
+    "open_findings": 10,
     "subsystems": 9,
     "seams": 0,
-    "claims": 0,
+    "claims": 10,
     "xrefs": 0,
-    "sessions": 5,
-    "finding_status_histogram": {},
+    "sessions": 11,
+    "finding_status_histogram": {
+      "confirmed-bug": 10
+    },
     "classification_histogram": {
-      "candidate": 571,
-      "generated-ignore": 69
+      "candidate": 383,
+      "examined": 106,
+      "generated-ignore": 150,
+      "vendor-ignore": 4
     }
   }
 }

@@ -1329,8 +1329,12 @@ if (failures.length) {
   const fired = PREDICATES.map(([id]) => id).filter((id) =>
     readings.some((reading) => reading.verdicts[id]),
   );
+  // A predicate failing in both arms is one predicate, counted twice; an
+  // agreement check failing is a different fact and is named separately, so
+  // the reason does not accuse the two arms of disagreeing when they agree.
+  const disagreed = failures.length - readings.filter((r) => Object.keys(r.verdicts).length).reduce((n, r) => n + Object.keys(r.verdicts).length, 0) > 0;
   const where = fired.length
-    ? `on ${fired.join(", ")}${failures.length > fired.length && storeReading && receiptReading ? " and on the agreement of its two arms" : ""}`
+    ? `on ${fired.join(", ")}${disagreed ? " and on the agreement of its two arms" : ""}`
     : "on the agreement of its two arms";
   red(
     `the candidate store does not meet the frozen baseline ${where} — ${failures.length} failed ` +
