@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { resolve as resolvePath } from "node:path";
 import SqliteDatabase from "better-sqlite3";
-import type { DB } from "./db.js";
+import { canonicalCreateViewSql, type DB } from "./db.js";
 import type { ServerContext } from "./helpers.js";
 import {
   isCitationToken,
@@ -1377,6 +1377,37 @@ export interface ArchivedFinding {
 }
 
 /**
+ * `finding_state_current` on a connection whose store may predate it.
+ *
+ * A no-op where the archive declares the view. Where it does not, the view is
+ * declared `TEMP` — which SQLite allows on a read-only main database, because
+ * the temp schema is a separate one — so the read below selects from the same
+ * definition every other reader selects from.
+ */
+function requireFindingStateView(db: DB, sourcePath: string): void {
+  const present = db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type='view' AND name='finding_state_current'")
+    .get();
+  if (present) return;
+  const canonical = canonicalCreateViewSql("finding_state_current");
+  if (!canonical) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} declares no finding_state_current view and schema.sql ` +
+        `carries no definition to re-declare over it, so the archive's findings cannot be read ` +
+        `through the one place the legacy-status fallback is written.`,
+    );
+  }
+  try {
+    db.exec(canonical.replace(/CREATE VIEW IF NOT EXISTS/i, "CREATE TEMP VIEW"));
+  } catch (error) {
+    throw new ToolError(
+      `the carry source at ${sourcePath} predates finding_state_current and the view could not ` +
+        `be re-declared over it: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
  * Every finding an archived store holds, with the identity and anchor a carry
  * has to record beside them.
  *
@@ -1394,6 +1425,16 @@ export interface ArchivedFinding {
  * every other. The view returns exactly one row per `findings` row, so the join
  * neither drops a finding nor duplicates one, and *every* archived finding is
  * carried whatever its state (spec.md §5.4).
+ *
+ * **An archive predating the view still reads through it.** The one archive
+ * §5.8 names — the clean-slate store frozen at `7c1c1a9` — carries
+ * `finding_resolution_current` and `findings` but not `finding_state_current`,
+ * because it was frozen before that view was declared, and it is immutable, so
+ * it cannot be given one. The view is therefore re-declared as a `TEMP` view on
+ * this read-only connection, from `schema.sql`'s own text: the archive is not
+ * written, the definition is not copied into this file, and the fallback stays
+ * in the single place the partition gate requires it to live. A store that has
+ * the view keeps using its own.
  */
 export function readArchivedStore(
   sourcePath: string,
@@ -1418,6 +1459,7 @@ export function readArchivedStore(
     const git = db
       .prepare("SELECT last_checked_sha, onboarding_sha FROM git_state ORDER BY repo_id LIMIT 1")
       .get() as { last_checked_sha: string | null; onboarding_sha: string | null } | undefined;
+    requireFindingStateView(db, sourcePath);
     const rows = db
       .prepare(
         `SELECT f.finding_id, f.subsystem_id, f.symptom, f.root_cause, f.severity,

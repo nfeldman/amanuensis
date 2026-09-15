@@ -356,6 +356,34 @@ function checkValues(createSql: string, column: string): string[] | null {
   return [...body.matchAll(/'([^']*)'/g)].map((m) => m[1] ?? "");
 }
 
+/**
+ * The canonical `CREATE VIEW` statement for one view, out of `schema.sql`.
+ *
+ * Exported for the one reader that needs a view's *text* rather than the view
+ * itself: `readArchivedStore` reads archives frozen before a view existed, and
+ * re-declaring that view as a `TEMP` one over the archive's own tables is the
+ * only way to read it without writing a second copy of the definition into a
+ * `.ts` file — which is precisely what `test-finding-partition.mjs` refuses
+ * (`the duplicated status fallback survives nowhere outside the view`). The
+ * schema stays the single place the fallback is written.
+ */
+export function canonicalCreateViewSql(view: string): string | null {
+  const schemaText = readSchemaText();
+  const re = new RegExp(`CREATE VIEW IF NOT EXISTS ${view}\\s+AS`, "i");
+  const start = re.exec(schemaText);
+  if (!start) return null;
+  // To the first `;` outside parentheses: a view body may carry a subselect
+  // whose own parentheses must not end the statement early.
+  let depth = 0;
+  for (let i = start.index; i < schemaText.length; i++) {
+    const ch = schemaText[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === ";" && depth === 0) return schemaText.slice(start.index, i + 1);
+  }
+  return null;
+}
+
 /** The canonical `CREATE TABLE` statement for one table, out of schema.sql. */
 function canonicalCreateSql(schemaText: string, table: string): string | null {
   const re = new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\s*\\(`, "i");

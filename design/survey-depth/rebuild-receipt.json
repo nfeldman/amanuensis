@@ -1,0 +1,359 @@
+{
+  "contract": "amanuensis-reader-lenses/rebuild-receipt/v1",
+  "packet": "P16",
+  "recorded_at": "2026-09-15T03:34:37.996Z",
+  "repository_sha": "09171b774ea8862970a49f6c62600f32841752cd",
+  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
+  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
+  "project_key": "github.com/nfeldman/amanuensis",
+  "produced_by": "dev/rebuild-self-conspectus-store.mjs --confirm",
+  "pre_rebuild": {
+    "store_present": false,
+    "db_exists": false,
+    "storage_entries": [],
+    "census": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "database_bytes": {
+      "memory.db": 1970176,
+      "memory.db-wal": 0,
+      "memory.db-shm": 32768
+    },
+    "note": "This worktree carried no self-conspectus store before the rebuild: the branch's work had never opened one, so the snapshot records an empty store this packet initialized to run the procedure at the real path, and the discard removed that. The recoverability of a populated snapshot is proved in the gate's procedure arm, not here."
+  },
+  "snapshot": {
+    "tool": "commit_phase_gate",
+    "label": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild",
+    "committed": true,
+    "commit_sha": "059aa03",
+    "reason": "committed",
+    "taken_before_deletion": true,
+    "history_at_snapshot": [
+      {
+        "sha": "059aa03",
+        "date": "2026-09-14T23:34:35-04:00",
+        "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
+      },
+      {
+        "sha": "3a94e23",
+        "date": "2026-09-14T23:34:35-04:00",
+        "message": "amanuensis: initialize storage"
+      }
+    ]
+  },
+  "stop": {
+    "server_pid": 60047,
+    "signal": "SIGTERM",
+    "exited_before_deletion": true,
+    "pid_probe_after_exit": "ESRCH",
+    "exclusive_before_deletion": {
+      "other_holders": [],
+      "established_by": "lsof -t -w -- . ./memory.db ./memory.db-wal ./memory.db-shm"
+    }
+  },
+  "discard": {
+    "removed": [
+      "memory.db",
+      "memory.db-wal",
+      "memory.db-shm"
+    ],
+    "survivors_of_partial_deletion": [
+      ".git",
+      ".gitignore",
+      ".storage-mode",
+      "initialization.json",
+      "project_identity",
+      "workspace_path"
+    ],
+    "removed_storage_directory": true,
+    "archive_path": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-survey-depth/620fb11e-3ba8-4420-9122-ce24e2dba48e/scratchpad/pre-acceptance-storage",
+    "reason": "Removing only memory.db, -wal and -shm leaves initialization.json naming a missing database, and the next open fails with a storage-marker error; removing the marker as well fails differently, because the incomplete-store rollback refuses a directory it did not create. The directory is archived whole and removed whole, and its Git history is carried back into the store that replaces it."
+  },
+  "reinitialize": {
+    "server_pid": 60215,
+    "cold_db_exists": false,
+    "views_created": [
+      "active_write_locks",
+      "compression_chain",
+      "concern_coverage",
+      "diagnosticity_evidence_value",
+      "field_demand",
+      "file_standing",
+      "finding_resolution_current",
+      "finding_state_current",
+      "finding_summary",
+      "hot_subsystems",
+      "legacy_claim_projection",
+      "revalidation_dashboard",
+      "review_brief_summary",
+      "seam_assessability",
+      "stale_backlog",
+      "stale_entries",
+      "subsystem_scope",
+      "xref_density"
+    ],
+    "marker": {
+      "contractVersion": "amanuensis-storage-initialization/v1",
+      "projectIdentity": "remote:github.com/nfeldman/amanuensis",
+      "projectKey": "github.com/nfeldman/amanuensis",
+      "storagePolicy": "worktree-local",
+      "canonicalRoot": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
+      "workspaceInstanceId": "ed7d8e639a6a",
+      "database": "memory.db"
+    },
+    "marker_validates": true,
+    "entries": [
+      ".git",
+      ".gitignore",
+      ".storage-mode",
+      "initialization.json",
+      "memory.db",
+      "memory.db-shm",
+      "memory.db-wal",
+      "project_identity",
+      "workspace_path"
+    ]
+  },
+  "readback": {
+    "get_project_info": {
+      "project_key": "github.com/nfeldman/amanuensis",
+      "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
+      "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
+      "db_exists": true
+    },
+    "get_dashboard": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "first_open_dashboard": {
+      "subsystem_count": 0,
+      "mapped_count": 0,
+      "total_findings": 0,
+      "open_bugs": 0,
+      "stale_entries": 0,
+      "scoped_files": 0,
+      "open_field_notes": 0,
+      "unresolved_contradictions": 0
+    },
+    "subsystems": 0,
+    "read_by_a_further_process": true
+  },
+  "carry": {
+    "source_kind": "store",
+    "source_path": "/Users/nfeldman/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db",
+    "archived_store_id": "store-legacy-36f2623f4d9afe92",
+    "archived_store_id_verified_against": "/Users/nfeldman/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db",
+    "archived_anchor": "61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27",
+    "reason": "the 2026-09-14 clean-slate rebuild discarded a conspectus holding 22 findings, six of them open and neither re-found nor ruled out; spec.md 5.8 carries all 22 from the archived store at 7c1c1a9, opened immutable, because the export carries no store identity",
+    "carry_run_id": 1,
+    "expected_count": 22,
+    "imported_count": 22,
+    "carried_rows": 22,
+    "records": [
+      {
+        "archived_finding_id": "B01-1",
+        "carried_id": 1,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B01-1"
+      },
+      {
+        "archived_finding_id": "B02-1",
+        "carried_id": 2,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B02-1"
+      },
+      {
+        "archived_finding_id": "B02-2",
+        "carried_id": 3,
+        "archived_resolution": "fixed-pending-verification",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B02-2"
+      },
+      {
+        "archived_finding_id": "B02-3",
+        "carried_id": 4,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B02-3"
+      },
+      {
+        "archived_finding_id": "B02-4",
+        "carried_id": 5,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B02-4"
+      },
+      {
+        "archived_finding_id": "B03-1",
+        "carried_id": 6,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-1"
+      },
+      {
+        "archived_finding_id": "B03-2",
+        "carried_id": 7,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-2"
+      },
+      {
+        "archived_finding_id": "B03-3",
+        "carried_id": 8,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-3"
+      },
+      {
+        "archived_finding_id": "B03-4",
+        "carried_id": 9,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-4"
+      },
+      {
+        "archived_finding_id": "B03-5",
+        "carried_id": 10,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-5"
+      },
+      {
+        "archived_finding_id": "B03-6",
+        "carried_id": 11,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-6"
+      },
+      {
+        "archived_finding_id": "B03-7",
+        "carried_id": 12,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-7"
+      },
+      {
+        "archived_finding_id": "B03-8",
+        "carried_id": 13,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B03-8"
+      },
+      {
+        "archived_finding_id": "B04-1",
+        "carried_id": 14,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B04-1"
+      },
+      {
+        "archived_finding_id": "B04-2",
+        "carried_id": 15,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B04-2"
+      },
+      {
+        "archived_finding_id": "B04-3",
+        "carried_id": 16,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B04-3"
+      },
+      {
+        "archived_finding_id": "B04-4",
+        "carried_id": 17,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B04-4"
+      },
+      {
+        "archived_finding_id": "B04-5",
+        "carried_id": 18,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B04-5"
+      },
+      {
+        "archived_finding_id": "B05-1",
+        "carried_id": 19,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B05-1"
+      },
+      {
+        "archived_finding_id": "B05-2",
+        "carried_id": 20,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B05-2"
+      },
+      {
+        "archived_finding_id": "B07-1",
+        "carried_id": 21,
+        "archived_resolution": "open",
+        "pre_recorded": null,
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B07-1"
+      },
+      {
+        "archived_finding_id": "B08-1",
+        "carried_id": 22,
+        "archived_resolution": "verified-fixed",
+        "pre_recorded": "archived-terminal",
+        "obligation_id": "carried:store-legacy-36f2623f4d9afe92:B08-1"
+      }
+    ],
+    "note": "Every archived finding is carried whatever its archived resolution state. One the archive had already closed is pre-recorded 'archived-terminal', which the carry alone writes: it carries the archive's judgement and asserts nothing about this store."
+  },
+  "history_restored": {
+    "restored_from": "/private/tmp/claude-501/-Users-nfeldman-automation-claude-amanuensis-survey-depth/620fb11e-3ba8-4420-9122-ce24e2dba48e/scratchpad/pre-acceptance-storage/.git",
+    "snapshot_sha": "059aa03",
+    "head_message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild",
+    "commits": [
+      {
+        "sha": "2b1f5cf",
+        "date": "2026-09-14T23:34:37-04:00",
+        "message": "Post-discard empty store (P16): reinitialized and read back, ready for the rebuild"
+      },
+      {
+        "sha": "f66a044",
+        "date": "2026-09-14T23:34:35-04:00",
+        "message": "session mu24bns9-544l6lf2 ended (completed)"
+      },
+      {
+        "sha": "059aa03",
+        "date": "2026-09-14T23:34:35-04:00",
+        "message": "Pre-rebuild snapshot (P16): the state discarded before the claims-backed rebuild"
+      },
+      {
+        "sha": "3a94e23",
+        "date": "2026-09-14T23:34:35-04:00",
+        "message": "amanuensis: initialize storage"
+      }
+    ]
+  },
+  "fixtures_unchanged": {
+    "checked": "sha256 of each A0 historical fixture after the rebuild (§12.3)",
+    "digests": {
+      "dev/conspectus/self-baseline.json": "0b9187cfe73fc5a0dc3bf01aa949b8f68b5c5b7aaf3169fcc839d44529445d7f",
+      "dev/conspectus/baseline-report.json": "26746fe217ebe196b02555334d116f49ee983c8b6704144efdb91bbf2e7cbea8",
+      "dev/conspectus/baseline-report-detector-1.0.0.json": "e1cfd009323b3830571bda7164a2eb1d84f3488c9a23d14e5050c80faba08f39",
+      "dev/conspectus/detector-registry.json": "eb35b6bdcf8f1ac571c522f59787327149b1c4db13ea4249f37a65947a03db11"
+    }
+  }
+}

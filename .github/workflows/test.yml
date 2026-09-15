@@ -389,6 +389,44 @@ jobs:
       # passing.
       - name: Survey depth red gates — the depth gate fires, and selectively
         run: node dev/test-survey-depth-red-gates.mjs
+      # GATE CR1 (design/survey-depth/spec.md §8.9a) — the carry receipt against
+      # the archive it summarises and the store the carry wrote into. Both of
+      # its subjects are machine-local: the archive is an absolute path outside
+      # the repository, and the live store is untracked (`git ls-files
+      # .amanuensis` → 0). A bare runner has neither, which is exactly the state
+      # that must not read as a pass, so this step asserts the third answer on
+      # every run: exit 2 with a `cannot run` line, never green and never
+      # offered as a red proof. Its selectivity arm — fifteen seeded faults over
+      # the same comparison — needs no store and runs here regardless.
+      #
+      # To run the gate itself, set repository variable CR1_GATE_ENABLED=true
+      # and CR1_ARCHIVE_STORE to a readable copy of the archived clean-slate
+      # store on the runner, with a carried store at .amanuensis/memory.db.
+      # Once enabled the job below is load-bearing.
+      - name: Carry receipt reports cannot run, never green, with no archive
+        env:
+          AMANUENSIS_CARRY_ARCHIVE: ${{ runner.temp }}/no-such-archived-store.db
+        run: |
+          set +e
+          out=$(node dev/test-carry-receipt.mjs 2>&1); status=$?
+          printf '%s\n' "$out"
+          test "$status" -eq 2 || { echo "expected exit 2 (cannot run), got $status" >&2; exit 1; }
+          printf '%s\n' "$out" | grep -q '^GATE P8 CANNOT RUN: ' || { echo "no cannot-run line" >&2; exit 1; }
+          printf '%s\n' "$out" | grep -q '^GATE P8 GREEN' && { echo "reported green with no archive" >&2; exit 1; }
+          printf '%s\n' "$out" | grep -q '^GATE P8 RED: ' && { echo "offered a cannot run as a red proof" >&2; exit 1; }
+          exit 0
+      - name: Carry receipt against the archived store and the carried store
+        if: vars.CR1_GATE_ENABLED == 'true'
+        env:
+          AMANUENSIS_CARRY_ARCHIVE: ${{ vars.CR1_ARCHIVE_STORE }}
+        run: |
+          set -euo pipefail
+          test -n "${AMANUENSIS_CARRY_ARCHIVE}" || {
+            echo "CR1_GATE_ENABLED is true but CR1_ARCHIVE_STORE is unset." >&2
+            echo "Provide the archive path or unset the variable; this gate does not skip silently." >&2
+            exit 1
+          }
+          node dev/test-carry-receipt.mjs
       # The regeneration pass that closed slice-S6's F6, F7 and F9: the durable
       # challenge-outcome record and the `mapped` prerequisite over it, the
       # recorded status ladder, the registry crossings, and the project's
