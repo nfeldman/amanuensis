@@ -755,14 +755,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "ca00160fc86595c8fd89baa210eaa4bbedca59bd",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "d10db51",
+      "green_sha": "f9256e8",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The reference edits and the check are one packet because the edits alone are prose that drifts and the check alone fails on its first run (GP37)."
+      "notes": "Sixteen register entries, not six: the derived scan reports every thrown or returned refusal opening 'cannot advance', '<tool> refuses:' or '<tool> requires', and the acceptance requires that set to be empty, so the nine status-ladder sentences, the publication refusal, the active-session requirement, set_disposition's evidence_ids, the declination conflict and define_term's anchor are registered beside the four new refusals and the two existing ones §6.1 names. The reference-side scan found three callers past §6.1's eleven passages — phase-5-packaging.md, subsystem-survey.md and memory-audit.md all instruct materialize_docs or the advance to mapped — and each now states the refusal, per §6.1's own rule that an affected caller is one wherever it lives. Two scope choices the spec left open, both with fixture controls (G4): the subject of a 'refuses:'/'requires' opening must be an advertised tool or an interpolation, and the message must be thrown or returned rather than collected into another call (which is what excludes refresh.ts:814's blockers.push). Both sides of every comparison have whitespace collapsed, because the server wraps a refusal across four concatenated literals and the references wrap the same sentence at their own column limit."
     },
     {
       "id": "P8",
