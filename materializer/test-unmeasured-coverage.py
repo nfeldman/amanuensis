@@ -394,6 +394,8 @@ def seed(
     reconciled_tree: tuple[str, ...] | None = None,
     reconciled_ledger: tuple[tuple[str, str, str], ...] | None = None,
     vocabulary: bool = False,
+    vocabulary_anchor: str | None = None,
+    workspace_path: Path | str | None = None,
     carried: bool = False,
 ) -> None:
     """One store, in whichever of §3.3's standings the caller asks for."""
@@ -467,7 +469,14 @@ def seed(
         cur.execute(
             "INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen)"
             " VALUES (?, ?, ?, ?)",
-            (VOCAB_TERM, VOCAB_GLOSS, DECLINED_SUPERSEDED, f"src/reader.ts:read@{head}"),
+            (
+                VOCAB_TERM,
+                VOCAB_GLOSS,
+                DECLINED_SUPERSEDED,
+                vocabulary_anchor
+                if vocabulary_anchor is not None
+                else f"src/reader.ts:read@{head}",
+            ),
         )
         cur.executemany(
             "INSERT INTO vocabulary_declinations (subsystem_id, reason, session_id, ref_sha,"
@@ -520,7 +529,8 @@ def seed(
             )
     db.commit()
     db.close()
-    (storage / "workspace_path").write_text(f"{workspace}\n")
+    bound = workspace if workspace_path is None else workspace_path
+    (storage / "workspace_path").write_text(f"{bound}\n")
     (storage / "entry-point.md").write_text(ENTRY_POINT)
     (storage / "onboarding-report.md").write_text(ONBOARDING_REPORT)
 
@@ -1086,6 +1096,176 @@ def main() -> int:
             " with a denominator",
             glossary_lists_declined,
         )
+
+        # -- §3.3 conditions 1 and 4: the bound workspace cannot answer -------
+        emit("")
+        emit("A reconciliation no tree can re-derive does not stand (§3.3 conditions 1, 4)")
+        gone_storage = root / "unreachable-workspace"
+        gone_storage.mkdir(parents=True, exist_ok=True)
+        gone: dict[str, Any] = {}
+        gone_error: str | None = None
+        try:
+            seed(
+                gone_storage,
+                workspace,
+                head,
+                ledger=LEDGER_PARTIAL,
+                unledgered=UNLEDGERED_PATHS,
+                workspace_path=root / "no-such-tree",
+            )
+            gone = publish(gone_storage, "--clean-publish")
+        except Exception as exc:  # noqa: BLE001 - the failure is the answer
+            gone_error = f"the unreachable-workspace fixture could not be seeded — {scrub(exc)}"
+        gone_docs = gone_storage / "docs"
+
+        def unreachable_workspace(label: str = COVERAGE_ROWS[0]) -> str | None:
+            if gone_error:
+                return gone_error
+            cell = metric_row(coverage_block(gone_docs), label)
+            if cell is None:
+                return f"the overview carries no {label!r} row at all"
+            if NOT_MEASURED not in cell:
+                return (
+                    f"{label!r} reads {cell!r} for a store whose bound workspace"
+                    " cannot enumerate the tree at the published revision, so §3.3"
+                    " conditions 1 and 4 were never evaluated and the fraction"
+                    " stands on the record's own word"
+                )
+            if not names_revision(cell, head):
+                return f"the refusal names no revision: {cell!r}"
+            return None
+
+        check(
+            "a store whose bound workspace cannot answer prints no coverage fraction",
+            unreachable_workspace,
+        )
+        check(
+            "a store whose bound workspace cannot answer prints no unledgered count",
+            lambda: unreachable_workspace(COVERAGE_ROWS[1]),
+        )
+
+        def unreachable_reads_back_green() -> str | None:
+            if gone_error:
+                return gone_error
+            red = [axis for axis, ok in axes(gone).items() if not ok]
+            if red:
+                return (
+                    "the read-back reports the refusal as a fault rather than as"
+                    f" present and honest — {red} red: {mismatches(gone)[:2]}"
+                )
+            return None
+
+        check("the refusal to measure still reads back green", unreachable_reads_back_green)
+
+        # -- the read-back compares the reading, not a substring of it --------
+        emit("")
+        emit("The read-back recomputes the published coverage rows (§3.4)")
+
+        def tampered(label: str, replacement: str) -> str | None:
+            """Rewrite one published cell and re-run the read-back over it."""
+
+            if part_error:
+                return part_error
+            page = part_docs / OVERVIEW_PAGE
+            original = read(page) or ""
+            cell = metric_row(coverage_block(part_docs), label)
+            if cell is None:
+                return f"the overview carries no {label!r} row at all"
+            row_line = f"| {label} | {cell} |"
+            if row_line not in original:
+                return f"the {label!r} row is not written as {row_line!r}"
+            page.write_text(original.replace(row_line, f"| {label} | {replacement} |"))
+            try:
+                summary = publish(part_storage, "--readback-only")
+                if axes(summary)["coverage"]:
+                    return (
+                        f"{label!r} was rewritten from {cell!r} to {replacement!r} and"
+                        " the coverage axis stayed green: the row is checked for a"
+                        " substring of the record, not against it"
+                    )
+            finally:
+                page.write_text(original)
+            return None
+
+        check(
+            "a files-read numerator the record contradicts turns the coverage axis red",
+            lambda: tampered(COVERAGE_ROWS[0], f"999 of {PARTIAL_D2}"),
+        )
+        check(
+            "an unledgered count the record contradicts turns the coverage axis red",
+            lambda: tampered(COVERAGE_ROWS[1], f"1{len(UNLEDGERED_PATHS)}"),
+        )
+
+        def untampered_still_green() -> str | None:
+            if part_error:
+                return part_error
+            summary = publish(part_storage, "--readback-only")
+            red = [axis for axis, ok in axes(summary).items() if not ok]
+            if red:
+                return (
+                    "the restored projection does not read back green, so the two"
+                    f" checks above prove nothing — {red} red: {mismatches(summary)[:2]}"
+                )
+            return None
+
+        check("the projection reads back green once restored", untampered_still_green)
+
+        # -- §4.5: an anchor is a citation that opens -------------------------
+        emit("")
+        emit("A term is current only where its anchor opens (§4.4, §4.5)")
+        UNOPENABLE = (
+            ("not-a-citation", "a token that is not a citation at all"),
+            (f"src/reader.ts:read@{'0' * 40}", "a citation whose revision does not resolve"),
+            (f"src/never-written.ts:read@{head}", "a citation naming a path absent from that tree"),
+        )
+        for bad_anchor, label in UNOPENABLE:
+            bad_storage = root / f"anchor-{abs(hash(bad_anchor)) % 10**8}"
+            bad_storage.mkdir(parents=True, exist_ok=True)
+            bad_error: str | None = None
+            try:
+                seed(
+                    bad_storage,
+                    workspace,
+                    head,
+                    ledger=LEDGER_FULL,
+                    unledgered=(),
+                    vocabulary=True,
+                    vocabulary_anchor=bad_anchor,
+                )
+                publish(bad_storage, "--clean-publish")
+            except Exception as exc:  # noqa: BLE001 - the failure is the answer
+                bad_error = f"the {label} fixture could not be seeded — {scrub(exc)}"
+
+            def anchor_does_not_discharge(
+                docs: Path = bad_storage / "docs",
+                error: str | None = bad_error,
+                label: str = label,
+            ) -> str | None:
+                if error:
+                    return error
+                needle = DECLINED_SUPERSEDED.lower().replace("-", "")
+                page = ""
+                for path in sorted(docs.glob("subsystems/*.md")):
+                    if path.name.lower().startswith(needle):
+                        page = read(path) or ""
+                        break
+                body = section(page, "Vocabulary")
+                if not body:
+                    return f"{DECLINED_SUPERSEDED}'s page carries no Vocabulary section"
+                if SUPERSEDED_HEADING in body:
+                    return (
+                        f"{label} renders the subsystem's declination as superseded"
+                        " history, so an anchor nobody can open discharged the"
+                        f" obligation (§4.4): {body[:200]!r}"
+                    )
+                if REASON_SUPERSEDED not in body:
+                    return (
+                        f"{label} leaves the subsystem with neither a current"
+                        f" declination nor its reason: {body[:200]!r}"
+                    )
+                return None
+
+            check(f"{label} does not make a term current", anchor_does_not_discharge)
 
         # -- §5.6: carried obligations, on both lenses and in both formats ----
         emit("")
