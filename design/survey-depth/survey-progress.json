@@ -1,0 +1,68 @@
+{
+  "contract": "amanuensis-survey-depth/survey-progress/v1",
+  "packet": "P10",
+  "what_this_is": "The batching record for the acceptance rebuild's survey (spec.md §7.4 steps 7-8). It says which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. It is a process record, not a gate input: every blocking predicate lives in design/survey-depth/acceptance-receipt.json, which dev/test-survey-depth.mjs recomputes over rows. The per-batch numbers here are historical snapshots and are not re-derivable after the fact; the final row is, and it must equal the receipt's.",
+  "store": {
+    "store_generation": "59913eaff3daad8d1c47ea093ada90dc",
+    "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
+    "carried_from": "store-legacy-36f2623f4d9afe92"
+  },
+  "target": {
+    "rule": "spec.md §7.3 B2 — D3% over tracked paths at the reconciled revision must reach the frozen baseline's 0.5957",
+    "baseline_fraction": 0.5957,
+    "baseline_examined": 221,
+    "baseline_obligation_bearing": 371,
+    "denominator_rule": "tracked paths at the reconciled revision minus those whose ledger classification the contract marks obligation_bearing=false — never the ledger's own row count (§1.4)"
+  },
+  "start": {
+    "at_sha": "3fafe14c94c38c5ef8ad57326272f76231bd039b",
+    "reconciled_at": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
+    "tracked_paths": 640,
+    "obligation_bearing": 571,
+    "examined": 0,
+    "fraction": 0.0,
+    "examined_needed_for_b2": 341,
+    "dispositions": 0,
+    "evidence": 0,
+    "carried_total": 22,
+    "carried_decided": 8,
+    "subsystems_mapped": 0
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "priority": 1,
+      "subsystems": ["B-02", "B-03"],
+      "why_first": "Highest defect surface: every durable write, the storage lifecycle and the whole tool surface a survey is written through. Eight of the twenty-two carried obligations name a file in one of these two.",
+      "status": "planned"
+    },
+    {
+      "batch": 2,
+      "priority": 2,
+      "subsystems": ["B-01", "B-04", "B-09"],
+      "why_next": "The method the server enforces, the only reader-facing projection, and the design lanes whose gates take denominators from documents under test.",
+      "status": "planned"
+    },
+    {
+      "batch": 3,
+      "priority": 3,
+      "subsystems": ["B-05", "B-08"],
+      "why_next": "Packaging, checkers and the release-readiness harnesses — the largest file counts and the thinnest prior coverage.",
+      "status": "planned"
+    },
+    {
+      "batch": 4,
+      "priority": 4,
+      "subsystems": ["B-06", "B-07"],
+      "why_last": "Two evidence corpora: a design study with its own validation record, and the embedded research surveys. Prose and captured trial data, no product code.",
+      "status": "planned"
+    }
+  ],
+  "carried_adjudication": {
+    "denominator": "design/survey-depth/carry-receipt.json — the carry receipt P8 committed, which this packet does not rewrite",
+    "total": 22,
+    "pre_recorded_archived_terminal": 8,
+    "to_decide": 14,
+    "decided": []
+  }
+}

@@ -1,0 +1,2956 @@
+{
+  "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
+  "repository_sha": "3fafe14c94c38c5ef8ad57326272f76231bd039b",
+  "recorded_at": "2026-09-15",
+  "store": {
+    "store_id": "59913eaff3daad8d1c47ea093ada90dc",
+    "repo_id": "default",
+    "checked_sha": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
+    "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
+  },
+  "baseline": {
+    "archived_store_id": "store-legacy-36f2623f4d9afe92",
+    "checked_sha": "61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27",
+    "examined_fraction": 0.5957
+  },
+  "blocking": {
+    "B1": {
+      "verdict": "green",
+      "baseline": {
+        "unledgered": 0,
+        "absent": 0
+      },
+      "witness": {
+        "detected_sha": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
+        "tree_digest": "6b2149145d35797151faa7a7baa93dfcb1314a5161064f31fb856b9da36bab04",
+        "ledger_digest": "0fdb811f9728e2ae1e5c8cc89a72d5a1ef8071fb96fadfb1cfd2f8b8d7eb754c",
+        "ledger": [
+          {
+            "file_path": ".claude/skills/amanuensis/SKILL.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/artifact-templates.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/concern-territories.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/memory-audit.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/notes.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/onboarding.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/open-questions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/phase-1-scope.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/phase-3-concerns.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/phase-5-packaging.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/refresh.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/reporting-style.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/setup.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/subsystem-survey.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".github/FUNDING.yml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".github/workflows/pages.yml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".github/workflows/publish.yml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".github/workflows/published-smoke.yml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".github/workflows/test.yml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".gitignore",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".mcp.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".pecia/config.yaml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".pecia/snapshot.head",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".pecia/snapshot.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".pecia/work.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": ".tool-versions",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "CONTRIBUTING.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "HISTORY.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "INSTALLATION.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "LICENSE",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "ROADMAP.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/actionable-redesign.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/blind-brief.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/current-report-stress-test.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/design-language.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/blind-editorial-decision-design.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/blind-ia-wayfinding.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/blind-interaction-art-direction.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/method-and-lineage.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/panel/synthesis-and-directions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/prototype-current/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/prototype/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/revision-2026-08-23.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/source-capture.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/task-tests.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/validation/index.html.png",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/validation/prototype-desktop.png",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/validation/report.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/delightful-output-panel/validation/validate-prototype.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/decisions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/dogfood-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/plan.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/plan.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/rationale.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/rebuild-coverage-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/rebuild-depth-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/rebuild-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/final/claude.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/final/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/final/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/round-1/aggregate.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/round-1/aggregate.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/round-1/claude.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/round-1/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/round-1/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S1/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S1/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S2/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S2/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S3/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S3/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S4/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S4/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S5/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S5/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S6/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S6/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S7/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/reviews/slice-S7/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/routing-measurement.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/reader-lenses/spec.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/carry-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/decisions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/plan.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/plan.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/rationale.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/rebuild-receipt.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/round-1/aggregate.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/round-1/aggregate.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/round-1/claude.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/round-1/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/round-1/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S1/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S1/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S2/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S2/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S3/codex.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/reviews/slice-S3/dispositions.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/survey-depth/spec.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a19-user-scoped-contract.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a20-activation-doctor.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a21-immutable-workspace-binding.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-codex-host.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/configuration-conflict.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/configuration-conflict.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/interrupted-a.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/interrupted-a.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/parent-cd-recovery.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-a-resume.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-a-resume.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-a.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-a.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-b.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/repository-b.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.sanitization.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/stale-process-cwd.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/storage-readback.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/worktree-a.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a22-host-runs/worktree-a.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a23-zero-touch-lifecycle.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a24-package-parity.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-activation-operating-envelope.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.launch-audit.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-a-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-b-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-c-nested.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-d-worktree.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-repo-e-parent-cd.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.launch-audit.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-negative-config.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-a-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-b-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-c-nested.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-root.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-d-worktree.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.jsonl",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.stderr.log",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-28T22-52-43-706Z-e0b75e9d-repo-e-parent-cd.store-custody.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a26-candidate-suite.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a26-clean-replay.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a26-release-readiness-red-gates.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/activation-evidence/a26-release-readiness.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adopt-codex-host-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0001-living-conspectus-terms.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0002-temporal-claim-model.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0003-predict-before-apply-change-impact.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0004-obligation-custody-and-reconciliation.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0005-resolution-proof-and-projection-readback.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0006-unattended-refresh-authority-and-recovery.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0007-impact-aware-review-brief.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0008-independent-review-custody-and-blinding.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0009-integral-head-composition-fan-in.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0010-derived-review-surface-and-semantic-readback.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0011-codebase-brief-contract.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0012-independent-dialectical-design.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0013-decision-acceptance-and-premise-custody.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0014-decision-bounded-research-custody.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0015-identity-first-crosswalk-and-qualified-methods.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0016-typed-revisable-learning-ledger.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0017-stratified-operating-envelope.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0018-chorusmith-adapter-parity-boundary.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0019-qualified-natural-history-corpus.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0020-practice-catalog-v2.10-reconciliation.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/adr/0021-friction-free-codex-activation.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/amanuensis-defects-to-pecia.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/capture-activation-launch.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/check-activation-operating-envelope.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/check-codex-host-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/check-friction-free-release-readiness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/check-living-conspectus.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/check-store-fully-surveyed.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/cleanup-activation-operating-trust.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/cleanup-codex-host-trust.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/conspectus/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/conspectus/baseline-report-detector-1.0.0.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/conspectus/baseline-report.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/conspectus/detector-registry.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/conspectus/self-baseline.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/cross-domain-analysis.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/friction-free-release-checklist.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/hooks/pre-commit",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/pecia-dogfood.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/pecia-resolve-finding.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/practice-catalog-v2.10.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/promote-docs.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/rebuild-self-conspectus-store.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/receipt-provenance.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-carry-receipt.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-dogfood-receipt.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-rebuild-coverage.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-rebuild-depth.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-regeneration-pass.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/record-survey-depth-baseline.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/refresh-a22-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/release-notes-v0.2.0-beta.1.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/render-friction-free-release-readiness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/render-roadmap.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/roadmap.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/run-activation-operating-envelope.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/run-codex-host-harness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/run-codex-parent-cd-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/run-friction-free-candidate-suite.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/run-friction-free-release-replay.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/survey-depth-baseline.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-activation-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-activation-operating-envelope-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-activation-operating-trust-cleanup.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-amanuensis-pecia-defects.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-carried-finding-references.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-carry-receipt.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-codex-host-evidence-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-friction-free-release-readiness-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-living-conspectus.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-package-activation-parity-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-pecia-roadmap-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-pecia-roadmap.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-reader-lenses-dogfood.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-rebuild-coverage.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-rebuild-depth.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-rebuild-readback.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-rebuild-regeneration.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-roadmap.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-survey-depth-red-gates.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "dev/test-survey-depth.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "docs/.manifest.json",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/.projection-contract.json",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/architecture.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/architecture.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/concern-checklist.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/concern-checklist.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/concerns.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/concerns.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/contradictions.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/contradictions.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/diagnosticity.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/diagnosticity.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/disagreements.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/disagreements.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/entry-point.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/entry-point.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/field-notes.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/field-notes.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/files.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/files.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/findings.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/findings.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/hot-spots.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/hot-spots.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/how-to-read.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/how-to-read.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/index.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/index.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/master-plan.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/master-plan.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/not-yet-surveyed.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/not-yet-surveyed.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/onboarding-report.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/onboarding-report.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/open-questions.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/open-questions.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolution-history.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolution-history.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolved-findings.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolved-findings.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolved-leads.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/resolved-leads.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/seams.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/seams.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/search-index.js",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/sessions.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/sessions.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/stale.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/stale.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b01-survey-methodology-and-agent-contracts.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b01-survey-methodology-and-agent-contracts.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b03-knowledge-tools-and-workflow-api.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b03-knowledge-tools-and-workflow-api.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b05-materializer-human-projection-read-back-html.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b05-materializer-human-projection-read-back-html.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b06-packaging-installer-and-host-activation.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b06-packaging-installer-and-host-activation.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b07-gates-evidence-custody-and-ci.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b07-gates-evidence-custody-and-ci.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b08-records-design-research-published-projection-execution-ledger.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b08-records-design-research-published-projection-execution-ledger.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/vocabulary.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/vocabulary.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "materializer/.gitignore",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/__init__.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/core.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/db.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/diagrams.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/html_projection.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/lint.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/manifest.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/readback.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/renderers.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/slugs.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/vocabulary.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/amanuensis_materializer/xref.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/materialize.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/pyproject.toml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-history-and-disagreements.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-ledger-freshness.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-lens-pages.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-materializer.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-overview-truthfulness.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-readback.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-search-index.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-unmeasured-coverage.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/uv.lock",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "mcp-server/.gitignore",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/DEVELOPMENT.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/biome.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/activation-parity.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/append-only-tables.txt",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/attention.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/chorusmith/artifact-input.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/chorusmith/custody-matrix.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/chorusmith/extraction-parity-ledger.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/chorusmith/project-type.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/chorusmith/run-manifest.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/codebase-brief.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/codebase-decision.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/concern-checklist.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/conspectus-vocabulary.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/historical-evaluation-corpus.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/locus-account.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/locus-history.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/refusal-parity.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/contracts/research-request.schema.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-config-healthy.toml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-config-residual-trust.toml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-config-shadowed.toml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-config-workspace-pinned.toml",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-context-probe.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/codex-host-red-matrix.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/conflicting-user-project.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/first-use-interruption.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/first-use-worker.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/operating-envelope-red-matrix.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/package-parity.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/release-readiness-red-matrix.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/activation/storage-symlink-escape.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/change-impact/manifest.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/codebase-brief/source-input.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/composition/manifest.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/crosswalk/qualification-result.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/evaluation/program.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/learning/method-qualification.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/research/scholiast/version-semantics/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/research/scholiast/version-semantics/sources.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/revalidation/manifest.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/review-analysis/manifest.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/fixtures/review-session/semantic-states.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/package-lock.json",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "mcp-server/package.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/check-concern-checklist.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/check-evidence-vocabulary.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/check-refusal-parity.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/check-sql-identifiers.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/check-tool-schemas.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/ensure-built.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/gen-tool-inventory.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/gen-vocabulary.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/historical-evaluation.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/scripts/prepack-bundle-assets.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/cli.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/codebase-brief-contract.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/codex-host.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/db.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/helpers.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/index.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/invariants.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/project.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/schema.sql",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/session.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/standing.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/storage-git.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/artifacts.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/carried.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/chorusmith-adapter.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/claims.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/codebase-brief.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/compare.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/composition.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/concerns.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/contradictions.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/crosswalk.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/dashboard.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/decisions.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/design-session.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/diagnosticity.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/dispatch.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/dispositions.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/evaluation.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/evidence.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/field-notes.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/files.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/findings.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/git.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/impact.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/learning.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/locks.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/locus.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/logging.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/materialize.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/open-questions.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/project.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/refresh.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/research.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/resolution.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/revalidation.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/review-analysis.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/review-session.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/review.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/seams.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/stale.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/storage-history.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/subsystems.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/vocabulary.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/tools/xrefs.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/src/vocabulary.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-activation-contract.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-activation-doctor.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-adversarial-correctness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-adversarial-performance.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-adversarial-security.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-attention-history.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-autoprogress.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-carried-findings.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-change-impact.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-chorusmith-adapter.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-cloud-e2e.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-cloud-storage.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-codebase-brief.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-codex-parent-workspace.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-compare.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-composition.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-consumer-route.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-crosswalk-qualification.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-decisions.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-derived-staleness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-design-session.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-disposition-evidence.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-edge-contract.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-existing-store-migration.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-finding-partition.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-first-use-laziness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-first-use-recovery.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-historical-evaluation.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-installer.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-invariants.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-learning-ledger.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-locus-compactness.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-locus-index-view.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-locus-standing.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-mcp-compatibility.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-nested-activation-binding.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-operating-envelope.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-package-activation-parity.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-package-artifact.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-perf-ceilings.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-perf-tier2.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-perf.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-phase2-claims-gate.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-priority.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-projection-custody.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-refresh-recovery.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-refusal-parity.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-release-rollback.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-research-broker.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-residual-hardening.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-resolution-proof.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-revalidation-scheduler.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-review-analysis.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-review-brief.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-review-session.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-scope-reconciliation.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-smoke.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-startup-bounds.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-storage-git.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-structural-claims.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-temporal-claims.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-vocabulary-discharge.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-vocabulary-source.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-workspace-binding.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/tsconfig.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/baseline-inspection.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/baseline-inspection.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/baseline.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/capture-component-landscape.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/component-landscape-metadata.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/conspectus.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/dependency-footprint.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/dependency-footprint.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/github-health.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/link-audit.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/link-audit.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/notes.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/npm-audit.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/npm-metadata.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/registry-policy.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/registry-policy.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/registry-trial-inspection.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/registry-trial-inspection.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/registry-trial-verification.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/shortlist.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/sources.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/specialist-npm-metadata.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/taxonomy.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trial-inspection.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trial-inspection.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trial-red-proof.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/.gitignore",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/alpine/alpine-csp.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/alpine/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/alpine/report-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/alpine/report.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/astro.config.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/dist/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/dist/methods.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/src/pages/index.astro",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/src/pages/methods.astro",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/astro/src/report.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/.eleventy.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/classic-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/methods.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/dist/report.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/src/index.njk",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/eleventy/src/methods.njk",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/dist/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/dist/report-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/lit/src/report-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/client.adcc8ae6.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/runtime.607a8173.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/_observablehq/stdlib.c27a8c1f.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/dist/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/observablehq.config.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/observable/src/index.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/package-lock.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/package.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/components.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/assets/index-C358O-a9.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/assets/index-DZwiDhHX.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist-client/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/report-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/dist/report.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/index.html",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/npm-audit.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/package-lock.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/package.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/registry-snapshot.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/scripts/build-document.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/scripts/capture-audit.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/scripts/capture-registry.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/client.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/button.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/input.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/label.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/components/ui/table.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/index.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/lib/utils.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/report-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/src/report.tsx",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/tsconfig.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/upgrade-diff.txt",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shadcn-copy/vite.config.ts",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shared/classic-filter.js",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/trials/shared/report.css",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/vendor-matrix.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/verify-registry-trial-snapshot.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/verify-survey.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/verify-trial-snapshot.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/ai-primary-web-platform-landscape/vocabulary.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/analyze_corpus.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/conspectus.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/corpus-profile.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/notes.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/sources.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/report-record-presentation/vocabulary.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/task-workspace-reorientation-indexes/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/task-workspace-reorientation-indexes/conspectus.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/task-workspace-reorientation-indexes/notes.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "scholiast/task-workspace-reorientation-indexes/sources.md",
+            "classification": "candidate"
+          }
+        ],
+        "tracked_paths": 640,
+        "ledger_rows": 640,
+        "unledgered": 0,
+        "absent": 0,
+        "exempt": 69,
+        "session_id": "mu252s7d-jpylag0r"
+      }
+    },
+    "B2": {
+      "verdict": "red",
+      "examined": 0,
+      "obligation_bearing": 571,
+      "fraction": 0,
+      "baseline": {
+        "examined": 221,
+        "obligation_bearing": 371,
+        "fraction": 0.5957
+      }
+    },
+    "B3": {
+      "verdict": "green",
+      "dispositions": []
+    },
+    "B4": {
+      "verdict": "green",
+      "subsystems": [
+        {
+          "id": "B-01",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-02",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-03",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-04",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-05",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-06",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-07",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-08",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        },
+        {
+          "id": "B-09",
+          "status": "unmapped",
+          "dispositions": 0,
+          "attached": 0,
+          "terms": [],
+          "declination": null
+        }
+      ]
+    },
+    "B5": {
+      "verdict": "red",
+      "baseline_open_findings": [
+        "B01-1",
+        "B02-3",
+        "B02-4",
+        "B03-5",
+        "B03-6",
+        "B03-7",
+        "B03-8",
+        "B04-2",
+        "B04-3",
+        "B04-4",
+        "B04-5",
+        "B05-2",
+        "B07-1"
+      ],
+      "carried": [
+        {
+          "carried_id": 1,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B01-1",
+          "subsystem_id": "B-01",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 2,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B02-1",
+          "subsystem_id": "B-02",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 3,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B02-2",
+          "subsystem_id": "B-02",
+          "archived_resolution": "fixed-pending-verification",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 4,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B02-3",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 5,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B02-4",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 6,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-1",
+          "subsystem_id": "B-03",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 7,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-2",
+          "subsystem_id": "B-03",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 8,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-3",
+          "subsystem_id": "B-03",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 9,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-4",
+          "subsystem_id": "B-03",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 10,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-5",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 11,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-6",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 12,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-7",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 13,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B03-8",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 14,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B04-1",
+          "subsystem_id": "B-04",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 15,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B04-2",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 16,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B04-3",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 17,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B04-4",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 18,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B04-5",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 19,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B05-1",
+          "subsystem_id": "B-05",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 20,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B05-2",
+          "subsystem_id": "B-05",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 21,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B07-1",
+          "subsystem_id": "B-07",
+          "archived_resolution": "open",
+          "outcome": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 22,
+          "archived_store_id": "store-legacy-36f2623f4d9afe92",
+          "archived_finding_id": "B08-1",
+          "subsystem_id": "B-08",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "repaired_sha": null,
+          "evidence_revisions": []
+        }
+      ]
+    },
+    "B6": {
+      "verdict": "red",
+      "undecided": 14
+    }
+  },
+  "reported": {
+    "ledger_rows": 640,
+    "evidence": 0,
+    "dispositions": 0,
+    "attached_dispositions": 0,
+    "disposition_evidence_rows": 0,
+    "field_notes": 0,
+    "open_questions_all": 1,
+    "open_questions_open": 1,
+    "anchored_terms": 0,
+    "open_findings": 0,
+    "subsystems": 9,
+    "seams": 0,
+    "claims": 0,
+    "xrefs": 0,
+    "sessions": 5,
+    "finding_status_histogram": {},
+    "classification_histogram": {
+      "candidate": 571,
+      "generated-ignore": 69
+    }
+  }
+}

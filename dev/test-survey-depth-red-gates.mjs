@@ -632,10 +632,21 @@ function runDepthGate({ root = null, baseline = undefined, extraEnv = {} } = {})
   };
 }
 
+// D0's status line addresses two readers. §7.1 fixes its verdict as
+// `GATE D0 …`; §8.0 clauses 1-2 bind the launcher to the *packet* id, and D0 is
+// P10's packet gate, so the line leads with `GATE P10 ` and carries D0's
+// verdict as its reason. Both halves are asserted here: a gate that satisfied
+// only one of its two readers would be refused by the other, which is how P5
+// failed, and an arm that checked only the spec name would not have caught it.
+const D0_RED = "GATE P10 RED: GATE D0 RED: ";
+const D0_GREEN = "GATE P10 GREEN — GATE D0 GREEN";
+const D0_CANNOT_RUN = "GATE P10 CANNOT RUN: GATE D0 CANNOT RUN: ";
+const D0_ANY = "GATE P10 ";
+
 /** The one-line summary of a D0 run, for a failure message that names it. */
 function describe(run) {
   if (!run.last) {
-    return `it printed no GATE D0 status line (exit ${run.status})`;
+    return `it printed no ${D0_ANY}status line (exit ${run.status})`;
   }
   return `it exited ${run.status} printing ${JSON.stringify(run.last.slice(0, 200))}`;
 }
@@ -646,7 +657,7 @@ function expectRed(run, predicate) {
   if (run.status === 2) {
     return `it exited 2 (cannot run), which §8.0 clause 3 forbids as a red — ${describe(run)}`;
   }
-  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  if (!run.last.startsWith(D0_RED)) return describe(run);
   if (predicate && !run.last.includes(predicate)) {
     return `it went red without naming ${predicate}, so the red cannot be attributed to the seeded fault — ${describe(run)}`;
   }
@@ -655,14 +666,14 @@ function expectRed(run, predicate) {
 
 function expectGreen(run) {
   if (run.status !== 0) return describe(run);
-  if (run.last !== "GATE D0 GREEN") return describe(run);
+  if (run.last !== D0_GREEN) return describe(run);
   return null;
 }
 
 function expectCannotRun(run) {
   if (run.status === 0) return `it exited 0 — ${describe(run)}`;
   if (run.status !== 2) return `it exited ${run.status}, not 2 — ${describe(run)}`;
-  if (!run.last.startsWith("GATE D0 CANNOT RUN: ")) return describe(run);
+  if (!run.last.startsWith(D0_CANNOT_RUN)) return describe(run);
   return null;
 }
 
@@ -818,8 +829,8 @@ check("every printed fraction carries its denominator", () => {
   // A run that printed nothing has no fraction without a denominator and no
   // fraction with one. Reporting that as a pass is the zero-denominator green
   // this arm is about, one level up.
-  if (!controlRun.last.startsWith("GATE D0 ")) {
-    return `the control run printed no GATE D0 status line, so there are no fractions to read — ${describe(controlRun)}`;
+  if (!controlRun.last.startsWith(D0_ANY)) {
+    return `the control run printed no ${D0_ANY}status line, so there are no fractions to read — ${describe(controlRun)}`;
   }
   // A rendered percentage always carries two decimals; an axis label like `D7%`
   // does not, so the two cannot be confused.
@@ -918,7 +929,7 @@ check("an absent baseline fixture is red, never green", () => {
   if (run.status === 0) return `the gate exited 0 with no baseline — ${describe(run)}`;
   if (run.status === 2)
     return `the gate reported cannot run for an absent committed fixture — ${describe(run)}`;
-  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  if (!run.last.startsWith(D0_RED)) return describe(run);
   return null;
 });
 
@@ -928,7 +939,7 @@ check("an unreadable baseline fixture is red, never green", () => {
   writeFileSync(broken, "{ this is not JSON\n");
   const run = runDepthGate({ root: control.root, baseline: broken });
   if (run.status === 0) return `the gate exited 0 over an unparseable fixture — ${describe(run)}`;
-  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  if (!run.last.startsWith(D0_RED)) return describe(run);
   return null;
 });
 
@@ -1181,7 +1192,7 @@ check("a receipt bound to no revision of this repository is red", () => {
   if (run.status === 0) {
     return `the gate exited 0 over a receipt whose repository_sha is forty zeroes — ${describe(run)}`;
   }
-  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  if (!run.last.startsWith(D0_RED)) return describe(run);
   return null;
 });
 
@@ -1294,7 +1305,7 @@ check("a receipt that disagrees with the live store beside it is red", () => {
   if (run.status === 0) {
     return `both arms ran and the gate exited 0 over a receipt that reports five more examined paths than the store holds — ${describe(run)}`;
   }
-  if (!run.last.startsWith("GATE D0 RED: ")) return describe(run);
+  if (!run.last.startsWith(D0_RED)) return describe(run);
   return null;
 });
 

@@ -20,7 +20,7 @@
 //
 // **Three states, not two.** Between the packet that registers this gate and the
 // packet that writes the receipt there is neither a live store nor a receipt.
-// That is reported as `GATE D0 CANNOT RUN` with exit **2** — an absence reported
+// That is reported as `GATE P10 CANNOT RUN: GATE D0 CANNOT RUN` with exit **2** — an absence reported
 // as an absence (VP4(e)) rather than a knowing red that stops being a signal.
 // `GATE D1` (§8.5) asserts the third state is reached there, so it cannot be
 // used to hide a real red, and §8.0 clause 3 forbids offering it as a red proof.
@@ -102,7 +102,9 @@
 // honesty.
 //
 // Output protocol: exactly one status line, last, on stdout, scrubbed of the
-// launcher's crash signatures.
+// launcher's crash signatures. It leads with the packet marker §8.0 binds the
+// launcher to and carries §7.1's `GATE D0` verdict as its reason, because the
+// two name the same gate in different vocabularies — see `PACKET` below.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -188,15 +190,27 @@ function check(label, fn) {
   return reason === null;
 }
 
+// The status line addresses two readers with different vocabularies, so it
+// carries both names. §7.1 fixes this gate's verdict as `GATE D0 …`; §8.0
+// clauses 1-2 bind the launcher to the *packet* id, and `verify_packet` greps
+// `^GATE P10 RED: ` at the red commit and `^GATE P10 GREEN` at HEAD, knowing
+// nothing of the spec's gate names. P5 shipped a complete, correct gate and was
+// refused for exactly this collision; it fixed it by leading with the packet
+// marker and carrying the spec gate's verdict as the reason, and D0 is the
+// second and last gate in this lane whose spec name is not its packet id.
+// `gate.red_expect`, which §8.0 says quotes the first line of the reason, is
+// therefore still matched by the D0 half.
+const PACKET = "P10";
+
 function red(reason) {
   emit("");
-  emit(`GATE D0 RED: ${reason}`);
+  emit(`GATE ${PACKET} RED: GATE D0 RED: ${reason}`);
   process.exit(1);
 }
 
 function cannotRun(reason) {
   emit("");
-  emit(`GATE D0 CANNOT RUN: ${reason}`);
+  emit(`GATE ${PACKET} CANNOT RUN: GATE D0 CANNOT RUN: ${reason}`);
   process.exit(2);
 }
 
@@ -1308,10 +1322,21 @@ for (const reading of readings) {
 // ---------------------------------------------------------------------------
 emit("");
 if (failures.length) {
+  // The reason names the predicates that fired, in §7.3's order, before it
+  // says how many assertions failed: a reader — and `gate.red_expect`, which
+  // §8.0 says quotes this line — needs to know *which* obligation the rebuild
+  // missed, and a bare count answers that for nobody.
+  const fired = PREDICATES.map(([id]) => id).filter((id) =>
+    readings.some((reading) => reading.verdicts[id]),
+  );
+  const where = fired.length
+    ? `on ${fired.join(", ")}${failures.length > fired.length && storeReading && receiptReading ? " and on the agreement of its two arms" : ""}`
+    : "on the agreement of its two arms";
   red(
-    `the candidate does not reach the frozen baseline's depth — ${failures.length} failed ` +
-      `assertion(s) over §7.3's blocking predicates${storeReading && receiptReading ? " and the agreement of its two arms" : ""}; ` +
+    `the candidate store does not meet the frozen baseline ${where} — ${failures.length} failed ` +
+      "assertion(s) over §7.3's blocking predicates" +
+      `${storeReading && receiptReading ? " and the agreement of its two arms" : ""}; ` +
       `first: ${failures[0]}`,
   );
 }
-emit("GATE D0 GREEN");
+emit(`GATE ${PACKET} GREEN — GATE D0 GREEN`);
