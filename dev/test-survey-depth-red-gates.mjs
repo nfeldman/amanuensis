@@ -938,7 +938,15 @@ check("a fixture bound to a different archived store is red", () => {
   const rebound = join(scratch, "rebound-baseline.json");
   writeFileSync(
     rebound,
-    JSON.stringify({ ...baseline, archived_store_id: "store-legacy-0000000000000000" }, null, 2),
+    JSON.stringify(
+      {
+        ...baseline,
+        checked_sha: archivedAnchor,
+        archived_store_id: "store-legacy-0000000000000000",
+      },
+      null,
+      2,
+    ),
   );
   const run = runDepthGate({ root: control.root, baseline: rebound });
   const wrong = expectRed(run, "B5");
@@ -1342,13 +1350,28 @@ check("--check exits 2 when the archive path names a file that is not a store", 
 });
 
 if (existsSync(ARCHIVE_PATH)) {
-  check("--check exits 0 against the archived store the fixture was measured from", () => {
-    const run = runRecorder(["--check"]);
-    if (run.status !== 0) {
-      return `it exited ${run.status} against the archive at ${ARCHIVE_PATH} — ${JSON.stringify(scrub(run.output).trim().slice(-400))}`;
-    }
-    return null;
-  });
+  // The recorder resolves the **archived store's own** revision against this
+  // repository, which is a property of the store rather than of D1's fixtures.
+  // Where that revision is not here — a history-free snapshot of this tree —
+  // exit 0 is the wrong expectation and exit 2 `cannot run` is the specified
+  // one (§8.0 clause 3). The case asserts whichever this checkout can prove,
+  // and is two-sided rather than skipped: both arms are real (F8/codex).
+  const anchorIsHere =
+    typeof baseline?.checked_sha === "string" &&
+    git(REPO, "cat-file", "-e", `${baseline.checked_sha}^{commit}`).status === 0;
+  check(
+    anchorIsHere
+      ? "--check exits 0 against the archived store the fixture was measured from"
+      : "--check exits 2, never 0, where the archive's own revision is not in this checkout",
+    () => {
+      const run = runRecorder(["--check"]);
+      const want = anchorIsHere ? 0 : 2;
+      if (run.status !== want) {
+        return `it exited ${run.status}, not ${want}, against the archive at ${ARCHIVE_PATH} — ${JSON.stringify(scrub(run.output).trim().slice(-400))}`;
+      }
+      return null;
+    },
+  );
 } else {
   note(
     `the archived store is not at ${ARCHIVE_PATH} on this machine, so the fixture could not be ` +
