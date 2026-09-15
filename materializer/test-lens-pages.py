@@ -296,11 +296,25 @@ UNLEDGERED_PATHS: tuple[str, ...] = (
     "src/new.ts",
     "tools/build.sh",
 )
-# What `detect_changes` saw: unledgered paths plus the ledger paths still in
-# the tree. `scope_gaps` is rebuilt from `git ls-files` on every run
-# (`mcp-server/src/tools/git.ts:224`), so the tracked universe is recoverable
-# from the store without a second git call.
-TRACKED_PATHS = len(UNLEDGERED_PATHS) + DISTINCT_PATHS - 1           # 15
+# The tree `detect_changes` reconciled the ledger against: the unledgered paths
+# plus the ledger paths the tree still carries. §3.4 reads this from the
+# `scope_reconciliations` row `seed` writes below, never from `scope_gaps` —
+# an empty `scope_gaps` is indistinguishable from a reconciliation that found
+# nothing, and the universe is no longer reconstructed from the ledger the
+# section is about to measure (finding B03-5, packet P6).
+TRACKED_AT_R: tuple[str, ...] = tuple(
+    sorted(set(UNLEDGERED_PATHS) | (set(LEDGER_PATHS) - {ABSENT_PATH}))
+)
+TRACKED_PATHS = len(TRACKED_AT_R)                                    # 15
+EXEMPT_TRACKED = len(
+    {path for _s, path, c, *_rest in LEDGER if c in EXEMPT} - {ABSENT_PATH}
+)
+
+
+def _set_digest(parts: list[str]) -> str:
+    """A path set as one hash, the construction `schema.sql` documents (§3.2)."""
+
+    return hashlib.sha256("\x00".join(sorted(parts)).encode()).hexdigest()
 
 # Four active concerns and one retired one. Every *active* code carries a
 # disposition somewhere, so the global "concern dispositioned nowhere"
@@ -430,6 +444,25 @@ def seed(storage: Path) -> None:
     cur.execute(
         "INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha)"
         f" VALUES ('{ABSENT_PATH}', 'absent', 'B-02', '{SHA_A}')"
+    )
+    # The reading `not-yet-surveyed.md` §1 counts over (§3.2, §3.4). Its two
+    # digests are what make it *stand*: the ledger digest is re-derived on every
+    # render, so a later classification change would invalidate this row rather
+    # than leave it quietly describing a ledger that has moved.
+    cur.execute(
+        "INSERT INTO scope_reconciliations (detected_sha, tree_digest, ledger_digest,"
+        " tracked_paths, ledger_rows, unledgered, absent, exempt, session_id)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'p8')",
+        (
+            SHA_A,
+            _set_digest(list(TRACKED_AT_R)),
+            _set_digest([f"{path}\x00{c}" for _s, path, c, *_rest in LEDGER]),
+            TRACKED_PATHS,
+            DISTINCT_PATHS,
+            len(UNLEDGERED_PATHS),
+            1,
+            EXEMPT_TRACKED,
+        ),
     )
     cur.executemany(
         "INSERT INTO concerns (code, category, origin, status) VALUES (?, ?, 'seeded', ?)",

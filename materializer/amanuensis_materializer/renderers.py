@@ -20,7 +20,7 @@ from hashlib import sha1, sha256
 from pathlib import Path
 from typing import Any
 
-from .db import row, rows
+from .db import row, rows, table_exists
 from .diagrams import (
     concern_coverage_heatmap,
     runtime_boundary_map,
@@ -31,12 +31,29 @@ from .diagrams import (
 from .lint import composite_index_violations, orientation_violations
 from .manifest import sha256_bytes, sha256_json
 from .readback import (
+    CARRIED_HEADING,
+    CARRIED_UNDECIDED,
+    COVERAGE_ROW_CARRIED,
+    COVERAGE_ROW_FILES_READ,
+    COVERAGE_ROW_UNLEDGERED,
     FINDING_LENS_PAGES,
     LEDGER_STALE_SECTIONS,
+    UNMEASURED,
+    WHY_NO_REVISION,
+    WHY_NONE_AT_ALL,
+    WHY_NONE_RECORDED,
+    ReconciliationStanding,
+    carried_anchor,
+    carried_marker,
+    carried_page,
+    carried_records,
+    carry_was_run,
     finding_marker,
     finding_page,
     ledger_stale_anchor,
     ledger_stale_marker,
+    reconciliation_standing,
+    resolve_workspace,
     stale_marker,
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page
@@ -263,17 +280,6 @@ def read_thesis(storage: Path) -> Thesis:
     if composite:
         return Thesis(THESIS_REFUSED_COMPOSITE, recorded=True, violations=composite)
     return Thesis(body, recorded=True)
-
-
-def resolve_workspace(storage: Path) -> Path:
-    """The surveyed workspace: the recorded path, else the storage's parent."""
-
-    record = storage / "workspace_path"
-    if record.is_file():
-        recorded = record.read_text().strip()
-        if recorded:
-            return Path(recorded)
-    return storage.parent
 
 
 #: What a page is titled when nothing in the record names the project. A
@@ -630,7 +636,6 @@ def render_index(
     obligation = int(alignment["obligation_files"])
     stale_obligation = int(alignment["stale_obligation"])
     stale_exempt = int(alignment["stale_exempt"])
-    examined = int(alignment["examined"])
     scoped = int(alignment["scoped_files"])
 
     subs = rows(conn, "SELECT id, name, status, layer FROM subsystems ORDER BY id")
@@ -639,9 +644,28 @@ def render_index(
         for status in values_of("subsystem_status")
     }
     depth = ", ".join(f"{count} {status}" for status, count in ladder.items() if count)
-    unledgered = row(
-        conn, "SELECT COUNT(*) AS n FROM scope_gaps WHERE kind='unledgered'"
-    ) or {"n": 0}
+    # §3.4: both coverage figures are read from the standing reconciliation, not
+    # from the ledger they measure and not from `scope_gaps`, which an
+    # unreconciled store leaves empty and which is then indistinguishable from
+    # a reconciliation that found nothing (finding B03-5, VP4(e)).
+    standing = reconciliation_standing(conn, storage)
+    unmeasured = _unmeasured(standing)
+    examined_tracked = int(
+        (
+            row(
+                conn,
+                "SELECT COUNT(*) AS n FROM (SELECT DISTINCT file_path FROM file_ledger"
+                " WHERE classification='examined' AND file_path NOT IN"
+                " (SELECT file_path FROM scope_gaps WHERE kind='absent'))",
+            )
+            or {"n": 0}
+        )["n"]
+        or 0
+    )
+    carried = carried_records(conn)
+    undecided_carried = sum(
+        1 for record in carried if str(record["outcome"]) == CARRIED_UNDECIDED
+    )
 
     state_counts = {
         str(r["resolution_state"]): int(r["n"] or 0)
@@ -736,36 +760,48 @@ def render_index(
         ]
     )
     out += ["### Survey coverage", ""]
+    if not standing.stands:
+        files_read = unmeasured
+    elif standing.obligation_paths:
+        # §1.2's D3 of D2, both over the tracked paths at the reconciled
+        # revision. Counting `examined` ledger *rows* against tracked *paths*
+        # would put two units either side of one fraction, and a path two
+        # subsystems both examined would count twice in the numerator.
+        files_read = f"{examined_tracked} of {standing.obligation_paths}"
+    else:
+        files_read = "no tracked path carries a survey obligation"
     out += _metric_table(
         [
             (
                 "Subsystems by survey depth",
                 depth if depth else "no subsystem is registered",
             ),
+            (COVERAGE_ROW_FILES_READ, files_read),
             (
-                "Files read, of those carrying an obligation",
-                f"{examined} of {obligation}"
-                if obligation
-                else "no scoped file carries a survey obligation",
-            ),
-            (
-                "Paths in scope with no ledger row",
-                str(unledgered["n"] or 0),
+                COVERAGE_ROW_UNLEDGERED,
+                unmeasured if not standing.stands else str(standing.unledgered),
             ),
         ]
     )
     out += ["### Open engineering work", ""]
-    out += _metric_table(
-        [
-            ("Findings open", str(state_counts.get("open", 0))),
-            (
-                "Repairs awaiting verification",
-                str(state_counts.get("fixed-pending-verification", 0)),
-            ),
-            ("Contradictions unresolved", str(unresolved["n"] or 0)),
-            ("Decisions open", str(decisions["n"] or 0)),
-        ]
-    )
+    # A defect this store confirmed and a defect it inherited and has not looked
+    # at are different facts, so the carried count is its own row and is never
+    # summed into `Findings open` (§5.6). The row is published when a carry is
+    # on record and omitted when none is: a store nobody ran a carry against
+    # has no carried obligations to report, and printing `0` would say a carry
+    # found nothing (§5.2, VP4(e)).
+    work: list[tuple[str, str]] = [("Findings open", str(state_counts.get("open", 0)))]
+    if carry_was_run(conn):
+        work.append((COVERAGE_ROW_CARRIED, str(undecided_carried)))
+    work += [
+        (
+            "Repairs awaiting verification",
+            str(state_counts.get("fixed-pending-verification", 0)),
+        ),
+        ("Contradictions unresolved", str(unresolved["n"] or 0)),
+        ("Decisions open", str(decisions["n"] or 0)),
+    ]
+    out += _metric_table(work)
     out += ["### Publication integrity", ""]
     if verification:
         out += _metric_table(
@@ -848,7 +884,8 @@ def render_index(
         **_db_source("index:alignment", alignment),
         **_db_source("index:subs", subs),
         **_db_source("index:states", state_counts),
-        **_db_source("index:unledgered", unledgered),
+        **_db_source("index:reconciliation", standing.record or {"why": standing.why}),
+        **_db_source("index:carried", carried),
         **_db_source("index:unresolved", unresolved),
         **_db_source("index:decisions", decisions),
         **_db_source("index:verification", verification or {}),
@@ -1004,11 +1041,9 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         "   WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 END, f.finding_id",
         (sid,),
     )
-    vocab = rows(
-        conn,
-        "SELECT term, gloss FROM vocabulary WHERE subsystem_id = ? ORDER BY term",
-        (sid,),
-    )
+    vocab = _vocabulary_terms(conn).get(sid, [])
+    declined = _declinations(conn).get(sid, [])
+    vocabulary_state = _vocabulary_state(vocab, declined)
     xrefs = rows(
         conn,
         "SELECT from_id, to_id, relationship, strength, context FROM xrefs WHERE from_id = ? OR to_id = ? ORDER BY relationship",
@@ -1213,11 +1248,35 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                 )
             out.append("")
 
-    # 5. Vocabulary.
+    # 5. Vocabulary — §4.5's three states, never collapsed into two. A
+    #    subsystem that answered "none" and one nobody asked are different
+    #    facts, and the section renders for both: a page that simply omits the
+    #    heading makes the silent state unrepresentable (VP4(e)).
+    out += ["## Vocabulary", ""]
     if vocab:
-        out += ["## Vocabulary", ""]
         out += [f"- **{v['term']}** — {v['gloss']}" for v in vocab]
         out.append("")
+    if vocabulary_state == "declined":
+        out += [
+            f"**Domain vocabulary** — none. {_declination_sentence(declined[0])}",
+            "",
+        ]
+    elif vocabulary_state == "not-recorded":
+        discharge_label = labels("vocabulary_discharge").get("not-recorded", "not recorded")
+        out += [
+            f"**Domain vocabulary** — {discharge_label.lower()}."
+            f" {meanings('vocabulary_discharge').get('not-recorded', '')}",
+            "",
+        ]
+    if vocabulary_state == "terms" and declined:
+        # Kept, not erased: a later pass that found a term supersedes the
+        # judgment without unsaying it (GP18, §4.3).
+        out += [
+            f"### {SUPERSEDED_HEADING}",
+            "",
+            _declination_sentence(declined[0]),
+            "",
+        ]
 
     # 6. Known defects here — links, never a second full record (§6.2).
     open_states = FINDING_LENS_STATES.get("findings.md", ())
@@ -1381,6 +1440,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         | _db_source(f"subsystem:{sid}:disp", dispositions)
         | _db_source(f"subsystem:{sid}:findings", findings)
         | _db_source(f"subsystem:{sid}:vocab", vocab)
+        | _db_source(f"subsystem:{sid}:declined", declined)
         | _db_source(f"subsystem:{sid}:xrefs", xrefs)
         | _db_source(f"subsystem:{sid}:seams", seams)
         | _db_source(f"subsystem:{sid}:concerns", active_concerns)
@@ -1466,6 +1526,105 @@ _STATE_HINTS: dict[str, str] = {
 }
 
 
+# §5.6's carried obligations. A carried record is an obligation this store
+# inherited, not a defect it confirmed, so it renders in its own section on the
+# lens its decidedness selects — undecided on Unresolved, decided on History —
+# and never inside the findings tables. Each record is a full record on exactly
+# one page, the rule §6.2 already fixes for findings, which is what lets the
+# read-back census count exactly one marker per corpus.
+CARRIED_LEAD = {
+    "findings.md": (
+        "_{n} carried forward from an earlier store and still undecided. An"
+        " inherited defect is an obligation to re-find it, rule it out with"
+        " evidence, or mark it repaired at a commit — not a defect this survey"
+        " confirmed, and not counted among the findings open above._"
+    ),
+    "resolved-findings.md": (
+        "_{n} carried forward from an earlier store and decided here. The"
+        " archived record is what the predecessor held; the outcome is what this"
+        " store did about it._"
+    ),
+}
+
+CARRIED_OUTCOME_LINKS = {"successor-finding": "successor_id"}
+
+
+def _successor_pages(conn: sqlite3.Connection) -> dict[str, str]:
+    """Where each finding this store holds renders, so a successor can be linked.
+
+    A carried record discharged into a successor is only useful if the reader
+    can reach the successor, and which lens holds it is a property of its
+    resolution state rather than of its id (§6.2).
+    """
+
+    return {
+        str(r["finding_id"]): page
+        for r in rows(
+            conn, "SELECT finding_id, resolution_state FROM finding_state_current"
+        )
+        if (page := finding_page(str(r["resolution_state"]))) is not None
+    }
+
+
+def _carried_section(
+    records: Sequence[dict[str, Any]],
+    page: str,
+    successors: dict[str, str],
+) -> list[str]:
+    """Every carried record for one lens, each as a full marked record."""
+
+    if not records:
+        return []
+    outcome_labels = labels("carried_finding_outcome")
+    out = [f"## {CARRIED_HEADING}", ""]
+    lead = CARRIED_LEAD.get(page)
+    if lead:
+        out += [lead.format(n=_count(len(records), "inherited obligation")), ""]
+    for record in records:
+        store_id = str(record["archived_store_id"])
+        archived_id = str(record["archived_finding_id"])
+        outcome = str(record["outcome"])
+        heading = (
+            "Undecided"
+            if outcome == CARRIED_UNDECIDED
+            else outcome_labels.get(outcome, outcome)
+        )
+        out += [
+            f"### {archived_id} · {_sev_badge(str(record['severity']))} · {heading}",
+            "",
+            f"{carried_marker(store_id, archived_id)}"
+            f'<a id="{carried_anchor(store_id, archived_id)}"></a>',
+            "",
+            f"- **Carried from** `{store_id}` at {_short(str(record['archived_anchor_sha']))},"
+            f" recorded there as `{record['archived_resolution']}`",
+            f"- **Subsystem there** {record['subsystem_id']}",
+        ]
+        if outcome == CARRIED_UNDECIDED:
+            out.append(
+                f"- **Outcome** `{CARRIED_UNDECIDED}` — nobody here has re-found it,"
+                " ruled it out, or recorded a repair"
+            )
+        else:
+            detail = f"- **Outcome** `{outcome}`"
+            successor = str(record.get("successor_id") or "")
+            if successor:
+                target = successors.get(successor)
+                detail += (
+                    f" — [{successor}]({target}#{successor.lower()})"
+                    if target
+                    else f" — {successor}, which this store does not hold"
+                )
+            elif record.get("repaired_sha"):
+                detail += f" — repaired at {_short(str(record['repaired_sha']))}"
+            out.append(detail)
+            if record.get("rationale"):
+                out.append(f"- **Recorded because** {record['rationale']}")
+        out += ["", str(record["symptom"]), ""]
+        if record.get("root_cause"):
+            out += [f"**Root cause, as archived.** {record['root_cause']}", ""]
+    return out
+
+
 def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     """The Unresolved lens: open defects and repairs awaiting verification.
 
@@ -1528,7 +1687,17 @@ def render_findings(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 out += [f"### {sev.title()} findings", ""]
                 for subsystem_rows in _by_subsystem(sev_rows):
                     out += _finding_table(subsystem_rows, level=4)
-    return "\n".join(out) + "\n", _db_source("findings:open", fs)
+    # §5.6: obligations inherited from an earlier store, still undecided here.
+    carried = [
+        record
+        for record in carried_records(conn)
+        if carried_page(str(record["outcome"])) == "findings.md"
+    ]
+    out += _carried_section(carried, "findings.md", _successor_pages(conn))
+    return "\n".join(out) + "\n", {
+        **_db_source("findings:open", fs),
+        **_db_source("findings:carried", carried),
+    }
 
 
 # §7.7's three bases. `schema.sql:813` requires `evidence_id` only for
@@ -1697,6 +1866,15 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
         for f in fs
     }
 
+    # §5.6: obligations inherited from an earlier store and decided here.
+    carried = [
+        record
+        for record in carried_records(conn)
+        if carried_page(str(record["outcome"])) == "resolved-findings.md"
+    ]
+    carried_block = _carried_section(carried, "resolved-findings.md", _successor_pages(conn))
+    carried_source = _db_source("findings:carried-resolved", carried)
+
     out = ["# Resolved findings", ""]
     if not fs:
         out += _empty_lens(
@@ -1706,9 +1884,11 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
             " basis its resolution rests on.",
             "`finding_state_current` over `findings` and `finding_resolution_events`.",
         )
+        out += carried_block
         return "\n".join(out) + "\n", {
             **_db_source("findings:resolved", fs),
             **_db_source("findings:resolved-basis", bases),
+            **carried_source,
         }
 
     out += [
@@ -1743,9 +1923,11 @@ def render_resolved_findings(conn: sqlite3.Connection, storage: Path) -> RenderR
         for subsystem_rows in _by_subsystem(state_rows):
             out += _resolved_records(subsystem_rows, bases)
 
+    out += carried_block
     return "\n".join(out) + "\n", {
         **_db_source("findings:resolved", fs),
         **_db_source("findings:resolved-basis", bases),
+        **carried_source,
     }
 
 
@@ -2025,6 +2207,91 @@ def render_diagnosticity_matrix(
     return text, sources
 
 
+# §4.5's three states, named once. `terms`, `declined` and `not-recorded` are
+# the `vocabulary_discharge` enum's own values, so a fourth state added to the
+# contract reaches this page rather than being silently folded into one of
+# these three (GP28).
+SUPERSEDED_HEADING = "Superseded: this subsystem previously declared no domain vocabulary"
+VOCABULARY_INDEX_HEADING = "Subsystems that declared no domain vocabulary"
+
+
+def _vocabulary_terms(conn: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
+    """Terms by subsystem, over the scope set rather than the primary column.
+
+    `vocabulary.subsystem_id` holds one scope and `define_term`'s upsert moves
+    it, so a term shared between two subsystems used to belong to whichever was
+    defined last. §4.4's `vocabulary_scopes` join is the scope set; the column
+    is kept as the primary scope, and both are read here so a store written
+    before the join table still answers.
+    """
+
+    by_subsystem: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str]] = set()
+
+    def record(subsystem_id: str, term: dict[str, Any]) -> None:
+        key = (subsystem_id, str(term["term"]))
+        if key in seen:
+            return
+        seen.add(key)
+        by_subsystem.setdefault(subsystem_id, []).append(term)
+
+    for term in rows(
+        conn,
+        "SELECT term, gloss, first_seen, subsystem_id FROM vocabulary"
+        " WHERE subsystem_id IS NOT NULL ORDER BY term",
+    ):
+        record(str(term["subsystem_id"]), term)
+    if table_exists(conn, "vocabulary_scopes"):
+        for term in rows(
+            conn,
+            "SELECT v.term, v.gloss, v.first_seen, s.subsystem_id"
+            " FROM vocabulary_scopes s JOIN vocabulary v ON v.term = s.term"
+            " ORDER BY v.term",
+        ):
+            record(str(term["subsystem_id"]), term)
+    for terms in by_subsystem.values():
+        terms.sort(key=lambda term: str(term["term"]))
+    return by_subsystem
+
+
+def _declinations(conn: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
+    """Every recorded declination, newest first, by subsystem (§4.3).
+
+    Kept across a reset and never deleted, so a subsystem can hold several and
+    the most recent is the one §4.4 reads. Whether its revision still resolves
+    is the server's prerequisite to enforce; this page reports what was said and
+    when, which is what makes `declined` distinguishable from `not recorded`.
+    """
+
+    if not table_exists(conn, "vocabulary_declinations"):
+        return {}
+    by_subsystem: dict[str, list[dict[str, Any]]] = {}
+    for record in rows(
+        conn,
+        "SELECT subsystem_id, reason, session_id, ref_sha, declared_at"
+        " FROM vocabulary_declinations ORDER BY id DESC",
+    ):
+        by_subsystem.setdefault(str(record["subsystem_id"]), []).append(record)
+    return by_subsystem
+
+
+def _vocabulary_state(terms: Sequence[dict[str, Any]], declined: Sequence[Any]) -> str:
+    """Which of §4.5's three states a subsystem is in. Current terms win."""
+
+    if any(str(term.get("first_seen") or "").strip() for term in terms):
+        return "terms"
+    return "declined" if declined else "not-recorded"
+
+
+def _declination_sentence(record: dict[str, Any]) -> str:
+    """One declination, with the three things that make it a judgment (§4.5)."""
+
+    return (
+        f"Declared at {_short(str(record['ref_sha'] or ''))} in session"
+        f" `{record['session_id']}`: _{record['reason']}_"
+    )
+
+
 def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     terms = rows(
         conn,
@@ -2057,7 +2324,47 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 for t in items:
                     out.append(f"- **{t['term']}** — {t['gloss']}")
                 out.append("")
-    return "\n".join(out) + "\n", _db_source("vocab:all", terms)
+
+    # §4.5: a subsystem that answered "none" is listed, with its reason, so a
+    # reader can tell it from a subsystem nobody asked. The denominator is
+    # every registered subsystem, because a count of declinations with nothing
+    # to divide it by says nothing about how much of the map answered.
+    declined = _declinations(conn)
+    scoped_terms = _vocabulary_terms(conn)
+    registered = [str(s["id"]) for s in rows(conn, "SELECT id FROM subsystems ORDER BY id")]
+    states = {
+        sid: _vocabulary_state(scoped_terms.get(sid, []), declined.get(sid, []))
+        for sid in registered
+    }
+    current = [sid for sid in registered if states[sid] == "declined"]
+    superseded = [
+        sid for sid in registered if states[sid] == "terms" and declined.get(sid)
+    ]
+    if current or superseded:
+        out += [
+            f"## {VOCABULARY_INDEX_HEADING} ({len(current)} of {len(registered)})",
+            "",
+        ]
+    if current:
+        for sid in current:
+            out.append(f"- **{sid}** — {_declination_sentence(declined[sid][0])}")
+        out.append("")
+    elif superseded:
+        out += [
+            "No subsystem's current state is a declination.",
+            "",
+        ]
+    if superseded:
+        out += [
+            f"{_count(len(superseded), 'further subsystem')} declared none earlier and"
+            " has since recorded a term; the judgment is kept on each subsystem's page"
+            f" as superseded history: {', '.join(f'**{sid}**' for sid in superseded)}.",
+            "",
+        ]
+    return "\n".join(out) + "\n", {
+        **_db_source("vocab:all", terms),
+        **_db_source("vocab:declined", declined),
+    }
 
 
 def render_field_notes(conn: sqlite3.Connection, storage: Path) -> RenderResult:
@@ -2686,42 +2993,96 @@ def render_files(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     return "\n".join(out) + "\n", sources
 
 
-def _tracked_paths(conn: sqlite3.Connection) -> int:
-    """The tracked-path universe the last reconciliation saw (§7.5, section 1).
+def _tracked_paths(
+    conn: sqlite3.Connection,
+    storage: Path,
+    standing: ReconciliationStanding | None = None,
+) -> int | None:
+    """The tracked-path universe at the revision this projection stamps (§3.4).
 
-    `detect_changes` rebuilds `scope_gaps` from `git ls-files` on every run
-    (`mcp-server/src/tools/git.ts:224`, `:286`): unledgered paths are the
-    tracked paths no ledger row names, and `absent` rows are the ledger paths
-    the tree no longer carries. The universe is therefore recoverable from the
-    store — unledgered paths plus the ledger paths still tracked — without a
-    second git call that could disagree with the reconciliation that wrote
-    these rows.
+    It reads the **standing reconciliation** and nothing else. It used to
+    reconstruct the universe from the ledger it was about to measure —
+    unledgered `scope_gaps` rows plus the ledger paths the tree still carried —
+    which is GP24 exactly: a denominator that counts what the survey was handed
+    rather than what it was owed. The candidate store's overview therefore
+    printed `0` against 501 unledgered tracked paths, because `detect_changes`
+    had never run at its checked revision and an empty `scope_gaps` is
+    indistinguishable from a reconciliation that found nothing (finding B03-5).
+
+    `None` is the third answer and is never `0`: a reading of nothing and no
+    reading at all are different facts, and collapsing them is the
+    zero-denominator green VP4(e) names.
     """
 
-    counted = row(
-        conn,
-        "SELECT (SELECT COUNT(*) FROM scope_gaps WHERE kind='unledgered') AS unledgered,"
-        " (SELECT COUNT(*) FROM (SELECT DISTINCT file_path FROM file_ledger"
-        "   WHERE file_path NOT IN (SELECT file_path FROM scope_gaps WHERE kind='absent')))"
-        "  AS still_tracked",
-    ) or {"unledgered": 0, "still_tracked": 0}
-    return int(counted["unledgered"] or 0) + int(counted["still_tracked"] or 0)
+    if standing is None:
+        standing = reconciliation_standing(conn, storage)
+    return standing.tracked_paths
 
 
-def _gap_denominator(numerator: int, denominator: int, unit: str, clause: str) -> list[str]:
+def _sentence(fragment: str) -> str:
+    """One clause, promoted to a sentence, without touching the rest of it.
+
+    `str.capitalize` would lowercase every other character, and a revision is
+    the one thing on this page that must survive verbatim.
+    """
+
+    return f"{fragment[:1].upper()}{fragment[1:]}." if fragment else ""
+
+
+def _unmeasured(standing: ReconciliationStanding) -> str:
+    """Why a coverage figure has no denominator, naming the revision (§3.4).
+
+    Every branch names the revision the projection stamps and the reason the
+    reading does not stand. §8.6 makes an omitted revision or an omitted reason
+    a red condition in its own right: `not measured` on its own is a refusal
+    with nothing a reader could act on, and the four repairs differ.
+    """
+
+    published = _short(standing.sha)
+    if standing.why == WHY_NO_REVISION:
+        return f"{UNMEASURED} — {WHY_NO_REVISION}"
+    if standing.why == WHY_NONE_AT_ALL:
+        return (
+            f"{UNMEASURED} — no reconciliation has been recorded for this store,"
+            f" at {published} or at any other revision"
+        )
+    if standing.why == WHY_NONE_RECORDED:
+        return (
+            f"{UNMEASURED} — the store was last reconciled at"
+            f" {_short(standing.latest_sha or '')}, not at {published}:"
+            f" {WHY_NONE_RECORDED}"
+        )
+    return (
+        f"{UNMEASURED} — the reconciliation recorded at {published} no longer"
+        f" stands: {standing.why}"
+    )
+
+
+def _gap_denominator(
+    numerator: int,
+    denominator: int | None,
+    unit: str,
+    clause: str,
+    reason: str | None = None,
+) -> list[str]:
     """One section's headline: the count, its unit, and its denominator.
 
     A bare zero is not a reading. Without the denominator beside it, a section
     that reports nothing cannot be told from one that could never report
     anything, which is the zero-denominator green ADR-0001 and VP4 both name.
+
+    `None` and `0` route to the same sentence for the same reason, and `reason`
+    is what tells them apart for a reader: a store that has not reconciled at
+    the revision it stamps has no denominator to print, and §3.4 requires the
+    revision to be named where that is why.
     """
 
     if not denominator:
-        return [
+        sentence = (
             f"No {unit} is recorded, so this gap is not measured here. That is a"
-            " statement about the record, not a claim that the gap is closed.",
-            "",
-        ]
+            " statement about the record, not a claim that the gap is closed."
+        )
+        return [sentence if reason is None else f"{sentence} {reason}", ""]
     return [f"**{numerator} of {denominator}** {unit} {clause}", ""]
 
 
@@ -2737,8 +3098,6 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
     to show what is not known.
     """
 
-    del storage  # every gap below is a property of the durable records
-
     git = row(conn, "SELECT * FROM git_state WHERE repo_id='default'") or {}
     checked = str(git.get("last_checked_sha") or "")
     branch = str(git.get("canonical_branch") or "not recorded")
@@ -2748,7 +3107,12 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         "SELECT file_path, detected_sha FROM scope_gaps WHERE kind='unledgered'"
         " ORDER BY file_path",
     )
-    tracked = _tracked_paths(conn)
+    # Section 1's denominator is the tracked universe at the reconciled
+    # revision, and an unreconciled store has none (§3.4). `None` routes into
+    # the sentence `_gap_denominator` already prints for a zero denominator,
+    # carrying the revision and the reason with it.
+    standing = reconciliation_standing(conn, storage)
+    tracked = _tracked_paths(conn, storage, standing)
     subsystems = rows(
         conn, "SELECT id, name, status, layer, notes FROM subsystems ORDER BY id"
     )
@@ -2797,6 +3161,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
         "tracked paths",
         "are named by no `file_ledger` row in any subsystem. They participate in no"
         " subsystem's scope, so nothing here has been read, excluded, or deferred.",
+        reason=None if standing.stands else _sentence(_unmeasured(standing)),
     )
     if unledgered:
         by_directory: dict[str, list[str]] = {}

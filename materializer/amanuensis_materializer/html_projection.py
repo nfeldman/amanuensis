@@ -23,8 +23,15 @@ from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from .manifest import sha256_bytes
+from .readback import MARKER_KINDS
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
+
+_MARKER_RE = re.compile(
+    r"<!--\s*amanuensis:(?:"
+    + "|".join(MARKER_KINDS)
+    + r"):[0-9a-f]+\s*-->"
+)
 
 HTML_PROJECTION_VERSION = "1.14.0"
 
@@ -1383,7 +1390,7 @@ def _inline(text: str) -> str:
     # Durable projection markers and explicit xref anchors are the only raw
     # HTML accepted.  All record-authored prose is escaped below.
     text = re.sub(
-        r"<!--\s*amanuensis:(?:finding|stale-entry|ledger-stale):[0-9a-f]+\s*-->",
+        _MARKER_RE,
         lambda m: stash(m.group(0)),
         text,
     )

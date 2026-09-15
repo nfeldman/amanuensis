@@ -974,10 +974,12 @@ def main() -> int:
         vocab_docs = vocab_storage / "docs"
 
         def subsystem_page(sid: str) -> str:
+            # Subsystem pages are slugged `b01-read-path.md`: the id without its
+            # hyphen, then the name. Matching on the bare id finds nothing.
+            needle = sid.lower().replace("-", "")
             for path in sorted(vocab_docs.glob("subsystems/*.md")):
-                body = read(path) or ""
-                if body and sid.lower() in path.name.lower():
-                    return body
+                if path.name.lower().startswith(needle):
+                    return read(path) or ""
             return ""
 
         def declined_renders() -> str | None:
@@ -1243,7 +1245,7 @@ def main() -> int:
             "removing a carried record's marker turns the state axis red",
             lambda: fault(
                 FINDINGS_PAGE,
-                lambda body: body.replace(marker(CARRIED_UNDECIDED[0][0]) + "\n", "", 1),
+                lambda body: body.replace(marker(CARRIED_UNDECIDED[0][0]), "", 1),
                 "state",
                 "carried",
             ),
