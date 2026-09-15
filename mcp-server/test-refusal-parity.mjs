@@ -77,6 +77,9 @@
 //   make the reference phrase something the server never says     → A11
 //   add a server refusal inside a tool handler, with no entry     → A12
 //   register a response field that is not an advertised tool      → A13
+//   file a tool as refusing when its handler never states it       → A14
+//   file a thrower as merely instructing the refusal               → A15
+//   leave the superseded `tools` field on an entry                 → A16
 //   drop the derived scan (report nothing generated)              → A6, A7
 //   drop `src/tools/*.ts` from the derived scan                   → A12
 //   read tool names from a bare `name:` rather than a definition  → A13, C5
@@ -328,7 +331,11 @@ function defaultRegister() {
     refusals: [
       {
         id: "probe-ladder",
-        tools: ["probe_advance"],
+        // `refuses` is what the server states at that tool; `instructs` is what
+        // a reference naming it has to warn about without throwing it. The
+        // census tool is the repair here: it reads what the advance refused.
+        refuses: ["probe_advance"],
+        instructs: ["probe_quiet"],
         server: { file: "src/invariants.ts", phrase: PROBE_LADDER_PHRASE },
         references: [
           {
@@ -339,7 +346,8 @@ function defaultRegister() {
       },
       {
         id: "probe-publication",
-        tools: ["probe_publish"],
+        refuses: ["probe_publish"],
+        instructs: [],
         server: { file: "src/tools/probe.ts", phrase: PROBE_PUBLISH_PHRASE },
         references: [{ file: "../.claude/skills/amanuensis/SKILL.md" }],
       },
@@ -485,7 +493,7 @@ check("A9 a register that is not JSON is rejected", () => {
 check("A10 an entry naming a tool the server does not advertise is rejected", () => {
   const root = buildFixture(
     bentRegister((register) => {
-      register.refusals[0].tools = ["probe_advnace"];
+      register.refusals[0].refuses = ["probe_advnace"];
     }),
   );
   return rejects("the misspelled tool", runCheck(root), ["probe-ladder", "probe_advnace"]);
@@ -535,13 +543,51 @@ check("A13 an entry naming a response field rather than an advertised tool is re
   // (slice-S3 review, F2/codex — 220 names scanned against 209 advertised).
   const root = buildFixture(
     bentRegister((register) => {
-      register.refusals[1].tools = ["probe_sections"];
+      register.refusals[1].refuses = ["probe_sections"];
     }),
   );
   return rejects("the registered response field", runCheck(root), [
     "probe-publication",
     "probe_sections",
   ]);
+});
+
+check("A14 a tool listed as refusing, whose handler never states it, is rejected", () => {
+  // The recorded instance: `active-session-required` named `start_session`,
+  // whose handler starts a session and calls nothing that refuses for want of
+  // one, while every tool that does throw it was absent — and no assertion
+  // compared the list against a call site (slice-S3 review, F3/codex).
+  const root = buildFixture(
+    bentRegister((register) => {
+      register.refusals[0].refuses = ["probe_advance", "probe_quiet"];
+      register.refusals[0].instructs = [];
+    }),
+  );
+  return rejects("the tool that does not throw it", runCheck(root), ["probe-ladder", "probe_quiet"]);
+});
+
+check("A15 a tool that does throw the refusal, listed as merely instructing it, is rejected", () => {
+  const root = buildFixture(
+    bentRegister((register) => {
+      register.refusals[1].refuses = [];
+      register.refusals[1].instructs = ["probe_publish"];
+    }),
+  );
+  return rejects("the thrower filed as a caller", runCheck(root), [
+    "probe-publication",
+    "probe_publish",
+  ]);
+});
+
+check("A16 an entry still carrying the old `tools` field is rejected", () => {
+  // The field `refuses` and `instructs` replace. Left in place it would read
+  // like an association and assert nothing, which is the state F3 reported.
+  const root = buildFixture(
+    bentRegister((register) => {
+      register.refusals[0].tools = ["probe_advance", "probe_quiet"];
+    }),
+  );
+  return rejects("the superseded field", runCheck(root), ["probe-ladder", "tools"]);
 });
 
 check("G6 the fixture's response field is not counted as a tool", () => {
@@ -738,7 +784,7 @@ check("E1 every define_term caller carries the anchor obligation", () => {
   // than by id, so a rename of the entry does not silently empty this check.
   const owned = (register?.refusals ?? []).filter(
     (row) =>
-      (row?.tools ?? []).includes("define_term") &&
+      [...(row?.refuses ?? []), ...(row?.instructs ?? [])].includes("define_term") &&
       String(row?.server?.file ?? "").startsWith("src/tools/"),
   );
   if (owned.length === 0) return "no register entry covers a refusal define_term itself throws";
