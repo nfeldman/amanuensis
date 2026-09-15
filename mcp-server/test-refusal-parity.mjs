@@ -56,6 +56,10 @@
 // False greens it cannot exclude:
 //   - A refusal nobody registers and whose sentence the derivation cannot see.
 //     Three openings and a tool-name subject are a lexical net, not a proof.
+//   - A tool that throws a registered sentence and appears in no entry's
+//     `refuses`. That list is held to being true, not to being complete: about
+//     fifty handlers call `requireActiveSession`, and a register that enumerated
+//     them would oblige every reference naming any of the fifty to quote it.
 //   - Whether either side is *right*. Both sides saying the same wrong thing
 //     passes, and must: the register is the artifact under review, not a
 //     model's judgment of similarity.

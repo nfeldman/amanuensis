@@ -43,6 +43,18 @@
 // carries no registered phrase for it, is instructing a call it does not warn
 // about. That is what finds `phase-1-scope.md`.
 //
+// **The fifth holds the register to its own association.** An entry names the
+// tools it concerns in two roles — `refuses`, the tools the server states the
+// sentence at, and `instructs`, the tools a reference calling them must warn
+// about without throwing it — and each name is checked against the source: the
+// tool's handler, whatever that handler calls or names, and the tool's own
+// definition. One field used to hold both roles and nothing compared it to a
+// call site, so `active-session-required` named `start_session` — the repair,
+// whose handler starts a session — while every tool that throws it was absent
+// (slice-S3 review, F3/codex). `refuses` must be true of every tool it names;
+// it is not required to name every one, and the derived scan above is what
+// covers a sentence no entry carries at all.
+//
 // Usage:
 //   node scripts/check-refusal-parity.mjs            # this repository
 //   node scripts/check-refusal-parity.mjs --json     # the same, machine-readable
@@ -129,18 +141,58 @@ if (register && entries.length === 0) {
  * the pair that reconciles against a live `tools/list`. The counts agree: 209.
  */
 const TOOL_DEFINITION = /^\s+name:\s*"([a-z][a-z0-9_]*)",\n\s+description:[\s\S]{0,8000}?\n\s+inputSchema:/gm;
-function advertisedTools() {
-  const names = new Set();
+
+/** The `{ … }` starting at `from`, or the first one after it, brace-matched. */
+function braced(text, from) {
+  const open = text.indexOf("{", from);
+  if (open === -1) return "";
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) return text.slice(open, i + 1);
+    }
+  }
+  return text.slice(open);
+}
+
+/** The object literal whose first key is at `at`. */
+function enclosingObject(text, at) {
+  let i = at - 1;
+  while (i >= 0 && /\s/.test(text[i])) i--;
+  return braced(text, text[i] === "{" ? i : at);
+}
+
+/**
+ * name → { file, definition, handler }, one row per advertised tool.
+ *
+ * `definition` is what the tool says about itself before its handler — the
+ * description and the input schema. `handler` is what it does. Assertion 5
+ * reads both: a refusal is usually thrown from the handler, and `define_term`'s
+ * anchor obligation is stated in the description the references quote.
+ */
+function toolDefinitions() {
+  const byName = new Map();
   const dir = join(ROOT, "src", "tools");
-  if (!existsSync(dir)) return names;
-  for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts"))) {
+  if (!existsSync(dir)) return byName;
+  for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts")).sort()) {
     const text = read(join(dir, file));
     if (text === null) continue;
-    for (const match of text.matchAll(TOOL_DEFINITION)) names.add(match[1]);
+    for (const match of text.matchAll(TOOL_DEFINITION)) {
+      const object = enclosingObject(text, match.index);
+      const at = object.indexOf("handler:");
+      byName.set(match[1], {
+        file,
+        definition: at === -1 ? object : object.slice(0, at),
+        handler: at === -1 ? "" : braced(object, at),
+      });
+    }
   }
-  return names;
+  return byName;
 }
-const TOOLS = advertisedTools();
+const TOOL_DEFINITIONS = toolDefinitions();
+const TOOLS = new Set(TOOL_DEFINITIONS.keys());
 
 // ---- the server's own refusal messages ------------------------------------
 
@@ -329,11 +381,110 @@ function serverSources() {
   return files;
 }
 
+// ---- what the server says at a tool ---------------------------------------
+
+/** The statement beginning at `from`, up to the `;` that ends it. */
+function statement(text, from) {
+  let i = from;
+  const end = Math.min(text.length, from + 20000);
+  while (i < end) {
+    const c = text[i];
+    if (c === '"' || c === "'" || c === "`") {
+      i = readLiteral(text, i, c).next;
+      continue;
+    }
+    if (c === ";") return text.slice(from, i);
+    i++;
+  }
+  return text.slice(from, end);
+}
+
+/**
+ * name → the bodies the server binds to it: functions, and the constants a
+ * refusal is composed into.
+ *
+ * `dispositions.ts` throws `new ToolError(EVIDENCE_IDS_REQUIRED)`, so a scan
+ * that read only the handler's own literals would find no sentence there and
+ * conclude `set_disposition` does not refuse. Tool tables are skipped: an array
+ * of definitions carries every refusal in the file, and following a reference
+ * to it would make each tool appear to state all of them.
+ */
+function serverSymbols() {
+  const bodies = new Map();
+  const add = (name, text) => bodies.set(name, [...(bodies.get(name) ?? []), text]);
+  for (const path of serverSources()) {
+    const text = read(path);
+    if (text === null) continue;
+    // Module scope only. A `const rows = …` inside some other handler would
+    // bind a name common enough that every body mentions it, and following it
+    // would let any tool "state" any refusal in the file.
+    for (const match of text.matchAll(
+      /(?:^|\n)(?:export )?(?:async )?function ([A-Za-z_$][\w$]*)\s*[(<]/g,
+    )) {
+      add(match[1], braced(text, match.index + match[0].length));
+    }
+    for (const match of text.matchAll(
+      /(?:^|\n)(?:export )?const ([A-Za-z_$][\w$]*)\s*(?::[^=\n]*)?=/g,
+    )) {
+      const bound = statement(text, match.index + match[0].length);
+      if (bound.includes("inputSchema:")) continue;
+      add(match[1], bound);
+    }
+  }
+  return bodies;
+}
+const SYMBOLS = serverSymbols();
+
+/**
+ * Does `text`, or anything it names, say `phrase`?
+ *
+ * The refusals a tool throws are mostly thrown somewhere else: a handler calls
+ * `enforcePhasePrerequisites`, which calls `requireAttachedEvidence`, which
+ * throws. Following the names a body mentions — bound functions and constants,
+ * not every identifier — is what turns "this tool refuses with this sentence"
+ * into something a check can hold the register to.
+ */
+function reaches(text, phrase, seen, depth) {
+  if (!text || depth > 6) return false;
+  if (saysIt(text, phrase)) return true;
+  for (const match of text.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+    const name = match[1];
+    if (seen.has(name)) continue;
+    const bound = SYMBOLS.get(name);
+    if (!bound) continue;
+    seen.add(name);
+    for (const body of bound) if (reaches(body, phrase, seen, depth + 1)) return true;
+  }
+  return false;
+}
+
+/**
+ * Does the server state `phrase` at `tool` — throw it from the handler, or
+ * document it in the tool's own definition?
+ *
+ * Both count, and the difference is not one a skill reference can act on:
+ * `define_term`'s anchor obligation is in its description, and the three
+ * passages that instruct the call quote it from there.
+ */
+function statesRefusal(tool, phrase) {
+  const definition = TOOL_DEFINITIONS.get(tool);
+  if (definition === undefined) return false;
+  if (carries(definition.definition, phrase)) return true;
+  return reaches(definition.handler, phrase, new Set(), 0);
+}
+
 // ---- assertions 1 and 2: the register against both sides -------------------
 
 const registeredPhrases = new Map(); // tool → Set(phrase)
+/** Every tool the entry names, in either role: the reference-side search set. */
+function named(entry) {
+  return [
+    ...(Array.isArray(entry?.refuses) ? entry.refuses : []),
+    ...(Array.isArray(entry?.instructs) ? entry.instructs : []),
+  ];
+}
 function rememberPhrase(entry, phrase) {
-  for (const tool of entry.tools ?? []) {
+  for (const tool of named(entry)) {
     if (!registeredPhrases.has(tool)) registeredPhrases.set(tool, new Set());
     registeredPhrases.get(tool).add(phrase);
   }
@@ -397,9 +548,55 @@ for (const entry of entries) {
     }
   }
 
-  for (const tool of entry?.tools ?? []) {
+  // ---- assertion 5: the association the register asserts --------------------
+  //
+  // `refuses` is what the server states at that tool; `instructs` is what a
+  // reference naming it has to warn about without throwing it. Before this,
+  // one field held both and nothing compared either to a call site, so
+  // `active-session-required` could name `start_session` — the repair, whose
+  // handler starts a session — and every tool that throws it could be absent
+  // (slice-S3 review, F3/codex). The list is required to be *true*, not
+  // exhaustive: a tool that throws a registered sentence and is named by no
+  // entry is not reported here. The derived scan covers the sentence nobody
+  // registered, which is the drift that loses a reader.
+  if (entry?.tools !== undefined) {
+    report(
+      id,
+      "register",
+      'the entry carries "tools", which "refuses" and "instructs" replace. Left in place it ' +
+        "reads like an association and asserts nothing.",
+    );
+  }
+  const refuses = Array.isArray(entry?.refuses) ? entry.refuses : [];
+  const instructs = Array.isArray(entry?.instructs) ? entry.instructs : [];
+  for (const tool of named(entry)) {
     if (!TOOLS.has(tool)) {
-      report(id, "register", `tools names "${tool}", which this server does not advertise`);
+      report(id, "register", `refuses/instructs names "${tool}", which this server does not advertise`);
+    }
+  }
+  for (const tool of refuses) {
+    if (instructs.includes(tool)) {
+      report(id, "register", `"${tool}" is filed as both refusing and instructing the refusal`);
+    }
+    if (!TOOLS.has(tool)) continue;
+    if (!statesRefusal(tool, phrase)) {
+      report(
+        id,
+        "register",
+        `refuses names "${tool}", and neither its handler nor its definition states "${phrase}". ` +
+          "A tool that does not refuse belongs in instructs.",
+      );
+    }
+  }
+  for (const tool of instructs) {
+    if (!TOOLS.has(tool)) continue;
+    if (statesRefusal(tool, phrase)) {
+      report(
+        id,
+        "register",
+        `instructs names "${tool}", which states the refusal itself. A tool that refuses belongs ` +
+          "in refuses, where the association is checked against its call sites.",
+      );
     }
   }
 }
