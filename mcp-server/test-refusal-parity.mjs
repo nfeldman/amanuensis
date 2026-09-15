@@ -49,6 +49,9 @@
 //       derivation's scope is deliberate and stated, not an accident
 //   G5  the sentences these eleven passages already carried are still there:
 //       nothing describing a surviving behaviour was removed or softened
+//   G6  the fixture's three tools are counted and its response section is not,
+//       so the tool set the derivation and the register are checked against is
+//       the surface the server actually advertises
 //
 // False greens it cannot exclude:
 //   - A refusal nobody registers and whose sentence the derivation cannot see.
@@ -72,7 +75,11 @@
 //   corrupt the register's JSON                                   → A9
 //   declare a tool the server does not advertise                  → A10
 //   make the reference phrase something the server never says     → A11
+//   add a server refusal inside a tool handler, with no entry     → A12
+//   register a response field that is not an advertised tool      → A13
 //   drop the derived scan (report nothing generated)              → A6, A7
+//   drop `src/tools/*.ts` from the derived scan                   → A12
+//   read tool names from a bare `name:` rather than a definition  → A13, C5
 //   drop check-refusal-parity.mjs from CI                         → C4
 //   unregister any of the four new refusals                       → C2
 //   drop the anchor obligation from any of the three callers       → E1
@@ -242,18 +249,38 @@ function buildFixture(register) {
     "mcp-server/src/tools/probe.ts",
     [
       "import { ToolError } from '../errors.js';",
+      "import { probeAdvance } from '../invariants.js';",
       "export const probeTools = [",
-      '  { name: "probe_advance", description: "Advance one probe subsystem." },',
+      "  {",
+      '    name: "probe_advance",',
+      '    description: "Advance one probe subsystem.",',
+      "    inputSchema: { type: \"object\", properties: {} },",
+      "    handler: (args) => {",
+      "      probeAdvance(args.id, 'mapped', 2);",
+      "      return { ok: true };",
+      "    },",
+      "  },",
       "  {",
       '    name: "probe_publish",',
       '    description: "Publish the probe projection.",',
+      "    inputSchema: { type: \"object\", properties: {} },",
       "    handler: () => {",
       "      throw new ToolError(",
       `        \`probe_publish refuses: the store ${PROBE_PUBLISH_PHRASE}.\`,`,
       "      );",
       "    },",
       "  },",
-      '  { name: "probe_quiet", description: "Read the probe census." },',
+      "  {",
+      '    name: "probe_quiet",',
+      '    description: "Read the probe census.",',
+      "    inputSchema: { type: \"object\", properties: {} },",
+      // A13's subject: a response section publishes a `name:` exactly as a tool
+      // definition does, and only the `description:`/`inputSchema:` pair that
+      // follows a real tool tells them apart. `gen-tool-inventory.mjs:44` reads
+      // the pair for this reason; a scan that reads the bare `name:` advertises
+      // eleven fields this server never exposed.
+      "    handler: () => ({ sections: [{ name: \"probe_sections\", rows: 0 }] }),",
+      "  },",
       "];",
       "// G4: neither of these is a refusal the register could be asked to carry.",
       "// The first names no operation the server advertises; the second is one",
@@ -475,6 +502,57 @@ check("A11 a reference phrase the server's sentence does not contain is rejected
   return rejects("the invented reference phrase", runCheck(root), ["probe-ladder"]);
 });
 
+check("A12 a server refusal inside a tool handler with no entry is reported", () => {
+  // A6 injects its unregistered refusal into `src/invariants.ts`. Every arm the
+  // packet shipped did, so the derived scan could be narrowed to that one file
+  // — `serverSources()` minus `src/tools/*.ts` — and 22 assertions still passed
+  // (slice-S3 review, F1/codex). Most of this server's refusals are thrown in
+  // the handler that refuses, which is exactly the half that went unwatched.
+  const root = buildFixture(null);
+  const relative = "mcp-server/src/tools/probe.ts";
+  write(
+    root,
+    relative,
+    `${fixtureFile(root, relative)}
+export function probeReconcile(id: string): void {
+  throw new ToolError(
+    \`cannot advance \${id} to 'mapped': the probe census was never taken.\`,
+  );
+}
+`,
+  );
+  return rejects("the unregistered refusal in a tool file", runCheck(root), [
+    "the probe census was never taken",
+    "probe.ts",
+  ]);
+});
+
+check("A13 an entry naming a response field rather than an advertised tool is rejected", () => {
+  // `probe_sections` is a `name:` in a response object, not a tool: it carries
+  // no `description:`/`inputSchema:` pair and `tools/list` never names it. A
+  // scan that reads the bare `name:` advertised it anyway, so the register
+  // could bind a refusal to a field no caller can invoke and A10 stayed green
+  // (slice-S3 review, F2/codex — 220 names scanned against 209 advertised).
+  const root = buildFixture(
+    bentRegister((register) => {
+      register.refusals[1].tools = ["probe_sections"];
+    }),
+  );
+  return rejects("the registered response field", runCheck(root), [
+    "probe-publication",
+    "probe_sections",
+  ]);
+});
+
+check("G6 the fixture's response field is not counted as a tool", () => {
+  const { run, json } = runCheckJson(buildFixture(null));
+  if (!run.ran) return `the parity check could not be run — ${head(run.out)}`;
+  if (!json) return `the parity check produced no machine-readable answer — ${head(run.out)}`;
+  return json.tools === 3
+    ? null
+    : `the fixture advertises three tools and the check counted ${json.tools}`;
+});
+
 check("G3 a reference that names a registered tool and carries the phrase is accepted", () => {
   const root = buildFixture(null);
   write(
@@ -602,6 +680,30 @@ check("C4 check-refusal-parity.mjs runs in CI beside check-evidence-vocabulary.m
   return job.includes("scripts/check-refusal-parity.mjs")
     ? null
     : "the parity check runs in CI, but not in the mcp-server job the vocabulary check runs in";
+});
+
+check("C5 the tool set the check reads is the one the server advertises", () => {
+  // An independent count, from the block `gen-tool-inventory.mjs` renders out of
+  // a live `tools/list`. The checker reads source text — it must, for
+  // `check-evidence-vocabulary.mjs`'s reason — and a text scan can read too much
+  // as easily as too little. This is the arm that fails if it goes back to a
+  // bare `name:`.
+  const development = join(here, "DEVELOPMENT.md");
+  if (!existsSync(development)) return "DEVELOPMENT.md is not in the tree";
+  const text = readFileSync(development, "utf8");
+  const start = text.indexOf("<!-- TOOL-INVENTORY-START -->");
+  const end = text.indexOf("<!-- TOOL-INVENTORY-END -->");
+  if (start === -1 || end === -1) return "DEVELOPMENT.md carries no generated tool inventory";
+  const advertised = new Set(
+    [...text.slice(start, end).matchAll(/^\| `([a-z][a-z0-9_]*)` \|/gm)].map((m) => m[1]),
+  );
+  if (advertised.size === 0) return "the generated tool inventory lists no tools";
+  const { run, json } = runCheckJson(null);
+  if (!run.ran) return `the parity check could not be run over this repository — ${head(run.out)}`;
+  if (!json) return `the parity check produced no machine-readable answer — ${head(run.out)}`;
+  return json.tools === advertised.size
+    ? null
+    : `the check reads ${json.tools} tool name(s) from src/tools/*.ts; tools/list advertises ${advertised.size}`;
 });
 
 check("F1 no server refusal and no caller is left unregistered at HEAD", () => {
