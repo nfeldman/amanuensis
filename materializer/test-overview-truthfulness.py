@@ -146,6 +146,10 @@ STATUS_DIMENSIONS = (
 )
 LENSES = ("Codebase", "Unresolved", "History", "Method")
 
+# The revision the fixture's survey checked. `make_workspace` rebinds it to the
+# commit whose tree is `TRACKED_AT_R`, so the recorded reconciliation is one a
+# reader can re-derive; it falls back to a literal where git cannot answer, and
+# there the store is honestly unreconciled (F4/codex).
 RECORDED_SHA = "aaaaaaaaaaaa1111"
 
 # The fixture's ledger, as (path, classification), and the tree it was
@@ -285,8 +289,8 @@ def seed(storage: Path, entry_point: str) -> None:
     cur.execute(
         "INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha,"
         " last_checked_sha, last_checked_at)"
-        " VALUES ('default', 'main', 'aaaaaaaaaaaa1111', 'aaaaaaaaaaaa1111',"
-        " '2026-09-10T12:00:00Z')"
+        " VALUES ('default', 'main', ?, ?, '2026-09-10T12:00:00Z')",
+        (RECORDED_SHA, RECORDED_SHA),
     )
     cur.execute("INSERT INTO sessions (session_id, intent) VALUES ('p3', 'fixture')")
     # 2 mapped, 1 scoping — a bare subsystem count cannot satisfy this.
@@ -440,31 +444,48 @@ def git(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def make_workspace(root: Path) -> tuple[Path, str | None]:
-    """A workspace with one commit, so the overview has a head to compare.
+def make_workspace(root: Path) -> tuple[Path, str | None, str | None]:
+    """A workspace with two commits: the revision the survey checked, then a head.
 
-    Returns the resolved head when git could produce one.  When git is absent
-    the overview must say the repository head is not known, and the assertions
-    below take that arm instead — both are real readings of the same rule.
+    The first commit carries exactly `TRACKED_AT_R`, so the reconciliation this
+    fixture records is one a reader can re-derive — §3.3 is a conjunction of
+    five conditions and two of them need that tree (F4/codex).  A second commit
+    on top keeps the checked revision distinct from the repository head, which
+    is the relation `Source alignment` is here to report.
+
+    Returns the head and the checked revision when git could produce them.
+    When git is absent the overview must say the repository head is not known,
+    and the assertions below take that arm instead — both are real readings of
+    the same rule.
     """
 
     workspace = root / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "src").mkdir(exist_ok=True)
-    (workspace / "src" / "reader.ts").write_text("export const read = () => 0;\n")
+    for path in TRACKED_AT_R:
+        target = workspace / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"// {path}\n")
     try:
         if git(workspace, "init", "--quiet").returncode != 0:
-            return workspace, None
+            return workspace, None, None
         if git(workspace, "add", "-A").returncode != 0:
-            return workspace, None
-        if git(workspace, "commit", "--quiet", "-m", "fixture").returncode != 0:
-            return workspace, None
+            return workspace, None, None
+        if git(workspace, "commit", "--quiet", "-m", "the tree R was reconciled against").returncode != 0:
+            return workspace, None, None
+        checked = git(workspace, "rev-parse", "HEAD")
+        if checked.returncode != 0:
+            return workspace, None, None
+        (workspace / "src" / "later.ts").write_text("export const later = () => 0;\n")
+        if git(workspace, "add", "-A").returncode != 0:
+            return workspace, None, None
+        if git(workspace, "commit", "--quiet", "-m", "a later commit the survey has not read").returncode != 0:
+            return workspace, None, None
         head = git(workspace, "rev-parse", "HEAD")
     except OSError:
-        return workspace, None
+        return workspace, None, None
     if head.returncode != 0:
-        return workspace, None
-    return workspace, head.stdout.strip() or None
+        return workspace, None, None
+    return workspace, head.stdout.strip() or None, checked.stdout.strip() or None
 
 
 def seeded(root: Path, name: str, entry_point: str) -> tuple[Path, str | None]:
@@ -785,7 +806,9 @@ def main() -> int:
     # -- the published overview ---------------------------------------------
     root = Path(tempfile.mkdtemp(prefix="amanuensis-p3-gate-"))
     try:
-        workspace, head = make_workspace(root)
+        workspace, head, checked = make_workspace(root)
+        if checked:
+            globals()["RECORDED_SHA"] = checked
 
         main_storage, seed_error = seeded(root, "main", ENTRY_POINT_WITH_THESIS)
         if seed_error is None:
@@ -897,8 +920,13 @@ def main() -> int:
             body = section(section(index, "Where the record stands"), "Source alignment", level=3)
             if not body.strip():
                 return "the Source alignment dimension is empty"
-            if "aaaaaaaaaaaa" not in body:
+            if RECORDED_SHA[:12] not in body:
                 return "Source alignment does not report the recorded last-checked revision"
+            if head and head[:12] == RECORDED_SHA[:12]:
+                return (
+                    "the fixture's checked revision is the workspace head, so the row"
+                    " cannot show the two apart"
+                )
             if head:
                 if head[:8] not in body:
                     return (

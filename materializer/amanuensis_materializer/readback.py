@@ -159,6 +159,9 @@ UNMEASURED = "not measured"
 #: and read by the renderer that prints them and the axis that checks them.
 COVERAGE_ROW_FILES_READ = "Files read, of those carrying an obligation"
 COVERAGE_ROW_UNLEDGERED = "Paths in scope with no ledger row"
+# The renderer's out-of-band reading for a store whose tracked paths all carry
+# an exempting classification: a denominator of zero is not a fraction (§1.4).
+NO_OBLIGATION_SENTENCE = "no tracked path carries a survey obligation"
 COVERAGE_ROW_CARRIED = "Carried defects undecided"
 
 OVERVIEW_PAGE_MD = "index.md"
@@ -219,6 +222,38 @@ def resolve_workspace(storage: Path) -> Path:
     return storage.parent
 
 
+# §9.2's one-token citation grammar, as `CITATION_TOKEN_SOURCE` publishes it:
+# `path:symbol@sha`, the revision 7-40 hex.
+CITATION_TOKEN = re.compile(r"^([^\s:]+(?:/[^\s:]+)*):([^\s@]+)@([0-9a-fA-F]{7,40})$")
+
+
+def anchor_opens(workspace: Path, anchor: object) -> bool:
+    """Whether `anchor` is a citation whose path exists in its own revision.
+
+    §4.4 discharges a subsystem's vocabulary obligation with an **anchored**
+    term, and D0's B4 reads the same word by running `git cat-file -e
+    <sha>:<path>`.  A projection that asks only whether `first_seen` is a
+    non-empty string calls a term current that no reader can open, and renders
+    the declination it supposedly superseded as history (F6/codex).
+    """
+
+    match = CITATION_TOKEN.match(str(anchor or "").strip())
+    if match is None or not workspace.is_dir():
+        return False
+    path, _symbol, revision = match.groups()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "cat-file", "-e", f"{revision}:{path}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
 def set_digest(parts: list[str]) -> str:
     """A set, as one hash: sorted, NUL-joined, SHA-256 (§3.2).
 
@@ -236,6 +271,28 @@ def tracked_path_digest(paths: list[str]) -> str:
     """§3.2's `tree_digest`: the tracked path set the counts were taken over."""
 
     return set_digest(paths)
+
+
+def examined_tracked(conn: Any) -> int:
+    """§1.2's D3: distinct examined ledger paths the tree still carries.
+
+    The numerator of the overview's `Files read` row, defined once so the
+    read-back recomputes the published value from the store rather than
+    searching the page for a substring of it (F7/codex).
+    """
+
+    return int(
+        (
+            row(
+                conn,
+                "SELECT COUNT(*) AS n FROM (SELECT DISTINCT file_path FROM file_ledger"
+                " WHERE classification='examined' AND file_path NOT IN"
+                " (SELECT file_path FROM scope_gaps WHERE kind='absent'))",
+            )
+            or {}
+        ).get("n")
+        or 0
+    )
 
 
 def ledger_digest(conn: Any) -> str:
@@ -287,6 +344,10 @@ WHY_LEDGER_MOVED = (
 )
 WHY_OTHER_TREE = "the reconciliation recorded there was taken over a different tree"
 WHY_NO_REVISION = "the store records no checked revision to reconcile against"
+WHY_NO_TREE = (
+    "the bound workspace cannot enumerate the tree at that revision, so the"
+    " reconciliation could not be re-derived"
+)
 
 
 @dataclass(frozen=True)
@@ -338,13 +399,13 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
     change moves it.  Condition 4 is checked whenever the bound workspace can
     enumerate the tree at that revision.
 
-    **Where git cannot answer**, condition 4 is unevaluated and the row's own
-    `ledger_digest` and recorded revision are what the reading stands on.  That
-    is a gap §3.4 leaves open for a projection that may run with no workspace
-    in reach, and it is strictly stronger than the ledger-derived universe it
-    replaces, which carried no witness at all.  `GATE SR1` owns whether a
-    written reconciliation was correct; this reader owns whether one is being
-    read at the revision it claims.
+    **Where git cannot answer**, conditions 1 and 4 are unevaluated and the
+    reconciliation does not stand: §3.3 is a conjunction, and a reading nothing
+    can re-derive is not one.  An earlier draft let the row's own
+    `ledger_digest` carry it, which published a fraction over a path set no
+    reader of this projection could check (F4/codex).  `GATE SR1` owns whether
+    a written reconciliation was correct; this reader owns whether one is being
+    read at the revision it claims, against the tree it claims.
     """
 
     sha = str((row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get("last_checked_sha") or "")
@@ -369,11 +430,20 @@ def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
         )
     current_ledger = ledger_digest(conn)
     tracked = tree_paths(resolve_workspace(storage), sha)
-    expected_tree = None if tracked is None else tracked_path_digest(tracked)
+    if tracked is None:
+        # §3.3 is a conjunction of five conditions, and conditions 1 and 4 both
+        # need the tree at R. Where no workspace answers, neither was evaluated,
+        # so the store is not reconciled at R and has no denominator -- the same
+        # answer §3.4 gives every other reading that does not stand. Reporting
+        # the recorded counts instead would publish a fraction of a set nobody
+        # here inventoried, which is the silent failure this section exists to
+        # remove (F4/codex, VP4(e)).
+        return ReconciliationStanding(sha, None, latest_sha, WHY_NO_TREE)
+    expected_tree = tracked_path_digest(tracked)
     for candidate in at_sha:
         if str(candidate["ledger_digest"]) != current_ledger:
             continue
-        if expected_tree is not None and str(candidate["tree_digest"]) != expected_tree:
+        if str(candidate["tree_digest"]) != expected_tree:
             continue
         return ReconciliationStanding(sha, candidate, latest_sha, None)
     # No qualifying row. Name which condition failed: a store whose ledger moved
@@ -1277,15 +1347,23 @@ class ProjectionVerifier:
 
         mismatches: list[dict[str, str]] = []
         standing = reconciliation_standing(conn, self.storage)
+        # The exact cell the record implies, not a fragment of it. `of 5` is a
+        # substring of `999 of 5`, so a numerator nobody recomputed used to read
+        # back green (F7/codex); the renderer's own two out-of-band sentences
+        # are spelled out here rather than matched loosely.
+        obligation = standing.obligation_paths
+        files_read: str | None
+        if obligation is None:
+            files_read = None
+        elif obligation:
+            files_read = f"{examined_tracked(conn)} of {obligation}"
+        else:
+            files_read = NO_OBLIGATION_SENTENCE
         expected: dict[str, str | None] = {
             COVERAGE_ROW_UNLEDGERED: (
                 None if standing.unledgered is None else str(standing.unledgered)
             ),
-            COVERAGE_ROW_FILES_READ: (
-                None
-                if standing.obligation_paths is None
-                else f"of {standing.obligation_paths}"
-            ),
+            COVERAGE_ROW_FILES_READ: files_read,
         }
         for rel in (OVERVIEW_PAGE_MD, OVERVIEW_PAGE_HTML):
             text = projection.get(rel)
@@ -1330,7 +1408,7 @@ class ProjectionVerifier:
                         }
                     )
                     continue
-                if wanted is not None and wanted not in cell:
+                if wanted is not None and cell.strip() != wanted:
                     mismatches.append(
                         {
                             "axis": "coverage",

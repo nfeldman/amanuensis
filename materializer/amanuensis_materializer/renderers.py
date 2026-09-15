@@ -40,9 +40,11 @@ from .readback import (
     LEDGER_STALE_SECTIONS,
     UNMEASURED,
     WHY_NO_REVISION,
+    WHY_NO_TREE,
     WHY_NONE_AT_ALL,
     WHY_NONE_RECORDED,
     ReconciliationStanding,
+    anchor_opens,
     carried_anchor,
     carried_marker,
     carried_page,
@@ -1043,7 +1045,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     )
     vocab = _vocabulary_terms(conn).get(sid, [])
     declined = _declinations(conn).get(sid, [])
-    vocabulary_state = _vocabulary_state(vocab, declined)
+    vocabulary_state = _vocabulary_state(vocab, declined, resolve_workspace(storage))
     xrefs = rows(
         conn,
         "SELECT from_id, to_id, relationship, strength, context FROM xrefs WHERE from_id = ? OR to_id = ? ORDER BY relationship",
@@ -2275,10 +2277,19 @@ def _declinations(conn: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
     return by_subsystem
 
 
-def _vocabulary_state(terms: Sequence[dict[str, Any]], declined: Sequence[Any]) -> str:
-    """Which of §4.5's three states a subsystem is in. Current terms win."""
+def _vocabulary_state(
+    terms: Sequence[dict[str, Any]], declined: Sequence[Any], workspace: Path
+) -> str:
+    """Which of §4.5's three states a subsystem is in. Current terms win.
 
-    if any(str(term.get("first_seen") or "").strip() for term in terms):
+    "Current" means **anchored** (§4.4, C18): a term whose `first_seen` opens
+    in the revision it names.  A non-empty string is not an anchor — the state
+    this page reports is the state D0's B4 recomputes, and a term nobody can
+    open discharged nothing, so a declination beside it is the subsystem's
+    current answer rather than superseded history (F6/codex).
+    """
+
+    if any(anchor_opens(workspace, term.get("first_seen")) for term in terms):
         return "terms"
     return "declined" if declined else "not-recorded"
 
@@ -2332,8 +2343,9 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     declined = _declinations(conn)
     scoped_terms = _vocabulary_terms(conn)
     registered = [str(s["id"]) for s in rows(conn, "SELECT id FROM subsystems ORDER BY id")]
+    workspace = resolve_workspace(storage)
     states = {
-        sid: _vocabulary_state(scoped_terms.get(sid, []), declined.get(sid, []))
+        sid: _vocabulary_state(scoped_terms.get(sid, []), declined.get(sid, []), workspace)
         for sid in registered
     }
     current = [sid for sid in registered if states[sid] == "declined"]
@@ -3041,6 +3053,8 @@ def _unmeasured(standing: ReconciliationStanding) -> str:
     published = _short(standing.sha)
     if standing.why == WHY_NO_REVISION:
         return f"{UNMEASURED} — {WHY_NO_REVISION}"
+    if standing.why == WHY_NO_TREE:
+        return f"{UNMEASURED} — at {published}, {WHY_NO_TREE}"
     if standing.why == WHY_NONE_AT_ALL:
         return (
             f"{UNMEASURED} — no reconciliation has been recorded for this store,"
