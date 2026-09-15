@@ -899,6 +899,60 @@ if (hasReceipt) {
             "(ADR-0001, Fully surveyed, clause 1; §3.3a)",
         );
       }
+      // §7.5 carries `ledger_digest` "so the digests can be re-derived at any
+      // later revision that still has the tree". `tree_digest` re-derives from
+      // the tree; `ledger_digest` re-derives from nothing unless the ledger
+      // travels with it, and a witness field nothing recomputes is a recorded
+      // verdict under another name (F3/codex, §7.5's own rule for B3 and B4).
+      const ledger = Array.isArray(witness.ledger) ? witness.ledger : null;
+      if (ledger === null) {
+        fail(
+          reading,
+          "B1",
+          "the receipt's B1 witness carries no ledger rows, so its ledger_digest, its unledgered count " +
+            "and its absent count cannot be re-derived from it and stand only on the receipt's own word (§7.5)",
+        );
+      } else {
+        const rederived = digestOf(
+          ledger.map((row) => `${row?.file_path ?? ""}${NUL}${row?.classification ?? ""}`),
+        );
+        if (rederived !== String(witness.ledger_digest ?? "")) {
+          fail(
+            reading,
+            "B1",
+            `the receipt's ledger_digest is ${String(witness.ledger_digest ?? "(absent)").slice(0, 12)}…; ` +
+              `the ${ledger.length} ledger row(s) beside it re-derive ${rederived.slice(0, 12)}…, ` +
+              "so the counts were taken against a ledger the receipt does not carry (§3.3 condition 5)",
+          );
+        }
+        if (Number(witness.ledger_rows) !== ledger.length) {
+          fail(
+            reading,
+            "B1",
+            `the receipt records ledger_rows=${witness.ledger_rows} and carries ${ledger.length} ledger row witness(es)`,
+          );
+        }
+        // The reconciliation's own counts, recomputed. `unledgered` and
+        // `absent` are the two halves of ADR-0001 clause 1, and a receipt that
+        // merely *records* them zero has asserted the thing under test.
+        if (reading.checkedSha) {
+          const tracked = new Set(trackedPathsAt(CANDIDATE_ROOT, reading.checkedSha) ?? []);
+          const ledgered = new Set(ledger.map((row) => String(row?.file_path ?? "")));
+          const unledgered = [...tracked].filter((path) => !ledgered.has(path));
+          const absent = [...ledgered].filter((path) => !tracked.has(path));
+          if (unledgered.length || absent.length) {
+            fail(
+              reading,
+              "B1",
+              `the receipt records unledgered=${witness.unledgered}, absent=${witness.absent}; its own ledger witness ` +
+                `against the tree at ${reading.checkedSha.slice(0, 7)} leaves ${unledgered.length} tracked path(s) ` +
+                `unledgered${unledgered.length ? ` (${unledgered.slice(0, 4).join(", ")}${unledgered.length > 4 ? ", …" : ""})` : ""} ` +
+                `and ${absent.length} ledger path(s) absent from the tree` +
+                `${absent.length ? ` (${absent.slice(0, 4).join(", ")}${absent.length > 4 ? ", …" : ""})` : ""}`,
+            );
+          }
+        }
+      }
       reading.reconciliation = witness;
     }
   }
@@ -948,6 +1002,40 @@ if (hasReceipt) {
         "the receipt carries no per-disposition witness, so whether *this* disposition carries a resolvable row cannot be answered from it (§7.5)",
       );
     } else {
+      // §7.5 requires "one row per disposition". A gate that only walks the
+      // rows it is handed passes an empty table vacuously and a table padded
+      // by repeating one row by arithmetic, so the witness table is first
+      // reconciled against the census the receipt records independently of it
+      // (F2/codex).
+      const census = Number(receipt?.reported?.dispositions);
+      const keys = rows.map((row) => `${row?.subsystem_id}/${row?.concern_code}`);
+      const distinct = new Set(keys);
+      if (distinct.size !== keys.length) {
+        const counts = new Map();
+        for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1);
+        const repeated = [...counts].filter(([, n]) => n > 1).map(([key]) => key);
+        fail(
+          reading,
+          "B3",
+          `the receipt witnesses ${keys.length} disposition(s) over ${distinct.size} distinct ` +
+            `(subsystem_id, concern_code) pair(s): ${repeated.slice(0, 6).join(", ")}${repeated.length > 6 ? ", …" : ""}`,
+        );
+      }
+      if (!Number.isFinite(census)) {
+        fail(
+          reading,
+          "B3",
+          "the receipt records no disposition count beside its witness table, so whether the table is " +
+            "complete cannot be answered from it (§7.5)",
+        );
+      } else if (distinct.size !== census) {
+        fail(
+          reading,
+          "B3",
+          `the receipt records ${census} disposition(s) and witnesses ${distinct.size} of them, so ` +
+            `${Math.abs(census - distinct.size)} disposition(s) are outside the table this predicate walks (§7.5)`,
+        );
+      }
       const resolves = resolveMany(
         CANDIDATE_ROOT,
         rows
