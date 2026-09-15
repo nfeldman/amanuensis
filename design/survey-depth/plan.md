@@ -12,7 +12,7 @@
 | P3 | Vocabulary: discharge or decline | done (1 attempt) | P2 | `mcp-server/test-vocabulary-discharge.mjs` | C15, C16, C17, C34, C38, C40 |
 | P4 | Findings carry forward across a reinitialization | done (1 attempt) | P3 | `mcp-server/test-carried-findings.mjs` | C19, C20, C21, C22, C23, C24, C34, C38, C40 |
 
-## S2 · The depth gate and the projection's 'not measured' rendering (review: pending)
+## S2 · The depth gate and the projection's 'not measured' rendering (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

@@ -27,10 +27,10 @@
         "P6"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "e4fc5ff7dcd02ceefd47155c61dac44842d2723d",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "c615901a1cc03963ab2eb6c75c7e548bcbe63393",
+        "findings": 10
       }
     },
     {
