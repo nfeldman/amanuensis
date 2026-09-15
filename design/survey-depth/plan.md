@@ -23,7 +23,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P7 | Skill parity and the refusal-parity check | ready | P1, P2, P3, P4 | `mcp-server/test-refusal-parity.mjs` | C26, C27, C34 |
+| P7 | Skill parity and the refusal-parity check | ready (1 attempt) | P1, P2, P3, P4 | `mcp-server/test-refusal-parity.mjs` | C26, C27, C34 |
 
 ## S4 · Acceptance rebuild and the Pecia reconciliation of the carried findings (review: pending)
 

@@ -41,7 +41,7 @@
       ],
       "review": {
         "status": "pending",
-        "start_sha": "",
+        "start_sha": "ca00160fc86595c8fd89baa210eaa4bbedca59bd",
         "reviewed_sha": "",
         "findings": 0
       }
@@ -756,8 +756,8 @@
       "needs_mcp": false,
       "budget_minutes": 150,
       "status": "ready",
-      "attempts": 0,
-      "start_sha": "",
+      "attempts": 1,
+      "start_sha": "ca00160fc86595c8fd89baa210eaa4bbedca59bd",
       "red_sha": "",
       "green_sha": "",
       "verified_by_launcher": false,
