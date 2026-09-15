@@ -1072,6 +1072,25 @@ is invisible to it, and §8.7 says so. It converts the failure mode from *silent
 which is the honest claim. The packet's acceptance requires the register to name all four new
 refusals plus the two existing ones the lane touches, and requires the derived set to be empty.
 
+**An entry names its tools in two roles, and the source is asked about both.** `refuses` lists
+the advertised tools the server states the sentence at — thrown from the handler, through
+whatever that handler calls or names, or documented in the tool's own definition — and
+`instructs` lists the tools a reference calling them must warn about and which do not refuse
+themselves. Their union is what the reference-side scan searches the skill for. A fifth
+assertion checks each name against the source in both directions: a tool filed as refusing
+whose handler never states the sentence, and a tool filed as merely instructing it that throws
+it, are both findings. One field held both roles until slice-S3's review, and nothing compared
+it to a call site: `active-session-required` named `start_session`, the repair, whose handler
+starts a session, while every tool that throws the requirement was absent. `refuses` is held to
+being true rather than to being complete — roughly fifty handlers call `requireActiveSession`,
+and a register enumerating them would oblige every reference naming any of the fifty to quote
+the sentence. The derived scan above is what covers a refusal no entry carries at all.
+
+The set of advertised tools this rests on is read as the tool-definition shape
+`scripts/gen-tool-inventory.mjs` reads — a `name` published with a `description` and an
+`inputSchema` — not as a bare `name:` key, which these modules also use for response sections
+and which advertised eleven fields the server never exposed.
+
 ---
 
 ## 7. Acceptance rebuild
@@ -1471,7 +1490,11 @@ reconciliation record that is itself wrong renders faithfully and wrongly; `GATE
 
 **Red when:** `check-refusal-parity.mjs` passes after a registered phrase is deleted from a
 reference, or from the server file; when the register names a file that does not exist; when it
-is empty; or when it is absent from CI. Control: the register at HEAD passes.
+is empty; when it is absent from CI; when a refusal added to a tool handler or to
+`invariants.ts` is reported by no derived candidate; when an entry binds a refusal to a response
+field rather than to an advertised tool; or when an entry files a tool as refusing that never
+states the sentence, or as instructing one that does. Control: the register at HEAD passes, and
+the count of tools the check reads equals the count `tools/list` advertises.
 
 **False green it cannot exclude:** a refusal nobody registers. The check compares a
 hand-maintained list against two sides; a fifth refusal added later with no register entry drifts
