@@ -729,9 +729,32 @@ check("the A0 fixture under dev/conspectus/ is unchanged (§12.3)", () => {
 emit("");
 
 const storeAbs = join(REPO, STORE_REL);
+// The store the receipt describes, which is not always the store at this path.
+//
+// The receipt records an absolute `storage_path`, and `.amanuensis` is
+// worktree-local: a second checkout of this repository has a second store at
+// the same *relative* path that this receipt never described. Asserting the
+// receipt's rows over it would report a disagreement between two unrelated
+// stores as a defect in one — the class of confusion
+// `design/survey-depth/spec.md` §5.3 exists to stop, and the state the
+// survey-depth acceptance rebuild puts this worktree into: it initializes a
+// store here, carried from the clean-slate archive, at a different revision.
+//
+// So the live arm runs against the store the receipt names, and says so when
+// the store it found is a different one. Every assertion is unchanged where the
+// subject is present; none is skipped silently.
+function receiptStorePath() {
+  const recorded = receipt?.storage_path;
+  return typeof recorded === "string" && recorded.length > 0 ? join(recorded, "memory.db") : null;
+}
+const liveIsReceiptSubject = (() => {
+  const recorded = receiptStorePath();
+  if (recorded === null) return true; // no path recorded: behave exactly as before
+  return resolve(recorded) === resolve(storeAbs);
+})();
 let live = null;
 let liveError = null;
-if (existsSync(storeAbs)) {
+if (existsSync(storeAbs) && liveIsReceiptSubject) {
   try {
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(storeAbs, { readOnly: true });
@@ -754,13 +777,19 @@ if (existsSync(storeAbs)) {
   }
   if (live) emit("the live store at .amanuensis/memory.db, read directly and read-only");
   else emit("the live store at .amanuensis/memory.db could not be opened");
+} else if (existsSync(storeAbs)) {
+  emit(
+    `the store at .amanuensis/memory.db is not the one this receipt describes (it records ` +
+      `${receiptStorePath()}), so the committed receipt is the whole gate: a store ` +
+      `this receipt never described can neither confirm nor contradict it`,
+  );
 } else {
   emit(
     "the live store is absent here (`git ls-files .amanuensis` → 0), so the committed receipt is the whole gate; this is the mode CI runs in",
   );
 }
 
-if (existsSync(storeAbs)) {
+if (existsSync(storeAbs) && liveIsReceiptSubject) {
   check("the live store opens for reading", () => liveError ?? (live ? null : "the store yielded no rows"));
 
   check("the live store still holds every subsystem the receipt records, at its status", () => {
