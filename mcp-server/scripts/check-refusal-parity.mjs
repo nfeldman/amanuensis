@@ -118,7 +118,17 @@ if (register && entries.length === 0) {
  * following the import would compare one array with itself. This is the set a
  * refusal's subject is checked against and the set the reference-side scan
  * searches the skill for.
+ *
+ * **A `name:` alone is not a tool.** These modules also build response sections
+ * shaped `{ name, source_rows, items }`, and reading the bare key advertised
+ * eleven of them — `hot_spots`, `leads`, `stale` and eight more — so the
+ * register could bind a refusal to a field no caller can invoke and the
+ * advertisement test stayed green (slice-S3 review, F2/codex). A tool is the
+ * object that publishes a `description` and an `inputSchema` after its name,
+ * which is the pair `gen-tool-inventory.mjs:44` reads for the same reason and
+ * the pair that reconciles against a live `tools/list`. The counts agree: 209.
  */
+const TOOL_DEFINITION = /^\s+name:\s*"([a-z][a-z0-9_]*)",\n\s+description:[\s\S]{0,8000}?\n\s+inputSchema:/gm;
 function advertisedTools() {
   const names = new Set();
   const dir = join(ROOT, "src", "tools");
@@ -126,7 +136,7 @@ function advertisedTools() {
   for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts"))) {
     const text = read(join(dir, file));
     if (text === null) continue;
-    for (const match of text.matchAll(/\bname:\s*"([a-z][a-z0-9_]*)"/g)) names.add(match[1]);
+    for (const match of text.matchAll(TOOL_DEFINITION)) names.add(match[1]);
   }
   return names;
 }
