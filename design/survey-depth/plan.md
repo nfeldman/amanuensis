@@ -16,7 +16,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P5 | The depth gate and its frozen baseline | ready (2 attempts) | P1, P2, P3, P4 | `dev/test-survey-depth-red-gates.mjs` | C1, C2, C3, C4, C5, C6, C28, C29, C34, C36, C42 |
+| P5 | The depth gate and its frozen baseline | done (unverified) (2 attempts) | P1, P2, P3, P4 | `dev/test-survey-depth-red-gates.mjs` | C1, C2, C3, C4, C5, C6, C28, C29, C34, C36, C42 |
 | P6 | The projection renders 'not measured' | ready | P2, P3, P4 | `materializer/test-unmeasured-coverage.py` | C14, C18, C34, C39 |
 
 ## S3 · Skill parity and its check (review: pending)

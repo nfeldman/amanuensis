@@ -586,14 +586,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 200,
-      "status": "ready",
+      "status": "done",
       "attempts": 2,
       "start_sha": "e4fc5ff7dcd02ceefd47155c61dac44842d2723d",
-      "red_sha": "c07ffe75910888dc6231d11340675396cff29507",
-      "green_sha": "b946eb2b2a4ca357be9c58dea0ec4e575c36d9b2",
+      "red_sha": "4c97944a13ac7c7277d68a9cb5eb255d4c4d44fe",
+      "green_sha": "a0f8bae9e6de26186d71fbdd912f815b488cc7f0",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "attempt 1 was marked done but the launcher refused it: VERIFY P5: gate failed at red without printing 'GATE P5 RED: <reason>'"
+      "notes": "Attempt 1's implementation is unchanged; the only edit is the status line dev/test-survey-depth-red-gates.mjs prints. It now leads with the packet marker spec.md 8.0 clauses 1-2 bind the launcher to and carries D1's verdict as its reason — 'GATE P5 RED: GATE D1 RED: ...' and 'GATE P5 GREEN — GATE D1 GREEN' — so gate.red_expect, which 8.0 says quotes the first line of the reason, still matches unchanged. The red was re-proved on top at 4c97944 rather than by rewriting c07ffe7: it carries the corrected gate over a tree where the three deliverables are absent and neither gate is in CI, and all 32 assertions fire (two more than c07ffe7, which predates the two added in a6f0815). REVIEWER, FIRST: the same collision is latent for P10. spec.md:1081 fixes D0's single last line as 'GATE D0 GREEN|RED|CANNOT RUN', spec.md:1284-1286 binds the launcher to 'GATE <packet-id>', and P10's gate command is dev/test-survey-depth.mjs — so P10 will be refused exactly as P5 was unless D0's line leads with 'GATE P10 '. Fixing it there also means updating D1's ten 'GATE D0 ' prefix assertions and the '^GATE D0 GREEN' and '^GATE D0 CANNOT RUN: ' greps in .github/workflows/test.yml. Not fixed here: at P5 D0 is a deliverable, not the packet gate, so no packet marker is correct on its line yet."
     },
     {
       "id": "P6",
