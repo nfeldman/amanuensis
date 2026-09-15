@@ -849,14 +849,14 @@
       ],
       "needs_mcp": true,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "82a9ddabfdd2b14c2446fb988f0989bd75a131ae",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "09171b774ea8862970a49f6c62600f32841752cd",
+      "green_sha": "b716a6d1496d9dd312356fb8f3ba6764f7567467",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Split out of a single 300-minute packet that combined reinitialization, a whole-repository survey, 22 adjudications, publication, promotion and three receipts. The checklist lands here, in a standalone contract, rather than in design/reader-lenses/rebuild-coverage-receipt.json: that receipt was written by reader-lenses P17 at dee59d3e and dev/test-rebuild-depth.mjs:19-24 depends on the denominator coming from a document the run under test did not produce."
+      "notes": "The §12.1 recipe ran here and the store it left is the lane worktrees .amanuensis (untracked): snapshot 059aa03, ESRCH pid probe, lsof exclusivity, delete, reinit in a second process, 22 carried records from the archived store opened ?immutable=1, read back from a third through list_carried_findings in 3 pages whose largest envelope was 8000 of 8192 bytes. Onboarding registered 9 subsystems (B-09 is new: the design lanes and their drivers), calibrated 12 concerns with T5 disqualified as an open question, and assigned all 640 tracked paths; the standing reconciliation at b716a6d is 640/640, 0 unledgered, 0 absent, 69 exempt, and both digests re-derive independently. Three files outside the deliverable list. (1) mcp-server/src/invariants.ts and src/db.ts: readArchivedStore selects resolution state from finding_state_current and the one archive §5.8 names was frozen before that view existed, so the carry could not read it at all; the view is now re-declared TEMP over the archive from schema.sqls own text, which keeps the legacy-status fallback in the single place test-finding-partition.mjs requires. It is P4s deliverable and this packet could not land without it. (2) dev/test-rebuild-coverage.mjs and dev/test-reader-lenses-dogfood.mjs: both assert their receipts rows over <repo>/.amanuensis, and both receipts name a store in the primary checkout; with a store here for the first time they compared two unrelated stores. Each live arm now reads the store its own receipt names and says so otherwise -- relabelling either receipt to name this store turns both red again on exactly the old assertions, which is the control. (3) mcp-server/scripts/check-concern-checklist.mjs is the --check §8.10 asks for, and design/survey-depth/rebuild-receipt.json holds the drivers receipt so design/reader-lenses/rebuild-receipt.json is not overwritten. Two gaps filled and recorded. The finding-id convention in the new contract is ^<subsystem-compact>-R\\\\d+$ rather than §8.10s quoted <subsystem-compact>-<N>: the archives ids are the latter shape and 22 of them are live carried rows, so a finding of this survey named B03-5 would shadow the obligation it inherited through §5.7s resolver. And §7.4 step 5 still says --carry-from ...old-findings-7c1c1a9.json while §5.8 step 1 and this packets acceptance say the archived store; the store is what was used, and §7.4 step 5 is the stale sentence. The gate prints GATE P8 ... leading and the spec gates verdict as its reason, as P5 did, because the launcher greps the packet id. Its comparison is a pure function fed 15 seeded faults by a selectivity arm that needs neither archive nor store; cannot run is exit 2 for a missing archive and for a missing live store alike."
     },
     {
       "id": "P10",
