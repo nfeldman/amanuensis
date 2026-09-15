@@ -40,10 +40,10 @@
         "P7"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "ca00160fc86595c8fd89baa210eaa4bbedca59bd",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "7021a7bc049b9f4106d7e91285c2551999e0abaf",
+        "findings": 6
       }
     },
     {
