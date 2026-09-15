@@ -255,9 +255,12 @@ function buildFixture(register) {
       "  },",
       '  { name: "probe_quiet", description: "Read the probe census." },',
       "];",
-      "// G4: the subject is not a tool this server advertises, so the derivation",
-      "// does not claim it. The scope is stated rather than accidental.",
-      "export function probeLearning(): void {",
+      "// G4: neither of these is a refusal the register could be asked to carry.",
+      "// The first names no operation the server advertises; the second is one",
+      "// note among several a preflight collects. The scope is stated, not",
+      "// accidental, so both are controls rather than happy accidents.",
+      "export function probeLearning(blockers: string[], mode: string): void {",
+      '  blockers.push(`${mode} requires a probe write prefix`);',
       '  throw new ToolError("learning requires an ended agent session with an outcome");',
       "}",
       "",
@@ -485,13 +488,17 @@ check("G3 a reference that names a registered tool and carries the phrase is acc
     : `a reference that names the tool and quotes the refusal was reported (exit ${run.status}) — ${head(run.out)}`;
 });
 
-check("G4 a refusal whose subject is not an advertised tool is left alone", () => {
+check("G4 a message the derivation does not claim is left alone", () => {
   const { run, json } = runCheckJson(buildFixture(null));
   if (!run.ran) return `the parity check could not be run — ${head(run.out)}`;
   if (!json) return `the parity check produced no machine-readable answer — ${head(run.out)}`;
   const derived = JSON.stringify(json.derived_unregistered ?? []);
-  return derived.includes("learning requires")
-    ? `the derivation claimed a message whose subject names no tool: ${head(derived)}`
+  const overreach = [
+    ["names no advertised tool as its subject", "learning requires"],
+    ["is collected into another call, not thrown", "probe write prefix"],
+  ].filter(([, sentinel]) => derived.includes(sentinel));
+  return overreach.length
+    ? `the derivation claimed a message that ${overreach.map(([why]) => why).join(" and ")}: ${head(derived)}`
     : null;
 });
 

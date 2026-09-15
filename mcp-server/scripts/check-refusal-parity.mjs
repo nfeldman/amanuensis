@@ -30,7 +30,10 @@
 //     server advertises, because a refusal names the operation it refuses.
 //     `learning requires an ended agent session` is a validation message about
 //     a noun, not an operation refusing, and claiming it would fill the report
-//     with entries no skill reference could ever be expected to carry.
+//     with entries no skill reference could ever be expected to carry; and
+//   * the message must be thrown or returned, not collected into another
+//     call's arguments. `blockers.push(`${mode} requires allowed_write_prefixes`)`
+//     opens like a refusal and is one note among several a preflight gathers.
 //
 // A refusal phrased outside those forms is invisible here. That converts the
 // failure mode from *silent* to *narrower*, which is the honest claim.

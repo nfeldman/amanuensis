@@ -204,6 +204,8 @@ artifact at the project storage root: `<id>-<slug>.md`. Sections:
 - **State containers** — table per the list above.
 - **Data flows** — at least one end-to-end, with numbered steps.
 - **Concurrency model** — prose paragraph with evidence citations.
+- **Domain vocabulary** — the terms recorded this phase with their
+  anchors, or the declination and its reason.
 - **Seam contracts** — one sub-section per seam, this side filled
   in.
 
