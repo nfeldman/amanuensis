@@ -233,6 +233,11 @@ const NUL = "\u0000";
  * in its own file; a fixture that built its digest with the same code the gate
  * verifies it with would compare a value with itself (GP24).
  */
+/** §3.2's `ledger_digest`, over the (path, classification) witness rows. */
+function ledgerDigestOf(rows) {
+  return digestOf(rows.map((row) => `${row.file_path}${NUL}${row.classification ?? ""}`));
+}
+
 function digestOf(parts) {
   return createHash("sha256")
     .update([...parts].sort().join(NUL))
@@ -973,6 +978,14 @@ function receiptFor(built, { forge = null } = {}) {
             detected_sha: reconciliation.detected_sha,
             tree_digest: reconciliation.tree_digest,
             ledger_digest: reconciliation.ledger_digest,
+            // §7.5 carries the digests "so the digests can be re-derived at any
+            // later revision". `tree_digest` re-derives from the tree; nothing
+            // re-derives `ledger_digest` without the ledger, so the ledger
+            // travels with it (F3/codex).
+            ledger: ledger.map((row) => ({
+              file_path: row.file_path,
+              classification: row.classification ?? null,
+            })),
             tracked_paths: reconciliation.tracked_paths,
             ledger_rows: reconciliation.ledger_rows,
             unledgered: reconciliation.unledgered,
@@ -1144,6 +1157,86 @@ check("a forged-green receipt whose B3 witness cites an unreachable revision is 
   const wrong = expectRed(runDepthGate({ root: made.root }), "B3");
   return wrong
     ? `the recorded "resolved": true was taken on trust rather than re-resolved — ${wrong}`
+    : null;
+});
+
+check("a forged-green receipt carrying an undecided record is red on B6", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-forged-b6", {
+    forge: (receipt) => {
+      // Deliberately **not** one of the baseline's thirteen: leaving one of
+      // those undecided fires B5 too, and a red on that receipt would prove
+      // nothing about B6 (F1/codex, mirroring buildCase's own B6 seed).
+      receipt.blocking.B5.carried.push({
+        archived_store_id: archivedStoreId,
+        archived_finding_id: "B02-9",
+        outcome: null,
+        repaired_sha: null,
+        evidence_revisions: [],
+      });
+    },
+  });
+  if (made.error) return made.error;
+  const wrong = expectRed(runDepthGate({ root: made.root }), "B6");
+  return wrong ? `an undecided carried witness passed as green — ${wrong}` : null;
+});
+
+check("a forged-green receipt whose B3 witness table is empty is red", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-forged-b3-empty", {
+    forge: (receipt) => {
+      receipt.blocking.B3.dispositions = [];
+    },
+  });
+  if (made.error) return made.error;
+  const wrong = expectRed(runDepthGate({ root: made.root }), "B3");
+  return wrong
+    ? `a receipt that witnesses none of its own dispositions passed as green — ${wrong}`
+    : null;
+});
+
+check("a forged-green receipt whose B3 witnesses name one disposition twice is red", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-forged-b3-dupe", {
+    forge: (receipt) => {
+      const rows = receipt.blocking.B3.dispositions;
+      if (rows.length) rows.push({ ...rows[0] });
+    },
+  });
+  if (made.error) return made.error;
+  const wrong = expectRed(runDepthGate({ root: made.root }), "B3");
+  return wrong
+    ? `a witness table padded to its census by repeating one row passed as green — ${wrong}`
+    : null;
+});
+
+check("a forged-green receipt whose B1 ledger_digest does not re-derive is red", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-forged-b1-digest", {
+    forge: (receipt) => {
+      receipt.blocking.B1.witness.ledger_digest = "0".repeat(64);
+    },
+  });
+  if (made.error) return made.error;
+  const wrong = expectRed(runDepthGate({ root: made.root }), "B1");
+  return wrong ? `a ledger_digest nothing re-derives passed as green — ${wrong}` : null;
+});
+
+check("a forged-green receipt whose B1 ledger witness hides an unledgered path is red", () => {
+  if (control.error) return control.error;
+  const made = receiptCase("receipt-forged-b1-unledgered", {
+    forge: (receipt) => {
+      // The reconciliation still records unledgered=0 and the digest still
+      // matches the witness; the witness itself no longer covers the tree.
+      const witness = receipt.blocking.B1.witness;
+      witness.ledger = witness.ledger.slice(1);
+      witness.ledger_digest = ledgerDigestOf(witness.ledger);
+    },
+  });
+  if (made.error) return made.error;
+  const wrong = expectRed(runDepthGate({ root: made.root }), "B1");
+  return wrong
+    ? `a ledger witness that leaves a tracked path unaccounted passed as green — ${wrong}`
     : null;
 });
 
