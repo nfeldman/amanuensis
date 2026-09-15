@@ -1,0 +1,215 @@
+{
+  "contract": "refusal-parity/1",
+  "what": "One entry per refusal the server throws that a skill reference instructs a caller into. The check is scripts/check-refusal-parity.mjs; the gate over it is mcp-server/test-refusal-parity.mjs (GATE RP1, design/survey-depth/spec.md §8.7).",
+  "how_to_read": "server.phrase is the server's own words, compared against the named file's source and against the messages that file composes — a sentence wrapped across a concatenation is still one sentence. A reference may carry its own phrase when the prose needs fewer words, and that phrase must be part of the server's sentence: a reference may quote less than the server says, never something else. tools names the advertised tools whose handlers throw the refusal, and is what the reference-side scan searches the skill for.",
+  "limits": "String identity over a hand-maintained list. It catches a reference edited out of agreement with the server; it cannot tell whether either side is right. A refusal nobody registers drifts freely — which is why the candidate set is derived from the server's own messages rather than from this file (spec.md §6.2, §8.7).",
+  "refusals": [
+    {
+      "id": "ladder-structural-claim-key",
+      "note": "Existing. The structural pass has to have recorded a claim before the status says it did.",
+      "tools": ["update_subsystem_status"],
+      "server": { "file": "src/invariants.ts", "phrase": "no current claim carries a claim_key beginning" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "ladder-structural-vocabulary",
+      "note": "New, spec.md §4.4. Discharge or decline — never a floor (decisions.md §3).",
+      "tools": ["update_subsystem_status", "define_term", "decline_domain_vocabulary"],
+      "server": {
+        "file": "src/invariants.ts",
+        "phrase": "neither defined a domain term for this subsystem nor declared that it has none"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" },
+        {
+          "file": "../.claude/skills/amanuensis/references/artifact-templates.md",
+          "phrase": "declared that it has none"
+        }
+      ]
+    },
+    {
+      "id": "ladder-unchallenged-claims",
+      "note": "Existing, and the prerequisite spec.md §6.1 adds to in phase-4-adversarial.md.",
+      "tools": ["update_subsystem_status", "invalidate_claim", "supersede_claim"],
+      "server": { "file": "src/invariants.ts", "phrase": "current claim(s) carry no challenge outcome" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md" }
+      ]
+    },
+    {
+      "id": "disposition-unattached",
+      "note": "New, spec.md §2.3. An answer nobody can open is not a disposition.",
+      "tools": ["update_subsystem_status", "set_disposition", "attach_evidence_to_disposition"],
+      "server": { "file": "src/invariants.ts", "phrase": "disposition(s) were answered from nothing" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/SKILL.md", "phrase": "answered from nothing" },
+        {
+          "file": "../.claude/skills/amanuensis/references/onboarding.md",
+          "phrase": "answered from nothing"
+        },
+        {
+          "file": "../.claude/skills/amanuensis/references/phase-3-concerns.md",
+          "phrase": "answered from nothing"
+        },
+        {
+          "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md",
+          "phrase": "answered from nothing"
+        }
+      ]
+    },
+    {
+      "id": "disposition-unreachable-evidence",
+      "note": "New, spec.md §2.3's second arm. refresh.md already said it; the server now enforces it.",
+      "tools": ["update_subsystem_status"],
+      "server": {
+        "file": "src/invariants.ts",
+        "phrase": "an unreachable anchor cannot be verified in place"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-3-concerns.md" },
+        {
+          "file": "../.claude/skills/amanuensis/references/refresh.md",
+          "phrase": "cannot be verified in place"
+        }
+      ]
+    },
+    {
+      "id": "scope-unreconciled",
+      "note": "New, spec.md §3.3. Thrown by the advance to mapped and by materialize_docs alike, so one sentence covers both.",
+      "tools": ["update_subsystem_status", "materialize_docs", "detect_changes"],
+      "server": {
+        "file": "src/invariants.ts",
+        "phrase": "the store has not been reconciled against the repository at"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/SKILL.md" },
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/memory-audit.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-5-packaging.md" },
+        { "file": "../.claude/skills/amanuensis/references/refresh.md" },
+        { "file": "../.claude/skills/amanuensis/references/subsystem-survey.md" }
+      ]
+    },
+    {
+      "id": "scope-incomplete-publication",
+      "note": "New, spec.md §3.3a. A reconciled store with unassigned paths has a denominator over a tree nobody finished inventorying.",
+      "tools": ["materialize_docs"],
+      "server": { "file": "src/invariants.ts", "phrase": "tracked path(s) with no ledger row" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/SKILL.md" },
+        { "file": "../.claude/skills/amanuensis/references/memory-audit.md" },
+        { "file": "../.claude/skills/amanuensis/references/refresh.md" }
+      ]
+    },
+    {
+      "id": "ladder-empty-ledger",
+      "note": "Existing. Phase 1's own deliverable is what discharges it.",
+      "tools": ["update_subsystem_status"],
+      "server": { "file": "src/invariants.ts", "phrase": "the file ledger is empty" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-1-scope.md" }
+      ]
+    },
+    {
+      "id": "ladder-no-survey-artifact",
+      "note": "Existing.",
+      "tools": ["update_subsystem_status"],
+      "server": { "file": "src/invariants.ts", "phrase": "no subsystem-survey artifact has been registered" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "ladder-no-dispositions",
+      "note": "Existing.",
+      "tools": ["update_subsystem_status"],
+      "server": { "file": "src/invariants.ts", "phrase": "no concern dispositions have been recorded" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
+      "id": "active-session-required",
+      "note": "Existing, and spec.md §4.2 extends its reach to define_term.",
+      "tools": ["start_session"],
+      "server": {
+        "file": "src/invariants.ts",
+        "phrase": "requires an active session. Call start_session first."
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/subsystem-survey.md" }
+      ]
+    },
+    {
+      "id": "set-disposition-evidence-required",
+      "note": "New, spec.md §2.2. evidence_ids is an input, not a later step.",
+      "tools": ["set_disposition"],
+      "server": {
+        "file": "src/tools/dispositions.ts",
+        "phrase": "set_disposition requires at least one evidence_id"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/SKILL.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-3-concerns.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md" }
+      ]
+    },
+    {
+      "id": "declination-conflicts-with-terms",
+      "note": "New, spec.md §4.3.",
+      "tools": ["decline_domain_vocabulary"],
+      "server": {
+        "file": "src/tools/vocabulary.ts",
+        "phrase": "cannot both carry domain vocabulary and declare it has none"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "define-term-anchor-resolves",
+      "note": "New, spec.md §4.2. The three references below are the callers §6.1's eight-entry register missed; the derived scan is what found them.",
+      "tools": ["define_term"],
+      "server": {
+        "file": "src/tools/vocabulary.ts",
+        "phrase": "whose revision must resolve and whose path must exist in that revision's tree"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-1-scope.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-3-concerns.md" }
+      ]
+    },
+    {
+      "id": "carried-undecided",
+      "note": "New, spec.md §5.5, ADR-0001's seventh clause. Enforced at the whole-store predicate, not at mapped.",
+      "tools": [],
+      "server": {
+        "file": "../dev/check-store-fully-surveyed.mjs",
+        "phrase": "carried finding(s) have no terminal outcome"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/SKILL.md" },
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/refresh.md" }
+      ]
+    },
+    {
+      "id": "overturn-requires-evidence",
+      "note": "Existing, and spec.md §5.4's ruled-out authority rule is built on it. phase-4-adversarial.md carried it before this lane.",
+      "tools": ["update_finding_status", "record_carried_outcome"],
+      "server": { "file": "src/invariants.ts", "phrase": "Overturning requires evidence, not vibes" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md" }
+      ]
+    }
+  ]
+}

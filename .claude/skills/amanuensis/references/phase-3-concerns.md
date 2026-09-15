@@ -62,13 +62,23 @@ overstating quality is the #1 way the methodology fails):
 
 ### 5. Write the disposition
 
+Record the readings first with `add_evidence`, then pass their ids:
+*"set_disposition requires at least one evidence_id"* — a disposition is
+how a concern was answered, and an answer nobody can open is not a
+disposition. The rows are attached inside the same write, not as a later
+step.
+
 `set_disposition`:
 
+- `evidence_ids` — the recorded evidence rows this disposition rests on.
+  At least one, and every one's revision must resolve in the workspace.
 - `classification` ∈ `{confirmed-bug, confirmed-acceptable,
   ruled-out, out-of-scope, unresolved-competition}`.
 - `evidence` — `file:symbol@sha` (legacy free-text field; still
   useful for at-a-glance inspection).
-- `evidence_quality` — matches the strongest evidence row attached.
+- `evidence_quality` — no stronger than the strongest attached row's
+  kind. The server refuses a quality the attached evidence does not
+  support.
 - `linchpin_dependent` — `true` if the classification hinges on
   `comment-asserted` / `name-inferred` / `pattern-matched`
   evidence, OR if you only have call-path context (no historical /
@@ -76,10 +86,16 @@ overstating quality is the #1 way the methodology fails):
 - `rationale` — one sentence.
 - `pass_type="survey"`.
 
-Then attach each evidence row:
 `attach_evidence_to_disposition(subsystem_id, concern_code,
-evidence_id, role)`. Role ∈ `{supports, contradicts, linchpin,
-compensating}`.
+evidence_id, role)` attaches further rows afterwards. Role ∈
+`{supports, contradicts, linchpin, compensating}`.
+
+The advance out of this phase reads what you attached. Leaving the
+subsystem at `concerns`, `adversarial` or `mapped` is refused while any
+disposition was *"answered from nothing"*, and refused again when one
+rests on a commit the workspace can no longer reach — *"an unreachable
+anchor cannot be verified in place"*. Re-read at a reachable commit and
+attach the new evidence.
 
 ### 6. Context frame for confirmed bugs and confirmed-acceptable
 
@@ -117,7 +133,9 @@ once the counterpart is `mapped`. Do not enter unmapped territory.
 ### 9. New vocabulary
 
 Anything you learn in the course of concern work — call it out with
-`define_term`.
+`define_term`. Anchor it at the commit you read it at: `first_seen` is a
+`file:symbol@sha` anchor whose revision must resolve and whose path must
+exist in that revision's tree, or the call is refused.
 
 ## Produce findings for confirmed bugs
 

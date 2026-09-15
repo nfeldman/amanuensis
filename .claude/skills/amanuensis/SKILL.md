@@ -127,6 +127,28 @@ Authorized claims still scale with status — this is **not** relaxed:
 | `adversarial` | Adversarial work is authorized and in progress. Treat a finding as survived only when its recorded adversarial evidence or terminal review aggregation says so. |
 | `mapped` | Workflow-marked complete with seam contracts filled in. Status alone is not proof that every finding survived challenge; the underlying records govern. |
 
+### What the server refuses
+
+Status is a claim about work that happened, so the ladder reads the record
+rather than the assertion. Each line quotes what comes back.
+
+- **A disposition carries evidence.** *"set_disposition requires at least
+  one evidence_id"*, attached as the disposition is written; the advance to
+  `concerns`, `adversarial` or `mapped` is refused while any disposition
+  was *"answered from nothing"*.
+- **Vocabulary is discharged or declined.** The advance to `structural` is
+  refused when the pass neither defined a domain term for the subsystem nor
+  declared that it has none. One anchored term is enough; so is
+  `decline_domain_vocabulary` with a reason.
+- **Scope is reconciled before authority.** `mapped` and `materialize_docs`
+  are both refused while *"the store has not been reconciled against the
+  repository at"* the revision being claimed, and publication is refused
+  again while the reconciliation reports *"tracked path(s) with no ledger
+  row"*. Run `detect_changes` and assign or exempt what it names.
+- **A carried finding is decided.** A store that discarded a prior
+  conspectus is not fully surveyed while *"carried finding(s) have no
+  terminal outcome"*.
+
 Anyone (including you, in a later session) making a claim that exceeds the
 authorized level for its source **must flag the claim explicitly as
 speculative**. This is the methodology's most important epistemic

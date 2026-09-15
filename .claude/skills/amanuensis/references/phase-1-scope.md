@@ -50,12 +50,22 @@ file as `candidate` with no rationale — if you can't say why it's in
 scope, it probably isn't, or you haven't understood it yet. Either
 way, neither is a reason to silently skip.
 
+The ledger is this phase's deliverable and the next advance reads it:
+`update_subsystem_status(id, status="structural")` is refused while
+*"the file ledger is empty"*.
+
 ### 3. Seed vocabulary
 
 For every significant domain term encountered (non-obvious protocol
 names, internal jargon, legacy concepts, borrowed words from other
 disciplines), call
 `define_term(term, gloss, expansion, subsystem_id, first_seen, ref_sha)`.
+
+`first_seen` is a `file:symbol@sha` anchor whose revision must resolve and
+whose path must exist in that revision's tree, or the call is refused;
+`ref_sha`, when you pass it, must name the same commit. A term recorded
+with no anchor is stored and anchors nothing — it discharges no
+subsystem's obligation.
 
 Two levels:
 

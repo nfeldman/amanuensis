@@ -1,0 +1,484 @@
+#!/usr/bin/env node
+// Skill/server refusal parity (design/survey-depth/spec.md §6.2, GATE RP1 §8.7).
+//
+// The survey skill's references are prose that instructs tool calls. When the
+// server starts refusing one of those calls, the reference that still teaches
+// it is wrong, and nothing notices: prose drifts silently and a reader follows
+// it into a refusal nobody warned them about. `references/phase-1-scope.md:58`
+// is the recorded instance — it instructs
+// `define_term(term, gloss, expansion, subsystem_id, first_seen, ref_sha)`, a
+// call this lane makes the server refuse when the anchor does not resolve, and
+// §6.1's eight-entry register did not name it.
+//
+// **What this buys, exactly.** It is string identity over a hand-maintained
+// register: it catches a reference edited out of agreement with the server, and
+// it cannot tell whether either side is *right*. A refusal nobody registers
+// drifts freely. That limit is why the check is cheap — the register is the
+// artifact under review, not a model's judgment of similarity — and §8.7 states
+// it rather than leaving a reader to infer it.
+//
+// **The third assertion narrows that limit rather than pretending past it.** A
+// register compared only against itself cannot report what nobody wrote down,
+// so the candidate set is *generated*: every refusal message the server's own
+// source carries is compared against the register, and every one no entry
+// covers is reported. The derivation is lexical, and its scope is stated:
+//
+//   * three openings — `cannot advance`, `<subject> refuses:`,
+//     `<subject> requires` — because those are the three sentence forms this
+//     server's refusals take; and
+//   * for the latter two, `<subject>` must be an interpolation or a tool the
+//     server advertises, because a refusal names the operation it refuses.
+//     `learning requires an ended agent session` is a validation message about
+//     a noun, not an operation refusing, and claiming it would fill the report
+//     with entries no skill reference could ever be expected to carry.
+//
+// A refusal phrased outside those forms is invisible here. That converts the
+// failure mode from *silent* to *narrower*, which is the honest claim.
+//
+// The fourth assertion runs the same comparison from the other side: a skill
+// reference that names a tool whose handler throws a registered refusal, and
+// carries no registered phrase for it, is instructing a call it does not warn
+// about. That is what finds `phase-1-scope.md`.
+//
+// Usage:
+//   node scripts/check-refusal-parity.mjs            # this repository
+//   node scripts/check-refusal-parity.mjs --json     # the same, machine-readable
+//   node scripts/check-refusal-parity.mjs --root DIR # a tree laid out like it
+//
+// `--root` exists for GATE RP1, which sabotages a fixture tree one edit at a
+// time. A gate that could only run over the committed register could assert
+// nothing before that register existed, and would assert only its presence
+// afterwards.
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const argv = process.argv.slice(2);
+const asJson = argv.includes("--json");
+const rootAt = argv.indexOf("--root");
+const REPO =
+  rootAt === -1
+    ? resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
+    : resolve(argv[rootAt + 1] ?? ".");
+const ROOT = join(REPO, "mcp-server");
+const REGISTER = join(ROOT, "contracts", "refusal-parity.json");
+const SKILL_DIR = join(REPO, ".claude", "skills", "amanuensis");
+
+/** One finding: what drifted, and which side lost it. */
+const findings = [];
+function report(id, side, message) {
+  findings.push({ id, side, message });
+}
+
+function read(path) {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+}
+function show(path) {
+  const r = relative(REPO, path);
+  return r.startsWith("..") ? path : r;
+}
+
+// ---- the register ---------------------------------------------------------
+
+const registerText = read(REGISTER);
+let register = null;
+if (registerText === null) {
+  report("(register)", "register", `${show(REGISTER)} could not be read`);
+} else {
+  try {
+    register = JSON.parse(registerText);
+  } catch (error) {
+    report("(register)", "register", `${show(REGISTER)} is not parseable JSON: ${error.message}`);
+  }
+}
+
+const entries = Array.isArray(register?.refusals) ? register.refusals : [];
+if (register && entries.length === 0) {
+  report(
+    "(register)",
+    "register",
+    `${show(REGISTER)} carries no refusals. An empty register asserts nothing: every refusal the ` +
+      "server throws would be unregistered and every reference free to drift.",
+  );
+}
+
+// ---- the tools the server advertises --------------------------------------
+
+/**
+ * Tool names, read as text from `src/tools/*.ts`.
+ *
+ * Read rather than imported, for `check-evidence-vocabulary.mjs`'s reason:
+ * following the import would compare one array with itself. This is the set a
+ * refusal's subject is checked against and the set the reference-side scan
+ * searches the skill for.
+ */
+function advertisedTools() {
+  const names = new Set();
+  const dir = join(ROOT, "src", "tools");
+  if (!existsSync(dir)) return names;
+  for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts"))) {
+    const text = read(join(dir, file));
+    if (text === null) continue;
+    for (const match of text.matchAll(/\bname:\s*"([a-z][a-z0-9_]*)"/g)) names.add(match[1]);
+  }
+  return names;
+}
+const TOOLS = advertisedTools();
+
+// ---- the server's own refusal messages ------------------------------------
+
+/**
+ * Every concatenated string/template literal in `text`, with `${…}` replaced by
+ * `{X}` and whitespace collapsed.
+ *
+ * Runs of literals joined by `+` are one message: this server wraps its
+ * sentences at the column limit, so a refusal is nearly always three or four
+ * literals in a row. Reading only the first would truncate every message at its
+ * first line break and the opening test would still work while the phrase test
+ * silently would not.
+ */
+function messages(text) {
+  const out = [];
+  let i = 0;
+  let pending = null; // { line, parts } — a run still open across `+`
+  let line = 1;
+  const flush = () => {
+    if (pending) out.push({ line: pending.line, text: pending.parts.join("").replace(/\s+/g, " ").trim() });
+    pending = null;
+  };
+  while (i < text.length) {
+    const c = text[i];
+    if (c === "\n") {
+      line++;
+      i++;
+      continue;
+    }
+    // A comment is not a message; skipping it also keeps an apostrophe inside
+    // prose from being read as the start of a string literal.
+    if (c === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && text[i + 1] === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
+        if (text[i] === "\n") line++;
+        i++;
+      }
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const startLine = line;
+      const thrown = pending !== null || throwPosition(text, i);
+      const { value, next } = readLiteral(text, i, c);
+      if (!thrown) {
+        for (let k = i; k < next; k++) if (text[k] === "\n") line++;
+        flush();
+        i = next;
+        continue;
+      }
+      for (let k = i; k < next; k++) if (text[k] === "\n") line++;
+      if (pending) pending.parts.push(value);
+      else pending = { line: startLine, parts: [value] };
+      // Stay open only across a `+` that joins this literal to the next one.
+      let j = next;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      if (text[j] === "+") {
+        let k = j + 1;
+        while (k < text.length && /\s/.test(text[k])) k++;
+        if (text[k] === '"' || text[k] === "'" || text[k] === "`") {
+          i = next;
+          continue;
+        }
+      }
+      flush();
+      i = next;
+      continue;
+    }
+    i++;
+  }
+  flush();
+  return out;
+}
+
+/**
+ * Is the literal starting at `at` thrown or returned, rather than collected?
+ *
+ * `blockers.push(`${authorityMode} requires allowed_write_prefixes`)` opens
+ * like a refusal and is not one: it is one note among several a preflight
+ * gathers, and no skill reference could be expected to quote it. A refusal is
+ * thrown by `new ToolError(`, returned by the helper that composes it
+ * (`requireCompleteReconciliation`), or bound to a constant the thrower uses
+ * (`dispositions.ts`'s `EVIDENCE_IDS_REQUIRED`). Being an argument to any
+ * *other* call is what this excludes.
+ */
+const NOT_A_CALL = new Set(["return", "throw", "await", "yield", "typeof", "if", "while"]);
+function throwPosition(text, at) {
+  const before = text.slice(Math.max(0, at - 200), at).replace(/\s+$/, "");
+  if (/new\s+ToolError\($/.test(before)) return true;
+  const call = /(?:^|[^\w$.])([A-Za-z_$][\w$.]*)\s*\($/.exec(before);
+  // `return (` opens a parenthesized expression, not a call: the reconciliation
+  // refusals are composed by a helper and thrown by its caller.
+  return call === null || NOT_A_CALL.has(call[1]);
+}
+
+function readLiteral(text, start, quote) {
+  let i = start + 1;
+  let value = "";
+  while (i < text.length) {
+    const c = text[i];
+    if (c === "\\") {
+      value += c === "\\" && text[i + 1] === "n" ? " " : text[i + 1];
+      i += 2;
+      continue;
+    }
+    if (quote === "`" && c === "$" && text[i + 1] === "{") {
+      let depth = 1;
+      i += 2;
+      while (i < text.length && depth > 0) {
+        if (text[i] === "{") depth++;
+        else if (text[i] === "}") depth--;
+        if (depth > 0) i++;
+      }
+      value += "{X}";
+      i++;
+      continue;
+    }
+    if (c === quote) return { value, next: i + 1 };
+    value += c;
+    i++;
+  }
+  return { value, next: i };
+}
+
+/**
+ * Does `text` carry `phrase`?
+ *
+ * Both sides are compared with their whitespace collapsed, because both sides
+ * wrap. The server splits a refusal across three or four concatenated literals
+ * at the column limit; the references wrap the same sentence at theirs. A
+ * comparison that demanded a contiguous byte run would be a check on two
+ * formatters rather than on what either side says, and would go red on a
+ * reflow that changed no word.
+ */
+function normalize(text) {
+  return String(text).replace(/\s+/g, " ");
+}
+function carries(text, phrase) {
+  return normalize(text).includes(normalize(phrase));
+}
+
+/**
+ * The server side additionally compares against the messages the file
+ * *composes*: a sentence wrapped across a concatenation is still one sentence,
+ * and the register quotes the sentence rather than whichever fragment the
+ * formatter happened to leave whole.
+ */
+function saysIt(text, phrase) {
+  if (carries(text, phrase)) return true;
+  return messages(text).some((message) => carries(message.text, phrase));
+}
+
+const SUBJECT = "(?:\\{X\\}|[A-Za-z_][A-Za-z0-9_]*)";
+const OPENINGS = [
+  { name: "cannot advance", re: /^cannot advance\b/ },
+  { name: "refuses:", re: new RegExp(`^(${SUBJECT}) refuses:`) },
+  { name: "requires", re: new RegExp(`^(${SUBJECT}) requires\\b`) },
+];
+
+/** Is this message one of the three refusal forms, with a subject that names an operation? */
+function refusalOpening(message) {
+  for (const opening of OPENINGS) {
+    const match = opening.re.exec(message);
+    if (!match) continue;
+    const subject = match[1];
+    if (subject === undefined) return opening.name; // `cannot advance` names no subject
+    if (subject === "{X}" || TOOLS.has(subject)) return opening.name;
+  }
+  return null;
+}
+
+function serverSources() {
+  const files = [];
+  const invariants = join(ROOT, "src", "invariants.ts");
+  if (existsSync(invariants)) files.push(invariants);
+  const dir = join(ROOT, "src", "tools");
+  if (existsSync(dir)) {
+    for (const file of readdirSync(dir).filter((name) => name.endsWith(".ts")).sort()) {
+      files.push(join(dir, file));
+    }
+  }
+  return files;
+}
+
+// ---- assertions 1 and 2: the register against both sides -------------------
+
+const registeredPhrases = new Map(); // tool → Set(phrase)
+function rememberPhrase(entry, phrase) {
+  for (const tool of entry.tools ?? []) {
+    if (!registeredPhrases.has(tool)) registeredPhrases.set(tool, new Set());
+    registeredPhrases.get(tool).add(phrase);
+  }
+}
+
+const covering = []; // { id, phrase } — the phrases the derived scan clears against
+
+for (const entry of entries) {
+  const id = String(entry?.id ?? "(unnamed)");
+  const serverFile = entry?.server?.file;
+  const phrase = entry?.server?.phrase;
+  if (!entry?.id) report(id, "register", "an entry carries no id");
+  if (typeof serverFile !== "string" || typeof phrase !== "string" || phrase.length === 0) {
+    report(id, "register", "the entry declares no server file and phrase");
+    continue;
+  }
+  covering.push({ id, phrase });
+  rememberPhrase(entry, phrase);
+
+  const serverPath = resolve(ROOT, serverFile);
+  const serverText = read(serverPath);
+  if (serverText === null) {
+    report(id, "server", `${serverFile} is not in the tree`);
+  } else if (!saysIt(serverText, phrase)) {
+    report(id, "server", `${serverFile} no longer says "${phrase}"`);
+  }
+
+  const references = Array.isArray(entry?.references) ? entry.references : [];
+  if (references.length === 0) {
+    report(
+      id,
+      "register",
+      "the entry names no reference. A refusal registered against nothing is a refusal the " +
+        "skill never states, which is the drift this check exists to report.",
+    );
+    continue;
+  }
+  for (const reference of references) {
+    const file = reference?.file;
+    if (typeof file !== "string") {
+      report(id, "register", "a reference carries no file");
+      continue;
+    }
+    const own = typeof reference.phrase === "string" ? reference.phrase : null;
+    const wanted = own ?? phrase;
+    if (own !== null && !carries(phrase, own)) {
+      report(
+        id,
+        "register",
+        `the reference phrase "${own}" is not part of the server's sentence "${phrase}". A ` +
+          "reference may quote less than the server says; it may not quote something else.",
+      );
+      continue;
+    }
+    rememberPhrase(entry, wanted);
+    const referenceText = read(resolve(ROOT, file));
+    if (referenceText === null) {
+      report(id, "reference", `${file} is not in the tree`);
+    } else if (!carries(referenceText, wanted)) {
+      report(id, "reference", `${file} no longer says "${wanted}"`);
+    }
+  }
+
+  for (const tool of entry?.tools ?? []) {
+    if (!TOOLS.has(tool)) {
+      report(id, "register", `tools names "${tool}", which this server does not advertise`);
+    }
+  }
+}
+
+// ---- assertion 3: refusals with no register entry -------------------------
+
+const derivedUnregistered = [];
+for (const path of serverSources()) {
+  const text = read(path);
+  if (text === null) continue;
+  for (const message of messages(text)) {
+    const opening = refusalOpening(message.text);
+    if (!opening) continue;
+    if (covering.some(({ phrase }) => carries(message.text, phrase))) continue;
+    derivedUnregistered.push({
+      file: show(path),
+      line: message.line,
+      opening,
+      message: message.text.length > 160 ? `${message.text.slice(0, 160)}…` : message.text,
+    });
+  }
+}
+for (const row of derivedUnregistered) {
+  report(
+    "(derived)",
+    "server",
+    `${row.file}:${row.line} refuses with no register entry — "${row.message}"`,
+  );
+}
+
+// ---- assertion 4: callers the register never warned ------------------------
+
+function skillFiles() {
+  const files = [];
+  const skill = join(SKILL_DIR, "SKILL.md");
+  if (existsSync(skill)) files.push(skill);
+  const dir = join(SKILL_DIR, "references");
+  if (existsSync(dir)) {
+    for (const file of readdirSync(dir).filter((name) => name.endsWith(".md")).sort()) {
+      files.push(join(dir, file));
+    }
+  }
+  return files;
+}
+
+const unphrasedReferences = [];
+for (const path of skillFiles()) {
+  const text = read(path);
+  if (text === null) continue;
+  for (const [tool, phrases] of registeredPhrases) {
+    if (!new RegExp(`\\b${tool}\\b`).test(text)) continue;
+    if ([...phrases].some((phrase) => carries(text, phrase))) continue;
+    unphrasedReferences.push({ file: show(path), tool });
+  }
+}
+for (const row of unphrasedReferences) {
+  report(
+    "(derived)",
+    "reference",
+    `${row.file} instructs ${row.tool}, whose handler throws a registered refusal, and states ` +
+      "none of that refusal's words",
+  );
+}
+
+// ---- the answer -----------------------------------------------------------
+
+const ok = findings.length === 0;
+if (asJson) {
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ok,
+        entries: entries.length,
+        tools: TOOLS.size,
+        findings,
+        derived_unregistered: derivedUnregistered,
+        unphrased_references: unphrasedReferences,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  process.exit(ok ? 0 : 1);
+}
+
+if (!ok) {
+  for (const finding of findings) console.error(`  ${finding.id} [${finding.side}] ${finding.message}`);
+  console.error(`\nrefusal parity drift: ${findings.length} finding(s)`);
+  process.exit(1);
+}
+console.log(
+  `OK — ${entries.length} registered refusal(s) agree with the server files and every named ` +
+    `reference; no refusal among ${TOOLS.size} advertised tools is unregistered, and no skill ` +
+    "reference instructs a refusing tool in silence.",
+);

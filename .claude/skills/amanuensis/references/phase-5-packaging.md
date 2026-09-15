@@ -62,6 +62,14 @@ the page.
 materialize_docs()
 ```
 
+`materialize_docs` is refused while *"the store has not been
+reconciled against the repository at"* the revision being published.
+Run `detect_changes(current_sha=<HEAD>)` first and assign or exempt
+every unledgered path it names; coverage published over an
+unreconciled ledger is a fraction of itself. The same reconciliation
+is what `update_subsystem_status(id, status="mapped")` reads at
+step 9.
+
 The materializer is diff-aware — only pages whose DB or prose
 sources changed get re-rendered. The cross-reference resolver
 re-links every ID across pages. It then publishes synchronized HTML and

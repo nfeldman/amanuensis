@@ -25,6 +25,9 @@ Phase 5.
 
 ## Session setup
 
+Every durable write *"requires an active session. Call start_session
+first."*
+
 1. Call `start_session(intent="survey ${subsystem_id}")`. Remember the
    `session_id`.
 2. Capture the survey-session SHA: `git rev-parse HEAD` on the
@@ -76,7 +79,11 @@ straight into Phase 5:
 4. **Register and rehash every touched artifact**:
    `register_artifact(path, kind, ...)` then `rehash_artifact(path,
    ref_sha=session_sha)`.
-5. **Materialize**: `materialize_docs()`.
+5. **Materialize**: `materialize_docs()`. Refused, like the advance to
+   `mapped` at step 9, while *"the store has not been reconciled
+   against the repository at"* the revision being published — run
+   `detect_changes(current_sha=<HEAD>)` first and assign or exempt
+   every unledgered path it names.
 6. **Contradiction detection.** For each finding in this pass, check
    `get_findings(subsystem_id=...)` for pre-existing findings citing
    the same file:symbol. On any incompatible classification, call

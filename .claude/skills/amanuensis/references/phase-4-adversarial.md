@@ -186,7 +186,21 @@ claim must carry a recorded outcome** — a `claim_validity_event` from
 `invalidate_claim` or `supersede_claim`, or an explicit `survived`
 note. A claim with no recorded outcome means the structural account
 was published unchallenged; say so in the hand-back rather than
-letting `mapped` imply a review that did not happen.
+letting `mapped` imply a review that did not happen. The server refuses
+the advance in those terms: *"current claim(s) carry no challenge
+outcome"*.
+
+`mapped` additionally refuses an unreconciled store. *"the store has not
+been reconciled against the repository at"* the revision being claimed is
+the sentence, and the repair is `detect_changes(current_sha=<HEAD>)`
+followed by assigning or exempting every unledgered path it reports. A
+subsystem cannot be mapped while the store cannot say what the tree
+contains.
+
+It refuses on Phase 3's evidence too. Any disposition *"answered from
+nothing"* blocks the advance, and *"set_disposition requires at least one
+evidence_id"* is where that begins: record the reading with `add_evidence`
+and pass its id, or attach it with `attach_evidence_to_disposition`.
 
 ## Rules
 

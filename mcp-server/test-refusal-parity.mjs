@@ -125,6 +125,16 @@ function head(text, n = 240) {
   return one.length > n ? `${one.slice(0, n)}…` : one;
 }
 
+/**
+ * Prose wraps, and so does the server's own source. Every containment test in
+ * this gate compares with whitespace collapsed for the reason
+ * `check-refusal-parity.mjs` does: a test that demanded a contiguous byte run
+ * would go red on a reflow that changed no word, and green on nothing extra.
+ */
+function carries(text, phrase) {
+  return String(text).replace(/\s+/g, " ").includes(String(phrase).replace(/\s+/g, " "));
+}
+
 const failures = [];
 const notes = [];
 let checked = 0;
@@ -546,6 +556,19 @@ check("C2 the register carries the four new refusals and the two existing ones",
   return missing.length ? `no register entry covers ${missing.join("; ")}` : null;
 });
 
+/**
+ * The server's source with its concatenation glue removed.
+ *
+ * A refusal is wrapped at the column limit into three or four adjacent
+ * literals, so the sentence the register quotes exists in the *message* and
+ * nowhere in the file contiguously. C3 reads the server file independently of
+ * `check-refusal-parity.mjs` — that is its whole value — so it has to undo the
+ * wrapping itself rather than trust the checker's assembly.
+ */
+function unwrapped(text) {
+  return text.replace(/["`]\s*\+\s*["`]/g, "");
+}
+
 check("C3 every registered phrase is in the file the register names", () => {
   const register = committedRegister();
   if (!register?.refusals) return "contracts/refusal-parity.json is absent, unparseable or empty";
@@ -554,7 +577,7 @@ check("C3 every registered phrase is in the file the register names", () => {
     const file = resolve(here, String(entry?.server?.file ?? ""));
     const text = existsSync(file) ? readFileSync(file, "utf8") : null;
     if (text === null) lost.push(`${entry?.id}: ${entry?.server?.file} is not in the tree`);
-    else if (!text.includes(String(entry?.server?.phrase)))
+    else if (!carries(unwrapped(text), String(entry?.server?.phrase)))
       lost.push(`${entry?.id}: ${entry?.server?.file} no longer says it`);
   }
   return lost.length ? lost.join("; ") : null;
@@ -600,17 +623,27 @@ const ANCHOR_CALLERS = [
 
 check("E1 every define_term caller carries the anchor obligation", () => {
   const register = committedRegister();
-  const entry = register?.refusals?.find((row) => (row?.tools ?? []).includes("define_term"));
-  if (!entry) return "no register entry covers a define_term refusal";
-  const phrases = [
-    String(entry.server?.phrase ?? ""),
-    ...(entry.references ?? []).map((row) => String(row?.phrase ?? "")),
-  ].filter((phrase) => phrase.length > 0);
+  // The *anchor* obligation, not the ladder refusal that also names the tool:
+  // the one define_term's own handler throws, which is the one a passage
+  // instructing the call has to warn about. Selected by where it lives rather
+  // than by id, so a rename of the entry does not silently empty this check.
+  const owned = (register?.refusals ?? []).filter(
+    (row) =>
+      (row?.tools ?? []).includes("define_term") &&
+      String(row?.server?.file ?? "").startsWith("src/tools/"),
+  );
+  if (owned.length === 0) return "no register entry covers a refusal define_term itself throws";
+  const phrases = owned
+    .flatMap((row) => [
+      String(row.server?.phrase ?? ""),
+      ...(row.references ?? []).map((reference) => String(reference?.phrase ?? "")),
+    ])
+    .filter((phrase) => phrase.length > 0);
   const silent = ANCHOR_CALLERS.filter((relative) => {
     const path = join(SKILLS, relative);
     if (!existsSync(path)) return true;
     const text = readFileSync(path, "utf8");
-    return !text.includes("define_term") || !phrases.some((phrase) => text.includes(phrase));
+    return !text.includes("define_term") || !phrases.some((phrase) => carries(text, phrase));
   });
   return silent.length
     ? `${silent.join(", ")} name define_term and carry no registered anchor phrase`
@@ -643,7 +676,7 @@ check("G5 no passage lost a sentence that describes a surviving behaviour", () =
       lost.push(`${relative} is not in the tree`);
       continue;
     }
-    if (!readFileSync(path, "utf8").includes(sentence)) lost.push(`${relative}: "${sentence}"`);
+    if (!carries(readFileSync(path, "utf8"), sentence)) lost.push(`${relative}: "${sentence}"`);
   }
   return lost.length ? `removed or softened: ${lost.join("; ")}` : null;
 });
