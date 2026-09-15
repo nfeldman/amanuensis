@@ -29,7 +29,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| P8 | Reinitialize, carry, and onboard in the lane worktree | ready | P5, P6, P7 | `dev/test-carry-receipt.mjs` | C25, C30, C34, C41, C42 |
+| P8 | Reinitialize, carry, and onboard in the lane worktree | ready (1 attempt) | P5, P6, P7 | `dev/test-carry-receipt.mjs` | C25, C30, C34, C41, C42 |
 | P10 | Survey every subsystem and decide every carried finding | ready | P8 | `dev/test-survey-depth.mjs` | C34, C41, C42 |
 | P11 | Publish, promote, and record the acceptance receipts | ready | P10 | `dev/test-survey-depth-acceptance.mjs` | C31, C33, C34 |
 | P9 | Pecia reconciliation of the carried findings | ready | P11 | `dev/test-pecia-carry-audit.mjs` | C24, C25, C34 |
