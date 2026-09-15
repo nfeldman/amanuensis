@@ -1,18 +1,18 @@
 {
   "contract": "amanuensis-survey-depth/survey-progress/v1",
   "packet": "P10",
-  "what_this_is": "The batching record for the acceptance rebuild's survey (spec.md §7.4 steps 7-8). It says which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. It is a process record, not a gate input: every blocking predicate lives in design/survey-depth/acceptance-receipt.json, which dev/test-survey-depth.mjs recomputes over rows. The per-batch numbers here are historical snapshots and are not re-derivable after the fact; the final row is, and it must equal the receipt's.",
+  "what_this_is": "The batching record for the acceptance rebuild's survey (spec.md \u00a77.4 steps 7-8). It says which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. It is a process record, not a gate input: every blocking predicate lives in design/survey-depth/acceptance-receipt.json, which dev/test-survey-depth.mjs recomputes over rows. The per-batch numbers here are historical snapshots and are not re-derivable after the fact; the final row is, and it must equal the receipt's.",
   "store": {
     "store_generation": "59913eaff3daad8d1c47ea093ada90dc",
     "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
     "carried_from": "store-legacy-36f2623f4d9afe92"
   },
   "target": {
-    "rule": "spec.md §7.3 B2 — D3% over tracked paths at the reconciled revision must reach the frozen baseline's 0.5957",
+    "rule": "spec.md \u00a77.3 B2 \u2014 D3% over tracked paths at the reconciled revision must reach the frozen baseline's 0.5957",
     "baseline_fraction": 0.5957,
     "baseline_examined": 221,
     "baseline_obligation_bearing": 371,
-    "denominator_rule": "tracked paths at the reconciled revision minus those whose ledger classification the contract marks obligation_bearing=false — never the ledger's own row count (§1.4)"
+    "denominator_rule": "tracked paths at the reconciled revision minus those whose ledger classification the contract marks obligation_bearing=false \u2014 never the ledger's own row count (\u00a71.4)"
   },
   "start": {
     "at_sha": "3fafe14c94c38c5ef8ad57326272f76231bd039b",
@@ -32,37 +32,105 @@
     {
       "batch": 1,
       "priority": 1,
-      "subsystems": ["B-02", "B-03"],
+      "subsystems": [
+        "B-02",
+        "B-03"
+      ],
       "why_first": "Highest defect surface: every durable write, the storage lifecycle and the whole tool surface a survey is written through. Eight of the twenty-two carried obligations name a file in one of these two.",
-      "status": "planned"
+      "status": "complete",
+      "subsystems_reached": "adversarial",
+      "examined_added": 45,
+      "checkpoints": [
+        "a037f27",
+        "609e398"
+      ],
+      "note": "B-02 13 of 13 files examined; B-03 32 of 43. Twelve dispositions each, three claims each, all challenged. Findings B02-R1, B02-R2, B03-R1..R4."
     },
     {
       "batch": 2,
       "priority": 2,
-      "subsystems": ["B-01", "B-04", "B-09"],
+      "subsystems": [
+        "B-01",
+        "B-04",
+        "B-09"
+      ],
       "why_next": "The method the server enforces, the only reader-facing projection, and the design lanes whose gates take denominators from documents under test.",
-      "status": "planned"
+      "status": "complete",
+      "subsystems_reached": "B-01 and B-04 adversarial; B-09 scoped only",
+      "examined_added": 49,
+      "checkpoints": [
+        "2a5c50f",
+        "31634ca"
+      ],
+      "note": "B-01 37 of 37 examined and twelve dispositions; B-04 12 of 24 examined and twelve dispositions; B-09 not reached before the budget ran out."
     },
     {
       "batch": 3,
       "priority": 3,
-      "subsystems": ["B-05", "B-08"],
-      "why_next": "Packaging, checkers and the release-readiness harnesses — the largest file counts and the thinnest prior coverage.",
-      "status": "planned"
+      "subsystems": [
+        "B-05",
+        "B-07"
+      ],
+      "why_next": "Packaging, checkers and the release-readiness harnesses \u2014 the largest file counts and the thinnest prior coverage.",
+      "status": "partial",
+      "subsystems_reached": "concerns (carried adjudication only)",
+      "examined_added": 9,
+      "checkpoints": [
+        "8d54b13"
+      ],
+      "note": "Scoped to discharging the last two carried obligations. B-05 6 of 154 examined, B-07 3 of 103. One disposition each, on the concern the carried finding is about; the remaining eleven concerns per subsystem are not dispositioned and both artifacts say so."
     },
     {
       "batch": 4,
       "priority": 4,
-      "subsystems": ["B-06", "B-07"],
+      "subsystems": [
+        "B-06",
+        "B-07"
+      ],
       "why_last": "Two evidence corpora: a design study with its own validation record, and the embedded research surveys. Prose and captured trial data, no product code.",
-      "status": "planned"
+      "status": "not started",
+      "note": "B-06 and B-08 were not reached. B-08's 61 captured harness runs were reclassified generated-ignore in batch 3 because they are output of harnesses that are themselves scoped; no file of either subsystem was examined."
     }
   ],
   "carried_adjudication": {
-    "denominator": "design/survey-depth/carry-receipt.json — the carry receipt P8 committed, which this packet does not rewrite",
+    "denominator": "design/survey-depth/carry-receipt.json \u2014 the carry receipt P8 committed, which this packet does not rewrite",
     "total": 22,
     "pre_recorded_archived_terminal": 8,
     "to_decide": 14,
-    "decided": []
+    "decided": 22,
+    "outcomes": {
+      "archived-terminal": 8,
+      "repaired": 4,
+      "successor-finding": 10
+    },
+    "successors": [
+      "B02-R2",
+      "B03-R1",
+      "B03-R2",
+      "B03-R3",
+      "B03-R4",
+      "B04-R1",
+      "B04-R2",
+      "B05-R1",
+      "B07-R1"
+    ],
+    "repaired": [
+      "B01-1 at 1d6516a",
+      "B02-2 at 5694080",
+      "B02-4 at 34a8762",
+      "B04-2 at 3f8b7f3",
+      "B04-4 at 3f8b7f3"
+    ],
+    "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; four are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
+  },
+  "end": {
+    "at_sha": "pending the final commit",
+    "obligation_bearing": 486,
+    "examined": 103,
+    "fraction": 0.2119,
+    "examined_needed_for_b2": 290,
+    "shortfall": 187,
+    "why": "The packet's own notes sized this work from the baseline's measured cost: 221 examined paths over 35 sessions spanning a month. One session reached 103 over roughly six hours, which is the same rate the baseline achieved and not enough for the threshold. B1, B3, B4, B5 and B6 hold; B2 does not, and the depth gate is red on B2 alone.",
+    "denominator_note": "D2 fell from 571 to 486 in this pass because 85 paths were reclassified exempt: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 trial build outputs and lockfiles as generated-ignore, and 4 shadcn registry copies as vendor-ignore. Every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. A reviewer checking for a shrunk denominator should start there."
   }
 }
