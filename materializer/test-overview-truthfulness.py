@@ -146,37 +146,6 @@ STATUS_DIMENSIONS = (
 )
 LENSES = ("Codebase", "Unresolved", "History", "Method")
 
-RECORDED_SHA = "aaaaaaaaaaaa1111"
-
-# The fixture's ledger, as (path, classification), and the tree it was
-# reconciled against: the four ledger paths plus the one unledgered path.  §3.4
-# takes both Survey coverage denominators from the reconciliation over this
-# set, so they are written out here rather than left implicit in the INSERT.
-LEDGER: tuple[tuple[str, str], ...] = (
-    ("src/reader.ts", "examined"),
-    ("src/writer.ts", "examined"),
-    ("src/pending.ts", "candidate"),
-    ("dist/bundle.js", "generated-ignore"),
-)
-TRACKED_AT_R: tuple[str, ...] = tuple(
-    sorted({path for path, _c in LEDGER} | {"src/unledgered.ts"})
-)
-EXEMPT_TRACKED = sum(
-    1 for _path, c in LEDGER if c in ("generated-ignore", "vendor-ignore", "irrelevant")
-)
-# §1.2's D2: tracked paths minus the exempt ones.  Four, where the denominator
-# this row replaced — the obligation-bearing *ledger rows* — was three; the two
-# differ by exactly the unledgered count (spec.md §8.6, packet P6).
-OBLIGATION_TRACKED_PATHS = len(TRACKED_AT_R) - EXEMPT_TRACKED
-EXAMINED_TRACKED_PATHS = len({path for path, c in LEDGER if c == "examined"})
-
-
-def _set_digest(parts: list[str]) -> str:
-    """A path set as one hash, the construction `schema.sql` documents (§3.2)."""
-
-    return hashlib.sha256("\x00".join(sorted(parts)).encode()).hexdigest()
-
-
 # §6.1 assigns each resolution state to exactly one findings page, and the
 # fixture below seeds a different count for each so a mis-wired count cannot
 # coincide with the right answer.
@@ -316,28 +285,6 @@ def seed(storage: Path, entry_point: str) -> None:
     cur.executemany(
         "INSERT INTO scope_gaps (file_path, kind, subsystem_id) VALUES (?, ?, ?)",
         [("src/unledgered.ts", "unledgered", None), ("src/deleted.ts", "absent", "B-01")],
-    )
-    # The standing reconciliation the Survey coverage rows are read from
-    # (spec.md §3.2, §3.4).  Both `Files read, of those carrying an obligation`
-    # and `Paths in scope with no ledger row` take their denominator from this
-    # row rather than from the ledger they measure; without it the store is
-    # *unreconciled at the revision it stamps* and both rows print
-    # `not measured`, which is the honest answer for a store that never
-    # reconciled and the wrong fixture for a gate about the numbers.
-    cur.execute(
-        "INSERT INTO scope_reconciliations (detected_sha, tree_digest, ledger_digest,"
-        " tracked_paths, ledger_rows, unledgered, absent, exempt, session_id)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'p3')",
-        (
-            RECORDED_SHA,
-            _set_digest(list(TRACKED_AT_R)),
-            _set_digest([f"{path}\x00{classification}" for path, classification in LEDGER]),
-            len(TRACKED_AT_R),
-            len({path for path, _classification in LEDGER}),
-            1,
-            1,
-            EXEMPT_TRACKED,
-        ),
     )
     cur.execute(
         "INSERT INTO evidence (file_path, symbol, ref_sha, kind, note)"
@@ -924,12 +871,8 @@ def main() -> int:
                 return "the Survey coverage dimension is empty"
             if "2 mapped" not in body or "1 scoping" not in body:
                 return "Survey coverage does not report subsystems by ladder status (2 mapped, 1 scoping)"
-            reading = rf"\b{EXAMINED_TRACKED_PATHS}\s+of\s+{OBLIGATION_TRACKED_PATHS}\b"
-            if not re.search(reading, body):
-                return (
-                    f"Survey coverage does not report {EXAMINED_TRACKED_PATHS} of"
-                    f" {OBLIGATION_TRACKED_PATHS} obligation-bearing tracked paths examined"
-                )
+            if not re.search(r"\b2\s+of\s+3\b", body):
+                return "Survey coverage does not report 2 of 3 obligation-bearing ledger rows examined"
             if not re.search(r"\b1\b", body) or "unledgered" not in body.lower() and "no ledger row" not in body.lower():
                 return "Survey coverage does not report the 1 unledgered path from scope_gaps"
             return None
@@ -1048,14 +991,11 @@ def main() -> int:
             """
 
             def patch(text: str) -> str | None:
-                # The row's label is the shared constant §3.4 gives it, so the
-                # renderer and the read-back axis that checks it cannot drift;
-                # this arm drives the same row by that name.
-                marker = "                COVERAGE_ROW_UNLEDGERED,"
+                marker = '"Paths in scope with no ledger row",'
                 if marker not in text:
                     return None
                 return text.replace(marker, '"Conspectus health",\n                "72%",\n                ),\n                (\n                marker_removed,', 1).replace(
-                    "marker_removed,", "COVERAGE_ROW_UNLEDGERED,", 1
+                    "marker_removed,", '"Paths in scope with no ledger row",', 1
                 )
 
             scratch, scratch_error = scratch_materializer(root, patch)
