@@ -61,6 +61,16 @@
 // including everything captured from a spawned process, is scrubbed of the
 // launcher's crash signatures, so an absent deliverable reads as a failed
 // assertion rather than as a gate that never ran.
+//
+// That line is addressed to two readers at once, which is why it names two
+// gates. §8.0 clauses 1 and 2 bind the launcher to the *packet* id — it looks
+// for `GATE P5 RED: <reason>` or `GATE P5 GREEN` and knows nothing of this
+// specification's own gate names — while §8.5 and `plan.json`'s
+// `gate.red_expect`, which quotes the first line of the reason, both name this
+// gate D1. So the packet marker leads and D1's verdict is the reason it
+// carries: `GATE P5 RED: GATE D1 RED: …`, `GATE P5 GREEN — GATE D1 GREEN`. A
+// line that satisfied only §8.5 was refused by the launcher at attempt 1 with
+// "gate failed at red without printing 'GATE P5 RED: <reason>'".
 
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
@@ -151,13 +161,13 @@ function finish(summary) {
   for (const line of unevaluated) emit(`unevaluated here: ${line}`);
   if (failures.length) {
     emit(
-      `GATE D1 RED: the depth gate did not turn red on a seeded fault, did not stay green on its ` +
-        `control, or accepted an input it must refuse — ${failures.length} failed assertion(s) ` +
-        `over ${summary}; first: ${failures[0]}`,
+      `GATE P5 RED: GATE D1 RED: the depth gate did not turn red on a seeded fault, did not stay ` +
+        `green on its control, or accepted an input it must refuse — ${failures.length} failed ` +
+        `assertion(s) over ${summary}; first: ${failures[0]}`,
     );
     process.exit(1);
   }
-  emit("GATE D1 GREEN");
+  emit("GATE P5 GREEN — GATE D1 GREEN");
   process.exit(0);
 }
 
