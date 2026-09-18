@@ -975,6 +975,54 @@ def main() -> int:
             tracked_paths_is_none,
         )
 
+        emit("")
+        emit("a declination nobody can open is history, and satisfies nothing (§4.4, C18)")
+
+        def unreachable_declination_is_not_recorded() -> str | None:
+            # §4.4: "Older rows, and rows anchored to a revision the repository
+            # no longer has, render as history (§4.5) and satisfy nothing." The
+            # reachability of a *term*'s anchor is checked; a declination's was
+            # not, so a subsystem whose only declination names a revision the
+            # repository has never had rendered `declined` — the second of the
+            # three states — on the strength of a row the prerequisite refuses
+            # (F6/codex).
+            sys.path.insert(0, str(ROOT))
+            try:
+                renderers = importlib.import_module("amanuensis_materializer.renderers")
+            except Exception as exc:
+                return f"the renderer module could not be loaded — {scrub(exc)}"
+            fn = getattr(renderers, "_vocabulary_state", None)
+            if fn is None:
+                return "renderers.py exposes no _vocabulary_state"
+            unreachable = [{"ref_sha": "0" * 40, "reason": "none applies", "session_id": "s1"}]
+            try:
+                answer = fn([], unreachable, workspace)
+            except Exception as exc:
+                return f"_vocabulary_state raised — {scrub(exc)}"
+            if answer != "not-recorded":
+                return (
+                    f"a subsystem whose only declination names {'0' * 7}… — a revision this"
+                    f" repository does not have — rendered {answer!r}. The status-advance"
+                    " prerequisite reads the effective declination, the newest row whose"
+                    " ref_sha resolves, so this row discharges nothing and the page reports"
+                    " a judgment the server would refuse"
+                )
+            reachable = [{"ref_sha": head, "reason": "none applies", "session_id": "s1"}]
+            try:
+                still = fn([], reachable, workspace)
+            except Exception as exc:
+                return f"_vocabulary_state raised on a reachable declination — {scrub(exc)}"
+            if still != "declined":
+                return (
+                    f"a declination anchored at a revision that does resolve rendered {still!r};"
+                    " the three states must stay distinct in both directions"
+                )
+            return None
+
+        check(
+            "an unreachable declination renders 'not recorded', a reachable one 'declined'",
+            unreachable_declination_is_not_recorded,
+        )
         # -- §4.5: declined, superseded, and not recorded ---------------------
         emit("")
         emit("Three vocabulary states, never two (§4.5)")

@@ -692,6 +692,39 @@ function main(mods) {
       }
       return null;
     });
+
+    check("A9b a duplicate-owned path that is deleted still reconciles", () => {
+      // `scope_gaps` is keyed (file_path, kind), and the absent loop inserts one
+      // row per *owner*, so a path two subsystems claim makes the second insert
+      // collide and the whole transaction abort: no reconciliation is written at
+      // all, and the store keeps answering from the last one. The AxiomDB store
+      // holds 53 duplicate-owned paths (F5/codex).
+      const ws = ctx.project.workspacePath;
+      git(ws, "rm", "-q", "a.ts");
+      gitCommit(ws, "delete the path two subsystems own");
+      let result = null;
+      try {
+        result = reconcile(ctx);
+      } catch (error) {
+        return `detect_changes threw — ${scrub(error?.message ?? error)}. A path owned twice and then deleted aborts the transaction that rewrites scope_gaps, so no reading is recorded and no owner is told its file is gone`;
+      }
+      if (result?.ok === false) return `detect_changes refused: ${result.error}`;
+      const gaps = ctx.db
+        .prepare("SELECT subsystem_id FROM scope_gaps WHERE file_path='a.ts' AND kind='absent'")
+        .all();
+      if (gaps.length === 0) {
+        return "a.ts was deleted and no absent gap was recorded for it";
+      }
+      const stale = ctx.db
+        .prepare(
+          "SELECT subsystem_id FROM file_ledger WHERE file_path='a.ts' AND stale=1 ORDER BY subsystem_id",
+        )
+        .all()
+        .map((r) => r.subsystem_id);
+      return stale.length === 2
+        ? null
+        : `${stale.length} of the 2 owners of a.ts were marked stale; the gap row is keyed by path, so the per-owner obligation lives in file_ledger and every owner must carry it`;
+    });
   }
 
   // ------------------- A10, A11: the tree at R, never the index and never HEAD
