@@ -376,7 +376,20 @@ export const gitTools: ToolDefinition[] = [
           `INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha) VALUES (?, ?, ?, ?)`,
         );
         for (const path of unledgered) gap.run(path, "unledgered", null, currentSha);
-        for (const row of absent) gap.run(row.file_path, "absent", row.subsystem_id, currentSha);
+        // One gap row per absent *path*, not per owner: the table is keyed
+        // (file_path, kind), so a path two subsystems claim would collide on the
+        // second insert and abort the whole rewrite — no reconciliation written
+        // at all, and the store still answering from the last one (F5/codex).
+        // Nothing is lost by taking the first owner here, because `mark(absent,
+        // …)` above has already flagged every owner's ledger row: the per-owner
+        // obligation lives in `file_ledger`, and `scope_gaps` is the countable
+        // statement that the path is gone.
+        const seenAbsent = new Set<string>();
+        for (const row of absent) {
+          if (seenAbsent.has(row.file_path)) continue;
+          seenAbsent.add(row.file_path);
+          gap.run(row.file_path, "absent", row.subsystem_id, currentSha);
+        }
 
         ctx.db
           .prepare(

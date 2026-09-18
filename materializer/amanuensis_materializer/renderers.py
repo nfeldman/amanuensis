@@ -2291,7 +2291,31 @@ def _vocabulary_state(
 
     if any(anchor_opens(workspace, term.get("first_seen")) for term in terms):
         return "terms"
-    return "declined" if declined else "not-recorded"
+    # The same rule, applied to the other record.  §4.4 reads the *effective*
+    # declination — the newest row for the subsystem whose `ref_sha` still
+    # resolves — and says older rows, and rows anchored to a revision the
+    # repository no longer has, "render as history (§4.5) and satisfy nothing".
+    # A row nobody can open is therefore not this subsystem's answer, and the
+    # third state is (F6/codex).
+    if any(_declination_resolves(workspace, record) for record in declined):
+        return "declined"
+    return "not-recorded"
+
+
+def _declination_resolves(workspace: Path, record: Any) -> bool:
+    """Whether a declination's `ref_sha` still resolves in the bound workspace.
+
+    A declination carries a bare revision, not a `path#symbol@sha` citation, so
+    the term arm's `anchor_opens` is the wrong predicate: what §4.4 asks of this
+    row is only that the repository still has the revision it was declared at.
+    """
+
+    revision = record.get("ref_sha") if hasattr(record, "get") else None
+    revision = str(revision or "").strip()
+    if not revision or not workspace.is_dir():
+        return False
+    resolved = _git_output(workspace, "rev-parse", "--verify", "--quiet", f"{revision}^{{commit}}")
+    return bool(resolved and resolved.strip())
 
 
 def _declination_sentence(record: dict[str, Any]) -> str:
