@@ -19,3 +19,37 @@ snapshot, and two do not reproduce here at all.
 | F8 | verified: no | action: rejected | `cd materializer && python3 test-search-index.py` exits 0 here with GATE P10 GREEN. The Chromium binary exiting 134 without a debugging endpoint is the review sandbox's browser, not the tree's; AMANUENSIS_TEST_BROWSER already exists for exactly this, which is the configuration the reviewer proposes |
 | F9 | verified: yes | action: fixed | reproduced by reading: spec.md §7.4 step 5 said `--carry-from …/old-findings-7c1c1a9.json` while §5.8 step 1, the carry receipt's own note and P8's plan notes all name the archived store opened ?immutable=1 — P8's notes had already recorded step 5 as the stale sentence. Step 5 now names the store and cites §5.8 for why. fixed 57cac81; the three surviving references to the export describe it as an artifact and are accurate. node aggregate-reviews.mjs check-claims: claims ok, 43 claims |
 | F10 | verified: yes | action: fixed | reproduced by running it: `node dev/test-rebuild-depth.mjs` exits 2 — 14 P17-denominated arms report the third state, the other 7 including both §8.10 controls hold — so the clause's "SUPERSEDED BY OWNER RULING 2026-09-18: dev/test-rebuild-depth.mjs is GREEN" contradicted both the clause's own first half and the implementation. The true half of the ruling is kept, the GREEN assertion removed and the third state restated. fixed 57cac81; plan-tool validate: plan valid, 12 packets in 4 slices |
+
+## Addendum — run `20260918-165724-fix-slice-S4`
+
+The launcher refused the run above and sent this session back with one
+instruction: "The dispositions for slice-S4 are complete and stand. What remains
+is that P11's gate is RED at HEAD. Repair that: reproduce it first, and do not
+redo the dispositions." No row, verdict or action in the table above is altered
+by this addendum; it records only what happened after the table was written.
+
+Reproduced at d206ad7: `node dev/test-survey-depth-acceptance.mjs` exits 1 with
+27 of 28 assertions passing and one binding failure — the receipt's ledger
+accounts for 647 paths and 649 are tracked, the two unledgered ones being
+`design/survey-depth/reviews/slice-S4/codex.md` and this file. F6's row above
+ends by noting that A1's binding arm was still red on one unledgered path; that
+path was codex.md, and committing this document made it two. So the review's own
+two deliverables were what held the gate red — a treadmill the lane has met
+before, and P10's notes in `plan.json` record the chain that closes it.
+
+Repaired at 830e752, not by relaxing the inventory but by the route the gate's
+message names: both documents recorded in `file_ledger` through
+`add_files_to_scope` (B-09, `examined`, their six sibling slice reviews'
+`why_in_scope`, both read in full here), `detect_changes` at d206ad7 reconciling
+649/649/0/0, the acceptance receipt re-recorded (B2 352/491 → 354/493, every
+blocking verdict green), and the three documents that follow the store brought
+with it: `survey-progress.json`'s final row, which GATE P10 requires to equal the
+receipt's and which went red on the old numbers; the dogfood receipt, through
+`materialize_docs(clean_publish=true)` → `dev/promote-docs.mjs` →
+`dev/record-dogfood-receipt.mjs`; and the rebuild-depth receipt, which GATE P20
+requires to read the same store revision. No tracked path was added or retired:
+649 before, 649 after.
+
+GATE A1 GREEN at HEAD. GATE P19 keeps its sanctioned exit-2 third state with
+both §8.10 controls, and GATE P20 is back to the same five pre-existing
+assertions it was red on before this session.
