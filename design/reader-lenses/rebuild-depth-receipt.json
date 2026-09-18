@@ -1,8 +1,8 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-depth-receipt/v1",
   "packet": "P19",
-  "recorded_at": "2026-09-18T01:54:00.694Z",
-  "repository_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+  "recorded_at": "2026-09-18T02:08:39.362Z",
+  "repository_sha": "4d11c60316f2185a0977fe1646250bcf19eeb12c",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-rebuild-depth.mjs",
@@ -73,19 +73,119 @@
       "status": "active"
     }
   ],
-  "seam_concerns": [
+  "seam_concerns": [],
+  "deferred_subsystems": [],
+  "batches": [
     {
-      "code": "SC-1",
-      "category": "seam contracts",
-      "discovered_in": null
+      "n": 1,
+      "recorded_as": "1",
+      "label": "P10 batch 1 checkpoint: B-02 surveyed to adversarial — 13 files examined, 12 dispositions, 2 findings, 3 carried outcomes",
+      "storage_commit": "a037f270e6642824343c22b9d7957527f49768a2",
+      "committed_at": "2026-09-15T00:31:28-04:00",
+      "subsystems": [
+        "B-02"
+      ]
+    },
+    {
+      "n": 2,
+      "recorded_as": "1",
+      "label": "P10 batch 1 complete: B-02 and B-03 at adversarial — 45 files examined, 24 dispositions, 6 findings, 7 carried outcomes",
+      "storage_commit": "609e398fc4f0bc8000f463bc26d9429f19f7a220",
+      "committed_at": "2026-09-15T00:40:41-04:00",
+      "subsystems": [
+        "B-02",
+        "B-03"
+      ]
+    },
+    {
+      "n": 3,
+      "recorded_as": "2a",
+      "label": "P10 batch 2a: B-01 surveyed to adversarial — 37 files examined, 12 dispositions, carried B01-1 repaired",
+      "storage_commit": "2a5c50f3514e33219ac7b2fb469ac03b95156c91",
+      "committed_at": "2026-09-15T00:46:45-04:00",
+      "subsystems": [
+        "B-01"
+      ]
+    },
+    {
+      "n": 4,
+      "recorded_as": "2b",
+      "label": "P10 batch 2b: B-04 surveyed to adversarial — 12 files examined, 12 dispositions, B04-2 and B04-4 repaired, B04-3 and B04-5 re-found",
+      "storage_commit": "31634cad53d21d7d7dbda2c672da4a58f18a8e55",
+      "committed_at": "2026-09-15T00:52:00-04:00",
+      "subsystems": [
+        "B-04"
+      ]
+    },
+    {
+      "n": 5,
+      "recorded_as": "3",
+      "label": "P10 batch 3: B-05 and B-07 carried adjudication; all 22 carried findings terminal; 85 captured and vendored paths exempted",
+      "storage_commit": "8d54b1326668f585f83b790095383499884cde95",
+      "committed_at": "2026-09-15T00:58:17-04:00",
+      "subsystems": [
+        "B-05",
+        "B-07"
+      ]
+    },
+    {
+      "n": 6,
+      "recorded_as": "5",
+      "label": "P10 batch 5 checkpoint — before B-03/B-04 remaining modules",
+      "storage_commit": "6fb0947c8472a8de66c35b24f29e5bd8f29c7d03",
+      "committed_at": "2026-09-17T20:46:28-04:00",
+      "subsystems": [
+        "B-03",
+        "B-04"
+      ]
+    },
+    {
+      "n": 7,
+      "recorded_as": "6",
+      "label": "P10 batch 6 — B-09's gate harnesses and drivers, read and ledgered",
+      "storage_commit": "a67554cbb5bbbb963509ab86b9e546b62515f185",
+      "committed_at": "2026-09-17T21:00:39-04:00",
+      "subsystems": [
+        "B-09"
+      ]
+    },
+    {
+      "n": 8,
+      "recorded_as": "7",
+      "label": "P10 batch 7 — B-09 complete: the reader-lenses and survey-depth lanes, their receipts, reviews and dispositions",
+      "storage_commit": "a0a3e593e045befa872e82774d70527f9beb1b88",
+      "committed_at": "2026-09-17T21:05:57-04:00",
+      "subsystems": [
+        "B-09"
+      ]
+    },
+    {
+      "n": 9,
+      "recorded_as": "8a",
+      "label": "P10 batch 8a — B-05's configs, contracts, fixtures and checkers, and B-08's first three activation receipts: 294 examined of 489 obligation-bearing",
+      "storage_commit": "474ff13b9260aae03a09af6d5714858c401c3069",
+      "committed_at": "2026-09-17T21:14:13-04:00",
+      "subsystems": [
+        "B-05",
+        "B-08"
+      ]
+    },
+    {
+      "n": 10,
+      "recorded_as": "9",
+      "label": "P10 batch 9 — B-06 complete at 24 of 24 files, priority 4's design study read end to end; B-07 opened",
+      "storage_commit": "6eb2a1de2131b455f8ae6637b4cf782a624fc9ad",
+      "committed_at": "2026-09-17T21:24:24-04:00",
+      "subsystems": [
+        "B-06",
+        "B-07"
+      ]
     }
   ],
-  "deferred_subsystems": [],
-  "batches": [],
   "seam_assessment": {
     "storage_commit": "26808c99254b8c86e6d94fec4c28e76475d2475b",
     "label": "session mu274z8h-ylgc5fy0 ended (deferred — B2 not reached; B1, B3, B4, B5, B6 green and all 22 carried findings terminal)",
-    "covers": "SC-1 through SC-9 and Phase 5 packaging"
+    "covers": "no seam concern was opened by this pass; Phase 5 packaging only"
   },
   "subsystems": [
     {
@@ -103,39 +203,6 @@
       "status_ladder": [
         {
           "from": null,
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "adversarial",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns",
-            "adversarial"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "a037f270e6642824343c22b9d7957527f49768a2",
-          "storage_label": "P10 batch 1 checkpoint: B-02 surveyed to adversarial — 13 files examined, 12 dispositions, 2 findings, 3 carried outcomes",
-          "observed_at": "2026-09-15T00:31:28-04:00"
-        },
-        {
-          "from": "adversarial",
           "to": "unmapped",
           "covers": [
             "unmapped"
@@ -206,14 +273,8 @@
         }
       ],
       "active_concern_denominator": 12,
-      "terminal_dispositions": 11,
-      "concern_gaps": [
-        {
-          "concern_code": "SC-1",
-          "open_question_id": null,
-          "gap": ""
-        }
-      ],
+      "terminal_dispositions": 12,
+      "concern_gaps": [],
       "dispositions": [
         {
           "concern_code": "AT-1",
@@ -390,6 +451,36 @@
           "pass_type": "survey"
         },
         {
+          "concern_code": "SC-1",
+          "classification": "confirmed-acceptable",
+          "evidence": [
+            {
+              "evidence_id": 1,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/db.ts",
+              "symbol": "openDatabase",
+              "line_range": "66-79",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            },
+            {
+              "evidence_id": 6,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/invariants.ts",
+              "symbol": "requireCompleteReconciliation",
+              "line_range": "855-881",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            }
+          ],
+          "evidence_citation": "mcp-server/src/vocabulary.ts:VOCABULARY_CONTRACT_VERSION@c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "evidence_quality": "code-verified",
+          "linchpin_dependent": true,
+          "rationale": "The two seams this side owns are compared by a checker rather than by prose. src/vocabulary.ts carries a generated-file banner and is written by scripts/gen-vocabulary.mjs from contracts/conspectus-vocabulary.json, with --check and --check-sql in CI so a copy or a SQL CHECK that diverges fails the build; helpers.ts re-exports the obligation split from that module rather than restating it, for the stated reason that a second definition is a second place to drift. Acceptable rather than ruled out because the store-facing half is weaker: migrateVocabularyChecks is what carries a widened enum into an existing store, and whether it has run is not asserted on open the way a declared object is.",
+          "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "pass_type": "survey"
+        },
+        {
           "concern_code": "SI-1",
           "classification": "ruled-out",
           "evidence": [
@@ -532,62 +623,47 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-02/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-02/identity/binding-is-re-derived-per-call",
+            "claim_id": "B02-C3",
+            "outcome": "survived",
+            "challenge": "The way to overturn this is a tool call that reaches a handler without assertProjectBinding, or a binding field that is carried rather than re-derived. Read the dispatcher: assertProjectBinding(project) is the first statement inside the try, before ensureDatabase and before tool.handler, and the only branch around it is `if (name !== \"get_project_info\") ensureDatabase()`, which skips the *open*, not the assertion. Read assertProjectBinding: it re-runs the project descriptor derivation and compares currentDescriptor.key against the receipt, so a workspace whose identity changed under a running server is caught rather than remembered. The residual is that the receipt's canonicalRoot is resolved once at startup: a workspace path that is re-pointed by a symlink swap mid-process would be re-derived from the same string. That is a narrower gap than the claim denies, and it is recorded here rather than left implied.",
+            "record": "claim-challenge-outcome:3",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu2622ld-ioef6w30",
             "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
-            "claim_key": "B-02/flow/lazy-first-use/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-02/recoverability/checkpoint-is-a-caller-obligation",
+            "claim_id": "B02-C2",
+            "outcome": "survived",
+            "challenge": "Two ways to overturn: find a checkpoint inside commitStorage that makes the caller obligation redundant, or find a third caller of commitStorage that omits it. grep for 'checkpoint' across mcp-server/src/ returns exactly three hits — the definition in db.ts, and the two call sites in tools/project.ts:98 and tools/storage-history.ts:32 — and grep for 'commitStorage' returns the same two callers plus the definition. So there is no checkpoint inside the committing function and there is no unchecked third caller today. The claim's warning half is what survives: the invariant is upheld by convention at two call sites and by nothing in storage-git.ts, which is why the disposition is confirmed-acceptable and linchpin-dependent rather than ruled out.",
+            "record": "claim-challenge-outcome:2",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu2622ld-ioef6w30",
             "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
-            "claim_key": "B-02/flow/storage-commit/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-02/storage-lifecycle/open-is-the-only-migration-path",
+            "claim_id": "B02-C1",
+            "outcome": "survived",
+            "challenge": "What would overturn this is a second path that changes a store's schema without going through openDatabase — a raw `db.exec` of DDL inside a tool handler, or a migration run from the CLI. Looked for it two ways: grep for `CREATE TABLE`, `ALTER TABLE` and `DROP` across mcp-server/src/ outside db.ts and schema.sql, and read every import of `better-sqlite3` in src/. The only DDL outside schema.sql is runMigrations' ALTER TABLE statements inside db.ts itself, and the only `new Database(...)` calls are openDatabase and ensureProjectStorage's probe, which itself calls openDatabase. The claim's weaker half is 'no store is left partially upgraded': requireSchemaObjects refuses the *open*, but the ALTER TABLE statements in runMigrations have already run and are not rolled back, so a store whose migration succeeded and whose schema apply then failed is left mid-upgrade with the handle closed. That is a narrower statement than the claim makes, and the claim stands only because the refusal makes such a store unusable rather than silently readable.",
+            "record": "claim-challenge-outcome:1",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu2622ld-ioef6w30",
             "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-02/key-type/mcp-server-src-project-ts-assertprojectbinding",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-02/seam/S-01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-02/state-container/mcp-server-src-db-ts-opendatabase",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
-          "survived": 0,
+          "survived": 3,
           "overturned": 0,
           "superseded": 0
         },
@@ -625,6 +701,11 @@
             "claim_b": "The handles this subsystem owns are the database and its child processes. The refusal paths close the database explicitly before throwing (requireSchemaObjects and requireViews both call db.close() first), and ensureProjectStorage's probe opens a candidate store and closes it. Every child process is spawnSync or execFileSync, so nothing is left running past the call; the two probes that could hang — the Codex parent ps and the git origin read — carry STARTUP_PROBE_TIMEOUT_MS with SIGKILL. Acceptable rather than ruled out: the long-lived db handle held in the ServerContext closure is never closed on process exit, which is harmless for a stdio server the host tears down but is not a released resource."
           },
           {
+            "concern_code": "SC-1",
+            "verdict": "quality-downgraded",
+            "claim_b": "The two seams this side owns are compared by a checker rather than by prose. src/vocabulary.ts carries a generated-file banner and is written by scripts/gen-vocabulary.mjs from contracts/conspectus-vocabulary.json, with --check and --check-sql in CI so a copy or a SQL CHECK that diverges fails the build; helpers.ts re-exports the obligation split from that module rather than restating it, for the stated reason that a second definition is a second place to drift. Acceptable rather than ruled out because the store-facing half is weaker: migrateVocabularyChecks is what carries a widened enum into an existing store, and whether it has run is not asserted on open the way a declared object is."
+          },
+          {
             "concern_code": "TB-1",
             "verdict": "quality-downgraded",
             "claim_b": "The blocking calls made before the server can serve anything are bounded: the Codex parent 'ps' and the git origin read both carry STARTUP_PROBE_TIMEOUT_MS (5s) with killSignal SIGKILL, and both degrade to a fallback on expiry rather than failing activation — which is what archived finding B02-2 asked for. Acceptable rather than ruled out because the per-write 'git rev-parse' in resolveWorkspaceCommit carries no timeout at all: it is execFileSync-shaped and blocks the event loop, so a wedged git on a slow filesystem stalls a durable write with nothing to diagnose. That path is not a startup probe, so the constant does not reach it."
@@ -647,39 +728,6 @@
       "status_ladder": [
         {
           "from": null,
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "adversarial",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns",
-            "adversarial"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "609e398fc4f0bc8000f463bc26d9429f19f7a220",
-          "storage_label": "P10 batch 1 complete: B-02 and B-03 at adversarial — 45 files examined, 24 dispositions, 6 findings, 7 carried outcomes",
-          "observed_at": "2026-09-15T00:40:41-04:00"
-        },
-        {
-          "from": "adversarial",
           "to": "unmapped",
           "covers": [
             "unmapped"
@@ -750,14 +798,8 @@
         }
       ],
       "active_concern_denominator": 12,
-      "terminal_dispositions": 11,
-      "concern_gaps": [
-        {
-          "concern_code": "SC-1",
-          "open_question_id": null,
-          "gap": ""
-        }
-      ],
+      "terminal_dispositions": 12,
+      "concern_gaps": [],
       "dispositions": [
         {
           "concern_code": "AT-1",
@@ -921,6 +963,36 @@
           "evidence_quality": "code-verified",
           "linchpin_dependent": true,
           "rationale": "The two resources this surface opens on its own are foreign database handles and child processes. compare_conspectuses opens two read-only handles and closes both in a finally, which is the right shape. Every child process is spawnSync or execFileSync and so cannot outlive its call. Acceptable rather than ruled out because materialize_docs spawns the Python materializer with no timeout: an unresponsive renderer blocks the server's only thread indefinitely, which is the same unbounded-subprocess family as B02-R1 and is recorded there rather than duplicated as a second finding.",
+          "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "pass_type": "survey"
+        },
+        {
+          "concern_code": "SC-1",
+          "classification": "confirmed-acceptable",
+          "evidence": [
+            {
+              "evidence_id": 15,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/vocabulary.ts",
+              "symbol": "resolveAnchor",
+              "line_range": "39-62",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            },
+            {
+              "evidence_id": 18,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/dashboard.ts",
+              "symbol": "get_dashboard",
+              "line_range": "141-148",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            }
+          ],
+          "evidence_citation": "mcp-server/src/tools/vocabulary.ts:define_term@c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "evidence_quality": "code-verified",
+          "linchpin_dependent": true,
+          "rationale": "The seams this surface publishes twice are held together by generated sources rather than by prose: every enum a schema advertises comes from ../vocabulary.js, the citation grammar a schema's pattern publishes is CITATION_TOKEN_SOURCE — the same source the handler enforces — and the open-findings predicate is one generated SQL string. Acceptable rather than ruled out because one seam is compared only by a checker outside this subsystem: the advertised tool set against DEVELOPMENT.md, reconciled by scripts/gen-tool-inventory.mjs (B-05). Nothing inside these modules would notice a tool added without its inventory entry.",
           "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
           "pass_type": "survey"
         },
@@ -1120,53 +1192,47 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-03/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-03/atomicity/every-durable-write-is-one-transaction",
+            "claim_id": "B03-C1",
+            "outcome": "survived",
+            "challenge": "To overturn this I looked for a handler that writes two dependent rows outside a transaction. grep for \"INSERT INTO\" across the 32 modules read, then checked each handler with more than one write: set_disposition, detect_changes, carry_finding, add_finding, update_finding_status, resolve_contradiction, open_diagnosticity_matrix, reset_subsystem, plan_composition_run, compile_review_session, prepare_codebase_brief_source, apply_change_impact, draft/accept decision, predict_change_impact's persistImpact — every one is inside ctx.db.transaction. The one real qualification is verify_finding_fix, which writes a single resolution event and needs no transaction, and export_review_session, which writes two files to disk *before* opening its transaction: a crash between the writes and the commit leaves files on disk with no export row. That is outside the claim as stated (it is about rows) and is the weaker case, so the claim stands but not as widely as \"every write is atomic\" would.",
+            "record": "claim-challenge-outcome:4",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu26cxw3-7kc3845v",
             "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
-            "claim_key": "B-03/flow/status-ladder/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-03/state-container/eight-unshared-git-probes",
+            "claim_id": "B03-C3",
+            "outcome": "survived",
+            "challenge": "To overturn this I would have to find that the probes are in fact shared, or that a checker compares them. grep for 'rev-parse --verify' and 'merge-base --is-ancestor' across mcp-server/src: local copies in xrefs.ts, findings.ts, claims.ts, impact.ts, composition.ts, review-session.ts, resolution.ts and the two shared helpers in helpers.ts, plus isAncestorOrSame in invariants.ts. No checker in mcp-server/scripts/ compares them; check-sql-identifiers, check-tool-schemas, check-evidence-vocabulary and gen-tool-inventory are about SQL, schemas, the evidence enum and the inventory. The comment's stated reason — different failure policies — is accurate and is a real design choice, so the claim is about the consequence rather than about the choice being wrong.",
+            "record": "claim-challenge-outcome:6",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu26cxw3-7kc3845v",
             "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
-            "claim_key": "B-03/key-type/mcp-server-src-tools-subsystems-ts-reset-subsystem",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-03/trust/a-worker-report-is-never-the-verdict",
+            "claim_id": "B03-C2",
+            "outcome": "survived",
+            "challenge": "The way to overturn this is a place where a supplied label is written through as a verdict. Checked the four report-accepting surfaces: land_composition_item stores the observation and sets status 'landed', never 'scored-pass'; score_composition_item derives the verdict only from durable state; land_integral_verification likewise; record_carried_outcome refuses 'repaired' without a post-repair reading. The nearest counterexample is land_evaluation_result-shaped tools in the eleven modules not read at this pass, so the claim is stated over what was read and B03-C3's residual applies. Also genuinely weaker than it sounds in one place: score_composition_item's test branch reads observed.exit_code from the worker's own report — it checks the identity and the target commit against the manifest, but the exit code itself is the worker's word, because nothing here re-runs the test.",
+            "record": "claim-challenge-outcome:5",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu26cxw3-7kc3845v",
             "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           },
           {
-            "claim_key": "B-03/seam/S-10",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-03/state-container/mcp-server-src-tools-dispositions-ts-set-disposition",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-03/state-container/mcp-server-src-tools-findings-ts-add-finding",
-            "claim_id": null,
+            "claim_key": "B-03/verification/an-unanswerable-check-refuses-separately-from-a-failed-one",
+            "claim_id": "c-b03-findings-ancestor-refusal",
             "outcome": "",
             "challenge": "",
             "record": "",
@@ -1175,7 +1241,7 @@
           }
         ],
         "outcomes": {
-          "survived": 0,
+          "survived": 3,
           "overturned": 0,
           "superseded": 0
         },
@@ -1233,6 +1299,11 @@
             "claim_b": "The two resources this surface opens on its own are foreign database handles and child processes. compare_conspectuses opens two read-only handles and closes both in a finally, which is the right shape. Every child process is spawnSync or execFileSync and so cannot outlive its call. Acceptable rather than ruled out because materialize_docs spawns the Python materializer with no timeout: an unresponsive renderer blocks the server's only thread indefinitely, which is the same unbounded-subprocess family as B02-R1 and is recorded there rather than duplicated as a second finding."
           },
           {
+            "concern_code": "SC-1",
+            "verdict": "quality-downgraded",
+            "claim_b": "The seams this surface publishes twice are held together by generated sources rather than by prose: every enum a schema advertises comes from ../vocabulary.js, the citation grammar a schema's pattern publishes is CITATION_TOKEN_SOURCE — the same source the handler enforces — and the open-findings predicate is one generated SQL string. Acceptable rather than ruled out because one seam is compared only by a checker outside this subsystem: the advertised tool set against DEVELOPMENT.md, reconciled by scripts/gen-tool-inventory.mjs (B-05). Nothing inside these modules would notice a tool added without its inventory entry."
+          },
+          {
             "concern_code": "SI-2",
             "verdict": "quality-downgraded",
             "claim_b": "Every revision this surface accepts is resolved at the write and re-resolved at the read, and the strongest case — define_term's anchor — goes further, requiring the path to exist in that revision's tree because parsing a citation cannot see an absent file. Acceptable rather than ruled out because the resolution is implemented eight times with eight failure policies and nothing compares them: xrefs.ts:581 names itself the eighth copy. A property added to one, such as a wall-clock bound, reaches the other seven only by hand."
@@ -1255,39 +1326,6 @@
       "status_ladder": [
         {
           "from": null,
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "adversarial",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns",
-            "adversarial"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "2a5c50f3514e33219ac7b2fb469ac03b95156c91",
-          "storage_label": "P10 batch 2a: B-01 surveyed to adversarial — 37 files examined, 12 dispositions, carried B01-1 repaired",
-          "observed_at": "2026-09-15T00:46:45-04:00"
-        },
-        {
-          "from": "adversarial",
           "to": "unmapped",
           "covers": [
             "unmapped"
@@ -1358,14 +1396,8 @@
         }
       ],
       "active_concern_denominator": 12,
-      "terminal_dispositions": 11,
-      "concern_gaps": [
-        {
-          "concern_code": "SC-1",
-          "open_question_id": null,
-          "gap": ""
-        }
-      ],
+      "terminal_dispositions": 12,
+      "concern_gaps": [],
       "dispositions": [
         {
           "concern_code": "AT-1",
@@ -1515,6 +1547,36 @@
           "pass_type": "survey"
         },
         {
+          "concern_code": "SC-1",
+          "classification": "confirmed-acceptable",
+          "evidence": [
+            {
+              "evidence_id": 24,
+              "kind": "doc-asserted",
+              "file_path": ".claude/skills/amanuensis/references/phase-2-structural.md",
+              "symbol": "record-the-inventory-as-claims",
+              "line_range": "238-302",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            },
+            {
+              "evidence_id": 25,
+              "kind": "doc-asserted",
+              "file_path": ".claude/skills/amanuensis/references/onboarding.md",
+              "symbol": "phase-5-draft-master-plan",
+              "line_range": "213-250",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            }
+          ],
+          "evidence_citation": ".claude/skills/amanuensis/references/onboarding.md:phase-5-draft-master-plan@c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "evidence_quality": "doc-asserted",
+          "linchpin_dependent": true,
+          "rationale": "The seam this subsystem owns is the one between an instruction and the refusal that answers it, and it is held by a checker: the references quote refusal strings verbatim and check-refusal-parity.mjs derives the candidate set from the server's own thrown messages. Acceptable rather than ruled out for a second seam nothing compares: reporting-style.md specifies the typed HTML projections and the colour-per-enum rule in detail, and the materializer implements them with no check between the two. Linchpin-dependent because the evidence for the first half is doc-asserted — the reference text — and the comparison itself lives in B-05.",
+          "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "pass_type": "survey"
+        },
+        {
           "concern_code": "SI-1",
           "classification": "confirmed-acceptable",
           "evidence": [
@@ -1620,44 +1682,21 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-01/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-01/method/every-obligation-has-a-substrate-half",
+            "claim_id": "B01-C1",
+            "outcome": "survived",
+            "challenge": "To overturn this I looked for an obligation the references instruct that the server does not enforce, beyond the one the claim already excepts. Walked every instructed write in phases 1-5 against invariants.ts: ledger, claim, vocabulary, artifact, disposition, challenge outcome, reconciliation and carried outcome each have a named refusal, and onboarding.md quotes all eight. Three instructed obligations have no server half and are worth naming as the claim's real boundary: the Phase 2 requirement to write an end-to-end data-flow trace (the server checks that *a* claim exists, not that it traces anything), the Phase 4 requirement to check for contradictions across sessions (nothing counts add_contradiction calls), and the Phase 5 requirement to update the three prose artifacts (register_artifact checks the subsystem-survey kind exists, not that master-plan.md or findings-index.md were touched). None of those is a refusal the references misquote, so the claim as stated — every quoted refusal is real and quoted accurately — stands; what it does not say, and should not be read as saying, is that every instruction has a refusal.",
+            "record": "claim-challenge-outcome:7",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu26oyg7-a06c9slj",
             "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-01/flow/authorized-claims-ladder/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-01/key-type/claude-skills-amanuensis-references-phase-2-structural-md-symbol-slug",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-01/seam/S-08",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
-          "survived": 0,
+          "survived": 1,
           "overturned": 0,
           "superseded": 0
         },
@@ -1677,6 +1716,11 @@
             "concern_code": "RL-1",
             "verdict": "quality-downgraded",
             "claim_b": "The two method-level resources are the session and the advisory artifact lock. Both have an instructed release — end_session at Phase 5 step 8, release_lock after the phase completes — and the lock additionally expires on its own TTL, so a crashed coordinator does not hold it forever. A session has no such expiry: an abandoned run leaves an open session row indefinitely, which costs nothing durable but makes list_sessions(state='active') a less useful signal than it looks. Acceptable, and noted rather than raised."
+          },
+          {
+            "concern_code": "SC-1",
+            "verdict": "quality-downgraded",
+            "claim_b": "The seam this subsystem owns is the one between an instruction and the refusal that answers it, and it is held by a checker: the references quote refusal strings verbatim and check-refusal-parity.mjs derives the candidate set from the server's own thrown messages. Acceptable rather than ruled out for a second seam nothing compares: reporting-style.md specifies the typed HTML projections and the colour-per-enum rule in detail, and the materializer implements them with no check between the two. Linchpin-dependent because the evidence for the first half is doc-asserted — the reference text — and the comparison itself lives in B-05."
           },
           {
             "concern_code": "SI-1",
@@ -1706,39 +1750,6 @@
       "status_ladder": [
         {
           "from": null,
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "adversarial",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns",
-            "adversarial"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "31634cad53d21d7d7dbda2c672da4a58f18a8e55",
-          "storage_label": "P10 batch 2b: B-04 surveyed to adversarial — 12 files examined, 12 dispositions, B04-2 and B04-4 repaired, B04-3 and B04-5 re-found",
-          "observed_at": "2026-09-15T00:52:00-04:00"
-        },
-        {
-          "from": "adversarial",
           "to": "unmapped",
           "covers": [
             "unmapped"
@@ -1809,14 +1820,8 @@
         }
       ],
       "active_concern_denominator": 12,
-      "terminal_dispositions": 11,
-      "concern_gaps": [
-        {
-          "concern_code": "SC-1",
-          "open_question_id": null,
-          "gap": ""
-        }
-      ],
+      "terminal_dispositions": 12,
+      "concern_gaps": [],
       "dispositions": [
         {
           "concern_code": "AT-1",
@@ -1975,6 +1980,36 @@
           "pass_type": "survey"
         },
         {
+          "concern_code": "SC-1",
+          "classification": "confirmed-acceptable",
+          "evidence": [
+            {
+              "evidence_id": 28,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/renderers.py",
+              "symbol": "ledger_freshness",
+              "line_range": "407-430",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            },
+            {
+              "evidence_id": 30,
+              "kind": "code-verified",
+              "file_path": "materializer/amanuensis_materializer/core.py",
+              "symbol": "Materializer.materialize",
+              "line_range": "259-276",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            }
+          ],
+          "evidence_citation": "materializer/amanuensis_materializer/db.py:missing_views@c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "evidence_quality": "code-verified",
+          "linchpin_dependent": true,
+          "rationale": "The schema seam is held by a probe with a named cause and one fix, and the vocabulary seam by generation: OBLIGATION_BEARING_SQL and the evidence-quality ladder come from the generated module rather than from a hand-kept copy, which is what B04-4's repair was. Acceptable rather than ruled out for the seam nothing holds: reporting-style.md specifies the typed projections this file implements, and no check relates the two. B04-4's history is exactly that failure — a hand-maintained sixth copy of the evidence ladder in a static page that only humans read.",
+          "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "pass_type": "survey"
+        },
+        {
           "concern_code": "SI-1",
           "classification": "out-of-scope",
           "evidence": [
@@ -2122,53 +2157,21 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-04/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
+            "claim_key": "B-04/projection/a-refusal-leaves-the-previous-output-untouched",
+            "claim_id": "B04-C1",
+            "outcome": "survived",
+            "challenge": "To overturn this I looked for a path that writes into the published output before it knows the run is good. The ordinary non-clean render is exactly that — it writes pages into the live directory one at a time — so the claim would be false if it said \"every render\", and it does not: it says every *failure* leaves the projection as it was, and the non-clean render's failures are per page with the previously written pages still valid Markdown. The real boundary the probe found is narrower and worth stating: a non-clean render interrupted mid-loop leaves a partly rewritten projection whose manifest still describes the previous one, because the manifest is saved after the page loop. That is recoverable by the next render and is why publication uses --clean-publish, but it means \"leaves the previous output untouched\" is exactly true for clean publication and approximately true for the incremental path. Also checked the promotion sequence for a window where neither the backup nor the stage is in place: output.rename(backup) then stage.rename(output), with the backup restored on exception only when output does not exist — correct, and the failure mode is a retained backup directory rather than a lost projection.",
+            "record": "claim-challenge-outcome:8",
+            "recorded_at_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+            "session_id": "mu26wn9s-v8ghdxol",
             "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-04/flow/bounded-response/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-04/key-type/mcp-server-src-standing-ts-standingstate",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-04/seam/S-05",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-04/state-container/mcp-server-src-tools-claims-ts-requirefileanchoredevidence",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
+            "field_note": null,
+            "outcomes_recorded": 1,
+            "prior_outcomes": []
           }
         ],
         "outcomes": {
-          "survived": 0,
+          "survived": 1,
           "overturned": 0,
           "superseded": 0
         },
@@ -2206,6 +2209,11 @@
             "claim_b": "The two resources are the SQLite connection and the staging directory. The connection is closed in a finally on both the render and the verify paths. The stage is removed on a red summary and on an exception, and the backup is restored if promotion throws before the output exists. Acceptable rather than ruled out for one residual the code itself notes: if the backup cannot be removed after a successful promotion the path is retained and reported as a warning, so a repeated failure accumulates backup directories beside the output."
           },
           {
+            "concern_code": "SC-1",
+            "verdict": "quality-downgraded",
+            "claim_b": "The schema seam is held by a probe with a named cause and one fix, and the vocabulary seam by generation: OBLIGATION_BEARING_SQL and the evidence-quality ladder come from the generated module rather than from a hand-kept copy, which is what B04-4's repair was. Acceptable rather than ruled out for the seam nothing holds: reporting-style.md specifies the typed projections this file implements, and no check relates the two. B04-4's history is exactly that failure — a hand-maintained sixth copy of the evidence ladder in a static page that only humans read."
+          },
+          {
             "concern_code": "SI-2",
             "verdict": "quality-downgraded",
             "claim_b": "Every revision the projection prints comes from a row that was resolved at write time by the server, so the renderer reproduces rather than re-derives them, and it stamps each page with the store's own checked revision rather than the working tree's. Acceptable rather than ruled out because the renderer performs no ancestry check of its own: a row whose ref_sha the workspace can no longer reach is printed exactly as a reachable one is, and only the gates outside this subsystem — the depth gate, the carry receipt, receipt-provenance — distinguish them."
@@ -2228,14 +2236,13 @@
           "covers": [
             "unmapped"
           ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
+          "source": "subsystem_status_transitions",
+          "transition_id": 4,
+          "tool": "upsert_subsystem",
+          "session_id": "mu24n2f3-bl660v39",
+          "ref_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079",
+          "storage_commit": null,
+          "observed_at": "2026-09-15 03:43:27"
         }
       ],
       "active_concern_denominator": 12,
@@ -2342,38 +2349,6 @@
           "covers": [
             "unmapped"
           ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "concerns",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "8d54b1326668f585f83b790095383499884cde95",
-          "storage_label": "P10 batch 3: B-05 and B-07 carried adjudication; all 22 carried findings terminal; 85 captured and vendored paths exempted",
-          "observed_at": "2026-09-15T00:58:17-04:00"
-        },
-        {
-          "from": "concerns",
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
           "source": "subsystem_status_transitions",
           "transition_id": 6,
           "tool": "upsert_subsystem",
@@ -2426,7 +2401,7 @@
         }
       ],
       "active_concern_denominator": 12,
-      "terminal_dispositions": 0,
+      "terminal_dispositions": 1,
       "concern_gaps": [
         {
           "concern_code": "AT-1",
@@ -2464,11 +2439,6 @@
           "gap": ""
         },
         {
-          "concern_code": "SC-1",
-          "open_question_id": null,
-          "gap": ""
-        },
-        {
           "concern_code": "SI-1",
           "open_question_id": null,
           "gap": ""
@@ -2489,11 +2459,42 @@
           "gap": ""
         }
       ],
-      "dispositions": [],
+      "dispositions": [
+        {
+          "concern_code": "SC-1",
+          "classification": "confirmed-bug",
+          "evidence": [
+            {
+              "evidence_id": 32,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/index.ts",
+              "symbol": "SERVER_VERSION",
+              "line_range": "28",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            },
+            {
+              "evidence_id": 33,
+              "kind": "code-verified",
+              "file_path": "mcp-server/scripts/gen-vocabulary.mjs",
+              "symbol": "loadSource",
+              "line_range": "1-40",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "role": "supports"
+            }
+          ],
+          "evidence_citation": "mcp-server/src/index.ts:SERVER_VERSION@c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "evidence_quality": "code-verified",
+          "linchpin_dependent": false,
+          "rationale": "This subsystem owns the checkers that hold every other seam, and one seam it owns is unheld: the package manifest's version against the runtime literal. At c073404 they disagree — 0.2.0-beta.2 against 0.2.0-beta.1 — and that literal is frozen into the binding receipt the setup documentation tells a user to read back when verifying an installation. render-roadmap.mjs relates the manifest to the roadmap's release record and published-smoke.yml asserts the receipt's canonicalRoot and storage_path, so both halves exist and neither compares these two. Filed as B05-R1.",
+          "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+          "pass_type": "survey"
+        }
+      ],
       "findings": [
         {
           "finding_id": "B05-R1",
-          "concern_code": null,
+          "concern_code": "SC-1",
           "severity": "MEDIUM",
           "status": "confirmed-bug",
           "resolution_state": "open",
@@ -2523,44 +2524,8 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-05/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-05/flow/clean-publish/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-05/key-type/materializer-amanuensis-materializer-readback-py-projectionverifier",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-05/seam/S-04",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-05/state-container/materializer-amanuensis-materializer-db-py-open-ro",
-            "claim_id": null,
+            "claim_key": "B-05/contracts/generate-or-assert-every-duplicated-fact",
+            "claim_id": "B05-C1",
             "outcome": "",
             "challenge": "",
             "record": "",
@@ -2598,14 +2563,13 @@
           "covers": [
             "unmapped"
           ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
+          "source": "subsystem_status_transitions",
+          "transition_id": 7,
+          "tool": "upsert_subsystem",
+          "session_id": "mu24n2f3-bl660v39",
+          "ref_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079",
+          "storage_commit": null,
+          "observed_at": "2026-09-15 03:43:27"
         }
       ],
       "active_concern_denominator": 12,
@@ -2683,44 +2647,7 @@
       },
       "adversarial": {
         "passes": 1,
-        "claim_targets": [
-          {
-            "claim_key": "B-08/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-08/flow/reference-not-copy/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-08/seam/S-07",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-08/state-container/pecia-work-jsonl-amanuensis-references",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          }
-        ],
+        "claim_targets": [],
         "outcomes": {
           "survived": 0,
           "overturned": 0,
@@ -2745,14 +2672,13 @@
           "covers": [
             "unmapped"
           ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
+          "source": "subsystem_status_transitions",
+          "transition_id": 8,
+          "tool": "upsert_subsystem",
+          "session_id": "mu24n2f3-bl660v39",
+          "ref_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079",
+          "storage_commit": null,
+          "observed_at": "2026-09-15 03:43:27"
         }
       ],
       "active_concern_denominator": 12,
@@ -2830,44 +2756,7 @@
       },
       "adversarial": {
         "passes": 1,
-        "claim_targets": [
-          {
-            "claim_key": "B-06/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-06/flow/digest-bound-repair/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-06/key-type/mcp-server-src-codex-host-ts-startup-probe-timeout-ms",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-06/seam/S-03",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          }
-        ],
+        "claim_targets": [],
         "outcomes": {
           "survived": 0,
           "overturned": 0,
@@ -2892,38 +2781,6 @@
       "status_ladder": [
         {
           "from": null,
-          "to": "unmapped",
-          "covers": [
-            "unmapped"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "c7681f028b55f56c2d78f9fcf6ee46764ed15f65",
-          "storage_label": "Onboarding · the acceptance rebuild's calibration, master plan and ledger",
-          "observed_at": "2026-09-14T23:43:28-04:00"
-        },
-        {
-          "from": "unmapped",
-          "to": "concerns",
-          "covers": [
-            "scoping",
-            "structural",
-            "concerns"
-          ],
-          "source": "storage-checkpoint",
-          "transition_id": null,
-          "tool": null,
-          "session_id": null,
-          "ref_sha": null,
-          "storage_commit": "8d54b1326668f585f83b790095383499884cde95",
-          "storage_label": "P10 batch 3: B-05 and B-07 carried adjudication; all 22 carried findings terminal; 85 captured and vendored paths exempted",
-          "observed_at": "2026-09-15T00:58:17-04:00"
-        },
-        {
-          "from": "concerns",
           "to": "unmapped",
           "covers": [
             "unmapped"
@@ -3094,44 +2951,8 @@
         "passes": 1,
         "claim_targets": [
           {
-            "claim_key": "B-07/concurrency",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-07/flow/two-arm-gate/01",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-07/key-type/github-workflows-test-yml-jobs-steps-run",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-07/seam/S-09",
-            "claim_id": null,
-            "outcome": "",
-            "challenge": "",
-            "record": "",
-            "validity_event": null,
-            "field_note": null
-          },
-          {
-            "claim_key": "B-07/state-container/dev-promote-docs-mjs-promote",
-            "claim_id": null,
+            "claim_key": "B-07/corpus/captures-are-unbounded-network-calls",
+            "claim_id": "B07-C1",
             "outcome": "",
             "challenge": "",
             "record": "",
@@ -3282,11 +3103,11 @@
   "census": {
     "mapped": 0,
     "deferred": 0,
-    "checklist_dispositions": 45,
-    "seam_dispositions": 5,
+    "checklist_dispositions": 50,
+    "seam_dispositions": 0,
     "findings": 10,
     "disposition_evidence": 65,
     "finding_evidence": 0,
-    "claim_targets": 39
+    "claim_targets": 11
   }
 }
