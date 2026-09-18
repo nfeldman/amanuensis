@@ -56,10 +56,10 @@
         "P9"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "82a9ddabfdd2b14c2446fb988f0989bd75a131ae",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "d1ad92fac4ac14fa3539d5750a8a133bc7dd8652",
+        "findings": 10
       }
     }
   ],
