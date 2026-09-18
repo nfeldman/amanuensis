@@ -1645,6 +1645,12 @@ by all three of:
    identity it does not have must turn the arm **red**, not `cannot run`. Without that control the
    identity check is indistinguishable from an exemption.
 
+   The replay reads the pair at `fb9f1c4`, so the control holds only while that commit stays
+   reachable. **This branch must be merged with its history, not squashed**: a squash merge drops
+   the object and turns the control — and so the gate — red on `main`. That is the honest failure
+   mode for a control whose subject is git history, and it is a merge-strategy constraint the owner
+   owns, not something the gate should paper over.
+
 This is scoping, not weakening: no axis is dropped for the subject the gate can still speak about,
 and CI must end green — say there how the third state is handled, the same way §7.1 answers it
 for `GATE D0`.
