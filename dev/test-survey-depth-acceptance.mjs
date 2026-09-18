@@ -1212,6 +1212,47 @@ try {
     report(true, "the committed receipt validates against this repository, this baseline and this store");
   }
 
+  // The recorder arm.
+  //
+  // Every assertion above reads the committed receipt and re-derives its
+  // predicates from the store; none of them ran `dev/record-survey-depth.mjs`,
+  // the tool that wrote it. So the recorder could be broken outright — forced
+  // to exit 2 on an available store — and A1 stayed green, and a reported axis
+  // could drift away from the store with nothing to notice. `--check` is the
+  // recorder's own answer to "would I write this same document today"; it is
+  // stable across runs over an unchanged store, and its three exit codes are
+  // kept distinct here because a recorder that cannot read its source is a
+  // different fact from a recorder that disagrees with it (VP4(e)).
+  {
+    const recorder = join(REPO, "dev/record-survey-depth.mjs");
+    if (!existsSync(recorder)) {
+      report(false, "[live]", "dev/record-survey-depth.mjs is absent, so the receipt has no writer");
+    } else {
+      const run = spawnSync(process.execPath, [recorder, "--check"], {
+        cwd: REPO,
+        encoding: "utf8",
+      });
+      const said = scrub(`${run.stdout ?? ""} ${run.stderr ?? ""}`);
+      if (run.error) {
+        report(false, "[live]", "dev/record-survey-depth.mjs --check could not be run");
+      } else if (run.status === 2) {
+        report(
+          false,
+          "[live]",
+          `dev/record-survey-depth.mjs --check cannot run against a store this gate just read: ${said}`,
+        );
+      } else if (run.status !== 0) {
+        report(
+          false,
+          "[live]",
+          `dev/record-survey-depth.mjs --check exits ${run.status}: ${said}`,
+        );
+      } else {
+        report(true, "the recorder re-derives the committed receipt from the live store");
+      }
+    }
+  }
+
   // §8.8's two seeded forged-green receipts, derived from the committed one so
   // that nothing but the seeded lie separates them from the control above.
   emitted.push("");
