@@ -196,6 +196,24 @@ if (reconciliation) {
   }
 }
 
+// The reported axes the frozen fixture carries beyond the bare counts, computed
+// exactly as `dev/record-survey-depth-baseline.mjs` computes them (`ratio` to
+// four places, `CITATION_TOKEN` from mcp-server/src/helpers.ts:283). Two
+// recorders that round differently would report a delta that is a rounding
+// artefact, which is why the arithmetic is copied and not approximated.
+const ratio = (numerator, denominator) =>
+  denominator === 0 ? null : Number((numerator / denominator).toFixed(4));
+const CITATION_TOKEN = /^[^\s:]+(?:\/[^\s:]+)*:[^\s@]+@[0-9a-fA-F]{7,40}$/;
+const evidenceRows = count("SELECT COUNT(*) n FROM evidence");
+const attachedDispositions = count(
+  `SELECT COUNT(*) n FROM dispositions d
+    WHERE EXISTS (SELECT 1 FROM disposition_evidence de
+                   WHERE de.subsystem_id=d.subsystem_id AND de.concern_code=d.concern_code)`,
+);
+const anchoredRows = all(
+  "SELECT term, first_seen FROM vocabulary WHERE first_seen IS NOT NULL AND TRIM(first_seen) <> ''",
+);
+
 const subsystems = all("SELECT id, name, status, priority FROM subsystems ORDER BY id");
 const statusById = new Map(subsystems.map((row) => [row.id, row.status]));
 const dispositions = all(
@@ -383,18 +401,22 @@ const receipt = {
   },
   reported: {
     ledger_rows: ledger.length,
-    evidence: count("SELECT COUNT(*) n FROM evidence"),
+    evidence: evidenceRows,
     dispositions: dispositions.length,
-    attached_dispositions: new Set(attachments.map((a) => `${a.subsystem_id}/${a.concern_code}`))
-      .size,
+    evidence_per_disposition: ratio(evidenceRows, dispositions.length),
+    attached_dispositions: attachedDispositions,
+    attached_coverage: ratio(attachedDispositions, dispositions.length),
+    unattached_dispositions: dispositions.length - attachedDispositions,
     disposition_evidence_rows: attachments.length,
     field_notes: count("SELECT COUNT(*) n FROM field_notes"),
     open_questions_all: count("SELECT COUNT(*) n FROM open_questions"),
     open_questions_open: count("SELECT COUNT(*) n FROM open_questions WHERE resolution='open'"),
-    anchored_terms: count(
-      "SELECT COUNT(*) n FROM vocabulary WHERE first_seen IS NOT NULL AND TRIM(first_seen) <> ''",
-    ),
+    anchored_terms: anchoredRows.length,
+    anchored_terms_in_citation_form: anchoredRows.filter((row) =>
+      CITATION_TOKEN.test(String(row.first_seen)),
+    ).length,
     open_findings: count("SELECT COUNT(*) n FROM findings WHERE status='confirmed-bug'"),
+    scope_gaps_unledgered: count("SELECT COUNT(*) n FROM scope_gaps WHERE kind='unledgered'"),
     subsystems: subsystems.length,
     seams: count("SELECT COUNT(*) n FROM seams"),
     claims: count("SELECT COUNT(*) n FROM claims"),

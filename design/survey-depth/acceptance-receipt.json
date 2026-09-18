@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "2bca8c015eaf0a906ec398645fd92ea0bbf35644",
+  "repository_sha": "50abc2885667d96db1ddcdf2f3942b400420b3f0",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+    "checked_sha": "50abc2885667d96db1ddcdf2f3942b400420b3f0",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
-        "tree_digest": "4021124580d0ac7771a4a492999e1e473be198edfdf9782bb3a26b46c5f6d31d",
-        "ledger_digest": "555897efe765fe8e27f72210c53fddcf57c8132eb3a0e4085b2a41cd4ff1cbfd",
+        "detected_sha": "50abc2885667d96db1ddcdf2f3942b400420b3f0",
+        "tree_digest": "62d970c24e2c49289f65be21451008daee68111ce2b1fab672022d9d953e581f",
+        "ledger_digest": "f9b738b34ac60d2c4f07c7c7c537d8f5fdab1ac2da844722e27f7c410ac5f681",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -1094,6 +1094,10 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/test-survey-depth-acceptance.mjs",
+            "classification": "examined"
+          },
+          {
             "file_path": "dev/test-survey-depth-red-gates.mjs",
             "classification": "examined"
           },
@@ -1306,11 +1310,11 @@
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
+            "file_path": "docs/subsystems/b02-mcp-core-persistence-and-lifecycle.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
+            "file_path": "docs/subsystems/b02-mcp-core-persistence-and-lifecycle.md",
             "classification": "generated-ignore"
           },
           {
@@ -1322,43 +1326,51 @@
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html",
+            "file_path": "docs/subsystems/b04-diff-aware-materializer.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md",
+            "file_path": "docs/subsystems/b04-diff-aware-materializer.md",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b05-materializer-human-projection-read-back-html.html",
+            "file_path": "docs/subsystems/b05-packaging-installer-validation-and-product-docs.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b05-materializer-human-projection-read-back-html.md",
+            "file_path": "docs/subsystems/b05-packaging-installer-validation-and-product-docs.md",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b06-packaging-installer-and-host-activation.html",
+            "file_path": "docs/subsystems/b06-report-interface-design-and-validation-studies.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b06-packaging-installer-and-host-activation.md",
+            "file_path": "docs/subsystems/b06-report-interface-design-and-validation-studies.md",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b07-gates-evidence-custody-and-ci.html",
+            "file_path": "docs/subsystems/b07-embedded-research-surveys-and-platform-trials.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b07-gates-evidence-custody-and-ci.md",
+            "file_path": "docs/subsystems/b07-embedded-research-surveys-and-platform-trials.md",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b08-records-design-research-published-projection-execution-ledger.html",
+            "file_path": "docs/subsystems/b08-activation-evidence-and-release-readiness.html",
             "classification": "generated-ignore"
           },
           {
-            "file_path": "docs/subsystems/b08-records-design-research-published-projection-execution-ledger.md",
+            "file_path": "docs/subsystems/b08-activation-evidence-and-release-readiness.md",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html",
+            "classification": "generated-ignore"
+          },
+          {
+            "file_path": "docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
             "classification": "generated-ignore"
           },
           {
@@ -2598,19 +2610,19 @@
             "classification": "candidate"
           }
         ],
-        "tracked_paths": 643,
-        "ledger_rows": 643,
+        "tracked_paths": 646,
+        "ledger_rows": 646,
         "unledgered": 0,
         "absent": 0,
-        "exempt": 154,
-        "session_id": "mu68mzjq-fmxm3ik1"
+        "exempt": 156,
+        "session_id": "mu6at1iu-teoxzqgg"
       }
     },
     "B2": {
       "verdict": "green",
-      "examined": 350,
-      "obligation_bearing": 489,
-      "fraction": 0.7157464212678937,
+      "examined": 351,
+      "obligation_bearing": 490,
+      "fraction": 0.7163265306122449,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -3790,36 +3802,41 @@
     }
   },
   "reported": {
-    "ledger_rows": 643,
+    "ledger_rows": 646,
     "evidence": 34,
     "dispositions": 50,
+    "evidence_per_disposition": 0.68,
     "attached_dispositions": 50,
+    "attached_coverage": 1,
+    "unattached_dispositions": 0,
     "disposition_evidence_rows": 65,
     "field_notes": 1,
     "open_questions_all": 1,
     "open_questions_open": 1,
     "anchored_terms": 8,
+    "anchored_terms_in_citation_form": 8,
     "open_findings": 10,
+    "scope_gaps_unledgered": 0,
     "subsystems": 9,
     "seams": 0,
     "claims": 10,
     "xrefs": 0,
-    "sessions": 12,
+    "sessions": 13,
     "finding_status_histogram": {
       "confirmed-bug": 10
     },
     "classification_histogram": {
       "candidate": 139,
-      "examined": 350,
-      "generated-ignore": 150,
+      "examined": 351,
+      "generated-ignore": 152,
       "vendor-ignore": 4
     }
   },
   "reported_deltas": {
     "ledger_rows": {
-      "candidate": 643,
+      "candidate": 646,
       "baseline": 503,
-      "delta": 140
+      "delta": 143
     },
     "evidence": {
       "candidate": 34,
@@ -3832,9 +3849,9 @@
       "delta": -78
     },
     "evidence_per_disposition": {
-      "candidate": null,
+      "candidate": 0.68,
       "baseline": 1.0391,
-      "delta": null
+      "delta": -0.35909999999999986
     },
     "attached_dispositions": {
       "candidate": 50,
@@ -3842,14 +3859,14 @@
       "delta": -62
     },
     "attached_coverage": {
-      "candidate": null,
+      "candidate": 1,
       "baseline": 0.875,
-      "delta": null
+      "delta": 0.125
     },
     "unattached_dispositions": {
-      "candidate": null,
+      "candidate": 0,
       "baseline": 16,
-      "delta": null
+      "delta": -16
     },
     "disposition_evidence_rows": {
       "candidate": 65,
@@ -3877,9 +3894,9 @@
       "delta": 4
     },
     "anchored_terms_in_citation_form": {
-      "candidate": null,
+      "candidate": 8,
       "baseline": 0,
-      "delta": null
+      "delta": 8
     },
     "open_findings": {
       "candidate": 10,
@@ -3887,9 +3904,9 @@
       "delta": -3
     },
     "scope_gaps_unledgered": {
-      "candidate": null,
+      "candidate": 0,
       "baseline": 0,
-      "delta": null
+      "delta": 0
     },
     "subsystems": {
       "candidate": 9,
@@ -3912,9 +3929,9 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 12,
+      "candidate": 13,
       "baseline": 35,
-      "delta": -23
+      "delta": -22
     },
     "finding_status_histogram": {
       "confirmed-bug": -3,
@@ -3922,8 +3939,8 @@
     },
     "classification_histogram": {
       "candidate": -11,
-      "examined": 129,
-      "generated-ignore": 26,
+      "examined": 130,
+      "generated-ignore": 28,
       "irrelevant": -2,
       "vendor-ignore": -2
     }
