@@ -1,15 +1,15 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-depth-receipt/v1",
   "packet": "P19",
-  "recorded_at": "2026-09-18T02:08:39.362Z",
-  "repository_sha": "4d11c60316f2185a0977fe1646250bcf19eeb12c",
+  "recorded_at": "2026-09-18T02:14:39.543Z",
+  "repository_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-rebuild-depth.mjs",
   "store": {
     "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
     "canonical_branch": "main",
-    "session_id": "mu6at1iu-teoxzqgg"
+    "session_id": "mu6bmjry-fuziol9u"
   },
   "checklist_concerns": [
     {
@@ -183,8 +183,8 @@
     }
   ],
   "seam_assessment": {
-    "storage_commit": "26808c99254b8c86e6d94fec4c28e76475d2475b",
-    "label": "session mu274z8h-ylgc5fy0 ended (deferred — B2 not reached; B1, B3, B4, B5, B6 green and all 22 carried findings terminal)",
+    "storage_commit": "efa08ab68c74aa7dd76536d3624fd9b3848a8145",
+    "label": "session mu6bmjry-fuziol9u ended (completed)",
     "covers": "no seam concern was opened by this pass; Phase 5 packaging only"
   },
   "subsystems": [
@@ -1179,10 +1179,48 @@
           "evidence": [],
           "adversarial_verdict": "upheld",
           "adversarial_record": []
+        },
+        {
+          "finding_id": "B03-R5",
+          "concern_code": "TB-1",
+          "severity": "MEDIUM",
+          "status": "confirmed-bug",
+          "resolution_state": "open",
+          "symptom": "An evidence row's locating coordinates are stored unchecked, so a disposition can be evidence-backed by a citation no reader can open. Measured in this store: 13 of the 35 evidence rows that carry a line_range name a range past the end of the file they cite, at the revision they cite it at — mcp-server/src/tools/findings.ts:verify_finding_fix at 1792-1798 of a 486-line file, mcp-server/src/tools/dashboard.ts:get_dashboard at 102-121 and again at 141-148 of an 85-line file, mcp-server/src/tools/stale.ts:clear_staleness at 1107-1120 of a 135-line file, mcp-server/src/tools/carried.ts:record_carried_outcome at 3512-3639 of a 735-line file, and nine more across mcp-server, materializer and the skill references. Every one of those rows is attached to a disposition and reads as evidence-backed.",
+          "root_cause": "add_evidence (mcp-server/src/tools/evidence.ts:44-66) validates two of the four fields its own description calls the anchor. requireWorkspaceSourcePath (helpers.ts:213-235) checks path syntax only — relative, non-traversing, not reserved tool state — and resolveWorkspaceCommit resolves the revision and stores it resolved. symbol and line_range are read by optString (evidence.ts:53-54) and go straight into the INSERT at :59-64. The repository already holds the check for the adjacent half of the same question: workspaceTreeHasPath (helpers.ts:359-370) runs git cat-file -e on revision:path, and its docstring states the principle — \"Parsing is not resolution, and an anchor pointing at a path the named revision never carried is an anchor no later reader can open.\" add_evidence does not call it, and no code anywhere compares a stored line_range against the length of the file it names.",
+          "business_context": "Spec section 2 of this lane made set_disposition take evidence ids so that evidence-backed becomes a property the substrate enforces rather than one the prose asserts. The ids are enforced: a disposition without an attachment is refused. The coordinates those ids carry are not, so a reader who follows a disposition to its evidence gets a file and a revision that both resolve and a location that cannot exist. That is the same prose-not-substrate defect the lane exists to remove, one layer down from where it was removed, and it is measurable at 37 percent in the acceptance rebuild's own store. It also explains a pattern visible in the four B-03 findings whose root_cause prose cites the same impossible ranges: a carried finding re-found by copying its archived coordinates is never contradicted by anything.",
+          "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+          "pass_type": "adversarial",
+          "recorded_via": "add_finding",
+          "primary_files": [
+            "mcp-server/src/tools/evidence.ts:add_evidence@23884334188e44e65ef4287d4d12fea9342f33f8",
+            "mcp-server/src/helpers.ts:requireWorkspaceSourcePath@23884334188e44e65ef4287d4d12fea9342f33f8",
+            "mcp-server/src/helpers.ts:workspaceTreeHasPath@23884334188e44e65ef4287d4d12fea9342f33f8"
+          ],
+          "evidence": [
+            {
+              "evidence_id": 36,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/tools/evidence.ts",
+              "symbol": "add_evidence",
+              "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+              "role": "root-cause"
+            },
+            {
+              "evidence_id": 37,
+              "kind": "code-verified",
+              "file_path": "mcp-server/src/helpers.ts",
+              "symbol": "workspaceTreeHasPath",
+              "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+              "role": "fix-anchor"
+            }
+          ],
+          "adversarial_verdict": "upheld",
+          "adversarial_record": []
         }
       ],
       "findings_by_state": {
-        "open": 4,
+        "open": 5,
         "accepted": 0,
         "ruled-out": 0,
         "fixed-pending-verification": 0,
@@ -1263,6 +1301,11 @@
           },
           {
             "finding_id": "B03-R4",
+            "verdict": "upheld",
+            "claim_b": ""
+          },
+          {
+            "finding_id": "B03-R5",
             "verdict": "upheld",
             "claim_b": ""
           }
@@ -2985,10 +3028,28 @@
       "question": "Territory T5 (aliasing and ownership) is disqualified for this pass. Does a subsystem's structural pass find one?",
       "what_assumed": "No cross-request shared mutable object is established in this read: every request and response crosses MCP serialization, and residual process-local state is covered by CR-1 and RL-1. Reopen if a subsystem's structural pass finds an alias.",
       "resolution": "open"
+    },
+    {
+      "id": 2,
+      "category": "contradiction",
+      "subsystem_id": "B-03",
+      "question": "B-03/SI-2 is dispositioned confirmed-acceptable on the rationale that \"every revision this surface accepts is resolved at the write and re-resolved at the read\", but SI-2's calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does SI-2 on B-03 stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?",
+      "what_assumed": "Left as recorded. B03-R5 is filed as a confirmed bug with its own evidence, and B-03/SI-2's classification is unchanged: revising a disposition another packet's survey pass recorded is a survey act, and this session is P11, which publishes and records receipts. The next session to survey B-03 adjudicates it.",
+      "resolution": "open"
     }
   ],
-  "field_notes_recorded": 1,
+  "field_notes_recorded": 2,
   "storage_history": [
+    {
+      "sha": "efa08ab68c74aa7dd76536d3624fd9b3848a8145",
+      "date": "2026-09-17T22:14:37-04:00",
+      "message": "session mu6bmjry-fuziol9u ended (completed)"
+    },
+    {
+      "sha": "b94d5e31721235138f8a70111a9ecdc249c7944c",
+      "date": "2026-09-17T22:14:35-04:00",
+      "message": "P11 adversarial — B03-R5: 13 of 35 evidence rows anchor past the end of their own file, because add_evidence validates the path's syntax and the revision and neither the symbol nor the line range"
+    },
     {
       "sha": "6eb2a1de2131b455f8ae6637b4cf782a624fc9ad",
       "date": "2026-09-17T21:24:24-04:00",
@@ -3105,9 +3166,9 @@
     "deferred": 0,
     "checklist_dispositions": 50,
     "seam_dispositions": 0,
-    "findings": 10,
+    "findings": 11,
     "disposition_evidence": 65,
-    "finding_evidence": 0,
+    "finding_evidence": 2,
     "claim_targets": 11
   }
 }

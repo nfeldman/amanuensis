@@ -1,6 +1,6 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+  "repository_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
@@ -3803,27 +3803,27 @@
   },
   "reported": {
     "ledger_rows": 646,
-    "evidence": 35,
+    "evidence": 37,
     "dispositions": 50,
-    "evidence_per_disposition": 0.7,
+    "evidence_per_disposition": 0.74,
     "attached_dispositions": 50,
     "attached_coverage": 1,
     "unattached_dispositions": 0,
     "disposition_evidence_rows": 65,
-    "field_notes": 1,
-    "open_questions_all": 1,
-    "open_questions_open": 1,
+    "field_notes": 2,
+    "open_questions_all": 2,
+    "open_questions_open": 2,
     "anchored_terms": 8,
     "anchored_terms_in_citation_form": 8,
-    "open_findings": 10,
+    "open_findings": 11,
     "scope_gaps_unledgered": 0,
     "subsystems": 9,
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 13,
+    "sessions": 14,
     "finding_status_histogram": {
-      "confirmed-bug": 10
+      "confirmed-bug": 11
     },
     "classification_histogram": {
       "candidate": 139,
@@ -3839,9 +3839,9 @@
       "delta": 143
     },
     "evidence": {
-      "candidate": 35,
+      "candidate": 37,
       "baseline": 133,
-      "delta": -98
+      "delta": -96
     },
     "dispositions": {
       "candidate": 50,
@@ -3849,9 +3849,9 @@
       "delta": -78
     },
     "evidence_per_disposition": {
-      "candidate": 0.7,
+      "candidate": 0.74,
       "baseline": 1.0391,
-      "delta": -0.33909999999999996
+      "delta": -0.2990999999999999
     },
     "attached_dispositions": {
       "candidate": 50,
@@ -3874,19 +3874,19 @@
       "delta": -116
     },
     "field_notes": {
-      "candidate": 1,
+      "candidate": 2,
       "baseline": 36,
-      "delta": -35
+      "delta": -34
     },
     "open_questions_all": {
-      "candidate": 1,
+      "candidate": 2,
       "baseline": 16,
-      "delta": -15
+      "delta": -14
     },
     "open_questions_open": {
-      "candidate": 1,
+      "candidate": 2,
       "baseline": 12,
-      "delta": -11
+      "delta": -10
     },
     "anchored_terms": {
       "candidate": 8,
@@ -3899,9 +3899,9 @@
       "delta": 8
     },
     "open_findings": {
-      "candidate": 10,
+      "candidate": 11,
       "baseline": 13,
-      "delta": -3
+      "delta": -2
     },
     "scope_gaps_unledgered": {
       "candidate": 0,
@@ -3929,12 +3929,12 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 13,
+      "candidate": 14,
       "baseline": 35,
-      "delta": -22
+      "delta": -21
     },
     "finding_status_histogram": {
-      "confirmed-bug": -3,
+      "confirmed-bug": -2,
       "fixed": -9
     },
     "classification_histogram": {
