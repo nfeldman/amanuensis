@@ -1,6 +1,6 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+  "repository_sha": "d627ea6788c9faa1eea2f63c7272a33ee9d69c1b",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
@@ -3825,7 +3825,7 @@
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 15,
+    "sessions": 16,
     "finding_status_histogram": {
       "confirmed-bug": 11
     },
@@ -3933,9 +3933,9 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 15,
+      "candidate": 16,
       "baseline": 35,
-      "delta": -20
+      "delta": -19
     },
     "finding_status_histogram": {
       "confirmed-bug": -2,
