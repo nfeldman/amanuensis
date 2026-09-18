@@ -64,6 +64,7 @@
 //   drop the gate from .github/workflows/test.yml    → A8 (ci)
 //   weaken evaluateReceipt so any of those passes    → the selectivity arm
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -124,6 +125,7 @@ const HEADLINES = {
   carried: "the carry receipt names a carried_id no carried_findings row has",
   counts: "the carry receipt reports a count the carry run does not",
   ci: "this gate does not run in CI, so a break lands on a branch no run reports",
+  recorder: "the tool that writes the carry receipt no longer re-derives it",
 };
 
 // ---------------------------------------------------------------------------
@@ -613,6 +615,39 @@ checked += 1;
   const control = evaluateReceipt(controlTriple());
   if (control.length > 0) {
     record("selectivity", `S0 the unsabotaged control is not green: ${control[0].detail}`);
+  }
+}
+
+// The recorder arm.
+//
+// Everything above reads the committed receipt and compares it with the
+// archive and the store; nothing ran `dev/record-carry-receipt.mjs`, the tool
+// that wrote it. So the recorder could be forced to exit 2 unconditionally and
+// CR1 stayed green over a document nothing could regenerate. `--check` is the
+// recorder's own answer to "would I write this same document today", and its
+// three exit codes are kept distinct: a recorder that cannot read the archive
+// is a different fact from one that disagrees with it (the header of
+// `dev/record-carry-receipt.mjs` says so, and this is what makes that
+// distinction load-bearing).
+checked += 1;
+{
+  const recorder = join(REPO, "dev/record-carry-receipt.mjs");
+  if (!existsSync(recorder)) {
+    record("recorder", `dev/record-carry-receipt.mjs is absent, so ${RECEIPT_REL} has no writer`);
+  } else {
+    const run = spawnSync(process.execPath, [recorder, "--check"], { cwd: REPO, encoding: "utf8" });
+    const said = `${run.stdout ?? ""} ${run.stderr ?? ""}`;
+    if (run.error) {
+      record("recorder", "dev/record-carry-receipt.mjs --check could not be run");
+    } else if (run.status === 2) {
+      record(
+        "recorder",
+        `dev/record-carry-receipt.mjs --check cannot run where this gate read the archive and the ` +
+          `store: ${said}`,
+      );
+    } else if (run.status !== 0) {
+      record("recorder", `dev/record-carry-receipt.mjs --check exits ${run.status}: ${said}`);
+    }
   }
 }
 
