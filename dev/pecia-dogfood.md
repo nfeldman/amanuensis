@@ -52,5 +52,65 @@ with owner identity `openai:codex-gpt-5`.
    correspondence test deliberately does not claim machine-local timeline
    authority.
 
+4. A foreign reference outlives the record that cites it only if the system
+   that owns it carries its referent forward. The 2026-09-14 clean-slate
+   rebuild of the conspectus destroyed the findings eight closed defects cite,
+   and `pecia audit` reported all eight at once — correctly, and with no way to
+   answer them from this side. The carry audit below is the answer; the
+   obligation it records belongs to Amanuensis, not to Pecia.
+
 These limitations are visible rather than waived. Amanuensis's existing CI,
 red gates, and explicit per-milestone commits remain the enforcement substrate.
+
+## Carry audit: the closed references the 2026-09-14 rebuild destroyed
+
+A Pecia defect closes against evidence, and for a defect imported from the
+conspectus that evidence is the reference `amanuensis:<finding-id>`, resolved
+by `dev/pecia-resolve-finding.mjs`. The 2026-09-14 clean-slate rebuild deleted
+the conspectus those ids named. Eight closed records lost the licence for their
+closure in one step, and `pecia audit` reported every one of them as
+`unresolvable-evidence` — the signal working, not a fault.
+
+The survey-depth acceptance rebuild carries all 22 archived findings forward as
+`carried_findings` records (`design/survey-depth/spec.md` §5.8), and the
+resolver follows a reference into the carried record and answers with the
+outcome recorded against it (§5.7). Each row below names the carried record
+that now answers for one closure. Re-running `pecia audit` over the rebuilt
+store reports none of the eight: all eight references resolve, each through its
+carried record, at exit 0.
+
+All eight were already `verified-fixed` in the archived store, so each carries
+the outcome `archived-terminal`: the rebuild inherited a decision rather than
+making one, and the closure keeps the licence it was granted. An id that had
+been carried undecided would resolve at exit 1 and appear here with no outcome,
+which is the state this table exists to make impossible to miss.
+
+| Pecia record | Reference | Subsystem | Archived resolution | Carried record | Outcome |
+| --- | --- | --- | --- | --- | --- |
+| `pc-1a91` | `amanuensis:B08-1` | B-08 | verified-fixed | `carried_id 22` | `archived-terminal` |
+| `pc-207e` | `amanuensis:B03-3` | B-03 | verified-fixed | `carried_id 8` | `archived-terminal` |
+| `pc-707e` | `amanuensis:B04-1` | B-04 | verified-fixed | `carried_id 14` | `archived-terminal` |
+| `pc-80b8` | `amanuensis:B03-2` | B-03 | verified-fixed | `carried_id 7` | `archived-terminal` |
+| `pc-833d` | `amanuensis:B02-1` | B-02 | verified-fixed | `carried_id 2` | `archived-terminal` |
+| `pc-adce` | `amanuensis:B03-4` | B-03 | verified-fixed | `carried_id 9` | `archived-terminal` |
+| `pc-ae87` | `amanuensis:B03-1` | B-03 | verified-fixed | `carried_id 6` | `archived-terminal` |
+| `pc-d688` | `amanuensis:B05-1` | B-05 | verified-fixed | `carried_id 19` | `archived-terminal` |
+
+Regenerate with `node dev/amanuensis-defects-to-pecia.mjs --carry-audit
+--markdown`, which reads the store rather than this file. `GATE PA1` —
+`dev/test-pecia-carry-audit.mjs`, `design/survey-depth/spec.md` §8.9b — is red
+when any of the eight is unaccounted here, when a row names a carried record
+the carry did not write, when it names an outcome the carried record
+contradicts, or when the closed records the audit reports are no longer these
+eight.
+
+### What this accounting does not cover
+
+`pecia audit` enumerates only *closed* records whose reference stopped
+resolving. An **open** record pointing at a destroyed finding is reported by
+nothing: the audit does not examine it, so it is outside the eight above and
+outside the gate that checks them. That gap is candidate finding **B03-R2**,
+which the acceptance rebuild carries forward rather than closes — carried
+record 11, outcome `successor-finding` into B03-R2 — and it is recorded here
+because an accounting that reported the eight without it would read as
+coverage of a question it never asked.

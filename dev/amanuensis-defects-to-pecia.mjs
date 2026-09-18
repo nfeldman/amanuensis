@@ -1,9 +1,21 @@
 #!/usr/bin/env node
 // Project Amanuensis's confirmed defects into the Pecia work ledger.
 //
-//   node dev/amanuensis-defects-to-pecia.mjs            # plan only (default)
-//   node dev/amanuensis-defects-to-pecia.mjs --json     # plan as JSON
-//   node dev/amanuensis-defects-to-pecia.mjs --apply    # write through the pecia CLI
+//   node dev/amanuensis-defects-to-pecia.mjs                  # plan only (default)
+//   node dev/amanuensis-defects-to-pecia.mjs --json           # plan as JSON
+//   node dev/amanuensis-defects-to-pecia.mjs --apply          # write through the pecia CLI
+//   node dev/amanuensis-defects-to-pecia.mjs --carry-audit    # the closed records' references
+//   node dev/amanuensis-defects-to-pecia.mjs --carry-audit --markdown
+//   node dev/amanuensis-defects-to-pecia.mjs --carry-audit --json
+//
+// THE CARRY AUDIT. A rebuild destroys the findings a closed defect cites, and
+// `pecia audit` reports the closure as unresolvable — which is the signal
+// working, not a fault. `--carry-audit` answers the question the signal raises:
+// for every closed record carrying an `amanuensis:` reference, which carried
+// record (spec.md §5.2) now answers for it, with what outcome, and does the
+// resolver `pecia audit` itself calls agree. `--markdown` emits the accounting
+// table `dev/pecia-dogfood.md` carries and `GATE PA1` reads, so that document
+// is derived from the store rather than asserted over it.
 //
 // WHAT THIS IS. Amanuensis decides what is a defect and whether a repair is
 // proven; Pecia schedules work. This carries the first into the second without
@@ -41,10 +53,16 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dbPath = join(root, ".amanuensis", "memory.db");
 const ledgerPath = join(root, ".pecia", "work.jsonl");
+// The resolver `.pecia/config.yaml` registers for this scheme. The carry audit
+// asks it, rather than re-deriving its answer, so the audit cannot disagree
+// with what `pecia audit` will report.
+const resolverPath = join(root, "dev", "pecia-resolve-finding.mjs");
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const asJson = args.includes("--json");
+const carryAudit = args.includes("--carry-audit");
+const asMarkdown = args.includes("--markdown");
 
 const SCHEME = "amanuensis";
 const OWNER = "import:amanuensis";
@@ -92,6 +110,26 @@ const findings = db
       ORDER BY f.finding_id`,
   )
   .all();
+
+// The carried obligations §5.2 added. A store written before that migration has
+// no such table; that is a real state and the audit says so rather than
+// throwing. Nothing else in this file reads it, so the plan and apply paths are
+// unchanged where it is absent.
+let carried = null;
+try {
+  carried = db
+    .prepare(
+      `SELECT cf.carried_id, cf.archived_finding_id, cf.archived_store_id, cf.subsystem_id,
+              cf.severity, cf.archived_resolution,
+              o.outcome, o.successor_id, o.repaired_sha
+         FROM carried_findings cf
+         LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+        ORDER BY cf.carried_id`,
+    )
+    .all();
+} catch {
+  carried = null;
+}
 db.close();
 
 // work.jsonl carries every revision; the head is the highest rev per id. It is a
@@ -294,6 +332,117 @@ function planFor(finding, head) {
 }
 
 const heads = readHeads();
+
+// ---------------------------------------------------------------------------
+// The carry audit.
+//
+// `pecia audit` runs the registered resolver over every head carrying a foreign
+// reference and reports the ones that no longer resolve. After a clean-slate
+// rebuild that is every closed defect citing a destroyed finding, and the only
+// thing that can answer for them is the carried record §5.8 wrote. This
+// enumerates exactly those records and reports, per record, the carried record
+// that answers for it, the outcome recorded against it, and the resolver's own
+// verdict.
+//
+// It reads `evidence`, not the label chain, so it does not need the chain to
+// resolve to one tail — a forked chain is a fault of the projection this audit
+// reports on, not a precondition for reporting.
+// ---------------------------------------------------------------------------
+
+function resolveReference(findingId) {
+  const r = spawnSync(process.execPath, [resolverPath, findingId], { cwd: root, encoding: "utf8" });
+  if (r.error) return { status: null, note: `resolver could not be run: ${r.error.message}` };
+  return { status: r.status, note: (r.stderr || "").trim().split("\n")[0] || "" };
+}
+
+function carryAuditRows(peciaHeads) {
+  const byFindingId = new Map(findings.map((f) => [f.finding_id, f]));
+  const rows = [];
+  for (const rec of peciaHeads.values()) {
+    if (!TERMINAL.has(rec.status)) continue;
+    const evidence = typeof rec.evidence === "string" ? rec.evidence : "";
+    if (!evidence.startsWith(`${SCHEME}:`)) continue;
+    const findingId = evidence.slice(SCHEME.length + 1);
+    // An id alone can match rows carried from two archives (§5.7); the audit
+    // reports that as the ambiguity it is rather than picking one.
+    const matches = carried.filter((c) => c.archived_finding_id === findingId);
+    const verdict = resolveReference(findingId);
+    rows.push({
+      pecia: rec.id,
+      status: rec.status,
+      reference: evidence,
+      finding: findingId,
+      live_finding: byFindingId.has(findingId),
+      carried_id: matches.length === 1 ? matches[0].carried_id : null,
+      carried_matches: matches.length,
+      archived_store_id: matches.length === 1 ? matches[0].archived_store_id : null,
+      archived_resolution: matches.length === 1 ? matches[0].archived_resolution : null,
+      subsystem_id: matches.length === 1 ? matches[0].subsystem_id : null,
+      outcome: matches.length === 1 ? (matches[0].outcome ?? null) : null,
+      successor_id: matches.length === 1 ? (matches[0].successor_id ?? null) : null,
+      repaired_sha: matches.length === 1 ? (matches[0].repaired_sha ?? null) : null,
+      resolves: verdict.status === 0,
+      resolver_exit: verdict.status,
+      resolver_note: verdict.note,
+    });
+  }
+  rows.sort((a, b) => (a.pecia < b.pecia ? -1 : a.pecia > b.pecia ? 1 : 0));
+  return rows;
+}
+
+if (carryAudit) {
+  if (carried === null) {
+    cannotRun("this store has no carried_findings table, so no carried record can answer for a closed reference");
+  }
+  const rows = carryAuditRows(heads);
+  if (asJson) {
+    console.log(JSON.stringify({ ok: true, mode: "carry-audit", count: rows.length, rows }, null, 2));
+  } else if (asMarkdown) {
+    // The shape GATE PA1 parses: the four facts a row asserts are backticked
+    // code spans, one of each per row. Everything else in the row is plain
+    // text, deliberately — an archived resolution of `ruled-out` rendered as a
+    // code span would be indistinguishable from an outcome of the same name,
+    // and the interpretation the eight share belongs in the prose above the
+    // table rather than repeated once per row.
+    console.log(
+      "| Pecia record | Reference | Subsystem | Archived resolution | Carried record | Outcome |",
+    );
+    console.log("| --- | --- | --- | --- | --- | --- |");
+    for (const r of rows) {
+      const carriedCell = r.carried_id === null ? "*none*" : `\`carried_id ${r.carried_id}\``;
+      const outcomeCell =
+        r.outcome === null
+          ? "*undecided*"
+          : r.successor_id
+            ? `\`${r.outcome}\` → \`${r.successor_id}\``
+            : `\`${r.outcome}\``;
+      console.log(
+        `| \`${r.pecia}\` | \`${r.reference}\` | ${r.subsystem_id ?? "—"} | ` +
+          `${r.archived_resolution ?? "—"} | ${carriedCell} | ${outcomeCell} |`,
+      );
+    }
+  } else {
+    for (const r of rows) {
+      const answer =
+        r.carried_id === null
+          ? r.carried_matches === 0
+            ? "no carried record"
+            : `${r.carried_matches} carried records share that id`
+          : `carried_id ${r.carried_id} · ${r.outcome ?? "undecided"}`;
+      console.log(
+        `  ${r.pecia}  ${r.reference.padEnd(20)} ${answer.padEnd(38)} ` +
+          `resolver exit ${r.resolver_exit}${r.resolves ? "" : ` — ${r.resolver_note}`}`,
+      );
+    }
+    const unresolved = rows.filter((r) => !r.resolves).length;
+    console.log(
+      `\ncarry audit: ${rows.length} closed record(s) citing the conspectus, ` +
+        `${rows.length - unresolved} resolving, ${unresolved} not.`,
+    );
+  }
+  process.exit(0);
+}
+
 const { byFinding, collisions } = indexBySourceLabel(heads);
 if (collisions.length) {
   cannotRun(`a finding's record chain does not resolve to one tail: ${describeCollisions(collisions)}`);
