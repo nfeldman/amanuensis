@@ -1229,7 +1229,9 @@ The lane's rebuild packets run, in **this worktree**, the recipe of
 3. **Delete** — `.amanuensis/memory.db` and its `-wal`/`-shm` companions.
 4. **Initialize and restart** — a second process opens the storage; `initializeSchema` creates
    the three new tables and every required view.
-5. **Carry** — `--carry-from …/old-findings-7c1c1a9.json` writes 22 carried records (§5.8).
+5. **Carry** — `--carry-from …/archive/store-7c1c1a9/memory.db`, the archived store opened
+   `?immutable=1`, writes 22 carried records (§5.8 step 1, which says why it is the store and not
+   `old-findings-7c1c1a9.json`: the export carries no store identity).
    *New step.* It runs before any survey work, so the obligations exist from the first session.
 6. **Read back** — from a third process: `get_project_info`, `get_dashboard`, and the carried
    count.
