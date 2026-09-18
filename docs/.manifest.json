@@ -1,35 +1,35 @@
 {
   "version": "0.5.0",
-  "generated_at": "2026-09-14T05:53:42Z",
+  "generated_at": "2026-09-18T01:47:28Z",
   "pages": [
     {
       "path": "architecture.md",
       "sources": {
-        "db:arch:seams": "a7d045830bef8b4e564b3c5ae630f525066b753d8bd7f5ff3884eb197610a5bf",
-        "db:arch:subs": "a3a4ebfa4a83178f755ecf2e389d57f270153cce2ff3d37b8ab651d396087910",
-        "db:arch:xrefs": "d835e633f907b7d0979a72a75ccad4577de32c3758dd324f75386ede6e9d22d2",
-        "prose:onboarding-report.md": "cf92088c8d2858924da8dc92231dedae065966fd31d8b17173bf23ea5959b413"
+        "db:arch:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:arch:subs": "0c47ab1c084a520d1672fda44106eeffeb05dc55c8437ba1b53a2835f9237f4d",
+        "db:arch:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:onboarding-report.md": "c23f02f39f368edcfcc86fc175341dc00c20b4904c6cab5e46a73f03cee797f9"
       },
-      "content_hash": "13f1d1da2817df35a7940b4ae2e80adffc5b7d3a18ba2b1fbd83734ce6641c94",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "47bac679391cb0e40c0c59fe92c9da21b2e37de3d77e4518e70d6c8a9d7675a9",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "concern-checklist.md",
       "sources": {
-        "prose:concern-checklist.md": "a12ece533be139bf6e16f67babd45089daeb4b2996487684938608cdd07376a4"
+        "prose:concern-checklist.md": "d624d7922557e5167208ad6058f0c30983f0f0b55ede3345ed3ce41e0d4c9f1e"
       },
-      "content_hash": "a12ece533be139bf6e16f67babd45089daeb4b2996487684938608cdd07376a4",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "d624d7922557e5167208ad6058f0c30983f0f0b55ede3345ed3ce41e0d4c9f1e",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "concerns.md",
       "sources": {
-        "db:concerns:all": "f970f1f5aaa737465d50559ba9e1684c3d1056109d8b3f578a990f4e6b7cff46",
-        "db:concerns:disp": "28fb135e2d9fa9cccdbc64f2385c78c1f417d3cf09c6b67e9f0024352c7a2360",
-        "db:concerns:subs": "751fa8410d3f77f12923eaa2d045a583a6bb2780c46e51c181547d253a8ac540"
+        "db:concerns:all": "d66231a1fd3c2e54e953581e13f182d7a47509d9ab4f8c1dbf6f560f08e66ea2",
+        "db:concerns:disp": "90b20686414e1835fd15660f33148c9eb19721f0d35e864980b40fa5fa7c82e4",
+        "db:concerns:subs": "5749d0e81166fd8838a7f856f37c2524f5166bbf719e18b6add98eb485e97403"
       },
-      "content_hash": "ce5e78bcafe40d84c573bec4742e880690ec0376f5729b01c3763743839e4e46",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "a9a57613f7ca6f440a0048f79912354efde65f58deacefb59e55d4837ea68bf3",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "contradictions.md",
@@ -38,8 +38,8 @@
         "db:contradictions:resolved": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:contradictions:standing": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0"
       },
-      "content_hash": "d233d71dec10d429c2fec050ff9d3deb50edae9e6f68bbd7905eaece649104b6",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "17a9a11062b1ee23a024e65ae07c7dbac425512dc7209cbf4789bdbebd99f88f",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "diagnosticity.md",
@@ -47,149 +47,151 @@
         "db:diagnosticity:index": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "content_hash": "52978217cbfbdcb15f5e81b3f04c53f77055e6608a23fb52c7a56a3dd977f6c3",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "disagreements.md",
       "sources": {
         "db:disagreements:contradictions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:disagreements:dispositions": "01236184fd21ea79d4fc2dbdcc006c6bcf6fd7a9d71f6be031c0af803f8fab95",
-        "db:disagreements:matrices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:disagreements:names": "6542e2beb1cf712c95e9d023f35b7daee2af18d52989c9a8a0f24f618e5704c7"
+        "db:disagreements:dispositions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:disagreements:matrices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "2b1a159c05d2f5a3d68feb25a5c9261a6c9361dafe5988747db34d1b8ae10ee2",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "46990f6b7a56f00546ca9e6cfc17e1162431766a49ee9a12fd90f61a8a3351db",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "entry-point.md",
       "sources": {
-        "prose:entry-point.md": "48e0af2bfbdaf030e8545d3cab9d898fdcc24bdd9796e19bd75bc17fba40cf0a"
+        "prose:entry-point.md": "50b116a70a06f120b25f76c479ed11c12e45ae4ad260ceb0fda91f56c77fd979"
       },
-      "content_hash": "48e0af2bfbdaf030e8545d3cab9d898fdcc24bdd9796e19bd75bc17fba40cf0a",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "50b116a70a06f120b25f76c479ed11c12e45ae4ad260ceb0fda91f56c77fd979",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "field-notes.md",
       "sources": {
         "db:notes:closed-count": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:notes:open": "2afec5ea8b3c378aeb9902015bde6f1362c118c31f672e02041e676ca94a27f4"
+        "db:notes:open": "c1ff904bd32a9b825d2d261560946dcec65868b4c5ae94e8b9e958f0a97b4d8d"
       },
-      "content_hash": "5a3fdc76912680bf89145d8bb0e2ee557350a16aaaa60c1d65bc789b393276ef",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "58b22cef082abd47e949921bca7bbf03757a7112a7f90d6c87b1497fa898f735",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "files.md",
       "sources": {
-        "db:files:defects": "f7d0a3c491b64d0ab722810409a3df59216907572e0c8c8c728cc3bdefc97d3d",
-        "db:files:git": "8681d7697094b4c48a3449c09672abf7f5f958ace1058c8eea0eb76db2617cb2",
-        "db:files:standing": "d8a3d989ca56a28f36aaf2ac315dee604740c824c4f43398c2c66fa549aa54ec"
+        "db:files:defects": "cb7c268586738a81ceccda7694433c37a265d6894c9ac03f6104cfdcfcb78dea",
+        "db:files:git": "b46b4313e516bcd0d23d14f3607a2dc6b1d14f815ae9f32aa81395fb1395d1ff",
+        "db:files:standing": "523c6017017b610c61215ce56ffb5d60ab631dde6bbe2d00f5fd6edf30676a27"
       },
-      "content_hash": "27563225b4888e73f8cb12c59f0c726bd86c8ad0df3327957ccd3dd7eea78cc0",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "fa483b064e966fde3daf4f8abde0517474ec28dc84a5f4add93ba5ce9997e89f",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "findings.md",
       "sources": {
-        "db:findings:open": "c67f2ad96b167482e6dca9343e3d36f440d111146bc27a1e4f662ff48ae9599c"
+        "db:findings:carried": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:findings:open": "977534adde7d03416cb126b3b7cdc86351067be585ac9cb5ab0ef8b6b7af9dc2"
       },
-      "content_hash": "e27f618f8785f9457fb3b1a957a973e02120991602fca0735d327f3bda0d8193",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "3ac07d0354fb23d5e44222450f9bd3c8ad2461c871a1f60ea5d391e3f567cc5b",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "hot-spots.md",
       "sources": {
         "db:hotspots:access": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-        "db:hotspots:measures": "912058b35293cc3bc49e872d67bf9a7a7c9dece6fae52da958513f614f7209ed"
+        "db:hotspots:measures": "3db225fb40250187edccf219cc3c6add875fa2fc0cd1a3306c2f190055ca5bc6"
       },
-      "content_hash": "252a4474436198e47677261afff1abe27efcc312a2b5ea0b6b954c1474a1ac50",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "0b1f856ceca8a53c47c6cf4781d6760ec774cf391a3a10a9b691b7da4cafb8c3",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "how-to-read.md",
       "sources": {
-        "synthetic:how-to-read": "85cdeee22d9c2675",
+        "synthetic:how-to-read": "cef7d53b01135f63",
         "synthetic:how-to-read-contract": "92521fc3cbd964bd"
       },
-      "content_hash": "85cdeee22d9c2675299321bf74e953f17b1227ec8ada41f451f9dcdc0e7c6f87",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "cef7d53b01135f630e12ab8e95d2f3e6f25fe4dc3a346b8af7e5e7892c2584ed",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "index.md",
       "sources": {
-        "db:index:alignment": "d89852674f6d8686d825991f7dd811508a742aa379173befdcb4e76b813ea2a1",
-        "db:index:decisions": "11d0a8967009cbcdf468f09e5b09e73e7119b528c35a0e0b23f2ae052786b8fa",
+        "db:index:alignment": "db2924cbcf76147c08f89d43d45f540a66f15418b21aa867a54d37de6d2ef290",
+        "db:index:carried": "573568e390a81b6a507e9d4a3dc48f5c7df638f1b06a6139a19f7b034ccc0e2b",
+        "db:index:decisions": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
         "db:index:identity": "931d73cc206559d429b860b80e58fd83819968632537639b2d7bb1dabd1c6c70",
-        "db:index:session": "5b7197db90df4e5aa560aa4123c1350aeac6a7692018758bf08d93acc5007236",
+        "db:index:reconciliation": "dda321b82bbb76c9fb26ff2427d91ec1b836ada756141b0ce077bb398d2ad536",
+        "db:index:session": "346cd1c1c8acf6b041aed567b538ebef39f2c36a044f30c897efea7310aa9a6d",
         "db:index:stale-objects": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:index:states": "5794d27c7dff86d91287a8fd91a0f20a1cad528b8c297bc03e059127bd8118a0",
-        "db:index:subs": "626d7c88259d67db976ba834eabc1fcab54cc5a25974343745670f6f717eb5e7",
-        "db:index:unledgered": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+        "db:index:states": "8de14c71dba4c8c514e97e808a95a500bf48ab9e44f5a4b0dfaff0d5182cdd8f",
+        "db:index:subs": "58e852c3d34e5fada25a26260d4046fbf5b0ba036e093e918d7fe42b904412eb",
         "db:index:unresolved": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:index:verification": "e9971ce4d4609666ac8cb471d9b321a284e843da80f614197da3b4aae8529221",
-        "prose:entry-point.md": "48e0af2bfbdaf030e8545d3cab9d898fdcc24bdd9796e19bd75bc17fba40cf0a"
+        "db:index:verification": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "prose:entry-point.md": "50b116a70a06f120b25f76c479ed11c12e45ae4ad260ceb0fda91f56c77fd979"
       },
-      "content_hash": "c0f0a555949c368bde49a4980c3c79c51633a2d5a34d543c9d1bddf9aff01548",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "84bfd6c3a553c269c197b0bd84e0aacb7e06709bdd3deb51566ed73005353c27",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "master-plan.md",
       "sources": {
-        "db:master-plan:finds": "c874deba7c57d241a9d31590e1156ebe316085701cf81fe20b58f7b1dd9c04af",
-        "db:master-plan:subs": "3b057e2d61128fae8bfbf5521b51e958d6159bc4adf90d47ff2a463b8e209bc8"
+        "db:master-plan:finds": "151087d0a09eea89828909651e1906affd1607f8027a99ebc5f2d32854ec50ad",
+        "db:master-plan:subs": "c7e1c3bfe238be6d88191a80a79af1c474b3907a094a2171c63d4feb45f04f87"
       },
-      "content_hash": "db634a717cbfde784ffc45f7fa3c9f520f2944c9dd881667a1fdacd5208c762a",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "ac9a147fd097edd3fb9362ec62fa633b07bbab824279c126ed6ae9be64a2e9f7",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "not-yet-surveyed.md",
       "sources": {
-        "db:gaps:concerns": "cfaf3e93f5879023cfc472d72f62730154f2c0d5e807135eaa02481cfa0d7184",
-        "db:gaps:dispositions": "681def9be4be69a004facceb4d7f43065145a8762a12dbcfd9592b818429470a",
-        "db:gaps:git": "8681d7697094b4c48a3449c09672abf7f5f958ace1058c8eea0eb76db2617cb2",
-        "db:gaps:ledger": "6dccba3854182d7b64ee639a8a6648a0c2b43bfaf42e98d6838be138d0c24899",
-        "db:gaps:seam-parties": "52aa9b1cbce041e81548ac63afe31b9e7402f0391ea7af51ac2bafaedf5e2fde",
-        "db:gaps:seams": "092e063d971e6742847a2d26d8c4c0ec1963c78e8c05da7416a22b4e23ebe012",
-        "db:gaps:subsystems": "fd1610ca1fad00a9f3ca39c523dc9c7d3701cb7cf4b75560ac723aac264b4dc4",
-        "db:gaps:tracked": "718df450482999420d3f6708dba5371a1a5a245fda64b7ab52305cec056b12a0",
+        "db:gaps:concerns": "0ab143156c8b5164ebe549dd5d61536b38a4ecd2a55b87f368546fa10092a935",
+        "db:gaps:dispositions": "155f1c32cf6ae3aa403904f3c3f53d0a449416aea22cf4233b645f4a40ace590",
+        "db:gaps:git": "b46b4313e516bcd0d23d14f3607a2dc6b1d14f815ae9f32aa81395fb1395d1ff",
+        "db:gaps:ledger": "12c57550f7b29ecf858f5e27b5a468b51cb8bbdc4b284379d374ee6a7898f1af",
+        "db:gaps:seam-parties": "094b1c60b495734f3c0c715a61aa8faad0ce861462a14278fbe0a4b3a676879a",
+        "db:gaps:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:gaps:subsystems": "a1b07cd27c84fbdeef34b2481319d61b39232614f2c8e1ccfcc0f0200229b4ed",
+        "db:gaps:tracked": "6dec2f9697d4cbfb71a138b2142c019d1a3b4e6fd5f52343ab6a47f1c1dec0cc",
         "db:gaps:unledgered": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "2d30f249cdc9216ab4b4ff2c05a9dc472d36200babf2b623e99fae65f844e826",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "f205c0945e982abae9a40a0957b55b3cf0b9308d9ad402fd59684573c3a817fc",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "onboarding-report.md",
       "sources": {
-        "prose:onboarding-report.md": "cf92088c8d2858924da8dc92231dedae065966fd31d8b17173bf23ea5959b413"
+        "prose:onboarding-report.md": "c23f02f39f368edcfcc86fc175341dc00c20b4904c6cab5e46a73f03cee797f9"
       },
-      "content_hash": "cf92088c8d2858924da8dc92231dedae065966fd31d8b17173bf23ea5959b413",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "c23f02f39f368edcfcc86fc175341dc00c20b4904c6cab5e46a73f03cee797f9",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "open-questions.md",
       "sources": {
         "db:open_questions:closed-count": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
-        "db:open_questions:open": "bd2a8cb51e22016d194a42450fc4cc8e885573be70e46ec3fb588a97ef6f5ba5"
+        "db:open_questions:open": "229c2b0183a7dca44c86812d316088825d4ea79c8d7e0c461046354afabb6a46"
       },
-      "content_hash": "3cce09f15c6a63ce80c10ee84e44d963ac11c068b3e7db3ab4b87502b90dd670",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "28d40c4fec967664fa4da59db1fedceb2f22ba357ebe094112bcc4eadb6e60f7",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "resolution-history.md",
       "sources": {
         "db:history:contradiction-events": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:history:finding-events": "427344cfb761c16ca18f996e03fefc58aed32d4670114a9d665339ce136349ba"
+        "db:history:finding-events": "8edc0621c76672a6765b969d305350745381476f0d658303f754eea9803cddcc"
       },
-      "content_hash": "f9de29aafa4ff3b52241dcc4bd8f13c5540520993e68d102d3cc9e1a5bda9e31",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "df787cbb9599bde411441159d43a0409f85599e9a3b74a9ec09ff4c5f724b2ea",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "resolved-findings.md",
       "sources": {
+        "db:findings:carried-resolved": "573568e390a81b6a507e9d4a3dc48f5c7df638f1b06a6139a19f7b034ccc0e2b",
         "db:findings:resolved": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:findings:resolved-basis": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
       },
-      "content_hash": "eec96a584bc784d73d7f3fcf064dde47f89c8ae65ed4c86f1710e8a4386b86fa",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "030147917ab8b671d4bdff236404314ba39dc6e96fb70d9186e56ca0d6ab5eb6",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "resolved-leads.md",
@@ -197,332 +199,362 @@
         "db:resolved-leads:notes": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "db:resolved-leads:questions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "9594431ecc64986339a99180b48fd32fb5a7d4a946a959f1caadf40140cb6812",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "bc0b9c70efd872680df6a9d9937183c2d3fbe19291b11a67c8aae3758acddd4a",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "seams.md",
       "sources": {
-        "db:seams:all": "cda74e8e8521b18c859baebde5ef94550ba2df1d4859ad7f1983e8ed78eefcaa",
-        "db:seams:assess": "b0ae009b10163dd537f6d8b5948bb00abf8c6eae2ec181579820fbfbd50d7815"
+        "db:seams:all": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:seams:assess": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "e5655783e81a2e50498d4fa1e02629ce6f8909d4062f42b26438b713d2fd2cca",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "074604d25d21deac985d3ea170bbfc844052780e121e282f1e2330cffc1c2a9d",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "sessions.md",
       "sources": {
         "db:sessions:refreshes": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:sessions:sessions": "872058a496ee0236c56fa54b5290f35b4db9f8075065384ce665f94d36b22840",
-        "db:sessions:verifications": "7b43fd7f732a6c300ac596e0e88b7b771a2377724a0a14036b917d723148e53d"
+        "db:sessions:sessions": "427c149cf0db0b9d6f82c3a8cab8eb01b83887cd8744f9f296b54cf22159d89b",
+        "db:sessions:verifications": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "6d6f340a7b34d38495cf0bc5b893ef2ab53ece7f7f8f8fb0a6637f5fdf4a5661",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "7d662aa8b46d361e931af151814fd4181199837e854687f816c212ac8b86d2be",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "stale.md",
       "sources": {
-        "db:stale:freshness": "391f9ba45177e5bc383a596f5a7690a6f44150e1c0abbf744bbbf1365e1923b2",
-        "db:stale:git": "8681d7697094b4c48a3449c09672abf7f5f958ace1058c8eea0eb76db2617cb2",
-        "db:stale:ledger": "71d44e0427598e0da90ca002c203671ac4fbb5e6b1cef36998a774c642aee23a",
-        "db:stale:names": "6542e2beb1cf712c95e9d023f35b7daee2af18d52989c9a8a0f24f618e5704c7"
+        "db:stale:freshness": "6d83b0af19632da3c1536f1ecb90cd34cc75af19c7539818971c123b32fcb40a",
+        "db:stale:git": "b46b4313e516bcd0d23d14f3607a2dc6b1d14f815ae9f32aa81395fb1395d1ff",
+        "db:stale:ledger": "c173cdabab7da693ceb5c331f51295e40abaf24c6f8bb65c813581ad212ed015",
+        "db:stale:names": "4ec7313afb3cb1a24ecc3d174c7ac5f1c240d3a9879ee0925acd4549507cd09f"
       },
-      "content_hash": "c1d61f4059e981b3ce19e14012626c9b0363175fa1ef64bc270ba1d62c4f2b2a",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "b7f5785d4687100867c7fad30db4c375664d46decf008c1e94cd8e1136188c72",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
       "sources": {
-        "db:subsystem:B-01:artifacts": "f32656b970aab5695fd687d4ffd15bf7b0b9b49149cba35139bb388f0d4f72bc",
-        "db:subsystem:B-01:claims": "60b34cddf3a60d1c2fdaeeefe99cdf95a7eac8ba5edffe570e4b61477ff69936",
-        "db:subsystem:B-01:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-01:disp": "038be2cb72d69be717c79bd1844883737f62bf08bdca06f3f88de4bd81bb7c82",
-        "db:subsystem:B-01:files": "b13ec034be2fed7741946629a74665a807454d45daf7d96c1ca776e836031197",
-        "db:subsystem:B-01:findings": "9aee3ee678a3c0086e8dd7b04b1b0286e9830e7d7eb8229f203ffef7372755a3",
-        "db:subsystem:B-01:row": "e787a125578a24160d136389c1ccccfff444923449322395a31eb3ee39953863",
-        "db:subsystem:B-01:seams": "8313744d7d829fa69c25d4ceaeda7c0e874b4660a1567ad356b272ee2e0964ca",
-        "db:subsystem:B-01:standing": "a43a2d740bbd602827bf472f074a806d237d4ab39f6cd2923f005e1f65e100e6",
-        "db:subsystem:B-01:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-01:xrefs": "5bdef04a7f4fe8681d256ea884a0655258eb4b2380bc48d8f2eaac85277c4e43",
-        "prose:B-01-methodology.md": "5cd3d68a845469b5cd3e1b7b604cfd1d05aae1f01c8c859fc74d6c818f8ebdd9"
+        "db:subsystem:B-01:artifacts": "44f8ed7115333288fc22e41516eb8b6e72bfd6f734fb346596e9a074cb7e9cfe",
+        "db:subsystem:B-01:claims": "b6fa8a101e733812cad171ead15d3e3b729016bbc98dc16a50cdf8c5ba5b136b",
+        "db:subsystem:B-01:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-01:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-01:disp": "8d47dbf42b8da525d2c13d3b26e8f0b74253d4f8118ecf266668b4e51feeb301",
+        "db:subsystem:B-01:files": "d3a9e304ea23f9b13791995e24430d8c95d3e1d173e726fd6c390d7cda975811",
+        "db:subsystem:B-01:findings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-01:row": "502991915ce95cf977aad042217247f4a08bffcc12839ca19616a4caae085670",
+        "db:subsystem:B-01:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-01:standing": "82967b004ba4e31468a7dc1e0b13e5bdd0ec15d7595bde41026d2c6fb8b82e49",
+        "db:subsystem:B-01:vocab": "b67d92c229c299359a8f40627258ecb577bd51fb26365fa4b693d1855da60e69",
+        "db:subsystem:B-01:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-01-structural.md": "9ae7ec0f7847278c28845e9674ba57a0ae2617ae873252521be81aab2ae0947f"
       },
-      "content_hash": "886ab64fa25f54c820f127a17eec6c129937932d8ec8e3d03eaa52e1f78b35bc",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "da0419543372d0871561152c6213a01cc5ec018f0f8595f2fbcb699931cf8a3a",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md",
+      "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "sources": {
-        "db:subsystem:B-02:artifacts": "60938351dcbbba9ef56da190c1bddd77a80252db2e0a566a9089b2327c06d821",
-        "db:subsystem:B-02:claims": "7b63d3dadba45dffd29255f759ed37c6c430fed4d9a99a8f9aeb2636ab4c1d45",
-        "db:subsystem:B-02:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-02:disp": "f4f807a6fc2828b81ceb1142e85ac70c25f19536c3ebcdbe9e026ecb38d95098",
-        "db:subsystem:B-02:files": "0af18295c248b209bdcfd14ba82650cb5f48d775886bc6185e5218f926f33986",
-        "db:subsystem:B-02:findings": "7d643571e4196ac4e8dbdcfb48fefaae8af5fbbfcf54a75037ec9d7cd0374757",
-        "db:subsystem:B-02:row": "1d43469546bf5781d2ad6eae7ab7a8673a88cb10d6c812eae9328e73fa0fd0e3",
-        "db:subsystem:B-02:seams": "45fdbba1fc1000db01c8d26f51291ee0ef67aa1aa09ac0642b987cb2717fd9bf",
-        "db:subsystem:B-02:standing": "41f86b3ad67319714eea297042caf842ca2540e079c7d067532b5caa2fe992f2",
-        "db:subsystem:B-02:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-02:xrefs": "a122c44e88441e5901d6854bbc6d176efd04ad30a7b1e1d8763a82bb96fa9378",
-        "prose:B-02-server-core.md": "135d05cb810b4dff7aa6a002b61bcf5ebf2b3c2336f562c6ba7ab41b8231ead1"
+        "db:subsystem:B-02:artifacts": "67484cd0e20f7e2ecb8f9e740a795e1ecff3fcf7cadbd61b4c2f22e05ee4843c",
+        "db:subsystem:B-02:claims": "03fb2013fdea290118c65717a07268cdfbae1f84c2494d037185c36755b75b59",
+        "db:subsystem:B-02:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-02:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-02:disp": "4dd23e2d09978b26a98e245420a64d21d1dac9197a87110eb8d6f394d7a70f5a",
+        "db:subsystem:B-02:files": "c474c875e1c5b4bae66214463e318193263ed7c1c763876083cbc6d42b182c23",
+        "db:subsystem:B-02:findings": "ce14827107e461c70bb5a7f36423d56649050b6da74fe066d691ea9d5d67b2c6",
+        "db:subsystem:B-02:row": "5e3426479467abb00b709c8cdaa700ff6486cbc3f63b462ffedf5fa553ebf708",
+        "db:subsystem:B-02:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-02:standing": "df766929f2b2b6e2d7b9d23c2154c9d115636846468c10f1f28a1c5b80438f6a",
+        "db:subsystem:B-02:vocab": "28a4e1bfb5424d96bf4bdc085f4d91801d0412c68b3f0fe6d2d448fc88df0b7b",
+        "db:subsystem:B-02:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-02-structural.md": "4a10fc6f49c190fe80875832041c54375670b660093f7a04a846cbddcbf568e6"
       },
-      "content_hash": "a369a632e5efb9d4f4be8547f78183edefd05c14a6353be48f81a319648cb6ef",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "f161f0f2f099d022ba9ecdd3d57696bb845bc77c4782b2ff185b63bb40fce9cb",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "sources": {
-        "db:subsystem:B-03:artifacts": "0189fb66b47c7882a0c092a2a21ec3f1bd9b76d5e23fda1e2ff35f2b877c7845",
-        "db:subsystem:B-03:claims": "7831ee22d91747eb496c9782af140e4416a880795415e6ef374ba393fc0d188a",
-        "db:subsystem:B-03:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-03:disp": "54fd429a1bf9963dabfd89f922b788950eeb8ccb54b59cd235cbcd81f52e597e",
-        "db:subsystem:B-03:files": "cc415954f2a8a4ea6d18a9a05d319c6e29a682afd1862b5868d9185783c9a145",
-        "db:subsystem:B-03:findings": "a3b42082b91b0ef620245f99f5b19421c0af908246b05a390b6bff66762b0c34",
-        "db:subsystem:B-03:row": "77af3ca47225f2b5513fa14b94e72f1973ae02daec8e0c3df2d588b338138428",
-        "db:subsystem:B-03:seams": "6be4c192d93198aadc3f4c60ac4b5edc54fbb194b75e405dc1bcbf0a3c0ccf1d",
-        "db:subsystem:B-03:standing": "97bc47a6c3a01ae60c8f0f6788081ad50a189cd3698af6aa1a1553c7c8f2d6f9",
-        "db:subsystem:B-03:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-03:xrefs": "600e589b609f76a14f513563b03e8bfc8bc8b29f646968959ebea8e03b5503bc",
-        "prose:B-03-knowledge-tools.md": "bef6ba8824d8520f42425ce615e361ee3563b23cb226f4ad05e2ee52d014983c"
+        "db:subsystem:B-03:artifacts": "911cfb6459a6fa79e5927b1ec0270ec15e426b43d137144cff111dd7b80b592a",
+        "db:subsystem:B-03:claims": "eae21a5b7258c809c88451e926cb9751417d5a014b15ad852efd2289a19f4dc3",
+        "db:subsystem:B-03:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-03:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-03:disp": "72fe6160a071fa2533cf73942c9c904610e240faa21cd8dc578027ac7ed559e3",
+        "db:subsystem:B-03:files": "6d6ff249df72b1ed8f0ebafdb4f9d5484d1b2d28d6650c07a24ea792a48eded5",
+        "db:subsystem:B-03:findings": "4133564b72c8959d3325d3c9b251a1c25675ba72f8233d63f9b859eeea4c4fc2",
+        "db:subsystem:B-03:row": "b3afaa7d6085f9bf635207152cb41d359cbea0391d735f08395723d4671d7eb3",
+        "db:subsystem:B-03:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-03:standing": "640d57b9961a61810244b5d0ea17d1f37409f77dbd1393b893bd23ef91313d3a",
+        "db:subsystem:B-03:vocab": "8045afd452b349b9875aa13f0b8edebd7c550ce857a966396a405bd7669afbe0",
+        "db:subsystem:B-03:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-03-structural.md": "5a3466d4949e6111b6d69cdacfb48a42ffd946f0325c0730c341353226724652"
       },
-      "content_hash": "186584d3dcaaed6dc0e7d15c7030014385003ced756d93682aaa8e0bb4106b5f",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "2fe2da9b34e616dd5f856e807438f5d83a2f5030bd7a7052c4d46d79694e3c0d",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md",
+      "path": "subsystems/b04-diff-aware-materializer.md",
       "sources": {
-        "db:subsystem:B-04:artifacts": "6250594b55f5d819368d254cb7371ccbdabda6781880c4b2c468e244281ae56f",
-        "db:subsystem:B-04:claims": "ea1479068939d255f8d83d1b6183b48cc0f2f3a103d34293fe921a2e40426e56",
-        "db:subsystem:B-04:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-04:disp": "b50d5f35a9a4b548049cce8438c0092e1d1aadddcff1e1d99fc8bb79cb2c96a1",
-        "db:subsystem:B-04:files": "011ad4c95795515d38b9604465468d23741a8e2f7fce53eb2777aeebdf1a0e24",
-        "db:subsystem:B-04:findings": "9dc7620392f010fea7a526a71b4efa79e7a8348ae5be390745c8f3081d4e548d",
-        "db:subsystem:B-04:row": "eec0c6bee0da36b3cfdd18cc748e80d7d92a56c3d8292c26e91a4fcb010890f7",
-        "db:subsystem:B-04:seams": "39621c03455882d5218be5fad6932cd7132920f77c744be4b6ea7f69e0744984",
-        "db:subsystem:B-04:standing": "21a2904055b2466732bffb9b6f7f2a42308a8a06f76202541c9b4e6f1b73a737",
-        "db:subsystem:B-04:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-04:xrefs": "2b11004342236caaa9cd7339b2fbbfd4271502e865e0c8fe09af25d5f1f2ce47",
-        "prose:B-04-reader-lenses.md": "b30d08b68dd5b94ae50c9709a25125ccdd5d1271a22e2463cf407a13184eac32"
+        "db:subsystem:B-04:artifacts": "7f2a81e8b8c96dc6daf2f5fe591194154af1f19b6b1e01aa82803f31f364a321",
+        "db:subsystem:B-04:claims": "84f8d666e5f71466d694ce146b6bc2070fc72bdaaca14f8b1792873ff3132cd2",
+        "db:subsystem:B-04:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-04:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-04:disp": "ae24a28666a09e79f94c9576fc8d1a337f09aa01933fd11c19eca078c269d82c",
+        "db:subsystem:B-04:files": "047410f468007f73f009d0c574c2c2a60994734d49bcb61e029dc697e648ebbd",
+        "db:subsystem:B-04:findings": "f4ad4887cb048d0ff0f8d1febf37b315d995424e5065bf0d6a358d2ed894d537",
+        "db:subsystem:B-04:row": "5a381f1babf23295b9a3e1f6a9c770c1955bdbe7d9050cf37b4370e7763f7ccb",
+        "db:subsystem:B-04:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-04:standing": "78ab7130719f2f9a56b3d49e10bd17b491b69eba6e3570a5ffe7589fc6a12b9e",
+        "db:subsystem:B-04:vocab": "a1cb53ea53617184a893c2d1daed2d5e3f426d7d9dd4076c23e2838863f4ec28",
+        "db:subsystem:B-04:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-04-structural.md": "a5a73c29df741f2e30b30cb53bd826b3e2192f7a0b144188908764e815b4224d"
       },
-      "content_hash": "7105a804b1a7173b278ba734c4a0de122f3b52eb109b0ed93d1983905633c640",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "e9bc18205ff3e17d958d2845e8b316e2a125ee6f32ab87a66abff9dd72425ffe",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b05-materializer-human-projection-read-back-html.md",
+      "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
       "sources": {
-        "db:subsystem:B-05:artifacts": "177cae008b5c5659e1642cab6dbed2c04cba6e0c6bfa6440a7d80c4e7e34bccb",
-        "db:subsystem:B-05:claims": "b72045d9bd338b6807c4657d0ddcb86c08bb78c8fe0715d712de6791cd5404e2",
-        "db:subsystem:B-05:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-05:disp": "cafcfc6c6ac2903bdce3bfc100b9c7eb828057c3d6d2e76a7b2be30bd601e79b",
-        "db:subsystem:B-05:files": "429293cf949167010166df4be1b12bca69788e1fed19fddfbd7d8d76d5cd9171",
-        "db:subsystem:B-05:findings": "223e3cc2c9dbc79c96d5467c66f3b8757fdc25adfd22a5e19efd00afd51005d5",
-        "db:subsystem:B-05:row": "05704c85fc1e2e56259bdcfe1575f4313ffdc9c44b0be550354c912ca411cdbd",
-        "db:subsystem:B-05:seams": "bf89fe1d40b793874336648f2e177a5ea20da61297440f61bebde0249da3d6e4",
-        "db:subsystem:B-05:standing": "1d34291b0d88a6205baca1a154bcc282ed97c0b5c1d2ffdc4d0c546f21e90f17",
-        "db:subsystem:B-05:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-05:xrefs": "133416b754651640bc9c7ebae2824008abeb41d453a0fda888deca5d2de5f065",
-        "prose:B-05-materializer.md": "4e00ea4996f4c4afa2a298c4e4e55707055723f7c0af573ce5bbf4ded117a902"
+        "db:subsystem:B-05:artifacts": "883603ffe7de889a4df10be8a7bbb7b236d03c95cc69660d4581f0a09495440e",
+        "db:subsystem:B-05:claims": "2f4c556deb5a916a87949df4d72b2497192bab73a91eefca46ac89c185aa9b10",
+        "db:subsystem:B-05:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-05:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-05:disp": "2208d685eec324111e2e201977a58cb362c5de72dc14c173b926c86e1049209a",
+        "db:subsystem:B-05:files": "e05eecee6464b56915699f7e6ccdc89a8a5eae4d0d434717b4968afe5c3bb3df",
+        "db:subsystem:B-05:findings": "958aa5830fcd451e3182edd886d7459f6a21db8d21fe48b9cdc8c4e13b7864ab",
+        "db:subsystem:B-05:row": "33ffcc87c2a11c1d513912ed05d0ea65110e370eb6b06d16ded54c1048d47150",
+        "db:subsystem:B-05:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-05:standing": "bf044081fa1ed05cdc9db059cf82dac74afe9f3fd6c882025fdd296f751bcaba",
+        "db:subsystem:B-05:vocab": "5ce85dde1a42907f55833749fc0801643e10daf30c713450389f22d4b0fefaf5",
+        "db:subsystem:B-05:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-05-structural.md": "d8bd9abb8b153e6c827bc56d38d4c98e61a210c25214a2d47b574bf128bb79af"
       },
-      "content_hash": "85c2a336a25d0e6204d29e00b4cc74905c5cbd6a8894390b4761825f45562625",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "cd84bca5228cfface4dc859f39756a902b56c054450196ce36493da9ccdba7e7",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b06-packaging-installer-and-host-activation.md",
+      "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
       "sources": {
-        "db:subsystem:B-06:artifacts": "a750d6daccc19861f45c776a00db6aab13dab74c5fa6d6a5a0e5b9aff026876c",
-        "db:subsystem:B-06:claims": "c6874d4de355d6d09d9f2ab387ef914c5aab723458950b8297fd3130d81955af",
-        "db:subsystem:B-06:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-06:disp": "9d677138b245a5d58c8f27852402bffae184e473c1677e6dc0c570a9fd8f3817",
-        "db:subsystem:B-06:files": "aaebcc546efebbc613ddd153f718904f5a0a541672d2454de61d505eabf7c85e",
+        "db:subsystem:B-06:artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-06:claims": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-06:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-06:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-06:disp": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-06:files": "fe352ccb9c5d5f687e8f6119237886f4a7de68157b85276408f045ae9549ef14",
         "db:subsystem:B-06:findings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-06:row": "05ec7da18b4544f3e9aacfe403f4d933eee4dd7c24765ae41751815353c34bcf",
-        "db:subsystem:B-06:seams": "349b561247ab5c422fc91f60b6a561bc34c170bb7769753bd9fb2d3538f11f18",
-        "db:subsystem:B-06:standing": "dd9fb3e8360d323be1eeaf2051f6fb041bd25675443088c7c91e98057de19ccc",
+        "db:subsystem:B-06:row": "d248e1004ed26ff8ae8d3f4e7ccf58be61da0c50a7cc8cc1a5f5df0b94066ddd",
+        "db:subsystem:B-06:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-06:standing": "b70a0c97c3ef88d6cff8a4ecdd608870b2a0a960674cc50acc89cfb021c182d2",
         "db:subsystem:B-06:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-06:xrefs": "7bf5f528653b56ccb40e7c4262b56183c19743137c2927537c2e3ecbe45b02c1",
-        "prose:B-06-packaging-activation.md": "66ea20c5b1598d762a31728368a0b7b6a609bebbf946f7d262c3e817afcdbb0f"
+        "db:subsystem:B-06:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "e39eaa92b53c7588c6442739e7679bf69af032005f9731843c20f5d7da43239f",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "e26ca9dd59a3d067a828fa333e8e807ef9cfb11d8bf6dd22c1872e9083bb54fd",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b07-gates-evidence-custody-and-ci.md",
+      "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
       "sources": {
-        "db:subsystem:B-07:artifacts": "d1b9ca826f5c7a97afa718f775af16f140a8c96fd140c37870461f0e32a1d1d3",
-        "db:subsystem:B-07:claims": "c813832f05b2f269e04cd3f4d128e4c22a9a90c7677568b623d6ddd1ff2407dc",
-        "db:subsystem:B-07:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-07:disp": "1d7f6f8cf0aad65e2c25699089a88a90394fdb7b98beb55e53ec17a9976f63e2",
-        "db:subsystem:B-07:files": "21bfda3ab8a345677ad9798f650be6de5e6034039eaf3e0cca870886e82c728c",
-        "db:subsystem:B-07:findings": "a8e3f1b318c0923cc3a738bbc30f6e5a214e50e003b1f299f526ed5657228e81",
-        "db:subsystem:B-07:row": "5f5c1b7b6c6c878648c30c9de01da64850f4f781f13ac5f7f2e72676bc36c1b0",
-        "db:subsystem:B-07:seams": "6b3a1e0f36f365fd7846ce563b4ec85a9d7c88e1cbb61d7d6e3af921fbef0fd0",
-        "db:subsystem:B-07:standing": "ad5059799bcbad2033b65f3713e77fffe3bf4fe64d8400230b3f7db913b1594e",
+        "db:subsystem:B-07:artifacts": "b1eb2a0116f8bbbc98260fdbb0f51a0fe5f46cbc0e9289cb09439906aa447cf1",
+        "db:subsystem:B-07:claims": "69fb9cb38671b92e23307cf43200fc70e4698ade369c7315dc64d4078614a634",
+        "db:subsystem:B-07:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-07:declined": "55d5dd6a72934954ba3b6ebdb7aeabeea0e00b77ae261db3d611ef27c412e92e",
+        "db:subsystem:B-07:disp": "d20bf937288d48ac71b2abe5342eafe9cba2f63e5393986122d7a36997cc7451",
+        "db:subsystem:B-07:files": "3d45d273d9389f7a2bc12d4a1329f23fbb146e0229c7b87a704feba878d8408d",
+        "db:subsystem:B-07:findings": "1a04801f27cb623632cf429046de4322b92f3f8f7bae5ae100dd762f64c2fbb2",
+        "db:subsystem:B-07:row": "78d9794ecf756dff71e7fca682dc76ef749dc608d5ccc9aa5e38aefa2a2ab835",
+        "db:subsystem:B-07:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-07:standing": "d4e95140da4d94c8ee95bc42c089eeed585389d125e278db03d317c326f05f2c",
         "db:subsystem:B-07:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-07:xrefs": "c94026ae979778a78cfd6cd4fa9cdd4b8b622633997c0715da7de0bf97a628c9",
-        "prose:B-07-gates-ci.md": "e6a2fc073f5284e5663514c3944d7517bac95694d60b17398d12d1dc301df2fc"
+        "db:subsystem:B-07:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "prose:subsystems/B-07-structural.md": "53cead8e108763d5d3deae95086a102a7946a4b42659bd04ae1abb3666de0d09"
       },
-      "content_hash": "fa971524c300def99782555c657012fcf437c0290d8966006588a2f8f5b1b254",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "ab67e964f96be064e39413c30f50d85cef751d03283bd267a7f0b126430c1b11",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
-      "path": "subsystems/b08-records-design-research-published-projection-execution-ledger.md",
+      "path": "subsystems/b08-activation-evidence-and-release-readiness.md",
       "sources": {
-        "db:subsystem:B-08:artifacts": "aab624147de5b54fab43a91e765b275b3f188316345a596a3ec17ec5c4017dfb",
-        "db:subsystem:B-08:claims": "eef22ce0863ad0f17f4be3669cf5ff62e4c100223fd6dc7cb513e47eb65c6f50",
-        "db:subsystem:B-08:concerns": "c86d61123cf4da05dc592b73b2bad7c75ed4125824999d3eb7213b6828530bcb",
-        "db:subsystem:B-08:disp": "59c15255657084b04c58b2fd31c4e7ffdc2a90ca2f825cdd62c198e11955da2a",
-        "db:subsystem:B-08:files": "775c5bc365faf87ba301281006f0ad328f28daa13294fd6e4fb899e29623900a",
+        "db:subsystem:B-08:artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-08:claims": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-08:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-08:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-08:disp": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-08:files": "5f4c0c764214ad1b6182988aefca320e88b0c9962660f29aab5781bd2953f5b1",
         "db:subsystem:B-08:findings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-08:row": "5b8492adf21c5f885d49e3e9bfe02cd248af1ff43737ff9822990d2e5c200c35",
-        "db:subsystem:B-08:seams": "90d144f7f6ae739dcf792939d5528800803b13d0d5b76e4ba7a23cf2f6751e10",
-        "db:subsystem:B-08:standing": "99c8024369f960c8dfdf995986b9689adbc3c20458f9fe0b0d3fa07633f3a556",
+        "db:subsystem:B-08:row": "760016459712eea4af49f051bafc62ae2011c6810077b44fb93753deb14a4a14",
+        "db:subsystem:B-08:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-08:standing": "cb50a3d3700b089fd196c4d49a4d9c2c8871281eb0b5e1384970df40fa3c7378",
         "db:subsystem:B-08:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-        "db:subsystem:B-08:xrefs": "1b6c2e16f23fc48e2e5c0d7f479dbfa9649a5be9d97fe36cd38596a5db49d9c6",
-        "prose:B-08-records.md": "7a314c3b6a9b9dc5bed07a0e2c506525df0015ec75763f67ee0e9773d500f0c1"
+        "db:subsystem:B-08:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
-      "content_hash": "cb78fc5fa03bc2bf93588d0ba81ea414b5cf0ad3c252ed5d7a8988dfab64dcdf",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "1d876fdd696683692f51d4e791c3f0d5c64f5f324404629cce2f3fe619328870",
+      "rendered_at": "2026-09-18T01:47:27Z"
+    },
+    {
+      "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
+      "sources": {
+        "db:subsystem:B-09:artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:claims": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:concerns": "a38f75333f905dbae11006de13ad36b044da888c19b6271ad1e2ec2c732512fe",
+        "db:subsystem:B-09:declined": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:disp": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:files": "47d9380389e791af21343cd8d70ebb353012e3d1dcecac0352532891f81f1199",
+        "db:subsystem:B-09:findings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:row": "73f22ac170ef9c85e0b784632655ff101c6e048de41493556a9b3f43c2e18565",
+        "db:subsystem:B-09:seams": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:standing": "f701db22aeca223dd2f5d4958aee4a07e6618d61eec6f462772e0feaf043ad50",
+        "db:subsystem:B-09:vocab": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "db:subsystem:B-09:xrefs": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "content_hash": "81e2dc9a98384d033218159fb69c4ffc2a01f690df05f1084d41b3666e437c7d",
+      "rendered_at": "2026-09-18T01:47:27Z"
     },
     {
       "path": "vocabulary.md",
       "sources": {
-        "db:vocab:all": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        "db:vocab:all": "9ddee134b095f8b137baed2c4f567008fd2446a7910e793c51ac48733ef7da7f",
+        "db:vocab:declined": "cc1ec9ca2c72639dd4ac99cf87eb070b7e318cc31718670729044a22e3d60dcd"
       },
-      "content_hash": "9edecd353ac43ca1491c1cbc7c274e2d7fddde9879374646898d2af3c38705b8",
-      "rendered_at": "2026-09-14T05:53:41Z"
+      "content_hash": "94ab710f20f587dc91a13de4afebbec6de0770c0cb4d5904c40ac7d1aca59ef7",
+      "rendered_at": "2026-09-18T01:47:27Z"
     }
   ],
   "projection_files": [
     {
       "path": "architecture.html",
-      "content_hash": "b49767c5d9fdd89e63985e4b6f79af1f709ca9a68eeb79a8e5d56a0e4620b45a"
+      "content_hash": "d31da3c55254f51f25fbc0de06326ca556b41d128755b16acbc084bfcb265c88"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "908dd69f9318b463a5f13245ff3b7e797e4bbde79d6b045f49a2124bdd01c453"
+      "content_hash": "806d16b592e202825a0b1d8d388b8697d380a2ab4de9e7f6ca6764248437c55f"
     },
     {
       "path": "concerns.html",
-      "content_hash": "f89cc97bd68c2b4bf7ecc870b4986322a680c32f44c92133f7fa8c53e4421878"
+      "content_hash": "63db76504122affd9b73f9eef413507d336987de80562104c7306315b53da939"
     },
     {
       "path": "contradictions.html",
-      "content_hash": "f944c51fb4ecb9ecfcabfc9b9bd8e53b8645e0fdc3b60d32bfcb2c2aab1f0d6b"
+      "content_hash": "5640e3793713b4869f3aca6e0d88f23c242cedc462507c4c87a2282c004735cf"
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "842e717b03bd0ce9bc2cd995ffd002b2a460fba579231314a6e1aa017f6333f8"
+      "content_hash": "b2ed548465cc726af823649e1c5b89c6a6b85a65d6704675babf8894362061e5"
     },
     {
       "path": "disagreements.html",
-      "content_hash": "5daddfb64c7499e6e4ed4807470c10f8ca6f3f785cbc6e75d895a678cdb68200"
+      "content_hash": "171ac73a50dbe481f3c441a71988a33cd1edc4bb57c289e88bd73915f8cf8ade"
     },
     {
       "path": "entry-point.html",
-      "content_hash": "d6eb51177df647ff410fcfcaa6012c36fbe252b4eccf78535e084b04bcfe8387"
+      "content_hash": "c4b3e493440c98edfee3a3477eaa740066ead3f1ef90b687f5a71ac54cc94cb4"
     },
     {
       "path": "field-notes.html",
-      "content_hash": "06cc7561bed79f0d60dbaa19dc2c9bd184187632dd4eced180683cd453df7090"
+      "content_hash": "2eb49347db375e99a6b1ce1f230a3bee0cc49bccb08f489ad4be48e2bf261790"
     },
     {
       "path": "files.html",
-      "content_hash": "51dad81b1688322360fce0eb6133707eb81088ff3cf69055beb0b949f1f465fe"
+      "content_hash": "e570a3766f18e4100feb5e36a6e40336cf6b5c83f396aea003cb66b8be912e81"
     },
     {
       "path": "findings.html",
-      "content_hash": "33bde5e0b783bdead8f2ce1e2ddaa5129d097d3a8f9edff7a6adb2ba6331ede0"
+      "content_hash": "8753faef56176d6f50a3747674cb8c95cef79d5b9a3fd8f09e0a6ee8a2615e79"
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "816bc01a5f4e0c9bc0a1d44335571b12155aa76160aabe068d7e6c04544e58a7"
+      "content_hash": "3341397b6ae35222ac3d95c9f26fc75ad64f490516f9975a0704b0a2d97ab221"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "c7be94a15acbfd3423cc809ad5c17a6408ff9bedbe58800b5502d25171a01673"
+      "content_hash": "acb7b05bea07ca3a539fce107464ade20f40ce6b1f00951f1021eae758b16b42"
     },
     {
       "path": "index.html",
-      "content_hash": "d9ced9402147e4dc396244407f310a0c6d51c142423a63e83d93fa2350a6bd31"
+      "content_hash": "35d5bf4a32b68f67ace945338274f66727bf716992c8cb5df9250b40c65f4ec1"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "b129c38ec6c7578de025b290f2b9cd6126e4bf0ca1a52f49e6bb4b565963be78"
+      "content_hash": "1716da2b559dc2c37c378ad01b0c5cfd10747702ef113b54cf0a547a74a19ed2"
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "153d7d8364179cb288ba55c6c1ba22a8330dc3f4474d50e4e0556f89ff0bd1bb"
+      "content_hash": "4103ec7f81bfc4764a3fe38430e26481469e6bfb9d8562fecab04d464e5952a9"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "af569c48030c7d1cc53acbb7824b474478151d1e5232cb998c8f1075e84eee60"
+      "content_hash": "dd03210058928be21d6cd8a977ae2b7cc7f0a367e24ed968ba512b1bea426f88"
     },
     {
       "path": "open-questions.html",
-      "content_hash": "6f0a2e9823d0afce6612ae3b3d3e3be365035c893b5da5f072ebea89f5d992b0"
+      "content_hash": "b90cbb6386523b82a7a8643bc0df2e4d2af16c41f20a65c31ee114b094f10adb"
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "0205a8f5262ff73edbb5e0ea8e9dfd17b6825940a9d45a181bb237f647e14516"
+      "content_hash": "f42768905433e7dcda73fd87d73abf757b7f57e6adadaafd8f43277a1b2ffc81"
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "b600c4b3532fd68e82e71360ded09ede765656c23480dc03ff5b87b5b23bd86c"
+      "content_hash": "e168ad5ab33a7bb3484bfccc6eaf7134dc23970128f31ce128d23fdc534f27c5"
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "154b14e3c7913bda0ecad5a306a238c12a3a2eedd1d2fe960352004421341f41"
+      "content_hash": "4672db7e6eda83aa32b4dbdb741111132a07d43880bdb5c7fa483970da8589f1"
     },
     {
       "path": "seams.html",
-      "content_hash": "25bbc7c7623d974089327d6d00274f1e4c7c876bb05c62736e5f35b01aa2fae7"
+      "content_hash": "85567de97435eb50bb2f52a5d3fc2ba3b9f35013f618725edc86e520a0059d58"
     },
     {
       "path": "search-index.js",
-      "content_hash": "3c2cb45563be7b71cc358ad4b72542d4c5b4ebe91b25e40a74893f7ff59ddc1f"
+      "content_hash": "3aadf74b50f779b9e3d4d7fb4dc88310f154e3b495acb1202f3662d69a9e1a3d"
     },
     {
       "path": "sessions.html",
-      "content_hash": "7e4b71ab7fbf6406fc36e55577a4314b84a1e476eb2f5c0ecce845473443e0ab"
+      "content_hash": "36a5d57984b677f6f1cdd981a5b7d707ebc24e06c0cb08ae9e063a66c39fed25"
     },
     {
       "path": "stale.html",
-      "content_hash": "7e390edf407aa1625b41049808a85a57629ce1cd829a3fa96f7432ca14622457"
+      "content_hash": "605d1181122bb76722843bc383ec7733273aa375e6627f846acee4e12f9fe863"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "0ad9e580df2e0cb136f3bb5c71dc2efd47121abe056faaecc465a7098bec0cc9"
+      "content_hash": "ca29fa5e0b6ffcfd92510dbef6905629efdd8aed1bb2c8b3b8f1a96ee812e1bc"
     },
     {
-      "path": "subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html",
-      "content_hash": "6c4e22a83593e816d8f7d9ee7e90a75a049f8a5baec9919a912c87a5b61a88ba"
+      "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "content_hash": "e1cfd6390a96635cdd38069225286445b2ae1e25fdf8a9e53888f340c2a3545d"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "b538ee08e5d69e008773ef1235e25f4b6909f8a842375d915e5cd0742ee8f83b"
+      "content_hash": "e20ec7eeb2f9c6a7e6f468052c76719b8456627059343f432c1d57cd594d1657"
     },
     {
-      "path": "subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html",
-      "content_hash": "05214a0b2bff59bebeb48626eedc2c5fe40325cfd3fbea090b31045b3c78fec9"
+      "path": "subsystems/b04-diff-aware-materializer.html",
+      "content_hash": "2a2bb1f2b78db9db3554107c5392b08985672c61c86b967ee2e97653df3906fc"
     },
     {
-      "path": "subsystems/b05-materializer-human-projection-read-back-html.html",
-      "content_hash": "a29c64cdbf6d066cd85f1d59a6e6ac865b2f3b2b225e0760c06586bac5f87dd4"
+      "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
+      "content_hash": "d180368c4c0993264174d1df4cddd534a3766a92bb4764882a65101abe1a5e7a"
     },
     {
-      "path": "subsystems/b06-packaging-installer-and-host-activation.html",
-      "content_hash": "1b4183e43cb86bf03e79145eb75c70090ff4c8a46e9f0f55469a06b0ec763c94"
+      "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
+      "content_hash": "ec64c243ae0cc89477886f5f3c618f895cc0a3830858b72d3c2cc6df067edd77"
     },
     {
-      "path": "subsystems/b07-gates-evidence-custody-and-ci.html",
-      "content_hash": "464a60375a6c97dc8471db1df04bb4d54fe01b94b1635532bdf1a6f8b22515c0"
+      "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
+      "content_hash": "080d6b7a8d8e094a000fe1cb39beba78c83020dd461726cd79d53e58cea88e0c"
     },
     {
-      "path": "subsystems/b08-records-design-research-published-projection-execution-ledger.html",
-      "content_hash": "ac1316d01e5098547cd6b41ebd3f4a8f66bb36eef39848581781bfbe62dc5206"
+      "path": "subsystems/b08-activation-evidence-and-release-readiness.html",
+      "content_hash": "134661e03049520ab0a82c1916e5254110c2702e292cfae09b61ee0c3a5d74fd"
+    },
+    {
+      "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html",
+      "content_hash": "20213cd29f725fcea2b5517ab531a321b0d6b01ae13d8fb3a508e37491335bb5"
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "c201e60a86680e76121a61aca1d35739d8741cf3330812bd1550adb713ca3e76"
+      "content_hash": "72600eb55728f075c9a8957d87d2f4d1b8ef495912458bdd8e65096151e7521b"
     }
   ]
 }

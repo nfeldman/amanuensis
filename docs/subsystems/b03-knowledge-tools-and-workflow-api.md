@@ -1,94 +1,62 @@
 # **B-03** — Knowledge tools and workflow API
 
-**Status**: 🟢 mapped  
-**Layer**: api
+**Status**: 🟡 adversarial  
+**Layer**: Runtime
 
 ## Scope
 
 No purpose statement is recorded for this subsystem; the scope below states what it covers.
 
-mcp-server/src/tools/ — every handler module except locus.ts, claims.ts, xrefs.ts and vocabulary.ts (which are [B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)): subsystems, files, evidence, dispositions, findings, resolution, concerns, contradictions, diagnosticity, field-notes, open-questions, seams, stale, impact, refresh, review, review-analysis, review-session, composition, codebase-brief, design-session, decisions, research, crosswalk, learning, evaluation, chorusmith-adapter, revalidation, compare, dashboard, artifacts, git, locks, logging, dispatch, project, storage-history, materialize.
+mcp-server/src/tools/** — the tool surface a survey writes and reads through
 
 ## Start here
 
-tools/evidence.ts and tools/dispositions.ts — the evidence anchor is the methodology's load-bearing constraint; then tools/findings.ts and tools/resolution.ts for the resolution chain, then tools/subsystems.ts for the knowledge-depth gates.
+src/tools/evidence.ts; src/tools/dispositions.ts; src/tools/git.ts; src/tools/carried.ts
 
 ## Structure
 
 What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.
 
-### Key types
-
-| Claim | Subject | Statement | Epistemic kind | Asserted at |
-|---|---|---|---|---|
-| `B-03/key-type/mcp-server-src-tools-subsystems-ts-reset-subsystem` | `mcp-server/src/tools/subsystems.ts:reset_subsystem` | reset_subsystem is the only path that regresses knowledge depth, and it clears dependent rows in one transaction so an interrupted reset cannot leave a subsystem at an earlier status carrying survey output from a later one. Dispositions, findings, field notes, xrefs and artifacts always go; the file ledger and every claim under the subsystem's prefix go only when the target is scoping or earlier, on the stated reasoning that a reset below structural discards that phase. Claim matching uses substr rather than LIKE because a subsystem id may contain wildcard characters, and it removes historical versions with current ones so no history is left with a hole. The xref deletion matches either endpoint, so a reset also removes edges other subsystems recorded toward this one. | Observation | `7c1c1a9f5689` |
-
 ### State containers
 
 | Claim | Subject | Statement | Epistemic kind | Asserted at |
 |---|---|---|---|---|
-| `B-03/state-container/mcp-server-src-tools-dispositions-ts-set-disposition` | `mcp-server/src/tools/dispositions.ts:set_disposition` | A disposition cannot be written without an evidence anchor, an evidence-quality tag, a rationale, a revision that resolves in the bound workspace, and a pass type. Three of its vocabulary-bearing fields — classification, evidence_quality and pass_type — go through requireEnum against the generated vocabulary source rather than being accepted as free text. The methodology's central constraint is therefore a refusal in code, not a request in prose. | Observation | `7c1c1a9f5689` |
-| `B-03/state-container/mcp-server-src-tools-findings-ts-add-finding` | `mcp-server/src/tools/findings.ts:add_finding` | add_finding writes the finding row and its opening resolution event in one step, so a finding cannot exist without a resolution state, and it resolves ref_sha at ingress as the revision that opening event is placed at. The identifier is taken from the caller through requireString with only a documented convention behind its shape, and the primary key on finding_id is the only uniqueness constraint it carries — scoped to one store, with nothing in the row recording which store generation minted it. That is the property [S-10](../seams.md#s-10)'s foreign reference depends on and does not get. | Observation | `7c1c1a9f5689` |
+| `B-03/state-container/eight-unshared-git-probes` | `mcp-server/src/tools/xrefs.ts:resolvesInWorkspace` | Revision resolution is implemented eight times across this tool surface rather than once. xrefs.ts names itself the eighth copy and records that they are deliberately unshared because each owns a different failure policy. The consequence the comment does not name is that a property added to one — such as the wall-clock bound B02-R1 and B02-R2 ask for — has to be added to all eight, and nothing in the build compares them. | Inference | `c0734040022f` |
 
-### Flow steps
-
-| Claim | Subject | Statement | Epistemic kind | Asserted at |
-|---|---|---|---|---|
-| `B-03/flow/status-ladder/01` | `mcp-server/src/invariants.ts:enforcePhasePrerequisites` | Four of the five status transitions carry a mechanical prerequisite, each naming the deliverable of the phase being left: `structural` requires a non-empty file ledger and at least one current claim under the subsystem's prefix; `concerns` requires a registered subsystem-survey artifact; `adversarial` requires at least one disposition; `mapped` requires a recorded challenge outcome on every current claim. enforceForwardPrerequisites walks every rung between the current status and the target, so a skipped phase names itself rather than being silently jumped, and it treats an insert opening at a later status as an advance from unmapped because upsert_subsystem is a status writer too. | Observation | `7c1c1a9f5689` |
-
-### Concurrency invariants
+### Other claims
 
 | Claim | Subject | Statement | Epistemic kind | Asserted at |
 |---|---|---|---|---|
-| `B-03/concurrency` | `B-03` | Roughly forty handler modules share one connection and run one at a time within a process, because the MCP dispatcher awaits each handler and better-sqlite3 is synchronous. Multi-row mutations that must not be seen half-done are wrapped individually in db.transaction by the handler that owns them — reset_subsystem is the clearest case — rather than by a transaction around dispatch, so atomicity is per-handler and opt-in. Across processes, exclusion is advisory: acquire_lock and release_lock write and clear rows in active_write_locks, and nothing compels a writer to take one first. | Inference | `7c1c1a9f5689` |
+| `B-03/atomicity/every-durable-write-is-one-transaction` | `B-03` | Every tool in this surface that writes more than one row writes them inside one ctx.db.transaction, so the invariant the pair expresses cannot be observed half-true. set_disposition writes the disposition and its attachments together; detect_changes writes the staleness marks, the scope_gaps rewrite, the git_state update and the append-only reconciliation row together; carry_finding writes the carried record and its archived-terminal pre-record together; add_finding writes the finding and its opening resolution event together. | Observation | `c0734040022f` |
+| `B-03/trust/a-worker-report-is-never-the-verdict` | `B-03` | Wherever this surface accepts a report from something it did not run, the report is landed and then scored by a separate call that re-reads durable state rather than believing the label. score_composition_item re-resolves the commit, re-reads the artifact registry's content hash, and requires a terminal review aggregation; score_integral_verification compares the reported checkout HEAD and tree against the manifest and requires zero dirty paths; record_carried_outcome requires a post-repair reading whose revision is a descendant of, or equal to, the claimed repair. | Inference | `c0734040022f` |
 
-### Seam contracts
+## Vocabulary
 
-| Claim | Subject | Statement | Epistemic kind | Asserted at |
-|---|---|---|---|---|
-| `B-03/seam/S-10` | `S-10` | From this side, what [S-10](../seams.md#s-10)'s foreign reference resolves against is a finding id and its current resolution state, and this subsystem guarantees only the second of those. The resolution chain is append-only and its terminal states are meaningful: the resolver exits 0 only for verified-fixed or ruled-out, and fixed-pending-verification deliberately does not resolve, so Pecia inherits the distinction between claiming a repair and proving one rather than re-deciding it. What this side does not guarantee is that a finding id means the same thing over time. finding_id is caller-supplied, carries no store generation, and a rebuilt store may mint it again for an unrelated finding; the resolver reads whatever store is at .amanuensis/memory.db now and cannot tell one generation from another. | Observation | `7c1c1a9f5689` |
-
-## Boundaries
-
-### Seams
-
-| Seam | Shared object | Other party | Assessable |
-|---|---|---|---|
-| **[S-01](../seams.md#s-01)** | .amanuensis/memory.db — the SQLite store, its schema, and the single open handle | **[B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)** | both parties are `mapped` |
-| **[S-06](../seams.md#s-06)** | The claims, claim_evidence, evidence and xrefs tables — written by the survey handlers, read by the reader route | **[B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)** | both parties are `mapped` |
-| **[S-08](../seams.md#s-08)** | The phase contract — stated as prose in the skill, enforced as prerequisites in the server | **[B-01](b01-survey-methodology-and-agent-contracts.md)** | both parties are `mapped` |
-| **[S-10](../seams.md#s-10)** | The `amanuensis:&lt;finding_id&gt;` foreign reference from the Pecia ledger into the conspectus | **[B-08](b08-records-design-research-published-projection-execution-ledger.md)** | both parties are `mapped` |
-
-### Recorded edges
-
-| From | → | To | Relationship | Strength | Context |
-|---|---|---|---|---|---|
-| **B-03** | → | **[B-05](b05-materializer-human-projection-read-back-html.md)** | data-flow | structural | materialize_docs is a handler here that spawns the Python materializer as a child process and asserts the output path stays inside project storage, which is why the tool cannot be pointed at the tracked docs tree and promotion is a second explicit step. Read at mcp-server/src/tools/materialize.ts:resolveStorageOutputPath@7c1c1a9 which resolves a relative output_dir against storagePath and asserts containment. |
-| **[B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)** | → | **B-03** | data-flow | structural | The reader route serves rows the survey handlers write: a claim binds evidence rows created by add_evidence and describe_locus reads them back as a locus account, so this subsystem's output is only as good as that subsystem's input. Read at mcp-server/src/tools/claims.ts:requireFileAnchoredEvidence@7c1c1a9 which resolves each evidence id and reads its kind and file_path. |
-| **[B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)** | → | **B-03** | dependency | structural | index.ts imports roughly forty handler modules from tools/ and hands each the same DB getter, so every knowledge tool writes through the one handle this subsystem owns — read at mcp-server/src/index.ts:main@7c1c1a9 where allTools is assembled and ctx.db is defined as a lazy getter. |
-| **[B-01](b01-survey-methodology-and-agent-contracts.md)** | → | **B-03** | dependency | structural | The skill states the phase contract as prose and this subsystem enforces the subset of it that is mechanical, so a phase obligation the prose states and the code does not check is enforced only by a model choosing to comply. Read at mcp-server/src/invariants.ts:enforcePhasePrerequisites@7c1c1a9 which is the enforced subset in full: a ledger, a claim, an artifact, a disposition, and a challenge outcome. |
-| **[B-08](b08-records-design-research-published-projection-execution-ledger.md)** | → | **B-03** | dependency | structural | The Pecia ledger holds defect records whose evidence is the foreign reference amanuensis: plus a finding id, and a resolver opens this store to answer them, so a scheduling system outside the conspectus depends on this subsystem's finding ids and resolution states remaining meaningful. Read at mcp-server/src/tools/findings.ts:add_finding@7c1c1a9 where finding_id is taken from the caller with no generation component. |
+- **verification object** — What a composition item was verified *over* — either one unit subject at its own target commit, or the whole assembled HEAD in a clean worktree — recorded on the item so a unit pass can never be read as an integral one.
+- **wire budget** — The 8192-byte ceiling a list tool's response must fit, measured on the doubled envelope — the indented text block plus the structuredContent that repeats it — not on the payload.
 
 ## Known defects here
 
-2 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
+4 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
 
-- A finding id can be re-minted by a rebuilt store and silently satisfy an external reference that was made against a different finding. Discarding a store makes every `amanuensis:&lt;finding_id&gt;` reference fail, which is loud and correct; re-minting one of those ids makes a closed defect resolve again, with nothing anywhere reporting that the referent changed. — [B03-R1](../findings.md#b03-r1) · 🟠 HIGH · Open
-- A clean-slate rebuild has no supported path for carrying an unresolved finding forward. Discarding a conspectus discards its open defects with it, and nothing tells the systems that referenced them that the referents were destroyed rather than resolved. — [B03-R2](../findings.md#b03-r2) · 🟡 MEDIUM · Open
+- A subsystem can report status 'mapped' with zero unledgered paths, zero absent files and zero stale entries while most of its scoped files have never been examined. Nothing in the server measures examination within the ledger, so the store's own census cannot distinguish a subsystem that was read from one that was inventoried. — [B03-R1](../findings.md#b03-r1) · 🟠 HIGH · Open
+- A finding can be promoted to verified-fixed while its recorded fix_sha names a commit at which the repair does not exist, so the resolution record misattributes the repair to the wrong commit and nothing in the custody chain detects it. — [B03-R2](../findings.md#b03-r2) · 🟡 MEDIUM · Open
+- When a file's content moves but every claim written against it still holds, the conspectus has no action that records the move. A citation whose line range has shifted keeps pointing at lines that now hold something else, and a range that lands on unrelated prose in the same document reads as correct — it makes the conspectus look wrong where it is right. — [B03-R3](../findings.md#b03-r3) · 🟡 MEDIUM · Open
+- A finding's severity cannot be amended after it is filed, so an adversarial pass that re-grades one can record the re-grade in a resolution note, a disposition and the survey artifact while the findings.severity column keeps the original grade — leaving the published index and the store's own column disagreeing about the same finding. — [B03-R4](../findings.md#b03-r4) · 🟡 MEDIUM · Open
 
 ## Standing
 
-**Mapped** — Survey complete through structural analysis, concern review, and adversarial challenge. It cannot justify that the reading is current at the repository head.
+**Adversarial** — Candidate conclusions are being challenged; treat them as provisional. It cannot justify that the challenge pass has finished.
 
 | Metric | Value |
 |---|---|
-| Files read | 14 of 20 ledger rows |
-| Files in scope, not yet read | 6 of 20 |
-| Files excluded from the survey obligation | 0 of 20 |
-| Ledger rows the repository has changed under | 0 of 20 |
-| Active concerns with a disposition recorded here | 24 of 30 — 4 confirmed-bug, 14 confirmed-acceptable, 1 ruled-out, 5 out-of-scope |
-| Findings by resolution state | 2 open |
-| Seams assessable from both sides | 4 of 4 |
+| Files read | 43 of 43 ledger rows |
+| Files in scope, not yet read | 0 of 43 |
+| Files excluded from the survey obligation | 0 of 43 |
+| Ledger rows the repository has changed under | 0 of 43 |
+| Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 9 confirmed-acceptable, 2 out-of-scope |
+| Findings by resolution state | 4 open |
+| Seams assessable from both sides | no seam names this subsystem |
 
 ## Survey record
 
@@ -96,125 +64,124 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 | Path | Classification | Why in scope | Examined at |
 |---|---|---|---|
-| <a id="le-65e66fcabf"></a>`mcp-server/src/tools/composition.ts` | candidate | Exact fan-in and the integral HEAD lane. Read for shape only. | `7c1c1a9f` |
-| <a id="le-140b6f3d29"></a>`mcp-server/src/tools/contradictions.ts` | candidate | First-class contradiction rows. Read for shape only. | `7c1c1a9f` |
-| <a id="le-0e49fbf332"></a>`mcp-server/src/tools/diagnosticity.ts` | candidate | Competing-concern matrices. Read for shape only. | `7c1c1a9f` |
-| <a id="le-b57fab0c08"></a>`mcp-server/src/tools/impact.ts` | candidate | Change impact and claim invalidation on file change. Read for shape only. | `7c1c1a9f` |
-| <a id="le-dd3a3c7de8"></a>`mcp-server/src/tools/refresh.ts` | candidate | Unattended refresh custody: dispatch and landing boundaries, obligation reconciliation. Read for shape only; its recovery contract was not exercised. | `7c1c1a9f` |
-| <a id="le-8278578c81"></a>`mcp-server/src/tools/review-analysis.ts` | candidate | Independent review passes, blinding and null controls. Read for shape only. | `7c1c1a9f` |
-| <a id="le-d6880bf731"></a>`mcp-server/src/tools/concerns.ts` | examined | The calibrated checklist and its coverage view. | `7c1c1a9f` |
-| <a id="le-bc82b199a5"></a>`mcp-server/src/tools/dashboard.ts` | examined | The derived counters a reader and the projection both read. | `7c1c1a9f` |
-| <a id="le-23127afcd5"></a>`mcp-server/src/tools/dispositions.ts` | examined | The per-concern verdict writer; enforces the evidence anchor and the evidence-quality tag. | `7c1c1a9f` |
-| <a id="le-ed6472d9a0"></a>`mcp-server/src/tools/evidence.ts` | examined | add_evidence — the row every claim, disposition and finding must cite. | `7c1c1a9f` |
-| <a id="le-4020309e5e"></a>`mcp-server/src/tools/field-notes.ts` | examined | The catch-all for observations the phase structure did not ask for. | `7c1c1a9f` |
-| <a id="le-566054a018"></a>`mcp-server/src/tools/files.ts` | examined | add_files_to_scope and update_file_classification — the ledger the standing predicate reads. | `7c1c1a9f` |
-| <a id="le-44c699c32a"></a>`mcp-server/src/tools/findings.ts` | examined | add_finding, update_finding_status and verify_finding_fix — the resolution chain a Pecia reference resolves against. | `7c1c1a9f` |
-| <a id="le-6ef26ea3bf"></a>`mcp-server/src/tools/locks.ts` | examined | acquire_lock and release_lock — the advisory cross-process exclusion [B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)'s concurrency claim defers to. | `7c1c1a9f` |
-| <a id="le-4a321e9eb2"></a>`mcp-server/src/tools/materialize.ts` | examined | The handler that spawns the materializer and asserts output containment; the [S-04](../seams.md#s-04) boundary from this side. | `7c1c1a9f` |
-| <a id="le-be8daa9f30"></a>`mcp-server/src/tools/open-questions.ts` | examined | The autoprogress escape valve: record_open_question with what_assumed. | `7c1c1a9f` |
-| <a id="le-95db056444"></a>`mcp-server/src/tools/resolution.ts` | examined | The append-only resolution history and its invariant audit. | `7c1c1a9f` |
-| <a id="le-1be82c1094"></a>`mcp-server/src/tools/seams.ts` | examined | upsert_seam and get_seam_assessability — both parties mapped is the assessability predicate. | `7c1c1a9f` |
-| <a id="le-6a992a5f92"></a>`mcp-server/src/tools/stale.ts` | examined | The ledger-derived staleness surface and its denominator. | `7c1c1a9f` |
-| <a id="le-8aacc5b615"></a>`mcp-server/src/tools/subsystems.ts` | examined | upsert_subsystem, update_subsystem_status and reset_subsystem — the knowledge-depth ladder's writers and its one escape hatch. | `7c1c1a9f` |
+| <a id="le-52ddba3d3b"></a>`mcp-server/src/tools/artifacts.ts` | examined | register_artifact's lexical and realpath containment checks on the storage-relative path, and the content hash the materializer's diff reads. | `c0734040` |
+| <a id="le-8635244b2d"></a>`mcp-server/src/tools/carried.ts` | examined | The carry's five writes and two reads, the archived-terminal pre-record, the three outcome authority rules, and the 8192-byte wire budget list_carried_findings measures on the doubled envelope. | `c0734040` |
+| <a id="le-8a6e1799d4"></a>`mcp-server/src/tools/chorusmith-adapter.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-8374f2c77c"></a>`mcp-server/src/tools/claims.ts` | examined | Claim custody: the file-anchored evidence rule enforced in insertClaim for both doors, the challenge-outcome vocabulary and its 24-character floor, invalidation and supersession. | `c0734040` |
+| <a id="le-e764a016a5"></a>`mcp-server/src/tools/codebase-brief.ts` | examined | The immutable brief source and its mode projections, with deterministic selection and zero model calls. | `c0734040` |
+| <a id="le-b9de4cef8b"></a>`mcp-server/src/tools/compare.ts` | examined | Structural diff of two stores opened read-only, with signature-based finding overlap and Kendall tau over shared priorities. | `c0734040` |
+| <a id="le-65e66fcabf"></a>`mcp-server/src/tools/composition.ts` | examined | The fan-in manifest: expected items scored independently of the worker's own success label, the integral lane gated on exact unit fan-in, and reconciliation that is red on any missing work. | `c0734040` |
+| <a id="le-d6880bf731"></a>`mcp-server/src/tools/concerns.ts` | examined | The calibrated checklist's writers; retire_concern records a final state rather than deleting, so historical dispositions stay readable. | `c0734040` |
+| <a id="le-140b6f3d29"></a>`mcp-server/src/tools/contradictions.ts` | examined | resolve_contradiction requires evidence from the active session attached to one of the two findings, and appends the resolution event in the same transaction. | `c0734040` |
+| <a id="le-4e74e78132"></a>`mcp-server/src/tools/crosswalk.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-bc82b199a5"></a>`mcp-server/src/tools/dashboard.ts` | examined | get_dashboard's single-round-trip census, and staleness_measured carrying the denominator so an empty ledger cannot read as a fresh conspectus. | `c0734040` |
+| <a id="le-1512fd6020"></a>`mcp-server/src/tools/decisions.ts` | examined | Decision custody: immutable revisions, explicit human or owning-system acceptance authority, and the projection read-back on three axes. | `c0734040` |
+| <a id="le-b85c143ab2"></a>`mcp-server/src/tools/design-session.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-0e49fbf332"></a>`mcp-server/src/tools/diagnosticity.ts` | examined | The ACH matrix: concerns and evidence enrolled first, one verdict per cell, and resolved requiring a leading concern that is in the matrix. | `c0734040` |
+| <a id="le-cee13c0a54"></a>`mcp-server/src/tools/dispatch.ts` | examined | The sub-agent dispatch log. | `c0734040` |
+| <a id="le-23127afcd5"></a>`mcp-server/src/tools/dispositions.ts` | examined | set_disposition's ordered refusals: depth, concern existence, revision resolution, evidence_ids, batched reachability, the quality ceiling, then one transaction for the row and its attachments. | `c0734040` |
+| <a id="le-2412897637"></a>`mcp-server/src/tools/evaluation.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-ed6472d9a0"></a>`mcp-server/src/tools/evidence.ts` | examined | add_evidence resolves ref_sha at ingress and stores it resolved; the two attach tools carry the role vocabularies the resolution rules read. | `c0734040` |
+| <a id="le-4020309e5e"></a>`mcp-server/src/tools/field-notes.ts` | examined | Field notes and their follow_up resolution, which the review session reads as unverified suspicions. | `c0734040` |
+| <a id="le-566054a018"></a>`mcp-server/src/tools/files.ts` | examined | The ledger writers: add_files_to_scope's validated batch upsert inside one transaction, and update_file_classification. | `c0734040` |
+| <a id="le-44c699c32a"></a>`mcp-server/src/tools/findings.ts` | examined | add_finding's opening resolution event, update_finding_status's overturn-evidence rule, and verify_finding_fix's ancestry requirement between repair and verification. | `c0734040` |
+| <a id="le-17468c4b96"></a>`mcp-server/src/tools/git.ts` | examined | detect_changes: the whole reconciliation — tree at the resolved revision, unledgered/absent/exempt, duplicate ownership, staleness re-derived both ways, scope_gaps rebuilt, and one append-only scope_reconciliations row with both digests. | `c0734040` |
+| <a id="le-b57fab0c08"></a>`mcp-server/src/tools/impact.ts` | examined | predict/apply change impact: rename-aware diff, the explicit relation graph over xrefs and seams, reason paths, and the unaffected-control set. | `c0734040` |
+| <a id="le-fd76969f61"></a>`mcp-server/src/tools/learning.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-6ef26ea3bf"></a>`mcp-server/src/tools/locks.ts` | examined | The write-lock table with TTL expiry cleared on every acquire. | `c0734040` |
+| <a id="le-f1e1e50eb5"></a>`mcp-server/src/tools/locus.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-2c73cbdb5d"></a>`mcp-server/src/tools/logging.ts` | examined | Access and query logging, and the default field-demand priority used before any query_log evidence exists. | `c0734040` |
+| <a id="le-4a321e9eb2"></a>`mcp-server/src/tools/materialize.ts` | examined | The publication preflight that refuses on an incomplete reconciliation before anything renders, and the projection read-back recorded as an auditable run. | `c0734040` |
+| <a id="le-be8daa9f30"></a>`mcp-server/src/tools/open-questions.ts` | examined | The autoprogress contract: record_open_question with what_assumed, and get_autoprogress_mode echoing the raw env value. | `c0734040` |
+| <a id="le-d4e50bcb20"></a>`mcp-server/src/tools/project.ts` | examined | Session lifecycle and the end_session auto-commit that checkpoints the WAL before committing storage. | `c0734040` |
+| <a id="le-dd3a3c7de8"></a>`mcp-server/src/tools/refresh.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-975eb9a6ea"></a>`mcp-server/src/tools/research.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-95db056444"></a>`mcp-server/src/tools/resolution.ts` | examined | audit_resolution_invariants over findings, claims, contradictions and obligations — it reports violations and never repairs. | `c0734040` |
+| <a id="le-7ae5c96125"></a>`mcp-server/src/tools/revalidation.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-8278578c81"></a>`mcp-server/src/tools/review-analysis.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-6d61e2146d"></a>`mcp-server/src/tools/review-session.ts` | examined | The decision surface compiled from a reconciled composition run, the actionable-items-need-evidence refusal, and the export read-back on state, coverage and content. | `c0734040` |
+| <a id="le-f9a7088ebf"></a>`mcp-server/src/tools/review.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
+| <a id="le-1be82c1094"></a>`mcp-server/src/tools/seams.ts` | examined | Seam records and get_seam_assessability, which gates SC-N concerns on both parties being mapped. | `c0734040` |
+| <a id="le-6a992a5f92"></a>`mcp-server/src/tools/stale.ts` | examined | The stale backlog over the ledger, clear_staleness refusing an absent file, and retire_ledger_file refusing a still-tracked one. | `c0734040` |
+| <a id="le-503791eb6f"></a>`mcp-server/src/tools/storage-history.ts` | examined | commit_phase_gate: the second caller of checkpointDatabaseForStorageCommit, and the storage log reader. | `c0734040` |
+| <a id="le-8aacc5b615"></a>`mcp-server/src/tools/subsystems.ts` | examined | Status writers and the finding rollup over finding_state_current. | `c0734040` |
+| <a id="le-80bab4fb82"></a>`mcp-server/src/tools/vocabulary.ts` | examined | define_term's three-step anchor resolution — parse, resolve the revision, require the path in that tree — the scope join that stops a re-definition revoking another subsystem's discharge, and decline_domain_vocabulary. | `c0734040` |
+| <a id="le-b46e91be2b"></a>`mcp-server/src/tools/xrefs.ts` | examined | add_xref requires a citation token in the context prose whose revision resolves; the eighth local copy of the git probe, kept local for its own failure policy. | `c0734040` |
 
 ### Concern review
 
 | Concern | Classification | Evidence quality | Linchpin? | Rationale |
 |---|---|---|---|---|
-| **[AL-1](../concerns.md#al-1)** | ruled-out | code-verified | 🔗 | Each module's exported tool array is built once at module load from literals and never mutated; handlers construct their responses from SQLite rows per call, so a caller holds no reference into server state. Marked linchpin-dependent because eight modules were read for shape only. |
-| **[AT-1](../concerns.md#at-1)** | confirmed-acceptable | code-verified | 🔗 | Atomicity is per-handler and opt-in, and the handlers whose partial state would be visible take it: reset_subsystem wraps five deletes plus the claim cascade in one transaction with the stated reason that an interrupted reset must not leave a scoping-status subsystem carrying later-phase output; add_finding writes the finding and its opening resolution event together. Marked linchpin-dependent because the reading rests on the handlers examined, and eight modules in this subsystem's ledger are classified candidate precisely because their multi-row writes were not read. |
-| **[AT-2](../concerns.md#at-2)** | out-of-scope | code-verified |  | The checkpoint-versus-mutation divergence is [B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)'s: it owns the WAL checkpoint and the storage commit. The tools here read that history rather than writing it. |
-| **[CC-1](../concerns.md#cc-1)** | out-of-scope | code-verified |  | Nothing in this subsystem is a generated artifact. Its output is rows, computed per call. Generated-artifact drift belongs to [B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) (the vocabulary) and [B-06](b06-packaging-installer-and-host-activation.md) (the tool inventory). |
-| **[CC-2](../concerns.md#cc-2)** | confirmed-acceptable | runtime-observed | 🔗 | The derived counters agreed with the tables throughout this survey wherever both were visible: get_attention's open census of 3 matched the three findings written, its decisions census of 4 matched the four open questions, and describe_locus's per-section censuses matched the rows the store held. This is agreement observed on a small, freshly written store, which is the weakest form of the check — marked linchpin-dependent for that reason. The known historical failure in this area was a whole staleness surface derived from a table nothing wrote, and that specific defect is closed by the move to file_ledger. |
-| **[CR-1](../concerns.md#cr-1)** | confirmed-acceptable | code-verified | 🔗 | Cross-process exclusion exists and is advisory by design: acquire_lock and release_lock write and clear active_write_locks rows, and no writer is compelled to take one. Acceptable because SQLite's own write serialization prevents corruption and the surviving risk is a lost update between two read-modify-write handlers, which requires two agents surveying one repository at once. Marked linchpin-dependent, and the residual question — whether the writers that need the lock actually take it — was not established here and is recorded as this subsystem's open item. |
-| **[CR-2](../concerns.md#cr-2)** | out-of-scope | code-verified |  | Store creation and its interruption boundaries are entirely [B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)'s. Handlers here touch ctx.db and inherit whatever it returns. |
-| **[EP-1](../concerns.md#ep-1)** | confirmed-acceptable | contract-stated | 🔗 | The one handler here that writes outside SQLite is materialize_docs, and its contract states the asymmetry correctly: clean_publish renders in isolation and promotes only when all three read-back axes are green, and a red run leaves the previous output untouched. Marked linchpin-dependent because that is the tool's stated contract read from its description and the materializer's own code, not a failure this pass induced; the behaviour under a mid-write failure is [B-05](b05-materializer-human-projection-read-back-html.md)'s to establish. |
-| **[EP-2](../concerns.md#ep-2)** | confirmed-acceptable | code-verified | 🔗 | A throw inside a handler unwinds through better-sqlite3's transaction wrapper, which rolls back, and out to the dispatcher, which converts it to a structured refusal; nothing here holds a resource across the boundary that a catch would have to release. The one asymmetry that matters is not a leak but an omission: commit_phase_gate is a call an agent makes, so a session that throws before checkpointing leaves work only in the untracked store. That is [B-01](b01-survey-methodology-and-agent-contracts.md)'s obligation and is dispositioned there. Marked linchpin-dependent because eight modules were read for shape only. |
-| **[ID-1](../concerns.md#id-1)** | confirmed-bug | code-verified |  | finding_id is caller-supplied, carries no store generation, and is the key an external system references. The Pecia ledger holds 22 live amanuensis:&lt;finding_id&gt; references minted against a store that no longer exists, and dev/pecia-resolve-finding.mjs answers them by opening whatever store is at .amanuensis/memory.db now. Discarding a store therefore makes every reference fail, which is loud and correct; but re-minting an id an old reference names would make it silently succeed against an unrelated finding, and nothing anywhere prevents that. This survey avoided the collision by choosing a distinct id namespace, which is a convention a person followed, not a property the system has. |
-| **[ID-2](../concerns.md#id-2)** | confirmed-acceptable | code-verified |  | ref_sha is required on every durable writer here and is resolved through the shared helper at ingress, so the stored value is a 40-character object name that resolved in the bound workspace rather than the string as typed. The helper's own header records that this was retrofitted onto add_evidence, add_finding and set_disposition after describe_locus was found reporting revision_bound true for a sha that resolved nowhere. |
-| **[IF-1](../concerns.md#if-1)** | out-of-scope | code-verified |  | The incremental and clean publish paths both live in the materializer; this subsystem passes a flag through to it. The divergence, if any, is [B-05](b05-materializer-human-projection-read-back-html.md)'s. |
-| **[IF-2](../concerns.md#if-2)** | confirmed-acceptable | code-verified | 🔗 | Staleness was moved off the never-written entries table onto file_ledger, which the survey always populates, and the columns carry the reason and the since-revision rather than a bare flag. The live reader confirms the denominator survives the move: get_attention reported staleness_measured true with separate claim and ledger counts, and describe_locus reported staleness_measured false on an unledgered path rather than a reassuring zero. Marked linchpin-dependent because agreement between the incremental detector and a full reconciliation was not tested — only that the derivation now has a populated source and a visible denominator. |
-| **[RL-1](../concerns.md#rl-1)** | confirmed-acceptable | code-verified | 🔗 | Subprocesses here are synchronous and reaped by spawnSync on every exit path; no handler opens a second database handle or holds a temporary directory across a call. The advisory write locks are the one resource with an asymmetric lifetime — acquire_lock writes a row that only release_lock or expiry clears — and the table carries an expiry for exactly that reason. Marked linchpin-dependent: the eight candidate modules include refresh and composition, which manage durable dispatch state, and their release paths were not read. |
-| **[SC-1](../concerns.md#sc-1)** | confirmed-acceptable | code-verified | 🔗 | Assessed from **B-03**'s side, same evidence. The handlers that would be visibly broken by a partial write do take a transaction — reset_subsystem wraps five deletes plus the claim cascade, add_finding writes the finding with its opening resolution event — so this party does not rely on the seam for atomicity it needs. Marked linchpin-dependent because eight modules in this subsystem were read for shape only, so the claim is about the handlers examined rather than about all of them; a candidate module writing several tables unwrapped would be an instance of this concern that this pass could not see. |
-| **[SC-10](../concerns.md#sc-10)** | confirmed-bug | code-verified |  | Assessed from **B-03**'s side, and the defect is on this side of the seam. This party mints the identifier the reference depends on and gives it no generation, no creation revision, and no uniqueness beyond the primary key within one store — so it cannot distinguish its own finding from a same-named finding in the store it replaced. It also offers no way to record that a finding is inherited from a discarded store, which is the counterpart Pecia's discovered_from would need. This survey avoided the collision by convention, choosing the &lt;SID&gt;-R&lt;n&gt; namespace deliberately; a rebuild that used the documented convention would have re-created B02-1 and B03-1 with different meanings. |
-| **[SC-6](../concerns.md#sc-6)** | confirmed-acceptable | code-verified |  | Assessed from **B-03**'s side, same evidence. This party's obligation across the seam is to supply evidence rows that resolve and are honestly kinded, and it discharges it: add_evidence resolves ref_sha at ingress and stores the resolved object name, and the claim writer resolves and ancestry-checks every cited row before inserting. The over-admission is on the reader's side of the seam, not this one — this party wrote exactly the rows it validated. Observed during this survey: two malformed claims were refused with errors naming the kinds found and the file required. |
-| **[SC-8](../concerns.md#sc-8)** | confirmed-acceptable | code-verified |  | Assessed from **B-03**'s side. This party's half of the boundary is legible: enforcePhasePrerequisites is one switch listing exactly what it requires at each rung, so what the server enforces can be read in one place, and enforceForwardPrerequisites ensures no rung is skipped by a different writer — the comment records that upsert_subsystem is a status writer too and that a prerequisite one writer honours and another walks around is not enforced. The server's side is therefore enumerable; the prose's side is not, which is why the defect is dispositioned against [B-01](b01-survey-methodology-and-agent-contracts.md). |
-| **[SE-1](../concerns.md#se-1)** | confirmed-bug | code-verified |  | A clean-slate rebuild has no supported path for carrying an unresolved finding forward, and the seam that needs one is [S-10](../seams.md#s-10). The skill authorizes "reinit survey" as a destructive operation and the rebuild procedure implements it, but nothing exports, migrates or re-mints an open finding, and nothing tells the external ledger that its referents were discarded rather than resolved. Observed directly: this rebuild left 13 open and 1 fixed-pending-verification findings in an archive file outside the repository, with 22 Pecia records still pointing at ids the store no longer holds. The obligation the seam creates is stated in dev/pecia-dogfood.md and in the resolver's own header; the tooling to discharge it does not exist on either side. |
-| **[TB-1](../concerns.md#tb-1)** | confirmed-bug | code-verified | 🔗 | Same class as B02-R1 and B04-R4, at this subsystem's sites: git subprocesses in findings.ts, resolution.ts, git.ts, impact.ts, materialize.ts, refresh.ts, review.ts, review-analysis.ts, review-session.ts, composition.ts and chorusmith-adapter.ts, none with a timeout. Recorded here as one disposition rather than eleven because the cause is one — the shared revision-resolution helper has no bound, and every durable writer pays a subprocess on every call by design. The finding is filed against [B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md), where the helper's fix location is; this disposition records that the concern is live in this subsystem too. Marked linchpin-dependent: read from the absence of an options field, not from an observed hang. |
-| **[TR-1](../concerns.md#tr-1)** | confirmed-acceptable | code-verified | 🔗 | The model-authored argument with the most reach here is materialize_docs's output_dir, and it is resolved against project.storagePath and containment-asserted, which is why the tool cannot be pointed at the repository root and why promotion is a separate script. Evidence and disposition file paths go through the shared workspace-path validation, and every subprocess is invoked with an argv array rather than a shell string. Marked linchpin-dependent because eight modules in this subsystem were read for shape only and their argument handling was not audited; the dedicated adversarial-security suite covers this surface and is [B-07](b07-gates-evidence-custody-and-ci.md)'s disposition. |
-| **[TR-2](../concerns.md#tr-2)** | confirmed-acceptable | code-verified | 🔗 | Stored prose is written and returned as typed fields on named rows; nothing here interprets it or renders it as markup. The two places it can acquire authority are the reader route ([B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)) and the generated HTML ([B-05](b05-materializer-human-projection-read-back-html.md)), dispositioned there. Marked linchpin-dependent because this rests on the absence of an interpreter rather than on an enforced boundary. |
-| **[VR-1](../concerns.md#vr-1)** | out-of-scope | code-verified |  | No version, digest or contract identity is declared in this subsystem. It records the revisions a survey read at, which is [ID-2](../concerns.md#id-2)'s territory and is dispositioned there; the version drift is stated in [B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)'s SERVER_VERSION and in [B-08](b08-records-design-research-published-projection-execution-ledger.md)'s documentation. |
-| **[ZD-1](../concerns.md#zd-1)** | confirmed-acceptable | code-verified |  | The prerequisites this subsystem enforces all have denominators that cannot be empty by construction: a ledger count, a claim count, an artifact count, a disposition count. Each fired against this survey when its deliverable was missing, which is a denominator demonstrated rather than assumed. The one prerequisite whose denominator is populated but whose outcome is fixed is `mapped`'s challenge requirement, and that is filed against [B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) rather than here, because the constraint is in the claims module. |
+| **[AT-1](../concerns.md#at-1)** | confirmed-acceptable | code-verified | 🔗 | Every multi-row mutation read in this pass is wrapped in one ctx.db.transaction, and the pairs are exactly the invariants: disposition with attachments, reconciliation with its gap rewrite and both digests, carried record with its pre-record, finding with its opening event, reset with its five deletes and the ladder rung. Acceptable rather than ruled out on two counts: the pattern is a convention at 30-odd call sites with nothing enforcing it, and 11 of the 43 modules are unread at this pass, so the claim is over what was read. |
+| **[AT-2](../concerns.md#at-2)** | confirmed-acceptable | code-verified | 🔗 | This surface holds both callers of commitStorage — commit_phase_gate and end_session — and both call checkpointDatabaseForStorageCommit immediately before it, so the recoverability invariant B02-1 is about is upheld here. Acceptable rather than ruled out for the same reason it is in [B-02](b02-mcp-core-persistence-and-lifecycle.md): the obligation is a convention at two call sites in this subsystem rather than a property of the function in [B-02](b02-mcp-core-persistence-and-lifecycle.md) that publishes the commit, and a third tool that wanted to commit storage would have to know to checkpoint. |
+| **[CC-1](../concerns.md#cc-1)** | confirmed-acceptable | code-verified | 🔗 | The derived surfaces here are answered through shared generated predicates rather than restated per reader: OPEN_FINDING_SQL over finding_state_current is what the dashboard, the subsystem rollup and get_finding_summary all count, which is the repair for F9/codex — a repaired finding that stayed open on one surface and closed on the others. OBLIGATION_BEARING_SQL plays the same role for the stale split. Acceptable rather than ruled out because scope_gaps is rebuilt only by detect_changes, so between a ledger write and the next reconciliation the dashboard's unclassified_paths is a count of the last reading rather than of the tree — which is exactly why §3 requires the standing reconciliation, not the gap rows, to license a coverage fraction. |
+| **[CR-1](../concerns.md#cr-1)** | confirmed-acceptable | code-verified | 🔗 | Handlers are synchronous end to end, so two calls cannot interleave inside one process, and the multi-row writes are transactional against a second process. The write_locks table is an advisory coordinator-level lock over artifact paths, not a database lock: acquire_lock clears expired holders and refuses a live one, but nothing in the tool surface requires a writer to hold it, so it serializes only sub-agents that agree to use it. Acceptable rather than ruled out on exactly that: the mechanism is sound and its use is voluntary. |
+| **[EP-1](../concerns.md#ep-1)** | confirmed-acceptable | code-verified | 🔗 | Refusals run before the transaction opens, so a refused call leaves no partial row: every guard in set_disposition, add_finding, carry_finding and detect_changes throws or returns before the transaction body. Inside a transaction, better-sqlite3 rolls back on a throw. Acceptable rather than ruled out for one asymmetry the code makes visible: two error styles coexist — ToolError (surfaced as {ok:false,error}) and a returned {ok:false,error} object — and which a handler uses is a per-handler choice, so a caller distinguishing a refusal from a failure has to read the message rather than the shape. |
+| **[IF-1](../concerns.md#if-1)** | out-of-scope | code-verified |  | This surface passes --force-full and --clean-publish through to the materializer and records the read-back it returns; it implements neither path. Whether incremental, full and clean-publish renders agree from identical state is a property of materializer/ ([B-04](b04-diff-aware-materializer.md)), where the probe can be run. What this side does own is the preflight that refuses to render at all over an unreconciled store, which is disposed under [CC-1](../concerns.md#cc-1) and [SC-1](../concerns.md#sc-1). |
+| **[RL-1](../concerns.md#rl-1)** | confirmed-acceptable | code-verified | 🔗 | The two resources this surface opens on its own are foreign database handles and child processes. compare_conspectuses opens two read-only handles and closes both in a finally, which is the right shape. Every child process is spawnSync or execFileSync and so cannot outlive its call. Acceptable rather than ruled out because materialize_docs spawns the Python materializer with no timeout: an unresponsive renderer blocks the server's only thread indefinitely, which is the same unbounded-subprocess family as B02-R1 and is recorded there rather than duplicated as a second finding. |
+| **[SC-1](../concerns.md#sc-1)** | confirmed-acceptable | code-verified | 🔗 | The seams this surface publishes twice are held together by generated sources rather than by prose: every enum a schema advertises comes from ../vocabulary.js, the citation grammar a schema's pattern publishes is CITATION_TOKEN_SOURCE — the same source the handler enforces — and the open-findings predicate is one generated SQL string. Acceptable rather than ruled out because one seam is compared only by a checker outside this subsystem: the advertised tool set against DEVELOPMENT.md, reconciled by scripts/gen-tool-inventory.mjs ([B-05](b05-packaging-installer-validation-and-product-docs.md)). Nothing inside these modules would notice a tool added without its inventory entry. |
+| **[SI-1](../concerns.md#si-1)** | out-of-scope | code-verified |  | Project-key and workspace-binding derivation is [B-02](b02-mcp-core-persistence-and-lifecycle.md)'s (project.ts), and nothing in this surface re-derives either: every handler reads ctx.project, which the dispatcher has already re-asserted. What these modules own is the narrower containment question — that a path a caller supplies cannot escape the bound storage root — and resolveArtifactPath and resolveStorageOutputPath both enforce it lexically and through realpath. Recorded out-of-scope so the identity concern stays owned where the derivation is. |
+| **[SI-2](../concerns.md#si-2)** | confirmed-acceptable | code-verified | 🔗 | Every revision this surface accepts is resolved at the write and re-resolved at the read, and the strongest case — define_term's anchor — goes further, requiring the path to exist in that revision's tree because parsing a citation cannot see an absent file. Acceptable rather than ruled out because the resolution is implemented eight times with eight failure policies and nothing compares them: xrefs.ts:581 names itself the eighth copy. A property added to one, such as a wall-clock bound, reaches the other seven only by hand. |
+| **[TB-1](../concerns.md#tb-1)** | confirmed-bug | code-verified |  | Not one of the eight spawnSync git probes in this surface carries a timeout or a killSignal, and each runs on the server's only thread inside a synchronous handler. The repository already states the rule — codex-host.ts declares STARTUP_PROBE_TIMEOUT_MS and names the hang it prevents — and applies it to three sites, all of them on the startup path. The write path, which runs a probe on every durable write, is unbounded everywhere. Recorded as B02-R1 against the shared helper and B02-R2 against index.ts:gitRoot; this disposition is the same defect counted over its full surface. |
+| **[TR-1](../concerns.md#tr-1)** | confirmed-acceptable | code-verified |  | The model-facing boundary is treated as untrusted throughout: a worker's success label is landed and then independently scored against durable state; a carried finding cannot be ruled out without evidence collected in this session; a claim cannot be overturned without new contradictory evidence; artifact paths are contained lexically and by realpath; and add_xref refuses prose carrying no resolvable citation. The one asymmetry is deliberate and documented: the symbol half of a citation is not checked for reachability, because deciding whether a symbol exists at a revision needs a parser the server does not have, and the description says a citation records where the edge was read rather than a symbol the server confirmed. |
 
 ### Survey artifact
 
-#### **B-03** · Knowledge tools and workflow API
+#### **B-03** — Knowledge tools and workflow API
 
-**Revision read:** `7c1c1a9` · **Layer:** api · **Priority:** 2
+Structural account, read at `c073404`. Scope: `mcp-server/src/tools/**` — 43 modules, the
+surface a survey is written and read through.
 
-##### Scope
+##### Observed
 
-`mcp-server/src/tools/` less the four reader-lens modules — twenty files carried into the
-ledger, of which twelve are `examined` and eight are `candidate`: `refresh.ts`,
-`review-analysis.ts`, `composition.ts`, `impact.ts`, `contradictions.ts`, `diagnosticity.ts`
-were read for shape and interface only, and their recovery and custody contracts were not
-exercised. They are marked `candidate` rather than `examined` so no reader takes a structural
-claim about them from this pass.
+**One shape, repeated.** Every module exports a `ToolDefinition[]`: a name, a description
+that is the agent-facing contract, a JSON Schema the dispatcher validates against with Ajv
+in strict mode, and a synchronous handler taking `(args, ctx)`. There is no shared base
+class and no middleware; the guards are ordinary calls at the top of each handler —
+`requireActiveSession`, `requireSubsystemStatus`, `requireWorkspaceSourcePath`,
+`resolveWorkspaceCommit` — in an order each handler chooses.
 
-##### Observed structure
+**Refusal order is deliberate.** `set_disposition` checks session, then depth, then the
+concern's existence, then resolves its revision, then the evidence ids, then their
+reachability, then the quality ceiling. The comments say why: a caller who got the depth
+wrong is better told that than told about its revision, and a refused write should not
+spawn a git subprocess first.
 
-**The data model is enforced, not requested.** `set_disposition` requires an evidence anchor,
-an evidence-quality tag, a rationale, a revision that resolves in the bound workspace, and a
-pass type; `classification`, `evidence_quality` and `pass_type` each go through `requireEnum`
-against the generated vocabulary. The methodology's central constraint is a refusal in code.
+**Multi-row writes are transactional.** `set_disposition` (row + attachments),
+`detect_changes` (staleness + `scope_gaps` + `git_state` + the reconciliation row),
+`carry_finding` (record + archived-terminal pre-record), `add_finding` (finding + opening
+resolution event), `reset_subsystem` (five deletes + the status write + the ladder rung).
 
-**The status ladder has four mechanical prerequisites,** one per transition, each naming the
-deliverable of the phase being left:
+**A report is landed, then scored.** Composition never reads a worker's success label as a
+verdict: `land_composition_item` stores the observation, and `score_composition_item`
+re-resolves the commit, re-reads the artifact registry's hash, checks the test's identity,
+SHA and exit code, and requires a terminal review aggregation. The integral lane is the
+same shape one level up.
 
-| To | Requires |
-|---|---|
-| `structural` | a non-empty file ledger **and** ≥1 current claim under `<sid>/` |
-| `concerns` | a registered `subsystem-survey` artifact |
-| `adversarial` | ≥1 disposition |
-| `mapped` | a recorded challenge outcome on **every** current claim |
+**Revision resolution is eight local copies.** `xrefs.ts:581` names itself the eighth and
+records that they are unshared on purpose, each owning a different failure policy —
+return `false`, throw `ToolError`, return `null`. None carries a timeout.
 
-`enforceForwardPrerequisites` walks every rung between the current status and the target, so a
-skipped phase names itself; and a fresh insert opening at a later status is read as an advance
-from `unmapped`, because `upsert_subsystem` is a status writer as much as
-`update_subsystem_status` is. All four fired during this survey.
+##### State containers
 
-**`reset_subsystem` is the only regression path,** and it is transactional. Dispositions,
-findings, field notes, xrefs and artifacts always go; the ledger and every claim under the
-prefix go only when the target is `scoping` or earlier. Claim matching uses `substr` rather
-than `LIKE` because a subsystem id may contain wildcard characters, and historical versions go
-with current ones so no chain is left with a hole. Observed: the xref deletion matches
-**either** endpoint, so resetting [B-04](b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) also removed the `B-02 → B-04` edge that [B-02](b02-server-core-repository-binding-storage-schema-lifecycle.md)'s pass had
-recorded.
+`ctx.db` (one `better-sqlite3` handle), `ctx.sessionId` (mutable, set by `start_session`
+and cleared by `end_session`), and `ctx.project` (frozen at startup). No module holds
+state of its own between calls.
 
-##### Concurrency
+##### Seam contracts from this side
 
-One connection, one handler at a time within a process: the dispatcher awaits each handler and
-`better-sqlite3` is synchronous. Atomicity is **per-handler and opt-in** — the handlers that
-need it call `db.transaction` themselves; nothing wraps dispatch. Across processes, exclusion
-is advisory: `acquire_lock` and `release_lock` write and clear rows in `active_write_locks`,
-and nothing compels a writer to take one first.
-
-##### Seam contract offered ([S-10](../seams.md#s-10))
-
-What the Pecia reference resolves against is a finding id and its current resolution state,
-and this side guarantees only the second. The chain is append-only and its terminal states
-mean what they say: the resolver exits 0 only for `verified-fixed` or `ruled-out`, and
-`fixed-pending-verification` deliberately does not resolve, so Pecia inherits the distinction
-between claiming a repair and proving one. What this side does **not** guarantee is that a
-finding id means the same thing over time: `finding_id` is caller-supplied, carries no store
-generation, and a rebuilt store can mint it again for an unrelated finding.
-
-##### Inference, separated from observation
-
-The concurrency reading is an inference from the dispatcher's shape and the synchronous
-driver; no concurrent run was performed. The eight `candidate` files carry no structural claim.
+- **the tables** — this surface is the only writer; the materializer ([B-04](b04-diff-aware-materializer.md)) reads them
+  `mode=ro`. Schema ownership is [B-02](b02-mcp-core-persistence-and-lifecycle.md)'s.
+- **`tools/list`** — read by every host and by `scripts/gen-tool-inventory.mjs`, which
+  reconciles the advertised set against `DEVELOPMENT.md` ([B-05](b05-packaging-installer-validation-and-product-docs.md)).
+- **the skill references** — `.claude/skills/amanuensis/**` ([B-01](b01-survey-methodology-and-agent-contracts.md)) instructs the calls
+  these handlers refuse; `check-refusal-parity` compares the two.
 
 ##### Open
 
-Whether the advisory lock is actually taken by the writers that need it was not established —
-the tools exist and are correct in isolation; their callers were not audited.
+Eleven of the 43 modules — `revalidation`, `design-session`, `refresh`,
+`chorusmith-adapter`, `research`, `learning`, `evaluation`, `crosswalk`, `review`,
+`review-analysis`, `locus` — are scoped and unread at this pass and remain `candidate` in
+the ledger. They are the long-tail research and review machinery rather than the survey
+write path; the concern dispositions below are taken over the 32 modules that were read,
+and say so.

@@ -4,18 +4,14 @@ _Every state a finding or a contradiction was recorded in, newest first, with th
 
 | Recorded | Record | State | Session | Account |
 |---|---|---|---|---|
-| 2026-09-14 05:44 UTC | [B05-R1](findings.md#b05-r1) | `open` | `mu0tg4oy-3yg0r6lb` | Finding recorded as confirmed-bug |
-| 2026-09-14 05:04 UTC | [B02-R4](findings.md#b02-r4) | `open` | `mu0s06eb-zblx9ra9` | Finding recorded as confirmed-bug |
-| 2026-09-14 04:44 UTC | [B01-R1](findings.md#b01-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 04:40 UTC | [B07-R2](findings.md#b07-r2) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 04:40 UTC | [B07-R1](findings.md#b07-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 04:04 UTC | [B03-R2](findings.md#b03-r2) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 04:04 UTC | [B03-R1](findings.md#b03-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:58 UTC | [B04-R4](findings.md#b04-r4) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:58 UTC | [B04-R3](findings.md#b04-r3) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:58 UTC | [B04-R2](findings.md#b04-r2) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:57 UTC | [B04-R1](findings.md#b04-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:45 UTC | [B02-R3](findings.md#b02-r3) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:45 UTC | [B02-R2](findings.md#b02-r2) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
-| 2026-09-14 03:44 UTC | [B02-R1](findings.md#b02-r1) | `open` | `mu0ok6i1-uhwgqsb9` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:56 UTC | [B07-R1](findings.md#b07-r1) | `open` | `mu274z8h-ylgc5fy0` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:54 UTC | [B05-R1](findings.md#b05-r1) | `open` | `mu274z8h-ylgc5fy0` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:51 UTC | [B04-R2](findings.md#b04-r2) | `open` | `mu26wn9s-v8ghdxol` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:51 UTC | [B04-R1](findings.md#b04-r1) | `open` | `mu26wn9s-v8ghdxol` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:39 UTC | [B03-R4](findings.md#b03-r4) | `open` | `mu26cxw3-7kc3845v` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:39 UTC | [B03-R3](findings.md#b03-r3) | `open` | `mu26cxw3-7kc3845v` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:39 UTC | [B03-R2](findings.md#b03-r2) | `open` | `mu26cxw3-7kc3845v` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:39 UTC | [B03-R1](findings.md#b03-r1) | `open` | `mu26cxw3-7kc3845v` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:30 UTC | [B02-R2](findings.md#b02-r2) | `open` | `mu2622ld-ioef6w30` | Finding recorded as confirmed-bug |
+| 2026-09-15 04:29 UTC | [B02-R1](findings.md#b02-r1) | `open` | `mu2622ld-ioef6w30` | Finding recorded as confirmed-bug |
 

@@ -4,31 +4,7 @@ An architecture survey of amanuensis, recorded by Amanuensis.
 
 ## What is this codebase?
 
-Amanuensis produces a **conspectus** of a codebase: an evidence-backed, revision-bound record
-of what a system is, what is wrong with it, and what nobody has established yet — one that
-survives across sessions and across agents.
-
-It is three things that must agree:
-
-1. **An MCP server** (`mcp-server/`, TypeScript on Node 24) that owns a SQLite store at
-   `<repo>/.amanuensis/memory.db` and exposes roughly two hundred tools. It is the authority.
-   It enforces the data model: every claim cites `file:symbol@sha`, a subsystem's status caps
-   what its agents may assert, dispositions and findings cannot be written without an
-   evidence anchor, resolution history is append-only.
-2. **A skill** (`.claude/skills/amanuensis/`) — the phased methodology a coordinating agent
-   executes: onboarding, then per subsystem scope → structural → concerns → adversarial →
-   packaging, then refresh.
-3. **A materializer** (`materializer/`, Python) that renders the store into HTML and Markdown
-   a person reads, and then reads its own output back on three axes before calling it
-   published.
-
-The load-bearing idea is epistemic rather than technical: *authorized claims scale with
-recorded depth.* A subsystem at `scoping` may state its file scope and nothing more. This is
-enforced in the server, not requested in prose, because the project's own history says that
-prose guards get violated and structural ones do not.
-
-What it is **not**: it never modifies the code it surveys. It reads source for evidence and
-writes only through its own tools.
+No thesis section is recorded; add a 'What is this codebase?' section to `entry-point.md`.
 
 ## Where the record stands
 
@@ -36,43 +12,39 @@ writes only through its own tools.
 
 | Metric | Value |
 |---|---|
-| Checked at | `7c1c1a9f5689` on `main`, 2026-09-14 03:27 UTC |
-| Repository head | `d6dd42157680` — a different revision from the one the survey checked |
-| Upstream head | `d3aeeccad870` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 0 of 104 |
-| Scoped files exempt from that obligation, marked stale | 0 of 2 |
+| Checked at | `e2382dc3cb7c` on `main`, 2026-09-18 01:47 UTC |
+| Repository head | `e2382dc3cb7c` — the same revision the survey checked |
+| Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
+| Files carrying a survey obligation marked stale | 8 of 490 |
+| Scoped files exempt from that obligation, marked stale | 0 of 154 |
 
 ### Survey coverage
 
 | Metric | Value |
 |---|---|
-| Subsystems by survey depth | 8 mapped |
-| Files read, of those carrying an obligation | 84 of 104 |
+| Subsystems by survey depth | 3 unmapped, 2 concerns, 4 adversarial |
+| Files read, of those carrying an obligation | 351 of 490 |
 | Paths in scope with no ledger row | 0 |
 
 ### Open engineering work
 
 | Metric | Value |
 |---|---|
-| Findings open | 14 |
+| Findings open | 10 |
+| Carried defects undecided | 0 |
 | Repairs awaiting verification | 0 |
 | Contradictions unresolved | 0 |
-| Decisions open | 5 |
+| Decisions open | 1 |
 
 ### Publication integrity
 
-| Metric | Value |
-|---|---|
-| State axis | green |
-| Coverage axis | green |
-| Content axis | green |
-| Verified at | 2026-09-14 05:45 UTC |
+No publication read-back is recorded for this store, so none of the three axes has a result to report.
 
 ## Findings by resolution state
 
 | Metric | Value |
 |---|---|
-| [Open](findings.md) | 14 |
+| [Open](findings.md) | 10 |
 | [Accepted](resolved-findings.md) | 0 |
 | [Ruled out](resolved-findings.md) | 0 |
 | [Unverified fix](findings.md) | 0 |
@@ -87,5 +59,5 @@ writes only through its own tools.
 
 ## Latest session
 
-`Strip hand-written filler prose from the projection (page hints, reader's guide intro and closing, overview lede, hot-spot and not-yet-surveyed intros, rail note, footer sentence); republish, promote, re-record the dogfood receipt` — started 2026-09-14 05:50 UTC · **active**
+`P11 — publish, promote, and record the acceptance receipts` — started 2026-09-18 01:47 UTC · **active**
 
