@@ -30,6 +30,25 @@
 // (candidate finding B07-R2). They moved to a contract and not to a receipt, and
 // to one no rebuild packet rewrites, so the independence above is unchanged.
 //
+// Three states, not two — survey-depth spec.md §8.10, the owner ruling of
+// 2026-09-18. That independence has a consequence nobody wrote down until P11
+// hit it: the coverage receipt describes the store P17 surveyed, and the
+// survey-depth acceptance rebuild deletes a store and initializes another from
+// nothing. Where the depth receipt under test records *that* store, the arms
+// whose denominator is P17's are asking about a different subject — nine
+// subsystems against P17's eight, eleven claims under none of P17's keys, an
+// onboarding whose priorities are not P17's — and no receipt content and no
+// amount of surveying can answer them.
+//
+// Those arms therefore report `cannot run` and the gate exits 2. Never green,
+// and never a red that blames this store for not being the other one. Every
+// assertion that does not read P17's sets keeps firing over whatever receipt is
+// committed, and a failure in one of them is RED with exit 1: red wins over
+// `cannot run`, so the third state can never hide a real red. Two controls keep
+// this from being an exemption — the historical pair replayed out of git history
+// reaches the verdicts it reached at `fb9f1c4`, and a copy of the committed
+// receipt relabelled to claim P17's store is judged red rather than excused.
+//
 // Turns red when:
 //   - `design/reader-lenses/rebuild-depth-receipt.json` is absent, is not valid
 //     JSON, or does not bind itself to this repository and this store;
@@ -68,9 +87,17 @@
 //     account would then have been published unchallenged;
 //   - a seam whose two parties are both mapped carries no SC disposition, or
 //     carries one on only one side;
-//   - the live store, when present, breaks any of those, or has lost a
-//     disposition, a finding or an outcome the receipt records;
+//   - the live store the receipt names, when present, breaks any of those, or
+//     has lost a disposition, a finding or an outcome the receipt records;
+//   - either of §8.10's controls stops holding: an arm that was red over the
+//     historical pair goes quiet, an arm that passed over it turns red, or a
+//     receipt that claims a store identity it does not have is excused instead
+//     of judged;
 //   - the gate does not run in `.github/workflows/test.yml`.
+//
+// Reports `cannot run` with exit 2 when, and only when, the committed depth
+// receipt does not describe the store the coverage receipt describes — the
+// arms that read P17's sets, and nothing else.
 //
 // False greens it cannot exclude. Whether a disposition is *correct* is not
 // checked here and cannot be: the record can require that a concern was answered
@@ -84,13 +111,18 @@
 // what was true when it was written; the live arm narrows that window only where
 // a store exists to read.
 //
-// Output protocol: exactly one status line, last, on stdout. Every message is
-// scrubbed of the launcher's crash signatures, so an absent deliverable reads as
-// a failed assertion rather than as a gate that never ran.
+// Output protocol: exactly one status line, last, on stdout — `GATE P19 GREEN`
+// (exit 0), `GATE P19 RED: <reason>` (exit 1) or `GATE P19 CANNOT RUN: <reason>`
+// (exit 2). Every message is scrubbed of the launcher's crash signatures, so an
+// absent deliverable reads as a failed assertion rather than as a gate that
+// never ran. `.github/workflows/test.yml` decides from the tree which of the
+// three answers this repository owes and demands that one, the way §7.1 does
+// for `GATE D0`; the gate does not get to tell CI which answer to accept.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { historyIsComplete, resolveRevisions } from "./receipt-provenance.mjs";
 
@@ -264,6 +296,7 @@ function emit(line) {
 }
 
 const failures = [];
+const answered = [];
 function check(label, fn) {
   let reason = null;
   try {
@@ -275,6 +308,7 @@ function check(label, fn) {
     failures.push(`${label}: ${reason}`);
     emit(`  FAIL ${label}: ${reason}`);
   } else {
+    answered.push(label);
     emit(`  ok   ${label}`);
   }
 }
@@ -341,7 +375,6 @@ function latestOutcomeId(live, claimKey) {
 // The two committed documents. The coverage receipt is P17's, and is what this
 // packet's denominators are read from.
 // ---------------------------------------------------------------------------
-emit("the concern, adversarial and packaging passes, as recorded in the committed depth receipt");
 
 const { text: receiptText, value: receipt } = readJson(RECEIPT_REL);
 const { text: coverageText, value: coverage } = readJson(COVERAGE_REL);
@@ -362,30 +395,166 @@ function requireCoverage() {
   return null;
 }
 
-const rowsOf = () => (Array.isArray(receipt?.subsystems) ? receipt.subsystems : []);
-const rowById = (id) => rowsOf().find((row) => row?.id === id) ?? null;
-const seamsOf = () => (Array.isArray(receipt?.seams) ? receipt.seams : []);
+// Every row and every denominator is read through a view built from one pair of
+// documents. It is a factory rather than a set of globals so that §8.10's two
+// controls can drive the *same* arm bodies over a different pair — the
+// historical pair replayed out of git history, and a copy of the committed
+// receipt relabelled to claim a store identity it does not have. A control that
+// re-implemented the arm would prove only that the copy agrees with itself.
+function viewsFor(receiptDoc, coverageDoc) {
+  const rowsOf = () => (Array.isArray(receiptDoc?.subsystems) ? receiptDoc.subsystems : []);
+  const rowById = (id) => rowsOf().find((row) => row?.id === id) ?? null;
+  const seamsOf = () => (Array.isArray(receiptDoc?.seams) ? receiptDoc.seams : []);
 
-/** P17's record of what was surveyed: the set this packet owes depth on. */
-const coverageRows = () => (Array.isArray(coverage?.subsystems) ? coverage.subsystems : []);
-const expectedMapped = () =>
-  coverageRows()
-    .filter((row) => statusRank(row?.status) >= statusRank("structural"))
-    .map((row) => row.id);
-const expectedDeferred = () =>
-  coverageRows()
-    .filter((row) => row?.status === "deferred")
-    .map((row) => row.id);
-/** The `<sid>/` claim keys P17 left current — Phase 4's target list (§9.1). */
-const coverageClaimKeys = (sid) => {
-  const row = coverageRows().find((entry) => entry?.id === sid);
-  return (Array.isArray(row?.claims) ? row.claims : []).map((claim) => claim?.claim_key);
-};
-const coverageSeams = () => (Array.isArray(coverage?.seams) ? coverage.seams : []);
+  /** P17's record of what was surveyed: the set this packet owes depth on. */
+  const coverageRows = () => (Array.isArray(coverageDoc?.subsystems) ? coverageDoc.subsystems : []);
+  const expectedMapped = () =>
+    coverageRows()
+      .filter((row) => statusRank(row?.status) >= statusRank("structural"))
+      .map((row) => row.id);
+  const expectedDeferred = () =>
+    coverageRows()
+      .filter((row) => row?.status === "deferred")
+      .map((row) => row.id);
+  /** The `<sid>/` claim keys P17 left current — Phase 4's target list (§9.1). */
+  const coverageClaimKeys = (sid) => {
+    const row = coverageRows().find((entry) => entry?.id === sid);
+    return (Array.isArray(row?.claims) ? row.claims : []).map((claim) => claim?.claim_key);
+  };
+  const coverageSeams = () => (Array.isArray(coverageDoc?.seams) ? coverageDoc.seams : []);
+  return {
+    receipt: receiptDoc,
+    coverage: coverageDoc,
+    rowsOf,
+    rowById,
+    seamsOf,
+    coverageRows,
+    expectedMapped,
+    expectedDeferred,
+    coverageClaimKeys,
+    coverageSeams,
+  };
+}
+
+const V = viewsFor(receipt, coverage);
+const {
+  rowsOf,
+  rowById,
+  seamsOf,
+  coverageRows,
+  expectedMapped,
+  expectedDeferred,
+  coverageClaimKeys,
+  coverageSeams,
+} = V;
 
 const dispositionsOf = (row) => (Array.isArray(row?.dispositions) ? row.dispositions : []);
 const findingsOf = (row) => (Array.isArray(row?.findings) ? row.findings : []);
 const gapsOf = (row) => (Array.isArray(row?.concern_gaps) ? row.concern_gaps : []);
+
+// ---------------------------------------------------------------------------
+// Whose store is this? — survey-depth spec.md §8.10, the owner ruling of
+// 2026-09-18 (decisions.md §7).
+//
+// Every denominator above is read out of P17's coverage receipt, and that
+// document describes the store P17 surveyed. The survey-depth acceptance
+// rebuild (its spec.md §7.4 steps 2-4) deletes a store and initializes a new one
+// from nothing, so where the depth receipt under test records *that* store the
+// two halves describe different subjects: P17's eight subsystems against this
+// one's nine, P17's claim keys against eleven claims under none of them, P17's
+// batch priorities against an onboarding that never had them. No receipt content
+// and no amount of surveying can reconcile them — attempt 2 of P11 established
+// that — so those arms are not unfinished work, they are unanswerable here.
+//
+// An unanswerable arm reports `cannot run` and the gate exits 2. It never
+// reports green, and it never reports a red that blames this store for not being
+// the other one. That is the third state §7.1 already defines for `GATE D0`, and
+// the identity check P8 applied to dev/test-rebuild-coverage.mjs and
+// dev/test-reader-lenses-dogfood.mjs, applied one level up: there it separates a
+// receipt from a *live store* it never described, here it separates a receipt
+// from a *denominator document* that describes a different store.
+//
+// Two facts decide it, both recorded in the documents themselves:
+//
+//   - the absolute `storage_path` each one was written against, and
+//   - whether their recorded storage histories share a commit. A store that
+//     continues another store's history carries its commits; one initialized
+//     from nothing has its own root and shares none. The historical pair shares
+//     100 of 100; this rebuild's receipt shares 0 of 24.
+//
+// Where a document records neither field there is nothing to compare, and the
+// answer is "the same store" — a missing field must not buy an exemption.
+//
+// A red is never hidden behind this. Every assertion that does not read P17's
+// sets keeps firing over whatever receipt is committed, a failure in one of them
+// is RED with exit 1, and RED wins over `cannot run`.
+// ---------------------------------------------------------------------------
+function storageHistoryShas(doc) {
+  return new Set(
+    (Array.isArray(doc?.storage_history) ? doc.storage_history : [])
+      .map((entry) => entry?.sha)
+      .filter((sha) => typeof sha === "string" && sha.length > 0),
+  );
+}
+
+/**
+ * Does `depthDoc` describe the store `coverageDoc` describes? Returns
+ * `{ same, why }`; `why` names the evidence, and is what the `cannot run`
+ * line quotes.
+ */
+function describesSameStore(depthDoc, coverageDoc) {
+  const here = typeof depthDoc?.storage_path === "string" ? depthDoc.storage_path : null;
+  const there = typeof coverageDoc?.storage_path === "string" ? coverageDoc.storage_path : null;
+  const hereHistory = storageHistoryShas(depthDoc);
+  const thereHistory = storageHistoryShas(coverageDoc);
+  const shared = [...hereHistory].filter((sha) => thereHistory.has(sha));
+  if (here === null || there === null || !hereHistory.size || !thereHistory.size) {
+    return { same: true, why: "neither document records enough to tell the two stores apart" };
+  }
+  if (resolve(here) !== resolve(there)) {
+    return {
+      same: false,
+      why:
+        `the depth receipt was written against the store at ${here} and ${COVERAGE_REL} ` +
+        `against the store at ${there}, and their storage histories share ${shared.length} of ` +
+        `${hereHistory.size} commit(s): P17's sets are a denominator for a different store`,
+    };
+  }
+  if (!shared.length) {
+    return {
+      same: false,
+      why:
+        `both documents name the store at ${here}, and their storage histories share none of ` +
+        `${hereHistory.size} commit(s): this store was initialized from nothing, not continued ` +
+        `from the one P17 surveyed`,
+    };
+  }
+  return {
+    same: true,
+    why: `both documents describe the store at ${here}, sharing ${shared.length} storage commit(s)`,
+  };
+}
+
+const SUBJECT = describesSameStore(receipt, coverage);
+
+emit("the concern, adversarial and packaging passes, as recorded in the committed depth receipt");
+if (!SUBJECT.same) {
+  emit(
+    `  every arm below whose denominator is P17's cannot run here: ${SUBJECT.why}. ` +
+      "Every other assertion fires unchanged (survey-depth spec.md §8.10).",
+  );
+}
+
+// An arm whose denominator is P17's. It runs where the two documents describe
+// one store and reports `cannot run` where they do not — never green, never a
+// red about the wrong subject.
+const unanswerable = [];
+function checkScoped(label, fn) {
+  if (SUBJECT.same) return check(label, fn);
+  unanswerable.push(label);
+  emit(`  --   ${label}: cannot run, its denominator is P17's`);
+  return undefined;
+}
 
 check("the depth receipt declares its contract and binds itself to this repository and store", () => {
   const missing = requireReceipt();
@@ -428,34 +597,35 @@ check("every subsystem row carries the store's last_checked_sha, and it resolves
   return resolveRevisions(REPO, [expected], "the store's last_checked_sha");
 });
 
-check("every subsystem P17 carried to structural is mapped here, and nothing P17 deferred is", () => {
-  const missing = requireReceipt() ?? requireCoverage();
+function assertSurveyedSetIsMappedHere(v, missing) {
   if (missing) return missing;
-  const owed = expectedMapped();
+  const owed = v.expectedMapped();
   if (owed.length < 3) {
     return `P17's coverage receipt records ${owed.length} surveyed subsystem(s); the denominator this packet owes depth on is not credible`;
   }
-  const present = rowsOf().map((row) => row?.id);
+  const present = v.rowsOf().map((row) => row?.id);
   const absent = owed.filter((id) => !present.includes(id));
   if (absent.length) {
     return `subsystem(s) ${absent.join(", ")} were surveyed to structural by P17 and have no row in the depth receipt`;
   }
-  const unsurveyed = present.filter((id) => !owed.includes(id) && !expectedDeferred().includes(id));
+  const unsurveyed = present.filter((id) => !owed.includes(id) && !v.expectedDeferred().includes(id));
   if (unsurveyed.length) {
     return `the depth receipt carries row(s) for ${unsurveyed.join(", ")}, which P17's coverage receipt does not record as surveyed`;
   }
-  const short = owed.filter((id) => rowById(id)?.status !== "mapped");
+  const short = owed.filter((id) => v.rowById(id)?.status !== "mapped");
   if (short.length) {
-    return `subsystem(s) ${short.map((id) => `${id}=${rowById(id)?.status ?? "absent"}`).join(", ")} are not mapped: decision 4 asks for a rebuilt conspectus, not a structural survey`;
+    return `subsystem(s) ${short.map((id) => `${id}=${v.rowById(id)?.status ?? "absent"}`).join(", ")} are not mapped: decision 4 asks for a rebuilt conspectus, not a structural survey`;
   }
-  const deferredMapped = expectedDeferred().filter((id) => rowById(id) && rowById(id).status === "mapped");
+  const deferredMapped = v.expectedDeferred().filter((id) => v.rowById(id) && v.rowById(id).status === "mapped");
   if (deferredMapped.length) {
     return `subsystem(s) ${deferredMapped.join(", ")} were deferred with a reason and are recorded as mapped anyway`;
   }
   return null;
-});
+}
 
-check("each subsystem's status ladder is a recorded chain that reaches mapped without skipping a rung", () => {
+checkScoped("every subsystem P17 carried to structural is mapped here, and nothing P17 deferred is", () => assertSurveyedSetIsMappedHere(V, requireReceipt() ?? requireCoverage()));
+
+checkScoped("each subsystem's status ladder is a recorded chain that reaches mapped without skipping a rung", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   const storageShas = new Set(
@@ -549,7 +719,7 @@ check("each subsystem's status ladder is a recorded chain that reaches mapped wi
   return null;
 });
 
-check("every active concern has a terminal disposition in every non-deferred subsystem, or a named gap", () => {
+checkScoped("every active concern has a terminal disposition in every non-deferred subsystem, or a named gap", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   const declared = Array.isArray(receipt.checklist_concerns) ? receipt.checklist_concerns : [];
@@ -594,7 +764,7 @@ check("every active concern has a terminal disposition in every non-deferred sub
   return null;
 });
 
-check("every disposition is evidence-backed at the quality it claims, and declares its linchpins", () => {
+checkScoped("every disposition is evidence-backed at the quality it claims, and declares its linchpins", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   let counted = 0;
@@ -649,7 +819,7 @@ check("every disposition is evidence-backed at the quality it claims, and declar
   return null;
 });
 
-check("every finding was recorded through add_finding with attached evidence, and the counts reconcile", () => {
+checkScoped("every finding was recorded through add_finding with attached evidence, and the counts reconcile", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   const seen = new Set();
@@ -712,7 +882,7 @@ check("every finding was recorded through add_finding with attached evidence, an
   return null;
 });
 
-check("a confirmed-bug disposition has a finding, and every finding names a disposition that confirms it", () => {
+checkScoped("a confirmed-bug disposition has a finding, and every finding names a disposition that confirms it", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   for (const id of expectedMapped()) {
@@ -743,18 +913,17 @@ check("a confirmed-bug disposition has a finding, and every finding names a disp
   return null;
 });
 
-check("every subsystem ran an adversarial pass over every claim P17 left current (§9.1, Phase 4)", () => {
-  const missing = requireReceipt() ?? requireCoverage();
+function assertAdversarialPassOverP17Claims(v, missing) {
   if (missing) return missing;
-  for (const id of expectedMapped()) {
-    const row = rowById(id);
+  for (const id of v.expectedMapped()) {
+    const row = v.rowById(id);
     const adversarial = row?.adversarial;
     if (!adversarial || typeof adversarial !== "object") return `${id} records no adversarial pass`;
     if (!Number.isInteger(adversarial.passes) || adversarial.passes < 1) {
       return `${id} records ${JSON.stringify(adversarial.passes ?? null)} adversarial pass(es); mapped would then imply a review that did not happen`;
     }
     const targets = Array.isArray(adversarial.claim_targets) ? adversarial.claim_targets : [];
-    const owed = coverageClaimKeys(id);
+    const owed = v.coverageClaimKeys(id);
     if (!owed.length) return `P17's coverage receipt records no claim for ${id}, so Phase 4 has no target list`;
     const targeted = targets.map((entry) => entry?.claim_key);
     const unchallenged = owed.filter((key) => !targeted.includes(key));
@@ -866,9 +1035,11 @@ check("every subsystem ran an adversarial pass over every claim P17 left current
     }
   }
   return null;
-});
+}
 
-check("every seam whose two parties are both mapped carries an SC disposition on both sides", () => {
+checkScoped("every subsystem ran an adversarial pass over every claim P17 left current (§9.1, Phase 4)", () => assertAdversarialPassOverP17Claims(V, requireReceipt() ?? requireCoverage()));
+
+checkScoped("every seam whose two parties are both mapped carries an SC disposition on both sides", () => {
   const missing = requireReceipt() ?? requireCoverage();
   if (missing) return missing;
   const mapped = new Set(expectedMapped().filter((id) => rowById(id)?.status === "mapped"));
@@ -914,14 +1085,13 @@ check("every seam whose two parties are both mapped carries an SC disposition on
   return null;
 });
 
-check("the batches ran in priority order, each behind its own storage checkpoint", () => {
-  const missing = requireReceipt() ?? requireCoverage();
+function assertBatchesRanInPriorityOrder(v, missing) {
   if (missing) return missing;
-  const batches = Array.isArray(receipt.batches) ? receipt.batches : [];
+  const batches = Array.isArray(v.receipt.batches) ? v.receipt.batches : [];
   if (!batches.length) return "the depth pass records no batch, so a failure resumes from the start";
-  const history = Array.isArray(receipt.storage_history) ? receipt.storage_history : [];
+  const history = Array.isArray(v.receipt.storage_history) ? v.receipt.storage_history : [];
   if (!history.length) return "the depth receipt carries no storage history, so no checkpoint can be found in it";
-  const priority = new Map(coverageRows().map((row) => [row?.id, row?.priority]));
+  const priority = new Map(v.coverageRows().map((row) => [row?.id, row?.priority]));
   const seen = [];
   let previousHigh = 0;
   for (let index = 0; index < batches.length; index += 1) {
@@ -962,10 +1132,12 @@ check("the batches ran in priority order, each behind its own storage checkpoint
   }
   const duplicated = seen.filter((id, index) => seen.indexOf(id) !== index);
   if (duplicated.length) return `subsystem(s) ${[...new Set(duplicated)].join(", ")} were carried in more than one batch`;
-  const uncarried = expectedMapped().filter((id) => !seen.includes(id));
+  const uncarried = v.expectedMapped().filter((id) => !seen.includes(id));
   if (uncarried.length) return `subsystem(s) ${uncarried.join(", ")} are mapped and in no batch`;
   return null;
-});
+}
+
+checkScoped("the batches ran in priority order, each behind its own storage checkpoint", () => assertBatchesRanInPriorityOrder(V, requireReceipt() ?? requireCoverage()));
 
 // ---------------------------------------------------------------------------
 // The live store, when one is present. Read-only and direct: the gate must not
@@ -974,9 +1146,26 @@ check("the batches ran in priority order, each behind its own storage checkpoint
 emit("");
 
 const storeAbs = join(REPO, STORE_REL);
+// The store the receipt describes, which is not always the store at this path.
+// `.amanuensis` is worktree-local, so a second checkout of this repository holds
+// a second store at the same *relative* path that this receipt never described;
+// asserting the receipt's rows over it would report a disagreement between two
+// unrelated stores as a defect in one. This is the guard P8 put on
+// dev/test-rebuild-coverage.mjs and dev/test-reader-lenses-dogfood.mjs, for the
+// same reason and with the same words, and it is why the live arm never turns
+// red over a store nobody claimed it was about.
+function receiptStorePath() {
+  const recorded = receipt?.storage_path;
+  return typeof recorded === "string" && recorded.length > 0 ? join(recorded, "memory.db") : null;
+}
+const liveIsReceiptSubject = (() => {
+  const recorded = receiptStorePath();
+  if (recorded === null) return true; // no path recorded: behave exactly as before
+  return resolve(recorded) === resolve(storeAbs);
+})();
 let live = null;
 let liveError = null;
-if (existsSync(storeAbs)) {
+if (existsSync(storeAbs) && liveIsReceiptSubject) {
   try {
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(storeAbs, { readOnly: true });
@@ -1007,16 +1196,22 @@ if (existsSync(storeAbs)) {
   }
   if (live) emit("the live store at .amanuensis/memory.db, read directly and read-only");
   else emit("the live store at .amanuensis/memory.db could not be opened");
+} else if (existsSync(storeAbs)) {
+  emit(
+    `the store at .amanuensis/memory.db is not the one this depth receipt describes (it records ` +
+      `${receiptStorePath()}), so the committed receipt is the whole gate: a store ` +
+      `this receipt never described can neither confirm nor contradict it`,
+  );
 } else {
   emit(
     "the live store is absent here (`git ls-files .amanuensis` → 0), so the committed depth receipt is the whole gate; this is the mode CI runs in",
   );
 }
 
-if (existsSync(storeAbs)) {
+if (existsSync(storeAbs) && liveIsReceiptSubject) {
   check("the live store opens for reading", () => liveError ?? (live ? null : "the store yielded no rows"));
 
-  check("every subsystem the depth receipt maps is mapped in the live store", () => {
+  checkScoped("every subsystem the depth receipt maps is mapped in the live store", () => {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
@@ -1028,7 +1223,7 @@ if (existsSync(storeAbs)) {
     return null;
   });
 
-  check("the live store holds an evidence-backed terminal disposition for every concern in every mapped subsystem", () => {
+  checkScoped("the live store holds an evidence-backed terminal disposition for every concern in every mapped subsystem", () => {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
@@ -1065,7 +1260,7 @@ if (existsSync(storeAbs)) {
     return null;
   });
 
-  check("every finding in the live store carries evidence, and the receipt records the same set", () => {
+  checkScoped("every finding in the live store carries evidence, and the receipt records the same set", () => {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
@@ -1099,7 +1294,7 @@ if (existsSync(storeAbs)) {
     return null;
   });
 
-  check("every current <sid>/ claim in the live store carries a recorded adversarial outcome", () => {
+  checkScoped("every current <sid>/ claim in the live store carries a recorded adversarial outcome", () => {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
@@ -1132,7 +1327,7 @@ if (existsSync(storeAbs)) {
     return null;
   });
 
-  check("every assessable seam carries its SC disposition on both sides in the live store", () => {
+  checkScoped("every assessable seam carries its SC disposition on both sides in the live store", () => {
     if (!live) return "the live store could not be read";
     const missing = requireReceipt() ?? requireCoverage();
     if (missing) return missing;
@@ -1177,6 +1372,133 @@ if (existsSync(storeAbs)) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The controls the owner ruling requires (survey-depth spec.md §8.10, clause 3).
+// Without them the identity check above is indistinguishable from an exemption:
+// a gate that can decline to answer needs something that proves it still can.
+//
+// They run on every invocation, in both states, and a failure in either is a
+// RED — not a `cannot run`. The three arms are called here as the functions the
+// committed pair is judged by, never re-implemented, so a control cannot go on
+// agreeing with a copy of itself after the arm has changed.
+// ---------------------------------------------------------------------------
+emit("");
+emit("§8.10's controls: the P17-denominated arms still fire, and a claimed identity is judged");
+
+// The depth receipt and P17's coverage receipt as this branch carried them
+// before the acceptance rebuild, and what each arm said over them — the eight
+// failed assertions §8.10 records at the lane's start.
+const HISTORICAL_PAIR_SHA = "fb9f1c4";
+const P17_DENOMINATED_ARMS = [
+  {
+    arm: "every subsystem P17 carried to structural is mapped here",
+    fn: assertSurveyedSetIsMappedHere,
+    then: null,
+  },
+  {
+    arm: "every subsystem ran an adversarial pass over every claim P17 left current",
+    fn: assertAdversarialPassOverP17Claims,
+    then: "B02-R1",
+  },
+  {
+    arm: "the batches ran in priority order, each behind its own storage checkpoint",
+    fn: assertBatchesRanInPriorityOrder,
+    then: "records no batch",
+  },
+];
+
+/** Both documents as of `HISTORICAL_PAIR_SHA`, materialized into a temporary tree. */
+function replayHistoricalPair() {
+  if (!historyIsComplete(REPO)) {
+    return {
+      error:
+        "revision ancestry is not evaluable in a shallow clone, so the historical pair cannot be " +
+        "read out of git history — check out with full history (`fetch-depth: 0` in CI)",
+    };
+  }
+  const tree = mkdtempSync(join(tmpdir(), "rebuild-depth-replay-"));
+  try {
+    const loaded = {};
+    for (const rel of [RECEIPT_REL, COVERAGE_REL]) {
+      const shown = git(["show", `${HISTORICAL_PAIR_SHA}:${rel}`]);
+      if (shown.status !== 0 || typeof shown.stdout !== "string" || !shown.stdout.length) {
+        return {
+          error: `${HISTORICAL_PAIR_SHA}:${rel} could not be read out of git history (${String(shown.stderr ?? "").trim() || "no output"})`,
+        };
+      }
+      const path = join(tree, basename(rel));
+      writeFileSync(path, shown.stdout);
+      loaded[rel] = JSON.parse(readFileSync(path, "utf8"));
+    }
+    return { depth: loaded[RECEIPT_REL], coverage: loaded[COVERAGE_REL] };
+  } catch (e) {
+    return { error: `the replayed pair did not parse (${e && e.message ? e.message : e})` };
+  } finally {
+    rmSync(tree, { recursive: true, force: true });
+  }
+}
+
+check(
+  `the historical pair at ${HISTORICAL_PAIR_SHA}, replayed into a temporary tree, reaches the verdicts it reached then`,
+  () => {
+    const replayed = replayHistoricalPair();
+    if (replayed.error) return replayed.error;
+    const identity = describesSameStore(replayed.depth, replayed.coverage);
+    if (!identity.same) {
+      return `the historical pair no longer reads as one store, so the replay proves nothing: ${identity.why}`;
+    }
+    const views = viewsFor(replayed.depth, replayed.coverage);
+    for (const { arm, fn, then } of P17_DENOMINATED_ARMS) {
+      const reason = fn(views, null);
+      if (then === null) {
+        if (reason) return `"${arm}" passed at ${HISTORICAL_PAIR_SHA} and now reports: ${reason}`;
+      } else if (!reason) {
+        return `"${arm}" was red at ${HISTORICAL_PAIR_SHA} over ${JSON.stringify(then)} and now passes, so the arm has stopped firing`;
+      } else if (!reason.includes(then)) {
+        return `"${arm}" reported ${JSON.stringify(then)} at ${HISTORICAL_PAIR_SHA} and now reports: ${reason}`;
+      }
+    }
+    return null;
+  },
+);
+
+check("a receipt relabelled to claim P17's store is judged red, and the same content unlabelled is not", () => {
+  const missing = requireReceipt() ?? requireCoverage();
+  if (missing) return missing;
+  const claimable = [...storageHistoryShas(coverage)];
+  if (!claimable.length) {
+    return `${COVERAGE_REL} records no storage commit, so there is no identity for a forgery to claim`;
+  }
+  // One receipt's rows under two labels. Nothing but the label differs, so the
+  // label is what the two outcomes are attributable to.
+  const relabelled = {
+    ...receipt,
+    storage_path: coverage.storage_path,
+    storage_history: [
+      { sha: claimable[0], date: "", message: "relabelled: claims a commit of P17's storage history" },
+      ...(Array.isArray(receipt.storage_history) ? receipt.storage_history : []),
+    ],
+  };
+  const claimed = describesSameStore(relabelled, coverage);
+  if (!claimed.same) {
+    return `a receipt carrying ${COVERAGE_REL}'s storage path and one of its storage commits still reads as another store, so a false label is untestable: ${claimed.why}`;
+  }
+  const views = viewsFor(relabelled, coverage);
+  const fired = P17_DENOMINATED_ARMS.filter(({ fn }) => fn(views, null));
+  if (!fired.length) {
+    return "the relabelled receipt satisfied all three P17-denominated arms, so claiming an identity it does not have costs nothing";
+  }
+  const disowned = {
+    ...receipt,
+    storage_path: "/nonexistent-workspace/.amanuensis",
+    storage_history: [{ sha: "f".repeat(40), date: "", message: "a store that shares no history" }],
+  };
+  if (describesSameStore(disowned, coverage).same) {
+    return "the same rows under a storage path and a history P17 never held still read as P17's store, so the identity check answers nothing";
+  }
+  return null;
+});
+
 emit("");
 check("the gate runs in CI", () => {
   const ci = existsSync(join(REPO, CI_REL)) ? readFileSync(join(REPO, CI_REL), "utf8") : null;
@@ -1185,10 +1507,20 @@ check("the gate runs in CI", () => {
 });
 
 emit("");
+// RED wins over `cannot run`: an arm that does not read P17's sets keeps firing
+// over whatever receipt is committed, and a failure in one of them is a defect
+// in that receipt whatever store it describes. The third state can therefore
+// never be used to hide a real red.
 if (failures.length) {
   emit(
     `GATE P19 RED: the rebuilt self-conspectus is not mapped through concerns, adversarial review and packaging — ${failures.length} failed assertion(s) over the depth receipt, covering the status ladder, the terminal disposition of every active concern, the adversarial outcome of every claim and finding, and seam assessment on both sides; first: ${failures[0]}`,
   );
   process.exit(1);
+}
+if (unanswerable.length) {
+  emit(
+    `GATE P19 CANNOT RUN: ${unanswerable.length} arm(s) read their denominator from ${COVERAGE_REL}, and ${SUBJECT.why}. The ${answered.length} assertion(s) that do not read P17's sets all hold, including both of §8.10's controls. This is the third state of survey-depth spec.md §8.10 (owner ruling 2026-09-18) and §7.1 — an absence reported as an absence, never a green: first unanswerable — ${unanswerable[0]}`,
+  );
+  process.exit(2);
 }
 emit("GATE P19 GREEN");
