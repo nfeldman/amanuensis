@@ -1649,6 +1649,45 @@ This is scoping, not weakening: no axis is dropped for the subject the gate can 
 and CI must end green — say there how the third state is handled, the same way §7.1 answers it
 for `GATE D0`.
 
+**Which receipt stays, decided in P11 attempt 3.**
+`design/reader-lenses/rebuild-depth-receipt.json` **stays the record of this rebuild** — the
+document attempt 2 re-recorded, describing the store this worktree initialized. The alternative,
+restoring the P19 document so the gate keeps P17's store as its subject, was measured and rejected:
+
+- Restored, the two documents read as one store and every arm fires — and the gate is **red on
+  seven assertions** over the P19 receipt: the ladder's `covers` span, the three concerns
+  `mcp-server/contracts/concern-checklist.json` calibrated that the reader-lenses survey never
+  held, `B-02/AL-1` with no attached evidence row, `ZD-1` classified `confirmed-bug` with no
+  finding, `B02-R1`'s missing counter-claim, seam `S-01` unevidenced on `B-02`, and no batches.
+  That is the pre-existing red this section records at `fb9f1c4`, and none of it is repairable
+  from here: the store those rows describe was deleted by §7.4 step 3 and lives in no worktree
+  this lane may write. CI would end red with no path to green.
+- Kept, the two documents read as two stores, the P17-denominated arms report `cannot run`, the
+  seven assertions that do not read P17's sets all hold — both controls among them — and the gate
+  exits 2. CI ends green on the third state.
+- The receipt that stays is also the only one anything can contradict. It names the store at
+  `…/amanuensis-survey-depth/.amanuensis`, which exists and which the live arm reads; the P19
+  document names `/Users/nfeldman/repos/amanuensis/.amanuensis`, a store the primary checkout has since
+  rebuilt, so restoring it would leave a receipt at HEAD describing no store anywhere. It would
+  also retire the four derivation defects attempt 2 fixed in `dev/record-rebuild-depth.mjs`, which
+  nothing but that receipt exercises.
+
+**How the two stores are told apart**, from facts the documents already carry: the absolute
+`storage_path` each was written against, and whether their recorded storage histories share a
+commit. A store that continues another carries its commits; one initialized from nothing has its
+own root and shares none — the historical pair shares 100 of 100, this rebuild's receipt 0 of 24.
+Where a document records neither field the answer is *the same store*: a missing field must not buy
+an exemption. `.github/workflows/test.yml` computes those two facts itself rather than asking the
+gate, because a gate that tells CI which answer to accept can excuse itself.
+
+**What this costs, stated plainly.** Fourteen of the gate's twenty-one assertions are unanswerable
+here and seven still hold. What the fourteen would have said about *this* rebuild is said by
+`GATE D0` (§7.1) and `GATE A1` (§8.8): B3 is the same evidence-backed-disposition predicate,
+recomputed from §7.5's row-level witnesses against a fixture a different run wrote, which is the
+independence this section exists to protect. `node dev/test-rebuild-depth.mjs` stays in
+`completion.commands` as a bare command, where exit 2 and its `CANNOT RUN` line are the owner's to
+read, alongside `dev/test-rebuild-regeneration.mjs`.
+
 `dev/test-rebuild-readback.mjs` spawns the rebuild driver directly at `:541-552` and `:686-699` with
 `--confirm --workspace --archive --receipt` and no `--carry-from`, and asserts it exits 0 (`:584`,
 `:596`, `:622`, `:720`, `:737`). §5.4 makes `--carry-from` required, so the gate breaks. The comment

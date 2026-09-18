@@ -582,12 +582,18 @@ Evidence:
 
 ### C33
 
-No existing gate, test or read-back axis is weakened. `dev/test-rebuild-depth.mjs` changes only by
-reading two hard-coded literals from `mcp-server/contracts/concern-checklist.json`, a standalone
-committed contract no rebuild packet rewrites, and its `a disposition carries no attached evidence`
-assertion is untouched. `design/reader-lenses/rebuild-coverage-receipt.json` is not a deliverable of
-any rebuild packet. `dev/test-rebuild-readback.mjs` changes only by passing an explicit reasoned
-empty carry and asserting the record it writes.
+No existing gate, test or read-back axis is weakened. `dev/test-rebuild-depth.mjs` changes in two
+ways and only two: it reads two hard-coded literals from
+`mcp-server/contracts/concern-checklist.json`, a standalone committed contract no rebuild packet
+rewrites; and, under the owner ruling of 2026-09-18 (`decisions.md` §7, applied in `spec.md` §8.10),
+the arms whose denominator is P17's coverage receipt report `cannot run` with exit 2 where the
+committed depth receipt describes a different store. No assertion is dropped or loosened —
+`a disposition carries no attached evidence` included. Every arm that does not read P17's sets
+fires over whatever receipt is committed, a failure in one of them is RED with exit 1 and red wins
+over `cannot run`, and two controls prove the scoped arms still fire.
+`design/reader-lenses/rebuild-coverage-receipt.json` is not a deliverable of any rebuild packet.
+`dev/test-rebuild-readback.mjs` changes only by passing an explicit reasoned empty carry and
+asserting the record it writes.
 
 Evidence:
 - `design/reader-lenses/rebuild-coverage-receipt.json` — `packet` `P17`, `repository_sha`
@@ -606,6 +612,13 @@ Evidence:
   <subsystem-id-compact>-<N>`.
 - Candidate finding B07-R2: "The depth gate hard-codes the discarded survey's concern codes and a
   colliding finding-id shape."
+- The historical pair replayed out of git history at `fb9f1c4` reaches the verdicts it reached
+  then: the surveyed-set arm passes, the adversarial arm is red over `B02-R1`'s missing
+  counter-claim, and the batch arm is red over the absent batches — three of the eight failed
+  assertions this branch started with.
+- Sabotaged four ways, the gate turns red each time: an arm made to return `null`, the identity
+  check pinned to `same`, the identity check pinned to `different`, and a depth receipt whose
+  contract string is changed. The third state cannot be reached by weakening the gate.
 - `.github/workflows/test.yml:255`, `:260`, `:266`, `:274` — the four rebuild gates in CI.
 
 ### C34
