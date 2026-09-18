@@ -35,10 +35,10 @@ No defect here is open or awaiting verification.
 
 | Metric | Value |
 |---|---|
-| Files read | 87 of 87 ledger rows |
-| Files in scope, not yet read | 0 of 87 |
-| Files excluded from the survey obligation | 0 of 87 |
-| Ledger rows the repository has changed under | 17 of 87 |
+| Files read | 90 of 90 ledger rows |
+| Files in scope, not yet read | 0 of 90 |
+| Files excluded from the survey obligation | 0 of 90 |
+| Ledger rows the repository has changed under | 18 of 90 |
 | Active concerns with a disposition recorded here | 0 of 12 |
 | Findings by resolution state | none recorded |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -92,6 +92,9 @@ No defect here is open or awaiting verification.
 | <a id="le-95d5a2b2b2"></a>`design/survey-depth/plan.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-e7e5969f8c"></a>`design/survey-depth/rationale.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-21ea97679c"></a>`design/survey-depth/rebuild-receipt.json` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
+| <a id="le-09eef34ad1"></a>`design/survey-depth/reviews/final/claude.md` | examined | The final whole-branch review by reviewer claude: two findings plus the notes that independently read P8, P10 and P11's failures as review-snapshot artifacts. Read in full by the fix session that dispositioned both. | `c82ceaac` |
+| <a id="le-aab796800d"></a>`design/survey-depth/reviews/final/codex.md` | examined | The final whole-branch review by reviewer codex: nine findings over the twelve landed packets, each with the command or reading that produced it. Read in full by the fix session that dispositioned all nine. | `c82ceaac` |
+| <a id="le-9e35b5f600"></a>`design/survey-depth/reviews/final/dispositions.md` | examined | This lane's disposition of all eleven final findings: seven fixed with red proofs, three rejected as the reviewer's environment rather than the tree's behaviour, one deferred. Written by the fix session that verified each one at HEAD. | `c82ceaac` |
 | <a id="le-3787d97e6e"></a>`design/survey-depth/reviews/round-1/aggregate.json` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-9ac4fd66b4"></a>`design/survey-depth/reviews/round-1/aggregate.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-b24142f86b"></a>`design/survey-depth/reviews/round-1/claude.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |

@@ -4,15 +4,15 @@ _Rows are ordered by open critical and high defects, then open medium and low, t
 
 | Subsystem | Open critical + high | Open medium + low | Awaiting verification | Undiscriminated | Weakest evidence quality | Unread files | Stale files | Unassessed seam sides |
 |---|---|---|---|---|---|---|---|---|
-| [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | 1 | 4 | 0 | 0 | `code-verified` | 0/43 | 0 | 0/0 |
+| [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | 1 | 4 | 0 | 0 | `code-verified` | 0/43 | 2 | 0/0 |
 | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) **[B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)** | 0 | 2 | 0 | 0 | — | 0/13 | 0 | 0/0 |
-| [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) **[B-04](subsystems/b04-diff-aware-materializer.md)** | 0 | 2 | 0 | 0 | `code-verified` | 0/24 | 0 | 0/0 |
+| [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) **[B-04](subsystems/b04-diff-aware-materializer.md)** | 0 | 2 | 0 | 0 | `code-verified` | 0/24 | 2 | 0/0 |
 | [Embedded research surveys and platform trials](subsystems/b07-embedded-research-surveys-and-platform-trials.md) **[B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md)** | 0 | 1 | 0 | 0 | `code-verified` | 74/79 | 0 | 0/0 |
-| [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** | 0 | 1 | 0 | 0 | `code-verified` | 65/153 | 1 | 0/0 |
+| [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** | 0 | 1 | 0 | 0 | `code-verified` | 65/153 | 4 | 0/0 |
 | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | 0 | 0 | 0 | 0 | — | 0/37 | 0 | 0/0 |
 | [Report interface design and validation studies](subsystems/b06-report-interface-design-and-validation-studies.md) **[B-06](subsystems/b06-report-interface-design-and-validation-studies.md)** | 0 | 0 | 0 | 0 | — | 0/24 | 0 | 0/0 |
 | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md) **[B-08](subsystems/b08-activation-evidence-and-release-readiness.md)** | 0 | 0 | 0 | 0 | — | 0/33 | 0 | 0/0 |
-| [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** | 0 | 0 | 0 | 0 | — | 0/87 | 17 | 0/0 |
+| [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** | 0 | 0 | 0 | 0 | — | 0/90 | 18 | 0/0 |
 
 ## What each column measures
 

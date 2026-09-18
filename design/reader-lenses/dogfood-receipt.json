@@ -1,13 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-18T21:06:58.362Z",
-  "repository_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+  "recorded_at": "2026-09-18T22:06:02.508Z",
+  "repository_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
   "store": {
-    "last_checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+    "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
     "canonical_branch": "main",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
@@ -63,9 +63,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-            "checked_at": "2026-09-18 21:02:20",
-            "repository_head": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+            "checked_at": "2026-09-18 22:05:28",
+            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -74,8 +74,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-              "last_checked_at": "2026-09-18 21:02:20"
+              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+              "last_checked_at": "2026-09-18 22:05:28"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
@@ -346,9 +346,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-            "checked_at": "2026-09-18 21:02:20",
-            "repository_head": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+            "checked_at": "2026-09-18 22:05:28",
+            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -357,8 +357,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-              "last_checked_at": "2026-09-18 21:02:20"
+              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+              "last_checked_at": "2026-09-18 22:05:28"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
@@ -626,9 +626,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-            "checked_at": "2026-09-18 21:02:20",
-            "repository_head": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+            "checked_at": "2026-09-18 22:05:28",
+            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -637,8 +637,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
-              "last_checked_at": "2026-09-18 21:02:20"
+              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+              "last_checked_at": "2026-09-18 22:05:28"
             },
             "staleness_measured": true,
             "evidence_rows": 1,
@@ -868,7 +868,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 11920,
+    "wire_bytes": 12284,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -888,7 +888,7 @@
         "path_prefix": null,
         "resolved": true
       },
-      "checked_sha": "d206ad78a4ca97c9406fd89383446ae95f0b1823",
+      "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
       "sections": {
         "open": {
           "census": 11,
@@ -900,15 +900,6 @@
               "label": "open",
               "severity": "HIGH",
               "subsystem_id": "B-03",
-              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
-              "revision_bound": true,
-              "authored": "code"
-            },
-            {
-              "finding_id": "B02-R1",
-              "label": "open",
-              "severity": "MEDIUM",
-              "subsystem_id": "B-02",
               "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
               "revision_bound": true,
               "authored": "code"
@@ -951,16 +942,6 @@
               "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
               "revision_bound": true,
               "authored": "model"
-            },
-            {
-              "question_id": 1,
-              "label": "unknown",
-              "category": "scope-judgment",
-              "subsystem_id": null,
-              "question": "Territory T5 (aliasing and ownership) is disqualified for this pass. Does a subsystem's structural pass find one?",
-              "ref_sha": null,
-              "revision_bound": false,
-              "authored": "model"
             }
           ],
           "ordering_basis": "category-then-id"
@@ -979,15 +960,15 @@
           "ordering_basis": "id"
         },
         "stale": {
-          "census": 18,
+          "census": 26,
           "recorded": true,
           "requested": true,
           "items": [
             {
               "source": "ledger",
               "label": "stale-knowledge",
-              "subsystem_id": "B-05",
-              "file_path": ".github/workflows/test.yml",
+              "subsystem_id": "B-03",
+              "file_path": "mcp-server/src/tools/carried.ts",
               "classification": "examined",
               "stale_reason": "git-drift",
               "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
@@ -995,11 +976,11 @@
               "authored": "code"
             }
           ],
-          "statement": "The two sources are counted apart and never summed.",
+          "statement": "The two sources are counted apart and never summed. Drifted rows nobody has read are in the ledger under policy: no reading of them has gone stale.",
           "counts": {
             "claim": 0,
-            "ledger": 18,
-            "drifted_unread": 0,
+            "ledger": 24,
+            "drifted_unread": 2,
             "drifted_deferred": 0
           },
           "ordering_basis": "claims-then-ledger-rows-by-subsystem-and-path"
@@ -1020,7 +1001,7 @@
                 "candidate": 0,
                 "obligation_bearing": 43
               },
-              "stale_files": 0,
+              "stale_files": 2,
               "unassessed_seam_sides": {
                 "sides": 0,
                 "of": 0
@@ -1036,14 +1017,14 @@
         }
       },
       "census": {
-        "total": 42,
+        "total": 50,
         "by_section": {
           "open": 11,
           "awaiting_verification": 0,
           "undiscriminated": 0,
           "decisions": 2,
           "leads": 2,
-          "stale": 18,
+          "stale": 26,
           "hot_spots": 9
         }
       },
@@ -1051,8 +1032,9 @@
         {
           "section": "open",
           "reason": "budget",
-          "count": 9,
+          "count": 10,
           "ids": [
+            "finding:B02-R1",
             "finding:B02-R2",
             "finding:B03-R2",
             "finding:B03-R3",
@@ -1062,6 +1044,15 @@
             "finding:B04-R2",
             "finding:B05-R1",
             "finding:B07-R1"
+          ],
+          "ids_truncated": false
+        },
+        {
+          "section": "decisions",
+          "reason": "budget",
+          "count": 1,
+          "ids": [
+            "question:1"
           ],
           "ids_truncated": false
         },
@@ -1077,15 +1068,31 @@
         },
         {
           "section": "stale",
-          "reason": "budget",
-          "count": 17,
+          "reason": "policy",
+          "count": 2,
           "ids": [
+            "ledger:B-05/mcp-server/test-carried-findings.mjs",
+            "ledger:B-05/mcp-server/test-scope-reconciliation.mjs"
+          ],
+          "ids_truncated": false
+        },
+        {
+          "section": "stale",
+          "reason": "budget",
+          "count": 23,
+          "ids": [
+            "ledger:B-03/mcp-server/src/tools/git.ts",
+            "ledger:B-04/materializer/amanuensis_materializer/renderers.py",
+            "ledger:B-04/materializer/test-unmeasured-coverage.py",
+            "ledger:B-05/.github/workflows/test.yml",
+            "ledger:B-05/dev/test-amanuensis-pecia-defects.mjs",
             "ledger:B-09/design/reader-lenses/dogfood-receipt.json",
             "ledger:B-09/design/reader-lenses/rebuild-depth-receipt.json",
             "ledger:B-09/design/survey-depth/acceptance-receipt.json",
             "ledger:B-09/design/survey-depth/claims.md",
             "ledger:B-09/design/survey-depth/plan.json",
             "ledger:B-09/design/survey-depth/plan.md",
+            "ledger:B-09/design/survey-depth/reviews/slice-S4/dispositions.md",
             "ledger:B-09/design/survey-depth/spec.md",
             "ledger:B-09/design/survey-depth/survey-progress.json",
             "ledger:B-09/dev/amanuensis-defects-to-pecia.mjs",
@@ -1094,11 +1101,9 @@
             "ledger:B-09/dev/record-survey-depth.mjs",
             "ledger:B-09/dev/test-carry-receipt.mjs",
             "ledger:B-09/dev/test-pecia-carry-audit.mjs",
-            "ledger:B-09/dev/test-rebuild-depth.mjs",
-            "ledger:B-09/dev/test-survey-depth-acceptance.mjs",
-            "ledger:B-09/dev/test-survey-depth.mjs"
+            "ledger:B-09/dev/test-rebuild-depth.mjs"
           ],
-          "ids_truncated": false
+          "ids_truncated": true
         },
         {
           "section": "hot_spots",
@@ -1121,8 +1126,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5657,
-        "response_bytes": 11920,
+        "payload_bytes": 5842,
+        "response_bytes": 12284,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1195,7 +1200,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-72c8a769-e5fb-44d1-832c-2ca44a55c760",
+      "projection_run_id": "projection-53714854-b72f-4f41-9a9a-c60a778c5382",
       "pages_rendered": 33,
       "html_pages_rendered": 33,
       "summary": {
@@ -1231,17 +1236,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-72c8a769-e5fb-44d1-832c-2ca44a55c760"
+        "projection_run_id": "projection-53714854-b72f-4f41-9a9a-c60a778c5382"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "c53ac8ebc7424be8e6975f9f67e4aa5b91dd87fca20c04db448eae8a64951e0c",
-      "manifest_sha256": "f967a65fbe961a0c63e1d6453cde5fd6c6464b4fe8e5a4a00e10e4151bcf380b",
+      "projection_contract_sha256": "71c4e6384b35fd2aaf8065d2d7cffe8d36ca5f919e86092331aa8c001ba37c38",
+      "manifest_sha256": "7aeacd08eecffbd3b5a5c4fa9f224c5c7498e85a40195975daa561a273295e37",
       "page_count": 67,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-18T21:06:46.098Z",
+      "promoted_at": "2026-09-18T22:05:53.661Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",

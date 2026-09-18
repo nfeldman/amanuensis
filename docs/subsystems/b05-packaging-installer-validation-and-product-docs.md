@@ -42,7 +42,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 88 of 154 ledger rows |
 | Files in scope, not yet read | 65 of 154 |
 | Files excluded from the survey obligation | 1 of 154 |
-| Ledger rows the repository has changed under | 1 of 154 |
+| Ledger rows the repository has changed under | 4 of 154 |
 | Active concerns with a disposition recorded here | 1 of 12 — 1 confirmed-bug |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |

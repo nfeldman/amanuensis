@@ -29,6 +29,8 @@ _No seams recorded yet._
 ```mermaid
 pie showData
     title Stale entries by subsystem
-    "B-09" : 17
-    "B-05" : 1
+    "B-09" : 18
+    "B-05" : 4
+    "B-04" : 2
+    "B-03" : 2
 ```

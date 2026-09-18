@@ -12,10 +12,10 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `d206ad78a4ca` on `main`, 2026-09-18 21:02 UTC |
-| Repository head | `d206ad78a4ca` — the same revision the survey checked |
+| Checked at | `a00d6f2cc2ab` on `main`, 2026-09-18 22:05 UTC |
+| Repository head | `a00d6f2cc2ab` — the same revision the survey checked |
 | Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 18 of 493 |
+| Files carrying a survey obligation marked stale | 26 of 496 |
 | Scoped files exempt from that obligation, marked stale | 63 of 156 |
 
 ### Survey coverage
@@ -23,7 +23,7 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 | Metric | Value |
 |---|---|
 | Subsystems by survey depth | 3 unmapped, 2 concerns, 4 adversarial |
-| Files read, of those carrying an obligation | 354 of 493 |
+| Files read, of those carrying an obligation | 357 of 496 |
 | Paths in scope with no ledger row | 0 |
 
 ### Open engineering work
@@ -43,7 +43,7 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-18 20:04 UTC |
+| Verified at | 2026-09-18 21:06 UTC |
 
 ## Findings by resolution state
 
@@ -64,5 +64,5 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ## Latest session
 
-`fix slice-S4: repair P11's RED gate — ledger the two slice-S4 review documents and re-record the acceptance receipt` — started 2026-09-18 21:02 UTC · **active**
+`fix-final: re-record the acceptance receipt over the final review's three tracked documents` — started 2026-09-18 22:00 UTC · ended 2026-09-18 22:01 UTC
 

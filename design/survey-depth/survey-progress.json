@@ -157,7 +157,7 @@
     "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; five are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
   },
   "end": {
-    "at_sha": "c82ceaac715df1fdd79919771e0bc4c650e727dd",
+    "at_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
     "obligation_bearing": 496,
     "examined": 357,
     "fraction": 0.7198,

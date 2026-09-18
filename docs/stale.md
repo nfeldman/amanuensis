@@ -1,15 +1,25 @@
 # Stale knowledge
 
-18 of 493 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `d206ad78a4ca` on `main`. 63 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+26 of 496 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `a00d6f2cc2ab` on `main`. 63 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
-18 of 354 examined files have changed since the revision they were read at.
+24 of 357 examined files have changed since the revision they were read at.
 
 | File | Owner | Read at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
+<!-- amanuensis:ledger-stale:ba77a8bca359573cee7e505cdc5252f1b792627ec9f927fc91ead2aa94f771cb -->
+| <a id="ls-ba77a8bca3"></a>`mcp-server/src/tools/carried.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | `c0734040` | 2026-09-18 22:00 UTC | git-drift | The carry's five writes and two reads, the archived-terminal pre-record, the three outcome authority rules, and the 8192-byte wire budget list_carried_findings measures on the doubled envelope. |
+<!-- amanuensis:ledger-stale:eff7d6082a2330f9c6bdd84802902cde0f06ac709ccae3b0df266ecfa8798d9b -->
+| <a id="ls-eff7d6082a"></a>`mcp-server/src/tools/git.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | `c0734040` | 2026-09-18 22:00 UTC | git-drift | detect_changes: the whole reconciliation — tree at the resolved revision, unledgered/absent/exempt, duplicate ownership, staleness re-derived both ways, scope_gaps rebuilt, and one append-only scope_reconciliations row with both digests. |
+<!-- amanuensis:ledger-stale:ce7ae4992ce6b043a22b511e1d8f2576fea7f34f011c9d94508af31e3b6665b5 -->
+| <a id="ls-ce7ae4992c"></a>`materializer/amanuensis_materializer/renderers.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `410d769b` | 2026-09-18 22:00 UTC | git-drift | The diff-aware materializer: page renderers, read-back axes, and the HTML projection. |
+<!-- amanuensis:ledger-stale:5b50e29ad7874b595b8a0ccf02f62c5c9aff3f3de7eedc1abc23b53dbe6ce88d -->
+| <a id="ls-5b50e29ad7"></a>`materializer/test-unmeasured-coverage.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `410d769b` | 2026-09-18 22:00 UTC | git-drift | The diff-aware materializer: the Python projection of the store. |
 <!-- amanuensis:ledger-stale:91903b73afbdd825a9cb4ed734706c3fbc8f19377f94519a8c95be55504fce8c -->
 | <a id="ls-91903b73af"></a>`.github/workflows/test.yml` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `c0734040` | 2026-09-18 01:47 UTC | git-drift | The CI registration of every gate this lane ships, including GATE D0's three-state block and GATE D1 beside it. |
+<!-- amanuensis:ledger-stale:e3a5cf8f8a18b0d607015c00c0d17c1b5f73bfa69f2ff00ae56442bd6a3b7422 -->
+| <a id="ls-e3a5cf8f8a"></a>`dev/test-amanuensis-pecia-defects.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `410d769b` | 2026-09-18 22:00 UTC | git-drift | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. |
 <!-- amanuensis:ledger-stale:7a899cdcaa08334ff737f12cb9cdd9766b0c6527a5a22f7ca232c79e348a9f3b -->
 | <a id="ls-7a899cdcaa"></a>`design/reader-lenses/dogfood-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 02:16 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:b01863459874479c4a7067c7648df567293d6ba694ead5b6d3aa27babacf1646 -->
@@ -22,6 +32,8 @@
 | <a id="ls-4d2e524147"></a>`design/survey-depth/plan.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:24 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:36ea48edadf9cd35852bb7ea41603810eb15768a0575eb71e232bf567442042c -->
 | <a id="ls-36ea48edad"></a>`design/survey-depth/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
+<!-- amanuensis:ledger-stale:84d5d78ac42de9968c230ec7aadf26a4f3ae9f9e1972667b59abaf1f19e006f9 -->
+| <a id="ls-84d5d78ac4"></a>`design/survey-depth/reviews/slice-S4/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `d206ad78` | 2026-09-18 22:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:af0239659903b848acd3d27723064ad0c0e306e01f671b56999d000450250eaf -->
 | <a id="ls-af02396599"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 20:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:d2a78918559128dc0ada7479fd9e245b12de2ce6aa4c3d8e5ab3deeb095916a6 -->
@@ -47,7 +59,14 @@
 
 ## Scoped but unread, and changed since scoping
 
-0 of 139 files in scope but not yet read have changed since they were scoped.
+2 of 139 files in scope but not yet read have changed since they were scoped.
+
+| File | Owner | Scoped at | Drift recorded | Reason | Why in scope |
+|---|---|---|---|---|---|
+<!-- amanuensis:ledger-stale:aafe57574808bcc8bcc272a91c183eb37fcc21cb54db52c05f3cc65ca53ccabb -->
+| <a id="ls-aafe575748"></a>`mcp-server/test-carried-findings.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-09-18 22:00 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
+<!-- amanuensis:ledger-stale:af83dd01cb390cfd6263dec82d62f77fb3ca071eb40bd5c5e246aa9430185580 -->
+| <a id="ls-af83dd01cb"></a>`mcp-server/test-scope-reconciliation.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-09-18 22:00 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
 
 ## Deferred files that changed after they were set aside
 

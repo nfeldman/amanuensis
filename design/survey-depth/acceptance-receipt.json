@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "c82ceaac715df1fdd79919771e0bc4c650e727dd",
+  "repository_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "c82ceaac715df1fdd79919771e0bc4c650e727dd",
+    "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,7 +21,7 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "c82ceaac715df1fdd79919771e0bc4c650e727dd",
+        "detected_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
         "tree_digest": "cf73b9cc7ffe241069507c5a1031a7a31504bfd063b570ef8ccfc07248d137ce",
         "ledger_digest": "4766ad906b3e990557b39fe2ba7499797ca5061f64a30bcab2cbdf9145cf0a21",
         "ledger": [
@@ -2639,7 +2639,7 @@
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": "mu7i5408-pfdjfj3n"
+        "session_id": null
       }
     },
     "B2": {

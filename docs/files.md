@@ -1,6 +1,6 @@
 # Files
 
-649 distinct paths across 649 ledger rows, read at `d206ad78a4ca`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+652 distinct paths across 652 ledger rows, read at `a00d6f2cc2ab`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -105,6 +105,9 @@
 | <a id="f-db39d32d25"></a>`design/survey-depth/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-95d5a2b2b2) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-6d0af2210e"></a>`design/survey-depth/rationale.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e7e5969f8c) | Examined | `410d769b` | 0 |
 | <a id="f-f3a731b76f"></a>`design/survey-depth/rebuild-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-21ea97679c) | Examined | `410d769b` | 0 |
+| <a id="f-4dc1116d84"></a>`design/survey-depth/reviews/final/claude.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-09eef34ad1) | Examined | `c82ceaac` | 0 |
+| <a id="f-205274084a"></a>`design/survey-depth/reviews/final/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-aab796800d) | Examined | `c82ceaac` | 0 |
+| <a id="f-76aad6a3a2"></a>`design/survey-depth/reviews/final/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-9e35b5f600) | Examined | `c82ceaac` | 0 |
 | <a id="f-fc0a75e26c"></a>`design/survey-depth/reviews/round-1/aggregate.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-3787d97e6e) | Examined | `410d769b` | 0 |
 | <a id="f-bc2f2e4a34"></a>`design/survey-depth/reviews/round-1/aggregate.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-9ac4fd66b4) | Examined | `410d769b` | 0 |
 | <a id="f-8ae53e52e6"></a>`design/survey-depth/reviews/round-1/claude.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-b24142f86b) | Examined | `410d769b` | 0 |
@@ -117,7 +120,7 @@
 | <a id="f-d6d55b7ded"></a>`design/survey-depth/reviews/slice-S3/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-88e6a86ef3) | Examined | `410d769b` | 0 |
 | <a id="f-c817131c50"></a>`design/survey-depth/reviews/slice-S3/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-fb33b7c53a) | Examined | `410d769b` | 0 |
 | <a id="f-3c71852db8"></a>`design/survey-depth/reviews/slice-S4/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-a29c6b0df6) | Examined | `d206ad78` | 0 |
-| <a id="f-84fe7a0be4"></a>`design/survey-depth/reviews/slice-S4/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-192228c4a7) | Examined | `d206ad78` | 0 |
+| <a id="f-84fe7a0be4"></a>`design/survey-depth/reviews/slice-S4/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-192228c4a7) | Examined, since changed | `d206ad78` | 0 |
 | <a id="f-cd8f21338a"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f469616995) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-a2b003bc1d"></a>`design/survey-depth/survey-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-72e7b4c603) | Examined, since changed | `081e12ed` | 0 |
 | <a id="f-de12fb7811"></a>`dev/activation-evidence/a19-user-scoped-contract.json` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-61b73c9a0f) | Examined | `410d769b` | 0 |
@@ -258,7 +261,7 @@
 | <a id="f-12dab2bccb"></a>`dev/test-activation-evidence.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-a2d0694fb6) | Examined | `410d769b` | 0 |
 | <a id="f-9a478627d4"></a>`dev/test-activation-operating-envelope-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-141693601d) | Examined | `410d769b` | 0 |
 | <a id="f-6c0b98bd39"></a>`dev/test-activation-operating-trust-cleanup.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-679c6e2c15) | Examined | `410d769b` | 0 |
-| <a id="f-d345f7be4a"></a>`dev/test-amanuensis-pecia-defects.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-390f0c9e45) | Examined | `410d769b` | 0 |
+| <a id="f-d345f7be4a"></a>`dev/test-amanuensis-pecia-defects.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-390f0c9e45) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-4495564c4b"></a>`dev/test-carried-finding-references.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-7f4b01c7c8) | Examined | `410d769b` | 0 |
 | <a id="f-59b412f1fd"></a>`dev/test-carry-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f058f32538) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-c2f35331da"></a>`dev/test-codex-host-evidence-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-4679cd8672) | Examined | `410d769b` | 0 |
@@ -356,7 +359,7 @@
 | <a id="f-33c2ca086d"></a>`materializer/amanuensis_materializer/lint.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-9e6fa5d9c6) | Examined | `c0734040` | 0 |
 | <a id="f-dbe02837ab"></a>`materializer/amanuensis_materializer/manifest.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-c1cd26d6d4) | Examined | `c0734040` | 0 |
 | <a id="f-e38072d03d"></a>`materializer/amanuensis_materializer/readback.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-d827cc413f) | Examined | `410d769b` | 2 |
-| <a id="f-3050a98470"></a>`materializer/amanuensis_materializer/renderers.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-6d3cf24ae6) | Examined | `410d769b` | 2 |
+| <a id="f-3050a98470"></a>`materializer/amanuensis_materializer/renderers.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-6d3cf24ae6) | Examined, since changed | `410d769b` | 2 |
 | <a id="f-91e672d1a7"></a>`materializer/amanuensis_materializer/slugs.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-9b07a74728) | Examined | `c0734040` | 0 |
 | <a id="f-58e6bc5395"></a>`materializer/amanuensis_materializer/vocabulary.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-40e31187ab) | Examined | `410d769b` | 0 |
 | <a id="f-53c190d57b"></a>`materializer/amanuensis_materializer/xref.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-98b16d5714) | Examined | `c0734040` | 0 |
@@ -369,7 +372,7 @@
 | <a id="f-4abfd94de0"></a>`materializer/test-overview-truthfulness.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-a5aca71c9b) | Examined | `410d769b` | 0 |
 | <a id="f-752ea1412d"></a>`materializer/test-readback.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-f9d8a99915) | Examined | `410d769b` | 0 |
 | <a id="f-ff0fd3741f"></a>`materializer/test-search-index.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-b741a152cd) | Examined | `410d769b` | 0 |
-| <a id="f-3587ee3ae0"></a>`materializer/test-unmeasured-coverage.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-cfcb878cc4) | Examined | `410d769b` | 0 |
+| <a id="f-3587ee3ae0"></a>`materializer/test-unmeasured-coverage.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-cfcb878cc4) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-62d252222c"></a>`materializer/uv.lock` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-bb739a0c9b) | Excluded | `a7f9384d` | 0 |
 | <a id="f-3077d78097"></a>`mcp-server/.gitignore` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-b6124b6738) | Examined | `410d769b` | 0 |
 | <a id="f-96a54f44ad"></a>`mcp-server/DEVELOPMENT.md` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-58e5638e34) | Examined | `410d769b` | 0 |
@@ -442,7 +445,7 @@
 | <a id="f-dcab935fff"></a>`mcp-server/src/standing.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-9e2f6e715c) | Examined | `c0734040` | 0 |
 | <a id="f-35473ea5b4"></a>`mcp-server/src/storage-git.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-07c11b6cef) | Examined | `c0734040` | 0 |
 | <a id="f-8db77bf26d"></a>`mcp-server/src/tools/artifacts.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-52ddba3d3b) | Examined | `c0734040` | 0 |
-| <a id="f-56c3bff17a"></a>`mcp-server/src/tools/carried.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-8635244b2d) | Examined | `c0734040` | 0 |
+| <a id="f-56c3bff17a"></a>`mcp-server/src/tools/carried.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-8635244b2d) | Examined, since changed | `c0734040` | 0 |
 | <a id="f-a7ec1b8f80"></a>`mcp-server/src/tools/chorusmith-adapter.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-8a6e1799d4) | Examined | `410d769b` | 0 |
 | <a id="f-86d2144573"></a>`mcp-server/src/tools/claims.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-8374f2c77c) | Examined | `c0734040` | 0 |
 | <a id="f-cb7ae4c99f"></a>`mcp-server/src/tools/codebase-brief.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-e764a016a5) | Examined | `c0734040` | 0 |
@@ -462,7 +465,7 @@
 | <a id="f-89ae267833"></a>`mcp-server/src/tools/field-notes.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-4020309e5e) | Examined | `c0734040` | 0 |
 | <a id="f-9866559848"></a>`mcp-server/src/tools/files.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-566054a018) | Examined | `c0734040` | 0 |
 | <a id="f-4598fd18c5"></a>`mcp-server/src/tools/findings.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-44c699c32a) | Examined | `c0734040` | 2 |
-| <a id="f-6a24c7bf26"></a>`mcp-server/src/tools/git.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-17468c4b96) | Examined | `c0734040` | 0 |
+| <a id="f-6a24c7bf26"></a>`mcp-server/src/tools/git.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-17468c4b96) | Examined, since changed | `c0734040` | 0 |
 | <a id="f-cf91c8099b"></a>`mcp-server/src/tools/impact.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-b57fab0c08) | Examined | `c0734040` | 0 |
 | <a id="f-978383a905"></a>`mcp-server/src/tools/learning.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-fd76969f61) | Examined | `410d769b` | 0 |
 | <a id="f-1b30725f54"></a>`mcp-server/src/tools/locks.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-6ef26ea3bf) | Examined | `c0734040` | 0 |
