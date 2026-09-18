@@ -55,6 +55,24 @@ function run(cmd, argv, cwd, label) {
   return r;
 }
 
+/** `run`, for a step whose *success* is a precondition rather than the
+ *  assertion. `run` itself stays status-blind on purpose — several assertions
+ *  below are exactly "the resolver exited 1" — but a setup step that fails and
+ *  is not checked takes the gate down somewhere unrelated: `pecia init` on an
+ *  unwritable uv cache exited 1, went unread, and the gate then died at an
+ *  ENOENT on the config file it was supposed to have created, reporting a
+ *  missing file instead of the broken dependency (F4/codex). */
+function mustRun(cmd, argv, cwd, label) {
+  const r = run(cmd, argv, cwd, label);
+  if (r.status !== 0) {
+    throw new Error(
+      `${label}: exited ${r.status}${r.signal ? ` on ${r.signal}` : ""}\n` +
+        `${String(r.stdout ?? "").trim()}\n${String(r.stderr ?? "").trim()}`.trim(),
+    );
+  }
+  return r;
+}
+
 function json(r, label) {
   try {
     return JSON.parse(r.stdout);
@@ -77,9 +95,12 @@ function auditKinds(cwd) {
 // green this repository has already found three times (B03-2, B04-1, B04-3).
 {
   const probe = spawnSync("pecia", ["--help"], { encoding: "utf8" });
-  if (probe.error) {
+  // Not only "is it on PATH": a CLI that is present but cannot run — an
+  // unwritable uv cache is the case seen — must report `cannot run` here rather
+  // than let the gate proceed on a dependency that does not work (F4/codex).
+  if (probe.error || probe.status !== 0) {
     process.stderr.write(
-      "cannot run: the `pecia` CLI is not on PATH.\n" +
+      `cannot run: the \`pecia\` CLI ${probe.error ? "is not on PATH" : `exited ${probe.status} on --help`}.\n` +
         "These gates exercise the real ledger tooling and will not pretend to pass without it.\n" +
         "Install pecia (github.com/nfeldman/pecia — a uv PEP-723 script) and re-run.\n",
     );
@@ -140,7 +161,7 @@ try {
   }
   db.close();
 
-  run("pecia", ["init"], work, "pecia init");
+  mustRun("pecia", ["init"], work, "pecia init");
   writeFileSync(
     join(work, ".pecia", "config.yaml"),
     "stale_days: 7\nrot_days: 14\nresolvers: [amanuensis=dev/pecia-resolve-finding.mjs]\n",
