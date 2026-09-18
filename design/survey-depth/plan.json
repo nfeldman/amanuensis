@@ -942,7 +942,7 @@
       "needs_mcp": true,
       "budget_minutes": 420,
       "status": "ready",
-      "attempts": 0,
+      "attempts": 1,
       "start_sha": "02f6c0aeb547c57305b407d3dce8ccf1feb88d15",
       "red_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
       "green_sha": "7556cf7",
