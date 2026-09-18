@@ -1673,8 +1673,9 @@ restoring the P19 document so the gate keeps P17's store as its subject, was mea
   exits 2. CI ends green on the third state.
 - The receipt that stays is also the only one anything can contradict. It names the store at
   `…/amanuensis-survey-depth/.amanuensis`, which exists and which the live arm reads; the P19
-  document names `/Users/nfeldman/repos/amanuensis/.amanuensis`, a store the primary checkout has since
-  rebuilt, so restoring it would leave a receipt at HEAD describing no store anywhere. It would
+  document names `/Users/nfeldman/repos/amanuensis/.amanuensis`, a store the primary checkout
+  has since rebuilt, so restoring it would leave a receipt at HEAD describing no store
+  anywhere. It would
   also retire the four derivation defects attempt 2 fixed in `dev/record-rebuild-depth.mjs`, which
   nothing but that receipt exercises.
 
