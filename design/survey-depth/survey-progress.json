@@ -90,6 +90,22 @@
       "why_last": "Two evidence corpora: a design study with its own validation record, and the embedded research surveys. Prose and captured trial data, no product code.",
       "status": "not started",
       "note": "B-06 and B-08 were not reached. B-08's 61 captured harness runs were reclassified generated-ignore in batch 3 because they are output of harnesses that are themselves scoped; no file of either subsystem was examined."
+    },
+    {
+      "batch": 8,
+      "priority": "3 (B-05) and 4 (B-08)",
+      "subsystems": [
+        "B-05",
+        "B-08"
+      ],
+      "why_next": "The cheapest unread files per page left in the repository: B-05's configuration, contracts, fixtures, packaging scripts and checkers, then B-08's activation receipts. B2 was the only failing predicate and this is where the remaining paths are.",
+      "status": "in progress",
+      "subsystems_reached": "no status advance; this batch adds examined paths and nothing else",
+      "examined_added": 86,
+      "checkpoints": [
+        "474ff13"
+      ],
+      "note": "B-05 to its 82nd ledger entry and B-08's first three receipts. 86 paths read in full and moved candidate -> examined: dev/ roadmap source and its four checkers, the mcp-server contracts and activation/evaluation fixtures, the packaging and check scripts, and A19-A21's activation evidence. D3% crossed the baseline here: 294 of 489 is 0.6012 against the frozen 0.5957."
     }
   ],
   "carried_adjudication": {
@@ -126,11 +142,11 @@
   "end": {
     "at_sha": "pending the final commit",
     "obligation_bearing": 489,
-    "examined": 208,
-    "fraction": 0.4254,
+    "examined": 294,
+    "fraction": 0.6012,
     "examined_needed_for_b2": 292,
-    "shortfall": 84,
-    "why": "The packet's own notes sized this work from the baseline's measured cost: 221 examined paths over 35 sessions spanning a month. One session reached 103 over roughly six hours, which is the same rate the baseline achieved and not enough for the threshold. B1, B3, B4, B5 and B6 hold; B2 does not, and the depth gate is red on B2 alone.",
+    "shortfall": 0,
+    "why": "B2 is met. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.6012 over the tracked denominator at HEAD.",
     "denominator_note": "D2 fell from 571 to 486 in this pass because 85 paths were reclassified exempt: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 trial build outputs and lockfiles as generated-ignore, and 4 shadcn registry copies as vendor-ignore. Every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. A reviewer checking for a shrunk denominator should start there."
   }
 }
