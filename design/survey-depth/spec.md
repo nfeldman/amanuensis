@@ -1618,6 +1618,37 @@ lane — and it survives only while the rebuild packet does not rewrite it. So:
 Its remaining assertions, including `a disposition carries no attached evidence`, are untouched:
 that assertion is this lane's own thesis and it was already right.
 
+**Its green requirement does not apply, and this is what discharges it instead** — owner ruling
+(`decisions.md` §7), applied 2026-09-18 after P11 attempt 2 established that no survey work can
+meet it. Three assertions read their denominators from `design/reader-lenses/rebuild-coverage-receipt.json`,
+the independence this section protects, and that document describes the store **P17** surveyed,
+which §7.4 steps 2 to 4 delete. `:443-446` refuses any subsystem outside P17's eight and this
+rebuild has nine; `:761-769` requires the receipt's adversarial targets to equal P17's claim keys
+exactly, and this store's eleven claims are under none of them, so its two clauses cannot both
+hold; `:936-953` reads batch priorities from P17's receipt and refuses a revisited subsystem. The
+numerator now describes one store and the denominator another, so the requirement is not
+unfinished work, it is unsatisfiable. It therefore does not bind, and the obligation is discharged
+by all three of:
+
+1. **The property is still asserted for this rebuild**, by `GATE D0` (§7.1) and `GATE A1` (§8.8)
+   over the frozen baseline fixture (§7.2) and this lane's acceptance receipt (§7.5) — two
+   documents written by different runs, which is the independence §8.10 was protecting.
+2. **The reader-lenses gate keeps its own subject.** Its P17-denominated arms report
+   `cannot run` and exit 2 — never green, and never a red that blames this store for not being
+   the other one — when the depth receipt under test does not describe the store the coverage
+   receipt describes. That is the identity check P8 already applied to `dev/test-rebuild-coverage.mjs`
+   and `dev/test-reader-lenses-dogfood.mjs`, and the third state §7.1 already defines. Every
+   assertion that does not depend on P17's sets keeps firing over whatever receipt is committed.
+3. **A control proves the arms still fire.** The historical pair — P17's coverage receipt and the
+   depth receipt as committed before the clean-slate rebuild — is replayed from git history into a
+   temporary tree and must reach the verdicts it reached then; and a receipt relabelled to claim an
+   identity it does not have must turn the arm **red**, not `cannot run`. Without that control the
+   identity check is indistinguishable from an exemption.
+
+This is scoping, not weakening: no axis is dropped for the subject the gate can still speak about,
+and CI must end green — say there how the third state is handled, the same way §7.1 answers it
+for `GATE D0`.
+
 `dev/test-rebuild-readback.mjs` spawns the rebuild driver directly at `:541-552` and `:686-699` with
 `--confirm --workspace --archive --receipt` and no `--carry-from`, and asserts it exits 0 (`:584`,
 `:596`, `:622`, `:720`, `:737`). §5.4 makes `--carry-from` required, so the gate breaks. The comment
