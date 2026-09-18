@@ -1,15 +1,17 @@
 # Stale knowledge
 
-8 of 490 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `20839da454b0` on `main`. 54 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+11 of 490 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `7f4b4d103c94` on `main`. 62 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
-8 of 351 examined files have changed since the revision they were read at.
+11 of 351 examined files have changed since the revision they were read at.
 
 | File | Owner | Read at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
 <!-- amanuensis:ledger-stale:91903b73afbdd825a9cb4ed734706c3fbc8f19377f94519a8c95be55504fce8c -->
 | <a id="ls-91903b73af"></a>`.github/workflows/test.yml` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `c0734040` | 2026-09-18 01:47 UTC | git-drift | The CI registration of every gate this lane ships, including GATE D0's three-state block and GATE D1 beside it. |
+<!-- amanuensis:ledger-stale:7a899cdcaa08334ff737f12cb9cdd9766b0c6527a5a22f7ca232c79e348a9f3b -->
+| <a id="ls-7a899cdcaa"></a>`design/reader-lenses/dogfood-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 02:16 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:b01863459874479c4a7067c7648df567293d6ba694ead5b6d3aa27babacf1646 -->
 | <a id="ls-b018634598"></a>`design/reader-lenses/rebuild-depth-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:c173f9183f78f66b53e459ea2a651222f3df69bfa975a016c20890b6800ddf61 -->
@@ -20,10 +22,14 @@
 | <a id="ls-36ea48edad"></a>`design/survey-depth/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:d2a78918559128dc0ada7479fd9e245b12de2ce6aa4c3d8e5ab3deeb095916a6 -->
 | <a id="ls-d2a7891855"></a>`design/survey-depth/survey-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `081e12ed` | 2026-09-18 01:15 UTC | git-drift | This packet's batching record: which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. |
+<!-- amanuensis:ledger-stale:b8f8585ff2d6622faa3f76357ad5a54a17528866cb18b6b015158a56f6f48bb8 -->
+| <a id="ls-b8f8585ff2"></a>`dev/record-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 02:16 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:898a43df4442e963e3a60f05472c390516816bd2adb3a7ad74ee0ac051b7582f -->
 | <a id="ls-898a43df44"></a>`dev/record-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `081e12ed` | 2026-09-18 01:47 UTC | git-drift | The receipt writer: it refuses to write a witness whose recorded digests do not re-derive from the tree and the ledger, and --check compares the committed receipt against the live store. |
 <!-- amanuensis:ledger-stale:e798be622ab837d5f558fc4ee82131c9e23a6f90dc27207f270b4c411c7e720b -->
 | <a id="ls-e798be622a"></a>`dev/test-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
+<!-- amanuensis:ledger-stale:bb593d1de183fa0707921011ec9ec3f1dff4feefa70c39419271aec04ce0af94 -->
+| <a id="ls-bb593d1de1"></a>`dev/test-survey-depth-acceptance.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `e2382dc3` | 2026-09-18 02:16 UTC | git-drift | GATE A1 of the survey-depth lane (spec.md §8.8): it recomputes every blocking predicate of the acceptance receipt from the row-level witnesses §7.5 requires, and carries §8.8's control — the committed receipt validates, two seeded forged-green copies of it do not. A lane gate and its receipt-recomputation belong with the other lane drivers and receipts this subsystem owns. |
 
 ## Scoped but unread, and changed since scoping
 

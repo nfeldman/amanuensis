@@ -1,6 +1,6 @@
 # Files
 
-646 distinct paths across 646 ledger rows, read at `20839da454b0`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+646 distinct paths across 646 ledger rows, read at `7f4b4d103c94`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -65,7 +65,7 @@
 | <a id="f-46903ad74c"></a>`design/reader-lenses/README.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-690e486f82) | Examined | `410d769b` | 0 |
 | <a id="f-2292f143fb"></a>`design/reader-lenses/claims.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4a9c0cf082) | Examined | `410d769b` | 0 |
 | <a id="f-66ac95184c"></a>`design/reader-lenses/decisions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ab915669bd) | Examined | `410d769b` | 0 |
-| <a id="f-9c61f54b60"></a>`design/reader-lenses/dogfood-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-7b31fa9aaf) | Examined | `410d769b` | 0 |
+| <a id="f-9c61f54b60"></a>`design/reader-lenses/dogfood-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-7b31fa9aaf) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-f64fc123db"></a>`design/reader-lenses/plan.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-0f51417254) | Examined | `410d769b` | 0 |
 | <a id="f-387db763d5"></a>`design/reader-lenses/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-1d4eb2da4b) | Examined | `410d769b` | 0 |
 | <a id="f-6d998e9d50"></a>`design/reader-lenses/rationale.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-3ef3a34be9) | Examined | `410d769b` | 0 |
@@ -238,7 +238,7 @@
 | <a id="f-3d538c4490"></a>`dev/record-carry-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e97538ef7b) | Examined | `410d769b` | 0 |
 | <a id="f-138b3246c5"></a>`dev/record-dogfood-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-eaca72f560) | Examined | `410d769b` | 0 |
 | <a id="f-bf013bd5d3"></a>`dev/record-rebuild-coverage.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-dd3068b5a3) | Examined | `410d769b` | 0 |
-| <a id="f-33e6215621"></a>`dev/record-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2652d460a0) | Examined | `410d769b` | 0 |
+| <a id="f-33e6215621"></a>`dev/record-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2652d460a0) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-681652b99e"></a>`dev/record-regeneration-pass.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ab53457431) | Examined | `410d769b` | 0 |
 | <a id="f-5be938482b"></a>`dev/record-survey-depth-baseline.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-31a0f96336) | Examined | `410d769b` | 0 |
 | <a id="f-4a4469467f"></a>`dev/record-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ca0bbfc242) | Examined, since changed | `081e12ed` | 0 |
@@ -271,7 +271,7 @@
 | <a id="f-682131806f"></a>`dev/test-rebuild-readback.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-6f19c9b5b9) | Examined | `410d769b` | 0 |
 | <a id="f-629e8c0f93"></a>`dev/test-rebuild-regeneration.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-667ac80609) | Examined | `410d769b` | 0 |
 | <a id="f-432e0b0af7"></a>`dev/test-roadmap.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-afca65075c) | Examined | `410d769b` | 0 |
-| <a id="f-63a8dbc397"></a>`dev/test-survey-depth-acceptance.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-5c70b9a90e) | Examined | `e2382dc3` | 0 |
+| <a id="f-63a8dbc397"></a>`dev/test-survey-depth-acceptance.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-5c70b9a90e) | Examined, since changed | `e2382dc3` | 0 |
 | <a id="f-8a81d33ff7"></a>`dev/test-survey-depth-red-gates.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-15017aefd5) | Examined | `410d769b` | 0 |
 | <a id="f-e3c3e70db3"></a>`dev/test-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-8b5483aac6) | Examined | `410d769b` | 0 |
 | <a id="f-7d31f11edb"></a>`docs/.manifest.json` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-18215313a9) | Excluded | `a7f9384d` | 0 |
@@ -430,7 +430,7 @@
 | <a id="f-fb8dbcec8a"></a>`mcp-server/src/codebase-brief-contract.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-ca9a153bd6) | Examined | `c0734040` | 0 |
 | <a id="f-0f6622c883"></a>`mcp-server/src/codex-host.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-fcffcd1e95) | Examined | `c0734040` | 2 |
 | <a id="f-706a59b679"></a>`mcp-server/src/db.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-28d2d6d8a8) | Examined | `c0734040` | 0 |
-| <a id="f-9bf8f370bf"></a>`mcp-server/src/helpers.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-f9885d1938) | Examined | `c0734040` | 1 |
+| <a id="f-9bf8f370bf"></a>`mcp-server/src/helpers.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-f9885d1938) | Examined | `c0734040` | 2 |
 | <a id="f-e6d78f9f4a"></a>`mcp-server/src/index.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-813b71c1ac) | Examined | `c0734040` | 2 |
 | <a id="f-e4b1468467"></a>`mcp-server/src/invariants.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-f53441642b) | Examined | `c0734040` | 1 |
 | <a id="f-9d5bcc188c"></a>`mcp-server/src/project.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md#le-97fd8ef43b) | Examined | `c0734040` | 1 |
@@ -455,7 +455,7 @@
 | <a id="f-a88e7f3281"></a>`mcp-server/src/tools/dispatch.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-cee13c0a54) | Examined | `c0734040` | 0 |
 | <a id="f-731bdbd005"></a>`mcp-server/src/tools/dispositions.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-23127afcd5) | Examined | `c0734040` | 0 |
 | <a id="f-fd30942f15"></a>`mcp-server/src/tools/evaluation.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-2412897637) | Examined | `410d769b` | 0 |
-| <a id="f-27ee6eecd1"></a>`mcp-server/src/tools/evidence.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-ed6472d9a0) | Examined | `c0734040` | 1 |
+| <a id="f-27ee6eecd1"></a>`mcp-server/src/tools/evidence.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-ed6472d9a0) | Examined | `c0734040` | 2 |
 | <a id="f-89ae267833"></a>`mcp-server/src/tools/field-notes.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-4020309e5e) | Examined | `c0734040` | 0 |
 | <a id="f-9866559848"></a>`mcp-server/src/tools/files.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-566054a018) | Examined | `c0734040` | 0 |
 | <a id="f-4598fd18c5"></a>`mcp-server/src/tools/findings.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-44c699c32a) | Examined | `c0734040` | 2 |

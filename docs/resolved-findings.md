@@ -4,7 +4,7 @@ No finding has reached a terminal state.
 
 - **Scope** — findings recorded verified-fixed, ruled out, or accepted, each with the basis its resolution rests on.
 - **Basis** — `finding_state_current` over `findings` and `finding_resolution_events`.
-- **Checked revision** — `20839da454b0` on `main`, recorded 2026-09-18 01:53 UTC.
+- **Checked revision** — `7f4b4d103c94` on `main`, recorded 2026-09-18 02:16 UTC.
 
 ## Carried obligations
 

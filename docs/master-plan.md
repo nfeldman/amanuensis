@@ -37,5 +37,5 @@
 | Priority | ID | Name | Status | Scope | Jump-in | Findings |
 |---|---|---|---|---|---|---|
 | 1 | **[B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)** | MCP core, persistence, and lifecycle | 🟡 adversarial | mcp-server/src/*.ts and schema.sql — the server root modules, the storage lifecycle, the invariants | mcp-server/src/index.ts; src/db.ts; src/schema.sql; src/invariants.ts | 2 (2 open) |
-| 1 | **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | Knowledge tools and workflow API | 🟡 adversarial | mcp-server/src/tools/** — the tool surface a survey writes and reads through | src/tools/evidence.ts; src/tools/dispositions.ts; src/tools/git.ts; src/tools/carried.ts | 4 (4 open) |
+| 1 | **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | Knowledge tools and workflow API | 🟡 adversarial | mcp-server/src/tools/** — the tool surface a survey writes and reads through | src/tools/evidence.ts; src/tools/dispositions.ts; src/tools/git.ts; src/tools/carried.ts | 5 (5 open) |
 

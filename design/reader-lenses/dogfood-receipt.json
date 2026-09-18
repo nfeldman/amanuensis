@@ -1,13 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-18T01:53:52.932Z",
-  "repository_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+  "recorded_at": "2026-09-18T02:16:55.359Z",
+  "repository_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
   "store": {
-    "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+    "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
     "canonical_branch": "main",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
@@ -63,9 +63,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-            "checked_at": "2026-09-18 01:53:29",
-            "repository_head": "20839da454b0940e3c014a8bb0181a128549e9e1",
+            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_at": "2026-09-18 02:16:23",
+            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -74,8 +74,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-              "last_checked_at": "2026-09-18 01:53:29"
+              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+              "last_checked_at": "2026-09-18 02:16:23"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
@@ -304,7 +304,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 11864,
+      "wire_bytes": 14958,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -346,9 +346,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-            "checked_at": "2026-09-18 01:53:29",
-            "repository_head": "20839da454b0940e3c014a8bb0181a128549e9e1",
+            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_at": "2026-09-18 02:16:23",
+            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -357,14 +357,23 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-              "last_checked_at": "2026-09-18 01:53:29"
+              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+              "last_checked_at": "2026-09-18 02:16:23"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
             "claims_recorded": 1
           },
-          "unknown": [],
+          "unknown": [
+            {
+              "kind": "open-question",
+              "question_id": 2,
+              "subsystem_id": "B-03",
+              "category": "contradiction",
+              "question": "B-03/SI-2 is dispositioned confirmed-acceptable on the rationale that \"every revision this surface accepts is resolved at the write and re-resolved at the read\", but SI-2's calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does SI-2 on B-03 stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?",
+              "scope": "subsystem"
+            }
+          ],
           "authorizes": "current claims whose evidence cites this file",
           "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
           "reachability_checked": true,
@@ -429,11 +438,23 @@
             "items": []
           },
           "leads": {
-            "census": 0,
-            "recorded": false,
+            "census": 1,
+            "recorded": true,
             "requested": true,
             "as_of_supported": false,
-            "items": []
+            "items": [
+              {
+                "kind": "question",
+                "question_id": 2,
+                "category": "contradiction",
+                "subsystem_id": "B-03",
+                "question": "B-03/SI-2 is dispositioned confirmed-acceptable on the rationale that \"every revision this surface accepts is resolved at the write and re-resolved at the read\", but SI-2's calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does SI-2 on B-03 stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?",
+                "scope": "subsystem",
+                "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ]
           },
           "history_pointer": {
             "census": 4,
@@ -490,7 +511,7 @@
           }
         },
         "census": {
-          "total": 10,
+          "total": 12,
           "by_section": {
             "purpose": 1,
             "structure": 1,
@@ -498,9 +519,9 @@
             "reviews": 0,
             "boundaries": 0,
             "terms": 2,
-            "leads": 0,
+            "leads": 1,
             "history_pointer": 4,
-            "unknown": 0
+            "unknown": 1
           }
         },
         "omitted": [
@@ -538,8 +559,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 5633,
-          "response_bytes": 11864,
+          "payload_bytes": 7149,
+          "response_bytes": 14958,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": false,
           "within_budget": true,
@@ -605,9 +626,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-            "checked_at": "2026-09-18 01:53:29",
-            "repository_head": "20839da454b0940e3c014a8bb0181a128549e9e1",
+            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_at": "2026-09-18 02:16:23",
+            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -616,8 +637,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
-              "last_checked_at": "2026-09-18 01:53:29"
+              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+              "last_checked_at": "2026-09-18 02:16:23"
             },
             "staleness_measured": true,
             "evidence_rows": 1,
@@ -847,7 +868,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 12204,
+    "wire_bytes": 11774,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -867,10 +888,10 @@
         "path_prefix": null,
         "resolved": true
       },
-      "checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+      "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
       "sections": {
         "open": {
-          "census": 10,
+          "census": 11,
           "recorded": true,
           "requested": true,
           "items": [
@@ -888,24 +909,6 @@
               "label": "open",
               "severity": "MEDIUM",
               "subsystem_id": "B-02",
-              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
-              "revision_bound": true,
-              "authored": "code"
-            },
-            {
-              "finding_id": "B02-R2",
-              "label": "open",
-              "severity": "MEDIUM",
-              "subsystem_id": "B-02",
-              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
-              "revision_bound": true,
-              "authored": "code"
-            },
-            {
-              "finding_id": "B03-R2",
-              "label": "open",
-              "severity": "MEDIUM",
-              "subsystem_id": "B-03",
               "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
               "revision_bound": true,
               "authored": "code"
@@ -935,10 +938,20 @@
           "ordering_basis": "contradictions-then-matrices-then-dispositions-each-by-id"
         },
         "decisions": {
-          "census": 1,
+          "census": 2,
           "recorded": true,
           "requested": true,
           "items": [
+            {
+              "question_id": 2,
+              "label": "unknown",
+              "category": "contradiction",
+              "subsystem_id": "B-03",
+              "question": "B-03/SI-2 is dispositioned confirmed-acceptable on the rationale that \"every revision this surface accepts is resolved at the write and re-resolved at the read\", but SI-2's calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does SI-2 on B-03 stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?",
+              "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+              "revision_bound": true,
+              "authored": "model"
+            },
             {
               "question_id": 1,
               "label": "unknown",
@@ -953,19 +966,20 @@
           "ordering_basis": "category-then-id"
         },
         "leads": {
-          "census": 1,
+          "census": 2,
           "recorded": true,
           "requested": true,
           "items": [],
           "statement": "Open leads of other categories are in the omission ledger under policy: unverified-suspicion is an open candidate-concern note, and no label here covers the rest.",
           "counts": {
             "unverified_suspicion": 0,
-            "pattern": 1
+            "pattern": 1,
+            "anomaly": 1
           },
           "ordering_basis": "id"
         },
         "stale": {
-          "census": 8,
+          "census": 11,
           "recorded": true,
           "requested": true,
           "items": [
@@ -984,21 +998,10 @@
               "source": "ledger",
               "label": "stale-knowledge",
               "subsystem_id": "B-09",
-              "file_path": "design/reader-lenses/rebuild-depth-receipt.json",
+              "file_path": "design/reader-lenses/dogfood-receipt.json",
               "classification": "examined",
               "stale_reason": "git-drift",
               "ref_sha": "410d769b7376734fb35078b93517b56ed5c76f97",
-              "revision_bound": true,
-              "authored": "code"
-            },
-            {
-              "source": "ledger",
-              "label": "stale-knowledge",
-              "subsystem_id": "B-09",
-              "file_path": "design/survey-depth/acceptance-receipt.json",
-              "classification": "examined",
-              "stale_reason": "git-drift",
-              "ref_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
               "revision_bound": true,
               "authored": "code"
             }
@@ -1006,7 +1009,7 @@
           "statement": "The two sources are counted apart and never summed.",
           "counts": {
             "claim": 0,
-            "ledger": 8,
+            "ledger": 11,
             "drifted_unread": 0,
             "drifted_deferred": 0
           },
@@ -1020,53 +1023,13 @@
             {
               "subsystem_id": "B-03",
               "open_critical_high": 1,
-              "open_medium_low": 3,
+              "open_medium_low": 4,
               "awaiting_verification": 0,
               "undiscriminated": 0,
               "weakest_confirmed_bug_evidence": "code-verified",
               "unread": {
                 "candidate": 0,
                 "obligation_bearing": 43
-              },
-              "stale_files": 0,
-              "unassessed_seam_sides": {
-                "sides": 0,
-                "of": 0
-              },
-              "ref_sha": null,
-              "revision_bound": false,
-              "authored": "code"
-            },
-            {
-              "subsystem_id": "B-02",
-              "open_critical_high": 0,
-              "open_medium_low": 2,
-              "awaiting_verification": 0,
-              "undiscriminated": 0,
-              "weakest_confirmed_bug_evidence": null,
-              "unread": {
-                "candidate": 0,
-                "obligation_bearing": 13
-              },
-              "stale_files": 0,
-              "unassessed_seam_sides": {
-                "sides": 0,
-                "of": 0
-              },
-              "ref_sha": null,
-              "revision_bound": false,
-              "authored": "code"
-            },
-            {
-              "subsystem_id": "B-04",
-              "open_critical_high": 0,
-              "open_medium_low": 2,
-              "awaiting_verification": 0,
-              "undiscriminated": 0,
-              "weakest_confirmed_bug_evidence": "code-verified",
-              "unread": {
-                "candidate": 0,
-                "obligation_bearing": 24
               },
               "stale_files": 0,
               "unassessed_seam_sides": {
@@ -1084,14 +1047,14 @@
         }
       },
       "census": {
-        "total": 29,
+        "total": 35,
         "by_section": {
-          "open": 10,
+          "open": 11,
           "awaiting_verification": 0,
           "undiscriminated": 0,
-          "decisions": 1,
-          "leads": 1,
-          "stale": 8,
+          "decisions": 2,
+          "leads": 2,
+          "stale": 11,
           "hot_spots": 9
         }
       },
@@ -1099,10 +1062,13 @@
         {
           "section": "open",
           "reason": "budget",
-          "count": 6,
+          "count": 9,
           "ids": [
+            "finding:B02-R2",
+            "finding:B03-R2",
             "finding:B03-R3",
             "finding:B03-R4",
+            "finding:B03-R5",
             "finding:B04-R1",
             "finding:B04-R2",
             "finding:B05-R1",
@@ -1113,30 +1079,37 @@
         {
           "section": "leads",
           "reason": "policy",
-          "count": 1,
+          "count": 2,
           "ids": [
-            "lead:1"
+            "lead:1",
+            "lead:2"
           ],
           "ids_truncated": false
         },
         {
           "section": "stale",
           "reason": "budget",
-          "count": 5,
+          "count": 9,
           "ids": [
+            "ledger:B-09/design/reader-lenses/rebuild-depth-receipt.json",
+            "ledger:B-09/design/survey-depth/acceptance-receipt.json",
             "ledger:B-09/design/survey-depth/plan.json",
             "ledger:B-09/design/survey-depth/plan.md",
             "ledger:B-09/design/survey-depth/survey-progress.json",
+            "ledger:B-09/dev/record-rebuild-depth.mjs",
             "ledger:B-09/dev/record-survey-depth.mjs",
-            "ledger:B-09/dev/test-rebuild-depth.mjs"
+            "ledger:B-09/dev/test-rebuild-depth.mjs",
+            "ledger:B-09/dev/test-survey-depth-acceptance.mjs"
           ],
           "ids_truncated": false
         },
         {
           "section": "hot_spots",
           "reason": "budget",
-          "count": 6,
+          "count": 8,
           "ids": [
+            "subsystem:B-02",
+            "subsystem:B-04",
             "subsystem:B-07",
             "subsystem:B-05",
             "subsystem:B-01",
@@ -1151,8 +1124,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5737,
-        "response_bytes": 12204,
+        "payload_bytes": 5575,
+        "response_bytes": 11774,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1184,6 +1157,10 @@
     },
     {
       "finding_id": "B03-R4",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B03-R5",
       "resolution_state": "open"
     },
     {
@@ -1221,7 +1198,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-e4f9a23a-6d8b-4afe-926d-5776f9b9408e",
+      "projection_run_id": "projection-63302afd-2386-4aaf-b8ce-c93f93b8a630",
       "pages_rendered": 33,
       "html_pages_rendered": 33,
       "summary": {
@@ -1257,17 +1234,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-e4f9a23a-6d8b-4afe-926d-5776f9b9408e"
+        "projection_run_id": "projection-63302afd-2386-4aaf-b8ce-c93f93b8a630"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "8fc85ad0b2e460ead2981af6ab2e906110e25a882e26cf46876afd224905740e",
-      "manifest_sha256": "892d1102791068e9f133f5a17bd3122c9d8ed0e2120610651c7d6e229129dbf7",
+      "projection_contract_sha256": "c6b83c766853dbfa33a1a83893f59b938e3b6daf7ab6a06321c98a244bca09c8",
+      "manifest_sha256": "b45510352c4b681a58743c7f90d487a32914e56c8918bde3ec6c34ce28d4d9bd",
       "page_count": 67,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-18T01:53:52.107Z",
+      "promoted_at": "2026-09-18T02:16:50.967Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",

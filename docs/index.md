@@ -12,11 +12,11 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `20839da454b0` on `main`, 2026-09-18 01:53 UTC |
-| Repository head | `20839da454b0` — the same revision the survey checked |
+| Checked at | `7f4b4d103c94` on `main`, 2026-09-18 02:16 UTC |
+| Repository head | `7f4b4d103c94` — the same revision the survey checked |
 | Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 8 of 490 |
-| Scoped files exempt from that obligation, marked stale | 54 of 156 |
+| Files carrying a survey obligation marked stale | 11 of 490 |
+| Scoped files exempt from that obligation, marked stale | 62 of 156 |
 
 ### Survey coverage
 
@@ -30,11 +30,11 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Findings open | 10 |
+| Findings open | 11 |
 | Carried defects undecided | 0 |
 | Repairs awaiting verification | 0 |
 | Contradictions unresolved | 0 |
-| Decisions open | 1 |
+| Decisions open | 2 |
 
 ### Publication integrity
 
@@ -43,13 +43,13 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-18 01:47 UTC |
+| Verified at | 2026-09-18 01:53 UTC |
 
 ## Findings by resolution state
 
 | Metric | Value |
 |---|---|
-| [Open](findings.md) | 10 |
+| [Open](findings.md) | 11 |
 | [Accepted](resolved-findings.md) | 0 |
 | [Ruled out](resolved-findings.md) | 0 |
 | [Unverified fix](findings.md) | 0 |
@@ -64,5 +64,5 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ## Latest session
 
-`P11 — publish, promote, and record the acceptance receipts` — started 2026-09-18 01:47 UTC · **active**
+`P11 — attach code-verified evidence to the ten findings of the acceptance rebuild, which carry none` — started 2026-09-18 02:10 UTC · ended 2026-09-18 02:14 UTC
 

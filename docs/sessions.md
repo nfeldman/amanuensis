@@ -6,6 +6,7 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
+| `mu6bmjry-fuziol9u` | `P11 — attach code-verified evidence to the ten findings of the acceptance rebuild, which carry none` | 2026-09-18 02:10 UTC | 2026-09-18 02:14 UTC | completed |
 | `mu6at1iu-teoxzqgg` | `P11 — publish, promote, and record the acceptance receipts` | 2026-09-18 01:47 UTC | not closed | not recorded |
 | `mu68mzjq-fmxm3ik1` | `P10 batch 5 — acceptance rebuild survey continuation: B-03 and B-04 remaining modules` | 2026-09-18 00:46 UTC | not closed | not recorded |
 | `mu274z8h-ylgc5fy0` | `survey B-05 and B-07 — carried adjudication and scoping (P10 batch 3)` | 2026-09-15 04:53 UTC | 2026-09-15 05:03 UTC | deferred — B2 not reached; B1, B3, B4, B5, B6 green and all 22 carried findings terminal |
@@ -28,5 +29,6 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `projection-e4f9a23a-6d8b-4afe-926d-5776f9b9408e` | `clean-publish` | green | green | green | 2026-09-18 01:53 UTC |
 | `projection-5ad7af73-7c33-42a0-b491-ef337cef6b01` | `clean-publish` | green | green | green | 2026-09-18 01:47 UTC |
 

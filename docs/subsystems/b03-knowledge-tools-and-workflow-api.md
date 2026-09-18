@@ -38,12 +38,13 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 ## Known defects here
 
-4 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
+5 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
 
 - A subsystem can report status 'mapped' with zero unledgered paths, zero absent files and zero stale entries while most of its scoped files have never been examined. Nothing in the server measures examination within the ledger, so the store's own census cannot distinguish a subsystem that was read from one that was inventoried. — [B03-R1](../findings.md#b03-r1) · 🟠 HIGH · Open
 - A finding can be promoted to verified-fixed while its recorded fix_sha names a commit at which the repair does not exist, so the resolution record misattributes the repair to the wrong commit and nothing in the custody chain detects it. — [B03-R2](../findings.md#b03-r2) · 🟡 MEDIUM · Open
 - When a file's content moves but every claim written against it still holds, the conspectus has no action that records the move. A citation whose line range has shifted keeps pointing at lines that now hold something else, and a range that lands on unrelated prose in the same document reads as correct — it makes the conspectus look wrong where it is right. — [B03-R3](../findings.md#b03-r3) · 🟡 MEDIUM · Open
 - A finding's severity cannot be amended after it is filed, so an adversarial pass that re-grades one can record the re-grade in a resolution note, a disposition and the survey artifact while the findings.severity column keeps the original grade — leaving the published index and the store's own column disagreeing about the same finding. — [B03-R4](../findings.md#b03-r4) · 🟡 MEDIUM · Open
+- An evidence row's locating coordinates are stored unchecked, so a disposition can be evidence-backed by a citation no reader can open. Measured in this store: 13 of the 35 evidence rows that carry a line_range name a range past the end of the file they cite, at the revision they cite it at — mcp-server/src/tools/findings.ts:verify_finding_fix at 1792-1798 of a 486-line file, mcp-server/src/tools/dashboard.ts:get_dashboard at 102-121 and again at 141-148 of an 85-line file, mcp-server/src/tools/stale.ts:clear_staleness at 1107-1120 of a 135-line file, mcp-server/src/tools/carried.ts:record_carried_outcome at 3512-3639 of a 735-line file, and nine more across mcp-server, materializer and the skill references. Every one of those rows is attached to a disposition and reads as evidence-backed. — [B03-R5](../findings.md#b03-r5) · 🟡 MEDIUM · Open
 
 ## Standing
 
@@ -56,7 +57,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files excluded from the survey obligation | 0 of 43 |
 | Ledger rows the repository has changed under | 0 of 43 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 9 confirmed-acceptable, 2 out-of-scope |
-| Findings by resolution state | 4 open |
+| Findings by resolution state | 5 open |
 | Seams assessable from both sides | no seam names this subsystem |
 
 ## Survey record

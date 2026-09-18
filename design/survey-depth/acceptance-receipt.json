@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+  "repository_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+    "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,7 +21,7 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
+        "detected_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
         "tree_digest": "62d970c24e2c49289f65be21451008daee68111ce2b1fab672022d9d953e581f",
         "ledger_digest": "f9b738b34ac60d2c4f07c7c7c537d8f5fdab1ac2da844722e27f7c410ac5f681",
         "ledger": [
@@ -2615,7 +2615,7 @@
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": "mu6at1iu-teoxzqgg"
+        "session_id": null
       }
     },
     "B2": {
