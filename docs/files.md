@@ -1,6 +1,6 @@
 # Files
 
-647 distinct paths across 647 ledger rows, read at `0f7dac6d1dd3`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+649 distinct paths across 649 ledger rows, read at `d206ad78a4ca`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -116,6 +116,8 @@
 | <a id="f-8b810d1dd9"></a>`design/survey-depth/reviews/slice-S2/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-629adfd86f) | Examined | `410d769b` | 0 |
 | <a id="f-d6d55b7ded"></a>`design/survey-depth/reviews/slice-S3/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-88e6a86ef3) | Examined | `410d769b` | 0 |
 | <a id="f-c817131c50"></a>`design/survey-depth/reviews/slice-S3/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-fb33b7c53a) | Examined | `410d769b` | 0 |
+| <a id="f-3c71852db8"></a>`design/survey-depth/reviews/slice-S4/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-a29c6b0df6) | Examined | `d206ad78` | 0 |
+| <a id="f-84fe7a0be4"></a>`design/survey-depth/reviews/slice-S4/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-192228c4a7) | Examined | `d206ad78` | 0 |
 | <a id="f-cd8f21338a"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f469616995) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-a2b003bc1d"></a>`design/survey-depth/survey-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-72e7b4c603) | Examined, since changed | `081e12ed` | 0 |
 | <a id="f-de12fb7811"></a>`dev/activation-evidence/a19-user-scoped-contract.json` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-61b73c9a0f) | Examined | `410d769b` | 0 |
@@ -258,12 +260,12 @@
 | <a id="f-6c0b98bd39"></a>`dev/test-activation-operating-trust-cleanup.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-679c6e2c15) | Examined | `410d769b` | 0 |
 | <a id="f-d345f7be4a"></a>`dev/test-amanuensis-pecia-defects.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-390f0c9e45) | Examined | `410d769b` | 0 |
 | <a id="f-4495564c4b"></a>`dev/test-carried-finding-references.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-7f4b01c7c8) | Examined | `410d769b` | 0 |
-| <a id="f-59b412f1fd"></a>`dev/test-carry-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f058f32538) | Examined | `410d769b` | 0 |
+| <a id="f-59b412f1fd"></a>`dev/test-carry-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f058f32538) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-c2f35331da"></a>`dev/test-codex-host-evidence-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-4679cd8672) | Examined | `410d769b` | 0 |
 | <a id="f-87c994f62c"></a>`dev/test-friction-free-release-readiness-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-e3472cd4bf) | Examined | `410d769b` | 0 |
 | <a id="f-f8260d93f1"></a>`dev/test-living-conspectus.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e4f7ba87b8) | Examined | `410d769b` | 0 |
 | <a id="f-59e1484a2c"></a>`dev/test-package-activation-parity-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-3b8960a4df) | Examined | `410d769b` | 0 |
-| <a id="f-317fa13fc5"></a>`dev/test-pecia-carry-audit.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2a2a8e0044) | Examined | `0f7dac6d` | 0 |
+| <a id="f-317fa13fc5"></a>`dev/test-pecia-carry-audit.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2a2a8e0044) | Examined, since changed | `0f7dac6d` | 0 |
 | <a id="f-2c9a7ec118"></a>`dev/test-pecia-roadmap-red-gates.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-ed1b9d303f) | Examined | `410d769b` | 0 |
 | <a id="f-e49be5d743"></a>`dev/test-pecia-roadmap.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-b5122252a2) | Examined | `410d769b` | 0 |
 | <a id="f-598400ed1b"></a>`dev/test-reader-lenses-dogfood.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-c925375dc4) | Examined | `410d769b` | 0 |
@@ -274,7 +276,7 @@
 | <a id="f-432e0b0af7"></a>`dev/test-roadmap.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-afca65075c) | Examined | `410d769b` | 0 |
 | <a id="f-63a8dbc397"></a>`dev/test-survey-depth-acceptance.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-5c70b9a90e) | Examined, since changed | `e2382dc3` | 0 |
 | <a id="f-8a81d33ff7"></a>`dev/test-survey-depth-red-gates.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-15017aefd5) | Examined | `410d769b` | 0 |
-| <a id="f-e3c3e70db3"></a>`dev/test-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-8b5483aac6) | Examined | `410d769b` | 0 |
+| <a id="f-e3c3e70db3"></a>`dev/test-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-8b5483aac6) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-7d31f11edb"></a>`docs/.manifest.json` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-18215313a9) | Excluded | `a7f9384d` | 0 |
 | <a id="f-441d4dc2f4"></a>`docs/.projection-contract.json` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-bb8ccd168e) | Excluded | `a7f9384d` | 0 |
 | <a id="f-dd740df082"></a>`docs/architecture.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-650632fa57) | Excluded | `a7f9384d` | 0 |

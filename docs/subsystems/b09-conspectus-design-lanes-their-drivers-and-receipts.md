@@ -35,10 +35,10 @@ No defect here is open or awaiting verification.
 
 | Metric | Value |
 |---|---|
-| Files read | 85 of 85 ledger rows |
-| Files in scope, not yet read | 0 of 85 |
-| Files excluded from the survey obligation | 0 of 85 |
-| Ledger rows the repository has changed under | 14 of 85 |
+| Files read | 87 of 87 ledger rows |
+| Files in scope, not yet read | 0 of 87 |
+| Files excluded from the survey obligation | 0 of 87 |
+| Ledger rows the repository has changed under | 17 of 87 |
 | Active concerns with a disposition recorded here | 0 of 12 |
 | Findings by resolution state | none recorded |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -103,6 +103,8 @@ No defect here is open or awaiting verification.
 | <a id="le-629adfd86f"></a>`design/survey-depth/reviews/slice-S2/dispositions.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-88e6a86ef3"></a>`design/survey-depth/reviews/slice-S3/codex.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-fb33b7c53a"></a>`design/survey-depth/reviews/slice-S3/dispositions.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
+| <a id="le-a29c6b0df6"></a>`design/survey-depth/reviews/slice-S4/codex.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `d206ad78` |
+| <a id="le-192228c4a7"></a>`design/survey-depth/reviews/slice-S4/dispositions.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `d206ad78` |
 | <a id="le-f469616995"></a>`design/survey-depth/spec.md` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-72e7b4c603"></a>`design/survey-depth/survey-progress.json` | examined | This packet's batching record: which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. | `081e12ed` |
 | <a id="le-38775e2be7"></a>`dev/amanuensis-defects-to-pecia.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |

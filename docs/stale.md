@@ -1,10 +1,10 @@
 # Stale knowledge
 
-15 of 491 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `0f7dac6d1dd3` on `main`. 63 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+18 of 493 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `d206ad78a4ca` on `main`. 63 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
-15 of 352 examined files have changed since the revision they were read at.
+18 of 354 examined files have changed since the revision they were read at.
 
 | File | Owner | Read at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
@@ -34,10 +34,16 @@
 | <a id="ls-b8f8585ff2"></a>`dev/record-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 02:16 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:898a43df4442e963e3a60f05472c390516816bd2adb3a7ad74ee0ac051b7582f -->
 | <a id="ls-898a43df44"></a>`dev/record-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `081e12ed` | 2026-09-18 01:47 UTC | git-drift | The receipt writer: it refuses to write a witness whose recorded digests do not re-derive from the tree and the ledger, and --check compares the committed receipt against the live store. |
+<!-- amanuensis:ledger-stale:21a076ecaf6837df4f1398d89bc80b528535eb83ff7655097c93f51542ee3127 -->
+| <a id="ls-21a076ecaf"></a>`dev/test-carry-receipt.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 21:02 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
+<!-- amanuensis:ledger-stale:7a4b4218ad9a5f2927f363b4cef44ce48f259cdd3b1254e5f294081cd00ed43c -->
+| <a id="ls-7a4b4218ad"></a>`dev/test-pecia-carry-audit.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `0f7dac6d` | 2026-09-18 21:02 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:e798be622ab837d5f558fc4ee82131c9e23a6f90dc27207f270b4c411c7e720b -->
 | <a id="ls-e798be622a"></a>`dev/test-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:bb593d1de183fa0707921011ec9ec3f1dff4feefa70c39419271aec04ce0af94 -->
 | <a id="ls-bb593d1de1"></a>`dev/test-survey-depth-acceptance.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `e2382dc3` | 2026-09-18 02:16 UTC | git-drift | GATE A1 of the survey-depth lane (spec.md §8.8): it recomputes every blocking predicate of the acceptance receipt from the row-level witnesses §7.5 requires, and carries §8.8's control — the committed receipt validates, two seeded forged-green copies of it do not. A lane gate and its receipt-recomputation belong with the other lane drivers and receipts this subsystem owns. |
+<!-- amanuensis:ledger-stale:e03bf4af927cc04de504e3de6c4c90626872f0db354ecff5dc1d0e5e47706866 -->
+| <a id="ls-e03bf4af92"></a>`dev/test-survey-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 21:02 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 
 ## Scoped but unread, and changed since scoping
 

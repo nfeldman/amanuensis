@@ -3,15 +3,15 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "670729576b43dc0c91ac70bede6fb869b01b59bfafd1778a2b3d63cfb28d38e8"
+      "content_hash": "815ab44ce1b00cc72c0bbdb46db8dc268239ee039682041b163149c743235f38"
     },
     {
       "path": "architecture.md",
-      "content_hash": "1e23c4106e77f2c1bfad72e77f1f76af54a42733302e31b6305136733072267e"
+      "content_hash": "d838008105c36a3313d173c866f96cc09ead2705790ee0b8c7f72c6c2d30ffd1"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "637156e4fc58d5e498978abe9461855a4142038b145a14187e64149ea29ddcd3"
+      "content_hash": "5bc9abaf289429ceae404bb5a3d5a809c02310e05e6096306652a4fb07402e08"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "694c8d9578b25539470a05c2627d08a8bb7c111495025ebd0e5037d4afdbfb47"
+      "content_hash": "7de2c0470dee879ad00cc94835e59aa683157f60136db4750cd0e9c9de676462"
     },
     {
       "path": "concerns.md",
@@ -27,15 +27,15 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "ee7b4f3d02b83f091344baef713355d644f5421b0831c2d677176d476d5fd0e8"
+      "content_hash": "2382547c58d76703563611063b719493221b62a72677f5380fa67b192cf311cc"
     },
     {
       "path": "contradictions.md",
-      "content_hash": "36e301c23ad0b4ac1c6e0f7111dc6bd7a885544610a35d383deb1986e08ffda7"
+      "content_hash": "cf084a2f6a9aa7e3c59bf8f22c746b02d92c9f2213d124658f014abf4e73c448"
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "d4317e14b2c2ffd3f62ce692b27f394d92e1e377b259f1d723d668f71ef11d50"
+      "content_hash": "a8464b2e90e3873bd62a473130f722c201153f68307455dea94ad36b959f86dd"
     },
     {
       "path": "diagnosticity.md",
@@ -43,15 +43,15 @@
     },
     {
       "path": "disagreements.html",
-      "content_hash": "202b626bb9771b0eb416b77fa077d3a25ab216c93b7d822c94442d4f6e6714aa"
+      "content_hash": "79be57cfda32185da537259ff5c19112fc6f287dfd2dc3575e7bf9bb53710826"
     },
     {
       "path": "disagreements.md",
-      "content_hash": "efef955cae1e4e8a34ad1ed5937c4a937b49c29adffda54443a06e3e18cebeba"
+      "content_hash": "00ea96d3d2dd5a9cf59af0d5a80c04d14a0569234d9d75ac978829b62aefe230"
     },
     {
       "path": "entry-point.html",
-      "content_hash": "14dec04ba19be1106ffeb2f0d66f13855e243496f228920939dbfce09849c6ab"
+      "content_hash": "41793c4be058d493a331f63e87512ec179c84494463c1a93f3fc3c1bb2d4d7ee"
     },
     {
       "path": "entry-point.md",
@@ -59,7 +59,7 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "5071e4cd5720b50f683abd3ae5e416d4d6d2364e2e11343749066c705122b637"
+      "content_hash": "fbb81b0798b6cf80f2875507653da22a15ea95ddefa5ccf8c1d2f884e8ceb778"
     },
     {
       "path": "field-notes.md",
@@ -67,15 +67,15 @@
     },
     {
       "path": "files.html",
-      "content_hash": "ef89ece368d1ba6822adbd351ae288d28f208674d75b755857db60f47aec242f"
+      "content_hash": "b015411bda1c303ec199316dbf399d8ce3454e3cc905971cabc817bb6adfd876"
     },
     {
       "path": "files.md",
-      "content_hash": "f9aa6d540501c631d676cc6ba89d66f79b508c41a09236bb56bff9bebcf64d83"
+      "content_hash": "af2ac0549e5ff1ac91ae8c8e8367ee6cc0a626d741fd9f450ac0d4e92cd9a237"
     },
     {
       "path": "findings.html",
-      "content_hash": "90b18227d36cb6d7ce5ec668b612c21e44b2361ddc221c986042f907cb5320e3"
+      "content_hash": "1fdd74e87fe79ce86a1b009ac410a405aa2b4ded4c4905b76dc37c58a514bdf8"
     },
     {
       "path": "findings.md",
@@ -83,15 +83,15 @@
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "34a53db5796ebe39e86fcb2403c3712a6c3f27762dfdd0dc088fbb85fd86815f"
+      "content_hash": "cb6bde2b8ffdb551ca22eaf6d4aef4ae8f22dde50c358eefd7c327dea1ab21c1"
     },
     {
       "path": "hot-spots.md",
-      "content_hash": "08761aa7bd288a92e77fc45eb9b80ecb55a6a7c95f40fccc15ce6bb545e95dc4"
+      "content_hash": "a150c297845dadcb5b368e21efbf3615fa88ab6105cda898a1e414e3ec00a04f"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "8fbd73ba9bac054a459aee4c4728cbe2f603ed82040100d7b792481393568705"
+      "content_hash": "ece31d8bb5a350ff199945bc91fc7f0e6e31f76c35e887129c23eee8c3e4fde2"
     },
     {
       "path": "how-to-read.md",
@@ -99,15 +99,15 @@
     },
     {
       "path": "index.html",
-      "content_hash": "df21bd1a1657c8c4b664b706ef435376fc85786e2c3219fb08552201d5bddceb"
+      "content_hash": "7f1f9faae8f385b5db611e704d2c3e5a934e138f1cb4f9b620671477427558d8"
     },
     {
       "path": "index.md",
-      "content_hash": "4a2caaba5cf91c4c80f557699cd24330c05b6875389db131069a0aeab3e02029"
+      "content_hash": "693248685e39a1a664467b61e9d2d0bf55d9efb011a2f38d1bd2a00f73afc22f"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "2fd0f87ea6256de22d45cbc76aa864be0b8215212e8b379c332d7e964177322d"
+      "content_hash": "00732c20546e40892f763ab21f3b36851cce6f7321c96e74b65f88f0a4ec363f"
     },
     {
       "path": "master-plan.md",
@@ -115,15 +115,15 @@
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "282eb8efb070de345f1589d08ab399d3a552c58efbf88c1e232288f75da6819a"
+      "content_hash": "69a043c6153ec541d5fec435b82928766a8d42ece69275cd421aa8e3439f4d29"
     },
     {
       "path": "not-yet-surveyed.md",
-      "content_hash": "2f6eec05b6074286135dd7218680da91036d3d12cb325e0908b6326b63aaaf6c"
+      "content_hash": "f702ea51a05a3ddd0bc13467417bde415b86d1e71a478d1eb205e60f406c8e59"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "fee4a9bb77cceea82a5437fe95aec41063dda7945f482327e3c7076c2c75b5d5"
+      "content_hash": "78bcce5a3e87f0f894df9542cddc83c4734ef6d7b2e12c773425640b736dfcc6"
     },
     {
       "path": "onboarding-report.md",
@@ -131,7 +131,7 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "24506a4bb5d21ab7cd1eb73fedcb215a29720a67963abe50d835a2157f55dc52"
+      "content_hash": "3cd1bf6f4b0f3f21338bfcea71e80088ef696398d5a73051797d820b87143bf3"
     },
     {
       "path": "open-questions.md",
@@ -139,7 +139,7 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "1c8adeeb088104073e75a89bccffc7b29ece9f420a4ec4ba5b10595043dc9d4d"
+      "content_hash": "89ae85338a622dbbc021c6f4ff12c9ce27383cac0a4bb2e3ad9a4177a0f6ee46"
     },
     {
       "path": "resolution-history.md",
@@ -147,23 +147,23 @@
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "02042a3d83b2672505e6291e572108cdf6b65b8830a41a3d086d6c50855e0ae4"
+      "content_hash": "2b6f997de573ee732248836217da33bcb1463027812c7989b786ca9f1bd4812d"
     },
     {
       "path": "resolved-findings.md",
-      "content_hash": "a6716a8d0c651fc03f0e516ec55f4de215a8b20a30f787f9d03ed13d404b610a"
+      "content_hash": "2a19b2f9f6cd3bb7fde3377739ca0cc7309d61de5c96a5200b5f2da788903eda"
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "73a45c0b2f75692fad56ebb408e354e0615fa27facc88b71eb20336e38107624"
+      "content_hash": "06151e75816ebeb13a5dded8d7d89529f04a8060ff736a09b3616b2160306bef"
     },
     {
       "path": "resolved-leads.md",
-      "content_hash": "163e6d0f50b31b439a7ef6e4fbcf368bff5ab59cf0519ec8215865b91f7d9345"
+      "content_hash": "b05cd182ce8a1ca19e54548dc3ed29bbbf694442572a5588a404ef76d1329e6e"
     },
     {
       "path": "seams.html",
-      "content_hash": "a56439ed2121e73c7d9d3c3c4224d1d04ed82d1554200db605f03d083ddfafca"
+      "content_hash": "5497c7bd7cd34b1b25d32c8c9d2c6057755c49f8e73da4e4b1f05f5bab3efe4b"
     },
     {
       "path": "seams.md",
@@ -171,27 +171,27 @@
     },
     {
       "path": "search-index.js",
-      "content_hash": "fb31d1dcf78962bcc4deebf783e25adc358b1f1c87dea1700c764b529e98d205"
+      "content_hash": "bc0e0163cc032e5655bc9916eeb3fca2257be93d39b29c675fa8c7132159b513"
     },
     {
       "path": "sessions.html",
-      "content_hash": "f30cd3ce8cbc4916bd840d5af11014724795679595d83f25214c7afbb03dd3ac"
+      "content_hash": "9bde753f6939f820300c7d29af61c58373e9a5a78f45b4e31aa40a08dedc71b3"
     },
     {
       "path": "sessions.md",
-      "content_hash": "3d19c694b10157fe7637c5754c0caaf3455161fd5f9bca19348171dcebdee2fb"
+      "content_hash": "e2a741749a78af97288dab5fba0a83a235453ebe7fce71666222ec9eb6d92028"
     },
     {
       "path": "stale.html",
-      "content_hash": "a3327a298799332d9c577466945107d70ac52da044449bd52b435767da846861"
+      "content_hash": "60aef6ad0b9b82d84843c1f0f84ea2d19da12d84558f6ab380b9a74031182e12"
     },
     {
       "path": "stale.md",
-      "content_hash": "815c40996569bf94f716c526d6acf9da1ca41ea1ddfc3cd060814bb80f4a8d83"
+      "content_hash": "5afe3e4bdb732fb5fd02b4b3505cf98445daadf7d2df72d08d95d6ed553c90cd"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "8e7c5d9d0d8f090266c308cb83acee94753ad0b7ca22ac8e150c9c15c85d18fa"
+      "content_hash": "3c3202206c42d7503fdd370c2bab18812f55044df53ec754999fae650fc433d5"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -199,7 +199,7 @@
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "e89e1c37e76d79dc327f93ba815a6533e87d15273b84e1d498683698ef8296ee"
+      "content_hash": "e57142020622edb527497988f584630fa65cabb02fd674a69175c82dc7441974"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
@@ -207,7 +207,7 @@
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "d174eb6423f0b8f2ab410023d110dcfd77e5d93e722bdba8b4dcc8399b5aebb9"
+      "content_hash": "9ec300724d4b6b548a2f0a9a4c9bb6567bd41fc98c642603aa0eb0cd3badd2c7"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
@@ -215,7 +215,7 @@
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "2c2f237a4d8279fabd986400713a82da78431b444f0273b66ff19e1520d443d7"
+      "content_hash": "2fe8cafb160178b21da8cb94c86c3d04d100f1e79a4c17da9a8cc8885dd635a4"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
@@ -223,7 +223,7 @@
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "e38c07d0e4e499fab3c4b027e32fef0a53adf8e3fafdcd172aae83efc93d7a78"
+      "content_hash": "a735583afd21505a64acc04d38946248896fa2f702590cad3bf1c133d742d6db"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -231,7 +231,7 @@
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "2bdffb8b2900106aea46cd7ed224a2cdc2b56d59eb50a402119f933d5da092e8"
+      "content_hash": "dbed5f04c79688df65dbb72dc9f589b089b3b96fa9a63beb599c003bb2b5da7b"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -239,7 +239,7 @@
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "4a59277406c857babd5103e16a93423f662c1e2c43f3d7c2079cbbb5ddd57dec"
+      "content_hash": "4e712a3e7015b715bf0edf9d49c4f57760b58ff44ba2ea1064d3b47a93b32858"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
@@ -247,7 +247,7 @@
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.html",
-      "content_hash": "ed53e43614eda3415bc79a0ca30b97e94af163d919499effa54f536e9db953e7"
+      "content_hash": "48377988ff7be5b17d2afb9e6a88b46c56673146522a5d2a83afeb77a5b8e1d9"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.md",
@@ -255,15 +255,15 @@
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html",
-      "content_hash": "aaccd8ddf567f81af2c7293c7d82ca9837bf581e122b3b2ac2ea1cf613f2fd46"
+      "content_hash": "2f4dd91f3d40481791d5a77192d272cd97cc2b902706b576ca53a1ec7307145c"
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
-      "content_hash": "d543ea35418eb436476579620bd7e45720f617037c0726e0e6570fb2fb8b8222"
+      "content_hash": "1616739b55da8881d4d32f527ecd718176721348ee8641864abd54a2e886e6b6"
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "a635713c990e60e78adbb502c41efda40ca5e5c1b9e0ddaec8e62836880f24f4"
+      "content_hash": "8457a2e7f78c7e3a0c2ea10ce9001b077d0ca1dc36a6b16c1c991b3f91b2fa37"
     },
     {
       "path": "vocabulary.md",
@@ -4529,6 +4529,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-192228c4a7"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-1d4eb2da4b"
     },
     {
@@ -4718,6 +4722,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-9e9bc452b0"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-a29c6b0df6"
     },
     {
       "source": "files.html",
@@ -7121,6 +7129,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-192228c4a7"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-1d4eb2da4b"
     },
     {
@@ -7310,6 +7322,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-9e9bc452b0"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-a29c6b0df6"
     },
     {
       "source": "files.md",
@@ -11189,6 +11205,18 @@
     },
     {
       "source": "stale.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html"
+    },
+    {
+      "source": "stale.html",
       "target": "vocabulary.html"
     },
     {
@@ -11198,6 +11226,18 @@
     {
       "source": "stale.md",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md"
     },
     {
       "source": "stale.md",
