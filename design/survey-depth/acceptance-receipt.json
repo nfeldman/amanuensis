@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
-  "recorded_at": "2026-09-15",
+  "repository_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
+  "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
+    "checked_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "081e12ed0a753b4d3dd57a65aac33f8a22ac8c48",
+        "detected_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
         "tree_digest": "4021124580d0ac7771a4a492999e1e473be198edfdf9782bb3a26b46c5f6d31d",
-        "ledger_digest": "0dc48627a4ca677e047e08bff87c131d5c09e8040faec5533bd1870404f91721",
+        "ledger_digest": "32ba9b0469f76d217ba11b1325fe984d3f068390e4b8d2655dfb81026f1d43bf",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -91,15 +91,15 @@
           },
           {
             "file_path": ".github/FUNDING.yml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".github/workflows/pages.yml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".github/workflows/publish.yml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".github/workflows/published-smoke.yml",
@@ -111,55 +111,55 @@
           },
           {
             "file_path": ".gitignore",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".mcp.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".pecia/config.yaml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".pecia/snapshot.head",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".pecia/snapshot.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".pecia/work.jsonl",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": ".tool-versions",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "CONTRIBUTING.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "HISTORY.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "INSTALLATION.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "LICENSE",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "ROADMAP.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/README.md",
@@ -259,143 +259,143 @@
           },
           {
             "file_path": "design/reader-lenses/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/claims.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/decisions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/dogfood-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/plan.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/plan.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/rationale.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/rebuild-coverage-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/rebuild-depth-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/rebuild-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/final/claude.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/final/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/final/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/round-1/aggregate.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/round-1/aggregate.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/round-1/claude.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/round-1/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/round-1/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S1/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S1/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S2/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S2/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S3/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S3/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S4/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S4/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S5/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S5/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S6/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S6/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S7/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/reviews/slice-S7/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/routing-measurement.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/spec.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/acceptance-receipt.json",
@@ -403,79 +403,79 @@
           },
           {
             "file_path": "design/survey-depth/carry-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/claims.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/decisions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/plan.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/plan.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/rationale.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/rebuild-receipt.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/round-1/aggregate.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/round-1/aggregate.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/round-1/claude.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/round-1/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/round-1/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S1/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S1/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S2/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S2/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S3/codex.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/reviews/slice-S3/dispositions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/spec.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/survey-depth/survey-progress.json",
@@ -483,15 +483,15 @@
           },
           {
             "file_path": "dev/activation-evidence/a19-user-scoped-contract.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a20-activation-doctor.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a21-immutable-workspace-binding.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a22-codex-host.json",
@@ -859,7 +859,7 @@
           },
           {
             "file_path": "dev/amanuensis-defects-to-pecia.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/capture-activation-launch.mjs",
@@ -879,11 +879,11 @@
           },
           {
             "file_path": "dev/check-living-conspectus.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/check-store-fully-surveyed.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/cleanup-activation-operating-trust.mjs",
@@ -895,27 +895,27 @@
           },
           {
             "file_path": "dev/conspectus/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/conspectus/baseline-report-detector-1.0.0.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/conspectus/baseline-report.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/conspectus/detector-registry.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/conspectus/self-baseline.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/cross-domain-analysis.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/friction-free-release-checklist.md",
@@ -923,55 +923,55 @@
           },
           {
             "file_path": "dev/hooks/pre-commit",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/pecia-dogfood.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/pecia-resolve-finding.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/practice-catalog-v2.10.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/promote-docs.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/rebuild-self-conspectus-store.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/receipt-provenance.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-carry-receipt.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-dogfood-receipt.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-rebuild-coverage.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-rebuild-depth.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-regeneration-pass.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-survey-depth-baseline.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/record-survey-depth.mjs",
@@ -991,11 +991,11 @@
           },
           {
             "file_path": "dev/render-roadmap.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/roadmap.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/run-activation-operating-envelope.mjs",
@@ -1019,7 +1019,7 @@
           },
           {
             "file_path": "dev/survey-depth-baseline.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-activation-evidence.mjs",
@@ -1035,15 +1035,15 @@
           },
           {
             "file_path": "dev/test-amanuensis-pecia-defects.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-carried-finding-references.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-carry-receipt.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-codex-host-evidence-red-gates.mjs",
@@ -1055,7 +1055,7 @@
           },
           {
             "file_path": "dev/test-living-conspectus.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-package-activation-parity-red-gates.mjs",
@@ -1063,43 +1063,43 @@
           },
           {
             "file_path": "dev/test-pecia-roadmap-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-pecia-roadmap.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-reader-lenses-dogfood.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-rebuild-coverage.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-rebuild-depth.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-rebuild-readback.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-rebuild-regeneration.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-roadmap.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-survey-depth-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-survey-depth.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "docs/.manifest.json",
@@ -1395,7 +1395,7 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/html_projection.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/lint.py",
@@ -1407,11 +1407,11 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/readback.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/renderers.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/slugs.py",
@@ -1419,7 +1419,7 @@
           },
           {
             "file_path": "materializer/amanuensis_materializer/vocabulary.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/amanuensis_materializer/xref.py",
@@ -1435,35 +1435,35 @@
           },
           {
             "file_path": "materializer/test-history-and-disagreements.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-ledger-freshness.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-lens-pages.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-materializer.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-overview-truthfulness.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-readback.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-search-index.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/test-unmeasured-coverage.py",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "materializer/uv.lock",
@@ -1471,59 +1471,59 @@
           },
           {
             "file_path": "mcp-server/.gitignore",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/DEVELOPMENT.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/biome.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/activation-parity.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/append-only-tables.txt",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/attention.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/chorusmith/artifact-input.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/chorusmith/custody-matrix.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/chorusmith/extraction-parity-ledger.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/chorusmith/project-type.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/chorusmith/run-manifest.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/codebase-brief.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/codebase-decision.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/concern-checklist.json",
@@ -1535,123 +1535,123 @@
           },
           {
             "file_path": "mcp-server/contracts/historical-evaluation-corpus.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/locus-account.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/locus-history.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/refusal-parity.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/contracts/research-request.schema.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-config-healthy.toml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-config-residual-trust.toml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-config-shadowed.toml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-config-workspace-pinned.toml",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-context-probe.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/codex-host-red-matrix.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/conflicting-user-project.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/first-use-interruption.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/first-use-worker.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/hard-coded-global-project-local.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/operating-envelope-red-matrix.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/package-parity.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/release-readiness-red-matrix.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/activation/storage-symlink-escape.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/change-impact/manifest.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/codebase-brief/source-input.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/composition/manifest.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/crosswalk/qualification-result.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/evaluation/program.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/learning/method-qualification.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/research/scholiast/version-semantics/claims.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/research/scholiast/version-semantics/sources.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/revalidation/manifest.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/review-analysis/manifest.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/fixtures/review-session/semantic-states.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/package-lock.json",
@@ -1659,15 +1659,15 @@
           },
           {
             "file_path": "mcp-server/package.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/check-concern-checklist.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/check-evidence-vocabulary.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/check-refusal-parity.mjs",
@@ -1675,19 +1675,19 @@
           },
           {
             "file_path": "mcp-server/scripts/check-sql-identifiers.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/check-tool-schemas.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/ensure-built.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/gen-tool-inventory.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/gen-vocabulary.mjs",
@@ -1695,11 +1695,11 @@
           },
           {
             "file_path": "mcp-server/scripts/historical-evaluation.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/scripts/prepack-bundle-assets.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/cli.ts",
@@ -1759,7 +1759,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/chorusmith-adapter.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/claims.ts",
@@ -1787,7 +1787,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/crosswalk.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/dashboard.ts",
@@ -1799,7 +1799,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/design-session.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/diagnosticity.ts",
@@ -1815,7 +1815,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/evaluation.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/evidence.ts",
@@ -1843,7 +1843,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/learning.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/locks.ts",
@@ -1851,7 +1851,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/locus.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/logging.ts",
@@ -1871,11 +1871,11 @@
           },
           {
             "file_path": "mcp-server/src/tools/refresh.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/research.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/resolution.ts",
@@ -1883,11 +1883,11 @@
           },
           {
             "file_path": "mcp-server/src/tools/revalidation.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/review-analysis.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/review-session.ts",
@@ -1895,7 +1895,7 @@
           },
           {
             "file_path": "mcp-server/src/tools/review.ts",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/src/tools/seams.ts",
@@ -2603,14 +2603,14 @@
         "unledgered": 0,
         "absent": 0,
         "exempt": 154,
-        "session_id": "mu274z8h-ylgc5fy0"
+        "session_id": "mu68mzjq-fmxm3ik1"
       }
     },
     "B2": {
-      "verdict": "red",
-      "examined": 106,
+      "verdict": "green",
+      "examined": 294,
       "obligation_bearing": 489,
-      "fraction": 0.2167689161554192,
+      "fraction": 0.6012269938650306,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -3804,13 +3804,13 @@
     "seams": 0,
     "claims": 10,
     "xrefs": 0,
-    "sessions": 11,
+    "sessions": 12,
     "finding_status_histogram": {
       "confirmed-bug": 10
     },
     "classification_histogram": {
-      "candidate": 383,
-      "examined": 106,
+      "candidate": 195,
+      "examined": 294,
       "generated-ignore": 150,
       "vendor-ignore": 4
     }
