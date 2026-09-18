@@ -126,10 +126,10 @@
   "end": {
     "at_sha": "pending the final commit",
     "obligation_bearing": 489,
-    "examined": 177,
-    "fraction": 0.362,
+    "examined": 208,
+    "fraction": 0.4254,
     "examined_needed_for_b2": 292,
-    "shortfall": 115,
+    "shortfall": 84,
     "why": "The packet's own notes sized this work from the baseline's measured cost: 221 examined paths over 35 sessions spanning a month. One session reached 103 over roughly six hours, which is the same rate the baseline achieved and not enough for the threshold. B1, B3, B4, B5 and B6 hold; B2 does not, and the depth gate is red on B2 alone.",
     "denominator_note": "D2 fell from 571 to 486 in this pass because 85 paths were reclassified exempt: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 trial build outputs and lockfiles as generated-ignore, and 4 shadcn registry copies as vendor-ignore. Every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. A reviewer checking for a shrunk denominator should start there."
   }
