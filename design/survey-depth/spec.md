@@ -1098,7 +1098,8 @@ and which advertised eleven fields the server never exposed.
 ### 7.1 The depth gate, `GATE D0` — `dev/test-survey-depth.mjs`
 
 It prints `GATE D0 GREEN`, `GATE D0 RED: <reason>` or `GATE D0 CANNOT RUN: <reason>` as its single
-last stdout line, under §8.0's protocol. `GATE D1` (§8.5) is the gate *for* it.
+last stdout line, under §8.0's protocol. `GATE D1` (§8.5) is the gate *for* it. Under §8.0 clause 4 that control gate **is**
+D0's red proof for its live-store arm; the receipt arm still takes a tree-bound red.
 
 Two arms, for the reason `dev/test-rebuild-depth.mjs:20-27` gives: the store is untracked
 (`git ls-files .amanuensis` returns 0), so a gate that only read a live store would be green by
@@ -1319,6 +1320,24 @@ fires *selectively*", one step earlier: an absent file does not prove even that.
    worktree — untracked (`git ls-files .amanuensis` → 0), so D0's red proof is machine-local, and
    in a clean checkout the same commit reports `cannot run`. A packet whose red proof needs an
    input the machine does not have is blocked, not waived.
+
+4. **A requirement the context makes impossible or vacuous does not apply** — owner ruling,
+   2026-09-17. Clauses 1 and 2 assume the gate's red condition is a property of the **tree**.
+   Where it is a property of an **untracked live store**, the launcher cannot take that proof:
+   `verify_packet` checks the red commit out into a fresh detached worktree that has no
+   `.amanuensis`, and it runs the red arm and the HEAD arm against the same store minutes apart,
+   so no live-store property can differ between them. Requiring it yields either a `cannot run`
+   the launcher rejects or a tree-bound stand-in that proves something else. For such a gate the
+   clause 1 and 2 proof is **discharged by a named control gate** that seeds each red condition
+   into a synthetic store and asserts the gate fires on it, itself verified under clauses 1 and 2
+   in its own packet. For `GATE D0` that control is `GATE D1` (§8.5), verified in **P5**. The
+   packet declares `gate.red_proof` naming the control packet and gate; the launcher then
+   requires that control packet to be `done` and launcher-verified with its gate green at HEAD,
+   and does not require the packet's own red commit to make a live-store property differ. Nothing
+   is waived in silence: a declaration naming no control, or naming one that is not verified, is
+   refused, and the exemption reaches only the live-store arm. A gate whose red condition **is**
+   tree-bound keeps clauses 1 and 2, `GATE D0`'s receipt arm included wherever a receipt is
+   committed.
 
 **What this requires of every red condition in §7.3 and §8.1 to §8.9b.** Each must name the *assertion* that
 fires — the call that should have been refused and was not, the row that should have been

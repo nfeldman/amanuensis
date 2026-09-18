@@ -20,3 +20,15 @@ Recorded 2026-09-14. These bind the specification.
 6. **Custody.** Work lands on branch `survey-depth` in a dedicated worktree from `main`
    at `d2b1630`. The primary checkout, its rebuilt store, and the AxiomDB repository are
    read-only for the lane. Nothing is pushed or merged by the lane.
+
+7. **An impossible or vacuous requirement does not apply.** Where context makes an otherwise
+   blanket requirement impossible to satisfy or empty of content, it does not bind. It must be
+   recorded where the requirement lives, together with what discharges the obligation instead; it
+   is never dropped in silence. Applied 2026-09-17 to the red-commit protocol for a gate whose red
+   condition is a property of an untracked live store (spec §8.0 clause 4).
+8. **Baseline parity stands, and the acceptance survey resumes.** B2's examined fraction is
+   expensive but neither impossible nor vacuous: the baseline reached it by classifying and
+   reading, which is the work this lane exists to make unavoidable. P10 therefore runs as many
+   implement sessions as it needs against the store P8 initialized, each required to advance a
+   recorded progress measure; a session that advances it and runs out of budget returns the packet
+   to `ready` rather than blocking the lane.

@@ -889,7 +889,13 @@
           "command not found",
           "ModuleNotFoundError",
           "ImportError"
-        ]
+        ],
+        "red_proof": {
+          "mode": "control-gate",
+          "control_packet": "P5",
+          "control_gate": "GATE D1",
+          "reason": "B1-B6 are properties of the untracked live store; verify_packet checks the red commit out into a fresh worktree with no .amanuensis and runs both arms against the same store, so no live-store property can differ between them (spec 8.0 clause 4, decisions 7)."
+        }
       },
       "regression": [
         "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
@@ -942,7 +948,13 @@
       "green_sha": "7556cf7",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "Restarted 2026-09-17 on the owner's instruction after the 09-15 block. B2 is budget, not method: 106 of the 292 examined tracked paths the acceptance needs, and an implement session against this store continues from 106 without redoing work. attempts reset to 0 so the lane can take two more 7-hour sessions before it re-blocks. The two contract questions in the previous blocked_reason (verify_packet cannot take a red proof for a live-store property; gate.red_expect named a predicate P8 had already satisfied, now repointed) are unresolved and still owed an owner ruling."
+      "notes": "CONTINUATION, owner ruling 2026-09-17 (decisions 7 and 8). The store P8 initialized in this worktree persists: continue from it and redo nothing. State at the last commit: B1, B3, B4, B5 and B6 hold; B2 alone is red. 103 examined of 486 obligation-bearing paths; 290 needed. Unread by subsystem, work them in this order: B-05 148, B-07 100, B-08 94, B-09 80, B-06 24. Classification is part of the work and the honest way the denominator falls: a generated or vendored path is exempt, and each exemption must name its producing script or upstream in the ledger, as the 85 already reclassified do. Do not exempt a path you have not looked at. Update design/survey-depth/survey-progress.json end.examined in every commit. The launcher reads that number: an attempt that does not raise it leaves the packet blocked, and an attempt that raises it and runs out of budget returns the packet to ready for another session. Say in blocked_reason what remains. Your red proof is not taken at a red commit. gate.red_proof delegates it to GATE D1 in P5 under spec 8.0 clause 4, so do not commit P11 deliverables to manufacture a tree-bound red. dev/record-survey-depth.mjs and design/survey-depth/acceptance-receipt.json are already in the tree from attempt 1; leave them to P11. Set status=done only when node dev/test-survey-depth.mjs prints GATE P10 GREEN. PRIOR ATTEMPT: Restarted 2026-09-17 on the owner's instruction after the 09-15 block. B2 is budget, not method: 106 of the 292 examined tracked paths the acceptance needs, and an implement session against this store continues from 106 without redoing work. attempts reset to 0 so the lane can take two more 7-hour sessions before it re-blocks. The two contract questions in the previous blocked_reason (verify_packet cannot take a red proof for a live-store property; gate.red_expect named a predicate P8 had already satisfied, now repointed) are unresolved and still owed an owner ruling.",
+      "max_attempts": 4,
+      "progress": {
+        "file": "design/survey-depth/survey-progress.json",
+        "pointer": ".end.examined"
+      },
+      "progress_last": 103
     },
     {
       "id": "P11",
