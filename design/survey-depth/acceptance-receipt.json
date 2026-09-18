@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
+  "repository_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
+    "checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
+        "detected_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
         "tree_digest": "4021124580d0ac7771a4a492999e1e473be198edfdf9782bb3a26b46c5f6d31d",
-        "ledger_digest": "32ba9b0469f76d217ba11b1325fe984d3f068390e4b8d2655dfb81026f1d43bf",
+        "ledger_digest": "555897efe765fe8e27f72210c53fddcf57c8132eb3a0e4085b2a41cd4ff1cbfd",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -163,99 +163,99 @@
           },
           {
             "file_path": "design/delightful-output-panel/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/actionable-redesign.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/blind-brief.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/current-report-stress-test.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/design-language.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/blind-editorial-decision-design.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/blind-ia-wayfinding.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/blind-interaction-art-direction.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/method-and-lineage.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-art-direction.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-editorial.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/blind-wayfinding.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/method-and-fan-in.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/rerun-2026-08-22/synthesis.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/panel/synthesis-and-directions.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/prototype-current/index.html",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/prototype/index.html",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/revision-2026-08-23.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/source-capture.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/task-tests.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/validation/index.html.png",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/validation/prototype-desktop.png",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/validation/report.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/delightful-output-panel/validation/validate-prototype.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "design/reader-lenses/README.md",
@@ -495,7 +495,7 @@
           },
           {
             "file_path": "dev/activation-evidence/a22-codex-host.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a22-host-runs/configuration-conflict.jsonl",
@@ -575,15 +575,15 @@
           },
           {
             "file_path": "dev/activation-evidence/a23-zero-touch-lifecycle.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a24-package-parity.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a25-activation-operating-envelope.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a25-host-runs/a25-2026-08-26T17-16-03-446Z-c435874d-negative-config.jsonl",
@@ -755,23 +755,23 @@
           },
           {
             "file_path": "dev/activation-evidence/a26-candidate-suite.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a26-clean-replay.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a26-release-readiness-red-gates.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/activation-evidence/a26-release-readiness.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adopt-codex-host-evidence.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/adr/0001-living-conspectus-terms.md",
@@ -863,19 +863,19 @@
           },
           {
             "file_path": "dev/capture-activation-launch.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/check-activation-operating-envelope.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/check-codex-host-evidence.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/check-friction-free-release-readiness.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/check-living-conspectus.mjs",
@@ -887,11 +887,11 @@
           },
           {
             "file_path": "dev/cleanup-activation-operating-trust.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/cleanup-codex-host-trust.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/conspectus/README.md",
@@ -919,7 +919,7 @@
           },
           {
             "file_path": "dev/friction-free-release-checklist.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/hooks/pre-commit",
@@ -979,15 +979,15 @@
           },
           {
             "file_path": "dev/refresh-a22-evidence.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/release-notes-v0.2.0-beta.1.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/render-friction-free-release-readiness.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/render-roadmap.mjs",
@@ -999,23 +999,23 @@
           },
           {
             "file_path": "dev/run-activation-operating-envelope.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/run-codex-host-harness.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/run-codex-parent-cd-evidence.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/run-friction-free-candidate-suite.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/run-friction-free-release-replay.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/survey-depth-baseline.json",
@@ -1023,15 +1023,15 @@
           },
           {
             "file_path": "dev/test-activation-evidence.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-activation-operating-envelope-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-activation-operating-trust-cleanup.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-amanuensis-pecia-defects.mjs",
@@ -1047,11 +1047,11 @@
           },
           {
             "file_path": "dev/test-codex-host-evidence-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-friction-free-release-readiness-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-living-conspectus.mjs",
@@ -1059,7 +1059,7 @@
           },
           {
             "file_path": "dev/test-package-activation-parity-red-gates.mjs",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "dev/test-pecia-roadmap-red-gates.mjs",
@@ -2187,11 +2187,11 @@
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/README.md",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/baseline-inspection.json",
-            "classification": "candidate"
+            "classification": "examined"
           },
           {
             "file_path": "scholiast/ai-primary-web-platform-landscape/baseline-inspection.py",
@@ -2608,9 +2608,9 @@
     },
     "B2": {
       "verdict": "green",
-      "examined": 294,
+      "examined": 350,
       "obligation_bearing": 489,
-      "fraction": 0.6012269938650306,
+      "fraction": 0.7157464212678937,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -3809,8 +3809,8 @@
       "confirmed-bug": 10
     },
     "classification_histogram": {
-      "candidate": 195,
-      "examined": 294,
+      "candidate": 139,
+      "examined": 350,
       "generated-ignore": 150,
       "vendor-ignore": 4
     }

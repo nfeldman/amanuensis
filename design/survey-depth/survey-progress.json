@@ -107,6 +107,22 @@
         "7bde36b"
       ],
       "note": "B-05 to its 82nd ledger entry and B-08's first three receipts. 86 paths read in full and moved candidate -> examined: dev/ roadmap source and its four checkers, the mcp-server contracts and activation/evaluation fixtures, the packaging and check scripts, and A19-A21's activation evidence. D3% crossed the baseline here: 294 of 489 is 0.6012 against the frozen 0.5957."
+    },
+    {
+      "batch": 9,
+      "priority": 4,
+      "subsystems": [
+        "B-06",
+        "B-07"
+      ],
+      "why_last": "The two evidence corpora priority 4 names, which batch 4 recorded as not started: a design study with its own validation record, and the embedded research surveys. Prose and captured trial data, no product code.",
+      "status": "partial",
+      "subsystems_reached": "no status advance; B-06's ledger is now fully examined, B-07's is not",
+      "examined_added": 26,
+      "checkpoints": [
+        "6eb2a1d"
+      ],
+      "note": "B-06 complete at 24 of 24: the blind brief, three first-reading memos and the rerun's four, both synthesis documents, the design language, the two prototypes, the product ruling, the source capture, the task tests, the validator and its report, and the two desktop QA captures — the images read as images, not as bytes. B-07 opened at 2 of 78. This batch is surplus to B2, which batch 8 had already met; it exists because priority 4 had never been surveyed at all and the packet's first acceptance clause asks for priority order."
     }
   ],
   "carried_adjudication": {
@@ -141,14 +157,15 @@
     "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; four are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
   },
   "end": {
-    "at_sha": "2d7d093559ccc73ae3def506d5cd1d2bebb3c37e",
+    "at_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
     "obligation_bearing": 489,
-    "examined": 294,
-    "fraction": 0.6012,
+    "examined": 350,
+    "fraction": 0.7157,
     "examined_needed_for_b2": 292,
     "shortfall": 0,
-    "why": "B2 is met. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.6012 over the tracked denominator at HEAD.",
+    "why": "B2 is met with room. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.7157 over the tracked denominator at HEAD, against the frozen baseline's 0.5957. The margin is deliberate: D2 would have to grow by 98 obligation-bearing tracked paths before B2 could turn red again, so P9 and P11 can add their own deliverables without reopening it.",
     "denominator_note": "D2 is 489: 643 tracked paths at HEAD minus the 154 whose ledger classification the contract marks obligation_bearing=false. It moved from the start row's 571 in two independent steps, and a reviewer auditing a shrunk denominator should check both. (1) 85 paths were reclassified exempt during this packet: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 scholiast trial build outputs as generated-ignore, and 4 shadcn registry copies as vendor-ignore — every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. That alone would leave 486. (2) The tree grew from 640 tracked paths to 643 over the same span, because this packet's own deliverables were committed to it; all three are obligation-bearing and all three are examined, which is what carries 486 back to 489. The other 69 exempt rows — the 66 generated docs/ projection pages and the two lockfiles — were already exempt at the start row and are unchanged by this packet.",
-    "gate": "node dev/test-survey-depth.mjs prints GATE P10 GREEN — GATE D0 GREEN; both arms hold B1-B6 and agree."
+    "gate": "node dev/test-survey-depth.mjs prints GATE P10 GREEN — GATE D0 GREEN; both arms hold B1-B6 and agree.",
+    "not_claimed": "139 tracked paths remain classified 'candidate' — scoped and unread, not exempt, and the ledger reports them as such. They are B-05's mcp-server test suite (65) and B-07's research corpus (74). No subsystem status was advanced in this packet, so nothing in the store claims a survey depth this reading did not reach. The acceptance predicate is a threshold on D3%, not full coverage."
   }
 }
