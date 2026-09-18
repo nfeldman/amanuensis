@@ -717,6 +717,150 @@ async function main(mods) {
     });
   }
 
+  // ----------------------------------------- CD1..CD5: ingress bounds (§5.2, §5.4)
+  //
+  // Four holes the final review found, each in a field that reaches a wire
+  // envelope or a NOT NULL column. They are grouped because they share one
+  // rule: a value this store cannot answer for must be refused where it enters,
+  // not carried and then papered over by a reader.
+  {
+    const ctx = world("ingress");
+
+    check("CD1 attach_carried_evidence refuses a role outside the vocabulary", () => {
+      const missing = absent("attach_carried_evidence", "§5.4's evidence join");
+      if (missing) return missing;
+      const id = seedCarried(ctx, { archived_finding_id: "CD1-1" });
+      const evidenceId = addEvidence(ctx, headSha(ctx));
+      const said = refusal(() =>
+        call(
+          "attach_carried_evidence",
+          { carried_id: id, evidence_id: evidenceId, role: "not-a-role-at-all" },
+          ctx,
+        ),
+      );
+      if (said) return null;
+      const stored = ctx.db
+        .prepare("SELECT role FROM carried_finding_evidence WHERE carried_id = ? AND evidence_id = ?")
+        .get(id, evidenceId);
+      return (
+        `the role ${JSON.stringify(stored?.role ?? null)} was accepted and stored. Both siblings ` +
+        "refuse an unknown role (attach_evidence_to_disposition, attach_evidence_to_finding), " +
+        "carried_finding_evidence.role carries no CHECK, and the row is immutable and " +
+        "undeletable, so the tool is the only enforcement point and a typo is permanent"
+      );
+    });
+
+    check("CD2 a carry run that names an archive names the revision it was read at", () => {
+      const said = refusal(() =>
+        call(
+          "begin_carry_run",
+          {
+            source_kind: "store",
+            source_path: "/cd2/archive/memory.db",
+            archived_store_id: "store-cd2noanchor00",
+            reason: "an archive carried without the revision it was read at",
+            expected_count: 1,
+            imported_count: 1,
+          },
+          ctx,
+        ),
+      );
+      return said
+        ? null
+        : "begin_carry_run accepted source_kind 'store' with no archived_anchor. carry_finding " +
+            "then writes `archived_anchor_sha` and the archived-terminal outcome's `ref_sha` as " +
+            "the empty string, which satisfies NOT NULL while recording nothing, and the rows are " +
+            "append-only (§5.2, §5.3)";
+    });
+
+    check("CD3 no carried record is written with an empty archived anchor", () => {
+      const empty = ctx.db
+        .prepare("SELECT COUNT(*) AS n FROM carried_findings WHERE TRIM(archived_anchor_sha) = ''")
+        .get().n;
+      return empty === 0
+        ? null
+        : `${empty} carried record(s) carry an empty archived_anchor_sha; the column is NOT NULL ` +
+            "precisely so the archive's revision is recorded";
+    });
+
+    check("CD4 list_carried_findings refuses an outcome outside the enum", () => {
+      const said = refusal(() => call("list_carried_findings", { outcome: "typo" }, ctx));
+      if (said) return null;
+      const page = call("list_carried_findings", { outcome: "typo" }, ctx);
+      return (
+        `the filter returned a successful page of ${page?.count ?? "?"} record(s) for an outcome ` +
+        "no record can hold. An unrecognized filter that answers 'none' reads as 'none carry it', " +
+        "so a reader cannot tell a typo from a true zero (§5.4's enum is the single source)"
+      );
+    });
+
+    check("CD5 one legacy row over the wire budget is cut down, whatever field is long", () => {
+      // The writer's bound is new, so a store may already hold a row no bound
+      // ever saw. The single-row fallback clears `symptom` and truncates
+      // `archived_finding_id`; `subsystem_id` and `archived_store_id` reach the
+      // same envelope and were left whole, so one row answered 18,474 bytes
+      // against an 8,192-byte budget (F8/codex).
+      const long = "L".repeat(9000);
+      seedCarried(ctx, {
+        archived_finding_id: "CD5-1",
+        archived_store_id: "store-cd5longsubsys",
+        subsystem_id: long,
+      });
+      const page = call("list_carried_findings", { subsystem_id: long }, ctx);
+      const bytes = Buffer.byteLength(JSON.stringify(page), "utf8");
+      if (bytes <= 8192) return null;
+      return (
+        `a page holding one legacy row answered ${bytes} bytes against the 8192-byte budget. ` +
+        `The fallback cut symptom and archived_finding_id and left subsystem_id at ` +
+        `${long.length} characters, so the compact page is not compact and the reader that must ` +
+        "page has nothing to page to"
+      );
+    });
+
+    check("CD6 carry_finding bounds every identifier the compact page repeats", () => {
+      const missing = absent("carry_finding", "§5.4's carry");
+      if (missing) return missing;
+      let runId = null;
+      const began = refusal(() => {
+        runId = call(
+          "begin_carry_run",
+          {
+            source_kind: "store",
+            source_path: "/cd6/archive/memory.db",
+            archived_store_id: "store-cd6boundedids",
+            archived_anchor: headSha(ctx),
+            reason: "a carry whose subsystem_id is longer than any envelope",
+            expected_count: 1,
+            imported_count: 1,
+          },
+          ctx,
+        ).carry_run_id;
+        return null;
+      });
+      if (began) return `begin_carry_run refused: ${began}`;
+      const said = refusal(() =>
+        call(
+          "carry_finding",
+          {
+            carry_run_id: runId,
+            archived_finding_id: "CD6-1",
+            subsystem_id: "S".repeat(9000),
+            severity: "HIGH",
+            symptom: "the archived symptom",
+            root_cause: "the archived cause",
+            archived_resolution: "open",
+          },
+          ctx,
+        ),
+      );
+      return said
+        ? null
+        : "carry_finding accepted a 9000-character subsystem_id. archived_finding_id is bounded " +
+            "at ingress for exactly this reason — the compact page repeats it once per row — and " +
+            "the other repeated identifiers reach the same envelope";
+    });
+  }
+
   // ------------------------------------------------- B1..B5: store identity (§5.3)
 
   {
