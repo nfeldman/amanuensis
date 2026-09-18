@@ -2221,6 +2221,7 @@ async function main(mods) {
           source_kind: "store",
           source_path: big.project.dbPath,
           archived_store_id: storeE,
+          archived_anchor: headSha(big),
           reason: "the oversized-id probe",
           expected_count: 1,
           imported_count: 1,

@@ -31,6 +31,32 @@ import { CARRIED_FINDING_OUTCOMES, FINDING_RESOLUTION_STATES, SEVERITIES } from 
 
 const CARRY_SOURCE_KINDS = ["store", "export", "none"] as const;
 
+/** §5.4's evidence-join roles — the `disposition_evidence` vocabulary, which is
+ *  what `supports` defaults out of. The column carries no CHECK, so this list is
+ *  the only enforcement point (F1/claude). */
+const CARRIED_EVIDENCE_ROLES = ["supports", "contradicts", "linchpin", "compensating"] as const;
+
+/** What `list_carried_findings` may filter on: the four terminal outcomes plus
+ *  the word the page prints for a record that has none. Derived from the single
+ *  source so the reader cannot drift from the writer (F9/codex). */
+const LIST_OUTCOME_FILTERS = [...CARRIED_FINDING_OUTCOMES, "undecided"] as const;
+
+/** The anchor a carry run was opened with. `begin_carry_run` requires it for
+ *  every source_kind that names an archive, so a run reaching here without one
+ *  is a row written before that refusal existed: it is refused at the point of
+ *  use rather than silently stamped "" into a NOT NULL column (F2/claude). */
+function requireCarriedAnchor(run: CarryRunRow): string {
+  const anchor = (run.archived_anchor ?? "").trim();
+  if (anchor === "") {
+    throw new ToolError(
+      `carry run ${run.id} names no archived_anchor. The carried record and its pre-recorded ` +
+        `outcome are both stamped with the revision the archive was read at; an empty anchor ` +
+        `satisfies the NOT NULL column while recording nothing. Open a new run with the anchor.`,
+    );
+  }
+  return anchor;
+}
+
 /** The archived resolution states that mean the archive had already closed it. */
 const ARCHIVED_CLOSED = new Set(["accepted", "ruled-out", "verified-fixed"]);
 
@@ -167,6 +193,18 @@ export const carriedTools: ToolDefinition[] = [
         if (sourcePath === null) {
           throw new ToolError(`source_path is required for source_kind '${sourceKind}'`);
         }
+        if (archivedAnchor === null) {
+          // `carried_findings.archived_anchor_sha` and the archived-terminal
+          // outcome's `ref_sha` are NOT NULL so the archive's revision is on the
+          // record. Defaulting to "" satisfied the constraint while recording
+          // nothing, in rows nothing can edit afterwards (F2/claude).
+          throw new ToolError(
+            `archived_anchor is required for source_kind '${sourceKind}'. It is the revision the ` +
+              `archive was read at, and every carried record and pre-recorded outcome is stamped ` +
+              `with it; an empty anchor satisfies the NOT NULL column while recording nothing, and ` +
+              `the rows are append-only.`,
+          );
+        }
         if (archivedStoreId === null) {
           // The one thing §5.3 exists to record. Without it a carried record
           // cannot name the store it came from, and a rebuilt store can
@@ -175,6 +213,14 @@ export const carriedTools: ToolDefinition[] = [
             `archived_store_id is required for source_kind '${sourceKind}'. A carried record must ` +
               `name the store it came from; an export that does not carry the field cannot be a ` +
               `carry source, and a store supplies it from its own minted identity.`,
+          );
+        }
+        if (archivedStoreId.length > MAX_ID_LENGTH) {
+          throw new ToolError(
+            `archived_store_id is ${archivedStoreId.length} characters. Every carried record repeats ` +
+              `it, and the compact page repeats it once per row, so a value this long puts a single ` +
+              `record over the ${WIRE_BUDGET}-byte response envelope by itself. At most ` +
+              `${MAX_ID_LENGTH} characters.`,
           );
         }
       }
@@ -266,6 +312,19 @@ export const carriedTools: ToolDefinition[] = [
         );
       }
       const subsystemId = requireString(args, "subsystem_id");
+      // Same rule as archived_finding_id above, for the same reason: the compact
+      // page repeats every identifier once per row, so one unbounded value puts a
+      // single record over the envelope by itself (F8/codex). The third such
+      // identifier, archived_store_id, is the run's and is bounded where the run
+      // is opened.
+      if (subsystemId.length > MAX_ID_LENGTH) {
+        throw new ToolError(
+          `subsystem_id is ${subsystemId.length} characters. The compact page repeats it once per ` +
+            `row, so a value this long puts a single record over the ${WIRE_BUDGET}-byte response ` +
+            `envelope by itself. At most ${MAX_ID_LENGTH} characters; the account of the defect ` +
+            `belongs in symptom and root_cause.`,
+        );
+      }
       const severity = requireEnum(args, "severity", SEVERITIES);
       const symptom = requireString(args, "symptom");
       const rootCause = requireString(args, "root_cause");
@@ -308,7 +367,7 @@ export const carriedTools: ToolDefinition[] = [
           .run(
             archivedFindingId,
             archivedStoreId,
-            run.archived_anchor ?? "",
+            requireCarriedAnchor(run),
             subsystemId,
             severity,
             symptom,
@@ -336,7 +395,7 @@ export const carriedTools: ToolDefinition[] = [
               `the archive ${archivedStoreId} recorded ${archivedFindingId} as ${archivedResolution} ` +
                 `before this store existed; the carry records that state rather than re-deciding it`,
               sessionId,
-              run.archived_anchor ?? "",
+              requireCarriedAnchor(run),
             );
         }
         return carriedId;
@@ -399,7 +458,7 @@ export const carriedTools: ToolDefinition[] = [
       properties: {
         carried_id: { type: "integer" },
         evidence_id: { type: "integer" },
-        role: { type: "string" },
+        role: { type: "string", enum: [...CARRIED_EVIDENCE_ROLES] },
       },
       required: ["carried_id", "evidence_id"],
       additionalProperties: false,
@@ -409,7 +468,14 @@ export const carriedTools: ToolDefinition[] = [
       const carriedId = requireInt(args, "carried_id");
       readCarried(ctx, carriedId);
       const evidenceId = requireInt(args, "evidence_id");
-      const role = optString(args, "role") ?? "supports";
+      // The column carries no CHECK and the row is append-only in both
+      // directions, so this is the only place an unknown role can be refused:
+      // a typo attached here is permanent and unreadable by the §5.4 rules that
+      // read the join (F1/claude). Both siblings validate; this one now does.
+      const role =
+        args.role === undefined || args.role === null
+          ? "supports"
+          : requireEnum(args, "role", CARRIED_EVIDENCE_ROLES);
       const evidence = ctx.db.prepare("SELECT id FROM evidence WHERE id = ?").get(evidenceId) as
         | { id: number }
         | undefined;
@@ -591,7 +657,7 @@ export const carriedTools: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        outcome: { type: "string" },
+        outcome: { type: "string", enum: [...LIST_OUTCOME_FILTERS] },
         subsystem_id: { type: "string" },
         archived_store_id: { type: "string" },
         limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
@@ -600,7 +666,12 @@ export const carriedTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: (args, ctx) => {
-      const wantedOutcome = optString(args, "outcome");
+      // An unrecognized filter that answers an empty page reads as "none carry
+      // it", so a typo is indistinguishable from a true zero (F9/codex).
+      const wantedOutcome =
+        args.outcome === undefined || args.outcome === null
+          ? null
+          : requireEnum(args, "outcome", LIST_OUTCOME_FILTERS);
       const subsystemId = optString(args, "subsystem_id");
       const archivedStoreId = optString(args, "archived_store_id");
       const limit = Math.min(
@@ -687,8 +758,15 @@ export const carriedTools: ToolDefinition[] = [
       if (page.length === 1 && last !== undefined && envelopeBytes(build()) > WIRE_BUDGET) {
         last.symptom = "";
         compacted = 1;
-        if (last.archived_finding_id.length > MAX_ID_LENGTH) {
-          last.archived_finding_id = `${last.archived_finding_id.slice(0, MAX_ID_LENGTH)}…`;
+        // Every field a legacy row can carry unbounded, not only the two the
+        // first cut named: a row written before the ingress bound above can be
+        // long in any of them, and cutting one while leaving the others whole
+        // answers a page request with an envelope nothing can receive
+        // (F8/codex).
+        for (const field of ["archived_finding_id", "archived_store_id", "subsystem_id"] as const) {
+          if (last[field].length > MAX_ID_LENGTH) {
+            last[field] = `${last[field].slice(0, MAX_ID_LENGTH)}…`;
+          }
         }
       }
       return build();
