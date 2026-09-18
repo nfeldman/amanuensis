@@ -25,6 +25,11 @@
 //   B5  every carried record with its outcome, its `repaired_sha` and the
 //       revisions of the evidence attached to it.
 //
+// Beside them, `reported_deltas`: every reported axis paired with the frozen
+// fixture's value and the signed difference (§7.5, claim C31). The counts alone
+// answer "how many"; a receipt that is a baseline for the *next* rebuild has to
+// answer "against what, and by how much" without the fixture in hand.
+//
 // `verdict` fields are written beside the witnesses because §7.5 asks for "every
 // blocking axis with its value, its baseline and its verdict" — for a *reader*.
 // The gate ignores every one of them by design (§7.3, §8.8), and this recorder
@@ -409,6 +414,43 @@ const receipt = {
   },
 };
 
+// §7.5 asks for "every reported axis with its delta", and a delta is a
+// comparison, not a count. The axes above are the candidate half; this block
+// pairs each with the frozen fixture's value and the signed difference, keyed
+// the same way, so a later reader can answer "against what, and by how much"
+// without the fixture in hand. Histograms get a per-bucket delta over the union
+// of both sides' keys: a bucket that exists on one side only is a change of the
+// bucket's whole count, and dropping it would report no change at all.
+//
+// It is a sibling of `reported` rather than a replacement for its shape because
+// `dev/test-survey-depth.mjs` reads those axes as numbers (§7.1's candidate
+// arm), and this recorder does not get to change another gate's contract to
+// satisfy its own. `GATE A1` recomputes every entry here from `reported` and the
+// fixture, so the two can never drift apart silently.
+receipt.reported_deltas = Object.fromEntries(
+  Object.entries(baseline.reported ?? {}).map(([key, base]) => {
+    if (typeof base === "number") {
+      const candidate = receipt.reported[key];
+      return [
+        key,
+        {
+          candidate: typeof candidate === "number" ? candidate : null,
+          baseline: base,
+          delta: typeof candidate === "number" ? candidate - base : null,
+        },
+      ];
+    }
+    const candidate = receipt.reported[key] ?? {};
+    const buckets = [...new Set([...Object.keys(base ?? {}), ...Object.keys(candidate)])].sort();
+    return [
+      key,
+      Object.fromEntries(
+        buckets.map((bucket) => [bucket, Number(candidate[bucket] ?? 0) - Number(base[bucket] ?? 0)]),
+      ),
+    ];
+  }),
+);
+
 db.close();
 
 const rendered = `${JSON.stringify(receipt, null, 2)}\n`;
@@ -422,6 +464,7 @@ if (check) {
   };
   compare("blocking", committed.blocking, receipt.blocking);
   compare("reported", committed.reported, receipt.reported);
+  compare("reported_deltas", committed.reported_deltas, receipt.reported_deltas);
   compare("store", committed.store, receipt.store);
   if (drift.length) {
     die(1, `the committed receipt disagrees with the live store on: ${drift.join(", ")}`);

@@ -18,10 +18,17 @@
 //
 // Every denominator this gate counts against is read from a *different*
 // committed document than the one under test — `rebuild-coverage-receipt.json`,
-// written by P17 — or is written out literally here. A numerator and its
-// denominator that shrink together prove nothing (GP24), and the concern
-// checklist is spelled out below rather than read from the record so that
-// dropping a concern from the survey cannot also drop it from what this expects.
+// written by P17, and `mcp-server/contracts/concern-checklist.json`, calibrated
+// by survey-depth P8. A numerator and its denominator that shrink together
+// prove nothing (GP24), so the concern checklist is read from that contract
+// rather than from the record under test: dropping a concern from the survey
+// cannot also drop it from what this expects.
+//
+// The checklist and the finding-id shape used to be literals here (`:104`), and
+// survey-depth spec.md §8.10 moved them because the clean-slate survey
+// calibrated a different checklist and deliberately chose a different id shape
+// (candidate finding B07-R2). They moved to a contract and not to a receipt, and
+// to one no rebuild packet rewrites, so the independence above is unchanged.
 //
 // Turns red when:
 //   - `design/reader-lenses/rebuild-depth-receipt.json` is absent, is not valid
@@ -97,11 +104,67 @@ const STORE_REL = ".amanuensis/memory.db";
 
 const RECEIPT_CONTRACT = "amanuensis-reader-lenses/rebuild-depth-receipt/v1";
 
-// The calibrated checklist onboarding produced for this repository, written out
-// rather than read from the record. This is the denominator every subsystem's
-// concern coverage is counted against; reading it from the same document that
-// reports the coverage would let a dropped concern shrink both halves at once.
-const CHECKLIST_CONCERNS = ["BV-1", "CC-1", "EV-1", "GT-1", "RC-1", "ZD-1"];
+// The calibrated checklist onboarding produced for this repository. This is the
+// denominator every subsystem's concern coverage is counted against, and the
+// finding-id shape beside it is the other literal this gate used to carry.
+//
+// Both now come from `mcp-server/contracts/concern-checklist.json`, and the
+// property the old literals protected is unchanged: the denominator is still
+// read from a *different* committed document than the one under test. That
+// contract is a standalone calibration regenerated only by an explicit
+// onboarding step and `--check`ed in CI — not a receipt, and rewritten by no
+// rebuild packet (survey-depth spec.md §8.10: P8 calibrated it, P10 surveyed
+// against it, P11 reads it). Reading the checklist out of the depth receipt
+// would let a dropped concern shrink both halves at once (GP24); reading it out
+// of a contract a different packet owns cannot.
+//
+// A contract that cannot be read is a missing denominator, not an empty one, so
+// this refuses to run rather than counting coverage against nothing (VP4(e)).
+const CHECKLIST_REL = "mcp-server/contracts/concern-checklist.json";
+const CHECKLIST_CONTRACT = "amanuensis/concern-checklist/v1";
+
+function loadChecklist() {
+  const path = join(REPO, CHECKLIST_REL);
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    return { error: `${CHECKLIST_REL} could not be read (${error?.message ?? error})` };
+  }
+  if (parsed?.contract !== CHECKLIST_CONTRACT) {
+    return {
+      error: `${CHECKLIST_REL} declares contract ${JSON.stringify(parsed?.contract ?? null)}, not ${CHECKLIST_CONTRACT}`,
+    };
+  }
+  const codes = (Array.isArray(parsed.concerns) ? parsed.concerns : [])
+    .map((entry) => entry?.code)
+    .filter((code) => typeof code === "string" && code);
+  if (!codes.length) {
+    return { error: `${CHECKLIST_REL} declares no calibrated concern, so coverage has no denominator` };
+  }
+  const template = parsed.finding_id_convention?.template;
+  if (typeof template !== "string" || !template.includes("{subsystem_compact}")) {
+    return {
+      error: `${CHECKLIST_REL} declares no finding_id_convention.template naming {subsystem_compact}`,
+    };
+  }
+  return { codes, template };
+}
+
+const CHECKLIST = loadChecklist();
+if (CHECKLIST.error) {
+  console.log(
+    `GATE P19 CANNOT RUN: the calibrated concern checklist is not readable — ${String(CHECKLIST.error).replace(/\s+/g, " ")}`,
+  );
+  process.exit(2);
+}
+const CHECKLIST_CONCERNS = CHECKLIST.codes;
+
+// The id shape this survey's own findings must follow, built from the contract's
+// template. `{subsystem_compact}` is the subsystem id with its hyphens removed.
+function findingIdPattern(subsystemId) {
+  return new RegExp(CHECKLIST.template.replace("{subsystem_compact}", subsystemId.split("-").join("")));
+}
 
 // phase-3-concerns.md: every concern reaches one of these. Nothing lingers at
 // "suspected" or "unknown".
@@ -595,8 +658,8 @@ check("every finding was recorded through add_finding with attached evidence, an
     const findings = findingsOf(row);
     for (const finding of findings) {
       const fid = finding?.finding_id;
-      if (typeof fid !== "string" || !new RegExp(`^${id.replace("-", "")}-\\d+$`).test(fid)) {
-        return `${id} records finding ${JSON.stringify(fid ?? null)}, which does not follow <subsystem-id-compact>-<N>`;
+      if (typeof fid !== "string" || !findingIdPattern(id).test(fid)) {
+        return `${id} records finding ${JSON.stringify(fid ?? null)}, which does not follow ${CHECKLIST.template} with {subsystem_compact} = ${id.split("-").join("")} (${CHECKLIST_REL})`;
       }
       if (seen.has(fid)) return `finding ${fid} is recorded twice`;
       seen.add(fid);

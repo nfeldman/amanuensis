@@ -1,6 +1,6 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+  "repository_sha": "2bca8c015eaf0a906ec398645fd92ea0bbf35644",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
@@ -3813,6 +3813,119 @@
       "examined": 350,
       "generated-ignore": 150,
       "vendor-ignore": 4
+    }
+  },
+  "reported_deltas": {
+    "ledger_rows": {
+      "candidate": 643,
+      "baseline": 503,
+      "delta": 140
+    },
+    "evidence": {
+      "candidate": 34,
+      "baseline": 133,
+      "delta": -99
+    },
+    "dispositions": {
+      "candidate": 50,
+      "baseline": 128,
+      "delta": -78
+    },
+    "evidence_per_disposition": {
+      "candidate": null,
+      "baseline": 1.0391,
+      "delta": null
+    },
+    "attached_dispositions": {
+      "candidate": 50,
+      "baseline": 112,
+      "delta": -62
+    },
+    "attached_coverage": {
+      "candidate": null,
+      "baseline": 0.875,
+      "delta": null
+    },
+    "unattached_dispositions": {
+      "candidate": null,
+      "baseline": 16,
+      "delta": null
+    },
+    "disposition_evidence_rows": {
+      "candidate": 65,
+      "baseline": 181,
+      "delta": -116
+    },
+    "field_notes": {
+      "candidate": 1,
+      "baseline": 36,
+      "delta": -35
+    },
+    "open_questions_all": {
+      "candidate": 1,
+      "baseline": 16,
+      "delta": -15
+    },
+    "open_questions_open": {
+      "candidate": 1,
+      "baseline": 12,
+      "delta": -11
+    },
+    "anchored_terms": {
+      "candidate": 8,
+      "baseline": 4,
+      "delta": 4
+    },
+    "anchored_terms_in_citation_form": {
+      "candidate": null,
+      "baseline": 0,
+      "delta": null
+    },
+    "open_findings": {
+      "candidate": 10,
+      "baseline": 13,
+      "delta": -3
+    },
+    "scope_gaps_unledgered": {
+      "candidate": null,
+      "baseline": 0,
+      "delta": null
+    },
+    "subsystems": {
+      "candidate": 9,
+      "baseline": 8,
+      "delta": 1
+    },
+    "seams": {
+      "candidate": 0,
+      "baseline": 10,
+      "delta": -10
+    },
+    "claims": {
+      "candidate": 10,
+      "baseline": 0,
+      "delta": 10
+    },
+    "xrefs": {
+      "candidate": 0,
+      "baseline": 1,
+      "delta": -1
+    },
+    "sessions": {
+      "candidate": 12,
+      "baseline": 35,
+      "delta": -23
+    },
+    "finding_status_histogram": {
+      "confirmed-bug": -3,
+      "fixed": -9
+    },
+    "classification_histogram": {
+      "candidate": -11,
+      "examined": 129,
+      "generated-ignore": 26,
+      "irrelevant": -2,
+      "vendor-ignore": -2
     }
   }
 }
