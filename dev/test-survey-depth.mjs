@@ -1250,7 +1250,12 @@ if (storeReading && receiptReading) {
 // re-derivable, and a gate that pretended otherwise would be asserting what it
 // cannot measure.
 // ---------------------------------------------------------------------------
-if (receiptReading) {
+// Scoped to this repository's own tree. `AMANUENSIS_DEPTH_WORKSPACE` points the
+// two arms at a synthetic candidate for GATE D1's seeded faults, and such a
+// candidate is a store and a receipt with no batching record behind them:
+// P10's deliverable describes P10's survey of *this* repository, so demanding
+// one of a synthetic workspace would fail it for not being this lane.
+if (receiptReading && CANDIDATE_ROOT === REPO) {
   let progress = null;
   let progressError = null;
   if (!existsSync(PROGRESS_PATH)) {

@@ -629,8 +629,12 @@ checked += 1;
 // is a different fact from one that disagrees with it (the header of
 // `dev/record-carry-receipt.mjs` says so, and this is what makes that
 // distinction load-bearing).
-checked += 1;
-{
+// Guarded by the store arm: where this gate itself cannot read the live store,
+// the recorder cannot either, and its exit 2 is then the same absence CR1
+// already reports below rather than a fault of its own. Turning that into a red
+// would make a missing store look like a broken recorder.
+if (storeArm !== null) {
+  checked += 1;
   const recorder = join(REPO, "dev/record-carry-receipt.mjs");
   if (!existsSync(recorder)) {
     record("recorder", `dev/record-carry-receipt.mjs is absent, so ${RECEIPT_REL} has no writer`);

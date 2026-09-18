@@ -1223,7 +1223,10 @@ try {
   // stable across runs over an unchanged store, and its three exit codes are
   // kept distinct here because a recorder that cannot read its source is a
   // different fact from a recorder that disagrees with it (VP4(e)).
-  {
+  // Guarded by the live store: where this gate has no store to read, the
+  // recorder has none either, and its exit 2 is that same absence rather than a
+  // fault of its own.
+  if (store) {
     const recorder = join(REPO, "dev/record-survey-depth.mjs");
     if (!existsSync(recorder)) {
       report(false, "[live]", "dev/record-survey-depth.mjs is absent, so the receipt has no writer");
