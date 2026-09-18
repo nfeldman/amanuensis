@@ -133,8 +133,8 @@
     "decided": 22,
     "outcomes": {
       "archived-terminal": 8,
-      "repaired": 4,
-      "successor-finding": 10
+      "repaired": 5,
+      "successor-finding": 9
     },
     "successors": [
       "B02-R2",
@@ -154,17 +154,17 @@
       "B04-2 at 3f8b7f3",
       "B04-4 at 3f8b7f3"
     ],
-    "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; four are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
+    "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; five are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
   },
   "end": {
-    "at_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
-    "obligation_bearing": 489,
-    "examined": 350,
-    "fraction": 0.7157,
-    "examined_needed_for_b2": 292,
+    "at_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+    "obligation_bearing": 491,
+    "examined": 352,
+    "fraction": 0.7169,
+    "examined_needed_for_b2": 293,
     "shortfall": 0,
-    "why": "B2 is met with room. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.7157 over the tracked denominator at HEAD, against the frozen baseline's 0.5957. The margin is deliberate: D2 would have to grow by 98 obligation-bearing tracked paths before B2 could turn red again, so P9 and P11 can add their own deliverables without reopening it.",
-    "denominator_note": "D2 is 489: 643 tracked paths at HEAD minus the 154 whose ledger classification the contract marks obligation_bearing=false. It moved from the start row's 571 in two independent steps, and a reviewer auditing a shrunk denominator should check both. (1) 85 paths were reclassified exempt during this packet: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 scholiast trial build outputs as generated-ignore, and 4 shadcn registry copies as vendor-ignore — every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. That alone would leave 486. (2) The tree grew from 640 tracked paths to 643 over the same span, because this packet's own deliverables were committed to it; all three are obligation-bearing and all three are examined, which is what carries 486 back to 489. The other 69 exempt rows — the 66 generated docs/ projection pages and the two lockfiles — were already exempt at the start row and are unchanged by this packet.",
+    "why": "B2 is met with room. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.7169 over the tracked denominator at HEAD, against the frozen baseline's 0.5957. The margin is deliberate: D2 would have to grow by 99 obligation-bearing tracked paths before B2 could turn red again, so P9 and P11 can add their own deliverables without reopening it.",
+    "denominator_note": "D2 is 491: 647 tracked paths at this revision minus the 156 whose ledger classification the contract marks obligation_bearing=false. It moved from the start row's 571 in two independent steps, and a reviewer auditing a shrunk denominator should check both. (1) 85 paths were reclassified exempt during this packet: 61 captured harness runs under dev/activation-evidence/*-host-runs/ as generated-ignore, 20 scholiast trial build outputs as generated-ignore, and 4 shadcn registry copies as vendor-ignore — every one is output or third-party code whose producing script is itself scoped, and each is named in the ledger. That alone would leave 486. (2) The tree grew from 640 tracked paths to 647 over the same span, because this packet's and P9's and P11's deliverables were committed to it; five of the new paths are obligation-bearing and all five are examined — the acceptance receipt, this file, dev/record-survey-depth.mjs, dev/test-pecia-carry-audit.mjs and dev/test-survey-depth-acceptance.mjs — which is what carries 486 back to 491. The rest of the growth is generated docs/ pages, which are exempt and move the exempt count from 154 to 156, not D2. The other 69 exempt rows — the 66 generated docs/ projection pages of the earlier publish and the two lockfiles — were already exempt at the start row and are unchanged by this packet.",
     "gate": "node dev/test-survey-depth.mjs prints GATE P10 GREEN — GATE D0 GREEN; both arms hold B1-B6 and agree.",
     "not_claimed": "139 tracked paths remain classified 'candidate' — scoped and unread, not exempt, and the ledger reports them as such. They are B-05's mcp-server test suite (65) and B-07's research corpus (74). No subsystem status was advanced in this packet, so nothing in the store claims a survey depth this reading did not reach. The acceptance predicate is a threshold on D3%, not full coverage."
   }
