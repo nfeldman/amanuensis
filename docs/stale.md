@@ -1,10 +1,10 @@
 # Stale knowledge
 
-11 of 490 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `7f4b4d103c94` on `main`. 62 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+15 of 491 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `0f7dac6d1dd3` on `main`. 63 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
-11 of 351 examined files have changed since the revision they were read at.
+15 of 352 examined files have changed since the revision they were read at.
 
 | File | Owner | Read at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
@@ -16,12 +16,20 @@
 | <a id="ls-b018634598"></a>`design/reader-lenses/rebuild-depth-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:c173f9183f78f66b53e459ea2a651222f3df69bfa975a016c20890b6800ddf61 -->
 | <a id="ls-c173f9183f"></a>`design/survey-depth/acceptance-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `081e12ed` | 2026-09-18 01:15 UTC | git-drift | This packet's own candidate witness: the row-level B1-B6 witnesses §7.5 requires, written by dev/record-survey-depth.mjs and recomputed by GATE D0 where no live store exists. |
+<!-- amanuensis:ledger-stale:bc0ba145e4fd81447814ed024b203ae202c35268b1d44a03bef060a0435a7f55 -->
+| <a id="ls-bc0ba145e4"></a>`design/survey-depth/claims.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 20:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:4d2e5241472fa6fb4a0f965b4aa99243f811c02224434e98b46b240cf44ece0c -->
 | <a id="ls-4d2e524147"></a>`design/survey-depth/plan.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:24 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:36ea48edadf9cd35852bb7ea41603810eb15768a0575eb71e232bf567442042c -->
 | <a id="ls-36ea48edad"></a>`design/survey-depth/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 01:47 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
+<!-- amanuensis:ledger-stale:af0239659903b848acd3d27723064ad0c0e306e01f671b56999d000450250eaf -->
+| <a id="ls-af02396599"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 20:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:d2a78918559128dc0ada7479fd9e245b12de2ce6aa4c3d8e5ab3deeb095916a6 -->
 | <a id="ls-d2a7891855"></a>`design/survey-depth/survey-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `081e12ed` | 2026-09-18 01:15 UTC | git-drift | This packet's batching record: which subsystems were surveyed in which batch, behind which storage checkpoint, and what each batch left the depth measures at. |
+<!-- amanuensis:ledger-stale:071a4043ec747831ffdd4477166235b57b2fea39eb889e56b2489742d8edf191 -->
+| <a id="ls-071a4043ec"></a>`dev/amanuensis-defects-to-pecia.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 20:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
+<!-- amanuensis:ledger-stale:cb132b119fa166aed868cd27b497cf39e6f54ca1d5ec3b57022179ebd3574a26 -->
+| <a id="ls-cb132b119f"></a>`dev/pecia-dogfood.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 20:00 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:b8f8585ff2d6622faa3f76357ad5a54a17528866cb18b6b015158a56f6f48bb8 -->
 | <a id="ls-b8f8585ff2"></a>`dev/record-rebuild-depth.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `410d769b` | 2026-09-18 02:16 UTC | git-drift | A conspectus design lane: its specification, claims, plan and receipts. |
 <!-- amanuensis:ledger-stale:898a43df4442e963e3a60f05472c390516816bd2adb3a7ad74ee0ac051b7582f -->

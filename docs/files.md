@@ -1,6 +1,6 @@
 # Files
 
-646 distinct paths across 646 ledger rows, read at `7f4b4d103c94`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+647 distinct paths across 647 ledger rows, read at `0f7dac6d1dd3`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@
 | <a id="f-137e3f9298"></a>`design/survey-depth/README.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-92ad4fdec8) | Examined | `410d769b` | 0 |
 | <a id="f-87e50d2c06"></a>`design/survey-depth/acceptance-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-9739de6901) | Examined, since changed | `081e12ed` | 0 |
 | <a id="f-6eb4839856"></a>`design/survey-depth/carry-receipt.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-bc6c74cb20) | Examined | `410d769b` | 0 |
-| <a id="f-c29c3cff55"></a>`design/survey-depth/claims.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e0bd10291f) | Examined | `410d769b` | 0 |
+| <a id="f-c29c3cff55"></a>`design/survey-depth/claims.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e0bd10291f) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-1fea49c2d9"></a>`design/survey-depth/decisions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-802b1b0aaf) | Examined | `410d769b` | 0 |
 | <a id="f-96bffbd84e"></a>`design/survey-depth/plan.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-89f5e01e40) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-db39d32d25"></a>`design/survey-depth/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-95d5a2b2b2) | Examined, since changed | `410d769b` | 0 |
@@ -116,7 +116,7 @@
 | <a id="f-8b810d1dd9"></a>`design/survey-depth/reviews/slice-S2/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-629adfd86f) | Examined | `410d769b` | 0 |
 | <a id="f-d6d55b7ded"></a>`design/survey-depth/reviews/slice-S3/codex.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-88e6a86ef3) | Examined | `410d769b` | 0 |
 | <a id="f-c817131c50"></a>`design/survey-depth/reviews/slice-S3/dispositions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-fb33b7c53a) | Examined | `410d769b` | 0 |
-| <a id="f-cd8f21338a"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f469616995) | Examined | `410d769b` | 0 |
+| <a id="f-cd8f21338a"></a>`design/survey-depth/spec.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-f469616995) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-a2b003bc1d"></a>`design/survey-depth/survey-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-72e7b4c603) | Examined, since changed | `081e12ed` | 0 |
 | <a id="f-de12fb7811"></a>`dev/activation-evidence/a19-user-scoped-contract.json` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-61b73c9a0f) | Examined | `410d769b` | 0 |
 | <a id="f-cdd35c06cf"></a>`dev/activation-evidence/a20-activation-doctor.json` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-ecc9e734ae) | Examined | `410d769b` | 0 |
@@ -212,7 +212,7 @@
 | <a id="f-853db0091f"></a>`dev/adr/0019-qualified-natural-history-corpus.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-bdd3f22734) | Examined | `c0734040` | 0 |
 | <a id="f-be88fe431b"></a>`dev/adr/0020-practice-catalog-v2.10-reconciliation.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-bed3b9d920) | Examined | `c0734040` | 0 |
 | <a id="f-c2a8b128dd"></a>`dev/adr/0021-friction-free-codex-activation.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-8921a1e5e6) | Examined | `c0734040` | 0 |
-| <a id="f-a32ed29fec"></a>`dev/amanuensis-defects-to-pecia.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-38775e2be7) | Examined | `410d769b` | 0 |
+| <a id="f-a32ed29fec"></a>`dev/amanuensis-defects-to-pecia.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-38775e2be7) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-69e410e774"></a>`dev/capture-activation-launch.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-a3fa2cd231) | Examined | `410d769b` | 0 |
 | <a id="f-4e67cbd48c"></a>`dev/check-activation-operating-envelope.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-d4d8ce13e1) | Examined | `410d769b` | 0 |
 | <a id="f-e7ec261a1c"></a>`dev/check-codex-host-evidence.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-c492dcf88a) | Examined | `410d769b` | 0 |
@@ -229,7 +229,7 @@
 | <a id="f-78ae1d028f"></a>`dev/cross-domain-analysis.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-8cb883ab88) | Examined | `410d769b` | 0 |
 | <a id="f-f58022af52"></a>`dev/friction-free-release-checklist.md` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-70cc047ec7) | Examined | `410d769b` | 0 |
 | <a id="f-ef8a3adfb0"></a>`dev/hooks/pre-commit` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-405ad18f5f) | Examined | `410d769b` | 0 |
-| <a id="f-99f9054807"></a>`dev/pecia-dogfood.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-d791a42994) | Examined | `410d769b` | 0 |
+| <a id="f-99f9054807"></a>`dev/pecia-dogfood.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-d791a42994) | Examined, since changed | `410d769b` | 0 |
 | <a id="f-abadeab08e"></a>`dev/pecia-resolve-finding.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-3b63b6976b) | Examined | `410d769b` | 0 |
 | <a id="f-34ab7aa322"></a>`dev/practice-catalog-v2.10.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-5d75a6f9dd) | Examined | `410d769b` | 0 |
 | <a id="f-9aa6d9416d"></a>`dev/promote-docs.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-794116670e) | Examined | `410d769b` | 0 |
@@ -263,6 +263,7 @@
 | <a id="f-87c994f62c"></a>`dev/test-friction-free-release-readiness-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-e3472cd4bf) | Examined | `410d769b` | 0 |
 | <a id="f-f8260d93f1"></a>`dev/test-living-conspectus.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-e4f7ba87b8) | Examined | `410d769b` | 0 |
 | <a id="f-59e1484a2c"></a>`dev/test-package-activation-parity-red-gates.mjs` | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md#le-3b8960a4df) | Examined | `410d769b` | 0 |
+| <a id="f-317fa13fc5"></a>`dev/test-pecia-carry-audit.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2a2a8e0044) | Examined | `0f7dac6d` | 0 |
 | <a id="f-2c9a7ec118"></a>`dev/test-pecia-roadmap-red-gates.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-ed1b9d303f) | Examined | `410d769b` | 0 |
 | <a id="f-e49be5d743"></a>`dev/test-pecia-roadmap.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-b5122252a2) | Examined | `410d769b` | 0 |
 | <a id="f-598400ed1b"></a>`dev/test-reader-lenses-dogfood.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-c925375dc4) | Examined | `410d769b` | 0 |

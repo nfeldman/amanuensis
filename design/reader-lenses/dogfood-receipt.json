@@ -1,13 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-18T02:16:55.359Z",
-  "repository_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+  "recorded_at": "2026-09-18T20:05:19.218Z",
+  "repository_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
   "store": {
-    "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+    "last_checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
     "canonical_branch": "main",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
@@ -63,9 +63,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-            "checked_at": "2026-09-18 02:16:23",
-            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+            "checked_at": "2026-09-18 20:01:58",
+            "repository_head": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -74,8 +74,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-              "last_checked_at": "2026-09-18 02:16:23"
+              "last_checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+              "last_checked_at": "2026-09-18 20:01:58"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
@@ -346,9 +346,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-            "checked_at": "2026-09-18 02:16:23",
-            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+            "checked_at": "2026-09-18 20:01:58",
+            "repository_head": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -357,8 +357,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-              "last_checked_at": "2026-09-18 02:16:23"
+              "last_checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+              "last_checked_at": "2026-09-18 20:01:58"
             },
             "staleness_measured": true,
             "evidence_rows": 3,
@@ -626,9 +626,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-            "checked_at": "2026-09-18 02:16:23",
-            "repository_head": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+            "checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+            "checked_at": "2026-09-18 20:01:58",
+            "repository_head": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
             "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
             "agrees": true,
             "unchecked_since": null
@@ -637,8 +637,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-              "last_checked_at": "2026-09-18 02:16:23"
+              "last_checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+              "last_checked_at": "2026-09-18 20:01:58"
             },
             "staleness_measured": true,
             "evidence_rows": 1,
@@ -868,7 +868,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 11774,
+    "wire_bytes": 12126,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -888,7 +888,7 @@
         "path_prefix": null,
         "resolved": true
       },
-      "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+      "checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
       "sections": {
         "open": {
           "census": 11,
@@ -979,7 +979,7 @@
           "ordering_basis": "id"
         },
         "stale": {
-          "census": 11,
+          "census": 15,
           "recorded": true,
           "requested": true,
           "items": [
@@ -1009,7 +1009,7 @@
           "statement": "The two sources are counted apart and never summed.",
           "counts": {
             "claim": 0,
-            "ledger": 11,
+            "ledger": 15,
             "drifted_unread": 0,
             "drifted_deferred": 0
           },
@@ -1047,14 +1047,14 @@
         }
       },
       "census": {
-        "total": 35,
+        "total": 39,
         "by_section": {
           "open": 11,
           "awaiting_verification": 0,
           "undiscriminated": 0,
           "decisions": 2,
           "leads": 2,
-          "stale": 11,
+          "stale": 15,
           "hot_spots": 9
         }
       },
@@ -1089,13 +1089,17 @@
         {
           "section": "stale",
           "reason": "budget",
-          "count": 9,
+          "count": 13,
           "ids": [
             "ledger:B-09/design/reader-lenses/rebuild-depth-receipt.json",
             "ledger:B-09/design/survey-depth/acceptance-receipt.json",
+            "ledger:B-09/design/survey-depth/claims.md",
             "ledger:B-09/design/survey-depth/plan.json",
             "ledger:B-09/design/survey-depth/plan.md",
+            "ledger:B-09/design/survey-depth/spec.md",
             "ledger:B-09/design/survey-depth/survey-progress.json",
+            "ledger:B-09/dev/amanuensis-defects-to-pecia.mjs",
+            "ledger:B-09/dev/pecia-dogfood.md",
             "ledger:B-09/dev/record-rebuild-depth.mjs",
             "ledger:B-09/dev/record-survey-depth.mjs",
             "ledger:B-09/dev/test-rebuild-depth.mjs",
@@ -1124,8 +1128,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5575,
-        "response_bytes": 11774,
+        "payload_bytes": 5747,
+        "response_bytes": 12126,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1198,7 +1202,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-63302afd-2386-4aaf-b8ce-c93f93b8a630",
+      "projection_run_id": "projection-0ddc1032-df9a-4dea-aa49-be8e4b45a786",
       "pages_rendered": 33,
       "html_pages_rendered": 33,
       "summary": {
@@ -1234,17 +1238,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-63302afd-2386-4aaf-b8ce-c93f93b8a630"
+        "projection_run_id": "projection-0ddc1032-df9a-4dea-aa49-be8e4b45a786"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "c6b83c766853dbfa33a1a83893f59b938e3b6daf7ab6a06321c98a244bca09c8",
-      "manifest_sha256": "b45510352c4b681a58743c7f90d487a32914e56c8918bde3ec6c34ce28d4d9bd",
+      "projection_contract_sha256": "64342db2d97378894dad6a5b8615f3b0107482c6a140f3ee68dcff4deea39483",
+      "manifest_sha256": "1f7504c824eb90021dd60141fffa77d889ec6ba5572295fbef9e4a2a94351021",
       "page_count": 67,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-18T02:16:50.967Z",
+      "promoted_at": "2026-09-18T20:05:12.429Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",

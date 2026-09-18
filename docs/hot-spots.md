@@ -12,7 +12,7 @@ _Rows are ordered by open critical and high defects, then open medium and low, t
 | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | 0 | 0 | 0 | 0 | — | 0/37 | 0 | 0/0 |
 | [Report interface design and validation studies](subsystems/b06-report-interface-design-and-validation-studies.md) **[B-06](subsystems/b06-report-interface-design-and-validation-studies.md)** | 0 | 0 | 0 | 0 | — | 0/24 | 0 | 0/0 |
 | [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md) **[B-08](subsystems/b08-activation-evidence-and-release-readiness.md)** | 0 | 0 | 0 | 0 | — | 0/33 | 0 | 0/0 |
-| [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** | 0 | 0 | 0 | 0 | — | 0/84 | 10 | 0/0 |
+| [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** | 0 | 0 | 0 | 0 | — | 0/85 | 14 | 0/0 |
 
 ## What each column measures
 

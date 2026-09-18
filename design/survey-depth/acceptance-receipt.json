@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+  "repository_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
   "recorded_at": "2026-09-18",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
+    "checked_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "7f4b4d103c947dc2362a4a2d6080639c641ecdb7",
-        "tree_digest": "62d970c24e2c49289f65be21451008daee68111ce2b1fab672022d9d953e581f",
-        "ledger_digest": "f9b738b34ac60d2c4f07c7c7c537d8f5fdab1ac2da844722e27f7c410ac5f681",
+        "detected_sha": "0f7dac6d1dd3b12d047f15bc27f1e38928106642",
+        "tree_digest": "1416ea9561beecad7085f6831b052abe623b338a7146d2331df38c4c682200f2",
+        "ledger_digest": "64da1b85c2086f0fff311c2f60df1efc7f37b0bec932a32f658388cf161ca2d0",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -1059,6 +1059,10 @@
           },
           {
             "file_path": "dev/test-package-activation-parity-red-gates.mjs",
+            "classification": "examined"
+          },
+          {
+            "file_path": "dev/test-pecia-carry-audit.mjs",
             "classification": "examined"
           },
           {
@@ -2610,19 +2614,19 @@
             "classification": "candidate"
           }
         ],
-        "tracked_paths": 646,
-        "ledger_rows": 646,
+        "tracked_paths": 647,
+        "ledger_rows": 647,
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": null
+        "session_id": "mu7dx0kt-24cqlcci"
       }
     },
     "B2": {
       "verdict": "green",
-      "examined": 351,
-      "obligation_bearing": 490,
-      "fraction": 0.7163265306122449,
+      "examined": 352,
+      "obligation_bearing": 491,
+      "fraction": 0.7169042769857433,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -3802,7 +3806,7 @@
     }
   },
   "reported": {
-    "ledger_rows": 646,
+    "ledger_rows": 647,
     "evidence": 37,
     "dispositions": 50,
     "evidence_per_disposition": 0.74,
@@ -3821,22 +3825,22 @@
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 14,
+    "sessions": 15,
     "finding_status_histogram": {
       "confirmed-bug": 11
     },
     "classification_histogram": {
       "candidate": 139,
-      "examined": 351,
+      "examined": 352,
       "generated-ignore": 152,
       "vendor-ignore": 4
     }
   },
   "reported_deltas": {
     "ledger_rows": {
-      "candidate": 646,
+      "candidate": 647,
       "baseline": 503,
-      "delta": 143
+      "delta": 144
     },
     "evidence": {
       "candidate": 37,
@@ -3929,9 +3933,9 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 14,
+      "candidate": 15,
       "baseline": 35,
-      "delta": -21
+      "delta": -20
     },
     "finding_status_histogram": {
       "confirmed-bug": -2,
@@ -3939,7 +3943,7 @@
     },
     "classification_histogram": {
       "candidate": -11,
-      "examined": 130,
+      "examined": 131,
       "generated-ignore": 28,
       "irrelevant": -2,
       "vendor-ignore": -2

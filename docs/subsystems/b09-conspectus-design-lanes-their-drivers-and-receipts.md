@@ -35,10 +35,10 @@ No defect here is open or awaiting verification.
 
 | Metric | Value |
 |---|---|
-| Files read | 84 of 84 ledger rows |
-| Files in scope, not yet read | 0 of 84 |
-| Files excluded from the survey obligation | 0 of 84 |
-| Ledger rows the repository has changed under | 10 of 84 |
+| Files read | 85 of 85 ledger rows |
+| Files in scope, not yet read | 0 of 85 |
+| Files excluded from the survey obligation | 0 of 85 |
+| Ledger rows the repository has changed under | 14 of 85 |
 | Active concerns with a disposition recorded here | 0 of 12 |
 | Findings by resolution state | none recorded |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -125,6 +125,7 @@ No defect here is open or awaiting verification.
 | <a id="le-7f4b01c7c8"></a>`dev/test-carried-finding-references.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-f058f32538"></a>`dev/test-carry-receipt.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-e4f7ba87b8"></a>`dev/test-living-conspectus.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
+| <a id="le-2a2a8e0044"></a>`dev/test-pecia-carry-audit.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `0f7dac6d` |
 | <a id="le-c925375dc4"></a>`dev/test-reader-lenses-dogfood.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-a9b5120e35"></a>`dev/test-rebuild-coverage.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |
 | <a id="le-57cf1f04ed"></a>`dev/test-rebuild-depth.mjs` | examined | A conspectus design lane: its specification, claims, plan and receipts. | `410d769b` |

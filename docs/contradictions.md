@@ -4,5 +4,5 @@ No disagreement between findings has been settled. 0 pairs still stand undiscrim
 
 - **Scope** — pairs of findings that made incompatible claims about one locus, and the evidence or argument that chose between them.
 - **Basis** — `contradictions` whose resolution is recorded, with `contradiction_resolution_events` for the account of how.
-- **Checked revision** — `7f4b4d103c94` on `main`, recorded 2026-09-18 02:16 UTC.
+- **Checked revision** — `0f7dac6d1dd3` on `main`, recorded 2026-09-18 20:01 UTC.
 

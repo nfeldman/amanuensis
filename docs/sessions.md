@@ -6,6 +6,8 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
+| `mu7e0pwg-rnwbzupq` | `survey-depth P9: republish the conspectus after the ledger row and reconciliation this packet's gate file required` | 2026-09-18 20:04 UTC | not closed | not recorded |
+| `mu7dx0kt-24cqlcci` | `survey-depth P9: record the packet's own gate file in the ledger so the acceptance receipt can be re-recorded against the tree at HEAD (GATE A1 binding, spec.md §7.3 B1)` | 2026-09-18 20:01 UTC | not closed | not recorded |
 | `mu6bmjry-fuziol9u` | `P11 — attach code-verified evidence to the ten findings of the acceptance rebuild, which carry none` | 2026-09-18 02:10 UTC | 2026-09-18 02:14 UTC | completed |
 | `mu6at1iu-teoxzqgg` | `P11 — publish, promote, and record the acceptance receipts` | 2026-09-18 01:47 UTC | not closed | not recorded |
 | `mu68mzjq-fmxm3ik1` | `P10 batch 5 — acceptance rebuild survey continuation: B-03 and B-04 remaining modules` | 2026-09-18 00:46 UTC | not closed | not recorded |
@@ -29,6 +31,7 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `projection-63302afd-2386-4aaf-b8ce-c93f93b8a630` | `clean-publish` | green | green | green | 2026-09-18 02:16 UTC |
 | `projection-e4f9a23a-6d8b-4afe-926d-5776f9b9408e` | `clean-publish` | green | green | green | 2026-09-18 01:53 UTC |
 | `projection-5ad7af73-7c33-42a0-b491-ef337cef6b01` | `clean-publish` | green | green | green | 2026-09-18 01:47 UTC |
 

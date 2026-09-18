@@ -12,18 +12,18 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `7f4b4d103c94` on `main`, 2026-09-18 02:16 UTC |
-| Repository head | `7f4b4d103c94` — the same revision the survey checked |
+| Checked at | `0f7dac6d1dd3` on `main`, 2026-09-18 20:01 UTC |
+| Repository head | `0f7dac6d1dd3` — the same revision the survey checked |
 | Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 11 of 490 |
-| Scoped files exempt from that obligation, marked stale | 62 of 156 |
+| Files carrying a survey obligation marked stale | 15 of 491 |
+| Scoped files exempt from that obligation, marked stale | 63 of 156 |
 
 ### Survey coverage
 
 | Metric | Value |
 |---|---|
 | Subsystems by survey depth | 3 unmapped, 2 concerns, 4 adversarial |
-| Files read, of those carrying an obligation | 351 of 490 |
+| Files read, of those carrying an obligation | 352 of 491 |
 | Paths in scope with no ledger row | 0 |
 
 ### Open engineering work
@@ -43,7 +43,7 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-18 01:53 UTC |
+| Verified at | 2026-09-18 02:16 UTC |
 
 ## Findings by resolution state
 
@@ -64,5 +64,5 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ## Latest session
 
-`P11 — attach code-verified evidence to the ten findings of the acceptance rebuild, which carry none` — started 2026-09-18 02:10 UTC · ended 2026-09-18 02:14 UTC
+`survey-depth P9: republish the conspectus after the ledger row and reconciliation this packet's gate file required` — started 2026-09-18 20:04 UTC · **active**
 

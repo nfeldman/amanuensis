@@ -1,14 +1,14 @@
 # Not yet surveyed
 
-Counted at `7f4b4d103c94` on `main`.
+Counted at `0f7dac6d1dd3` on `main`.
 
 ## Paths with no ledger row
 
-**0 of 646** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
+**0 of 647** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
 
 ## Files in scope that no one has read
 
-**139 of 490** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
+**139 of 491** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
 
 ### Packaging, installer, validation, and product docs **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** — 65 unread of 153 rows carrying an obligation
 
