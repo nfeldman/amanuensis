@@ -117,16 +117,19 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const BASELINE_REL = "dev/survey-depth-baseline.json";
 const RECEIPT_REL = "design/survey-depth/acceptance-receipt.json";
+const PROGRESS_REL = "design/survey-depth/survey-progress.json";
 const STORE_REL = ".amanuensis/memory.db";
 const VOCABULARY_REL = "mcp-server/contracts/conspectus-vocabulary.json";
 
 const BASELINE_CONTRACT = "amanuensis-survey-depth/baseline/v1";
 const RECEIPT_CONTRACT = "amanuensis-survey-depth/acceptance-receipt/v1";
+const PROGRESS_CONTRACT = "amanuensis-survey-depth/survey-progress/v1";
 
 const CANDIDATE_ROOT = resolve(process.env.AMANUENSIS_DEPTH_WORKSPACE || REPO);
 const BASELINE_PATH = resolve(process.env.AMANUENSIS_DEPTH_BASELINE || join(REPO, BASELINE_REL));
 const STORE_PATH = join(CANDIDATE_ROOT, STORE_REL);
 const RECEIPT_PATH = join(CANDIDATE_ROOT, RECEIPT_REL);
+const PROGRESS_PATH = join(CANDIDATE_ROOT, PROGRESS_REL);
 
 // The status ladder, and the two rungs the predicates bind at. `deferred` is off
 // the ladder entirely and owes neither.
@@ -1229,6 +1232,95 @@ if (storeReading && receiptReading) {
     return a === b
       ? null
       : `the store holds ${storeReading.carriedIds.length} carried record(s) and the receipt ${receiptReading.carriedIds.length}, and the two sets differ`;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The batching record.
+//
+// `survey-progress.json` is P10's other deliverable and it states its own
+// contract: "The per-batch numbers here are historical snapshots and are not
+// re-derivable after the fact; the final row is, and it must equal the
+// receipt's." Nothing read the file, so none of that bound — its contract
+// string could be changed to one no schema names, its outcome census could
+// disagree with the lists it is a census of, and its final row could drift
+// from the receipt, all without moving a gate. The three claims the document
+// makes about itself are checked here, against the receipt this gate already
+// holds. The per-batch rows are left alone: the document says they are not
+// re-derivable, and a gate that pretended otherwise would be asserting what it
+// cannot measure.
+// ---------------------------------------------------------------------------
+if (receiptReading) {
+  let progress = null;
+  let progressError = null;
+  if (!existsSync(PROGRESS_PATH)) {
+    progressError = `${PROGRESS_REL} is absent from the tree`;
+  } else {
+    try {
+      progress = JSON.parse(readFileSync(PROGRESS_PATH, "utf8"));
+    } catch (e) {
+      progressError = `${PROGRESS_REL} could not be read as JSON — ${e && e.message ? e.message : e}`;
+    }
+  }
+
+  check("the batching record declares the survey-progress contract", () => {
+    if (progressError) return progressError;
+    return progress?.contract === PROGRESS_CONTRACT
+      ? null
+      : `${PROGRESS_REL} declares contract ${JSON.stringify(progress?.contract ?? null)}, not ${JSON.stringify(PROGRESS_CONTRACT)}`;
+  });
+
+  check("the batching record's outcome census counts the records it lists", () => {
+    if (progressError) return progressError;
+    const adjudication = progress?.carried_adjudication ?? {};
+    const outcomes = adjudication.outcomes ?? {};
+    const listed = {
+      repaired: Array.isArray(adjudication.repaired) ? adjudication.repaired.length : null,
+      "successor-finding": Array.isArray(adjudication.successors)
+        ? adjudication.successors.length
+        : null,
+    };
+    const wrong = [];
+    for (const [key, count] of Object.entries(listed)) {
+      if (count === null) {
+        wrong.push(`${key} has no list to count`);
+      } else if (outcomes[key] !== count) {
+        wrong.push(`${key} is reported as ${outcomes[key] ?? "absent"} and ${count} are listed`);
+      }
+    }
+    const total = Object.values(outcomes).reduce((n, v) => n + (Number(v) || 0), 0);
+    if (total !== adjudication.total) {
+      wrong.push(`the outcomes sum to ${total} and the total is reported as ${adjudication.total ?? "absent"}`);
+    }
+    if (adjudication.total !== receiptReading.carriedIds.length) {
+      wrong.push(
+        `the total is ${adjudication.total ?? "absent"} and the receipt witnesses ${receiptReading.carriedIds.length} carried record(s)`,
+      );
+    }
+    return wrong.length ? `${PROGRESS_REL}: ${wrong.join("; ")}` : null;
+  });
+
+  check("the batching record's final row equals the receipt's coverage", () => {
+    if (progressError) return progressError;
+    const end = progress?.end ?? {};
+    const wrong = [];
+    if (end.examined !== receiptReading.examined) {
+      wrong.push(`it ends at ${end.examined ?? "absent"} examined and the receipt records ${receiptReading.examined}`);
+    }
+    if (end.obligation_bearing !== receiptReading.obligationBearing) {
+      wrong.push(
+        `it ends at ${end.obligation_bearing ?? "absent"} obligation-bearing and the receipt records ${receiptReading.obligationBearing}`,
+      );
+    }
+    const fraction = receiptReading.obligationBearing
+      ? Number((receiptReading.examined / receiptReading.obligationBearing).toFixed(4))
+      : null;
+    if (end.fraction !== fraction) {
+      wrong.push(`it ends at fraction ${end.fraction ?? "absent"} and the receipt's rounds to ${fraction}`);
+    }
+    return wrong.length
+      ? `${PROGRESS_REL} says its final row must equal the receipt's, and ${wrong.join("; ")}`
+      : null;
   });
 }
 
