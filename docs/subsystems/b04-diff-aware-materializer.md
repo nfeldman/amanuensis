@@ -40,10 +40,10 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 | Metric | Value |
 |---|---|
-| Files read | 24 of 92 ledger rows |
-| Files in scope, not yet read | 0 of 92 |
-| Files excluded from the survey obligation | 68 of 92 |
-| Ledger rows the repository has changed under | 0 of 92 |
+| Files read | 24 of 94 ledger rows |
+| Files in scope, not yet read | 0 of 94 |
+| Files excluded from the survey obligation | 70 of 94 |
+| Ledger rows the repository has changed under | 54 of 94 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 8 confirmed-acceptable, 1 ruled-out, 2 out-of-scope |
 | Findings by resolution state | 2 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -129,20 +129,22 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-30810cfd13"></a>`docs/stale.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-b7efa3c038"></a>`docs/subsystems/b01-survey-methodology-and-agent-contracts.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-b1e5f74f44"></a>`docs/subsystems/b01-survey-methodology-and-agent-contracts.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-bdf73be75c"></a>`docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-df1d3f14b8"></a>`docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
+| <a id="le-e43cdcafa2"></a>`docs/subsystems/b02-mcp-core-persistence-and-lifecycle.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-b38a7eae97"></a>`docs/subsystems/b02-mcp-core-persistence-and-lifecycle.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
 | <a id="le-296c83f36f"></a>`docs/subsystems/b03-knowledge-tools-and-workflow-api.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-d022e2477c"></a>`docs/subsystems/b03-knowledge-tools-and-workflow-api.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-228b5243bd"></a>`docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-b3473b5658"></a>`docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-06db247ca5"></a>`docs/subsystems/b05-materializer-human-projection-read-back-html.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-01472a3233"></a>`docs/subsystems/b05-materializer-human-projection-read-back-html.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-46af77edbd"></a>`docs/subsystems/b06-packaging-installer-and-host-activation.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-cfe92e4f3a"></a>`docs/subsystems/b06-packaging-installer-and-host-activation.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-84904e1ed9"></a>`docs/subsystems/b07-gates-evidence-custody-and-ci.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-40dad1a97c"></a>`docs/subsystems/b07-gates-evidence-custody-and-ci.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-83f313b973"></a>`docs/subsystems/b08-records-design-research-published-projection-execution-ledger.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
-| <a id="le-00f0e5dbd1"></a>`docs/subsystems/b08-records-design-research-published-projection-execution-ledger.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
+| <a id="le-3ea4588e82"></a>`docs/subsystems/b04-diff-aware-materializer.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-e09b62fb85"></a>`docs/subsystems/b04-diff-aware-materializer.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-f7d75eba5a"></a>`docs/subsystems/b05-packaging-installer-validation-and-product-docs.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-93aac7e845"></a>`docs/subsystems/b05-packaging-installer-validation-and-product-docs.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-dd479ba038"></a>`docs/subsystems/b06-report-interface-design-and-validation-studies.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-2f3bb88274"></a>`docs/subsystems/b06-report-interface-design-and-validation-studies.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-f7d3cbaf4f"></a>`docs/subsystems/b07-embedded-research-surveys-and-platform-trials.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-2a5170fe68"></a>`docs/subsystems/b07-embedded-research-surveys-and-platform-trials.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-57cd9e6e3a"></a>`docs/subsystems/b08-activation-evidence-and-release-readiness.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-01f0843bad"></a>`docs/subsystems/b08-activation-evidence-and-release-readiness.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-31026b301a"></a>`docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
+| <a id="le-fe02a0e84e"></a>`docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `50abc288` |
 | <a id="le-6d939ae1ac"></a>`docs/vocabulary.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-9c4690dd50"></a>`docs/vocabulary.md` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-bb739a0c9b"></a>`materializer/uv.lock` | generated-ignore | uv writes this lockfile; it is resolver output. | `a7f9384d` |

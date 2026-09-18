@@ -1,10 +1,10 @@
 # Not yet surveyed
 
-Counted at `e2382dc3cb7c` on `main`.
+Counted at `20839da454b0` on `main`.
 
 ## Paths with no ledger row
 
-**0 of 644** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
+**0 of 646** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
 
 ## Files in scope that no one has read
 

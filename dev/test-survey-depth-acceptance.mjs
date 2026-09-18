@@ -572,7 +572,7 @@ export function evaluateAcceptance({
     const openIds = baseline.blocking?.open_findings ?? [];
     const missing = openIds.filter((id) => {
       const row = byId.get(id);
-      return !row || !row.outcome || !String(row.outcome).trim();
+      return !row?.outcome || !String(row.outcome).trim();
     });
     verdictAgrees(
       fail,
@@ -650,7 +650,7 @@ export function evaluateAcceptance({
           ...new Set([...Object.keys(base), ...Object.keys(reported[key] ?? {})]),
         ].sort();
         for (const bucket of wanted) {
-          const candidate = Number((reported[key] ?? {})[bucket] ?? 0);
+          const candidate = Number(reported[key]?.[bucket] ?? 0);
           const before = Number(base[bucket] ?? 0);
           if (Number(entryKeys[bucket]) !== candidate - before) {
             fail(
@@ -1092,6 +1092,25 @@ function runSelectivity(report) {
     return;
   }
   report(true, "the synthetic control evaluates clean, so a seeded fault is the only difference");
+
+  // CI's own state: the store is untracked, so on a bare checkout the receipt
+  // arm stands alone. It must still evaluate — a gate that only answered where
+  // a store exists would be green by absence exactly where it is load-bearing.
+  const noStore = evaluateAcceptance({ ...syntheticInputs(), store: null });
+  report(
+    noStore.length === 0,
+    "with no live store the receipt arm stands alone and still evaluates every assertion",
+    `dropping the store changed the verdict: ${noStore.map((f) => `${f.family}: ${f.detail}`).join(" | ")}`,
+  );
+  // And the live arm is not decoration: the same inputs with a store that
+  // disagrees must fail, so "no store" is a narrower check and never a laxer one.
+  const wrongStore = syntheticInputs();
+  wrongStore.store.ledger_rows = 999;
+  report(
+    evaluateAcceptance(wrongStore).some((f) => f.family === "live"),
+    "a live store that disagrees still fails, so the no-store path is narrower and not laxer",
+    "a disagreeing store produced no live failure",
+  );
 
   for (const [expected, label, seed] of SEEDS) {
     const inputs = syntheticInputs();

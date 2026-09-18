@@ -1,6 +1,6 @@
 # Stale knowledge
 
-8 of 490 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `e2382dc3cb7c` on `main`. 0 of 154 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+8 of 490 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `20839da454b0` on `main`. 54 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 

@@ -1,15 +1,15 @@
 {
   "contract": "amanuensis-reader-lenses/rebuild-depth-receipt/v1",
   "packet": "P19",
-  "recorded_at": "2026-09-18T01:45:49.541Z",
-  "repository_sha": "2bca8c015eaf0a906ec398645fd92ea0bbf35644",
+  "recorded_at": "2026-09-18T01:54:00.694Z",
+  "repository_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
   "produced_by": "dev/record-rebuild-depth.mjs",
   "store": {
-    "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+    "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
     "canonical_branch": "main",
-    "session_id": "mu68mzjq-fmxm3ik1"
+    "session_id": "mu6at1iu-teoxzqgg"
   },
   "checklist_concerns": [
     {
@@ -94,7 +94,7 @@
       "layer": "Runtime",
       "priority": 1,
       "status": "adversarial",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-02-structural.md",
         "content_hash": "4a10fc6f49c190fe80875832041c54375670b660093f7a04a846cbddcbf568e6",
@@ -638,7 +638,7 @@
       "layer": "Runtime",
       "priority": 1,
       "status": "adversarial",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-03-structural.md",
         "content_hash": "5a3466d4949e6111b6d69cdacfb48a42ffd946f0325c0730c341353226724652",
@@ -1246,7 +1246,7 @@
       "layer": "Coordination",
       "priority": 2,
       "status": "adversarial",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-01-structural.md",
         "content_hash": "9ae7ec0f7847278c28845e9674ba57a0ae2617ae873252521be81aab2ae0947f",
@@ -1697,7 +1697,7 @@
       "layer": "Projection",
       "priority": 2,
       "status": "adversarial",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-04-structural.md",
         "content_hash": "a5a73c29df741f2e30b30cb53bd826b3e2192f7a0b144188908764e815b4224d",
@@ -2219,7 +2219,7 @@
       "layer": "Design evidence",
       "priority": 2,
       "status": "unmapped",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": null,
       "status_ladder": [
         {
@@ -2329,7 +2329,7 @@
       "layer": "Delivery",
       "priority": 3,
       "status": "concerns",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-05-structural.md",
         "content_hash": "d8bd9abb8b153e6c827bc56d38d4c98e61a210c25214a2d47b574bf128bb79af",
@@ -2589,7 +2589,7 @@
       "layer": "Delivery",
       "priority": 3,
       "status": "unmapped",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": null,
       "status_ladder": [
         {
@@ -2736,7 +2736,7 @@
       "layer": "Design evidence",
       "priority": 4,
       "status": "unmapped",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": null,
       "status_ladder": [
         {
@@ -2883,7 +2883,7 @@
       "layer": "Research evidence",
       "priority": 4,
       "status": "concerns",
-      "last_checked_sha": "3daedc1c8fc805ecdbc1f84d56f55764dc20ac51",
+      "last_checked_sha": "20839da454b0940e3c014a8bb0181a128549e9e1",
       "artifact": {
         "path": "subsystems/B-07-structural.md",
         "content_hash": "53cead8e108763d5d3deae95086a102a7946a4b42659bd04ae1abb3666de0d09",

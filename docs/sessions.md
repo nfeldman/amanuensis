@@ -26,5 +26,7 @@ No refresh run is recorded.
 
 ## Publication read-back
 
-No publication read-back is recorded, so none of the three axes has a result to report.
+| Run | Mode | State | Coverage | Content | Verified |
+|---|---|---|---|---|---|
+| `projection-5ad7af73-7c33-42a0-b491-ef337cef6b01` | `clean-publish` | green | green | green | 2026-09-18 01:47 UTC |
 

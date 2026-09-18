@@ -3,7 +3,7 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "d31da3c55254f51f25fbc0de06326ca556b41d128755b16acbc084bfcb265c88"
+      "content_hash": "26cb51a87e503df660265f7cb82c520a99cb95da28b0a9918d5a007588887ca7"
     },
     {
       "path": "architecture.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "806d16b592e202825a0b1d8d388b8697d380a2ab4de9e7f6ca6764248437c55f"
+      "content_hash": "3bbd5fee6f88fcf8b3659ad744015196bc84312e066fa8311dd33208aa923161"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "63db76504122affd9b73f9eef413507d336987de80562104c7306315b53da939"
+      "content_hash": "60306fdf08bb5c004bb817748a83cf7e7c39c25c3469a2c3dc0004d46cb99322"
     },
     {
       "path": "concerns.md",
@@ -27,15 +27,15 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "5640e3793713b4869f3aca6e0d88f23c242cedc462507c4c87a2282c004735cf"
+      "content_hash": "02cb80a0b16f0abccdda1f7c397300e51a75d502e5c0610c20f7951a23c18dd7"
     },
     {
       "path": "contradictions.md",
-      "content_hash": "17a9a11062b1ee23a024e65ae07c7dbac425512dc7209cbf4789bdbebd99f88f"
+      "content_hash": "14e0743b073c256fb9e866bd7fab46fb7b44d675ef5965ec0d547866bc68c457"
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "b2ed548465cc726af823649e1c5b89c6a6b85a65d6704675babf8894362061e5"
+      "content_hash": "1b58fd88ccecbd9a1358ad295f33a1952d042223b5231f1b2a2b6b0452a5d9de"
     },
     {
       "path": "diagnosticity.md",
@@ -43,15 +43,15 @@
     },
     {
       "path": "disagreements.html",
-      "content_hash": "171ac73a50dbe481f3c441a71988a33cd1edc4bb57c289e88bd73915f8cf8ade"
+      "content_hash": "fc1c7a6370449bc376b28702df97ce76dac0d24d73b1a22eef03908bff84b593"
     },
     {
       "path": "disagreements.md",
-      "content_hash": "46990f6b7a56f00546ca9e6cfc17e1162431766a49ee9a12fd90f61a8a3351db"
+      "content_hash": "aa40417937298aa02fa17e98558e0878608fd1fced1cc390729651e0d839c873"
     },
     {
       "path": "entry-point.html",
-      "content_hash": "c4b3e493440c98edfee3a3477eaa740066ead3f1ef90b687f5a71ac54cc94cb4"
+      "content_hash": "970292d140427011ae1989662ebd51f168b80e99d5bb437eb9daa17cb0844cc1"
     },
     {
       "path": "entry-point.md",
@@ -59,7 +59,7 @@
     },
     {
       "path": "field-notes.html",
-      "content_hash": "2eb49347db375e99a6b1ce1f230a3bee0cc49bccb08f489ad4be48e2bf261790"
+      "content_hash": "2b22e829807137d047dc0755ac9e6eca276f8a55925f52ea193dd3715fe69e44"
     },
     {
       "path": "field-notes.md",
@@ -67,15 +67,15 @@
     },
     {
       "path": "files.html",
-      "content_hash": "e570a3766f18e4100feb5e36a6e40336cf6b5c83f396aea003cb66b8be912e81"
+      "content_hash": "9a2b40f635bd80eb73a05daee27247f51eaa04aac55f7273b2b9021568425c6f"
     },
     {
       "path": "files.md",
-      "content_hash": "fa483b064e966fde3daf4f8abde0517474ec28dc84a5f4add93ba5ce9997e89f"
+      "content_hash": "17ed2829ca2c5d1ce31e1065416351cad72c8d3d88e3c2c7a4ed7185a1f07732"
     },
     {
       "path": "findings.html",
-      "content_hash": "8753faef56176d6f50a3747674cb8c95cef79d5b9a3fd8f09e0a6ee8a2615e79"
+      "content_hash": "f7155ceb785335ee27d20a7adff27fbab05dcca801f604547310698fac4a633a"
     },
     {
       "path": "findings.md",
@@ -83,7 +83,7 @@
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "3341397b6ae35222ac3d95c9f26fc75ad64f490516f9975a0704b0a2d97ab221"
+      "content_hash": "42eabbb97bafd378641e9ff55dde5fde8f74dcc84bb56be6577bc23882b507eb"
     },
     {
       "path": "hot-spots.md",
@@ -91,7 +91,7 @@
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "acb7b05bea07ca3a539fce107464ade20f40ce6b1f00951f1021eae758b16b42"
+      "content_hash": "39cabed74c11d6b92d1004a36985385bbf16360ef4c61ccc3a0f843af52c8628"
     },
     {
       "path": "how-to-read.md",
@@ -99,15 +99,15 @@
     },
     {
       "path": "index.html",
-      "content_hash": "35d5bf4a32b68f67ace945338274f66727bf716992c8cb5df9250b40c65f4ec1"
+      "content_hash": "bf07c3719f4e295e31d465666ee36355ce8d9c3cc395c4afa4adbc1843c39b00"
     },
     {
       "path": "index.md",
-      "content_hash": "84bfd6c3a553c269c197b0bd84e0aacb7e06709bdd3deb51566ed73005353c27"
+      "content_hash": "3cbb0431bfcb0e5e7715480cb96d18593f0e5a1a0bd08ac4ae869be2f156c326"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "1716da2b559dc2c37c378ad01b0c5cfd10747702ef113b54cf0a547a74a19ed2"
+      "content_hash": "1c95768b7da5a07d3003cbc66498dbd83aed7b8da296fa9d2136ea448f093d84"
     },
     {
       "path": "master-plan.md",
@@ -115,15 +115,15 @@
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "4103ec7f81bfc4764a3fe38430e26481469e6bfb9d8562fecab04d464e5952a9"
+      "content_hash": "c5b2ecc9bd9d9e2f081638820b5b37e69e5a0ff8728f4723d94d480498fced0b"
     },
     {
       "path": "not-yet-surveyed.md",
-      "content_hash": "b6716d00a8b79fae497ef16e15c5f7ced9b6d4d2bae952012a140ec5449a53a1"
+      "content_hash": "519958b5fcd03a9eb75a95380930eba914548ebfc650901016407ebe814a09cb"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "dd03210058928be21d6cd8a977ae2b7cc7f0a367e24ed968ba512b1bea426f88"
+      "content_hash": "1b0512092449834078a233eb7be4e34c30fbfeaaea25bfccf78b444916dac952"
     },
     {
       "path": "onboarding-report.md",
@@ -131,7 +131,7 @@
     },
     {
       "path": "open-questions.html",
-      "content_hash": "b90cbb6386523b82a7a8643bc0df2e4d2af16c41f20a65c31ee114b094f10adb"
+      "content_hash": "4f17d5fd218b1c1cac548a9dcde32e05d3de14671a7df80cf07e43e00b746b08"
     },
     {
       "path": "open-questions.md",
@@ -139,7 +139,7 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "f42768905433e7dcda73fd87d73abf757b7f57e6adadaafd8f43277a1b2ffc81"
+      "content_hash": "c499da0f5fdcad85cf70acd7e781b6d457cc2fb99c21f89f9c7ce41d2e5a4f94"
     },
     {
       "path": "resolution-history.md",
@@ -147,23 +147,23 @@
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "e168ad5ab33a7bb3484bfccc6eaf7134dc23970128f31ce128d23fdc534f27c5"
+      "content_hash": "f0e553d4747e1d041dba8ac8ec207d9f36c5e4fa79566c2a9e484e417497b615"
     },
     {
       "path": "resolved-findings.md",
-      "content_hash": "994fd804f607c81e00e404b07ee1098aed3211d5ee7af9f49f07cfa6216d29f5"
+      "content_hash": "2ef055f25b946d0aa4b2151950f68aec6402b79359098903d62363245a9d7410"
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "4672db7e6eda83aa32b4dbdb741111132a07d43880bdb5c7fa483970da8589f1"
+      "content_hash": "2a166ea0bd1c304536db03d0bbb0a90dfee9a568678af766a9fe2403bd57e873"
     },
     {
       "path": "resolved-leads.md",
-      "content_hash": "bc0b9c70efd872680df6a9d9937183c2d3fbe19291b11a67c8aae3758acddd4a"
+      "content_hash": "f8867340a0b227cbc92ab973b9b5c361f107bff90004db11dda758e171b4c175"
     },
     {
       "path": "seams.html",
-      "content_hash": "85567de97435eb50bb2f52a5d3fc2ba3b9f35013f618725edc86e520a0059d58"
+      "content_hash": "b3787cea23e437ab660fd04c4bc33982d6347e33b2bc8a55d412fb4023e382eb"
     },
     {
       "path": "seams.md",
@@ -171,27 +171,27 @@
     },
     {
       "path": "search-index.js",
-      "content_hash": "3aadf74b50f779b9e3d4d7fb4dc88310f154e3b495acb1202f3662d69a9e1a3d"
+      "content_hash": "84bb4ab367ca43ae49206fc2fe5ddf6d5e17dd1f3a4c861c18803495a03028f8"
     },
     {
       "path": "sessions.html",
-      "content_hash": "36a5d57984b677f6f1cdd981a5b7d707ebc24e06c0cb08ae9e063a66c39fed25"
+      "content_hash": "4d1f35c5f032b7ff5720c7ae77a9c7a47e093c7724e51b5d85d01f687bf38ff0"
     },
     {
       "path": "sessions.md",
-      "content_hash": "7d662aa8b46d361e931af151814fd4181199837e854687f816c212ac8b86d2be"
+      "content_hash": "5f8ba9e31c434d598b567b0dc779eafddfafedc9c2ec0017a2520ecd86b5f5b0"
     },
     {
       "path": "stale.html",
-      "content_hash": "605d1181122bb76722843bc383ec7733273aa375e6627f846acee4e12f9fe863"
+      "content_hash": "5eab339bbcfd9c308529abcc2611779fd4c68f27deb1fc1de23346bf2bd700c9"
     },
     {
       "path": "stale.md",
-      "content_hash": "b7f5785d4687100867c7fad30db4c375664d46decf008c1e94cd8e1136188c72"
+      "content_hash": "51a93995b0527c735603922faeb8a77e605eabedf10890b733f3b1f0b39b8bfb"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "ca29fa5e0b6ffcfd92510dbef6905629efdd8aed1bb2c8b3b8f1a96ee812e1bc"
+      "content_hash": "b644bebdc865dd8e71077e9790c1fe037bdae389c72cc3b49cdd9bb51297ee03"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
@@ -199,7 +199,7 @@
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "e1cfd6390a96635cdd38069225286445b2ae1e25fdf8a9e53888f340c2a3545d"
+      "content_hash": "3e03959d492a0fbb7a98acc17ff6c759d61b750dacea569e45a8ed6347659878"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
@@ -207,23 +207,23 @@
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "e20ec7eeb2f9c6a7e6f468052c76719b8456627059343f432c1d57cd594d1657"
+      "content_hash": "a1d2e8330a9249ceca0a661efb01a886c06bfebec86483547f4691d632396e64"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
-      "content_hash": "6abf3997aa8304d31429fb0ed744a0b378f3e7ddac7c228e159597eced08c0ca"
+      "content_hash": "0cd1fba7e03836b44eb04ef0a5a807a03aeed7209831368549752c2420de4978"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "2a2bb1f2b78db9db3554107c5392b08985672c61c86b967ee2e97653df3906fc"
+      "content_hash": "8e0900208197507c1c1750673e7d04c544c43feac8b939f679cab096e32366b8"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
-      "content_hash": "ae127f474bc0e8821e7865983da27e188a59cd538d52343207b1fa79b7948c32"
+      "content_hash": "da46227a88b7dbf290a7c6a1b04556f2e5628a19f67e0601a926ffed3f897d18"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "d180368c4c0993264174d1df4cddd534a3766a92bb4764882a65101abe1a5e7a"
+      "content_hash": "e42721e5836334e64c0a353297518077d3aa1a0306eddaadcb86bcc04871c0d2"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
@@ -231,7 +231,7 @@
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "ec64c243ae0cc89477886f5f3c618f895cc0a3830858b72d3c2cc6df067edd77"
+      "content_hash": "44980dbc795d539f32fd1ff5359d64938392a3aec86f471849fd1dcbe39a3e99"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
@@ -239,7 +239,7 @@
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "080d6b7a8d8e094a000fe1cb39beba78c83020dd461726cd79d53e58cea88e0c"
+      "content_hash": "e6e292a0954baa04ffdc2d5e0a90bf86b6d638468d1e0c4bf4addee985b0f26e"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
@@ -247,7 +247,7 @@
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.html",
-      "content_hash": "134661e03049520ab0a82c1916e5254110c2702e292cfae09b61ee0c3a5d74fd"
+      "content_hash": "51cb1f2c4b17a533cd56b6de64bf68c47bc82f1aed0fd24d32e90d8190e72ebc"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.md",
@@ -255,7 +255,7 @@
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html",
-      "content_hash": "20213cd29f725fcea2b5517ab531a321b0d6b01ae13d8fb3a508e37491335bb5"
+      "content_hash": "b1952f6451e7a95656705f9000a79e71f3329cd401b46dbd8e7468e60d35723d"
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
@@ -263,7 +263,7 @@
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "72600eb55728f075c9a8957d87d2f4d1b8ef495912458bdd8e65096151e7521b"
+      "content_hash": "a1be4c236462c3ba2438a2f82487ac50a848d87df99ad2f5cd85fc8aaa12c928"
     },
     {
       "path": "vocabulary.md",
@@ -2625,15 +2625,11 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-00f0e5dbd1"
-    },
-    {
-      "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-01472a3233"
-    },
-    {
-      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-018dc6529d"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-01f0843bad"
     },
     {
       "source": "files.html",
@@ -2650,10 +2646,6 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-06b4fec7f7"
-    },
-    {
-      "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-06db247ca5"
     },
     {
       "source": "files.html",
@@ -2677,10 +2669,6 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-228b5243bd"
-    },
-    {
-      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-237b7ad940"
     },
     {
@@ -2693,11 +2681,23 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-2a5170fe68"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-2b8b4a4c57"
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-2f3bb88274"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-30810cfd13"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-31026b301a"
     },
     {
       "source": "files.html",
@@ -2717,7 +2717,7 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-40dad1a97c"
+      "target": "subsystems/b04-diff-aware-materializer.html#le-3ea4588e82"
     },
     {
       "source": "files.html",
@@ -2726,10 +2726,6 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-44afe236ae"
-    },
-    {
-      "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-46af77edbd"
     },
     {
       "source": "files.html",
@@ -2746,6 +2742,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-57ca08047c"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-57cd9e6e3a"
     },
     {
       "source": "files.html",
@@ -2801,14 +2801,6 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-83f313b973"
-    },
-    {
-      "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-84904e1ed9"
-    },
-    {
-      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-8736eb43ee"
     },
     {
@@ -2822,6 +2814,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-9322e0f077"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-93aac7e845"
     },
     {
       "source": "files.html",
@@ -2877,11 +2873,11 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-b3473b5658"
+      "target": "subsystems/b04-diff-aware-materializer.html#le-b34e98d920"
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-b34e98d920"
+      "target": "subsystems/b04-diff-aware-materializer.html#le-b38a7eae97"
     },
     {
       "source": "files.html",
@@ -2906,10 +2902,6 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-bda9fc3b96"
-    },
-    {
-      "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-bdf73be75c"
     },
     {
       "source": "files.html",
@@ -2941,10 +2933,6 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-cfe92e4f3a"
-    },
-    {
-      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-d022e2477c"
     },
     {
@@ -2961,7 +2949,11 @@
     },
     {
       "source": "files.html",
-      "target": "subsystems/b04-diff-aware-materializer.html#le-df1d3f14b8"
+      "target": "subsystems/b04-diff-aware-materializer.html#le-dd479ba038"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-e09b62fb85"
     },
     {
       "source": "files.html",
@@ -2970,6 +2962,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-e1695ac22a"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-e43cdcafa2"
     },
     {
       "source": "files.html",
@@ -2985,11 +2981,23 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-f7d3cbaf4f"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-f7d75eba5a"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-f9d8a99915"
     },
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-fcd34ce394"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-fe02a0e84e"
     },
     {
       "source": "files.html",
@@ -5225,15 +5233,11 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-00f0e5dbd1"
-    },
-    {
-      "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-01472a3233"
-    },
-    {
-      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-018dc6529d"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-01f0843bad"
     },
     {
       "source": "files.md",
@@ -5250,10 +5254,6 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-06b4fec7f7"
-    },
-    {
-      "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-06db247ca5"
     },
     {
       "source": "files.md",
@@ -5277,10 +5277,6 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-228b5243bd"
-    },
-    {
-      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-237b7ad940"
     },
     {
@@ -5293,11 +5289,23 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-2a5170fe68"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-2b8b4a4c57"
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-2f3bb88274"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-30810cfd13"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-31026b301a"
     },
     {
       "source": "files.md",
@@ -5317,7 +5325,7 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-40dad1a97c"
+      "target": "subsystems/b04-diff-aware-materializer.md#le-3ea4588e82"
     },
     {
       "source": "files.md",
@@ -5326,10 +5334,6 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-44afe236ae"
-    },
-    {
-      "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-46af77edbd"
     },
     {
       "source": "files.md",
@@ -5346,6 +5350,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-57ca08047c"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-57cd9e6e3a"
     },
     {
       "source": "files.md",
@@ -5401,14 +5409,6 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-83f313b973"
-    },
-    {
-      "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-84904e1ed9"
-    },
-    {
-      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-8736eb43ee"
     },
     {
@@ -5422,6 +5422,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-9322e0f077"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-93aac7e845"
     },
     {
       "source": "files.md",
@@ -5477,11 +5481,11 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-b3473b5658"
+      "target": "subsystems/b04-diff-aware-materializer.md#le-b34e98d920"
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-b34e98d920"
+      "target": "subsystems/b04-diff-aware-materializer.md#le-b38a7eae97"
     },
     {
       "source": "files.md",
@@ -5506,10 +5510,6 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-bda9fc3b96"
-    },
-    {
-      "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-bdf73be75c"
     },
     {
       "source": "files.md",
@@ -5541,10 +5541,6 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-cfe92e4f3a"
-    },
-    {
-      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-d022e2477c"
     },
     {
@@ -5561,7 +5557,11 @@
     },
     {
       "source": "files.md",
-      "target": "subsystems/b04-diff-aware-materializer.md#le-df1d3f14b8"
+      "target": "subsystems/b04-diff-aware-materializer.md#le-dd479ba038"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-e09b62fb85"
     },
     {
       "source": "files.md",
@@ -5570,6 +5570,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-e1695ac22a"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-e43cdcafa2"
     },
     {
       "source": "files.md",
@@ -5585,11 +5589,23 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-f7d3cbaf4f"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-f7d75eba5a"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-f9d8a99915"
     },
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-fcd34ce394"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-fe02a0e84e"
     },
     {
       "source": "files.md",

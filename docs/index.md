@@ -12,11 +12,11 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `e2382dc3cb7c` on `main`, 2026-09-18 01:47 UTC |
-| Repository head | `e2382dc3cb7c` — the same revision the survey checked |
+| Checked at | `20839da454b0` on `main`, 2026-09-18 01:53 UTC |
+| Repository head | `20839da454b0` — the same revision the survey checked |
 | Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
 | Files carrying a survey obligation marked stale | 8 of 490 |
-| Scoped files exempt from that obligation, marked stale | 0 of 154 |
+| Scoped files exempt from that obligation, marked stale | 54 of 156 |
 
 ### Survey coverage
 
@@ -38,7 +38,12 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ### Publication integrity
 
-No publication read-back is recorded for this store, so none of the three axes has a result to report.
+| Metric | Value |
+|---|---|
+| State axis | green |
+| Coverage axis | green |
+| Content axis | green |
+| Verified at | 2026-09-18 01:47 UTC |
 
 ## Findings by resolution state
 

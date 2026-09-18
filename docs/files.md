@@ -1,6 +1,6 @@
 # Files
 
-644 distinct paths across 644 ledger rows, read at `e2382dc3cb7c`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+646 distinct paths across 646 ledger rows, read at `20839da454b0`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
@@ -325,20 +325,22 @@
 | <a id="f-2e50b8a589"></a>`docs/stale.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-30810cfd13) | Excluded | `a7f9384d` | 0 |
 | <a id="f-b93e406a71"></a>`docs/subsystems/b01-survey-methodology-and-agent-contracts.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-b7efa3c038) | Excluded | `a7f9384d` | 0 |
 | <a id="f-b2bfabffa6"></a>`docs/subsystems/b01-survey-methodology-and-agent-contracts.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-b1e5f74f44) | Excluded | `a7f9384d` | 0 |
-| <a id="f-74772f6767"></a>`docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-bdf73be75c) | Excluded | `a7f9384d` | 0 |
-| <a id="f-5cf102b221"></a>`docs/subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-df1d3f14b8) | Excluded | `a7f9384d` | 0 |
+| <a id="f-878ba9977a"></a>`docs/subsystems/b02-mcp-core-persistence-and-lifecycle.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-e43cdcafa2) | Excluded | `50abc288` | 0 |
+| <a id="f-00fb94be5b"></a>`docs/subsystems/b02-mcp-core-persistence-and-lifecycle.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-b38a7eae97) | Excluded | `50abc288` | 0 |
 | <a id="f-0638d3e53c"></a>`docs/subsystems/b03-knowledge-tools-and-workflow-api.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-296c83f36f) | Excluded | `a7f9384d` | 0 |
 | <a id="f-1555e9b115"></a>`docs/subsystems/b03-knowledge-tools-and-workflow-api.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-d022e2477c) | Excluded | `a7f9384d` | 0 |
-| <a id="f-28e04368a7"></a>`docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-228b5243bd) | Excluded | `a7f9384d` | 0 |
-| <a id="f-ddcdaf9a28"></a>`docs/subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-b3473b5658) | Excluded | `a7f9384d` | 0 |
-| <a id="f-67189e623b"></a>`docs/subsystems/b05-materializer-human-projection-read-back-html.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-06db247ca5) | Excluded | `a7f9384d` | 0 |
-| <a id="f-7654f8ebc2"></a>`docs/subsystems/b05-materializer-human-projection-read-back-html.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-01472a3233) | Excluded | `a7f9384d` | 0 |
-| <a id="f-798f78e5e3"></a>`docs/subsystems/b06-packaging-installer-and-host-activation.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-46af77edbd) | Excluded | `a7f9384d` | 0 |
-| <a id="f-5f88ef6300"></a>`docs/subsystems/b06-packaging-installer-and-host-activation.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-cfe92e4f3a) | Excluded | `a7f9384d` | 0 |
-| <a id="f-7522697a63"></a>`docs/subsystems/b07-gates-evidence-custody-and-ci.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-84904e1ed9) | Excluded | `a7f9384d` | 0 |
-| <a id="f-0ab15b9524"></a>`docs/subsystems/b07-gates-evidence-custody-and-ci.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-40dad1a97c) | Excluded | `a7f9384d` | 0 |
-| <a id="f-9921c59836"></a>`docs/subsystems/b08-records-design-research-published-projection-execution-ledger.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-83f313b973) | Excluded | `a7f9384d` | 0 |
-| <a id="f-35edaaa1f8"></a>`docs/subsystems/b08-records-design-research-published-projection-execution-ledger.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-00f0e5dbd1) | Excluded | `a7f9384d` | 0 |
+| <a id="f-3206d8441e"></a>`docs/subsystems/b04-diff-aware-materializer.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-3ea4588e82) | Excluded | `50abc288` | 0 |
+| <a id="f-3d36f54191"></a>`docs/subsystems/b04-diff-aware-materializer.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-e09b62fb85) | Excluded | `50abc288` | 0 |
+| <a id="f-a0c4383c84"></a>`docs/subsystems/b05-packaging-installer-validation-and-product-docs.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-f7d75eba5a) | Excluded | `50abc288` | 0 |
+| <a id="f-d1e0780fea"></a>`docs/subsystems/b05-packaging-installer-validation-and-product-docs.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-93aac7e845) | Excluded | `50abc288` | 0 |
+| <a id="f-33c4991ded"></a>`docs/subsystems/b06-report-interface-design-and-validation-studies.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-dd479ba038) | Excluded | `50abc288` | 0 |
+| <a id="f-6234e9f31f"></a>`docs/subsystems/b06-report-interface-design-and-validation-studies.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-2f3bb88274) | Excluded | `50abc288` | 0 |
+| <a id="f-d28fff5819"></a>`docs/subsystems/b07-embedded-research-surveys-and-platform-trials.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-f7d3cbaf4f) | Excluded | `50abc288` | 0 |
+| <a id="f-899fca20ea"></a>`docs/subsystems/b07-embedded-research-surveys-and-platform-trials.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-2a5170fe68) | Excluded | `50abc288` | 0 |
+| <a id="f-9a4c053bb8"></a>`docs/subsystems/b08-activation-evidence-and-release-readiness.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-57cd9e6e3a) | Excluded | `50abc288` | 0 |
+| <a id="f-1dace842db"></a>`docs/subsystems/b08-activation-evidence-and-release-readiness.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-01f0843bad) | Excluded | `50abc288` | 0 |
+| <a id="f-7be9c088d1"></a>`docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-31026b301a) | Excluded | `50abc288` | 0 |
+| <a id="f-ac428f6f54"></a>`docs/subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-fe02a0e84e) | Excluded | `50abc288` | 0 |
 | <a id="f-2224fbde60"></a>`docs/vocabulary.html` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-6d939ae1ac) | Excluded | `a7f9384d` | 0 |
 | <a id="f-9392870e8a"></a>`docs/vocabulary.md` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-9c4690dd50) | Excluded | `a7f9384d` | 0 |
 | <a id="f-328bd30a77"></a>`materializer/.gitignore` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md#le-e1695ac22a) | Examined | `c0734040` | 0 |
