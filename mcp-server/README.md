@@ -64,7 +64,12 @@ the MCP child, Amanuensis reads the exact task-root argument from its direct
 prompt text or use a hard-coded repository path.
 
 Default storage is worktree-local: worktrees share repository identity but
-receive distinct workspace-instance IDs and `.amanuensis` paths. An explicit
+receive distinct workspace-instance IDs and `.amanuensis` paths. A store carried
+into a second working copy of the same repository — a clone, a CI checkout, a
+moved directory — opens there, because the binding is to the repository's
+identity and not to the directory the store was created in; one naming a
+different repository is refused. A repository with no `origin` remote is
+identified by its path and its store does not travel. An explicit
 `AMANUENSIS_STORAGE_ROOT` instead selects shared-by-repository-identity custody;
 do not use it when concurrent worktrees need isolation. Run `amanuensis doctor --client codex
 --dir /path/to/project --json` to inspect effective config precedence, launch

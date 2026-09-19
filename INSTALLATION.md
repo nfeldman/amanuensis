@@ -94,6 +94,14 @@ deleting them.
 Survey state defaults to `<project>/.amanuensis/`, is excluded from the project's source
 history, and has its own checkpoint history.
 
+A store is bound to its repository's identity, not to the directory it was created in. A
+second working copy of the same repository — a colleague's clone, a CI checkout, the same
+directory moved — reads a store that travelled with it, and the server logs once which
+working copy the store was created in. A store whose recorded project identity names a
+different repository is still refused. A repository with no `origin` remote is identified
+by its path, so its store does not travel until the repository has the remote it was
+surveyed under.
+
 ### Worktrees and shared storage
 
 Ordinary Git worktrees receive separate worktree-local `.amanuensis` stores. They share

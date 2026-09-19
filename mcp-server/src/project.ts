@@ -698,7 +698,37 @@ function initializationMarkerPath(storagePath: string): string {
   return join(storagePath, STORAGE_INITIALIZATION_MARKER);
 }
 
-function validateStorageMarker(project: ProjectContext, storagePath = project.storagePath): void {
+// The completion marker answers two different questions and only one of them is
+// an identity. `contractVersion`, `projectIdentity`, `projectKey`,
+// `storagePolicy` and `database` say which repository the store belongs to;
+// `canonicalRoot` and `workspaceInstanceId` (a digest of that same root) record
+// the working copy it happened to be created in. Requiring all seven to match
+// made a store unreadable from any other working copy of the same repository —
+// a clone, a second worktree, a CI checkout, or the same directory moved —
+// while assertStorageIdentity, guarding the same question one layer down,
+// already accepts exactly that case whenever the recorded project identity
+// matches. Two layers guarded one question, disagreed, and the stricter one won
+// without ever saying that a path was what it objected to. Identity is enforced
+// here; the recorded location is provenance, reported and never refused.
+const MARKER_IDENTITY_FIELDS: readonly (keyof StorageInitializationMarker)[] = [
+  "contractVersion",
+  "projectIdentity",
+  "projectKey",
+  "storagePolicy",
+  "database",
+];
+
+interface StorageRelocation {
+  /** Working copy the store was created in; null when the marker recorded none. */
+  createdAtRoot: string | null;
+  /** Working copy it is being opened from now. */
+  openedAtRoot: string;
+}
+
+function validateStorageMarker(
+  project: ProjectContext,
+  storagePath = project.storagePath,
+): StorageRelocation | null {
   const marker = readJsonRecord(
     initializationMarkerPath(storagePath),
     "Amanuensis storage completion marker",
@@ -706,13 +736,25 @@ function validateStorageMarker(project: ProjectContext, storagePath = project.st
   const expected = expectedStorageMarker(project);
   const expectedKeys = Object.keys(expected).sort();
   const markerKeys = Object.keys(marker).sort();
-  const matches =
+  const shapeMatches =
     markerKeys.length === expectedKeys.length &&
-    markerKeys.every((key, index) => key === expectedKeys[index]) &&
-    expectedKeys.every((key) => marker[key] === expected[key as keyof StorageInitializationMarker]);
-  if (!matches) {
+    markerKeys.every((key, index) => key === expectedKeys[index]);
+  const mismatched = shapeMatches
+    ? MARKER_IDENTITY_FIELDS.filter((key) => marker[key] !== expected[key])
+    : [];
+  if (!shapeMatches || mismatched.length > 0) {
+    // Name the field that objected. The bare refusal this replaces was read as
+    // "this store is foreign" when it usually meant "this store moved".
+    const cause = shapeMatches
+      ? mismatched
+          .map(
+            (key) =>
+              `${key}: expected ${JSON.stringify(expected[key])}, found ${JSON.stringify(marker[key])}`,
+          )
+          .join("; ")
+      : `marker names ${markerKeys.join(", ") || "no fields"}; the contract names ${expectedKeys.join(", ")}`;
     throw new Error(
-      `Amanuensis storage completion marker does not match the immutable repository binding: ${storagePath}`,
+      `Amanuensis storage completion marker does not match the immutable repository binding: ${storagePath} (${cause})`,
     );
   }
   const databasePath = join(storagePath, expected.database);
@@ -721,6 +763,28 @@ function validateStorageMarker(project: ProjectContext, storagePath = project.st
       `Amanuensis storage completion marker names a missing database: ${databasePath}`,
     );
   }
+  if (expected.canonicalRoot === null || marker.canonicalRoot === expected.canonicalRoot) {
+    return null;
+  }
+  return {
+    createdAtRoot: typeof marker.canonicalRoot === "string" ? marker.canonicalRoot : null,
+    openedAtRoot: expected.canonicalRoot,
+  };
+}
+
+// One line per store per process. A relocation is a fact the operator should
+// see once; assertProjectBinding revalidates the marker on every tool call, so
+// reporting from there would turn it into a per-call warning.
+const reportedRelocations = new Set<string>();
+
+function reportStorageRelocation(storagePath: string, relocation: StorageRelocation | null): void {
+  if (!relocation || reportedRelocations.has(storagePath)) return;
+  reportedRelocations.add(storagePath);
+  process.stderr.write(
+    `[amanuensis-memory] storage was created in ${relocation.createdAtRoot ?? "an unrecorded working copy"} ` +
+      `and is being read from ${relocation.openedAtRoot}; the recorded project identity matches, so it is ` +
+      "opened as the same repository's conspectus\n",
+  );
 }
 
 function writeJsonAtomic(path: string, value: unknown): void {
@@ -802,7 +866,7 @@ function ensureExistingProjectStorage(
   );
   const markerPath = initializationMarkerPath(project.storagePath);
   if (existsSync(markerPath)) {
-    validateStorageMarker(project);
+    reportStorageRelocation(project.storagePath, validateStorageMarker(project));
     const initializerOwner = join(project.storagePath, STAGING_OWNER_FILE);
     if (existsSync(initializerOwner)) {
       rmSync(initializerOwner);
@@ -827,7 +891,7 @@ function ensureExistingProjectStorage(
       writeJsonAtomic(markerPath, expectedStorageMarker(project));
       afterMutation?.("completion-marker", markerPath);
     }
-    validateStorageMarker(project);
+    reportStorageRelocation(project.storagePath, validateStorageMarker(project));
     const gitInit = ensureStorageRepo(project.storagePath, {
       independent: project.bindingReceipt.storagePolicy === "worktree-local",
     });
