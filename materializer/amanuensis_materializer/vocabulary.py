@@ -15,6 +15,14 @@ FINDING_RESOLUTION_STATES: tuple[str, ...] = (
     "verified-fixed",
 )
 
+# carried_finding_outcome — carried axis.
+CARRIED_FINDING_OUTCOMES: tuple[str, ...] = (
+    "successor-finding",
+    "ruled-out",
+    "repaired",
+    "archived-terminal",
+)
+
 # finding_status — resolution axis.
 FINDING_STATUSES: tuple[str, ...] = (
     "confirmed-bug",
@@ -61,6 +69,13 @@ SUBSYSTEM_STATUSES: tuple[str, ...] = (
     "adversarial",
     "mapped",
     "deferred",
+)
+
+# vocabulary_discharge — vocabulary axis.
+VOCABULARY_DISCHARGES: tuple[str, ...] = (
+    "terms",
+    "declined",
+    "not-recorded",
 )
 
 # evidence_kind — evidence axis.
@@ -266,6 +281,40 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "label": "Verified fixed",
                 "meaning": "A later revision contains a repair backed by recorded verification evidence.",
                 "cannot_justify": "that the repair is still present at the repository head",
+            },
+        ),
+    },
+    "carried_finding_outcome": {
+        "axis": "carried",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "successor-finding",
+                "label": "Re-found here",
+                "meaning": "A finding filed in this store records the same defect, so the carried obligation is discharged into it and a reference to the archived id follows the finding into its successor.",
+                "cannot_justify": "that the successor is the same defect; the substrate can require that a finding was filed in this store and in this session, and cannot read the judgement that the two are one",
+                "authorizes": "reporting the archived defect as still tracked, under the successor's id and the successor's resolution state",
+            },
+            {
+                "value": "ruled-out",
+                "label": "Ruled out here",
+                "meaning": "A reading taken in this store, in the session that overturned it, does not show the defect the archive recorded.",
+                "cannot_justify": "that no related defect exists at the same locus; overturning requires evidence collected by the overturning pass, not that the locus was exhausted",
+                "authorizes": "closing a Pecia reference to the archived finding",
+            },
+            {
+                "value": "repaired",
+                "label": "Repaired here",
+                "meaning": "A commit that resolves in the bound workspace carries the repair, and at least one attached evidence row was read at a revision that is a descendant of, or equal to, that commit.",
+                "cannot_justify": "that the repair is still present at the repository head, or that it is complete; a claimed repair with no post-repair reading is fixed-pending-verification, never a discharge",
+                "authorizes": "closing a Pecia reference to the archived finding",
+            },
+            {
+                "value": "archived-terminal",
+                "label": "Closed in the archive",
+                "meaning": "The archive had already closed this finding — verified-fixed, ruled-out or accepted — and the carry recorded that state rather than re-deciding it. Written by the carry alone.",
+                "cannot_justify": "anything about this store: nobody here checked a commit or read a repaired path, and the row carries the archive's judgement and not this survey's",
+                "authorizes": "treating the obligation as decided for the fully-surveyed predicate and for the reference resolver",
             },
         ),
     },
@@ -484,6 +533,30 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "This subsystem is intentionally outside the active survey plan.",
                 "cannot_justify": "anything about this subsystem's behavior",
                 "authorizes": "nothing",
+            },
+        ),
+    },
+    "vocabulary_discharge": {
+        "axis": "vocabulary",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "terms",
+                "label": "Terms recorded",
+                "meaning": "The subsystem carries at least one vocabulary term scoped to it whose first_seen anchor still resolves: the token parses, its revision is reachable, and its path exists in that revision's tree.",
+                "cannot_justify": "that the recorded terms are the ones a reader most needs, or that the list is complete; one anchored term discharges the obligation and no count is required",
+            },
+            {
+                "value": "declined",
+                "label": "Declared none",
+                "meaning": "A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own.",
+                "cannot_justify": "that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing",
+            },
+            {
+                "value": "not-recorded",
+                "label": "Not recorded",
+                "meaning": "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
+                "cannot_justify": "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'",
             },
         ),
     },

@@ -44,7 +44,20 @@ Read every part of the result, not just `stale_count`:
   denominators. Report them alongside any zero.
 - `unverifiable_ref_rows` — rows whose examination commit is no longer
   reachable. These need re-examination and a clear at a reachable
-  commit; they cannot be verified in place.
+  commit; they cannot be verified in place. The status ladder says the
+  same thing back: *"an unreachable anchor cannot be verified in
+  place"*.
+
+`detect_changes` writes a reconciliation record, and two operations now
+read it rather than take your word. Advancing a subsystem to `mapped`
+and calling `materialize_docs` are both refused while *"the store has
+not been reconciled against the repository at"* the revision being
+published. Assigning the unledgered list before anything else is not
+advice any more: publication is refused while the standing
+reconciliation reports *"tracked path(s) with no ledger row"* or rows
+the tree no longer carries. Every tracked path needs exactly one
+subsystem assignment or an explicit exclusion with a reason before
+coverage over that tree is published.
 
 ### 2. Order the work
 
@@ -97,6 +110,27 @@ Re-run `detect_changes` to confirm the reconciliation still holds, then
 published surface matches the state you just established. Check
 `get_dashboard().staleness_measured` before repeating any freshness
 claim in your summary.
+
+## Reinitialization (a rebuild, not a refresh)
+
+A reinitialization discards a conspectus and surveys again. The findings
+the old one held do not go with it: they carry forward as unverified
+obligations that this store has to decide.
+
+- **`--carry-from` is required.** The rebuild driver refuses to start
+  without it. An empty carry is a reasoned declaration, stated with
+  `--carry-reason`; it is never expressed by leaving the argument off.
+- **Three outcomes, each asserting something about this store.**
+  `successor-finding` names a finding filed in this session;
+  `ruled-out` requires evidence collected in this store and attached;
+  `repaired` requires a commit that resolves and an attached reading
+  taken at or after it. Overturning requires evidence, not vibes.
+- **A fourth is written by the carry, not by hand.**
+  `archived-terminal` records that the archive had already closed the
+  finding. It is not one of the three authority-bearing outcomes and
+  cannot be claimed as one.
+- **The store is not fully surveyed while *"carried finding(s) have no
+  terminal outcome"*.** A discarded defect is not a decided one.
 
 ## What finishing means
 

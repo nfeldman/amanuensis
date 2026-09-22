@@ -146,6 +146,41 @@ STATUS_DIMENSIONS = (
 )
 LENSES = ("Codebase", "Unresolved", "History", "Method")
 
+# The revision the fixture's survey checked. `make_workspace` rebinds it to the
+# commit whose tree is `TRACKED_AT_R`, so the recorded reconciliation is one a
+# reader can re-derive; it falls back to a literal where git cannot answer, and
+# there the store is honestly unreconciled (F4/codex).
+RECORDED_SHA = "aaaaaaaaaaaa1111"
+
+# The fixture's ledger, as (path, classification), and the tree it was
+# reconciled against: the four ledger paths plus the one unledgered path.  §3.4
+# takes both Survey coverage denominators from the reconciliation over this
+# set, so they are written out here rather than left implicit in the INSERT.
+LEDGER: tuple[tuple[str, str], ...] = (
+    ("src/reader.ts", "examined"),
+    ("src/writer.ts", "examined"),
+    ("src/pending.ts", "candidate"),
+    ("dist/bundle.js", "generated-ignore"),
+)
+TRACKED_AT_R: tuple[str, ...] = tuple(
+    sorted({path for path, _c in LEDGER} | {"src/unledgered.ts"})
+)
+EXEMPT_TRACKED = sum(
+    1 for _path, c in LEDGER if c in ("generated-ignore", "vendor-ignore", "irrelevant")
+)
+# §1.2's D2: tracked paths minus the exempt ones.  Four, where the denominator
+# this row replaced — the obligation-bearing *ledger rows* — was three; the two
+# differ by exactly the unledgered count (spec.md §8.6, packet P6).
+OBLIGATION_TRACKED_PATHS = len(TRACKED_AT_R) - EXEMPT_TRACKED
+EXAMINED_TRACKED_PATHS = len({path for path, c in LEDGER if c == "examined"})
+
+
+def _set_digest(parts: list[str]) -> str:
+    """A path set as one hash, the construction `schema.sql` documents (§3.2)."""
+
+    return hashlib.sha256("\x00".join(sorted(parts)).encode()).hexdigest()
+
+
 # §6.1 assigns each resolution state to exactly one findings page, and the
 # fixture below seeds a different count for each so a mis-wired count cannot
 # coincide with the right answer.
@@ -254,8 +289,8 @@ def seed(storage: Path, entry_point: str) -> None:
     cur.execute(
         "INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha,"
         " last_checked_sha, last_checked_at)"
-        " VALUES ('default', 'main', 'aaaaaaaaaaaa1111', 'aaaaaaaaaaaa1111',"
-        " '2026-09-10T12:00:00Z')"
+        " VALUES ('default', 'main', ?, ?, '2026-09-10T12:00:00Z')",
+        (RECORDED_SHA, RECORDED_SHA),
     )
     cur.execute("INSERT INTO sessions (session_id, intent) VALUES ('p3', 'fixture')")
     # 2 mapped, 1 scoping — a bare subsystem count cannot satisfy this.
@@ -285,6 +320,28 @@ def seed(storage: Path, entry_point: str) -> None:
     cur.executemany(
         "INSERT INTO scope_gaps (file_path, kind, subsystem_id) VALUES (?, ?, ?)",
         [("src/unledgered.ts", "unledgered", None), ("src/deleted.ts", "absent", "B-01")],
+    )
+    # The standing reconciliation the Survey coverage rows are read from
+    # (spec.md §3.2, §3.4).  Both `Files read, of those carrying an obligation`
+    # and `Paths in scope with no ledger row` take their denominator from this
+    # row rather than from the ledger they measure; without it the store is
+    # *unreconciled at the revision it stamps* and both rows print
+    # `not measured`, which is the honest answer for a store that never
+    # reconciled and the wrong fixture for a gate about the numbers.
+    cur.execute(
+        "INSERT INTO scope_reconciliations (detected_sha, tree_digest, ledger_digest,"
+        " tracked_paths, ledger_rows, unledgered, absent, exempt, session_id)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'p3')",
+        (
+            RECORDED_SHA,
+            _set_digest(list(TRACKED_AT_R)),
+            _set_digest([f"{path}\x00{classification}" for path, classification in LEDGER]),
+            len(TRACKED_AT_R),
+            len({path for path, _classification in LEDGER}),
+            1,
+            1,
+            EXEMPT_TRACKED,
+        ),
     )
     cur.execute(
         "INSERT INTO evidence (file_path, symbol, ref_sha, kind, note)"
@@ -387,31 +444,48 @@ def git(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def make_workspace(root: Path) -> tuple[Path, str | None]:
-    """A workspace with one commit, so the overview has a head to compare.
+def make_workspace(root: Path) -> tuple[Path, str | None, str | None]:
+    """A workspace with two commits: the revision the survey checked, then a head.
 
-    Returns the resolved head when git could produce one.  When git is absent
-    the overview must say the repository head is not known, and the assertions
-    below take that arm instead — both are real readings of the same rule.
+    The first commit carries exactly `TRACKED_AT_R`, so the reconciliation this
+    fixture records is one a reader can re-derive — §3.3 is a conjunction of
+    five conditions and two of them need that tree (F4/codex).  A second commit
+    on top keeps the checked revision distinct from the repository head, which
+    is the relation `Source alignment` is here to report.
+
+    Returns the head and the checked revision when git could produce them.
+    When git is absent the overview must say the repository head is not known,
+    and the assertions below take that arm instead — both are real readings of
+    the same rule.
     """
 
     workspace = root / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "src").mkdir(exist_ok=True)
-    (workspace / "src" / "reader.ts").write_text("export const read = () => 0;\n")
+    for path in TRACKED_AT_R:
+        target = workspace / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"// {path}\n")
     try:
         if git(workspace, "init", "--quiet").returncode != 0:
-            return workspace, None
+            return workspace, None, None
         if git(workspace, "add", "-A").returncode != 0:
-            return workspace, None
-        if git(workspace, "commit", "--quiet", "-m", "fixture").returncode != 0:
-            return workspace, None
+            return workspace, None, None
+        if git(workspace, "commit", "--quiet", "-m", "the tree R was reconciled against").returncode != 0:
+            return workspace, None, None
+        checked = git(workspace, "rev-parse", "HEAD")
+        if checked.returncode != 0:
+            return workspace, None, None
+        (workspace / "src" / "later.ts").write_text("export const later = () => 0;\n")
+        if git(workspace, "add", "-A").returncode != 0:
+            return workspace, None, None
+        if git(workspace, "commit", "--quiet", "-m", "a later commit the survey has not read").returncode != 0:
+            return workspace, None, None
         head = git(workspace, "rev-parse", "HEAD")
     except OSError:
-        return workspace, None
+        return workspace, None, None
     if head.returncode != 0:
-        return workspace, None
-    return workspace, head.stdout.strip() or None
+        return workspace, None, None
+    return workspace, head.stdout.strip() or None, checked.stdout.strip() or None
 
 
 def seeded(root: Path, name: str, entry_point: str) -> tuple[Path, str | None]:
@@ -732,7 +806,9 @@ def main() -> int:
     # -- the published overview ---------------------------------------------
     root = Path(tempfile.mkdtemp(prefix="amanuensis-p3-gate-"))
     try:
-        workspace, head = make_workspace(root)
+        workspace, head, checked = make_workspace(root)
+        if checked:
+            globals()["RECORDED_SHA"] = checked
 
         main_storage, seed_error = seeded(root, "main", ENTRY_POINT_WITH_THESIS)
         if seed_error is None:
@@ -844,8 +920,13 @@ def main() -> int:
             body = section(section(index, "Where the record stands"), "Source alignment", level=3)
             if not body.strip():
                 return "the Source alignment dimension is empty"
-            if "aaaaaaaaaaaa" not in body:
+            if RECORDED_SHA[:12] not in body:
                 return "Source alignment does not report the recorded last-checked revision"
+            if head and head[:12] == RECORDED_SHA[:12]:
+                return (
+                    "the fixture's checked revision is the workspace head, so the row"
+                    " cannot show the two apart"
+                )
             if head:
                 if head[:8] not in body:
                     return (
@@ -871,8 +952,12 @@ def main() -> int:
                 return "the Survey coverage dimension is empty"
             if "2 mapped" not in body or "1 scoping" not in body:
                 return "Survey coverage does not report subsystems by ladder status (2 mapped, 1 scoping)"
-            if not re.search(r"\b2\s+of\s+3\b", body):
-                return "Survey coverage does not report 2 of 3 obligation-bearing ledger rows examined"
+            reading = rf"\b{EXAMINED_TRACKED_PATHS}\s+of\s+{OBLIGATION_TRACKED_PATHS}\b"
+            if not re.search(reading, body):
+                return (
+                    f"Survey coverage does not report {EXAMINED_TRACKED_PATHS} of"
+                    f" {OBLIGATION_TRACKED_PATHS} obligation-bearing tracked paths examined"
+                )
             if not re.search(r"\b1\b", body) or "unledgered" not in body.lower() and "no ledger row" not in body.lower():
                 return "Survey coverage does not report the 1 unledgered path from scope_gaps"
             return None
@@ -991,11 +1076,14 @@ def main() -> int:
             """
 
             def patch(text: str) -> str | None:
-                marker = '"Paths in scope with no ledger row",'
+                # The row's label is the shared constant §3.4 gives it, so the
+                # renderer and the read-back axis that checks it cannot drift;
+                # this arm drives the same row by that name.
+                marker = "                COVERAGE_ROW_UNLEDGERED,"
                 if marker not in text:
                     return None
                 return text.replace(marker, '"Conspectus health",\n                "72%",\n                ),\n                (\n                marker_removed,', 1).replace(
-                    "marker_removed,", '"Paths in scope with no ledger row",', 1
+                    "marker_removed,", "COVERAGE_ROW_UNLEDGERED,", 1
                 )
 
             scratch, scratch_error = scratch_materializer(root, patch)

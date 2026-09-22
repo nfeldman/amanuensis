@@ -83,6 +83,44 @@ Enumerate subsystems. For each, call
 `upsert_subsystem(id, name, status="unmapped", layer, scope,
 jump_in_reading, notes, priority)`.
 
+`status` is the first rung of the ladder every later phase climbs, and a
+status is a claim about work that happened. The server refuses an advance
+the record does not support. Each refusal below is quoted in the words it
+comes back in.
+
+- To `structural`, the scoping phase must have populated the ledger:
+  *"the file ledger is empty"*.
+- To `structural`, the structural pass must have recorded a claim:
+  *"no current claim carries a claim_key beginning"* the subsystem's id.
+- To `structural`, the subsystem's domain vocabulary must be discharged or
+  declined. A pass that *"neither defined a domain term for this subsystem
+  nor declared that it has none"* is refused. One term with a `first_seen`
+  anchor that resolves is enough, and so is `decline_domain_vocabulary`
+  with the reason none applies; there is no quota, and "none" is a real and
+  common answer that has to be said out loud.
+- To `concerns`, the structural artifact must exist: *"no subsystem-survey
+  artifact has been registered"*.
+- To `adversarial`, the concern pass must have written dispositions:
+  *"no concern dispositions have been recorded"*.
+- To `concerns`, `adversarial` or `mapped`, every disposition must rest on
+  an attached evidence row whose revision resolves. One *"answered from
+  nothing"* refuses the advance, and so does one whose evidence sits at a
+  commit the workspace can no longer reach — *"an unreachable anchor cannot
+  be verified in place"*.
+- To `mapped`, every current claim must carry a challenge outcome:
+  *"current claim(s) carry no challenge outcome"*.
+- To `mapped`, the store must be reconciled against the tree. *"the store
+  has not been reconciled against the repository at"* the revision being
+  claimed is the sentence; run `detect_changes(current_sha=<HEAD>)` and
+  assign or exempt every unledgered path it reports.
+
+Two more bind outside the ladder. Every durable write *"requires an active
+session. Call start_session first."* — Phase 0 opened one. And a store that
+discarded a prior conspectus is not fully surveyed while *"carried
+finding(s) have no terminal outcome"*: each inherited defect is re-found as
+a successor finding, ruled out with evidence collected in this store, or
+marked repaired at a commit that resolves.
+
 **Rank every subsystem by survey priority** (1 = survey first). Base
 the ranking on signal strength:
 

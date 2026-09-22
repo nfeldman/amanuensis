@@ -35,8 +35,21 @@
 // snapshot stays reachable from the store that replaced it, and a closing phase
 // gate records the empty starting point the rebuild (P17) begins from.
 //
+// Step 5a carries the predecessor's findings into the store that replaced it.
+// That step exists because the 2026-09-14 rebuild did not have it: six open
+// findings -- B03-5, B03-6, B03-7, B03-8, B04-5, B07-1 -- were neither re-found
+// nor ruled out, and their text survives only in an archive nobody re-reads.
+// `--carry-from` is therefore required, and `--carry-from none` is accepted only
+// with a reason: "nothing to carry" is a judgment somebody makes, and an
+// unreasoned empty carry is indistinguishable from a forgotten one
+// (design/survey-depth/spec.md §5.4).
+//
 // Usage:
-//   node dev/rebuild-self-conspectus-store.mjs --confirm [--archive <dir>]
+//   node dev/rebuild-self-conspectus-store.mjs --confirm
+//                                              --carry-from <store|export|none>
+//                                              --carry-reason "<text>"
+//                                              [--carry-verify-store <path>]
+//                                              [--archive <dir>]
 //                                              [--receipt <path>]
 //                                              [--discard-populated-store]
 //                                              [--workspace <dir>]
@@ -258,6 +271,167 @@ function step(text) {
 }
 
 // ---------------------------------------------------------------------------
+// The carry source, resolved before anything is discarded
+// ---------------------------------------------------------------------------
+
+/**
+ * What `--carry-from` names, read and validated **before** step 1.
+ *
+ * Validated first for the obvious reason: discovering that the carry source is
+ * unreadable, or carries no store identity, after the store has been deleted
+ * would leave the run with neither the predecessor nor a way to name it. A
+ * refusal here costs nothing; a refusal at step 5a costs the conspectus.
+ *
+ * Three kinds. A **store** is read `readonly` and supplies its own identity —
+ * minted if it has one, and the frozen `git_state` digest if it was archived
+ * before that column existed. An **export** must carry a top-level
+ * `archived_store_id`: it cannot derive either form, because an export's keys
+ * are `anchor, counts, exported_at, findings, open_questions, source,
+ * subsystems` and its `anchor` is the repository HEAD at export, not the
+ * store's own revision. **none** is an explicit reasoned empty carry, which is
+ * a record rather than a silence.
+ */
+async function resolveCarrySource() {
+  const from = arg("--carry-from");
+  const reason = arg("--carry-reason");
+  if (!from) {
+    die(
+      "refusing to reinitialize: --carry-from <store|export|none> is required.\n" +
+        "A reinitialization discards a conspectus, and the findings it held are obligations the\n" +
+        "successor inherits. Pass the archived store (read read-only), an export carrying\n" +
+        "archived_store_id, or `none` with --carry-reason saying why there is nothing to carry.",
+    );
+  }
+  if (!reason) {
+    die(
+      "refusing to reinitialize: --carry-reason \"<text>\" is required.\n" +
+        "Every carry run records why it carried what it carried; without it 'nothing was carried'\n" +
+        "and 'nobody ran a carry' are the same reading.",
+    );
+  }
+
+  if (from === "none") {
+    return {
+      kind: "none",
+      path: null,
+      archivedStoreId: null,
+      verifiedAgainst: null,
+      anchor: null,
+      reason,
+      findings: [],
+    };
+  }
+
+  const sourcePath = resolve(from);
+  if (!existsSync(sourcePath)) die(`the carry source does not exist: ${sourcePath}`);
+
+  if (sourcePath.endsWith(".json")) {
+    let doc;
+    try {
+      doc = JSON.parse(readFileSync(sourcePath, "utf8"));
+    } catch (error) {
+      die(`the carry source at ${sourcePath} is not parseable JSON: ${error.message}`);
+    }
+    const archivedStoreId = typeof doc.archived_store_id === "string" ? doc.archived_store_id : null;
+    if (!archivedStoreId) {
+      die(
+        `refusing the carry source ${sourcePath}: it carries no top-level archived_store_id.\n` +
+          "An export cannot derive one — its keys carry the repository HEAD at export, not the\n" +
+          "store's own identity — so a carry from it could not name the store the records came\n" +
+          "from, which is the one thing that field exists to record. Export again with an\n" +
+          "exporter that writes archived_store_id, or carry from the archived store itself.",
+      );
+    }
+    if (!Array.isArray(doc.findings)) {
+      die(`refusing the carry source ${sourcePath}: it carries no findings array`);
+    }
+    // §5.3: "where the store itself is available the carry verifies the two
+    // agree and refuses on a mismatch". The export is the weaker witness — it
+    // carries whatever its exporter wrote — so where the store it was taken
+    // from is also on this machine, the two are compared and a disagreement is
+    // a refusal. An export that names the wrong archive produces a carry that
+    // is internally consistent and wrong, and `archived_store_id` is the only
+    // field that separates the two stores.
+    let verifiedAgainst = null;
+    const verifyStore = arg("--carry-verify-store");
+    if (verifyStore) {
+      const storePath = resolve(verifyStore);
+      if (!existsSync(storePath)) die(`--carry-verify-store names no file: ${storePath}`);
+      let readArchivedStoreId;
+      try {
+        ({ archivedStoreId: readArchivedStoreId } = await import(
+          join(REPO, "mcp-server", "dist", "invariants.js")
+        ));
+      } catch (error) {
+        die(`the built server could not be loaded to verify the carry source: ${error.message}`);
+      }
+      let storeIdentity;
+      try {
+        storeIdentity = readArchivedStoreId(storePath, { immutable: true });
+      } catch (error) {
+        die(`refusing to verify ${sourcePath} against ${storePath}: ${error.message}`);
+      }
+      if (storeIdentity !== archivedStoreId) {
+        die(
+          `refusing the carry source ${sourcePath}: it declares archived_store_id\n` +
+            `  ${archivedStoreId}\n` +
+            `but the store at ${storePath} is\n` +
+            `  ${storeIdentity}\n` +
+            "A carry that named the wrong archive produces records that are internally consistent\n" +
+            "and wrong, and archived_store_id is the only field that separates the two stores.",
+        );
+      }
+      verifiedAgainst = storePath;
+    }
+
+    return {
+      kind: "export",
+      path: sourcePath,
+      archivedStoreId,
+      verifiedAgainst,
+      anchor: typeof doc.anchor === "string" ? doc.anchor : "",
+      reason,
+      findings: doc.findings.map((finding) => ({
+        finding_id: String(finding.finding_id ?? ""),
+        subsystem_id: String(finding.subsystem_id ?? ""),
+        symptom: String(finding.symptom ?? ""),
+        root_cause: String(finding.root_cause ?? ""),
+        severity: String(finding.severity ?? ""),
+        resolution_state: String(finding.resolution_state ?? "open"),
+        ref_sha: finding.ref_sha ?? null,
+        primary_files: Array.isArray(finding.primary_files)
+          ? finding.primary_files.map((entry) => String(entry))
+          : [],
+      })),
+    };
+  }
+
+  let readArchivedStore;
+  try {
+    ({ readArchivedStore } = await import(join(REPO, "mcp-server", "dist", "invariants.js")));
+  } catch (error) {
+    die(`the built server could not be loaded to read the carry source: ${error.message}`);
+  }
+  let archive;
+  try {
+    archive = readArchivedStore(sourcePath, { immutable: true });
+  } catch (error) {
+    die(`refusing the carry source ${sourcePath}: ${error.message}`);
+  }
+  return {
+    kind: "store",
+    path: sourcePath,
+    archivedStoreId: archive.archived_store_id,
+    // The store *is* the witness: there is no second reading to disagree with,
+    // which is why §5.3's cross-check is an export-only concern.
+    verifiedAgainst: sourcePath,
+    anchor: archive.archived_anchor,
+    reason,
+    findings: archive.findings,
+  };
+}
+
+// ---------------------------------------------------------------------------
 if (!flag("--confirm")) {
   die(
     "refusing to run: this discards the live self-conspectus store at\n" +
@@ -266,6 +440,15 @@ if (!flag("--confirm")) {
   );
 }
 if (!existsSync(SERVER)) die(`the built server is absent at ${SERVER}; run npm run build first.`);
+
+// Before the snapshot, not after the discard: a carry source that cannot be
+// read is a refusal that costs nothing here and costs the conspectus later.
+const carry = await resolveCarrySource();
+step(
+  carry.kind === "none"
+    ? `carry source: none — ${carry.reason}`
+    : `carry source: ${carry.kind} ${carry.path} (${carry.archivedStoreId}, ${carry.findings.length} finding(s))`,
+);
 
 const receiptPath = resolve(WORKSPACE, arg("--receipt", "design/reader-lenses/rebuild-receipt.json"));
 const archive = resolve(
@@ -396,6 +579,61 @@ if (!Array.isArray(subsystems) || subsystems.length !== 0) {
 }
 step(`read back: db_exists=${readbackInfo.db_exists}, subsystems=${subsystems.length}`);
 
+// --- step 5a: carry the predecessor's findings into the store that replaced it
+// Placed after the read-back, which is a statement about the *discard*, and
+// before the closing phase gate, which records the store the rebuild begins
+// from -- so the gate's commit carries the carry.
+const carrying = client();
+await carrying.handshake();
+const carrySession = await carrying.call("start_session", {
+  intent: "P16 — carry the predecessor's findings into the reinitialized store",
+});
+const carryRun = await carrying.call("begin_carry_run", {
+  source_kind: carry.kind,
+  ...(carry.kind === "none"
+    ? {}
+    : {
+        source_path: carry.path,
+        archived_store_id: carry.archivedStoreId,
+        archived_anchor: carry.anchor ?? "",
+      }),
+  reason: carry.reason,
+  expected_count: carry.findings.length,
+  imported_count: carry.findings.length,
+});
+const carried = [];
+for (const finding of carry.findings) {
+  const row = await carrying.call("carry_finding", {
+    carry_run_id: carryRun.carry_run_id,
+    archived_finding_id: finding.finding_id,
+    subsystem_id: finding.subsystem_id,
+    severity: finding.severity,
+    symptom: finding.symptom,
+    root_cause: finding.root_cause,
+    archived_resolution: finding.resolution_state,
+    ...(finding.ref_sha ? { archived_ref_sha: String(finding.ref_sha) } : {}),
+    ...(finding.primary_files.length ? { primary_files: finding.primary_files } : {}),
+  });
+  carried.push({
+    archived_finding_id: finding.finding_id,
+    carried_id: row.carried_id,
+    archived_resolution: finding.resolution_state,
+    pre_recorded: row.pre_recorded,
+    obligation_id: row.obligation_id,
+  });
+}
+// The counts are a promise made before the writes and checked after them: this
+// refuses while expected_count, imported_count and the rows written disagree.
+const carryFinished = await carrying.call("finish_carry_run", {
+  carry_run_id: carryRun.carry_run_id,
+});
+await carrying.call("end_session", { session_id: carrySession.session_id, outcome: "completed" });
+await carrying.stop();
+step(
+  `carried ${carryFinished.carried_rows} of ${carryFinished.expected_count} finding(s) from ` +
+    `${carry.kind === "none" ? "no predecessor" : carry.archivedStoreId}`,
+);
+
 // --- carry the snapshot's history into the rebuilt store --------------------
 rmSync(join(STORAGE, ".git"), { recursive: true, force: true });
 cpSync(join(archive, ".git"), join(STORAGE, ".git"), { recursive: true });
@@ -494,6 +732,26 @@ const receipt = {
     ),
     subsystems: subsystems.length,
     read_by_a_further_process: true,
+  },
+  carry: {
+    source_kind: carry.kind,
+    source_path: carry.path,
+    archived_store_id: carry.archivedStoreId,
+    archived_store_id_verified_against: carry.verifiedAgainst,
+    archived_anchor: carry.anchor,
+    reason: carry.reason,
+    carry_run_id: carryRun.carry_run_id,
+    expected_count: carryFinished.expected_count,
+    imported_count: carryFinished.imported_count,
+    carried_rows: carryFinished.carried_rows,
+    records: carried,
+    note:
+      carry.kind === "none"
+        ? "An explicit reasoned empty carry. The row exists so 'nothing was carried' and 'nobody" +
+          " ran a carry' are different readings of this store."
+        : "Every archived finding is carried whatever its archived resolution state. One the" +
+          " archive had already closed is pre-recorded 'archived-terminal', which the carry alone" +
+          " writes: it carries the archive's judgement and asserts nothing about this store.",
   },
   history_restored: {
     restored_from: join(archive, ".git"),

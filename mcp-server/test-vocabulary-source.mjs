@@ -663,7 +663,18 @@ if (!liveError) {
       `INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha, last_checked_sha)
        VALUES ('default', 'main', ?, ?)`,
     ).run(head, head);
-    validatorFixture = { db, head, later, ctx: { project, db, sessionId: "p1" } };
+    // §2.2: set_disposition names at least one recorded reading. Seeded the way
+    // the rest of this fixture is, so the probes below stay about the enum they
+    // drive rather than about the evidence contract.
+    const reading = Number(
+      db
+        .prepare(
+          `INSERT INTO evidence (file_path, symbol, line_range, ref_sha, kind, session_id)
+           VALUES ('src/ledger.ts', 'row', '1-1', ?, 'code-verified', 'p1')`,
+        )
+        .run(head).lastInsertRowid,
+    );
+    validatorFixture = { db, head, later, reading, ctx: { project, db, sessionId: "p1" } };
   } catch (e) {
     liveError = `the validator fixture could not be built — ${e && e.message ? e.message : e}`;
   }
@@ -720,6 +731,7 @@ check("every bound validator refuses a value the source does not carry", () => {
     concern_code: "SC-1",
     classification: "ruled-out",
     evidence: `src/ledger.ts:row@${head}`,
+    evidence_ids: [validatorFixture.reading],
     evidence_quality: "code-verified",
     rationale: "the writer is bounded by the ledger row count",
     ref_sha: head,

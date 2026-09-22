@@ -18,11 +18,13 @@
 // Two deliberate shapes, both of which the gate depends on:
 //
 //   - A subsystem row's `dispositions` carries the **checklist** concerns only.
-//     Seam concerns are per-seam by construction — an SC code names two parties,
-//     not eleven — so they live under `seams[].dispositions` and are not counted
-//     into a subsystem's active-concern denominator. Putting them in both places
+//     A seam concern is per-seam by construction — an SC code names two parties,
+//     not eleven — so it lives under `seams[].dispositions` and is not counted
+//     into a subsystem's active-concern denominator. Putting it in both places
 //     would make a seam assessment look like a missing disposition everywhere it
-//     does not apply.
+//     does not apply. What makes a concern a seam concern is that onboarding did
+//     not seed it into the calibrated checklist, not that it is named SC-n: see
+//     `isSeamConcern`.
 //   - A claim target's `record` names the `claim_challenge_outcomes` row that
 //     carries its outcome. A surviving claim changes no other row, so without
 //     that record it is indistinguishable from a claim nobody looked at — which
@@ -57,13 +59,31 @@ const CONTRACT = "amanuensis-reader-lenses/rebuild-depth-receipt/v1";
 // The checklist onboarding calibrated. Read from the store's concerns table by
 // origin, not typed in: a seeded concern is the checklist, a discovered one is
 // a seam concern this pass opened.
-const SEAM_CONCERN = /^SC-\d+$/;
+//
+// The SC-n shape alone is not the test. The reader-lenses pass discovered its
+// seam concerns, so there SC-n and the checklist were disjoint and the shape
+// answered both questions at once. The acceptance rebuild's onboarding seeded
+// `SC-1 seam contracts` into the calibrated checklist itself
+// (`mcp-server/contracts/concern-checklist.json`) and opened no seam at all, so
+// the shape now says "seam" about a concern every subsystem carries its own
+// disposition for. Classifying by shape alone dropped those five dispositions
+// out of their subsystems' checklist coverage and reported SC-1 as a gap in all
+// nine. Membership of the calibrated checklist decides it; the shape only
+// distinguishes the concerns outside it.
+const SEAM_CONCERN_SHAPE = /^SC-\d+$/;
 
 // The survey progression, which the recorded ladder is read against.
 const STATUS_ORDER = ["unmapped", "scoping", "structural", "concerns", "adversarial", "mapped"];
 
-// The storage checkpoint labels this pass writes.
-const BATCH_LABEL = /^Depth batch (\d+) · (.*)$/;
+// The storage checkpoint labels a depth pass writes. The reader-lenses pass
+// labelled one checkpoint per batch as `Depth batch 3 · …`; the acceptance
+// rebuild's survey packet labelled its own as `P10 batch 8a — …`, sometimes
+// twice for one batch (`… batch 1 checkpoint: …` then `… batch 1 complete: …`)
+// because it ran across several sessions. Both shapes are read, and a
+// checkpoint that carries no batch label is not a batch: `P10 endgame — …` and
+// the session-close commits describe the same store without claiming to be a
+// resumable unit of survey.
+const BATCH_LABEL = /^(?:Depth batch|P\d+ batch) (\d+)([a-z]?)(?: checkpoint| complete)?\s*[·—:-]\s*(.*)$/;
 const SUBSYSTEM_ID = /\bB-\d{2}\b/g;
 
 // Finding targets are still read off their probe notes: a finding's verdict
@@ -144,6 +164,36 @@ const artifactRows = all("SELECT path, kind, subsystem_id, content_hash, bytes F
 
 const CHECKLIST = concernRows.filter((row) => row.origin === "seeded").map((row) => row.code);
 
+/**
+ * A concern assessed per *seam* rather than per subsystem: it carries the SC-n
+ * shape and onboarding did not seed it into the calibrated checklist. Both
+ * halves are load-bearing. A checklist concern that happens to be named SC-1 is
+ * a checklist concern — every subsystem owes it a disposition of its own — and
+ * counting it as a seam concern subtracts those dispositions from the coverage
+ * they belong to and reports the concern as a gap everywhere it was in fact
+ * assessed.
+ */
+const isSeamConcern = (code) => SEAM_CONCERN_SHAPE.test(String(code ?? "")) && !CHECKLIST.includes(code);
+
+/**
+ * A SQLite `datetime('now')` stamp as an instant.
+ *
+ * The two records the ladder is folded from keep time in different zones and
+ * neither says so in its own text. `subsystem_status_transitions.created_at` is
+ * `datetime('now')`, which SQLite writes in UTC as `YYYY-MM-DD HH:MM:SS` with no
+ * marker; a storage checkpoint's date comes from `git log --format=%aI`, which
+ * is ISO-8601 with the committer's offset. `Date.parse` reads the unmarked form
+ * as *local* time, so on this machine every transition row sorted four hours
+ * late — after the checkpoints that had already observed the status it was
+ * climbing to — and the ladder came out as `adversarial` → `unmapped`, a rung
+ * running backwards through a survey that never went backwards. Marking the
+ * stamp as the UTC it already is puts the two sources on one axis.
+ */
+const sqliteInstant = (value) => {
+  const text = String(value ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(text) ? `${text.replace(" ", "T")}Z` : text;
+};
+
 const sessionId =
   one("SELECT session_id FROM sessions ORDER BY started_at DESC LIMIT 1")?.session_id ?? null;
 
@@ -156,19 +206,28 @@ const storageHistory = git(["log", "--format=%H%x1f%aI%x1f%s"], STORAGE)
     return { sha, date, message };
   });
 
-const batches = [];
-for (const entry of [...storageHistory].reverse()) {
-  const match = BATCH_LABEL.exec(entry.message);
-  if (!match) continue;
-  batches.push({
-    n: Number(match[1]),
+// One entry per labelled checkpoint, oldest first, numbered by its position in
+// that order. The label's own designation is kept beside it under
+// `recorded_as`, because the two do not always agree and neither may be
+// invented from the other: the reader-lenses pass wrote one checkpoint per
+// batch and its numbers were the positions, while the acceptance rebuild's
+// survey packet checkpointed batch 1 twice, split batch 2 into `2a`/`2b`, and
+// skipped `4` when a session ended without reaching it. Renumbering by position
+// is what makes the sequence resumable — the reader recovers batch k by walking
+// k checkpoints — and `recorded_as` is what keeps the packet's own account
+// legible against its progress record.
+const batches = [...storageHistory]
+  .reverse()
+  .map((entry) => ({ entry, match: BATCH_LABEL.exec(entry.message) }))
+  .filter(({ match }) => match !== null)
+  .map(({ entry, match }, index) => ({
+    n: index + 1,
+    recorded_as: `${match[1]}${match[2]}`,
     label: entry.message,
     storage_commit: entry.sha,
     committed_at: entry.date,
-    subsystems: [...new Set(String(match[2]).match(SUBSYSTEM_ID) ?? [])],
-  });
-}
-batches.sort((a, b) => a.n - b.n);
+    subsystems: [...new Set(String(match[3]).match(SUBSYSTEM_ID) ?? [])],
+  }));
 
 // The seam pass and Phase 5 packaging ran after the last subsystem batch and
 // are recoverable at the commit the session close wrote. It is named here
@@ -209,7 +268,26 @@ for (const row of challengeOutcomeRows) {
  * record is append-only and a later pass appends rather than edits.
  */
 function claimTargetsFor(sid) {
-  const owed = (coverage.subsystems.find((row) => row.id === sid)?.claims ?? []).map((c) => c.claim_key);
+  // The claims *this* store holds for the subsystem, not the claims P17 left.
+  //
+  // Reading the target list out of `rebuild-coverage-receipt.json` was right
+  // while the depth pass continued the store P17 had surveyed: the same claim
+  // rows were still there to be challenged, and taking the list from the
+  // earlier document kept a pass from quietly shrinking its own target set.
+  // The acceptance rebuild deletes that store and rebuilds from nothing
+  // (survey-depth spec.md §7.4 steps 2-4), so its account is carried by
+  // eleven claims under keys P17 never wrote. Asking the coverage receipt what
+  // this rebuild owed produced thirty-nine targets naming another rebuild's
+  // claims, thirty-one of them with `outcome: ""` — a receipt reporting that a
+  // survey failed to challenge claims that do not exist in the store it
+  // surveyed, while saying nothing at all about the eight it did challenge.
+  // The store is the only record of what this pass had to challenge; the gate
+  // compares the result against P17's list itself, and the mismatch belongs
+  // there, in an assertion, rather than here in a receipt that would have to
+  // misdescribe the pass to hide it.
+  const owed = [
+    ...new Set(claimRows.filter((row) => String(row.claim_key ?? "").startsWith(`${sid}/`)).map((row) => row.claim_key)),
+  ];
   return owed.map((key) => {
     const rowsForKey = claimRows.filter((row) => row.claim_key === key);
     const outcomes = rowsForKey
@@ -294,7 +372,7 @@ const subsystems = subsystemRows
   .filter((row) => row.status !== "deferred")
   .map((row) => {
     const checklist = dispositionRows.filter(
-      (d) => d.subsystem_id === row.id && !SEAM_CONCERN.test(d.concern_code),
+      (d) => d.subsystem_id === row.id && !isSeamConcern(d.concern_code),
     );
     const findings = findingRows
       .filter((f) => f.subsystem_id === row.id)
@@ -418,7 +496,7 @@ function findingConcern(findingId) {
     findingEvidenceRows.filter((e) => e.finding_id === findingId).map((e) => e.evidence_id),
   );
   const confirmed = dispositionRows.filter(
-    (d) => d.subsystem_id === sid && d.classification === "confirmed-bug" && !SEAM_CONCERN.test(d.concern_code),
+    (d) => d.subsystem_id === sid && d.classification === "confirmed-bug" && !isSeamConcern(d.concern_code),
   );
   if (confirmed.length === 0) return null;
   let best = null;
@@ -507,7 +585,7 @@ function ladderFor(sid) {
   const timeline = [];
   for (const row of statusTransitionRows.filter((entry) => entry.subsystem_id === sid)) {
     timeline.push({
-      at: row.created_at,
+      at: sqliteInstant(row.created_at),
       order: [0, row.id],
       status: row.to_status,
       from_hint: row.from_status,
@@ -578,12 +656,13 @@ function spanBetween(from, to) {
 }
 
 // --- seams ---------------------------------------------------------------------
+const seamConcernCodes = concernRows.filter((row) => isSeamConcern(row.code)).map((row) => row.code);
 const seams = seamRows.map((seam) => {
   const codes = [
     ...new Set(
       dispositionRows
         .filter(
-          (d) => SEAM_CONCERN.test(d.concern_code) && (d.subsystem_id === seam.party_a || d.subsystem_id === seam.party_b),
+          (d) => isSeamConcern(d.concern_code) && (d.subsystem_id === seam.party_a || d.subsystem_id === seam.party_b),
         )
         .filter((d) => {
           const both = dispositionRows.filter((x) => x.concern_code === d.concern_code).map((x) => x.subsystem_id);
@@ -636,14 +715,25 @@ const receipt = {
     .filter((row) => row.origin === "seeded")
     .map((row) => ({ code: row.code, category: row.category, status: row.status })),
   seam_concerns: concernRows
-    .filter((row) => SEAM_CONCERN.test(row.code))
+    .filter((row) => isSeamConcern(row.code))
     .map((row) => ({ code: row.code, category: row.category, discovered_in: row.discovered_in })),
   deferred_subsystems: subsystemRows
     .filter((row) => row.status === "deferred")
     .map((row) => ({ id: row.id, status: row.status })),
   batches,
+  // `covers` names the seam concerns the pass had to assess, read off the
+  // concerns table rather than written down: the reader-lenses pass discovered
+  // nine and the sentence naming them was true there and nowhere else. A
+  // rebuild whose onboarding opened no seam concern says so, rather than
+  // claiming a range it never had.
   seam_assessment: sessionClose
-    ? { storage_commit: sessionClose.sha, label: sessionClose.message, covers: "SC-1 through SC-9 and Phase 5 packaging" }
+    ? {
+        storage_commit: sessionClose.sha,
+        label: sessionClose.message,
+        covers: seamConcernCodes.length
+          ? `${seamConcernCodes.join(", ")} and Phase 5 packaging`
+          : "no seam concern was opened by this pass; Phase 5 packaging only",
+      }
     : null,
   subsystems,
   seams,
@@ -653,8 +743,8 @@ const receipt = {
   census: {
     mapped: mappedIds.length,
     deferred: subsystemRows.filter((row) => row.status === "deferred").length,
-    checklist_dispositions: dispositionRows.filter((d) => !SEAM_CONCERN.test(d.concern_code)).length,
-    seam_dispositions: dispositionRows.filter((d) => SEAM_CONCERN.test(d.concern_code)).length,
+    checklist_dispositions: dispositionRows.filter((d) => !isSeamConcern(d.concern_code)).length,
+    seam_dispositions: dispositionRows.filter((d) => isSeamConcern(d.concern_code)).length,
     findings: findingRows.length,
     disposition_evidence: dispositionEvidenceRows.length,
     finding_evidence: findingEvidenceRows.length,

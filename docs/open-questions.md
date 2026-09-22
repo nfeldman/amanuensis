@@ -2,59 +2,28 @@
 
 _Questions the survey could not settle on its own. Each records what it blocked and the assumption the survey proceeded with, so a reader can see which readings would change if the assumption turns out wrong. Questions already settled are on [Resolved leads and questions](resolved-leads.md)._
 
-## Domain knowledge
+## Contradiction
 
 _1 open question._
 
-<a id="question-4"></a>
-### #4 · phase `onboarding-4`
+<a id="question-2"></a>
+### #2 · subsystem **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** · phase `adversarial`
 
-> Territory 5 (aliasing and ownership) is weakly applicable to TypeScript-with-SQLite and to a Python process that reads and exits. Is one concern ([AL-1](concerns.md#al-1)) proportionate, or is the territory effectively disqualified here?
+> [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)/[SI-2](concerns.md#si-2) is dispositioned confirmed-acceptable on the rationale that "every revision this surface accepts is resolved at the write and re-resolved at the read", but [SI-2](concerns.md#si-2)'s calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does [SI-2](concerns.md#si-2) on [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md) stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?
 
-- **Assumption the survey proceeded with** — Kept one concern rather than disqualifying the territory. Long-lived module-level state does exist — the tool-definition arrays, the parsed contracts, the vocabulary tables — and the server is a long-running process, so a mutation that escapes lives for the life of the session. One concern is the smallest form that keeps the territory falsifiable instead of assumed away.
-- **Recorded** — 2026-09-14 03:32 UTC.
-
-## Ambiguous evidence
-
-_1 open question._
-
-<a id="question-5"></a>
-### #5 · subsystem **[B-05](subsystems/b05-materializer-human-projection-read-back-html.md)** · phase `B-05 phase 3`
-
-> Do the diff-aware incremental publish and clean_publish produce byte-identical trees from one store state? Two accounts of the code are both defensible and this pass could not discriminate between them.
-
-- **Assumption the survey proceeded with** — Recorded [IF-1](concerns.md#if-1) as `unresolved-competition` rather than choosing. The optimistic reading is that both paths share one page plan, one write_contract and one three-axis verifier, so a divergence would have to survive a byte comparison. The pessimistic reading is that the diff-aware path decides what to re-render from registered artifacts' content hashes, so a page whose inputs changed without its artifact hash changing is skipped by one path and rendered by the other — and the shared verifier would not catch it, because it verifies what was written, not what should have been. Discriminating needs two runs over one store state and a tree diff; this pass ran only clean publishes.
-- **Recorded** — 2026-09-14 04:09 UTC.
+- **What this blocked** — Nothing. The finding and the measurement are both recorded; only the disposition's classification is left open.
+- **Assumption the survey proceeded with** — Left as recorded. B03-R5 is filed as a confirmed bug with its own evidence, and [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)/[SI-2](concerns.md#si-2)'s classification is unchanged: revising a disposition another packet's survey pass recorded is a survey act, and this session is P11, which publishes and records receipts. The next session to survey [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md) adjudicates it.
+- **Recorded** — 2026-09-18 02:14 UTC.
 
 ## Scope judgment
 
-_2 open questions._
-
-<a id="question-2"></a>
-### #2 · phase `onboarding-5`
-
-> This survey mints finding ids in a new namespace (`&lt;SID&gt;-R&lt;n&gt;`, e.g. B02-R1) rather than the previous store's `&lt;SID&gt;-&lt;n&gt;`. Is that the right convention, or should a rebuilt store restart the plain sequence?
-
-- **Assumption the survey proceeded with** — Use the distinct namespace. The Pecia ledger holds 22 live `amanuensis:&lt;finding_id&gt;` foreign references minted against the discarded store; the resolver reads whatever store is on disk now, so a rebuilt store that re-minted `B03-1` would make a closed defect resolve against a different finding with no signal that the referent had changed. The distinct namespace makes every stale reference fail loudly, which is the behaviour the reference exists to provide.
-- **Recorded** — 2026-09-14 03:32 UTC.
-
-<a id="question-1"></a>
-### #1 · phase `onboarding-5`
-
-> Should the reader-lens code (standing.ts, tools/locus.ts, tools/claims.ts, tools/xrefs.ts, tools/vocabulary.ts, src/vocabulary.ts) be its own subsystem, or part of the knowledge-tools subsystem it is registered alongside?
-
-- **Assumption the survey proceeded with** — Split out as [B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md). It has a distinct contract (a compactness budget, a standing state machine, a single enum source, a consumer-facing route) that the other handlers do not share, and it is the newest code with the least prior scrutiny. The cost of the split is that [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md) and [B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) share the claims and evidence tables, which is recorded as seam [S-06](seams.md#s-06) rather than hidden inside one subsystem.
-- **Recorded** — 2026-09-14 03:32 UTC.
-
-## Priority ranking
-
 _1 open question._
 
-<a id="question-3"></a>
-### #3 · phase `onboarding-5`
+<a id="question-1"></a>
+### #1
 
-> [B-07](subsystems/b07-gates-evidence-custody-and-ci.md) (gates, evidence custody, CI) is ranked 3, below the code it validates. Should the validation substrate be surveyed first instead, on the grounds that a defect there hides defects everywhere else?
+> Territory T5 (aliasing and ownership) is disqualified for this pass. Does a subsystem's structural pass find one?
 
-- **Assumption the survey proceeded with** — Ranked 3. A gate defect is only legible once you know what the gate is asserting over, so reading the subject first makes the zero-denominator concern ([ZD-1](concerns.md#zd-1)) falsifiable rather than speculative. The risk accepted is that a gate defect found late does not get to inform the earlier subsystems' passes.
-- **Recorded** — 2026-09-14 03:32 UTC.
+- **Assumption the survey proceeded with** — No cross-request shared mutable object is established in this read: every request and response crosses MCP serialization, and residual process-local state is covered by [CR-1](concerns.md#cr-1) and [RL-1](concerns.md#rl-1). Reopen if a subsystem's structural pass finds an alias.
+- **Recorded** — 2026-09-15 03:43 UTC.
 

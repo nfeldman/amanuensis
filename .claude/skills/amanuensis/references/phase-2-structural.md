@@ -21,7 +21,10 @@ If you need to expand scope mid-phase, update the ledger via
 For statically typed languages, read class/struct/type/interface
 definitions before any method bodies. The type graph is higher
 signal than implementation detail. Record in prose; add vocabulary
-entries (`define_term`) for the non-obvious names.
+entries (`define_term`) for the non-obvious names. Each term's
+`first_seen` is a `file:symbol@sha` anchor whose revision must resolve
+and whose path must exist in that revision's tree, or the call is
+refused.
 
 ### 2. State containers
 
@@ -170,9 +173,27 @@ Files actually read in this phase move from `candidate` to
 
 ### 9. Vocabulary
 
-Continue adding terms via `define_term`. Any internal name whose
-meaning required reading code should be captured with enough
-expansion that the next survey pass does not have to rediscover it.
+This phase discharges the subsystem's domain-vocabulary obligation or
+declines it. The advance to `structural` refuses a pass that *"neither
+defined a domain term for this subsystem nor declared that it has
+none"*.
+
+Keep adding terms via `define_term`. Any internal name whose meaning
+required reading code should be captured with enough expansion that the
+next survey pass does not have to rediscover it. Each term's `first_seen`
+is a `file:symbol@sha` anchor whose revision must resolve and whose path
+must exist in that revision's tree; a term stored without one anchors
+nothing and discharges nothing.
+
+One anchored term is enough. There is no quota, and no reason to invent a
+term to clear a count.
+
+Where the subsystem genuinely has no vocabulary of its own, say so:
+`decline_domain_vocabulary(subsystem_id, reason, ref_sha)`. The record is
+append-only and attributed to the session that wrote it, and "none" is a
+real and common answer that has to be said out loud. A subsystem *"cannot
+both carry domain vocabulary and declare it has none"* — the declination
+is refused where an anchored term already stands.
 
 ## Output artifact
 
@@ -183,6 +204,8 @@ artifact at the project storage root: `<id>-<slug>.md`. Sections:
 - **State containers** — table per the list above.
 - **Data flows** — at least one end-to-end, with numbered steps.
 - **Concurrency model** — prose paragraph with evidence citations.
+- **Domain vocabulary** — the terms recorded this phase with their
+  anchors, or the declination and its reason.
 - **Seam contracts** — one sub-section per seam, this side filled
   in.
 

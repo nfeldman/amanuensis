@@ -39,6 +39,7 @@ import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 const allTools = new Map(
   [
@@ -54,6 +55,7 @@ const allTools = new Map(
     ...artifactTools,
     ...evidenceTools,
     ...claimTools,
+    ...vocabularyTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -127,6 +129,8 @@ function headSha(ws) {
   ).trim();
 }
 
+// Returns the evidence id it recorded: §2.2 makes `set_disposition` name at
+// least one reading, and the disposition below rests on the same one.
 function seedStructuralClaim(ws, ctx, subsystemId) {
   const sha = headSha(ws);
   const evidenceId = call(
@@ -151,6 +155,22 @@ function seedStructuralClaim(ws, ctx, subsystemId) {
       epistemic_kind: "observation",
       ref_sha: sha,
       evidence_ids: [evidenceId],
+    },
+    ctx,
+  );
+  return evidenceId;
+}
+
+// §4.4's own deliverable at the same advance: a domain term whose anchor
+// resolves, or the declaration that this subsystem has none. The fixture's
+// `main.ts` coins no word of its own, so it says so.
+function dischargeVocabulary(ws, ctx, subsystemId) {
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: subsystemId,
+      reason: "cloud e2e fixture: main.ts coins no term of its own",
+      ref_sha: headSha(ws),
     },
     ctx,
   );
@@ -181,7 +201,8 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
-    seedStructuralClaim(target, ctx, "B-01");
+    const readingId = seedStructuralClaim(target, ctx, "B-01");
+    dischargeVocabulary(target, ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -210,6 +231,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
         concern_code: "CC-1",
         classification: "confirmed-acceptable",
         evidence: `main.ts:root@${headSha(target)}`,
+        evidence_ids: [readingId],
         evidence_quality: "name-inferred",
         rationale: "name suggests bounded; verified by reviewer's answer to OQ",
         ref_sha: headSha(target),
@@ -298,7 +320,8 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
       call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
       call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
-      seedStructuralClaim(ws, ctx, "B-01");
+      const reading = seedStructuralClaim(ws, ctx, "B-01");
+      dischargeVocabulary(ws, ctx, "B-01");
       call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
       call("register_artifact", { path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx);
@@ -310,6 +333,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
           concern_code: "CC-1",
           classification: "ruled-out",
           evidence: "x",
+          evidence_ids: [reading],
           evidence_quality: "code-verified",
           rationale: "r",
           ref_sha: headSha(ws),

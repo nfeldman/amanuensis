@@ -10,6 +10,7 @@ import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
 import { assertProjectBinding, ensureProjectStorage, resolveProject } from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
+import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
@@ -32,6 +33,19 @@ const SERVER_VERSION = "0.2.0-beta.1";
 // successor writes. These hints inform hosts; they are not authorization.
 const ADDITIVE_TOOLS = new Set([
   "add_claim",
+  // The four carried-finding tables are append-only in the substrate, by the
+  // trigger pairs `schema.sql` ships rather than by this list (spec.md §5.2):
+  // each of these inserts one row and no path in the server can update or
+  // delete it. `record_carried_outcome` writes the decision that discharges an
+  // obligation and is deliberately NOT here — it is additive in the same sense,
+  // but a host reading the hint should see a decision being recorded.
+  "begin_carry_run",
+  "carry_finding",
+  "attach_carried_evidence",
+  // `vocabulary_declinations` is append-only in the substrate, by the trigger
+  // pair `schema.sql` ships rather than by this list (spec.md §4.3): the tool
+  // inserts one row and no path in the server can update or delete it.
+  "decline_domain_vocabulary",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -235,6 +249,7 @@ async function main(): Promise<void> {
     ...findingTools,
     ...fieldNoteTools,
     ...vocabularyTools,
+    ...carriedTools,
     ...xrefTools,
     ...contradictionTools,
     ...loggingTools,

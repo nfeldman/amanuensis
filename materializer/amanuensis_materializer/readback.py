@@ -17,7 +17,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 from collections import Counter
+from dataclasses import dataclass
+from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -61,6 +64,13 @@ FINDING_PAGE_BY_STATE: dict[str, str] = {
 def finding_page(resolution_state: str | None) -> str | None:
     """The page a finding in this resolution state renders on, or None."""
     return FINDING_PAGE_BY_STATE.get(str(resolution_state or ""))
+
+
+#: Every durable marker kind the projection emits, named once. The HTML view
+#: accepts raw HTML from the Markdown bytes only for these, so a marker kind
+#: added here reaches both corpora and one added only to a renderer is stripped
+#: out of the HTML and reported by the state axis as absent (§11.3).
+MARKER_KINDS: tuple[str, ...] = ("finding", "stale-entry", "ledger-stale", "carried")
 
 
 def finding_marker(finding_id: str) -> str:
@@ -117,6 +127,426 @@ def ledger_stale_marker(subsystem_id: str, file_path: str) -> str:
     """The durable marker for one stale `file_ledger` row (§11.3)."""
 
     return f"<!-- amanuensis:ledger-stale:{_ledger_row_token(subsystem_id, file_path)} -->"
+
+
+# ---------------------------------------------------------------------------
+# The standing reconciliation (spec.md §3.2, §3.3, §3.4)
+#
+# The projection is a reader of the store, never the system of record, and this
+# is the one reading that decides whether any coverage fraction on any page has
+# a denominator at all.  It lives here rather than in `renderers.py` so the
+# renderer and the independent read-back cannot disagree about whether a store
+# is reconciled: one definition, read by the page that prints the number and by
+# the axis that checks it (GP28).
+# ---------------------------------------------------------------------------
+
+#: The one byte a repository path cannot contain, so a joined set is unambiguous.
+NUL = "\x00"
+
+# The classifications that exempt a tracked path from the obligation to be read
+# come from the generated vocabulary, never from a list maintained here.
+EXEMPT_CLASSIFICATIONS: tuple[str, ...] = tuple(
+    value
+    for value in values_of("file_classification")
+    if value not in OBLIGATION_BEARING_CLASSIFICATIONS
+)
+
+
+#: What the overview prints where a coverage figure has no denominator (§3.4).
+UNMEASURED = "not measured"
+
+#: The two overview rows §3.4 moves to the standing reconciliation, named once
+#: and read by the renderer that prints them and the axis that checks them.
+COVERAGE_ROW_FILES_READ = "Files read, of those carrying an obligation"
+COVERAGE_ROW_UNLEDGERED = "Paths in scope with no ledger row"
+# The renderer's out-of-band reading for a store whose tracked paths all carry
+# an exempting classification: a denominator of zero is not a fraction (§1.4).
+NO_OBLIGATION_SENTENCE = "no tracked path carries a survey obligation"
+COVERAGE_ROW_CARRIED = "Carried defects undecided"
+
+OVERVIEW_PAGE_MD = "index.md"
+OVERVIEW_PAGE_HTML = "index.html"
+
+_MD_ROW_RE = re.compile(r"^\s*\|(?P<cells>.*)\|\s*$")
+# The HTML view renders a metric table as a description list, and a data table
+# as a table; both shapes are read, so this axis does not depend on which one
+# the shared template happens to use.
+_HTML_PAIR_RE = re.compile(
+    r"<dt\b[^>]*>(?P<label>.*?)</dt>\s*<dd\b[^>]*>(?P<value>.*?)</dd>", re.S | re.I
+)
+_HTML_ROW_RE = re.compile(r"<tr\b[^>]*>(?P<body>.*?)</tr>", re.S | re.I)
+_HTML_CELL_RE = re.compile(r"<t[dh]\b[^>]*>(?P<cell>.*?)</t[dh]>", re.S | re.I)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _plain(fragment: str) -> str:
+    return unescape(_TAG_RE.sub("", fragment)).strip()
+
+
+def _metric_cell(text: str, label: str, suffix: str) -> str | None:
+    """The value cell of one `| label | value |` metric row, in either format.
+
+    The HTML view is derived from the finished Markdown bytes, so the same row
+    is checkable in both corpora — and both are checked, because a healthy
+    Markdown page must not stand in for its companion (§11.3's rule, applied to
+    a reading rather than to a marker).
+    """
+
+    if suffix in HTML_SUFFIXES:
+        for pair in _HTML_PAIR_RE.finditer(text):
+            if _plain(pair.group("label")).strip("*` ") == label:
+                return _plain(pair.group("value"))
+        for match in _HTML_ROW_RE.finditer(text):
+            cells = [_plain(c.group("cell")) for c in _HTML_CELL_RE.finditer(match.group("body"))]
+            if len(cells) >= 2 and cells[0].strip("*` ") == label:
+                return cells[1]
+        return None
+    for line in text.splitlines():
+        match = _MD_ROW_RE.match(line)
+        if not match:
+            continue
+        cells = [cell.strip() for cell in match.group("cells").split("|")]
+        if len(cells) >= 2 and cells[0].strip("*` ") == label:
+            return cells[1]
+    return None
+
+
+def resolve_workspace(storage: Path) -> Path:
+    """The surveyed workspace: the recorded path, else the storage's parent."""
+
+    record = storage / "workspace_path"
+    if record.is_file():
+        recorded = record.read_text().strip()
+        if recorded:
+            return Path(recorded)
+    return storage.parent
+
+
+# §9.2's one-token citation grammar, as `CITATION_TOKEN_SOURCE` publishes it:
+# `path:symbol@sha`, the revision 7-40 hex.
+CITATION_TOKEN = re.compile(r"^([^\s:]+(?:/[^\s:]+)*):([^\s@]+)@([0-9a-fA-F]{7,40})$")
+
+
+def anchor_opens(workspace: Path, anchor: object) -> bool:
+    """Whether `anchor` is a citation whose path exists in its own revision.
+
+    §4.4 discharges a subsystem's vocabulary obligation with an **anchored**
+    term, and D0's B4 reads the same word by running `git cat-file -e
+    <sha>:<path>`.  A projection that asks only whether `first_seen` is a
+    non-empty string calls a term current that no reader can open, and renders
+    the declination it supposedly superseded as history (F6/codex).
+    """
+
+    match = CITATION_TOKEN.match(str(anchor or "").strip())
+    if match is None or not workspace.is_dir():
+        return False
+    path, _symbol, revision = match.groups()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "cat-file", "-e", f"{revision}:{path}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+def set_digest(parts: list[str]) -> str:
+    """A set, as one hash: sorted, NUL-joined, SHA-256 (§3.2).
+
+    Sorted so the digest states the set and not the order git or SQLite
+    happened to return it in, and joined on NUL because that is the one byte a
+    repository path cannot contain.  The same construction the server uses
+    (`mcp-server/src/invariants.ts` `digestOf`); a second construction here
+    would make every reconciliation this process reads look stale.
+    """
+
+    return hashlib.sha256(NUL.join(sorted(parts)).encode()).hexdigest()
+
+
+def tracked_path_digest(paths: list[str]) -> str:
+    """§3.2's `tree_digest`: the tracked path set the counts were taken over."""
+
+    return set_digest(paths)
+
+
+def examined_tracked(conn: Any) -> int:
+    """§1.2's D3: distinct examined ledger paths the tree still carries.
+
+    The numerator of the overview's `Files read` row, defined once so the
+    read-back recomputes the published value from the store rather than
+    searching the page for a substring of it (F7/codex).
+    """
+
+    return int(
+        (
+            row(
+                conn,
+                "SELECT COUNT(*) AS n FROM (SELECT DISTINCT file_path FROM file_ledger"
+                " WHERE classification='examined' AND file_path NOT IN"
+                " (SELECT file_path FROM scope_gaps WHERE kind='absent'))",
+            )
+            or {}
+        ).get("n")
+        or 0
+    )
+
+
+def ledger_digest(conn: Any) -> str:
+    """§3.2's `ledger_digest`: the ledger the counts were taken against."""
+
+    return set_digest(
+        [
+            f"{r['file_path']}{NUL}{r['classification'] or ''}"
+            for r in rows(conn, "SELECT file_path, classification FROM file_ledger")
+        ]
+    )
+
+
+def tree_paths(workspace: Path, revision: str) -> list[str] | None:
+    """The paths the **tree** at `revision` carries, or None when git cannot say.
+
+    `git ls-files` reads the index, which moves under an unrelated `git add`
+    and does not describe the revision at all (§3.3).  `-z` because git quotes
+    any path it cannot print literally, and a quoted path is a different string
+    from the one the ledger stores.
+    """
+
+    if not revision or not workspace.is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), "ls-tree", "-r", "--name-only", "-z", revision],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return [path for path in result.stdout.split(NUL) if path]
+
+
+#: Why a reading does not stand, in the words the projection prints.  Named
+#: constants because §8.6 makes an omitted reason a red condition: a sentence
+#: that says only "not measured" tells a reader nothing to repair.
+WHY_NONE_RECORDED = "no reconciliation has been recorded at that revision"
+WHY_NONE_AT_ALL = (
+    "no reconciliation has been recorded, at that revision or at any other"
+)
+WHY_LEDGER_MOVED = (
+    "the file ledger has changed since the reconciliation recorded there was taken"
+)
+WHY_OTHER_TREE = "the reconciliation recorded there was taken over a different tree"
+WHY_NO_REVISION = "the store records no checked revision to reconcile against"
+WHY_NO_TREE = (
+    "the bound workspace cannot enumerate the tree at that revision, so the"
+    " reconciliation could not be re-derived"
+)
+
+
+@dataclass(frozen=True)
+class ReconciliationStanding:
+    """Whether the store is *reconciled at* the revision it stamps, and why not.
+
+    `record` is the standing reconciliation (§3.3: the most recent qualifying
+    row) or None.  `why` is None exactly when `record` is not, so a caller can
+    never read a reason for a reading that stands, or a reading from a store
+    that has none.
+    """
+
+    sha: str
+    record: dict[str, Any] | None
+    latest_sha: str | None
+    why: str | None
+
+    @property
+    def stands(self) -> bool:
+        return self.record is not None
+
+    @property
+    def tracked_paths(self) -> int | None:
+        """|tracked| at the reconciled revision, or None — never 0 for absent."""
+
+        return None if self.record is None else int(self.record["tracked_paths"] or 0)
+
+    @property
+    def unledgered(self) -> int | None:
+        return None if self.record is None else int(self.record["unledgered"] or 0)
+
+    @property
+    def obligation_paths(self) -> int | None:
+        """§1.2's D2: tracked paths minus those an exempting classification frees."""
+
+        if self.record is None:
+            return None
+        return int(self.record["tracked_paths"] or 0) - int(self.record["exempt"] or 0)
+
+
+def reconciliation_standing(conn: Any, storage: Path) -> ReconciliationStanding:
+    """§3.3, as far as a read-only reader of the store can evaluate it.
+
+    Conditions 1 and 3 collapse here: the revision the projection stamps *is*
+    `git_state.last_checked_sha`, so a row's `detected_sha` is compared against
+    the revision the pages are stamped with.  Condition 5 — the ledger digest
+    re-derived now — is pure SQL and is always checked; it is the ordinary
+    invalidation, because every later `add_files_to_scope` or classification
+    change moves it.  Condition 4 is checked whenever the bound workspace can
+    enumerate the tree at that revision.
+
+    **Where git cannot answer**, conditions 1 and 4 are unevaluated and the
+    reconciliation does not stand: §3.3 is a conjunction, and a reading nothing
+    can re-derive is not one.  An earlier draft let the row's own
+    `ledger_digest` carry it, which published a fraction over a path set no
+    reader of this projection could check (F4/codex).  `GATE SR1` owns whether
+    a written reconciliation was correct; this reader owns whether one is being
+    read at the revision it claims, against the tree it claims.
+    """
+
+    sha = str((row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get("last_checked_sha") or "")
+    if not table_exists(conn, "scope_reconciliations"):
+        return ReconciliationStanding(sha, None, None, WHY_NONE_AT_ALL)
+    latest = row(
+        conn, "SELECT detected_sha FROM scope_reconciliations ORDER BY id DESC LIMIT 1"
+    )
+    latest_sha = str(latest["detected_sha"]) if latest else None
+    if not sha:
+        return ReconciliationStanding(sha, None, latest_sha, WHY_NO_REVISION)
+    at_sha = rows(
+        conn,
+        "SELECT id, detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,"
+        " unledgered, absent, exempt, detected_at FROM scope_reconciliations"
+        " WHERE detected_sha = ? ORDER BY id DESC",
+        (sha,),
+    )
+    if not at_sha:
+        return ReconciliationStanding(
+            sha, None, latest_sha, WHY_NONE_AT_ALL if latest_sha is None else WHY_NONE_RECORDED
+        )
+    current_ledger = ledger_digest(conn)
+    tracked = tree_paths(resolve_workspace(storage), sha)
+    if tracked is None:
+        # §3.3 is a conjunction of five conditions, and conditions 1 and 4 both
+        # need the tree at R. Where no workspace answers, neither was evaluated,
+        # so the store is not reconciled at R and has no denominator -- the same
+        # answer §3.4 gives every other reading that does not stand. Reporting
+        # the recorded counts instead would publish a fraction of a set nobody
+        # here inventoried, which is the silent failure this section exists to
+        # remove (F4/codex, VP4(e)).
+        return ReconciliationStanding(sha, None, latest_sha, WHY_NO_TREE)
+    expected_tree = tracked_path_digest(tracked)
+    for candidate in at_sha:
+        if str(candidate["ledger_digest"]) != current_ledger:
+            continue
+        if str(candidate["tree_digest"]) != expected_tree:
+            continue
+        return ReconciliationStanding(sha, candidate, latest_sha, None)
+    # No qualifying row. Name which condition failed: a store whose ledger moved
+    # under the reading and one whose revision was re-pointed both run
+    # `detect_changes`, but a reader told only "unreconciled" cannot tell one
+    # lost reading from a reading never taken.
+    if any(str(c["ledger_digest"]) == current_ledger for c in at_sha):
+        return ReconciliationStanding(sha, None, latest_sha, WHY_OTHER_TREE)
+    return ReconciliationStanding(sha, None, latest_sha, WHY_LEDGER_MOVED)
+
+
+# ---------------------------------------------------------------------------
+# Carried obligations (spec.md §5.2, §5.6)
+#
+# Lens membership for a carried record, defined once and read by the renderer
+# and by the census below.  The partition is over *decidedness*, not over the
+# archived resolution state: a carried record is an obligation this store has
+# either discharged or not, and the archived store's own verdict is history
+# that travelled with it.
+# ---------------------------------------------------------------------------
+CARRIED_UNDECIDED = "undecided"
+
+CARRIED_LENS_PAGES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("Unresolved", "findings.md", (CARRIED_UNDECIDED,)),
+    (
+        "History",
+        "resolved-findings.md",
+        ("successor-finding", "ruled-out", "repaired", "archived-terminal"),
+    ),
+)
+
+CARRIED_PAGE_BY_OUTCOME: dict[str, str] = {
+    outcome: page for _lens, page, outcomes in CARRIED_LENS_PAGES for outcome in outcomes
+}
+
+CARRIED_HEADING = "Carried obligations"
+
+
+def carried_page(outcome: str | None) -> str | None:
+    """The page a carried record with this outcome renders on, or None."""
+
+    return CARRIED_PAGE_BY_OUTCOME.get(str(outcome or CARRIED_UNDECIDED))
+
+
+def _carried_token(archived_store_id: str, archived_finding_id: str) -> str:
+    """One digest per carried record, over the key the store is unique by.
+
+    `carried_findings` is `UNIQUE (archived_store_id, archived_finding_id)`, and
+    §5.7 refuses an unqualified id for exactly that reason: two archives can
+    carry the same finding id.  The marker is qualified the same way, so two
+    archives' records cannot collide into one marker.
+    """
+
+    return hashlib.sha256(
+        f"{archived_store_id}{NUL}{archived_finding_id}".encode()
+    ).hexdigest()
+
+
+def carried_marker(archived_store_id: str, archived_finding_id: str) -> str:
+    """The durable marker for one carried obligation (§5.6)."""
+
+    return f"<!-- amanuensis:carried:{_carried_token(archived_store_id, archived_finding_id)} -->"
+
+
+def carried_anchor(archived_store_id: str, archived_finding_id: str) -> str:
+    """A collision-resistant anchor for one carried record."""
+
+    return f"cf-{_carried_token(archived_store_id, archived_finding_id)[:10]}"
+
+
+def carried_records(conn: Any) -> list[dict[str, Any]]:
+    """Every carried obligation, with its outcome or the word `undecided`."""
+
+    if not table_exists(conn, "carried_findings"):
+        return []
+    return rows(
+        conn,
+        "SELECT c.carried_id, c.archived_finding_id, c.archived_store_id,"
+        " c.archived_anchor_sha, c.subsystem_id, c.severity, c.symptom, c.root_cause,"
+        " c.archived_resolution, c.primary_files,"
+        " COALESCE(o.outcome, ?) AS outcome, o.successor_id, o.repaired_sha,"
+        " o.rationale, o.ref_sha AS outcome_ref_sha"
+        " FROM carried_findings c"
+        " LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id"
+        " ORDER BY CASE c.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1"
+        "   WHEN 'MEDIUM' THEN 2 ELSE 3 END, c.archived_store_id, c.archived_finding_id",
+        (CARRIED_UNDECIDED,),
+    )
+
+
+def carry_was_run(conn: Any) -> bool:
+    """Whether any carry ran at all, including a reasoned empty one (§5.2).
+
+    "Nothing was carried" and "nobody ran a carry" are different facts, and the
+    overview must not report the first when it means the second: the row is
+    published when a carry is on record, and omitted when none is.
+    """
+
+    if table_exists(conn, "carry_runs") and int(
+        (row(conn, "SELECT COUNT(*) AS n FROM carry_runs") or {"n": 0})["n"] or 0
+    ):
+        return True
+    return bool(carried_records(conn))
 
 
 def ledger_stale_anchor(subsystem_id: str, file_path: str) -> str:
@@ -258,6 +688,8 @@ class ProjectionVerifier:
             mismatches.extend(self._finding_partition_census(conn, projection))
             mismatches.extend(self._ledger_stale_census(conn, projection))
             mismatches.extend(self._locus_index_census(conn, projection))
+            mismatches.extend(self._carried_record_census(conn, projection))
+            mismatches.extend(self._coverage_measurement_census(conn, projection))
         finally:
             conn.close()
         # The Markdown and HTML views must each carry authoritative markers.
@@ -786,6 +1218,206 @@ class ProjectionVerifier:
                             "object_type": "locus-index-symbol",
                             "object_id": f"{pair[0]} in {pair[1]}",
                             "detail": "the cited symbol is absent from the index",
+                        }
+                    )
+        return mismatches
+
+    def _carried_record_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Every carried obligation, recorded once, on the lens its outcome selects.
+
+        A carried record is an obligation this store inherited and has either
+        decided or not.  The census is the finding partition's shape applied to
+        the second population `readback.py` had never seen (§5.6, C39):
+
+        * every `carried_finding_outcome` value, and the word `undecided`, is
+          claimed by exactly one lens — an outcome with no lens is a partition
+          hole, not a rendering detail;
+        * each carried record carries exactly one marker in the Markdown corpus
+          and exactly one in the HTML corpus, both on the page its outcome
+          selects.  One healthy format cannot mask drift in its companion.
+
+        A store that carried nothing has no denominator here and reports
+        nothing, which is the honest reading: `carry_runs` is where "nobody ran
+        a carry" is told apart from "a carry found nothing" (§5.2).
+        """
+
+        mismatches: list[dict[str, str]] = []
+        claimed: dict[str, list[str]] = {}
+        for lens, _page, outcomes in CARRIED_LENS_PAGES:
+            for outcome in outcomes:
+                claimed.setdefault(outcome, []).append(lens)
+        for outcome in (*values_of("carried_finding_outcome"), CARRIED_UNDECIDED):
+            lenses = claimed.get(outcome, [])
+            if len(lenses) != 1:
+                named = ", ".join(lenses) or "no lens"
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "carried-partition-vocabulary",
+                        "object_id": outcome,
+                        "detail": (
+                            f"the carried outcome is claimed by {named}"
+                            f" ({len(lenses)} lenses), not by exactly one"
+                        ),
+                    }
+                )
+        for outcome in claimed:
+            if outcome != CARRIED_UNDECIDED and outcome not in values_of(
+                "carried_finding_outcome"
+            ):
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "carried-partition-vocabulary",
+                        "object_id": outcome,
+                        "detail": "a lens claims an outcome the vocabulary does not carry",
+                    }
+                )
+
+        records = carried_records(conn)
+        if not records:
+            return mismatches
+        corpora = {
+            suffix: "\n".join(
+                body for rel, body in projection.items() if Path(rel).suffix == suffix
+            )
+            for suffix in (".md", ".html")
+        }
+        for record in records:
+            store_id = str(record["archived_store_id"])
+            archived_id = str(record["archived_finding_id"])
+            marker = carried_marker(store_id, archived_id)
+            expected = carried_page(str(record["outcome"]))
+            if expected is None:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "carried-record",
+                        "object_id": f"{store_id}:{archived_id}",
+                        "detail": (
+                            f"the recorded outcome {record['outcome']!r} selects no lens"
+                        ),
+                    }
+                )
+                continue
+            for suffix, label in ((".md", "markdown"), (".html", "html")):
+                page = str(Path(expected).with_suffix(suffix))
+                page_count = projection.get(page, "").count(marker)
+                corpus_count = corpora[suffix].count(marker)
+                if page_count != 1 or corpus_count != 1:
+                    mismatches.append(
+                        {
+                            "axis": "state",
+                            "object_type": (
+                                "carried-record" if label == "markdown" else "carried-record-html"
+                            ),
+                            "object_id": f"{store_id}:{archived_id}",
+                            "detail": (
+                                f"outcome {record['outcome']} selects {page}, which carries"
+                                f" the {label} record {page_count} time(s); the {label}"
+                                f" corpus carries it {corpus_count} time(s)"
+                            ),
+                        }
+                    )
+        return mismatches
+
+    def _coverage_measurement_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Each published coverage row, against the store's own standing (§3.4).
+
+        The coverage axis already asks whether a planned page and a recorded
+        link are present.  This asks the same question of a *reading*: a
+        `not measured` row is present and honest, and is never a satisfied
+        coverage claim.  Both directions turn it red, because both are silent
+        failures:
+
+        * an **unreconciled** store whose overview publishes a number has
+          published a fraction of a set nobody inventoried (§1.4);
+        * a **reconciled** store whose overview withholds the reading it has,
+          or publishes one the record contradicts, is no more honest — the
+          numbers are checked against the standing reconciliation here, read
+          from the database, not from the page that printed them.
+
+        No other axis is touched: the state axis still owns markers and the
+        content axis still owns bytes.
+        """
+
+        mismatches: list[dict[str, str]] = []
+        standing = reconciliation_standing(conn, self.storage)
+        # The exact cell the record implies, not a fragment of it. `of 5` is a
+        # substring of `999 of 5`, so a numerator nobody recomputed used to read
+        # back green (F7/codex); the renderer's own two out-of-band sentences
+        # are spelled out here rather than matched loosely.
+        obligation = standing.obligation_paths
+        files_read: str | None
+        if obligation is None:
+            files_read = None
+        elif obligation:
+            files_read = f"{examined_tracked(conn)} of {obligation}"
+        else:
+            files_read = NO_OBLIGATION_SENTENCE
+        expected: dict[str, str | None] = {
+            COVERAGE_ROW_UNLEDGERED: (
+                None if standing.unledgered is None else str(standing.unledgered)
+            ),
+            COVERAGE_ROW_FILES_READ: files_read,
+        }
+        for rel in (OVERVIEW_PAGE_MD, OVERVIEW_PAGE_HTML):
+            text = projection.get(rel)
+            if text is None:
+                continue  # coverage already owns the missing-page diagnostic
+            for label, wanted in expected.items():
+                cell = _metric_cell(text, label, Path(rel).suffix.lower())
+                if cell is None:
+                    mismatches.append(
+                        {
+                            "axis": "coverage",
+                            "object_type": "coverage-measurement",
+                            "object_id": f"{rel}:{label}",
+                            "detail": "the overview publishes no such row",
+                        }
+                    )
+                    continue
+                if UNMEASURED in cell:
+                    if standing.stands:
+                        mismatches.append(
+                            {
+                                "axis": "coverage",
+                                "object_type": "coverage-measurement",
+                                "object_id": f"{rel}:{label}",
+                                "detail": (
+                                    f"the store is reconciled at {standing.sha[:12]} and the"
+                                    " row withholds the reading the record carries"
+                                ),
+                            }
+                        )
+                    continue
+                if not standing.stands:
+                    mismatches.append(
+                        {
+                            "axis": "coverage",
+                            "object_type": "coverage-measurement",
+                            "object_id": f"{rel}:{label}",
+                            "detail": (
+                                "the store is unreconciled and the row publishes a reading"
+                                f" anyway: {cell!r} ({standing.why})"
+                            ),
+                        }
+                    )
+                    continue
+                if wanted is not None and cell.strip() != wanted:
+                    mismatches.append(
+                        {
+                            "axis": "coverage",
+                            "object_type": "coverage-measurement",
+                            "object_id": f"{rel}:{label}",
+                            "detail": (
+                                f"the row reads {cell!r}; the standing reconciliation at"
+                                f" {standing.sha[:12]} says {wanted!r}"
+                            ),
                         }
                     )
         return mismatches

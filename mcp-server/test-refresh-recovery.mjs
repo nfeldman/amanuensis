@@ -10,6 +10,7 @@ import { openDatabase } from "./dist/db.js";
 import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { refreshTools } from "./dist/tools/refresh.js";
 
@@ -66,8 +67,37 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
     );
     return execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspace, encoding: "utf8" }).trim();
   }
-  const baseSha = commit("before", "src/core.ts");
-  const headSha = commit("after", changeTrackedFile ? "src/core.ts" : "docs/note.md");
+  function remove(filePath) {
+    execFileSync("git", ["rm", "--quiet", filePath], { cwd: workspace });
+    execFileSync(
+      "git",
+      [
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "user.name=amanuensis-refresh-test",
+        "-c",
+        "user.email=test@localhost",
+        "commit",
+        "--quiet",
+        "--no-verify",
+        "-m",
+        `remove ${filePath}`,
+      ],
+      { cwd: workspace },
+    );
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspace, encoding: "utf8" }).trim();
+  }
+  const coreSha = commit("before", "src/core.ts");
+  // When the head commit must move something the ledger does not record, it
+  // *removes* a path the ledger never mentioned rather than adding one. §3.3a
+  // refuses to publish coverage over a tree carrying a path nobody assigned or
+  // excluded, so a fixture whose HEAD tree still held that file could never
+  // reach the run's final projection — while a deletion leaves the range
+  // non-empty, leaves the A3 unowned-drift probe with nothing in the ledger to
+  // find, and leaves HEAD's tree exactly the set the ledger covers.
+  const baseSha = changeTrackedFile ? coreSha : commit("note", "docs/note.md");
+  const headSha = changeTrackedFile ? commit("after", "src/core.ts") : remove("docs/note.md");
   const project = resolveProject(workspace, {
     selectionSource: `test-refresh-${label}`,
     serverVersion: "test",
@@ -80,7 +110,7 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
   const tools = new Map(
-    [...projectTools, ...evidenceTools, ...claimTools, ...refreshTools].map((tool) => [
+    [...projectTools, ...evidenceTools, ...claimTools, ...refreshTools, ...gitTools].map((tool) => [
       tool.name,
       tool,
     ]),
@@ -116,6 +146,13 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
     ref_sha: baseSha,
     evidence_ids: [initialEvidence.id],
   });
+  // §3.3: the run's final step publishes, and publication is refused over a
+  // store with no standing reconciliation at the revision it is about to stamp.
+  // Run once here, after the ledger is final, through the same tool a survey
+  // uses.
+  call("set_git_state", { canonical_branch: "main", onboarding_sha: baseSha });
+  call("detect_changes", { current_sha: headSha });
+
   const runId = `refresh-${label}`;
   const planArgs = {
     run_id: runId,

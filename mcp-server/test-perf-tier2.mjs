@@ -22,6 +22,7 @@ import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 const allTools = new Map(
   [
@@ -35,6 +36,7 @@ const allTools = new Map(
     ...artifactTools,
     ...evidenceTools,
     ...claimTools,
+    ...vocabularyTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -75,13 +77,20 @@ const sess = call("start_session", { intent: "perf" }, ctx);
 ctx.sessionId = sess.session_id;
 
 // Seed 40 subsystems at concerns depth and 50 concerns.
+const subsystemEvidence = [];
 for (let i = 0; i < 40; i++) {
   const id = `B-${String(i).padStart(2, "0")}`;
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
   call("add_files_to_scope", { subsystem_id: id, ref_sha: "perf-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "perf fixture" }] }, ctx);
   const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
+  // §2.2: set_disposition names the readings it rests on, so the measured call
+  // below has one to name.
+  subsystemEvidence.push(evidenceId);
   call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
+  // §4.4: the structural pass discharges its vocabulary obligation or declares
+  // the subsystem has none. A fixture subsystem coins no word of its own.
+  call("decline_domain_vocabulary", { subsystem_id: id, reason: "perf fixture: its one file coins no term of its own", ref_sha: seedSha }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -103,6 +112,7 @@ measure("set_disposition (gate: status + concern lookup + upsert)", () => {
       concern_code: `CC-${j}`,
       classification: "ruled-out",
       evidence: "x",
+      evidence_ids: [subsystemEvidence[i]],
       evidence_quality: "code-verified",
       rationale: "r",
       ref_sha: seedSha,
@@ -171,6 +181,10 @@ console.log("\nInterpretation:");
 console.log("  - Tier 2 adds a PK status lookup per gated write (~1-5µs).");
 console.log("  - Compared to the write itself (INSERT + indexes, ~30-100µs),");
 console.log("    the gate overhead is ≤10% on the hot path.");
-console.log("  - No network and no lock. The first durable write at a revision");
-console.log("    resolves it with one `git rev-parse`; that resolution is memoized");
-console.log("    per workspace, so the steady state above spawns no subprocess.");
+console.log("  - No network and no lock, but every durable write at a revision");
+console.log("    resolves it live: nothing is memoized, because revalidating a");
+console.log("    cached answer costs the same subprocess (helpers.ts:110-125).");
+console.log("    set_disposition pays two — one `git rev-parse` for its own");
+console.log("    ref_sha and one `git cat-file --batch-check` for every evidence");
+console.log("    revision at once — which is why it reads in ms, not µs, and why");
+console.log("    test-perf-ceilings.mjs reads it against a subprocess ceiling.");

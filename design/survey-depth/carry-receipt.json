@@ -1,0 +1,220 @@
+{
+  "contract": "amanuensis-survey-depth/carry-receipt/v1",
+  "packet": "P8",
+  "recorded_by": "dev/record-carry-receipt.mjs",
+  "note": "The stable core of this document — contract, archive, carry_run, count, records — is what `--check` compares and what GATE CR1 reads. `read_back` measures the run that wrote the file and moves as later packets record outcomes, so it is deliberately outside both.",
+  "archive": {
+    "path": "~/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db",
+    "opened": "file:<path>?immutable=1",
+    "archived_store_id": "store-legacy-36f2623f4d9afe92",
+    "archived_store_id_form": "legacy (§5.3)",
+    "archived_anchor": "61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27",
+    "finding_count": 22,
+    "note": "Read from the archived store, not from old-findings-7c1c1a9.json: the export carries no store identity, and §5.3's identity is the only field that separates one archive from another."
+  },
+  "carry_run": {
+    "carry_run_id": 1,
+    "source_kind": "store",
+    "source_path": "/Users/nfeldman/.claude/automations/amanuensis-clean-slate/archive/store-7c1c1a9/memory.db",
+    "archived_store_id": "store-legacy-36f2623f4d9afe92",
+    "archived_anchor": "61bc6b5c89f7c6b5091f9cb5df5e68cd969a3f27",
+    "reason": "the 2026-09-14 clean-slate rebuild discarded a conspectus holding 22 findings, six of them open and neither re-found nor ruled out; spec.md 5.8 carries all 22 from the archived store at 7c1c1a9, opened immutable, because the export carries no store identity",
+    "expected_count": 22,
+    "imported_count": 22,
+    "ran_at": "2026-09-15 03:34:37"
+  },
+  "count": 22,
+  "read_back": {
+    "tool": "list_carried_findings",
+    "process": "a third process: the carry's server exited before this one opened the store",
+    "project_key": "github.com/nfeldman/amanuensis",
+    "db_exists": true,
+    "subsystems_at_read_back": 0,
+    "page_limit": 10,
+    "pages": [
+      {
+        "returned": 10,
+        "envelope_bytes": 8000,
+        "next_cursor": "10"
+      },
+      {
+        "returned": 9,
+        "envelope_bytes": 7536,
+        "next_cursor": "19"
+      },
+      {
+        "returned": 3,
+        "envelope_bytes": 2390,
+        "next_cursor": null
+      }
+    ],
+    "listed": 22,
+    "wire_budget_bytes": 8192,
+    "largest_envelope_bytes": 8000,
+    "within_budget": true
+  },
+  "records": [
+    {
+      "archived_finding_id": "B01-1",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-01",
+      "archived_severity": "LOW",
+      "carried_id": 1
+    },
+    {
+      "archived_finding_id": "B02-1",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-02",
+      "archived_severity": "HIGH",
+      "carried_id": 2,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B02-2",
+      "archived_resolution": "fixed-pending-verification",
+      "archived_subsystem_id": "B-02",
+      "archived_severity": "MEDIUM",
+      "carried_id": 3
+    },
+    {
+      "archived_finding_id": "B02-3",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-02",
+      "archived_severity": "MEDIUM",
+      "carried_id": 4
+    },
+    {
+      "archived_finding_id": "B02-4",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-02",
+      "archived_severity": "HIGH",
+      "carried_id": 5
+    },
+    {
+      "archived_finding_id": "B03-1",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "HIGH",
+      "carried_id": 6,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B03-2",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "HIGH",
+      "carried_id": 7,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B03-3",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "MEDIUM",
+      "carried_id": 8,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B03-4",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "LOW",
+      "carried_id": 9,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B03-5",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "HIGH",
+      "carried_id": 10
+    },
+    {
+      "archived_finding_id": "B03-6",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "MEDIUM",
+      "carried_id": 11
+    },
+    {
+      "archived_finding_id": "B03-7",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "MEDIUM",
+      "carried_id": 12
+    },
+    {
+      "archived_finding_id": "B03-8",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-03",
+      "archived_severity": "MEDIUM",
+      "carried_id": 13
+    },
+    {
+      "archived_finding_id": "B04-1",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-04",
+      "archived_severity": "MEDIUM",
+      "carried_id": 14,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B04-2",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-04",
+      "archived_severity": "HIGH",
+      "carried_id": 15
+    },
+    {
+      "archived_finding_id": "B04-3",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-04",
+      "archived_severity": "HIGH",
+      "carried_id": 16
+    },
+    {
+      "archived_finding_id": "B04-4",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-04",
+      "archived_severity": "MEDIUM",
+      "carried_id": 17
+    },
+    {
+      "archived_finding_id": "B04-5",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-04",
+      "archived_severity": "MEDIUM",
+      "carried_id": 18
+    },
+    {
+      "archived_finding_id": "B05-1",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-05",
+      "archived_severity": "HIGH",
+      "carried_id": 19,
+      "pre_recorded_outcome": "archived-terminal"
+    },
+    {
+      "archived_finding_id": "B05-2",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-05",
+      "archived_severity": "MEDIUM",
+      "carried_id": 20
+    },
+    {
+      "archived_finding_id": "B07-1",
+      "archived_resolution": "open",
+      "archived_subsystem_id": "B-07",
+      "archived_severity": "LOW",
+      "carried_id": 21
+    },
+    {
+      "archived_finding_id": "B08-1",
+      "archived_resolution": "verified-fixed",
+      "archived_subsystem_id": "B-08",
+      "archived_severity": "MEDIUM",
+      "carried_id": 22,
+      "pre_recorded_outcome": "archived-terminal"
+    }
+  ]
+}

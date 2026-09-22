@@ -207,6 +207,14 @@ run("add_claim", {
   ref_sha: claimSha1,
   evidence_ids: [smokeEvidence.id],
 }, (r) => r.ok);
+// §4.4: the structural pass discharges its vocabulary obligation before the
+// advance — a term whose anchor resolves, or the declaration that there is
+// none. This one has a term, and the anchor names a path the tree at that
+// revision really carries.
+run("define_term", {
+  term: "claim-fixture", gloss: "the file the smoke fixture rewrites to mint a revision",
+  subsystem_id: "B-01", first_seen: `claim-fixture.txt:claim-fixture@${claimSha1}`,
+}, (r) => r.ok && r.anchored === true);
 run("update_subsystem_status", { id: "B-01", status: "structural" }, (r) => r.previous_status === "scoping");
 run("register_artifact", {
   path: "B-01-survey.md", kind: "subsystem-survey", subsystem_id: "B-01",
@@ -219,6 +227,7 @@ run("set_disposition", {
   concern_code: "CC-1",
   classification: "ruled-out",
   evidence: "scheduler/main.ts:runJob@deadbeef",
+  evidence_ids: [smokeEvidence.id],
   evidence_quality: "code-verified",
   linchpin_dependent: false,
   rationale: "no cache in this subsystem",
@@ -263,7 +272,11 @@ run("resolve_field_note", { id: fn.id, follow_up: "dismissed" }, (r) => r.ok);
 run("define_term", { term: "runJob", gloss: "the scheduler's per-job entry point", subsystem_id: "B-01" }, (r) => r.ok && r.action === "inserted");
 run("define_term", { term: "runJob", gloss: "refined gloss", subsystem_id: "B-01" }, (r) => r.action === "updated");
 run("lookup_term", { term: "runJob" }, (r) => r !== null && r.gloss === "refined gloss");
-run("list_vocabulary", { subsystem_id: "B-01" }, (r) => r.length === 1);
+// Both terms scoped to B-01: the one the structural pass anchored and the one
+// defined here. Scoping is per (term, subsystem) and the listing reads the
+// scope set, so a term shared with another subsystem still appears here.
+run("list_vocabulary", { subsystem_id: "B-01" }, (r) =>
+  r.length === 2 && r.every((e) => e.subsystem_id === "B-01"));
 
 // 10. Xrefs
 // §9.2: context is required and must carry a citation token whose revision
@@ -404,7 +417,16 @@ run("verify_finding_fix", {
   evidence_id: fixEvidence.id,
   verification_note: "smoke repair verification",
 }, (r) => r.ok && r.resolution_state === "verified-fixed");
-run("get_disposition_evidence", { subsystem_id: "B-01", concern_code: "CC-1" }, (r) => r.length === 1 && r[0].role === "supports");
+// Two attachments, not one: set_disposition now writes the reading it was
+// given (§2.2) and `attach_evidence_to_disposition` added the second above.
+run(
+  "get_disposition_evidence",
+  { subsystem_id: "B-01", concern_code: "CC-1" },
+  (r) =>
+    r.length === 2 &&
+    r.every((row) => row.role === "supports") &&
+    [smokeEvidence.id, ev1.id].every((id) => r.some((row) => row.id === id)),
+);
 run("get_finding_evidence", { finding_id: "B01-1" }, (r) => r.length === 2);
 // Three rows on this path now: the disposition citation, the fix
 // verification, and Phase 2's structural-claim evidence.

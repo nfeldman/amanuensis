@@ -92,6 +92,13 @@ drift, so they get refresh priority. Re-examine the file, then call
 file, so re-reading one file never vouches for the rest of its
 subsystem.
 
+This is the reconciliation the rest of the system reads. A subsystem
+cannot reach `mapped`, and the projection cannot be published, while
+*"the store has not been reconciled against the repository at"* the
+revision in question; publication is refused again while the standing
+reconciliation reports *"tracked path(s) with no ledger row"*. Report
+the unledgered list here — the coordinator assigns it.
+
 Check `get_dashboard().staleness_measured` before repeating any
 freshness claim. When it is false, nothing has been scoped and the
 absence of stale files is absence of measurement, not health.

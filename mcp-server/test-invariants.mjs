@@ -20,8 +20,10 @@ import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
 import { findingTools } from "./dist/tools/findings.js";
+import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 let passed = 0,
   failed = 0;
@@ -57,6 +59,7 @@ const allTools = new Map(
   [
     ...projectTools,
     ...subsystemTools,
+    ...vocabularyTools,
     ...concernTools,
     ...dispositionTools,
     ...findingTools,
@@ -65,6 +68,7 @@ const allTools = new Map(
     ...claimTools,
     ...fileTools,
     ...artifactTools,
+    ...gitTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -116,6 +120,23 @@ function headSha(ctx) {
   ).trim();
 }
 
+// §2.2: a disposition names the readings it rests on, and the server attaches
+// them as it writes it. Every fixture that records a disposition records one
+// first, through the same write path a survey would use.
+function fixtureEvidence(ctx, filePath = "fixture.ts") {
+  return call(
+    "add_evidence",
+    {
+      file_path: filePath,
+      symbol: "fixture",
+      line_range: "1-4",
+      ref_sha: headSha(ctx),
+      kind: "code-verified",
+    },
+    ctx,
+  ).id;
+}
+
 // Phase 2's own deliverable: advancing to `structural` requires at least one
 // current claim whose claim_key begins `<sid>/`. Seeded through add_claim so
 // the fixture exercises the same write path a survey would.
@@ -150,6 +171,27 @@ function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
   );
 }
 
+// §4.4's own deliverable, checked at the same advance: the structural pass
+// either records a domain term whose anchor resolves or declares the subsystem
+// carries none. Discharge or decline, never a floor — a fixture subsystem coins
+// no word of its own, so it says so, which is the ordinary answer rather than a
+// gap. Idempotent: the declination is append-only and one is enough.
+function seedVocabularyDischarge(ctx, id) {
+  const held = ctx.db
+    .prepare("SELECT COUNT(*) AS n FROM vocabulary_declinations WHERE subsystem_id = ?")
+    .get(id);
+  if (held.n > 0) return;
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: id,
+      reason: "fixture subsystem: its seeded files coin no term of their own",
+      ref_sha: headSha(ctx),
+    },
+    ctx,
+  );
+}
+
 // Phase 4's own deliverable: every current `<sid>/` claim needs a recorded
 // challenge outcome before the subsystem may advance to `mapped`. A survived
 // outcome is the ordinary result and the one a fixture climb produces.
@@ -174,6 +216,19 @@ function seedChallengeOutcomes(ctx, id) {
       ctx,
     );
   }
+}
+
+// §3.3's own deliverable: `mapped` is the status that licenses the phrase
+// *fully surveyed*, so the whole store must have been reconciled against the
+// repository's tree at HEAD before any subsystem reaches it. Driven through the
+// same two tools a survey uses, and last — a reconciliation is invalidated by
+// the next ledger write, so it is taken once the ledger for this climb is final.
+function reconcileStore(ctx) {
+  const sha = headSha(ctx);
+  if (!ctx.db.prepare("SELECT 1 FROM git_state WHERE repo_id='default'").get()) {
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: sha }, ctx);
+  }
+  call("detect_changes", { current_sha: sha }, ctx);
 }
 
 // Convenience: advance a subsystem through the survey to a target depth,
@@ -209,6 +264,8 @@ function advanceTo(ctx, id, status) {
       );
       // Structural prerequisite: ≥1 current claim keyed `<sid>/`.
       seedStructuralClaim(ctx, id);
+      // …and the vocabulary obligation the same advance now carries.
+      seedVocabularyDischarge(ctx, id);
     }
     if (order[i] === "concerns") {
       // Structural prerequisite: subsystem-survey artifact registered.
@@ -236,6 +293,7 @@ function advanceTo(ctx, id, status) {
             concern_code: "FIXTURE-1",
             classification: "ruled-out",
             evidence: `src/${id}/index.ts:fixture@fixture-ref`,
+            evidence_ids: [fixtureEvidence(ctx, `src/${id}/index.ts`)],
             evidence_quality: "code-verified",
             linchpin_dependent: false,
             rationale: "fixture disposition for advanceTo",
@@ -251,6 +309,7 @@ function advanceTo(ctx, id, status) {
       // recorded challenge outcome before the subsystem may publish its
       // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
       seedChallengeOutcomes(ctx, id);
+      reconcileStore(ctx);
     }
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
@@ -447,6 +506,7 @@ t("set_disposition positive path works at concerns status", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "x",
+        evidence_ids: [fixtureEvidence(ctx)],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -612,6 +672,7 @@ t("reset_subsystem clears dependents and allows regression", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "x",
+        evidence_ids: [fixtureEvidence(ctx)],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -642,6 +703,14 @@ t("reset_subsystem clears dependents and allows regression", () => {
     assert(r.deleted.dispositions === 1);
     assert(r.deleted.findings === 1);
     assert(r.new_status === "structural");
+    // §2.2 gave every disposition an attachment, so the cascade the schema
+    // declares is now load-bearing: an orphaned `disposition_evidence` row
+    // would make the next disposition at the same (subsystem, concern) look
+    // pre-attached to a reading the reset discarded.
+    const orphans = ctx.db
+      .prepare("SELECT COUNT(*) AS n FROM disposition_evidence WHERE subsystem_id = 'B-01'")
+      .get().n;
+    assert(orphans === 0, `reset left ${orphans} attachment(s) behind for B-01`);
     // Subsequent set_disposition should be rejected because B-01 is now structural.
     assertThrows(
       () =>
@@ -830,6 +899,7 @@ t("sequence of gated writes after session/advance works end-to-end", () => {
         concern_code: "CC-1",
         classification: "ruled-out",
         evidence: "a.ts:f@abc",
+        evidence_ids: [ev.id],
         evidence_quality: "code-verified",
         rationale: "r",
         ref_sha: headSha(ctx),
@@ -889,6 +959,7 @@ t("advance to 'structural' without a current <sid>/ claim is rejected", () => {
       "claim_key beginning 'B-01/'",
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assert(
       readStatus(ctx, "B-01") === "structural",
@@ -935,6 +1006,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "concerns" }, ctx),
@@ -957,6 +1029,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -1001,6 +1074,7 @@ t("phase prerequisites: happy path passes all gates", () => {
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
+    seedVocabularyDischarge(ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
     call(
       "register_artifact",
@@ -1016,6 +1090,7 @@ t("phase prerequisites: happy path passes all gates", () => {
         concern_code: "CC-gate",
         classification: "ruled-out",
         evidence: "a.ts:f@r",
+        evidence_ids: [fixtureEvidence(ctx, "a.ts")],
         evidence_quality: "code-verified",
         linchpin_dependent: false,
         rationale: "test",
@@ -1025,9 +1100,11 @@ t("phase prerequisites: happy path passes all gates", () => {
       ctx,
     );
     call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
-    // Phase 4's prerequisite: the structural account is challenged before it
-    // is published as mapped (§9.1).
+    // Phase 4's prerequisites: the structural account is challenged before it
+    // is published as mapped (§9.1), and the whole store has been reconciled
+    // against the repository's tree at HEAD (§3.3).
     seedChallengeOutcomes(ctx, "B-01");
+    reconcileStore(ctx);
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
   } finally {

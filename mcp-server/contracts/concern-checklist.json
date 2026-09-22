@@ -1,0 +1,110 @@
+{
+  "contract": "amanuensis/concern-checklist/v1",
+  "note": "The calibrated concern checklist onboarding produced for this repository, and the finding-id convention beside it. Both used to be literals in dev/test-rebuild-depth.mjs (:104). They live here because that gate counts a survey's concern coverage against them, and a denominator read out of the document that reports the coverage lets a dropped concern shrink both halves at once (GP24, and the gate's own comment at :19-24). Neither this file nor the id convention is a receipt, and no rebuild packet rewrites either: survey-depth P8 calibrated them, P10 surveys against them, P11 reads them.",
+  "calibrated_at": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079",
+  "calibrated_by": "design/survey-depth/plan.json P8 — onboarding of the acceptance rebuild",
+  "territory_catalog": ".claude/skills/amanuensis/references/concern-territories.md",
+  "regenerated_by": "onboarding Phase 4; checked by mcp-server/scripts/check-concern-checklist.mjs",
+  "concerns": [
+    {
+      "code": "AT-1",
+      "category": "atomicity",
+      "territory": "T7",
+      "origin": "seeded",
+      "probe": "Inspect every multi-table mutation for one transaction covering the invariant it claims — the carry and its run counts, a disposition and its evidence join, a reconciliation and its scope_gaps rewrite."
+    },
+    {
+      "code": "AT-2",
+      "category": "checkpoint atomicity",
+      "territory": "T7",
+      "origin": "seeded",
+      "probe": "Mutate the database under WAL, call commit_phase_gate, clone or restore the storage commit, and verify the mutation is in it. This is the territory of archived finding B02-1 and of the A0 baseline's recoverability defect."
+    },
+    {
+      "code": "CC-1",
+      "category": "derived-state coherence",
+      "territory": "T2",
+      "origin": "seeded",
+      "probe": "Enumerate every derived surface — the SQL views, the materialized pages, the manifest, the search index, the dashboard census — and find one that can disagree with the rows it is derived from after an ordinary write."
+    },
+    {
+      "code": "CR-1",
+      "category": "concurrency",
+      "territory": "T8",
+      "origin": "seeded",
+      "probe": "Race two writers, the lock table, SQLite WAL commits and storage git commits; reconcile the landed records against the history. Lanes run concurrently against sibling worktrees on this machine."
+    },
+    {
+      "code": "EP-1",
+      "category": "exceptional paths",
+      "territory": "T4",
+      "origin": "seeded",
+      "probe": "Fail validation, SQL and filesystem steps inside mutating tools and compare the dependent rows before and after. The success path establishes an invariant; ask whether the error path restores it."
+    },
+    {
+      "code": "IF-1",
+      "category": "incremental/full parity",
+      "territory": "T6",
+      "origin": "seeded",
+      "probe": "Render incremental, force-full and clean_publish from identical state and compare state, coverage and bytes; then delete a record and re-render, and look for what the incremental path leaves behind."
+    },
+    {
+      "code": "RL-1",
+      "category": "resource lifecycle",
+      "territory": "T9",
+      "origin": "seeded",
+      "probe": "Inject success, error, timeout and cancellation at every database handle, child process, temporary directory and materializer lock boundary, and find one that is not released on every exit path."
+    },
+    {
+      "code": "SC-1",
+      "category": "seam contracts",
+      "territory": "T11",
+      "origin": "seeded",
+      "probe": "Find a fact published in two places with nothing comparing them: the enum in the vocabulary contract against the SQL CHECK and the two generated modules, the tool inventory against DEVELOPMENT.md, the server's refusal messages against the skill references that instruct the calls they refuse, a schema field against the Python projection that reads it."
+    },
+    {
+      "code": "SI-1",
+      "category": "scope identity",
+      "territory": "T1",
+      "origin": "seeded",
+      "probe": "Try to make project-key and workspace-binding derivation conflate two checkouts of this repository, or place a store outside the configured storage root. This repository is surveyed from git worktrees whose .amanuensis is worktree-local, so two live stores for one project_key is the ordinary case, not the exotic one."
+    },
+    {
+      "code": "SI-2",
+      "category": "revision identity",
+      "territory": "T1",
+      "origin": "seeded",
+      "probe": "Follow every ref_sha, first_seen, anchor and repaired_sha from the write that accepts it to the read that trusts it; require each to resolve in the bound workspace at the moment it is read, and try to reuse one at a revision the workspace cannot reach."
+    },
+    {
+      "code": "TB-1",
+      "category": "temporal bounds",
+      "territory": "T3",
+      "origin": "seeded",
+      "probe": "Enumerate every git and python subprocess a tool call awaits; locate the timeout, the cancellation path and the failure propagation for each. An unbounded probe on the activation path hangs the host."
+    },
+    {
+      "code": "TR-1",
+      "category": "trust boundary",
+      "territory": "T10",
+      "origin": "seeded",
+      "probe": "Fuzz tool arguments that reach a filesystem path, a SQL identifier or a git argument: storage escape, injection, and bypass of the depth authority the phase ladder enforces."
+    }
+  ],
+  "disqualified_territories": [
+    {
+      "territory": "T5",
+      "name": "aliasing and ownership",
+      "reason": "No cross-request shared mutable object is established in this read: every request and response crosses MCP serialization, and residual process-local state is covered by CR-1 and RL-1. Recorded as an open question rather than skipped, so a structural pass that finds an alias reopens it."
+    }
+  ],
+  "finding_id_convention": {
+    "template": "^{subsystem_compact}-R\\d+$",
+    "subsystem_compact": "the subsystem id with its hyphens removed — B-03 becomes B03",
+    "example": {
+      "subsystem_id": "B-03",
+      "finding_id": "B03-R1"
+    },
+    "why": "The archived conspectus this store carried from names its findings <subsystem-compact>-<N> — B03-5, B07-1 — and 22 of those ids are live carried_findings rows here. dev/pecia-resolve-finding.mjs answers from findings first and carried_findings second (spec.md §5.7), so a finding of this survey named B03-5 would shadow the carried obligation of the same name and a closed Pecia record would resolve against the wrong defect. The R distinguishes this rebuild's own findings from the ones it inherited. This is what candidate finding B07-R2 asked for."
+  }
+}

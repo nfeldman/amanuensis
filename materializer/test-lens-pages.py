@@ -53,6 +53,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -221,6 +222,11 @@ PER_PARTY_PROXY = "per-party-proxy"
 MIXED_LABEL = "Owners disagree"
 
 SHA_A = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
+# The revision the fixture's survey checked, distinct from the per-row `ref_sha`
+# values above. `make_workspace` rebinds it to the commit whose tree is
+# `TRACKED_AT_R`, so §3.3's conditions 1 and 4 — both of which need that tree —
+# are evaluated rather than skipped, and this row's reading stands (F4/codex).
+CHECKED_SHA = SHA_A
 SHA_B = "bbbbbbbbbbbb2222bbbbbbbbbbbb2222bbbbbbbb"
 
 # ---------------------------------------------------------------------------
@@ -296,11 +302,25 @@ UNLEDGERED_PATHS: tuple[str, ...] = (
     "src/new.ts",
     "tools/build.sh",
 )
-# What `detect_changes` saw: unledgered paths plus the ledger paths still in
-# the tree. `scope_gaps` is rebuilt from `git ls-files` on every run
-# (`mcp-server/src/tools/git.ts:224`), so the tracked universe is recoverable
-# from the store without a second git call.
-TRACKED_PATHS = len(UNLEDGERED_PATHS) + DISTINCT_PATHS - 1           # 15
+# The tree `detect_changes` reconciled the ledger against: the unledgered paths
+# plus the ledger paths the tree still carries. §3.4 reads this from the
+# `scope_reconciliations` row `seed` writes below, never from `scope_gaps` —
+# an empty `scope_gaps` is indistinguishable from a reconciliation that found
+# nothing, and the universe is no longer reconstructed from the ledger the
+# section is about to measure (finding B03-5, packet P6).
+TRACKED_AT_R: tuple[str, ...] = tuple(
+    sorted(set(UNLEDGERED_PATHS) | (set(LEDGER_PATHS) - {ABSENT_PATH}))
+)
+TRACKED_PATHS = len(TRACKED_AT_R)                                    # 15
+EXEMPT_TRACKED = len(
+    {path for _s, path, c, *_rest in LEDGER if c in EXEMPT} - {ABSENT_PATH}
+)
+
+
+def _set_digest(parts: list[str]) -> str:
+    """A path set as one hash, the construction `schema.sql` documents (§3.2)."""
+
+    return hashlib.sha256("\x00".join(sorted(parts)).encode()).hexdigest()
 
 # Four active concerns and one retired one. Every *active* code carries a
 # disposition somewhere, so the global "concern dispositioned nowhere"
@@ -389,6 +409,63 @@ Seeded from the calibrated set.
 # ---------------------------------------------------------------------------
 # Fixture
 # ---------------------------------------------------------------------------
+def git(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """One git call in the fixture workspace, with a fixed identity."""
+
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "P8 gate",
+        "GIT_AUTHOR_EMAIL": "gate@example.invalid",
+        "GIT_COMMITTER_NAME": "P8 gate",
+        "GIT_COMMITTER_EMAIL": "gate@example.invalid",
+    }
+    return subprocess.run(
+        ["git", "-C", str(workspace), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+
+def make_workspace(root: Path) -> tuple[Path, str | None]:
+    """A workspace whose first commit carries exactly `TRACKED_AT_R`.
+
+    §3.4 reads this fixture's coverage from a `scope_reconciliations` row, and
+    §3.3 lets that row stand only where the tree it names can be enumerated.
+    A second commit keeps the checked revision apart from the head, which is
+    the relation the pages report.
+    """
+
+    workspace = root / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    for path in TRACKED_AT_R:
+        target = workspace / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"// {path}\n")
+    try:
+        for args in (
+            ("init", "--quiet"),
+            ("add", "-A"),
+            ("commit", "--quiet", "-m", "the tree R was reconciled against"),
+        ):
+            if git(workspace, *args).returncode != 0:
+                return workspace, None
+        checked = git(workspace, "rev-parse", "HEAD")
+        if checked.returncode != 0:
+            return workspace, None
+        (workspace / "later.ts").write_text("export const later = () => 0;\n")
+        for args in (
+            ("add", "-A"),
+            ("commit", "--quiet", "-m", "a later commit the survey has not read"),
+        ):
+            if git(workspace, *args).returncode != 0:
+                return workspace, None
+    except OSError:
+        return workspace, None
+    return workspace, checked.stdout.strip() or None
+
+
 def seed(storage: Path) -> None:
     db = sqlite3.connect(storage / "memory.db")
     db.executescript(SCHEMA.read_text())
@@ -396,7 +473,8 @@ def seed(storage: Path) -> None:
     cur.execute(
         "INSERT INTO git_state (repo_id, canonical_branch, onboarding_sha,"
         " last_checked_sha, last_checked_at)"
-        f" VALUES ('default', 'main', '{SHA_A}', '{SHA_A}', '2026-09-11T12:00:00Z')"
+        " VALUES ('default', 'main', ?, ?, '2026-09-11T12:00:00Z')",
+        (CHECKED_SHA, CHECKED_SHA),
     )
     cur.execute("INSERT INTO sessions (session_id, intent) VALUES ('p8', 'fixture')")
     cur.executemany(
@@ -430,6 +508,25 @@ def seed(storage: Path) -> None:
     cur.execute(
         "INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha)"
         f" VALUES ('{ABSENT_PATH}', 'absent', 'B-02', '{SHA_A}')"
+    )
+    # The reading `not-yet-surveyed.md` §1 counts over (§3.2, §3.4). Its two
+    # digests are what make it *stand*: the ledger digest is re-derived on every
+    # render, so a later classification change would invalidate this row rather
+    # than leave it quietly describing a ledger that has moved.
+    cur.execute(
+        "INSERT INTO scope_reconciliations (detected_sha, tree_digest, ledger_digest,"
+        " tracked_paths, ledger_rows, unledgered, absent, exempt, session_id)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'p8')",
+        (
+            CHECKED_SHA,
+            _set_digest(list(TRACKED_AT_R)),
+            _set_digest([f"{path}\x00{c}" for _s, path, c, *_rest in LEDGER]),
+            TRACKED_PATHS,
+            DISTINCT_PATHS,
+            len(UNLEDGERED_PATHS),
+            1,
+            EXEMPT_TRACKED,
+        ),
     )
     cur.executemany(
         "INSERT INTO concerns (code, category, origin, status) VALUES (?, ?, 'seeded', ?)",
@@ -747,11 +844,15 @@ def main() -> int:
 
     root = Path(tempfile.mkdtemp(prefix="amanuensis-p8-"))
     try:
+        workspace, checked = make_workspace(root)
+        if checked:
+            globals()["CHECKED_SHA"] = checked
         storage = root / "store"
         storage.mkdir(parents=True, exist_ok=True)
         seed_error: str | None = None
         try:
             seed(storage)
+            (storage / "workspace_path").write_text(f"{workspace}\n")
         except Exception as exc:
             seed_error = f"the fixture could not be seeded — {scrub(exc)}"
         summary = publish(storage, "--clean-publish") if seed_error is None else {}

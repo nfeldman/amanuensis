@@ -285,7 +285,7 @@ try {
 }
 if (built.ok) {
   try {
-    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools] =
+    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary] =
       await Promise.all([
         import("../mcp-server/dist/db.js"),
         import("../mcp-server/dist/project.js"),
@@ -298,8 +298,9 @@ if (built.ok) {
         import("../mcp-server/dist/tools/dispositions.js"),
         import("../mcp-server/dist/tools/concerns.js"),
         import("../mcp-server/dist/tools/git.js"),
+        import("../mcp-server/dist/tools/vocabulary.js"),
       ]);
-    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools };
+    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary };
   } catch (e) {
     loadError = e && e.message ? e.message : String(e);
   }
@@ -329,6 +330,7 @@ function toolNamed(name) {
     mods?.dispositions?.dispositionTools,
     mods?.concerns?.concernTools,
     mods?.gitTools?.gitTools,
+    mods?.vocabulary?.vocabularyTools,
   ];
   for (const group of groups) {
     if (!Array.isArray(group)) continue;
@@ -464,6 +466,17 @@ function subsystemAtAdversarial(id, { claimKey } = {}) {
     },
     ctx,
   );
+  // §4.4: the structural pass discharges its vocabulary obligation or declares
+  // the subsystem has none. A fixture subsystem coins no word of its own.
+  call(
+    "decline_domain_vocabulary",
+    {
+      subsystem_id: id,
+      reason: "regeneration fixture: its seeded file coins no term of its own",
+      ref_sha: fixture.base,
+    },
+    ctx,
+  );
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${slug}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -474,6 +487,7 @@ function subsystemAtAdversarial(id, { claimKey } = {}) {
       concern_code: "FIXTURE-1",
       classification: "ruled-out",
       evidence: `${filePath}:Unit${slug}@${fixture.base}`,
+      evidence_ids: [evidenceId],
       evidence_quality: "code-verified",
       linchpin_dependent: false,
       rationale: "gate fixture disposition",
@@ -536,6 +550,11 @@ check("recording the outcome admits the advance, and the transition is recorded"
   if (!written || typeof written.id !== "number") {
     return `record_claim_challenge returned ${JSON.stringify(written ?? null)} rather than the id of the row it wrote`;
   }
+  // §3.3 sits on the same rung: `mapped` also requires the whole store to have
+  // been reconciled against the tree at HEAD. Taken here, after the fixture's
+  // last ledger write, so the advance is refused only by the prerequisite this
+  // check is about.
+  call("detect_changes", { current_sha: fixture.head }, fixture.ctx);
   const denied = refusal("update_subsystem_status", { id: "B-R1", status: "mapped" }, fixture.ctx);
   if (denied !== null) return `the advance was still refused after the outcome was recorded: ${denied}`;
   const rows = fixture.db

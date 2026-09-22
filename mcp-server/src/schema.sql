@@ -192,6 +192,47 @@ CREATE TABLE IF NOT EXISTS scope_gaps (
     PRIMARY KEY (file_path, kind)
 );
 
+-- One reading of the repository's tracked paths against the file ledger, at one
+-- revision. A *perfectly* reconciled store has zero `scope_gaps` rows, so "a gap
+-- row exists at R" reads a complete reconciliation as a missing one: the count
+-- zero and the absence of a reading are different facts and are stored
+-- differently (VP4(e), finding B03-5). `detect_changes` writes exactly one row
+-- per invocation, inside the transaction that rewrites `scope_gaps`, and the
+-- history of those rows is the record of when the map was last checked against
+-- the tree.
+--
+-- The two digests, not the six counts, are the witness. Counts go stale
+-- silently: a later `set_disposition` or `add_files_to_scope` changes the ledger
+-- without touching the row that claims to describe it. `tree_digest` pins the
+-- path set the counts were taken over and `ledger_digest` pins the ledger they
+-- were taken against, so a standing reconciliation can be told from a stale one
+-- (design/survey-depth/spec.md §3.2, §3.3).
+CREATE TABLE IF NOT EXISTS scope_reconciliations (
+    id              INTEGER PRIMARY KEY,
+    detected_sha    TEXT    NOT NULL,   -- resolved, 40 hex, from rev-parse <R>^{commit}
+    tree_digest     TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined tracked path set
+    ledger_digest   TEXT    NOT NULL,   -- SHA-256 over the sorted NUL-joined (path, classification)
+    tracked_paths   INTEGER NOT NULL,   -- |git ls-tree -r --name-only detected_sha|
+    ledger_rows     INTEGER NOT NULL,   -- distinct file_ledger.file_path
+    unledgered      INTEGER NOT NULL,   -- tracked with no ledger row
+    absent          INTEGER NOT NULL,   -- ledger rows the tree no longer carries
+    exempt          INTEGER NOT NULL,   -- tracked and ledgered with an exempting classification
+    session_id      TEXT,
+    detected_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_scope_reconciliations_sha
+    ON scope_reconciliations(detected_sha);
+
+-- Append-only, by the trigger rather than by this paragraph: a reconciliation
+-- that can be edited after the fact is not a record of when the map was checked.
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_is_immutable
+BEFORE UPDATE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS scope_reconciliation_cannot_be_deleted
+BEFORE DELETE ON scope_reconciliations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'scope reconciliation cannot be deleted'); END;
+
 -- Per-owner standing: what a reader is entitled to claim about one file on
 -- the authority of one subsystem's examination of it. One row per file_ledger
 -- row, and no new table -- every column the CASE reads is already stored.
@@ -415,6 +456,235 @@ CREATE TABLE IF NOT EXISTS vocabulary (
 );
 
 CREATE INDEX IF NOT EXISTS idx_vocabulary_subsystem ON vocabulary(subsystem_id);
+
+
+----------------------------------------------------------------------
+-- VOCABULARY_SCOPES: which subsystems a term belongs to
+----------------------------------------------------------------------
+-- `vocabulary.term` is the table's primary key and `define_term` upserts
+-- `subsystem_id = COALESCE(excluded.subsystem_id, vocabulary.subsystem_id)`,
+-- so one term row can name exactly one subsystem. Re-defining a term shared
+-- between A and B for B therefore moved it off A -- silently, after A had
+-- already advanced on it, revoking A's discharge with no signal at the moment
+-- it happened (design/survey-depth/spec.md §4.4).
+--
+-- A term may be scoped to any number of subsystems, and this is where that is
+-- recorded. `vocabulary.subsystem_id` is kept as the primary scope for readers
+-- that already select on it; the scope set, not that column, is what the
+-- §4.4 prerequisite reads.
+CREATE TABLE IF NOT EXISTS vocabulary_scopes (
+    term          TEXT    NOT NULL,   -- vocabulary.term
+    subsystem_id  TEXT    NOT NULL,   -- one subsystem this term belongs to
+    scoped_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (term, subsystem_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocabulary_scopes_subsystem
+    ON vocabulary_scopes(subsystem_id);
+
+-- Append-only, by the trigger rather than by this paragraph. A scope row is a
+-- subsystem's discharge of the §4.4 obligation: the reason it was allowed to
+-- advance to `structural`. `define_term` only ever writes one with
+-- `INSERT OR IGNORE` (src/tools/vocabulary.ts:123) and nothing edits or removes
+-- one, so an UPDATE or a DELETE here is a discharge being revoked or moved
+-- after the advance it licensed -- silently, which is the failure §4.4's join
+-- table was added to stop. Shipped without these two, this table was the one
+-- table the specification added that C38 did not hold for.
+CREATE TRIGGER IF NOT EXISTS vocabulary_scopes_is_immutable
+BEFORE UPDATE ON vocabulary_scopes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'a vocabulary scope is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS vocabulary_scopes_cannot_be_deleted
+BEFORE DELETE ON vocabulary_scopes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'a vocabulary scope cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
+-- VOCABULARY_DECLINATIONS: "this subsystem coins nothing", said out loud
+----------------------------------------------------------------------
+-- The generative obligation a structural pass carries is discharge *or*
+-- decline, never a floor (design/survey-depth/decisions.md §3). A subsystem
+-- whose code coins no term of its own is an ordinary and common answer, and the
+-- only way to tell it apart from a subsystem nobody asked is to make someone
+-- say it, at a revision, in a session that can be named.
+--
+-- Append-only: never updated, never deleted. A later pass that *does* find a
+-- term simply defines it; the declination stays as the record of what an
+-- earlier reader concluded and when, and a subsystem reset does not erase it,
+-- for the reason GP18 gives -- a ruled-out record is kept, not deleted.
+CREATE TABLE IF NOT EXISTS vocabulary_declinations (
+    id            INTEGER PRIMARY KEY,
+    subsystem_id  TEXT    NOT NULL,
+    reason        TEXT    NOT NULL,   -- prose; why this subsystem carries no domain vocabulary
+    session_id    TEXT    NOT NULL,
+    ref_sha       TEXT    NOT NULL,   -- resolved, the revision the judgment was made at
+    declared_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_vocab_declinations_subsystem
+    ON vocabulary_declinations(subsystem_id);
+
+-- Append-only by the trigger rather than by the paragraph above: a judgment
+-- that can be edited after the fact is not a record of what a reader concluded.
+CREATE TRIGGER IF NOT EXISTS vocab_declination_is_immutable
+BEFORE UPDATE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS vocab_declination_cannot_be_deleted
+BEFORE DELETE ON vocabulary_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
+-- STORE_IDENTITY: which store this is, minted rather than derived
+----------------------------------------------------------------------
+-- A carried record must name the store it came from, and the name must not
+-- change under it (candidate finding B03-R1: a finding id with no store
+-- generation lets a rebuilt store silently re-satisfy a closed reference).
+--
+-- Minted, not derived. An earlier draft derived the identity as a digest of
+-- <repo_id|canonical_branch|onboarding_sha|last_checked_sha>, and that fails in
+-- both directions: `set_git_state` may update `last_checked_sha` at any time,
+-- so a live store's identity changes every time it reconciles and an id written
+-- into a successor last week cannot be recomputed from the source today; and
+-- two clean-slate rebuilds of the same repository at the same revision produce
+-- the same tuple, so they collide -- exactly the confusion the field exists to
+-- prevent. Identity is a fact the store carries, not a function of its mutable
+-- state (design/survey-depth/spec.md §5.3).
+--
+-- The row is written by `openDatabase` on the open that creates it, because
+-- SQLite has no random default a CREATE TABLE can carry. It is single-valued
+-- by the CHECK and immutable by the triggers.
+CREATE TABLE IF NOT EXISTS store_identity (
+    id                INTEGER PRIMARY KEY CHECK (id = 1),
+    store_generation  TEXT    NOT NULL CHECK (length(store_generation) = 32),
+    minted_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS store_identity_is_immutable
+BEFORE UPDATE ON store_identity FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'store identity is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS store_identity_cannot_be_deleted
+BEFORE DELETE ON store_identity FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'store identity cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
+-- CARRIED FINDINGS: what a reinitialization owes its predecessor
+----------------------------------------------------------------------
+-- A reinitialization discards a conspectus. Before this, no record type carried
+-- a prior finding into the successor: six baseline open findings -- B03-5,
+-- B03-6, B03-7, B03-8, B04-5, B07-1 -- were neither re-found nor ruled out, and
+-- their text survived only in an archive nobody re-read (candidate findings
+-- B03-R1 and B03-R2).
+--
+-- Carried findings live in their own table rather than in `findings`. A carried
+-- record is an *obligation to decide*, not a finding this store confirmed:
+-- putting it in `findings` would let it be counted as a defect this survey
+-- found, would collide with the successor's id, and would make
+-- `finding_resolution_current` answer about a store that no longer exists
+-- (spec.md §5.2).
+--
+-- One run per invocation of the carry, including a reasoned empty one. Without
+-- it "nothing was carried" and "nobody ran a carry" are the same reading
+-- (VP4(e)). `expected_count` and `imported_count` are separate fields so a
+-- partial carry is a visible disagreement rather than a silent one: the carry
+-- refuses to write past `imported_count` and refuses to finish while the two
+-- differ or while the rows written disagree with either.
+CREATE TABLE IF NOT EXISTS carry_runs (
+    id                INTEGER PRIMARY KEY,
+    source_kind       TEXT    NOT NULL CHECK (source_kind IN ('store','export','none')),
+    source_path       TEXT,               -- NULL only for source_kind='none'
+    archived_store_id TEXT,               -- NULL only for source_kind='none'
+    archived_anchor   TEXT,               -- the archive's anchor revision
+    reason            TEXT    NOT NULL,   -- required for every kind; the only field 'none' has
+    expected_count    INTEGER NOT NULL,   -- findings the source declares
+    imported_count    INTEGER NOT NULL,   -- carried_findings rows this run commits to writing
+    session_id        TEXT,
+    ran_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS carried_findings (
+    carried_id           INTEGER PRIMARY KEY,
+    archived_finding_id  TEXT    NOT NULL,  -- the id in the archived store, e.g. 'B03-5'
+    archived_store_id    TEXT    NOT NULL,  -- identity of the store it came from (§5.3)
+    archived_anchor_sha  TEXT    NOT NULL,  -- that store's revision at export
+    subsystem_id         TEXT    NOT NULL,  -- as recorded there; may not exist here
+    severity             TEXT    NOT NULL CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+    symptom              TEXT    NOT NULL,
+    root_cause           TEXT    NOT NULL,
+    carry_run_id         INTEGER NOT NULL REFERENCES carry_runs(id) ON DELETE RESTRICT,
+    archived_resolution  TEXT    NOT NULL CHECK (archived_resolution IN
+                            ('open','accepted','ruled-out',
+                             'fixed-pending-verification','verified-fixed')),
+    archived_ref_sha     TEXT,
+    primary_files        TEXT,              -- JSON array, as archived
+    carried_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    carried_by_session   TEXT,
+    UNIQUE (archived_store_id, archived_finding_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_carried_findings_run
+    ON carried_findings(carry_run_id);
+CREATE INDEX IF NOT EXISTS idx_carried_findings_archived_id
+    ON carried_findings(archived_finding_id);
+
+-- One outcome per carried record, and outcomes are never deleted. A mistaken
+-- outcome is corrected by a new carried record from the same archive, which is
+-- visible (spec.md §5.4).
+CREATE TABLE IF NOT EXISTS carried_finding_outcomes (
+    id            INTEGER PRIMARY KEY,
+    carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
+    outcome       TEXT    NOT NULL CHECK (outcome IN
+                            ('successor-finding','ruled-out','repaired','archived-terminal')),
+    successor_id  TEXT,        -- findings.finding_id, required for 'successor-finding'
+    repaired_sha  TEXT,        -- resolved commit, required for 'repaired'
+    rationale     TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL,
+    ref_sha       TEXT    NOT NULL,
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_one
+    ON carried_finding_outcomes(carried_id);
+
+-- The evidence join §5.4's `ruled-out` and `repaired` authority rules require:
+-- overturning a carried finding needs a reading collected in the current
+-- session, and discharging a repair needs a reading taken at a revision that is
+-- a descendant of, or equal to, the repair.
+CREATE TABLE IF NOT EXISTS carried_finding_evidence (
+    carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    role          TEXT    NOT NULL DEFAULT 'supports',
+    attached_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (carried_id, evidence_id)
+);
+
+-- Append-only by the triggers rather than by the paragraphs above: a carried
+-- record that can be edited after the fact is not a record of what the
+-- predecessor held, and an outcome that can be rewritten is not a decision.
+CREATE TRIGGER IF NOT EXISTS carried_finding_is_immutable
+BEFORE UPDATE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_cannot_be_deleted
+BEFORE DELETE ON carried_findings FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_is_immutable
+BEFORE UPDATE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_cannot_be_deleted
+BEFORE DELETE ON carried_finding_outcomes FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding outcome cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_evidence_is_immutable
+BEFORE UPDATE ON carried_finding_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding evidence attachment is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carried_finding_evidence_cannot_be_deleted
+BEFORE DELETE ON carried_finding_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carried finding evidence attachment cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_is_immutable
+BEFORE UPDATE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS carry_run_cannot_be_deleted
+BEFORE DELETE ON carry_runs FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'carry run cannot be deleted'); END;
 
 
 ----------------------------------------------------------------------

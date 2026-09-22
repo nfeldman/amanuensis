@@ -22,13 +22,14 @@ Every page this conspectus publishes, in the order the record presents them. The
 | [System boundaries](seams.md) | Shared objects and ordering assumptions where independently understandable subsystems meet. |
 | [Codebase glossary](vocabulary.md) | The project's own names, with the meanings Amanuensis observed in context. |
 | Subsystems · [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | Scope, structure, boundaries, defects, and the survey record for Survey methodology and agent contracts. |
-| Subsystems · [Server core: repository binding, storage, schema, lifecycle](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md) | Scope, structure, boundaries, defects, and the survey record for Server core: repository binding, storage, schema, lifecycle. |
+| Subsystems · [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) | Scope, structure, boundaries, defects, and the survey record for MCP core, persistence, and lifecycle. |
 | Subsystems · [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | Scope, structure, boundaries, defects, and the survey record for Knowledge tools and workflow API. |
-| Subsystems · [Reader lenses: standing, locus account, claims, edges, vocabulary](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) | Scope, structure, boundaries, defects, and the survey record for Reader lenses: standing, locus account, claims, edges, vocabulary. |
-| Subsystems · [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md) | Scope, structure, boundaries, defects, and the survey record for Materializer: human projection, read-back, HTML. |
-| Subsystems · [Packaging, installer, and host activation](subsystems/b06-packaging-installer-and-host-activation.md) | Scope, structure, boundaries, defects, and the survey record for Packaging, installer, and host activation. |
-| Subsystems · [Gates, evidence custody, and CI](subsystems/b07-gates-evidence-custody-and-ci.md) | Scope, structure, boundaries, defects, and the survey record for Gates, evidence custody, and CI. |
-| Subsystems · [Records: design, research, published projection, execution ledger](subsystems/b08-records-design-research-published-projection-execution-ledger.md) | Scope, structure, boundaries, defects, and the survey record for Records: design, research, published projection, execution ledger. |
+| Subsystems · [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | Scope, structure, boundaries, defects, and the survey record for Diff-aware materializer. |
+| Subsystems · [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | Scope, structure, boundaries, defects, and the survey record for Packaging, installer, validation, and product docs. |
+| Subsystems · [Report interface design and validation studies](subsystems/b06-report-interface-design-and-validation-studies.md) | Scope, structure, boundaries, defects, and the survey record for Report interface design and validation studies. |
+| Subsystems · [Embedded research surveys and platform trials](subsystems/b07-embedded-research-surveys-and-platform-trials.md) | Scope, structure, boundaries, defects, and the survey record for Embedded research surveys and platform trials. |
+| Subsystems · [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md) | Scope, structure, boundaries, defects, and the survey record for Activation evidence and release readiness. |
+| Subsystems · [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | Scope, structure, boundaries, defects, and the survey record for Conspectus design lanes, their drivers and receipts. |
 
 ### Unresolved
 
@@ -77,6 +78,17 @@ Every value below is generated from the vocabulary contract, version `1.0.0` —
 | `ruled-out` | Ruled out | The candidate problem was overturned by evidence or adversarial review. | that no related defect exists at the same locus |
 | `fixed-pending-verification` | Unverified fix | A repair is recorded, but independent fix evidence has not yet closed the finding. | that the defect is gone at the repository head |
 | `verified-fixed` | Verified fixed | A later revision contains a repair backed by recorded verification evidence. | that the repair is still present at the repository head |
+
+### Carried finding outcome
+
+`carried_finding_outcome` · carried axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `successor-finding` | Re-found here | A finding filed in this store records the same defect, so the carried obligation is discharged into it and a reference to the archived id follows the finding into its successor. | that the successor is the same defect; the substrate can require that a finding was filed in this store and in this session, and cannot read the judgement that the two are one |
+| `ruled-out` | Ruled out here | A reading taken in this store, in the session that overturned it, does not show the defect the archive recorded. | that no related defect exists at the same locus; overturning requires evidence collected by the overturning pass, not that the locus was exhausted |
+| `repaired` | Repaired here | A commit that resolves in the bound workspace carries the repair, and at least one attached evidence row was read at a revision that is a descendant of, or equal to, that commit. | that the repair is still present at the repository head, or that it is complete; a claimed repair with no post-repair reading is fixed-pending-verification, never a discharge |
+| `archived-terminal` | Closed in the archive | The archive had already closed this finding — verified-fixed, ruled-out or accepted — and the carry recorded that state rather than re-deciding it. Written by the carry alone. | anything about this store: nobody here checked a commit or read a repaired path, and the row carries the archive's judgement and not this survey's |
 
 ### Finding status
 
@@ -140,6 +152,16 @@ Every value below is generated from the vocabulary contract, version `1.0.0` —
 | `adversarial` | Adversarial | Candidate conclusions are being challenged; treat them as provisional. | that the challenge pass has finished |
 | `mapped` | Mapped | Survey complete through structural analysis, concern review, and adversarial challenge. | that the reading is current at the repository head |
 | `deferred` | Deferred | This subsystem is intentionally outside the active survey plan. | anything about this subsystem's behavior |
+
+### Vocabulary discharge
+
+`vocabulary_discharge` · vocabulary axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `terms` | Terms recorded | The subsystem carries at least one vocabulary term scoped to it whose first_seen anchor still resolves: the token parses, its revision is reachable, and its path exists in that revision's tree. | that the recorded terms are the ones a reader most needs, or that the list is complete; one anchored term discharges the obligation and no count is required |
+| `declined` | Declared none | A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own. | that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing |
+| `not-recorded` | Not recorded | Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way. | that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none' |
 
 ### Evidence kind
 

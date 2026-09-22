@@ -33,6 +33,7 @@ import { fileTools } from "./dist/tools/files.js";
 import { artifactTools } from "./dist/tools/artifacts.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
+import { vocabularyTools } from "./dist/tools/vocabulary.js";
 
 const allTools = new Map(
   [
@@ -48,6 +49,7 @@ const allTools = new Map(
     ...artifactTools,
     ...evidenceTools,
     ...claimTools,
+    ...vocabularyTools,
   ].map((td) => [td.name, td]),
 );
 function call(name, args, ctx) {
@@ -114,13 +116,25 @@ const ctx = { project, db, sessionId: null };
 const sess = call("start_session", { intent: "ceilings" }, ctx);
 ctx.sessionId = sess.session_id;
 
+const subsystemEvidence = [];
 for (let i = 0; i < 20; i++) {
   const id = `B-${String(i).padStart(2, "0")}`;
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
   call("add_files_to_scope", { subsystem_id: id, ref_sha: "ceil-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "ceiling fixture" }] }, ctx);
   const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
+  // §2.2: set_disposition names the readings it rests on. Five per subsystem,
+  // so the multi-evidence ceiling below measures a batch rather than a single.
+  subsystemEvidence.push([
+    evidenceId,
+    ...Array.from({ length: 4 }, () =>
+      call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id,
+    ),
+  ]);
   call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
+  // §4.4: the structural pass discharges its vocabulary obligation or declares
+  // the subsystem has none. A fixture subsystem coins no word of its own.
+  call("decline_domain_vocabulary", { subsystem_id: id, reason: "ceiling fixture: its one file coins no term of its own", ref_sha: seedSha }, ctx);
   call("update_subsystem_status", { id, status: "structural" }, ctx);
   call("register_artifact", { path: `${id}-survey.md`, kind: "subsystem-survey", subsystem_id: id }, ctx);
   call("update_subsystem_status", { id, status: "concerns" }, ctx);
@@ -193,6 +207,33 @@ ceiling("set_disposition (resolves ref_sha)", 200, () => {
       concern_code: `CC-${i % 25}`,
       classification: "ruled-out",
       evidence: "x",
+      evidence_ids: [subsystemEvidence[i % 20][0]],
+      evidence_quality: "code-verified",
+      rationale: "r",
+      ref_sha: seedSha,
+      pass_type: "survey",
+    },
+    ctx,
+  );
+});
+
+// §2.2 step 2's reason for existing, measured rather than asserted: the same
+// ceiling over five evidence ids. Resolving one revision per id would make this
+// entry five subprocesses where the one above is two, and the multiple this
+// ceiling holds — ~31× a measured 6.35-6.50 ms subprocess — is the tightest in
+// this section. A batched resolution keeps the two entries within noise of each
+// other; a per-id resolution separates them.
+let multiDispCounter = 0;
+ceiling("set_disposition (5 evidence ids, one batched resolution)", 200, () => {
+  const i = multiDispCounter++;
+  call(
+    "set_disposition",
+    {
+      subsystem_id: `B-${String(i % 20).padStart(2, "0")}`,
+      concern_code: `CC-${(i % 24) + 1}`,
+      classification: "ruled-out",
+      evidence: "x",
+      evidence_ids: subsystemEvidence[i % 20],
       evidence_quality: "code-verified",
       rationale: "r",
       ref_sha: seedSha,

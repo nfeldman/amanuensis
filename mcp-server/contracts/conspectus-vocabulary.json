@@ -9,6 +9,10 @@
         {
           "table": "finding_resolution_events",
           "column": "resolution_state"
+        },
+        {
+          "table": "carried_findings",
+          "column": "archived_resolution"
         }
       ],
       "values": [
@@ -46,6 +50,47 @@
           "meaning": "A later revision contains a repair backed by recorded verification evidence.",
           "cannot_justify": "that the repair is still present at the repository head",
           "resolution_open": false
+        }
+      ]
+    },
+    "carried_finding_outcome": {
+      "axis": "carried",
+      "const_name": "CARRIED_FINDING_OUTCOMES",
+      "note": "The terminal outcomes a carried finding can reach. Three are authority-bearing and are written by record_carried_outcome: each asserts something about *this* store, with a rule that says who may assert it and on what evidence. The fourth is written by the carry alone, for a finding the archive had already closed, which asserts nothing about this store because nobody here checked a commit or read a repaired path.",
+      "sql": [
+        {
+          "table": "carried_finding_outcomes",
+          "column": "outcome"
+        }
+      ],
+      "values": [
+        {
+          "value": "successor-finding",
+          "label": "Re-found here",
+          "meaning": "A finding filed in this store records the same defect, so the carried obligation is discharged into it and a reference to the archived id follows the finding into its successor.",
+          "cannot_justify": "that the successor is the same defect; the substrate can require that a finding was filed in this store and in this session, and cannot read the judgement that the two are one",
+          "authorizes": "reporting the archived defect as still tracked, under the successor's id and the successor's resolution state"
+        },
+        {
+          "value": "ruled-out",
+          "label": "Ruled out here",
+          "meaning": "A reading taken in this store, in the session that overturned it, does not show the defect the archive recorded.",
+          "cannot_justify": "that no related defect exists at the same locus; overturning requires evidence collected by the overturning pass, not that the locus was exhausted",
+          "authorizes": "closing a Pecia reference to the archived finding"
+        },
+        {
+          "value": "repaired",
+          "label": "Repaired here",
+          "meaning": "A commit that resolves in the bound workspace carries the repair, and at least one attached evidence row was read at a revision that is a descendant of, or equal to, that commit.",
+          "cannot_justify": "that the repair is still present at the repository head, or that it is complete; a claimed repair with no post-repair reading is fixed-pending-verification, never a discharge",
+          "authorizes": "closing a Pecia reference to the archived finding"
+        },
+        {
+          "value": "archived-terminal",
+          "label": "Closed in the archive",
+          "meaning": "The archive had already closed this finding — verified-fixed, ruled-out or accepted — and the carry recorded that state rather than re-deciding it. Written by the carry alone.",
+          "cannot_justify": "anything about this store: nobody here checked a commit or read a repaired path, and the row carries the archive's judgement and not this survey's",
+          "authorizes": "treating the obligation as decided for the fully-surveyed predicate and for the reference resolver"
         }
       ]
     },
@@ -295,6 +340,31 @@
           "meaning": "This subsystem is intentionally outside the active survey plan.",
           "authorizes": "nothing",
           "cannot_justify": "anything about this subsystem's behavior"
+        }
+      ]
+    },
+    "vocabulary_discharge": {
+      "axis": "vocabulary",
+      "const_name": "VOCABULARY_DISCHARGES",
+      "note": "The three states a subsystem's domain vocabulary can be in at the advance to 'structural'. Discharge or decline, never a floor: one anchored term is enough, 'none' is a real and common answer that has to be said out loud, and a subsystem nobody asked is a third state that is never collapsed into the second.",
+      "values": [
+        {
+          "value": "terms",
+          "label": "Terms recorded",
+          "meaning": "The subsystem carries at least one vocabulary term scoped to it whose first_seen anchor still resolves: the token parses, its revision is reachable, and its path exists in that revision's tree.",
+          "cannot_justify": "that the recorded terms are the ones a reader most needs, or that the list is complete; one anchored term discharges the obligation and no count is required"
+        },
+        {
+          "value": "declined",
+          "label": "Declared none",
+          "meaning": "A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own.",
+          "cannot_justify": "that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing"
+        },
+        {
+          "value": "not-recorded",
+          "label": "Not recorded",
+          "meaning": "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
+          "cannot_justify": "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'"
         }
       ]
     },

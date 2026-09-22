@@ -7,8 +7,14 @@ import {
   optString,
   optStringArray,
   requireString,
+  resolveWorkspaceCommits,
   type ToolDefinition,
 } from "../helpers.js";
+// §3's reconciliation record shares one derivation with the predicate that
+// reads it back. Two copies of "the digest of the tracked path set" would
+// disagree the first time either was edited, and the disagreement would present
+// as a store that reconciles and is never reconciled.
+import { ledgerDigest, listTrackedPaths, trackedPathDigest } from "../invariants.js";
 // The reconciliation's three outcomes are named by the enum source, not by a
 // literal beside each `markStale` call. Typing the writer's argument is what
 // makes the compiler refuse a value the source does not carry: `git-driftt`
@@ -50,6 +56,14 @@ function getGit(ctx: ServerContext): {
     | undefined;
   return row ?? null;
 }
+
+/**
+ * How many duplicately owned paths one reconciliation names before it stops
+ * enumerating. The count beside it keeps the scale visible; `file_standing`
+ * holds the rest. A store whose ledger overlaps wholesale would otherwise put
+ * the response's size in the ledger's size.
+ */
+const NAMED_DUPLICATE_PATHS = 25;
 
 function carriesObligation(row: { classification: string | null }): boolean {
   const value = (row.classification ??
@@ -155,7 +169,7 @@ export const gitTools: ToolDefinition[] = [
   {
     name: "detect_changes",
     description:
-      "Compare current_sha against last_checked_sha for files tracked in the file_ledger. Marks affected entries stale and updates last_checked_sha. Requires the target workspace to be a git repo the server can shell out to.",
+      "Reconcile the file_ledger against the tree at current_sha: mark drifted and absent entries stale, rewrite scope_gaps, update last_checked_sha, and record the reading as one append-only scope_reconciliations row carrying its counts and two witness digests. The advance to 'mapped' and materialize_docs both refuse a store with no standing reconciliation. Requires the target workspace to be a git repo the server can shell out to.",
     inputSchema: {
       type: "object",
       properties: { current_sha: { type: "string" } },
@@ -163,9 +177,26 @@ export const gitTools: ToolDefinition[] = [
       additionalProperties: false,
     },
     handler: (args, ctx) => {
-      const currentSha = requireString(args, "current_sha");
+      const requestedSha = requireString(args, "current_sha");
       const g = getGit(ctx);
       if (!g) return { ok: false, error: "git_state not initialized; call set_git_state first" };
+      // §3.3 clause 1: the revision is resolved to the full 40-hex commit it
+      // names before anything is compared or stored. An abbreviation, a tag or
+      // a branch name is a different string from the id a later comparison
+      // holds, and string-matching the two is how a reconciliation at one
+      // revision comes to satisfy a publication at another.
+      const currentSha =
+        resolveWorkspaceCommits(ctx.project.workspacePath, [requestedSha]).get(requestedSha) ??
+        null;
+      if (currentSha === null) {
+        return {
+          ok: false,
+          error:
+            `current_sha ${requestedSha} does not resolve to a commit in the bound workspace ` +
+            `${ctx.project.workspacePath}; a reconciliation is stamped with the revision it was ` +
+            `taken at, so the revision has to exist`,
+        };
+      }
       const lastSha = g.last_checked_sha ?? g.onboarding_sha;
       let changedFiles: string[] = [];
       try {
@@ -212,18 +243,24 @@ export const gitTools: ToolDefinition[] = [
         commitCount = 0;
       }
 
-      // Reconcile the ledger against the working tree. Intersecting the commit
-      // diff with existing rows (above) can only ever see files someone already
-      // classified: additions match no row and drop out, and rows whose file was
-      // deleted keep asserting they were examined. Both halves of that gap are
-      // finding B03-1, so the tree itself is the reference here, not the diff.
-      let trackedPaths: string[] = [];
-      try {
-        trackedPaths = runGit(ctx.project.workspacePath, ["ls-files"]).split("\n").filter(Boolean);
-      } catch (e) {
+      // Reconcile the ledger against the tree at `currentSha`. Intersecting the
+      // commit diff with existing rows (above) can only ever see files someone
+      // already classified: additions match no row and drop out, and rows whose
+      // file was deleted keep asserting they were examined. Both halves of that
+      // gap are finding B03-1, so the tree itself is the reference here, not the
+      // diff.
+      //
+      // The tree at the revision, never `git ls-files`. That reads the index —
+      // the working tree's staged state, which moves under an unrelated
+      // `git add` and does not describe the revision at all, while every count
+      // written below is stamped with it (§3.3).
+      const trackedPaths = listTrackedPaths(ctx.project.workspacePath, currentSha);
+      if (trackedPaths === null) {
         return {
           ok: false,
-          error: `git ls-files failed: ${(e as Error).message}. Is the workspace a git repo?`,
+          error:
+            `git ls-tree -r --name-only ${currentSha} failed. Is the workspace a git repo the ` +
+            `server can read?`,
         };
       }
       const trackedSet = new Set(trackedPaths);
@@ -239,6 +276,34 @@ export const gitTools: ToolDefinition[] = [
 
       const unledgered = trackedPaths.filter((p) => !ledgerPaths.has(p));
       const absent = ledgerRows.filter((r) => !trackedSet.has(r.file_path));
+      // `exempt` is the third part of the tracked set: paths the ledger carries
+      // and that carry no survey obligation. Counted over distinct paths,
+      // because it is one side of the tracked-set intersection §3.2 records and
+      // not a count of rows.
+      const exemptPaths = new Set(
+        ledgerRows
+          .filter((row) => trackedSet.has(row.file_path) && !carriesObligation(row))
+          .map((row) => row.file_path),
+      );
+
+      // One path owned by two subsystems is neither unledgered nor absent, so
+      // neither `scope_gaps` kind records it and a reconciliation silent about
+      // it is a reading that did not report its own ambiguity — the AxiomDB
+      // store holds it for 53 of its 187 distinct ledger paths. Reported rather
+      // than refused: which subsystem should own a shared path is a coordinator
+      // judgement, not a server one. The list is capped and the count is kept,
+      // so a wholesale overlap is visible without putting a reconciliation's
+      // response size in the ledger's size.
+      const ownersByPath = new Map<string, string[]>();
+      for (const row of ledgerRows) {
+        const owners = ownersByPath.get(row.file_path);
+        if (owners) owners.push(row.subsystem_id);
+        else ownersByPath.set(row.file_path, [row.subsystem_id]);
+      }
+      const duplicateOwnership = [...ownersByPath.entries()]
+        .filter(([, owners]) => owners.length > 1)
+        .map(([file_path, owners]) => ({ file_path, subsystem_ids: [...owners].sort() }))
+        .sort((a, b) => (a.file_path < b.file_path ? -1 : 1));
 
       // A ledger row is stale when its content differs from the commit at which
       // it was examined — a claim about content, not about which paths happen to
@@ -280,6 +345,9 @@ export const gitTools: ToolDefinition[] = [
         }
       }
 
+      let reconciliationId = 0;
+      let treeDigest = "";
+      let recordedLedgerDigest = "";
       const reconcileTx = ctx.db.transaction(() => {
         const markStale = ctx.db.prepare(
           `UPDATE file_ledger SET stale=1, stale_since=datetime('now'), stale_reason=?
@@ -308,13 +376,55 @@ export const gitTools: ToolDefinition[] = [
           `INSERT INTO scope_gaps (file_path, kind, subsystem_id, detected_sha) VALUES (?, ?, ?, ?)`,
         );
         for (const path of unledgered) gap.run(path, "unledgered", null, currentSha);
-        for (const row of absent) gap.run(row.file_path, "absent", row.subsystem_id, currentSha);
+        // One gap row per absent *path*, not per owner: the table is keyed
+        // (file_path, kind), so a path two subsystems claim would collide on the
+        // second insert and abort the whole rewrite — no reconciliation written
+        // at all, and the store still answering from the last one (F5/codex).
+        // Nothing is lost by taking the first owner here, because `mark(absent,
+        // …)` above has already flagged every owner's ledger row: the per-owner
+        // obligation lives in `file_ledger`, and `scope_gaps` is the countable
+        // statement that the path is gone.
+        const seenAbsent = new Set<string>();
+        for (const row of absent) {
+          if (seenAbsent.has(row.file_path)) continue;
+          seenAbsent.add(row.file_path);
+          gap.run(row.file_path, "absent", row.subsystem_id, currentSha);
+        }
 
         ctx.db
           .prepare(
             `UPDATE git_state SET last_checked_sha=?, last_checked_at=datetime('now') WHERE repo_id='default'`,
           )
           .run(currentSha);
+
+        // The reading itself, one append-only row per invocation, written in the
+        // same transaction as the gap rewrite it describes. A perfectly
+        // reconciled store has zero `scope_gaps` rows, so the presence of a gap
+        // row cannot stand in for the reading: the count zero and the absence of
+        // a reading are different facts (VP4(e), §3.2). The two digests are
+        // taken here rather than above so they describe the ledger this
+        // transaction is committing.
+        treeDigest = trackedPathDigest(trackedPaths);
+        recordedLedgerDigest = ledgerDigest(ctx.db);
+        const written = ctx.db
+          .prepare(
+            `INSERT INTO scope_reconciliations
+               (detected_sha, tree_digest, ledger_digest, tracked_paths, ledger_rows,
+                unledgered, absent, exempt, session_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            currentSha,
+            treeDigest,
+            recordedLedgerDigest,
+            trackedPaths.length,
+            ledgerPaths.size,
+            unledgered.length,
+            absent.length,
+            exemptPaths.size,
+            ctx.sessionId,
+          );
+        reconciliationId = Number(written.lastInsertRowid);
       });
       reconcileTx();
 
@@ -335,11 +445,21 @@ export const gitTools: ToolDefinition[] = [
         stale_subsystems,
         stale_count: stale_subsystems.length,
         total_changed_files: changedFiles.length,
+        // The reading's own identity, so a caller can find the row this call
+        // wrote rather than guessing which of a store's reconciliations it was.
+        reconciliation_id: reconciliationId,
+        reconciled_at_sha: currentSha,
+        tree_digest: treeDigest,
+        ledger_digest: recordedLedgerDigest,
         // Reconciliation denominators travel with the result so a zero finding
         // is readable as "nothing drifted out of this much" rather than as an
         // unqualified all-clear.
         reconciled_tracked_paths: trackedPaths.length,
         reconciled_ledger_rows: ledgerRows.length,
+        reconciled_ledger_paths: ledgerPaths.size,
+        reconciled_exempt_paths: exemptPaths.size,
+        duplicate_ownership_count: duplicateOwnership.length,
+        duplicate_ownership: duplicateOwnership.slice(0, NAMED_DUPLICATE_PATHS),
         unledgered_paths: unledgered,
         absent_ledger_paths: absent.map((r) => ({
           subsystem_id: r.subsystem_id,

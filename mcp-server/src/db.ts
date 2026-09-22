@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
@@ -22,6 +23,26 @@ function findSchemaPath(): string {
   throw new Error(
     `amanuensis-memory: cannot locate schema.sql. Searched: ${candidates.join(", ")}`,
   );
+}
+
+let schemaTextCache: { key: string; text: string } | null = null;
+
+/**
+ * `schema.sql`, read once per open rather than once per reader.
+ *
+ * Three readers want it now — the apply, the vocabulary rebuild, and the
+ * post-apply check — and re-reading 2,600 lines three times on every open is
+ * paid by every tool call that opens a store. Keyed on size and mtime so an
+ * edit during a long-lived process is still picked up.
+ */
+function readSchemaText(): string {
+  const path = findSchemaPath();
+  const stats = statSync(path);
+  const key = `${path}:${stats.size}:${stats.mtimeMs}`;
+  if (schemaTextCache?.key === key) return schemaTextCache.text;
+  const text = readFileSync(path, "utf8");
+  schemaTextCache = { key, text };
+  return text;
 }
 
 export type DB = Database.Database;
@@ -54,8 +75,115 @@ export function openDatabase(dbPath: string): DB {
   // work in the common case.
   runMigrations(db);
   initializeSchema(db);
+  mintStoreIdentity(db);
+  requireSchemaObjects(db);
   requireViews(db);
   return db;
+}
+
+/**
+ * Give this store the identity a carried record names it by (§5.3).
+ *
+ * Minted once and never recomputed, because there is nothing to recompute:
+ * identity is a fact the store carries, not a function of its mutable state.
+ * The alternative an earlier draft took — a digest over
+ * `<repo_id|canonical_branch|onboarding_sha|last_checked_sha>` — fails in both
+ * directions. `set_git_state` may update `last_checked_sha` at any time, so a
+ * live store's identity would move every time it reconciled and an id written
+ * into a successor last week could not be recomputed from the source today;
+ * and two clean-slate rebuilds of the same repository at the same revision
+ * yield the same tuple, so they would collide.
+ *
+ * It is written here rather than as a column default because SQLite has no
+ * random default a `CREATE TABLE` can carry. `INSERT OR IGNORE` makes the mint
+ * happen on the open that creates the table and never again — including on an
+ * existing populated store, which gains its identity the first time it is
+ * opened after this schema lands, and keeps it thereafter. The immutability
+ * trigger is on UPDATE and DELETE, so a second open is a silent no-op rather
+ * than a refusal.
+ */
+function mintStoreIdentity(db: DB): void {
+  db.prepare("INSERT OR IGNORE INTO store_identity (id, store_generation) VALUES (1, ?)").run(
+    randomBytes(16).toString("hex"),
+  );
+}
+
+/**
+ * One object `schema.sql` declares, as `sqlite_master` records it.
+ */
+interface DeclaredObject {
+  type: "table" | "view" | "index" | "trigger";
+  name: string;
+}
+
+let declaredCache: { text: string; objects: DeclaredObject[] } | null = null;
+
+/**
+ * Every table, view, index and trigger `schema.sql` declares at statement
+ * level.
+ *
+ * Exported so a gate can check the store against the schema's own
+ * declarations rather than against a second list that would drift from it.
+ */
+export function declaredSchemaObjects(schemaSql: string): DeclaredObject[] {
+  if (declaredCache?.text === schemaSql) return declaredCache.objects;
+  const pattern =
+    /^CREATE\s+(?:UNIQUE\s+)?(TABLE|VIEW|INDEX|TRIGGER)\s+(?:IF\s+NOT\s+EXISTS\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gim;
+  const objects: DeclaredObject[] = [];
+  for (const match of schemaSql.matchAll(pattern)) {
+    const kind = match[1];
+    const name = match[2];
+    if (kind === undefined || name === undefined) continue;
+    objects.push({ type: kind.toLowerCase() as DeclaredObject["type"], name });
+  }
+  declaredCache = { text: schemaSql, objects };
+  return objects;
+}
+
+/**
+ * Fail the open when schema application did not leave every declared object in
+ * place, as the declared kind.
+ *
+ * `initializeSchema` applies `schema.sql` on every open and reports nothing
+ * about what arrived. That is usually harmless and once is not: `CREATE TABLE
+ * IF NOT EXISTS t` is a silent no-op when the name `t` is already held by an
+ * object of another kind, so an open can return a store missing a declared
+ * table and report success. Every later read of that table then fails
+ * somewhere else, with the store blamed for a schema defect — the same silent
+ * loss `requireViews` was added to stop for the two views the materializer
+ * reads, unguarded for the other 515 objects.
+ *
+ * This matters here rather than in the abstract because the survey-depth lane
+ * adds tables to stores that already exist and are already populated, with no
+ * grace path (`decisions.md` §1, `README.md` §4): a table that does not arrive
+ * has to be a refused open, not a silence. Reading the declarations out of
+ * `schema.sql` keeps the check from becoming a second list to maintain — a
+ * table declared there is covered the moment it is declared.
+ */
+function requireSchemaObjects(db: DB): void {
+  const declared = declaredSchemaObjects(readSchemaText());
+  const live = new Map<string, string>();
+  for (const row of db.prepare("SELECT type, name FROM sqlite_master").all() as {
+    type: string;
+    name: string;
+  }[]) {
+    live.set(row.name, row.type);
+  }
+  const wrong: string[] = [];
+  for (const object of declared) {
+    const actual = live.get(object.name);
+    if (actual === undefined) wrong.push(`${object.type} ${object.name} (absent)`);
+    else if (actual !== object.type)
+      wrong.push(`${object.type} ${object.name} (present as ${actual})`);
+  }
+  if (wrong.length > 0) {
+    db.close();
+    throw new Error(
+      `amanuensis-memory: applying schema.sql left ${wrong.length} of ${declared.length} declared ` +
+        `object(s) absent or of the wrong kind: ${wrong.slice(0, 8).join(", ")}` +
+        `${wrong.length > 8 ? `, and ${wrong.length - 8} more` : ""}`,
+    );
+  }
 }
 
 /**
@@ -84,8 +212,7 @@ function requireViews(db: DB): void {
 function initializeSchema(db: DB): void {
   // The schema is written with CREATE ... IF NOT EXISTS throughout, so we
   // can run it on every open — both fresh init and existing DBs are handled.
-  const schemaSql = readFileSync(findSchemaPath(), "utf8");
-  db.exec(schemaSql);
+  db.exec(readSchemaText());
 }
 
 /**
@@ -148,8 +275,14 @@ function runMigrations(db: DB): void {
     );
   }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
-  // schema.sql handle the new index and scope_gaps on the next
-  // initializeSchema pass — no explicit add here.
+  // schema.sql handle the new index, scope_gaps and scope_reconciliations on
+  // the next initializeSchema pass — no explicit add here. A new *table* needs
+  // no migration entry and no REQUIRED_VIEWS entry: `initializeSchema` re-execs
+  // schema.sql on every open (:84-89) and `requireSchemaObjects` then refuses
+  // the open if the table did not arrive, so an existing populated store gains
+  // scope_reconciliations the next time it is opened with no domain row
+  // rewritten. REQUIRED_VIEWS (:44, :61-82) stays as it is because the
+  // survey-depth lane's §3 adds no view.
   //
   // 4. CHECK-constrained vocabularies — a widened enum reaches an existing
   // store only through a table rebuild.
@@ -171,7 +304,7 @@ function runMigrations(db: DB): void {
  * vocabulary added there is migrated without a second list to maintain.
  */
 function migrateVocabularyChecks(db: DB): void {
-  const schemaText = readFileSync(findSchemaPath(), "utf8");
+  const schemaText = readSchemaText();
   for (const [table, column, canonical] of vocabularySqlBindings()) {
     if (!hasTable(db, table)) continue;
     const live = liveCreateSql(db, table);
@@ -221,6 +354,34 @@ function checkValues(createSql: string, column: string): string[] | null {
   const body = match?.[1];
   if (body === undefined) return null;
   return [...body.matchAll(/'([^']*)'/g)].map((m) => m[1] ?? "");
+}
+
+/**
+ * The canonical `CREATE VIEW` statement for one view, out of `schema.sql`.
+ *
+ * Exported for the one reader that needs a view's *text* rather than the view
+ * itself: `readArchivedStore` reads archives frozen before a view existed, and
+ * re-declaring that view as a `TEMP` one over the archive's own tables is the
+ * only way to read it without writing a second copy of the definition into a
+ * `.ts` file — which is precisely what `test-finding-partition.mjs` refuses
+ * (`the duplicated status fallback survives nowhere outside the view`). The
+ * schema stays the single place the fallback is written.
+ */
+export function canonicalCreateViewSql(view: string): string | null {
+  const schemaText = readSchemaText();
+  const re = new RegExp(`CREATE VIEW IF NOT EXISTS ${view}\\s+AS`, "i");
+  const start = re.exec(schemaText);
+  if (!start) return null;
+  // To the first `;` outside parentheses: a view body may carry a subselect
+  // whose own parentheses must not end the statement early.
+  let depth = 0;
+  for (let i = start.index; i < schemaText.length; i++) {
+    const ch = schemaText[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === ";" && depth === 0) return schemaText.slice(start.index, i + 1);
+  }
+  return null;
 }
 
 /** The canonical `CREATE TABLE` statement for one table, out of schema.sql. */

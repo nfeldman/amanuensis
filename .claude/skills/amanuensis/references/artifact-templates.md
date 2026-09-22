@@ -355,6 +355,17 @@ file:symbol@sha references.]
 - Cardinality: [...]
 - Staleness tolerance: [...]
 
+## Domain vocabulary (Phase 2)
+
+| Term | Gloss | First seen |
+|---|---|---|
+
+[One row per term recorded with `define_term`, each anchored at a
+`file:symbol@sha` whose revision resolves. Where the subsystem has none
+of its own, this section carries the declination and its reason instead:
+the structural pass either defined a domain term for this subsystem or
+declared that it has none. One term is enough; there is no quota.]
+
 ## Concern work (Phase 3)
 
 [Structured dispositions live in the DB. Prose here covers the

@@ -4,14 +4,15 @@ _Rows are ordered by open critical and high defects, then open medium and low, t
 
 | Subsystem | Open critical + high | Open medium + low | Awaiting verification | Undiscriminated | Weakest evidence quality | Unread files | Stale files | Unassessed seam sides |
 |---|---|---|---|---|---|---|---|---|
-| [Server core: repository binding, storage, schema, lifecycle](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md) **[B-02](subsystems/b02-server-core-repository-binding-storage-schema-lifecycle.md)** | 2 | 2 | 0 | 0 | `test-observed` | 0/8 | 0 | 0/10 |
-| [Reader lenses: standing, locus account, claims, edges, vocabulary](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md) **[B-04](subsystems/b04-reader-lenses-standing-locus-account-claims-edges-vocabulary.md)** | 2 | 2 | 0 | 0 | `runtime-observed` | 0/9 | 0 | 0/6 |
-| [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | 1 | 1 | 0 | 0 | `code-verified` | 6/20 | 0 | 0/8 |
-| [Gates, evidence custody, and CI](subsystems/b07-gates-evidence-custody-and-ci.md) **[B-07](subsystems/b07-gates-evidence-custody-and-ci.md)** | 0 | 2 | 0 | 0 | `test-observed` | 3/14 | 0 | 0/2 |
-| [Materializer: human projection, read-back, HTML](subsystems/b05-materializer-human-projection-read-back-html.md) **[B-05](subsystems/b05-materializer-human-projection-read-back-html.md)** | 0 | 1 | 0 | 1 | — | 3/11 | 0 | 0/6 |
-| [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | 0 | 1 | 0 | 0 | `contract-stated` | 4/16 | 0 | 0/2 |
-| [Records: design, research, published projection, execution ledger](subsystems/b08-records-design-research-published-projection-execution-ledger.md) **[B-08](subsystems/b08-records-design-research-published-projection-execution-ledger.md)** | 0 | 0 | 0 | 0 | `doc-asserted` | 3/14 | 0 | 0/4 |
-| [Packaging, installer, and host activation](subsystems/b06-packaging-installer-and-host-activation.md) **[B-06](subsystems/b06-packaging-installer-and-host-activation.md)** | 0 | 0 | 0 | 0 | `code-verified` | 1/12 | 0 | 0/2 |
+| [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) **[B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)** | 1 | 4 | 0 | 0 | `code-verified` | 0/43 | 2 | 0/0 |
+| [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) **[B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)** | 0 | 2 | 0 | 0 | — | 0/13 | 0 | 0/0 |
+| [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) **[B-04](subsystems/b04-diff-aware-materializer.md)** | 0 | 2 | 0 | 0 | `code-verified` | 0/24 | 2 | 0/0 |
+| [Embedded research surveys and platform trials](subsystems/b07-embedded-research-surveys-and-platform-trials.md) **[B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md)** | 0 | 1 | 0 | 0 | `code-verified` | 74/79 | 0 | 0/0 |
+| [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** | 0 | 1 | 0 | 0 | `code-verified` | 65/153 | 4 | 0/0 |
+| [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)** | 0 | 0 | 0 | 0 | — | 0/37 | 0 | 0/0 |
+| [Report interface design and validation studies](subsystems/b06-report-interface-design-and-validation-studies.md) **[B-06](subsystems/b06-report-interface-design-and-validation-studies.md)** | 0 | 0 | 0 | 0 | — | 0/24 | 0 | 0/0 |
+| [Activation evidence and release readiness](subsystems/b08-activation-evidence-and-release-readiness.md) **[B-08](subsystems/b08-activation-evidence-and-release-readiness.md)** | 0 | 0 | 0 | 0 | — | 0/33 | 0 | 0/0 |
+| [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** | 0 | 0 | 0 | 0 | — | 0/90 | 18 | 0/0 |
 
 ## What each column measures
 

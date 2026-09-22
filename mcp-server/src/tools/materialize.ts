@@ -10,6 +10,7 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
+import { requireCompleteReconciliation } from "../invariants.js";
 import { resolveStorageOutputPath } from "../project.js";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +71,33 @@ function currentSha(ctx: ServerContext): string | null {
     stdio: ["ignore", "pipe", "ignore"],
   });
   return result.status === 0 ? result.stdout.trim() || null : null;
+}
+
+/**
+ * §3.3 and §3.3a, checked before anything renders.
+ *
+ * Publication is the whole-store claim: it stamps a revision on a set of
+ * coverage fractions, and those fractions take their denominator from the
+ * repository's tracked paths at the store's reconciled revision (§1.4). A store
+ * that has not reconciled at the revision being published has no denominator,
+ * and one whose standing reconciliation reports a nonzero `unledgered` or
+ * `absent` has a denominator over a tree nobody finished inventorying.
+ *
+ * Checked here rather than inside the renderer so a refusal leaves the previous
+ * `docs/` untouched exactly as a red read-back does (`dev/adr/0005`): nothing is
+ * spawned, nothing is staged, and nothing is promoted.
+ *
+ * A workspace whose HEAD does not resolve is refused by the same sentence. The
+ * projection stamps a revision either way, and a revision the server cannot
+ * name is not one it can publish coverage against.
+ */
+function preflightReconciliation(ctx: ServerContext): string | null {
+  return requireCompleteReconciliation(
+    ctx.db,
+    ctx.project.workspacePath,
+    "HEAD",
+    "materialize_docs",
+  );
 }
 
 function preflightVerificationIdentity(
@@ -225,7 +253,7 @@ export const materializeTools: ToolDefinition[] = [
   {
     name: "materialize_docs",
     description:
-      "Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth.",
+      "Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. Refuses before rendering when the store has no standing reconciliation at HEAD, or when the standing one reports tracked paths with no ledger row or ledger rows the tree no longer carries: run detect_changes and assign or exempt every path it reports first.",
     inputSchema: {
       type: "object",
       properties: {
@@ -247,6 +275,8 @@ export const materializeTools: ToolDefinition[] = [
       const cleanPublish = optBool(args, "clean_publish", false);
       const verifyReadback = optBool(args, "verify_readback", true);
       const verificationRunId = optString(args, "verification_run_id");
+      const refusal = preflightReconciliation(ctx);
+      if (refusal) return { ok: false, error: refusal };
       const cliArgs: string[] = [];
       if (forceFull) cliArgs.push("--force-full");
       if (cleanPublish) cliArgs.push("--clean-publish");
