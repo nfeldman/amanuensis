@@ -1589,6 +1589,17 @@ stopped resolving. An open Pecia record pointing at a destroyed finding is outsi
 outside this gate; that gap is candidate finding **B03-R2**, which the acceptance rebuild carries
 forward rather than closes.
 
+
+**Scope, after the merge from `main`** — owner ruling (`decisions.md` §7), applied 2026-09-22.
+The eight records above are the ones whose references the rebuild destroyed, because they cite
+findings the archive held. When `main` was merged into this branch it brought `pc-5465`, which cites
+`B02-R5`: a finding filed on `main` after the fork, in the primary checkout's store. Requiring a
+carried-record accounting row for it is impossible, since nothing was carried for a finding the
+archive never held. So the audit's denominator is the closed records that cite an archived finding,
+and every other closed record is **split out rather than dropped**: each must be named in
+`dev/pecia-dogfood.md` with where its reference resolves, which is assertion A0 with its own seeded
+fault. A new record therefore still turns the gate red until someone accounts for it.
+
 ### 8.10 Gates that must stay green, unchanged
 
 `dev/test-rebuild-coverage.mjs`, `dev/test-reader-lenses-dogfood.mjs`,
@@ -1724,6 +1735,15 @@ the rebuild writes its candidate, in two more. Both are removed from every regre
 appears in the **acceptance** of the packet expected to turn it green, which is where a gate a
 packet is supposed to fix belongs. `dev/test-rebuild-regeneration.mjs` stays in
 `completion.commands`, where it is the launcher's and the owner's business rather than a packet's.
+
+**Status at merge, 2026-09-22.** It is still red, and now for more reasons than when this lane began:
+one assertion on `main` before the merge, four on the merged tree in a storeless checkout, six in the
+lane worktree. Four of them are the premise `decisions.md` §7 already ruled on for
+`dev/test-rebuild-depth.mjs` — they hold this rebuild against receipts describing the deleted P17
+store — and two may be genuine: two receipts recorded at different store revisions, and an edge the
+rebuilt store lacks. Scoping it is the same careful work the depth gate needed, so it is filed as
+Pecia defect `pc-6425` with that classification rather than rushed into this merge. It is recorded
+red, not weakened.
 It also holds a `set_disposition` call site (`dev/test-rebuild-regeneration.mjs`), so it is a P1
 deliverable even though it is nobody's regression: a caller a change breaks must be updated whether
 or not it was passing.

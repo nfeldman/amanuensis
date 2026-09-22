@@ -114,3 +114,17 @@ which the acceptance rebuild carries forward rather than closes — carried
 record 11, outcome `successor-finding` into B03-R2 — and it is recorded here
 because an accounting that reported the eight without it would read as
 coverage of a question it never asked.
+
+## Closed records outside the carry's scope
+
+The table above accounts for references the acceptance rebuild could have destroyed: references to
+findings the archive held, each answered by the carried record that inherited it. A closed record
+citing a finding filed **after** the rebuild forked, in another checkout's store, was never the
+carry's to account for, because no carried record could exist for it. Each such record is named here
+with where its reference resolves, so a new record cannot pass the audit simply by being new
+(`GATE PA1`, spec §8.9b's closing paragraph; `decisions.md` §7).
+
+- `pc-5465` → `amanuensis:B02-R5`, "a conspectus cannot be read from any working copy other than
+  the one it was created in." Filed on `main` on 2026-09-19 after `survey-depth` forked, and repaired
+  there at `8cb6a7a` ("Bind a store to its repository's identity, not to the directory it was made
+  in"). It resolves in the primary checkout's store, not in the store this branch rebuilt.

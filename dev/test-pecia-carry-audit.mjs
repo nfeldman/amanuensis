@@ -194,11 +194,36 @@ const HEADLINES = {
 //
 // Returns [{ family, detail }] — empty when every assertion held.
 // ---------------------------------------------------------------------------
-export function evaluateCarryAudit({ closed, carried, archiveId, table, gapNoted }) {
+// The carry can only have destroyed a reference to a finding the archive held. A closed record
+// citing a finding filed after the fork, in another checkout's store, was never the carry's to
+// account for (owner ruling, decisions.md §7; spec §8.9b's closing paragraph). Such records are
+// split out here rather than dropped: each must still be named in the dogfood document with where
+// it resolves, so a new record cannot slip past the audit by being new.
+export function partitionClosed(closed, carried) {
+  const archived = new Set(carried.map((row) => String(row.archived_finding_id)));
+  const idOf = (reference) => String(reference ?? "").replace(new RegExp(`^${SCHEME}:`), "");
+  const inScope = [];
+  const outOfScope = [];
+  for (const row of closed) (archived.has(idOf(row.reference)) ? inScope : outOfScope).push(row);
+  return { inScope, outOfScope };
+}
+
+export function evaluateCarryAudit({ closed, carried, archiveId, table, gapNoted, outOfScope = [], docMentions = new Set() }) {
   const failures = [];
   const fail = (family, detail) => failures.push({ family, detail: scrub(detail) });
 
   const expected = new Map(closed.map((row) => [row.pecia_id, row]));
+
+  // A0 — every closed record outside the carry's scope is named in the document, with its reason.
+  const unnamed = outOfScope.map((row) => row.pecia_id).filter((id) => !docMentions.has(id)).sort();
+  if (unnamed.length) {
+    fail(
+      "account",
+      `${unnamed.length} closed record(s) cite findings the archive never held and are not named in ` +
+        `${DOGFOOD_REL}: ${unnamed.join(", ")}. A record outside the carry's scope must still be ` +
+        `accounted for, with where its reference resolves`,
+    );
+  }
 
   // A1 — the accounting exists, and there is exactly one of it.
   if (table === null) {
@@ -603,6 +628,10 @@ function controlInputs() {
 }
 
 const SEEDED = [
+  ["a closed record outside the carry's scope that the document never names", "account", (t) => {
+    t.outOfScope = [{ pecia_id: "pc-f00d", reference: `${SCHEME}:X99-R1`, status: "done" }];
+    t.docMentions = new Set();
+  }],
   ["a dropped accounting row", "account", (t) => t.table.rows.pop()],
   ["no accounting table at all", "account", (t) => { t.table = null; }],
   ["two accounting tables", "account", (t) => { t.table = { ambiguous: 2 }; }],
@@ -658,8 +687,10 @@ const gapNoted = new RegExp(`\\b${GAP_FINDING}\\b`).test(markdown);
 
 // The document arm. It runs everywhere, and it is what turns this gate red
 // before the accounting exists.
-checked += 7;
-for (const failure of evaluateCarryAudit({ closed, carried, archiveId, table, gapNoted })) {
+checked += 8;
+const { inScope, outOfScope } = partitionClosed(closed, carried);
+const docMentions = new Set(markdown.match(/\bpc-[0-9a-f]{4}\b/g) ?? []);
+for (const failure of evaluateCarryAudit({ closed: inScope, carried, archiveId, table, gapNoted, outOfScope, docMentions })) {
   failures.push(failure);
 }
 
@@ -826,6 +857,13 @@ checked += 1;
   }
 }
 
+if (outOfScope.length) {
+  console.log(
+    `  scope ${outOfScope.length} closed record(s) cite findings the archive never held, so the carry ` +
+      `cannot account for them, and each must be named in the document: ` +
+      outOfScope.map((r) => `${r.pecia_id} → ${r.reference}`).join(", "),
+  );
+}
 console.log(
   `  ran  ${checked} assertion(s) — ${closed.length} closed Pecia record(s) citing the ` +
     `conspectus, ${carried.length} carried record(s) in the acceptance witness, accounting ` +
