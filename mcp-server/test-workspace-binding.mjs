@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -20,6 +21,7 @@ import { openDatabase } from "./dist/db.js";
 import { ensureProjectStorage, resolveProject } from "./dist/project.js";
 import { compareTools } from "./dist/tools/compare.js";
 import { materializeTools } from "./dist/tools/materialize.js";
+import { projectTools } from "./dist/tools/project.js";
 
 function initRepository(path, remote) {
   mkdirSync(path, { recursive: true });
@@ -184,8 +186,105 @@ try {
   assert.equal(worktreeBinding.bindingReceipt.storagePolicy, "worktree-local");
   assert.notEqual(mainBinding.storagePath, worktreeBinding.storagePath);
 
+  // A conspectus belongs to a repository, not to the directory it was surveyed
+  // in. A second working copy of the same repository — a colleague's clone, a
+  // CI checkout, the same directory moved — must be able to read a store that
+  // travelled with it, and must still refuse a store belonging to anything
+  // else. The marker used to enforce the creating path as if it were the
+  // identity, which refused every one of those and admitted nothing extra.
+  const surveyed = resolveProject(repositoryA, { selectionSource: "test", serverVersion: "test" });
+  const surveyedDb = openDatabase(surveyed.dbPath);
+  const surveyedCtx = { project: surveyed, db: surveyedDb, sessionId: null };
+  const sessionId = tool(projectTools, "start_session").handler(
+    { intent: "portability fixture" },
+    surveyedCtx,
+  ).session_id;
+  assert(sessionId, "fixture session was not recorded");
+  surveyedDb.close();
+
+  const secondCopy = join(root, "second-working-copy");
+  assert.equal(
+    spawnSync("git", ["clone", "--quiet", repositoryA, secondCopy], { cwd: root }).status,
+    0,
+  );
+  assert.equal(
+    spawnSync("git", ["remote", "set-url", "origin", "https://github.com/acme/fixture.git"], {
+      cwd: secondCopy,
+    }).status,
+    0,
+  );
+  rmSync(join(secondCopy, ".amanuensis"), { recursive: true, force: true });
+  cpSync(join(repositoryA, ".amanuensis"), join(secondCopy, ".amanuensis"), { recursive: true });
+  const markerPath = join(secondCopy, ".amanuensis", "initialization.json");
+  const markerBefore = readFileSync(markerPath, "utf8");
+
+  const copied = resolveProject(secondCopy, { selectionSource: "test", serverVersion: "test" });
+  assert.equal(copied.bindingReceipt.projectIdentity, surveyed.bindingReceipt.projectIdentity);
+  assert.notEqual(copied.workspacePath, surveyed.workspacePath);
+  initializeStorage(copied);
+  const copiedDb = openDatabase(copied.dbPath);
+  const readBack = tool(projectTools, "get_session").handler(
+    { session_id: sessionId },
+    { project: copied, db: copiedDb, sessionId: null },
+  );
+  copiedDb.close();
+  assert.equal(readBack.session_id, sessionId, "the conspectus did not read back from a copy");
+  assert.equal(readBack.intent, "portability fixture");
+  assert.equal(
+    readFileSync(markerPath, "utf8"),
+    markerBefore,
+    "reading a relocated store rewrote its completion marker",
+  );
+
+  // Red gates. Relaxing the path must not relax the identity.
+  const foreignStore = join(root, "foreign-working-copy");
+  mkdirSync(foreignStore, { recursive: true });
+  assert.equal(
+    spawnSync("git", ["clone", "--quiet", repositoryA, join(foreignStore, "checkout")], {
+      cwd: root,
+    }).status,
+    0,
+  );
+  const foreignCheckout = join(foreignStore, "checkout");
+  assert.equal(
+    spawnSync("git", ["remote", "set-url", "origin", "https://github.com/acme/unrelated.git"], {
+      cwd: foreignCheckout,
+    }).status,
+    0,
+  );
+  rmSync(join(foreignCheckout, ".amanuensis"), { recursive: true, force: true });
+  cpSync(join(repositoryA, ".amanuensis"), join(foreignCheckout, ".amanuensis"), {
+    recursive: true,
+  });
+  assert.throws(
+    () =>
+      initializeStorage(
+        resolveProject(foreignCheckout, { selectionSource: "test", serverVersion: "test" }),
+      ),
+    /storage identity collision|projectIdentity: expected/,
+    "a store from a different repository was adopted",
+  );
+
+  const tampered = JSON.parse(markerBefore);
+  tampered.projectKey = "github.com/acme/someone-else";
+  writeFileSync(markerPath, `${JSON.stringify(tampered)}\n`);
+  assert.throws(
+    () => initializeStorage(resolveProject(secondCopy)),
+    /completion marker does not match the immutable repository binding.*projectKey: expected/s,
+    "a marker naming a different project key was accepted",
+  );
+  const truncated = JSON.parse(markerBefore);
+  delete truncated.projectIdentity;
+  writeFileSync(markerPath, `${JSON.stringify(truncated)}\n`);
+  assert.throws(
+    () => initializeStorage(resolveProject(secondCopy)),
+    /completion marker does not match the immutable repository binding.*the contract names/s,
+    "a marker missing a contract field was accepted",
+  );
+  writeFileSync(markerPath, markerBefore);
+
   console.log(
-    "A21 red gate verified: symlink escape halted before mutation and repository/worktree bindings stayed isolated",
+    "A21 red gate verified: symlink escape halted before mutation, repository/worktree bindings stayed isolated, and a second working copy read the conspectus while foreign and tampered stores were refused",
   );
 } finally {
   delete process.env.AMANUENSIS_STORAGE_ROOT;

@@ -283,6 +283,15 @@ A few things are load-bearing and easy to break inadvertently. If
 your change touches one, the contract belongs in the server, not
 in agent prose:
 
+- **Repository-binding custody.** A store is bound to its repository's
+  identity, never to the directory it was created in. The storage completion
+  marker enforces contract version, project identity, project key, storage
+  policy, and database name; `canonicalRoot` and `workspaceInstanceId` are
+  provenance, reported once and never refused, so a clone, a CI checkout, or a
+  moved directory can read a store that travelled with it while a store from
+  another repository is still refused. Extend `test-workspace-binding.mjs`
+  whenever a marker field, identity derivation, storage policy, or containment
+  assertion changes.
 - **Knowledge-depth gates.** A subsystem's status determines what
   claims its agents are authorized to make. `update_subsystem_status`
   rejects regressions; `reset_subsystem` is the explicit escape hatch
