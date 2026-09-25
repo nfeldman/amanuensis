@@ -34,10 +34,17 @@ ceremony before useful work begins.
 
 ## On session start (orient, infer scope, proceed)
 
-1. **Check MCP reachability.** If `amanuensis-memory` tools are missing, tell
-   the user the server isn't connected and stop — the methodology is
-   unworkable without persistent state. See `references/setup.md` for
-   wiring.
+1. **Check MCP reachability by calling, not by reading your tool list.**
+   Hosts with many tools defer MCP tools out of the initial listing, so their
+   absence there proves nothing. Search for them first: Claude Code lists them
+   as deferred (load with ToolSearch, query `amanuensis`); Codex code mode
+   omits them from the `exec` description but exposes them on the global
+   `tools` object — filter `ALL_TOOLS` for `amanuensis`, then call
+   `tools.mcp__amanuensis_memory__get_project_info({})` (the hyphen in the
+   server name becomes an underscore). Only when the search finds no
+   `amanuensis-memory` tools, or the call itself fails, tell the user the
+   server isn't connected and stop — the methodology is unworkable without
+   persistent state. See `references/setup.md` for wiring.
 2. **Probe project state.** Call `get_project_info`.
    - `db_exists=false` → cold start. Do a quick repo scan: top-level
      languages, build systems, directory cluster count, deployable units.
