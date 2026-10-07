@@ -76,3 +76,14 @@ restarts or reconnects them. Computer-use access to the app was unavailable, so
 the current chat's connection was not reloaded. The tests above are actual
 stdio process tests with the reproduced desktop launch boundary; they do not
 claim a post-reload native app session has been observed.
+
+## Native app read-back on October 7
+
+The current native Codex app connection successfully called
+`get_project_info({workspace: "/Users/nfeldman/repos/amanuensis"})` and returned
+this repository, its existing `.amanuensis` store, and selection source
+`tool-workspace-handshake`. The server instance was
+`2eb15f64-7684-4ed3-a637-5cbdda104f29` and its version was `0.2.0-beta.2`,
+with the rebuilt repair loaded. This establishes a live native app handshake
+for the repair; it does not establish a beta.3 reconnect or verification in
+another chat.

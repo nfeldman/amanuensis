@@ -24,13 +24,20 @@ The workspace regression fails against the pre-fix server and passes with the
 repair, including startup from `/`, simultaneous clone isolation, lazy first
 use, immutable binding, restart recovery, project pins, and CLI `--cd` behavior.
 The installed launcher was independently checked from `/` against a real project.
-Post-reload native app verification and product efficacy remain unestablished.
+A live native Codex app call also returned this chat's repository through the
+handshake; that connection was still running the repaired beta.2 build.
+Native app verification of beta.3 after reconnect and product efficacy remain
+unestablished.
 
 Repository-wide CI has pre-existing failures in historical source-custody
 receipt validation and the roadmap job's missing server build. This release
 does not claim that workflow is green. Publication uses the release workflow's
 clean packed-artifact check; the published package is checked separately by the
-Linux/macOS Node.js 20/22 smoke matrix.
+Linux/macOS Node.js 20/22 smoke matrix. [Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/37692059909),
+and [all four published-package smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/37693422887).
+A clean local installation of the exact registry version matched its published
+SHA-512 integrity and passed all ten workspace regression groups against the
+installed beta.3 server.
 
 Install this exact prerelease with:
 
