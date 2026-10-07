@@ -215,6 +215,21 @@ def main() -> None:
         assert summary1["html_entrypoint"] == str((storage / "docs" / "index.html").resolve())
         assert summary1["pages_rendered"] > 0
         assert summary1["pages_unchanged"] == 0, summary1
+        # A relocated store's old workspace_path must not override the MCP
+        # connection's explicit checkout, for rendering or independent read-back.
+        relocated = storage / "relocated-docs"
+        bound_run = subprocess.run(
+            [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage),
+             "--workspace", str(ROOT.parent), "--output", str(relocated)],
+            capture_output=True, text=True, check=True,
+        )
+        bound_summary = json.loads(bound_run.stdout.strip().splitlines()[-1])
+        assert bound_summary["ok"] is True, bound_summary
+        head = subprocess.check_output(
+            ["git", "-C", str(ROOT.parent), "rev-parse", "HEAD"], text=True,
+        ).strip()
+        assert head[:12] in (relocated / "index.md").read_text()
+        assert (storage / "workspace_path").read_text() == "/example/FictionalProject\n"
         # Verify key pages exist.
         docs = storage / "docs"
         for p in [

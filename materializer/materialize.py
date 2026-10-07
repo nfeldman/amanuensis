@@ -24,6 +24,7 @@ import uuid
 from pathlib import Path
 
 from amanuensis_materializer import Materializer
+from amanuensis_materializer.readback import BOUND_WORKSPACE
 
 
 def unmanaged_output_files(output: Path) -> list[str]:
@@ -63,6 +64,10 @@ def main() -> int:
         help="Project storage directory (contains memory.db and prose artifacts).",
     )
     parser.add_argument(
+        "--workspace",
+        help="Bound surveyed checkout; overrides the store's historical workspace_path after relocation.",
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Output directory (default: <storage>/docs).",
@@ -94,6 +99,12 @@ def main() -> int:
         help="Emit a JSON summary as the final stdout line (on by default).",
     )
     args = parser.parse_args()
+    if args.workspace:
+        workspace = Path(args.workspace).resolve()
+        if not workspace.is_dir():
+            print(json.dumps({"ok": False, "error": f"workspace dir not found: {workspace}"}))
+            return 2
+        BOUND_WORKSPACE.set(workspace)
 
     storage = Path(args.storage).resolve()
     if not storage.is_dir():

@@ -19,6 +19,7 @@ import json
 import re
 import subprocess
 from collections import Counter
+from contextvars import ContextVar
 from dataclasses import dataclass
 from html import unescape
 from html.parser import HTMLParser
@@ -211,8 +212,15 @@ def _metric_cell(text: str, label: str, suffix: str) -> str | None:
     return None
 
 
+BOUND_WORKSPACE: ContextVar[Path | None] = ContextVar("bound_workspace", default=None)
+
+
 def resolve_workspace(storage: Path) -> Path:
-    """The surveyed workspace: the recorded path, else the storage's parent."""
+    """Prefer the caller's binding; recorded paths are legacy provenance."""
+
+    bound = BOUND_WORKSPACE.get()
+    if bound is not None:
+        return bound
 
     record = storage / "workspace_path"
     if record.is_file():

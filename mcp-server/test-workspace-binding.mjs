@@ -136,6 +136,26 @@ try {
   initializeStorage(project);
   const db = openDatabase(project.dbPath);
   const ctx = { project, db, sessionId: null };
+  // A relocated store retains provenance from its original checkout. The
+  // materializer must receive the connection's binding, even from cwd=/.
+  const materializerStub = join(root, "materializer-stub.py");
+  const materializerArgs = join(root, "materializer-args.json");
+  writeFileSync(materializerStub,
+    `import json, sys\nfrom pathlib import Path\nPath(${JSON.stringify(materializerArgs)}).write_text(json.dumps(sys.argv[1:]))\nprint(json.dumps({"ok": True}))\n`);
+  const previousMaterializer = process.env.AMANUENSIS_MATERIALIZER;
+  const previousCwd = process.cwd();
+  try {
+    process.env.AMANUENSIS_MATERIALIZER = materializerStub;
+    process.chdir("/");
+    assert.equal(tool(materializeTools, "verify_materialized_docs").handler({}, ctx).ok, true);
+    const args = JSON.parse(readFileSync(materializerArgs, "utf8"));
+    assert.equal(args[args.indexOf("--workspace") + 1], project.workspacePath);
+    assert.equal(args[args.indexOf("--storage") + 1], project.storagePath);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousMaterializer === undefined) delete process.env.AMANUENSIS_MATERIALIZER;
+    else process.env.AMANUENSIS_MATERIALIZER = previousMaterializer;
+  }
   const outsideMaterialization = join(repositoryB, "materialized");
   assert.throws(
     () =>

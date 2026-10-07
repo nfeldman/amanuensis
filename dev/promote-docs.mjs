@@ -202,7 +202,10 @@ function readback(storage, directory, label) {
   const python = process.env.AMANUENSIS_PYTHON ?? "python3";
   const run = spawnSync(
     python,
-    [MATERIALIZER, "--storage", storage, "--output", directory, "--readback-only"],
+    [
+      MATERIALIZER, "--storage", storage, "--workspace", REPO,
+      "--output", directory, "--readback-only",
+    ],
     { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
   );
   if (run.error) refuse(`the read-back of ${label} could not be started — ${run.error.message}`);

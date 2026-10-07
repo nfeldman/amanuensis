@@ -230,7 +230,11 @@ function execute(
   const py = process.env.AMANUENSIS_PYTHON ?? "python3";
   const result = spawnSync(
     py,
-    [script, "--storage", ctx.project.storagePath, "--output", outputDir, ...extraArgs],
+    [
+      script, "--storage", ctx.project.storagePath,
+      "--workspace", ctx.project.workspacePath,
+      "--output", outputDir, ...extraArgs,
+    ],
     { encoding: "utf8" },
   );
   if (result.error)
