@@ -1,14 +1,27 @@
 # Resolved findings
 
-No finding has reached a terminal state.
+_Each record carries the basis its resolution rests on, labelled by kind. A verified repair rests on evidence; a claim ruled out or a behaviour accepted rests on an argument someone authorized to make it recorded._
 
-- **Scope** — findings recorded verified-fixed, ruled out, or accepted, each with the basis its resolution rests on.
-- **Basis** — `finding_state_current` over `findings` and `finding_resolution_events`.
-- **Checked revision** — `a00d6f2cc2ab` on `main`, recorded 2026-09-18 22:05 UTC.
+## Verified fixed
+
+_1 record with verification evidence attached to the repair._
+
+### [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+
+<!-- amanuensis:finding:f86b564f02a657ccbc15857fe2bd4b30e32e846d511d2feae48eb2c7839370ba -->
+<a id="b02-r2"></a>
+#### B02-R2 · `MEDIUM`
+
+A stalled git subprocess during server startup hangs the MCP server indefinitely, with no timeout and no diagnosis, on every start that selects its workspace from an argument or the environment — which is the registration Claude Code writes.
+
+- **Root cause** — index.ts's gitRoot helper (index.ts:122-133) calls execFileSync("git", ["rev-parse", "--show-toplevel"]) with cwd, encoding and stdio and no timeout or killSignal. index.ts imports execFileSync directly from node:child_process and never imports STARTUP_PROBE_TIMEOUT_MS, the bound codex-host.ts declares and project.ts applies to all six of its git invocations. gitRoot runs up to four times before the transport connects: twice inside assertWorkspaceMatchesLaunch and twice inside parseArgs, which is the first statement of main(). This is carried finding B02-3 re-found at c073404, unchanged in mechanism and in location from its archived reading at 61bc6b5.
+- **Resolution** — `verified-fixed`, recorded 2026-10-07 22:44 UTC.
+- **Repair** — `dd674ef84876` at `mcp-server/src/index.ts:gitRoot`.
+- **Basis** — `evidence`: the verification evidence recorded at `a521e284e795` — [`mcp-server/src/index.ts`](files.md#f-e6d78f9f4a) `gitRoot` lines `130-144`, kind `code-verified`. Current gitRoot passes STARTUP_PROBE_TIMEOUT_MS and killSignal SIGKILL to execFileSync; catch returns null. Repair introduced in dd674ef.
 
 ## Carried obligations
 
-_22 inherited obligations carried forward from an earlier store and decided here. The archived record is what the predecessor held; the outcome is what this store did about it._
+_23 inherited obligations carried forward from an earlier store and decided here. The archived record is what the predecessor held; the outcome is what this store did about it._
 
 ### B02-1 · 🟠 HIGH · Closed in the archive
 
@@ -133,7 +146,7 @@ A stalled ps or git subprocess during server startup hangs the MCP server indefi
 
 - **Carried from** `store-legacy-36f2623f4d9afe92` at `61bc6b5c89f7`, recorded there as `open`
 - **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
-- **Outcome** `successor-finding` — [B02-R2](findings.md#b02-r2)
+- **Outcome** `successor-finding` — [B02-R2](resolved-findings.md#b02-r2)
 - **Recorded because** Re-found unchanged. index.ts:gitRoot still calls execFileSync with no timeout and no killSignal, index.ts still does not import STARTUP_PROBE_TIMEOUT_MS, and gitRoot still runs up to four times before the transport connects. Filed here as B02-R2 under this rebuild's own id convention so the obligation is a live finding of this store rather than only an inherited one.
 
 A stalled git subprocess during server startup still hangs the MCP server indefinitely with no timeout and no diagnosis, despite the B02-2 repair. The remaining unbounded probe runs on every start that selects its workspace from the environment — the registration Claude Code uses.
@@ -256,6 +269,19 @@ The published 0.2.0-beta.2 package identifies itself to every MCP host as 0.2.0-
 Release readiness depends on the byte state of the user's live ~/.codex/config.toml. Once that file changes for any reason, the A22 checker reports drift permanently, the A26 candidate suite fails, and no release can be cut until another real-host A22 campaign rebaselines the pin.
 
 **Root cause, as archived.** The A22 receipt records host.configSha256Before/After and configurationCustody.restoredConfigSha256 for the developer's own Codex configuration, and check-codex-host-evidence compares the live file against them. That file is user-level and mutable independently of this repository, so the pin is a snapshot of something the project does not own and cannot hold still. dev/refresh-a22-evidence.mjs rebaselines the fourteen source digests but not the config pin, leaving no cheap recovery.
+
+### B02-R5 · 🟡 MEDIUM · Closed in the archive
+
+<!-- amanuensis:carried:f6980585cef88c3f35336ccec9e3ae39635696d6c59e61d2103a9144817568b6 --><a id="cf-f6980585ce"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `verified-fixed`
+- **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+- **Outcome** `archived-terminal`
+- **Recorded because** the archive store-legacy-7e0595ffa9f84f2b recorded B02-R5 as verified-fixed before this store existed; the carry records that state rather than re-deciding it
+
+A conspectus cannot be read from any working copy other than the one it was created in. A colleague's clone, a CI checkout, a second worktree, or the same directory moved refuses to open with `Amanuensis storage completion marker does not match the immutable repository binding: <path>` — a fatal server error, not a degraded mode, whose message names neither the field that objected nor the fact that a path was what it objected to, so it reads as "this store belongs to another repository" when the repository is in fact identical. Reproduced 2026-09-19 against the d2b1630 build with two checkouts sharing one origin remote and an identical projectIdentity.
+
+**Root cause, as archived.** The storage completion marker records seven fields and `validateStorageMarker` (project.ts:701-723) requires all seven to match. Five are identity — contractVersion, projectIdentity, projectKey, storagePolicy, database. Two are location: canonicalRoot and workspaceInstanceId, written by `expectedStorageMarker` (667-678) from `project.workspacePath` and a digest of the same root. Enforcing location as if it were identity is what binds the store to a directory. One layer down, `assertStorageIdentity` (558-589) guards the same question and already accepts a moved working copy whenever the recorded project_identity matches — it consults workspace_path only when no identity was recorded. Two layers guarded one question, disagreed, and the stricter one silently decided the behavior. This is the project's recorded class of a gate whose denominator was drawn wider than the property it was defending, in its inverted form: a check narrower than the identity it claims to enforce.
 
 ### B01-1 · 🔵 LOW · Repaired here
 

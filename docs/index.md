@@ -12,29 +12,29 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `a00d6f2cc2ab` on `main`, 2026-09-18 22:05 UTC |
-| Repository head | `a00d6f2cc2ab` — the same revision the survey checked |
-| Upstream head | `d2b1630bbdf4` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 26 of 496 |
-| Scoped files exempt from that obligation, marked stale | 63 of 156 |
+| Checked at | `ec5824bceb9c` on `main`, 2026-10-07 22:54 UTC |
+| Repository head | `ec5824bceb9c` — the same revision the survey checked |
+| Upstream head | `1f1c00c95b5c` — a different revision from the one the survey checked (`origin/main`) |
+| Files carrying a survey obligation marked stale | 0 of 499 |
+| Scoped files exempt from that obligation, marked stale | 65 of 156 |
 
 ### Survey coverage
 
 | Metric | Value |
 |---|---|
 | Subsystems by survey depth | 3 unmapped, 2 concerns, 4 adversarial |
-| Files read, of those carrying an obligation | 357 of 496 |
+| Files read, of those carrying an obligation | 360 of 499 |
 | Paths in scope with no ledger row | 0 |
 
 ### Open engineering work
 
 | Metric | Value |
 |---|---|
-| Findings open | 11 |
-| Carried defects undecided | 0 |
+| Findings open | 10 |
+| Carried defects undecided | 14 |
 | Repairs awaiting verification | 0 |
 | Contradictions unresolved | 0 |
-| Decisions open | 2 |
+| Decisions open | 6 |
 
 ### Publication integrity
 
@@ -43,17 +43,17 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-09-18 21:06 UTC |
+| Verified at | 2026-10-07 22:55 UTC |
 
 ## Findings by resolution state
 
 | Metric | Value |
 |---|---|
-| [Open](findings.md) | 11 |
+| [Open](findings.md) | 10 |
 | [Accepted](resolved-findings.md) | 0 |
 | [Ruled out](resolved-findings.md) | 0 |
 | [Unverified fix](findings.md) | 0 |
-| [Verified fixed](resolved-findings.md) | 0 |
+| [Verified fixed](resolved-findings.md) | 1 |
 
 ## The four lenses
 
@@ -64,5 +64,5 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ## Latest session
 
-`fix-final: re-record the acceptance receipt over the final review's three tracked documents` — started 2026-09-18 22:00 UTC · ended 2026-09-18 22:01 UTC
+`Publish the refreshed self-conspectus from the bound repository, verifying the relocated workspace handoff at ec5824b.` — started 2026-10-07 22:55 UTC · ended 2026-10-07 22:55 UTC
 

@@ -52,7 +52,7 @@ No defect here is open or awaiting verification.
 
 | Path | Classification | Why in scope | Examined at |
 |---|---|---|---|
-| <a id="le-017d152868"></a>`.claude/skills/amanuensis/SKILL.md` | examined | The coordinator's contract: autonomy default, the stop conditions, the command routing table, the authorized-claims ladder, and the hard constraints. | `c0734040` |
+| <a id="le-017d152868"></a>`.claude/skills/amanuensis/SKILL.md` | examined | The coordinator's contract: autonomy default, the stop conditions, the command routing table, the authorized-claims ladder, and the hard constraints. | `a521e28` |
 | <a id="le-592927548e"></a>`.claude/skills/amanuensis/references/artifact-templates.md` | examined | The prose artifact formats the materializer's diff reads, and the entry-point acceptance gate. | `c0734040` |
 | <a id="le-18b6f1fc80"></a>`.claude/skills/amanuensis/references/concern-territories.md` | examined | The eleven-territory catalog onboarding Phase 4 calibrates against, and the diagnosticity protocol. | `c0734040` |
 | <a id="le-87251d5427"></a>`.claude/skills/amanuensis/references/memory-audit.md` | examined | The hygiene sweep that lists drift without working it — the route refresh.md is defined against. | `c0734040` |
@@ -66,7 +66,7 @@ No defect here is open or awaiting verification.
 | <a id="le-87d1cc2ac1"></a>`.claude/skills/amanuensis/references/phase-5-packaging.md` | examined | Phase 5: the four prose artifacts, register/rehash, materialize, contradiction detection, seam assessability, and the mapped advance. | `c0734040` |
 | <a id="le-b9d0f2a875"></a>`.claude/skills/amanuensis/references/refresh.md` | examined | The drift-discharge loop, the cardinal rule against clearing what was not read, and the reinitialization section carrying the carry contract. | `c0734040` |
 | <a id="le-10fb8244f3"></a>`.claude/skills/amanuensis/references/reporting-style.md` | examined | The IA/UI boundary, the register, the typed HTML projections, and the colour-per-enum rule the materializer implements. | `c0734040` |
-| <a id="le-056443afa8"></a>`.claude/skills/amanuensis/references/setup.md` | examined | The installer adapters per host, the workspace-resolution contract, and the worktree-local storage default this lane depends on. | `c0734040` |
+| <a id="le-056443afa8"></a>`.claude/skills/amanuensis/references/setup.md` | examined | The installer adapters per host, the workspace-resolution contract, and the worktree-local storage default this lane depends on. | `a521e28` |
 | <a id="le-a19a8b2374"></a>`.claude/skills/amanuensis/references/subsystem-survey.md` | examined | The coordinator's loop: resume logic, session setup, per-phase dispatch, and what to do when a phase cannot produce what the next needs. | `c0734040` |
 | <a id="le-99ac01afce"></a>`dev/adr/0001-living-conspectus-terms.md` | examined | The executable definitions of fully surveyed, current, stale, invalid, resolved, verified-fixed and complete — clause 1 is what §3's reconciliation enforces and clause 7 is what this lane added. | `c0734040` |
 | <a id="le-c0491c92b8"></a>`dev/adr/0002-temporal-claim-model.md` | examined | Why claims carry both Git validity intervals and explicit supersession edges. | `c0734040` |

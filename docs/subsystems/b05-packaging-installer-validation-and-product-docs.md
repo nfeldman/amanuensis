@@ -39,10 +39,10 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 | Metric | Value |
 |---|---|
-| Files read | 88 of 154 ledger rows |
-| Files in scope, not yet read | 65 of 154 |
-| Files excluded from the survey obligation | 1 of 154 |
-| Ledger rows the repository has changed under | 4 of 154 |
+| Files read | 91 of 157 ledger rows |
+| Files in scope, not yet read | 65 of 157 |
+| Files excluded from the survey obligation | 1 of 157 |
+| Ledger rows the repository has changed under | 1 of 157 |
 | Active concerns with a disposition recorded here | 1 of 12 — 1 confirmed-bug |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -60,13 +60,13 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-94a7ff5615"></a>`mcp-server/test-adversarial-security.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-8231c0b17f"></a>`mcp-server/test-attention-history.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-6e2867fe0b"></a>`mcp-server/test-autoprogress.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
-| <a id="le-266e756c8c"></a>`mcp-server/test-carried-findings.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
+| <a id="le-266e756c8c"></a>`mcp-server/test-carried-findings.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a521e28` |
 | <a id="le-5f7eb5d68f"></a>`mcp-server/test-change-impact.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-f03a3ce504"></a>`mcp-server/test-chorusmith-adapter.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-a761dd6f02"></a>`mcp-server/test-cloud-e2e.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-565935c892"></a>`mcp-server/test-cloud-storage.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-d61cc4b7f6"></a>`mcp-server/test-codebase-brief.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
-| <a id="le-746e0cfbab"></a>`mcp-server/test-codex-parent-workspace.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
+| <a id="le-746e0cfbab"></a>`mcp-server/test-codex-parent-workspace.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a521e28` |
 | <a id="le-4d983fef8c"></a>`mcp-server/test-compare.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-63b8d45ccc"></a>`mcp-server/test-composition.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-054fe5d600"></a>`mcp-server/test-consumer-route.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
@@ -108,7 +108,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-4133590a18"></a>`mcp-server/test-review-analysis.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-5e28e6fd06"></a>`mcp-server/test-review-brief.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-8a10c5166e"></a>`mcp-server/test-review-session.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
-| <a id="le-b4bb46c944"></a>`mcp-server/test-scope-reconciliation.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
+| <a id="le-b4bb46c944"></a>`mcp-server/test-scope-reconciliation.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a521e28` |
 | <a id="le-a1342c1ab3"></a>`mcp-server/test-smoke.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-6c42e25d8d"></a>`mcp-server/test-startup-bounds.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-c5242d809d"></a>`mcp-server/test-storage-git.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
@@ -116,42 +116,44 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-996c8d9035"></a>`mcp-server/test-temporal-claims.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-dd0fce72cf"></a>`mcp-server/test-vocabulary-discharge.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-80b9cab913"></a>`mcp-server/test-vocabulary-source.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
-| <a id="le-ebdfbb3cfc"></a>`mcp-server/test-workspace-binding.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
+| <a id="le-ebdfbb3cfc"></a>`mcp-server/test-workspace-binding.mjs` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `ec5824bc` |
 | <a id="le-9c91991914"></a>`mcp-server/tsconfig.json` | candidate | Packaging, configuration, fixtures, checkers and the server's own test suite. | `a7f9384d` |
 | <a id="le-f55c3d9a96"></a>`.github/FUNDING.yml` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-93f283a230"></a>`.github/workflows/pages.yml` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-934e7538b8"></a>`.github/workflows/publish.yml` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-4271f9070c"></a>`.github/workflows/published-smoke.yml` | examined | The published-tarball smoke job named in B05-2's root cause: it asserts the binding receipt's canonicalRoot and storage_path and never asserts the reported server version. | `c0734040` |
-| <a id="le-71fbb7b0fb"></a>`.github/workflows/test.yml` | examined | The CI registration of every gate this lane ships, including GATE D0's three-state block and GATE D1 beside it. | `c0734040` |
+| <a id="le-71fbb7b0fb"></a>`.github/workflows/test.yml` | examined | The CI registration of every gate this lane ships, including GATE D0's three-state block and GATE D1 beside it. | `a521e28` |
 | <a id="le-77e0d693fa"></a>`.gitignore` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-662f11f38b"></a>`.mcp.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-e3123e5c9f"></a>`.pecia/config.yaml` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-5413b0286b"></a>`.pecia/snapshot.head` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-bdef40c028"></a>`.pecia/snapshot.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-5fcd03e3a4"></a>`.pecia/work.jsonl` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-5413b0286b"></a>`.pecia/snapshot.head` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-bdef40c028"></a>`.pecia/snapshot.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-5fcd03e3a4"></a>`.pecia/work.jsonl` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-79244d1ddf"></a>`.tool-versions` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-f4f8cb0763"></a>`CONTRIBUTING.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-fc65beb71e"></a>`HISTORY.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-2ae149d716"></a>`INSTALLATION.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-f4f8cb0763"></a>`CONTRIBUTING.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-fc65beb71e"></a>`HISTORY.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-2ae149d716"></a>`INSTALLATION.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-92b9b267c5"></a>`LICENSE` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-31a487e865"></a>`README.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-42e248e1cb"></a>`ROADMAP.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-31a487e865"></a>`README.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-42e248e1cb"></a>`ROADMAP.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-e711c0cf3f"></a>`dev/codex-app-workspace-repair.md` | examined | Workspace repair verification record maintained with delivery documentation. | `a521e28` |
 | <a id="le-257be3305f"></a>`dev/conspectus/README.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-798c28a252"></a>`dev/conspectus/baseline-report-detector-1.0.0.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-b21ec90750"></a>`dev/conspectus/baseline-report.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-e190b2bd3a"></a>`dev/conspectus/detector-registry.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-809af737fc"></a>`dev/conspectus/self-baseline.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-405ad18f5f"></a>`dev/hooks/pre-commit` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-aac0e5d7b0"></a>`dev/release-notes-v0.2.0-beta.3.md` | examined | Published beta.3 release notes and bounded validation evidence. | `a521e28` |
 | <a id="le-9e304511e2"></a>`dev/render-roadmap.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-c5cc24fa88"></a>`dev/roadmap.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-c5cc24fa88"></a>`dev/roadmap.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-fcd5a4581d"></a>`dev/survey-depth-baseline.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-390f0c9e45"></a>`dev/test-amanuensis-pecia-defects.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-390f0c9e45"></a>`dev/test-amanuensis-pecia-defects.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-ed1b9d303f"></a>`dev/test-pecia-roadmap-red-gates.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-b5122252a2"></a>`dev/test-pecia-roadmap.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-afca65075c"></a>`dev/test-roadmap.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-b6124b6738"></a>`mcp-server/.gitignore` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-58e5638e34"></a>`mcp-server/DEVELOPMENT.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-995065865c"></a>`mcp-server/README.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-58e5638e34"></a>`mcp-server/DEVELOPMENT.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
+| <a id="le-995065865c"></a>`mcp-server/README.md` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-5f3891d9ab"></a>`mcp-server/biome.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-49955b2f56"></a>`mcp-server/contracts/activation-parity.schema.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-5796a0162b"></a>`mcp-server/contracts/append-only-tables.txt` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
@@ -195,7 +197,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-19ddb7b4a8"></a>`mcp-server/fixtures/revalidation/manifest.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-8e69b93183"></a>`mcp-server/fixtures/review-analysis/manifest.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-18d1eed634"></a>`mcp-server/fixtures/review-session/semantic-states.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
-| <a id="le-fd6d9d5c10"></a>`mcp-server/package.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-fd6d9d5c10"></a>`mcp-server/package.json` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `a521e28` |
 | <a id="le-a8ef18af84"></a>`mcp-server/scripts/check-concern-checklist.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-08348b4626"></a>`mcp-server/scripts/check-evidence-vocabulary.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-865f114b66"></a>`mcp-server/scripts/check-refusal-parity.mjs` | examined | The skill/server refusal register, and the generated candidate set that narrows what an unregistered refusal can hide — with the three sentence forms it can see stated as its own scope limit. | `c0734040` |
@@ -206,6 +208,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-0c0feac4cb"></a>`mcp-server/scripts/gen-vocabulary.mjs` | examined | The single-source generator: it writes the TypeScript and Python enum modules and asserts the schema's CHECK literals against the contract, and states why the schema is checked rather than rewritten. | `c0734040` |
 | <a id="le-d3fca4883b"></a>`mcp-server/scripts/historical-evaluation.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
 | <a id="le-bdecfca941"></a>`mcp-server/scripts/prepack-bundle-assets.mjs` | examined | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. | `410d769b` |
+| <a id="le-6f9ae7a4e0"></a>`mcp-server/test-codex-app-workspace.mjs` | examined | Delivery regression for native Codex app launch and per-connection workspace isolation. | `a521e28` |
 | <a id="le-ab14f85ccf"></a>`mcp-server/package-lock.json` | generated-ignore | npm writes this lockfile; it is resolver output. | `a7f9384d` |
 
 ### Concern review

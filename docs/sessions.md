@@ -6,6 +6,10 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
+| `muyphq8l-j85i9md4` | `Publish the refreshed self-conspectus from the bound repository, verifying the relocated workspace handoff at ec5824b.` | 2026-10-07 22:55 UTC | 2026-10-07 22:55 UTC | Published refresh at ec5824b after a fresh compiled MCP connection launched from cwd=/ bound to this repository; both workspace regressions passed. Completed source refresh, preserving 14 undecided carries, 10 open findings, six questions and historical receipts. |
+| `muyp90tu-nxs1iwl2` | `Publish refreshed self-conspectus: verify 33-page HTML/Markdown projection at a521e28 and promote it to the tracked GitHub Pages report.` | 2026-10-07 22:49 UTC | 2026-10-07 22:54 UTC | Source refresh complete at ec5824b. Six additional files re-examined after repairing materializer checkout handoff; publish from a fresh compiled MCP connection with explicit workspace binding. Historical receipts retained; 14 inherited obligations remain undecided. |
+| `muyozldb-ytkmpjjk` | `Refresh self-conspectus at README beta.3 revision a521e28: re-examine the 47 stale source rows, classify three new delivery files, preserve unfinished survey authority, materialize and promote verified human projection.` | 2026-10-07 22:41 UTC | 2026-10-07 22:47 UTC | completed-refresh: 47 stale obligation rows re-examined at a521e28, 3 new delivery files scoped and examined, B02-R2 verified-fixed with code evidence 38; version-parity recurrence, cross-store reference and historical acceptance/progress prose discrepancies recorded as questions 3-6. Subsystem depth unchanged. |
+| `muc8jhzq-l8r081ec` | `adopt the survey-depth rebuild into the primary checkout; carry forward the fifteen findings the replaced store held` | 2026-09-22 05:30 UTC | 2026-09-22 05:30 UTC | carried fifteen findings from the replaced store under store-legacy identity |
 | `mu7i5408-pfdjfj3n` | `fix-final: re-record the acceptance receipt over the final review's three tracked documents` | 2026-09-18 22:00 UTC | 2026-09-18 22:01 UTC | completed |
 | `mu7g2jm2-zm6dwn6y` | `fix slice-S4: repair P11's RED gate — ledger the two slice-S4 review documents and re-record the acceptance receipt` | 2026-09-18 21:02 UTC | not closed | not recorded |
 | `mu7e0pwg-rnwbzupq` | `survey-depth P9: republish the conspectus after the ledger row and reconciliation this packet's gate file required` | 2026-09-18 20:04 UTC | not closed | not recorded |
@@ -33,6 +37,10 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `self-refresh-ec5824b-bound-1` | `clean-publish` | green | green | green | 2026-10-07 22:55 UTC |
+| `self-refresh-beta3-a521e28-final` | `clean-publish` | green | green | green | 2026-10-07 22:49 UTC |
+| `self-refresh-beta3-a521e28` | `clean-publish` | green | green | green | 2026-10-07 22:48 UTC |
+| `projection-53714854-b72f-4f41-9a9a-c60a778c5382` | `clean-publish` | green | green | green | 2026-09-18 22:05 UTC |
 | `projection-72c8a769-e5fb-44d1-832c-2ca44a55c760` | `clean-publish` | green | green | green | 2026-09-18 21:06 UTC |
 | `projection-0ddc1032-df9a-4dea-aa49-be8e4b45a786` | `clean-publish` | green | green | green | 2026-09-18 20:04 UTC |
 | `projection-63302afd-2386-4aaf-b8ce-c93f93b8a630` | `clean-publish` | green | green | green | 2026-09-18 02:16 UTC |

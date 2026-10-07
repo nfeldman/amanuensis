@@ -1,16 +1,16 @@
 # Not yet surveyed
 
-Counted at `a00d6f2cc2ab` on `main`.
+Counted at `ec5824bceb9c` on `main`.
 
 ## Paths with no ledger row
 
-**0 of 652** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
+**0 of 655** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
 
 ## Files in scope that no one has read
 
-**139 of 496** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
+**139 of 499** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
 
-### Packaging, installer, validation, and product docs **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** — 65 unread of 153 rows carrying an obligation
+### Packaging, installer, validation, and product docs **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** — 65 unread of 156 rows carrying an obligation
 
 - `mcp-server/test-activation-contract.mjs` — Packaging, configuration, fixtures, checkers and the server's own test suite.
 - `mcp-server/test-activation-doctor.mjs` — Packaging, configuration, fixtures, checkers and the server's own test suite.

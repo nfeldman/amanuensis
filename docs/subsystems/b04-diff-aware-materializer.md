@@ -43,7 +43,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 24 of 94 ledger rows |
 | Files in scope, not yet read | 0 of 94 |
 | Files excluded from the survey obligation | 70 of 94 |
-| Ledger rows the repository has changed under | 65 of 94 |
+| Ledger rows the repository has changed under | 64 of 94 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 8 confirmed-acceptable, 1 ruled-out, 2 out-of-scope |
 | Findings by resolution state | 2 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -63,21 +63,21 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-699fcb91c7"></a>`materializer/amanuensis_materializer/html_projection.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-9e6fa5d9c6"></a>`materializer/amanuensis_materializer/lint.py` | examined | The orientation-prose lints: survey-status assertions shaped as assertions rather than matched as bare words, and the composite-index rule. | `c0734040` |
 | <a id="le-c1cd26d6d4"></a>`materializer/amanuensis_materializer/manifest.py` | examined | The per-page source-hash record, the version bump that invalidates everything, and prune_retired. | `c0734040` |
-| <a id="le-d827cc413f"></a>`materializer/amanuensis_materializer/readback.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
-| <a id="le-6d3cf24ae6"></a>`materializer/amanuensis_materializer/renderers.py` | examined | The diff-aware materializer: page renderers, read-back axes, and the HTML projection. | `410d769b` |
+| <a id="le-d827cc413f"></a>`materializer/amanuensis_materializer/readback.py` | examined | The diff-aware materializer: the Python projection of the store. | `ec5824bc` |
+| <a id="le-6d3cf24ae6"></a>`materializer/amanuensis_materializer/renderers.py` | examined | The diff-aware materializer: page renderers, read-back axes, and the HTML projection. | `a521e28` |
 | <a id="le-9b07a74728"></a>`materializer/amanuensis_materializer/slugs.py` | examined | The deterministic routing every page and every xref target is derived from. | `c0734040` |
 | <a id="le-40e31187ab"></a>`materializer/amanuensis_materializer/vocabulary.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-98b16d5714"></a>`materializer/amanuensis_materializer/xref.py` | examined | The global cross-reference pass: code fences and existing links stashed, self-references rendered bold rather than linked, and every candidate path verified inside the output root. | `c0734040` |
-| <a id="le-fcd34ce394"></a>`materializer/materialize.py` | examined | The CLI: the three modes, the unmanaged-file refusal that protects a human's files from clean publication, and the stage/backup/promote sequence that leaves the prior output untouched on a red run. | `c0734040` |
+| <a id="le-fcd34ce394"></a>`materializer/materialize.py` | examined | The CLI: the three modes, the unmanaged-file refusal that protects a human's files from clean publication, and the stage/backup/promote sequence that leaves the prior output untouched on a red run. | `ec5824bc` |
 | <a id="le-9deec6b840"></a>`materializer/pyproject.toml` | examined | The ruff configuration the regression list runs. | `c0734040` |
 | <a id="le-1460bf49b2"></a>`materializer/test-history-and-disagreements.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-1a2e92873c"></a>`materializer/test-ledger-freshness.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-bda9fc3b96"></a>`materializer/test-lens-pages.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
-| <a id="le-c96468c2ef"></a>`materializer/test-materializer.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
+| <a id="le-c96468c2ef"></a>`materializer/test-materializer.py` | examined | The diff-aware materializer: the Python projection of the store. | `ec5824bc` |
 | <a id="le-a5aca71c9b"></a>`materializer/test-overview-truthfulness.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-f9d8a99915"></a>`materializer/test-readback.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
 | <a id="le-b741a152cd"></a>`materializer/test-search-index.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
-| <a id="le-cfcb878cc4"></a>`materializer/test-unmeasured-coverage.py` | examined | The diff-aware materializer: the Python projection of the store. | `410d769b` |
+| <a id="le-cfcb878cc4"></a>`materializer/test-unmeasured-coverage.py` | examined | The diff-aware materializer: the Python projection of the store. | `a521e28` |
 | <a id="le-18215313a9"></a>`docs/.manifest.json` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-bb8ccd168e"></a>`docs/.projection-contract.json` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |
 | <a id="le-650632fa57"></a>`docs/architecture.html` | generated-ignore | materialize_docs renders these pages and dev/promote-docs.mjs checks them in; they are the projection's output, not its source. | `a7f9384d` |

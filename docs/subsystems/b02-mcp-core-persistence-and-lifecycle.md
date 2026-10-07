@@ -33,10 +33,11 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 ## Known defects here
 
-2 defects here are open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
+1 defect here is open or awaiting verification. Each one's full record, with its evidence, is on [Open findings](../findings.md).
 
 - A durable write can block the server indefinitely. Every add_evidence, add_finding, add_claim and set_disposition shells out to `git rev-parse` synchronously with no timeout, so an unresponsive git — a network-mounted worktree, a credential helper waiting on input, a filesystem that has stopped answering — hangs the whole stdio server with no diagnostic, because spawnSync blocks the event loop and the transport is single-threaded. — [B02-R1](../findings.md#b02-r1) · 🟡 MEDIUM · Open
-- A stalled git subprocess during server startup hangs the MCP server indefinitely, with no timeout and no diagnosis, on every start that selects its workspace from an argument or the environment — which is the registration Claude Code writes. — [B02-R2](../findings.md#b02-r2) · 🟡 MEDIUM · Open
+
+1 further defect here reached a terminal state; it is recorded on [Resolved findings](../resolved-findings.md).
 
 ## Standing
 
@@ -49,7 +50,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files excluded from the survey obligation | 0 of 13 |
 | Ledger rows the repository has changed under | 0 of 13 |
 | Active concerns with a disposition recorded here | 12 of 12 — 8 confirmed-acceptable, 3 ruled-out, 1 out-of-scope |
-| Findings by resolution state | 2 open |
+| Findings by resolution state | 1 open, 1 verified fixed |
 | Seams assessable from both sides | no seam names this subsystem |
 
 ## Survey record
@@ -60,12 +61,12 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 |---|---|---|---|
 | <a id="le-b9dab6dc2d"></a>`mcp-server/src/cli.ts` | examined | The installer and doctor: registration planning for Claude, VS Code and Codex, the managed config blocks, and the repair plans. | `c0734040` |
 | <a id="le-ca9a153bd6"></a>`mcp-server/src/codebase-brief-contract.ts` | examined | The codebase-brief schema, its canonical JSON hashing, and the compile/validate pair the brief tools call. | `c0734040` |
-| <a id="le-fcffcd1e95"></a>`mcp-server/src/codex-host.ts` | examined | Codex parent-workspace discovery, with the 5s probe timeout that finding B02-2 is about. | `c0734040` |
+| <a id="le-fcffcd1e95"></a>`mcp-server/src/codex-host.ts` | examined | Codex parent-workspace discovery, with the 5s probe timeout that finding B02-2 is about. | `a521e28` |
 | <a id="le-28d2d6d8a8"></a>`mcp-server/src/db.ts` | examined | Storage lifecycle: openDatabase runs migrations, re-execs schema.sql, mints store identity, then refuses the open when a declared object or required view is absent. | `c0734040` |
 | <a id="le-f9885d1938"></a>`mcp-server/src/helpers.ts` | examined | The shared ingress guards: resolveWorkspaceCommit, the batched resolveWorkspaceCommits, path and citation validation, and the response envelope every budget is measured on. | `c0734040` |
-| <a id="le-813b71c1ac"></a>`mcp-server/src/index.ts` | examined | Server root: workspace selection, tool assembly, Ajv validation, annotation derivation, and the single dispatcher that enforces each tool's compact flag. | `c0734040` |
+| <a id="le-813b71c1ac"></a>`mcp-server/src/index.ts` | examined | Server root: workspace selection, tool assembly, Ajv validation, annotation derivation, and the single dispatcher that enforces each tool's compact flag. | `a521e28` |
 | <a id="le-f53441642b"></a>`mcp-server/src/invariants.ts` | examined | Every status-advance refusal: phase prerequisites, attached-evidence, vocabulary discharge, reconciliation standing, archived store identity, and the carried accounting. | `c0734040` |
-| <a id="le-97fd8ef43b"></a>`mcp-server/src/project.ts` | examined | Project identity, the binding receipt, the storage root containment check, and the staged atomic publish of a new store. | `c0734040` |
+| <a id="le-97fd8ef43b"></a>`mcp-server/src/project.ts` | examined | Project identity, the binding receipt, the storage root containment check, and the staged atomic publish of a new store. | `a521e28` |
 | <a id="le-9cd5d88c97"></a>`mcp-server/src/schema.sql` | examined | The durable substrate: 547 CREATE statements, 546 of them IF NOT EXISTS, and 176 immutability trigger lines that make the append-only tables append-only. | `c0734040` |
 | <a id="le-df2c09ece6"></a>`mcp-server/src/session.ts` | examined | The session table's three operations; the smallest module in the subsystem and the one every write's session_id comes from. | `c0734040` |
 | <a id="le-9e2f6e715c"></a>`mcp-server/src/standing.ts` | examined | The reader-lens standing model: locus resolution, the standing ladder, the authority ceiling, and the revision and measured blocks describe_locus answers from. | `c0734040` |

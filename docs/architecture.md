@@ -26,11 +26,4 @@ _No seams recorded yet._
 
 ## Staleness map
 
-```mermaid
-pie showData
-    title Stale entries by subsystem
-    "B-09" : 18
-    "B-05" : 4
-    "B-04" : 2
-    "B-03" : 2
-```
+_No stale files across 499 scoped files carrying a survey obligation, at the last reconciliation._

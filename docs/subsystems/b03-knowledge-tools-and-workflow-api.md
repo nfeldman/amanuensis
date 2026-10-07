@@ -55,7 +55,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 43 of 43 ledger rows |
 | Files in scope, not yet read | 0 of 43 |
 | Files excluded from the survey obligation | 0 of 43 |
-| Ledger rows the repository has changed under | 2 of 43 |
+| Ledger rows the repository has changed under | 0 of 43 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 9 confirmed-acceptable, 2 out-of-scope |
 | Findings by resolution state | 5 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -67,7 +67,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Path | Classification | Why in scope | Examined at |
 |---|---|---|---|
 | <a id="le-52ddba3d3b"></a>`mcp-server/src/tools/artifacts.ts` | examined | register_artifact's lexical and realpath containment checks on the storage-relative path, and the content hash the materializer's diff reads. | `c0734040` |
-| <a id="le-8635244b2d"></a>`mcp-server/src/tools/carried.ts` | examined | The carry's five writes and two reads, the archived-terminal pre-record, the three outcome authority rules, and the 8192-byte wire budget list_carried_findings measures on the doubled envelope. | `c0734040` |
+| <a id="le-8635244b2d"></a>`mcp-server/src/tools/carried.ts` | examined | The carry's five writes and two reads, the archived-terminal pre-record, the three outcome authority rules, and the 8192-byte wire budget list_carried_findings measures on the doubled envelope. | `a521e28` |
 | <a id="le-8a6e1799d4"></a>`mcp-server/src/tools/chorusmith-adapter.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
 | <a id="le-8374f2c77c"></a>`mcp-server/src/tools/claims.ts` | examined | Claim custody: the file-anchored evidence rule enforced in insertClaim for both doors, the challenge-outcome vocabulary and its 24-character floor, invalidation and supersession. | `c0734040` |
 | <a id="le-e764a016a5"></a>`mcp-server/src/tools/codebase-brief.ts` | examined | The immutable brief source and its mode projections, with deterministic selection and zero model calls. | `c0734040` |
@@ -87,15 +87,15 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | <a id="le-4020309e5e"></a>`mcp-server/src/tools/field-notes.ts` | examined | Field notes and their follow_up resolution, which the review session reads as unverified suspicions. | `c0734040` |
 | <a id="le-566054a018"></a>`mcp-server/src/tools/files.ts` | examined | The ledger writers: add_files_to_scope's validated batch upsert inside one transaction, and update_file_classification. | `c0734040` |
 | <a id="le-44c699c32a"></a>`mcp-server/src/tools/findings.ts` | examined | add_finding's opening resolution event, update_finding_status's overturn-evidence rule, and verify_finding_fix's ancestry requirement between repair and verification. | `c0734040` |
-| <a id="le-17468c4b96"></a>`mcp-server/src/tools/git.ts` | examined | detect_changes: the whole reconciliation — tree at the resolved revision, unledgered/absent/exempt, duplicate ownership, staleness re-derived both ways, scope_gaps rebuilt, and one append-only scope_reconciliations row with both digests. | `c0734040` |
+| <a id="le-17468c4b96"></a>`mcp-server/src/tools/git.ts` | examined | detect_changes: the whole reconciliation — tree at the resolved revision, unledgered/absent/exempt, duplicate ownership, staleness re-derived both ways, scope_gaps rebuilt, and one append-only scope_reconciliations row with both digests. | `a521e28` |
 | <a id="le-b57fab0c08"></a>`mcp-server/src/tools/impact.ts` | examined | predict/apply change impact: rename-aware diff, the explicit relation graph over xrefs and seams, reason paths, and the unaffected-control set. | `c0734040` |
 | <a id="le-fd76969f61"></a>`mcp-server/src/tools/learning.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
 | <a id="le-6ef26ea3bf"></a>`mcp-server/src/tools/locks.ts` | examined | The write-lock table with TTL expiry cleared on every acquire. | `c0734040` |
 | <a id="le-f1e1e50eb5"></a>`mcp-server/src/tools/locus.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
 | <a id="le-2c73cbdb5d"></a>`mcp-server/src/tools/logging.ts` | examined | Access and query logging, and the default field-demand priority used before any query_log evidence exists. | `c0734040` |
-| <a id="le-4a321e9eb2"></a>`mcp-server/src/tools/materialize.ts` | examined | The publication preflight that refuses on an incomplete reconciliation before anything renders, and the projection read-back recorded as an auditable run. | `c0734040` |
+| <a id="le-4a321e9eb2"></a>`mcp-server/src/tools/materialize.ts` | examined | The publication preflight that refuses on an incomplete reconciliation before anything renders, and the projection read-back recorded as an auditable run. | `ec5824bc` |
 | <a id="le-be8daa9f30"></a>`mcp-server/src/tools/open-questions.ts` | examined | The autoprogress contract: record_open_question with what_assumed, and get_autoprogress_mode echoing the raw env value. | `c0734040` |
-| <a id="le-d4e50bcb20"></a>`mcp-server/src/tools/project.ts` | examined | Session lifecycle and the end_session auto-commit that checkpoints the WAL before committing storage. | `c0734040` |
+| <a id="le-d4e50bcb20"></a>`mcp-server/src/tools/project.ts` | examined | Session lifecycle and the end_session auto-commit that checkpoints the WAL before committing storage. | `a521e28` |
 | <a id="le-dd3a3c7de8"></a>`mcp-server/src/tools/refresh.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
 | <a id="le-975eb9a6ea"></a>`mcp-server/src/tools/research.ts` | examined | The knowledge tools and the workflow API the survey writes through. | `410d769b` |
 | <a id="le-95db056444"></a>`mcp-server/src/tools/resolution.ts` | examined | audit_resolution_invariants over findings, claims, contradictions and obligations — it reports violations and never repairs. | `c0734040` |
