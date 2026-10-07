@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { discoverCodexParentWorkspace, parseCodexParentWorkspace } from "./dist/codex-host.js";
+import {
+  discoverCodexParentLaunch,
+  discoverCodexParentWorkspace,
+  isCodexAppServer,
+  parseCodexParentWorkspace,
+} from "./dist/codex-host.js";
 
 assert.equal(
   parseCodexParentWorkspace(
@@ -34,4 +39,20 @@ assert.equal(
   }),
   "/tmp/repository-42",
 );
-console.log("Codex parent workspace detection: 6 passed, 0 failed");
+assert(
+  isCodexAppServer(
+    "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex -c features.code_mode_host=true app-server --analytics-default-enabled",
+  ),
+);
+assert(isCodexAppServer("codex -c 'setting=app-server decoy' --profile work app-server"));
+assert(isCodexAppServer('"/Applications/Codex App/codex" -c feature=true app-server'));
+assert(!isCodexAppServer("node script.js app-server"));
+assert(!isCodexAppServer("codex exec 'fix app-server --cd /tmp/decoy'"));
+assert.deepEqual(
+  discoverCodexParentLaunch({
+    launchCwd: "/tmp/incidental-repository",
+    readParentCommand: () => "codex --cd /tmp/incidental-repository app-server",
+  }),
+  { workspace: null, appServer: true },
+);
+console.log("Codex parent workspace detection: 12 passed, 0 failed");

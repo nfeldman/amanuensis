@@ -8,8 +8,12 @@ export const projectTools: ToolDefinition[] = [
   {
     name: "get_project_info",
     description:
-      "Return metadata about the current project: key, workspace, storage directory, whether the DB is initialized, and stored git baseline.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      "Bind or verify this connection using the absolute workspace directory from the chat environment. Return the current project key, workspace, storage directory, DB initialization and git baseline. If unbound, supply workspace before any other project tool; a different workspace is refused.",
+    inputSchema: {
+      type: "object",
+      properties: { workspace: { type: "string", minLength: 1 } },
+      additionalProperties: false,
+    },
     handler: (_args, ctx) => {
       let git: { canonical_branch?: string; onboarding_sha?: string } | undefined;
       let dbExists = false;

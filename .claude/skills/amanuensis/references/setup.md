@@ -48,8 +48,15 @@ registration. New repositories require no Amanuensis-specific restart.
 These are host security/discovery rules, not Amanuensis workflow review gates.
 
 The default Codex registration contains no target repository path. It launches
-the stdio server with `cwd = "."`; the server resolves and binds the Git root
-containing that process cwd. A deliberate project pin is explicit:
+the stdio server with `cwd = "."`. CLI launches can bind the Git root containing
+that cwd or recover `codex --cd`. The Codex app can launch the MCP process at
+`/`, independently of the chat's workspace. Under the desktop app-server the
+server stays unbound and creates no state until the skill calls
+`get_project_info({workspace: "/absolute/path/from/chat/environment"})`.
+The skill supplies this argument on every session's initial probe, so an
+existing binding is also checked before database access. A different workspace
+is refused; one connection never switches projects. Filesystem root is never
+an acceptable workspace. A deliberate project pin is explicit:
 
 ```bash
 amanuensis init --client codex --scope project --dir /path/to/project

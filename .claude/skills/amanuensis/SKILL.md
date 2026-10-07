@@ -40,12 +40,25 @@ ceremony before useful work begins.
    as deferred (load with ToolSearch, query `amanuensis`); Codex code mode
    omits them from the `exec` description but exposes them on the global
    `tools` object — filter `ALL_TOOLS` for `amanuensis`, then call
-   `tools.mcp__amanuensis_memory__get_project_info({})` (the hyphen in the
-   server name becomes an underscore). Only when the search finds no
-   `amanuensis-memory` tools, or the call itself fails, tell the user the
+   `tools.mcp__amanuensis_memory__get_project_info({workspace: projectRoot})`
+   (the hyphen in the server name becomes an underscore). Set `projectRoot`
+   to the absolute target directory from this chat's environment context;
+   resolve a nested directory to its Git worktree root using a shell command
+   with that explicit `workdir`. **The MCP process cwd is not the chat's cwd.**
+   Codex app sessions can launch the server at `/`. Never use `/`, infer a
+   project from `/.amanuensis`, or change the global registration to pin the
+   current project. The workspace handshake binds an unbound connection once
+   and verifies an existing binding before state access. Only when the search
+   finds no `amanuensis-memory` tools, or the call itself fails, tell the user the
    server isn't connected and stop — the methodology is unworkable without
    persistent state. See `references/setup.md` for wiring.
-2. **Probe project state.** Call `get_project_info`.
+2. **Verify the workspace before interpreting project state.** Reuse the
+   handshake response. Its `workspace_path` must match the target worktree
+   root. An `unbound` response means retry `get_project_info` with `workspace`;
+   it does **not** mean a cold start. A mismatch means stop before using any
+   other project tool. If the loaded schema does not accept `workspace`, the
+   server predates the handshake: report that this connection needs a restart,
+   rather than working around it with a project pin.
    - `db_exists=false` → cold start. Do a quick repo scan: top-level
      languages, build systems, directory cluster count, deployable units.
      Estimate **rough scale** — likely subsystem count (range), evidence

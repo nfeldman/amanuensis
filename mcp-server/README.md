@@ -63,6 +63,14 @@ the MCP child, Amanuensis reads the exact task-root argument from its direct
 `codex` parent and records `parent-codex-cli-cd-git-root`. It does not inspect
 prompt text or use a hard-coded repository path.
 
+Codex app-server launches use a workspace handshake instead: the skill calls
+`get_project_info({workspace: "/absolute/project/path/from/chat/environment"})`.
+The app's launcher cwd, including `/`, is never treated as its chat's project.
+An unbound connection advertises no storage and refuses all project tools until
+the handshake succeeds. The handshake also verifies existing CLI or project
+pins; it cannot switch a bound connection to another workspace. Filesystem root
+is rejected for every registration route.
+
 Default storage is worktree-local: worktrees share repository identity but
 receive distinct workspace-instance IDs and `.amanuensis` paths. A store carried
 into a second working copy of the same repository — a clone, a CI checkout, a

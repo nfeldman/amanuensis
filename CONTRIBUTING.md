@@ -59,6 +59,7 @@ node test-smoke.mjs                     # exercises every tool against a fresh D
 node test-invariants.mjs                # knowledge-depth gates, monotonic transitions
 node test-derived-staleness.mjs         # ledger-derived staleness and scope reconciliation
 node test-startup-bounds.mjs            # activation-path probes are time-bounded
+node test-codex-app-workspace.mjs       # desktop workspace handshake, isolation and root refusal
 node test-adversarial-correctness.mjs   # tries to violate the data contracts
 node test-adversarial-security.mjs      # input handling, SQL safety, path traversal
 node test-resolution-proof.mjs          # repair proof and append-only resolution history

@@ -492,7 +492,7 @@ _209 tools across 43 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `get_project_info` | Return metadata about the current project: key, workspace, storage directory, whether the DB is initialized, and stored git baseline. |
+| `get_project_info` | Bind or verify this connection using the absolute workspace directory from the chat environment. Return the current project key, workspace, storage directory, DB initialization and git baseline. If unbound, supply workspace before any other project tool; a different workspace is refused. |
 | `start_session` | Begin a new survey session. Intent is free text like 'onboarding', 'survey B-01', 'refresh'. Returns a session_id used to tag dispositions, findings, field notes, and access/query logs. |
 | `get_session` | Return the stored metadata for a session. If no session_id is provided, returns the most recently started session. |
 | `end_session` | Mark a session ended with an outcome ('completed', 'deferred', 'superseded', etc.). Not required — sessions are still valid while open — but closing them makes the activity log legible. |

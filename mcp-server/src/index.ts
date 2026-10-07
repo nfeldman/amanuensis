@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { isAbsolute, parse } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
-import { discoverCodexParentWorkspace } from "./codex-host.js";
+import { discoverCodexParentLaunch, STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
-import { assertProjectBinding, ensureProjectStorage, resolveProject } from "./project.js";
+import {
+  assertProjectBinding,
+  ensureProjectStorage,
+  type ProjectContext,
+  resolveProject,
+} from "./project.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
@@ -25,7 +31,9 @@ import { locusTools } from "./tools/locus.js";
 // back from the initialize result.
 const SERVER_INSTRUCTIONS =
   "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first. Its standing states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
-const SERVER_VERSION = "0.2.0-beta.1";
+const WORKSPACE_INSTRUCTIONS =
+  "Before using project tools, call get_project_info with workspace set to the absolute project directory from this chat's environment context (not the MCP process cwd). An unbound response is not a cold start. The first workspace handshake binds this server process once; a different workspace is refused before database access.";
+const SERVER_VERSION = "0.2.0-beta.2";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
 // additive updates. Default every mutation to destructive and carve out only
@@ -125,6 +133,8 @@ function gitRoot(cwd: string): string | null {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      timeout: STARTUP_PROBE_TIMEOUT_MS,
+      killSignal: "SIGKILL",
     }).trim();
     return root ? realpathSync(root) : null;
   } catch {
@@ -150,15 +160,16 @@ function assertWorkspaceMatchesLaunch(
   }
 }
 
-function parseArgs(argv: string[]): { workspace: string; selectionSource: string } {
+function parseArgs(argv: string[]): { workspace: string | null; selectionSource: string } {
   // An explicit target always wins. Claude Code provides its project root in
   // the server environment; other local clients normally launch in the target
   // repository. For the latter case, normalize a nested cwd to the Git root.
   const allowWorkspacePin = argv.includes("--allow-workspace-pin");
-  const codexParentWorkspace =
+  const codexParentLaunch =
     process.env.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1"
-      ? discoverCodexParentWorkspace()
-      : null;
+      ? discoverCodexParentLaunch()
+      : { workspace: null, appServer: false };
+  const codexParentWorkspace = codexParentLaunch.workspace;
   const launchWorkspace = codexParentWorkspace ?? process.cwd();
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1];
@@ -191,28 +202,55 @@ function parseArgs(argv: string[]): { workspace: string; selectionSource: string
       selectionSource: parentRoot ? "parent-codex-cli-cd-git-root" : "parent-codex-cli-cd",
     };
   }
+  // The desktop app-server serves many chats; even a Git cwd belongs to the
+  // launcher, not necessarily this chat. Its connection must select explicitly.
+  if (codexParentLaunch.appServer) {
+    return { workspace: null, selectionSource: "awaiting-workspace-handshake" };
+  }
   const root = gitRoot(process.cwd());
   if (root) return { workspace: root, selectionSource: "process-cwd-git-root" };
-  // Non-Git workspaces are supported; their current directory is the root.
+  // Codex desktop starts user-scoped MCP processes outside the chat's project,
+  // commonly at /. That is a launcher location, never a project selection.
+  // Stay reachable for a workspace handshake without resolving or opening state.
+  if (
+    process.env.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1" ||
+    process.cwd() === parse(process.cwd()).root
+  ) {
+    return { workspace: null, selectionSource: "awaiting-workspace-handshake" };
+  }
+  // Other hosts retain support for non-Git workspaces in their launch directory.
   return { workspace: process.cwd(), selectionSource: "process-cwd-non-git" };
 }
 
 async function main(): Promise<void> {
   const { workspace, selectionSource } = parseArgs(process.argv.slice(2));
-  const project = resolveProject(workspace, { selectionSource, serverVersion: SERVER_VERSION });
+  let project: ProjectContext | null = workspace
+    ? resolveProject(workspace, { selectionSource, serverVersion: SERVER_VERSION })
+    : null;
+  const requireProject = (): ProjectContext => {
+    if (!project) {
+      throw new ToolError(
+        "workspace is unbound; call get_project_info with workspace set to the absolute project directory from the chat environment before using project tools",
+      );
+    }
+    return project;
+  };
   let db: DB | null = null;
   const ensureDatabase = (): DB => {
     if (db) return db;
-    ensureProjectStorage(project, (candidatePath) => {
+    const bound = requireProject();
+    ensureProjectStorage(bound, (candidatePath) => {
       const candidate = openDatabase(candidatePath);
       candidate.close();
     });
-    db = openDatabase(project.dbPath);
+    db = openDatabase(bound.dbPath);
     return db;
   };
 
   const ctx: ServerContext = {
-    project,
+    get project() {
+      return requireProject();
+    },
     get db() {
       return ensureDatabase();
     },
@@ -282,7 +320,7 @@ async function main(): Promise<void> {
       capabilities: {
         tools: {},
       },
-      instructions: SERVER_INSTRUCTIONS,
+      instructions: `${WORKSPACE_INSTRUCTIONS} ${SERVER_INSTRUCTIONS}`,
     },
   );
 
@@ -312,7 +350,39 @@ async function main(): Promise<void> {
       });
     }
     try {
-      assertProjectBinding(project);
+      if (name === "get_project_info") {
+        const requested = args.workspace;
+        if (typeof requested === "string") {
+          if (!isAbsolute(requested))
+            throw new ToolError("workspace must be an absolute directory path");
+          const canonical = gitRoot(requested) ?? realpathSync(requested);
+          if (project && project.workspacePath !== canonical) {
+            throw new ToolError(
+              `workspace mismatch: this server is bound to ${project.workspacePath}, but this chat requested ${canonical}. Start a separate server connection for the other workspace; rebinding is refused.`,
+            );
+          }
+          if (!project) {
+            project = resolveProject(canonical, {
+              selectionSource: "tool-workspace-handshake",
+              serverVersion: SERVER_VERSION,
+            });
+            process.stderr.write(
+              `[amanuensis-memory] binding=${JSON.stringify(project.bindingReceipt)}\n`,
+            );
+          }
+        }
+        if (!project) {
+          return jsonResult({
+            ok: false,
+            binding_status: "unbound",
+            workspace_path: null,
+            storage_path: null,
+            binding_receipt: null,
+            error: WORKSPACE_INSTRUCTIONS,
+          });
+        }
+      }
+      assertProjectBinding(requireProject());
       if (name !== "get_project_info") ensureDatabase();
       const data = tool.handler(args, ctx);
       // §4.1: the tool declares whether its text block is serialized compactly,
@@ -329,7 +399,11 @@ async function main(): Promise<void> {
     }
   });
 
-  process.stderr.write(`[amanuensis-memory] binding=${JSON.stringify(project.bindingReceipt)}\n`);
+  process.stderr.write(
+    project
+      ? `[amanuensis-memory] binding=${JSON.stringify(project.bindingReceipt)}\n`
+      : `[amanuensis-memory] workspace unbound; awaiting get_project_info(workspace)\n`,
+  );
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

@@ -31,13 +31,35 @@ export function parseCodexParentWorkspace(command: string, launchCwd: string): s
   return resolve(launchCwd, workspace);
 }
 
-export function discoverCodexParentWorkspace(
+export function isCodexAppServer(command: string): boolean {
+  const executable = basename(firstArgument(command));
+  if (executable !== "codex" && executable !== "codex.exe") return false;
+  const argumentsOnly = command.replace(/^(?:"[^"]*"|'[^']*'|\S+)\s*/, "");
+  const tokens = [...argumentsOnly.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map(
+    (match) => match[1] ?? match[2] ?? match[3] ?? "",
+  );
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i] ?? "";
+    if (
+      ["-c", "--config", "-p", "--profile", "-C", "--cd", "--enable", "--disable"].includes(token)
+    ) {
+      i++;
+      continue;
+    }
+    if (token.startsWith("-")) continue;
+    // Inspect the subcommand, not words inside a CLI exec prompt.
+    return token === "app-server";
+  }
+  return false;
+}
+
+export function discoverCodexParentLaunch(
   options: {
     parentPid?: number;
     launchCwd?: string;
     readParentCommand?: (parentPid: number) => string;
   } = {},
-): string | null {
+): { workspace: string | null; appServer: boolean } {
   const parentPid = options.parentPid ?? process.ppid;
   const launchCwd = options.launchCwd ?? process.cwd();
   const readParentCommand =
@@ -54,9 +76,20 @@ export function discoverCodexParentWorkspace(
         killSignal: "SIGKILL",
       }).trim());
   try {
-    return parseCodexParentWorkspace(readParentCommand(parentPid), launchCwd);
+    const command = readParentCommand(parentPid);
+    const appServer = isCodexAppServer(command);
+    return {
+      workspace: appServer ? null : parseCodexParentWorkspace(command, launchCwd),
+      appServer,
+    };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code) return null;
+    if ((error as NodeJS.ErrnoException).code) return { workspace: null, appServer: false };
     throw error;
   }
+}
+
+export function discoverCodexParentWorkspace(
+  options: Parameters<typeof discoverCodexParentLaunch>[0] = {},
+): string | null {
+  return discoverCodexParentLaunch(options).workspace;
 }

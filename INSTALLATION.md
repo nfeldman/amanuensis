@@ -129,6 +129,16 @@ direct Codex parent process and records `parent-codex-cli-cd-git-root` in the bi
 receipt. It does not infer the repository from prompt text or a hard-coded path. An
 unreadable `--cd` value halts before storage initialization.
 
+Codex app sessions may launch a user-scoped MCP server at `/` rather than the
+chat's project directory. Amanuensis leaves that connection unbound and blocks
+project tools until `get_project_info` receives `workspace`, an absolute path
+from the chat's environment. The installed skill performs this handshake
+automatically and checks the returned root. The handshake creates no store;
+the first database-backed call does. Once bound, a different workspace is
+refused before database access. Filesystem root is rejected even with an
+explicit pin. Restart existing connections after upgrading to this protocol;
+the global registration does not need a project path.
+
 ## Diagnose and repair Codex activation
 
 Diagnosis is read-only:

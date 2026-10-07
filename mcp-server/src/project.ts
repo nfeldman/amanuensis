@@ -608,6 +608,11 @@ export function resolveProject(
     throw new Error(`workspace is not a directory: ${requestedWorkspace}`);
   }
   const absWorkspace = realpathSync(requestedWorkspace);
+  if (absWorkspace === dirname(absWorkspace)) {
+    throw new Error(
+      "filesystem root is not a project workspace; select an explicit project directory",
+    );
+  }
   const descriptor = describeProject(absWorkspace);
   const projectKey = descriptor.key;
   const override = process.env.AMANUENSIS_STORAGE_ROOT?.trim();

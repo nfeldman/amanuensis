@@ -206,6 +206,9 @@ jobs:
       - name: Codex parent-process workspace selection
         working-directory: mcp-server
         run: node test-codex-parent-workspace.mjs
+      - name: Codex app workspace handshake from filesystem root
+        working-directory: mcp-server
+        run: node test-codex-app-workspace.mjs
       - name: Nested Codex activation selects the Git root lazily
         working-directory: mcp-server
         run: node test-nested-activation-binding.mjs
