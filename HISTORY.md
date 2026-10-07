@@ -3,6 +3,23 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## [0.2.0-beta.3] - 2026-10-07
+
+- Bind Codex app connections through an explicit chat-workspace handshake;
+  reject filesystem root and cross-workspace rebinding before database access.
+- Add revision-aware locus, attention, and history tools and searchable report
+  views that preserve unresolved work and the basis for recorded conclusions.
+- Enforce survey depth with evidence-backed dispositions, vocabulary discharge,
+  repository scope reconciliation, and terminal outcomes for carried findings.
+- Open a conspectus moved to another working copy of the same verified
+  repository while continuing to refuse foreign stores.
+- Probe deferred MCP tools before declaring the memory server disconnected.
+- Update the locked transitive `proxy-addr` dependency to `2.0.8` to address the
+  critical advisory found by the release audit.
+
+The desktop launch boundary has stdio regression coverage. Post-reload native
+app verification and product efficacy remain unestablished.
+
 ## [0.2.0-beta.1] - 2026-08-26
 
 This is the first friction-free Codex activation beta.
@@ -50,6 +67,7 @@ This is the first friction-free Codex activation beta.
 
 - Initial public Amanuensis MCP server and development documentation.
 
+[0.2.0-beta.3]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-beta.2...v0.2.0-beta.3
 [0.2.0-beta.1]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-alpha.1...v0.2.0-beta.1
 [0.2.0-alpha.1]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-alpha.0...v0.2.0-alpha.1
 [0.2.0-alpha.0]: https://github.com/nfeldman/amanuensis/compare/v0.1.0...v0.2.0-alpha.0
