@@ -69,13 +69,33 @@ Restart Codex once, open a trusted Git repository, and ask it to **run Amanuensi
 onboarding**. After that one user-scoped installation, each new trusted repository binds
 to its own Amanuensis store without repository-local setup or another restart.
 
+In the Codex app, the installed skill selects the repository from the chat's workspace.
+Each connection binds once, and concurrent repositories keep separate stores. After
+upgrading, restart existing MCP connections so they load the new server and skill.
+
 Requires Node.js 20 or newer and Python 3.11 or newer. For Claude Code, VS Code, another
 MCP host, source installs, upgrades, rollback, diagnosis, storage policy, or uninstalling,
 see [Installation and operations](INSTALLATION.md).
 
+## Work from the memory
+
+Once a conspectus exists, ask your agent:
+
+- **“What do we know about this file?”** Get the recorded account, its evidence and
+  revision, and the limits of what has actually been surveyed.
+- **“What needs attention?”** Find unresolved work and stale knowledge; **“What was
+  concluded?”** retrieves the recorded decisions and review history.
+- **“Refresh the conspectus.”** Reconcile it with the current repository, re-examine
+  changed files, record affected claims, and republish the human-readable map.
+
+The MCP readers `describe_locus`, `get_attention`, and `get_history` expose these
+accounts without asking a model to invent a new interpretation. A refresh updates the
+record through source examination; it does not make every subsystem fully surveyed.
+
 ## Beta means beta
 
-The current source is versioned as `0.2.0-beta.1`. Its internal contracts and failure
+The current published release is [0.2.0-beta.3](https://github.com/nfeldman/amanuensis/releases/tag/v0.2.0-beta.3),
+available as `latest` on npm. Its internal contracts and failure
 gates are extensively tested, and the tool is being dogfooded in active development.
 
 What has not been established yet is the longitudinal product claim: how useful the
