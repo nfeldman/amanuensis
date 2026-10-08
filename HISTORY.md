@@ -3,6 +3,15 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## [0.2.0-beta.4] - 2026-10-07
+
+- Pass the bound checkout to materialization and independent read-back, so a
+  relocated conspectus does not inspect its historical worktree instead.
+- Preserve the original workspace record as provenance.
+- Verify the complete materialization path from a clean-installed npm artifact
+  launched from `/`, with different Git heads in the original and bound checkouts.
+- Update the README and refresh the published self-conspectus.
+
 ## [0.2.0-beta.3] - 2026-10-07
 
 - Bind Codex app connections through an explicit chat-workspace handshake;
@@ -67,6 +76,7 @@ This is the first friction-free Codex activation beta.
 
 - Initial public Amanuensis MCP server and development documentation.
 
+[0.2.0-beta.4]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-beta.3...v0.2.0-beta.4
 [0.2.0-beta.3]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-beta.2...v0.2.0-beta.3
 [0.2.0-beta.1]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-alpha.1...v0.2.0-beta.1
 [0.2.0-alpha.1]: https://github.com/nfeldman/amanuensis/compare/v0.2.0-alpha.0...v0.2.0-alpha.1

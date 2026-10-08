@@ -33,7 +33,7 @@ const SERVER_INSTRUCTIONS =
   "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first. Its standing states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
 const WORKSPACE_INSTRUCTIONS =
   "Before using project tools, call get_project_info with workspace set to the absolute project directory from this chat's environment context (not the MCP process cwd). An unbound response is not a cold start. The first workspace handshake binds this server process once; a different workspace is refused before database access.";
-const SERVER_VERSION = "0.2.0-beta.3";
+const SERVER_VERSION = "0.2.0-beta.4";
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
 // additive updates. Default every mutation to destructive and carve out only
