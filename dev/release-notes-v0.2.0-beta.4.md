@@ -25,6 +25,10 @@ independent read-back while preserving the provenance record.
 The same installed-package regression fails against published beta.3 because
 its overview uses the original checkout's Git head, and passes with beta.4.
 
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/37717854609), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/37718320598). The exact registry
+version also passed the installed-package materializer regression locally.
+
 Repository-wide CI retains the previously recorded historical receipt and
 roadmap-job failures. This release does not claim that workflow is green.
 Post-reconnect native Codex app verification and product efficacy remain

@@ -36,53 +36,79 @@
     },
     "release": {
       "status": "established",
-      "tag": "v0.2.0-beta.3",
-      "tagCommit": "db474db7cd0686dfd563f1ad792e427694608704",
+      "tag": "v0.2.0-beta.4",
+      "tagCommit": "ebb2aac48b776b623b747702b3b52bb9f1251717",
       "registry": "npmjs",
       "package": "@gruetech/amanuensis",
-      "version": "0.2.0-beta.3",
+      "version": "0.2.0-beta.4",
       "distTag": "latest",
-      "publishedAt": "2026-10-07T21:55:07.566Z",
-      "shasum": "b17634c76f687468434c25aab7bbf30b3182b34e",
-      "integrity": "sha512-+y6Na7dRN2ETLqaRQHAOWwe9XapYXhcLUQfTkTURhIoXE3i853LWP5g07vno5Bchd2uoVTZkLKgI9dtVO+mulA==",
+      "publishedAt": "2026-10-08T02:30:54.617Z",
+      "shasum": "0bb8975753567f606c52c543bb3414f71ed3af62",
+      "integrity": "sha512-XzhAtkPLtOptkV6ZOU25n2iYOMc905Nua6j2ovizTJgqBcqlb82B8sqGkc0rvPOlL54zzuzrLjh4hAHUAq+7Dw==",
       "publish": {
         "provider": "github-actions",
         "workflow": "publish.yml",
-        "runId": 37692059909,
-        "headSha": "db474db7cd0686dfd563f1ad792e427694608704",
+        "runId": 37717854609,
+        "headSha": "ebb2aac48b776b623b747702b3b52bb9f1251717",
         "conclusion": "success"
       },
       "publishedSmoke": {
         "provider": "github-actions",
         "workflow": "published-smoke.yml",
-        "runId": 37693422887,
-        "version": "0.2.0-beta.3",
+        "runId": 37718320598,
+        "version": "0.2.0-beta.4",
         "conclusion": "success"
       },
       "previousEstablished": {
         "status": "established",
-        "tag": "v0.2.0-beta.2",
-        "tagCommit": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
+        "tag": "v0.2.0-beta.3",
+        "tagCommit": "db474db7cd0686dfd563f1ad792e427694608704",
         "registry": "npmjs",
         "package": "@gruetech/amanuensis",
-        "version": "0.2.0-beta.2",
+        "version": "0.2.0-beta.3",
         "distTag": "latest",
-        "publishedAt": "2026-08-29T05:20:25.614Z",
-        "shasum": "e5aeab7e7429487c5cd94f3eb78c4eeede553767",
-        "integrity": "sha512-VByQofetGfbrKGRUX2NibrZOn3ErWW1BjR8KVNgqEhV7YmxlnBvdPVee24u/9ql6lwJajsY8/XuAeGH4W8ptQQ==",
+        "publishedAt": "2026-10-07T21:55:07.566Z",
+        "shasum": "b17634c76f687468434c25aab7bbf30b3182b34e",
+        "integrity": "sha512-+y6Na7dRN2ETLqaRQHAOWwe9XapYXhcLUQfTkTURhIoXE3i853LWP5g07vno5Bchd2uoVTZkLKgI9dtVO+mulA==",
         "publish": {
           "provider": "github-actions",
           "workflow": "publish.yml",
-          "runId": 33235810585,
-          "headSha": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
+          "runId": 37692059909,
+          "headSha": "db474db7cd0686dfd563f1ad792e427694608704",
           "conclusion": "success"
         },
         "publishedSmoke": {
           "provider": "github-actions",
           "workflow": "published-smoke.yml",
-          "runId": 33236376907,
-          "version": "0.2.0-beta.2",
+          "runId": 37693422887,
+          "version": "0.2.0-beta.3",
           "conclusion": "success"
+        },
+        "previousEstablished": {
+          "status": "established",
+          "tag": "v0.2.0-beta.2",
+          "tagCommit": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
+          "registry": "npmjs",
+          "package": "@gruetech/amanuensis",
+          "version": "0.2.0-beta.2",
+          "distTag": "latest",
+          "publishedAt": "2026-08-29T05:20:25.614Z",
+          "shasum": "e5aeab7e7429487c5cd94f3eb78c4eeede553767",
+          "integrity": "sha512-VByQofetGfbrKGRUX2NibrZOn3ErWW1BjR8KVNgqEhV7YmxlnBvdPVee24u/9ql6lwJajsY8/XuAeGH4W8ptQQ==",
+          "publish": {
+            "provider": "github-actions",
+            "workflow": "publish.yml",
+            "runId": 33235810585,
+            "headSha": "7a010cdb1aef07a4af2915e9cb850548273dbfef",
+            "conclusion": "success"
+          },
+          "publishedSmoke": {
+            "provider": "github-actions",
+            "workflow": "published-smoke.yml",
+            "runId": 33236376907,
+            "version": "0.2.0-beta.2",
+            "conclusion": "success"
+          }
         }
       }
     }
@@ -190,7 +216,7 @@
       "resolveBeforeInitiative": "A2",
       "status": "resolved",
       "decisionRecord": "dev/adr/0003-predict-before-apply-change-impact.md",
-      "resolution": "Use deterministic explicit relations first; require ≥95% labeled stale-claim recall and 100% for critical seeded claims before replacing the conservative fallback, while keeping false invalidation ≤10%."
+      "resolution": "Use deterministic explicit relations first; require \u226595% labeled stale-claim recall and 100% for critical seeded claims before replacing the conservative fallback, while keeping false invalidation \u226410%."
     },
     {
       "question": "Which design-session artifacts belong in Amanuensis custody versus Chorusmith session custody?",
@@ -255,7 +281,7 @@
       "name": "Immanent design versus speculative potential",
       "left": "Honor what the system is already trying to do.",
       "right": "Do not let current accidents cap its potential.",
-      "resolution": "Generate three labeled lenses—immanent, adversarial, and speculative—without merging them into a false consensus."
+      "resolution": "Generate three labeled lenses\u2014immanent, adversarial, and speculative\u2014without merging them into a false consensus."
     }
   ],
   "definitions": [
@@ -531,8 +557,8 @@
   "stages": [
     {
       "id": "now",
-      "label": "Now — make Codex activation friction-free",
-      "horizon": "Immediate 2–4 engineering weeks; no new product-surface expansion until this stage passes.",
+      "label": "Now \u2014 make Codex activation friction-free",
+      "horizon": "Immediate 2\u20134 engineering weeks; no new product-surface expansion until this stage passes.",
       "objective": "After one user-scoped installation, start Amanuensis correctly in any new trusted Codex repository with no repository-specific setup or restart.",
       "productEvidenceStatus": "unestablished",
       "exitEvidence": [],
@@ -842,7 +868,7 @@
             "A claim invalidated at commit B is not returned as current at B or later, remains queryable historically, and can be superseded only with new evidence.",
             "Bounded exhaustive tests cover interval edges, supersession cycles, evidence reachability, and contradictory current-authority states.",
             "The survey workflow writes temporal claims for the authoritative records it creates; a completed survey that leaves the claim tables empty fails rather than reporting success.",
-            "Every staleness signal is derived from a source a writer on the survey path populates. Any signal that cannot be — dashboard stale_entries, get_stale_backlog, clear_staleness, and the projection staleness map — is retired together with the surface it reads.",
+            "Every staleness signal is derived from a source a writer on the survey path populates. Any signal that cannot be \u2014 dashboard stale_entries, get_stale_backlog, clear_staleness, and the projection staleness map \u2014 is retired together with the surface it reads.",
             "No surface renders absence of measurement as health: a projection distinguishes no drift recorded from no drift measured, and never emits an affirmative freshness sentence it cannot substantiate."
           ],
           "redGate": "Survey a subsystem, then advance HEAD past its anchoring commit. The dashboard, the stale backlog, and the published projection must each report the drift and name the affected subsystem. A run in which no writer populated the authority source must halt as a zero-denominator green rather than report freshness.",
@@ -897,10 +923,10 @@
             "Two-sided sensitivity checks show that adding and removing each relation class changes impact output in the predicted direction.",
             "The explicit-relation implementation is measured before any model or embedding fallback is admitted.",
             "Change detection reports, per subsystem, paths present in the tree but absent from the ledger and paths present in the ledger but absent from the tree.",
-            "A ledger row whose file no longer exists can be retired without discarding the subsystem’s dispositions, findings, artifacts, or cross-references.",
+            "A ledger row whose file no longer exists can be retired without discarding the subsystem\u2019s dispositions, findings, artifacts, or cross-references.",
             "A subsystem whose declared scope contains unclassified paths cannot be published as fully covered; the gap is reported with its count and paths."
           ],
-          "redGate": "Add one file to a surveyed subsystem’s declared scope and delete another the ledger records as examined. Reconciliation must report both, name each path, and refuse to describe the subsystem as fully covered. A reconciliation returning zero added and zero missing must demonstrate non-vacuity in the same run.",
+          "redGate": "Add one file to a surveyed subsystem\u2019s declared scope and delete another the ledger records as examined. Reconciliation must report both, name each path, and refuse to describe the subsystem as fully covered. A reconciliation returning zero added and zero missing must demonstrate non-vacuity in the same run.",
           "risks": [
             "Static relations can miss runtime coupling and generated-code dependencies.",
             "Model-assisted impact can create nondeterministic invalidation noise."
@@ -940,7 +966,7 @@
           "status": "done",
           "owner": "Amanuensis",
           "outcome": "Revalidation obligations are produced by real drift, and a refresh that observes drift without owning it cannot report success.",
-          "rationale": "A3 proved that dropped and duplicated obligations halt completion, but never that obligations are created at all. In this repository’s own conspectus the obligation tables are empty while the code has drifted 23 commits, so the scheduler’s controls have never had a denominator.",
+          "rationale": "A3 proved that dropped and duplicated obligations halt completion, but never that obligations are created at all. In this repository\u2019s own conspectus the obligation tables are empty while the code has drifted 23 commits, so the scheduler\u2019s controls have never had a denominator.",
           "dependsOn": [
             "A2"
           ],
@@ -996,7 +1022,7 @@
           "status": "done",
           "owner": "Amanuensis",
           "outcome": "Fixed, revalidated, and materialized become evidenced states rather than optimistic labels.",
-          "rationale": "The current asymmetry—proof required to rule out but not to mark fixed—undercuts the core claim that users should not have to redo verification.",
+          "rationale": "The current asymmetry\u2014proof required to rule out but not to mark fixed\u2014undercuts the core claim that users should not have to redo verification.",
           "dependsOn": [
             "A1",
             "A3"
@@ -1053,7 +1079,7 @@
           "status": "done",
           "owner": "Amanuensis",
           "outcome": "A fully surveyed repository can be refreshed end to end from a commit range with deterministic controls, bounded provider use, explicit stop conditions, and a complete audit trail.",
-          "rationale": "Full automation is a systems property. It requires authority, idempotence, reconciliation, and recovery—not just a prompt that continues without asking.",
+          "rationale": "Full automation is a systems property. It requires authority, idempotence, reconciliation, and recovery\u2014not just a prompt that continues without asking.",
           "dependsOn": [
             "A0",
             "A3",
@@ -1107,8 +1133,8 @@
     },
     {
       "id": "next",
-      "label": "Next — remove first-use and lifecycle ceremony",
-      "horizon": "Following 1–2 engineering weeks, gated on the real-host activation matrix rather than elapsed time.",
+      "label": "Next \u2014 remove first-use and lifecycle ceremony",
+      "horizon": "Following 1\u20132 engineering weeks, gated on the real-host activation matrix rather than elapsed time.",
       "objective": "Make first use, upgrade, rollback, and published-package operation preserve the proven activation contract without repository-by-repository intervention.",
       "productEvidenceStatus": "unestablished",
       "exitEvidence": [],
@@ -1616,7 +1642,7 @@
     },
     {
       "id": "later",
-      "label": "Later — earn the friction-free operating claim",
+      "label": "Later \u2014 earn the friction-free operating claim",
       "horizon": "After published-package parity; sequence by product evidence, not a calendar promise.",
       "objective": "Demonstrate zero-ceremony, isolated multi-repository operation under real use and pass a release-ready beta gate without pooling away weak strata.",
       "productEvidenceStatus": "unestablished",
@@ -1701,12 +1727,12 @@
             "A25"
           ],
           "deliverables": [
-            "A release checklist derived from A19–A25 acceptance and red gates with exact evidence links.",
+            "A release checklist derived from A19\u2013A25 acceptance and red gates with exact evidence links.",
             "A clean-machine source and package replay plus configuration migration and rollback rehearsal.",
             "A release-readiness report that keeps publication authorization and product-proof status separate."
           ],
           "acceptance": [
-            "Every A19–A25 acceptance item has current evidence and every red gate has been demonstrated to halt.",
+            "Every A19\u2013A25 acceptance item has current evidence and every red gate has been demonstrated to halt.",
             "The release candidate passes clean install, five-repository activation, concurrency, interruption, upgrade, rollback, uninstall, and documentation read-back.",
             "No release or product-proof status advances without the exact artifact, host, repository, and run denominators."
           ],
@@ -2519,14 +2545,14 @@
       "id": "M2",
       "name": "Stale-claim recall",
       "definition": "Expected invalidated authoritative claims reached by the impact engine divided by all invalidated claims in the labeled fixture.",
-      "target": "≥95% before targeted invalidation replaces the conservative fallback; 100% for critical seeded claims.",
+      "target": "\u226595% before targeted invalidation replaces the conservative fallback; 100% for critical seeded claims.",
       "exclusions": "Unlabeled claims and changes outside the pinned commit range are reported separately, not silently removed."
     },
     {
       "id": "M3",
       "name": "False invalidation rate",
       "definition": "Still-valid authoritative claims withdrawn by the impact engine divided by all still-valid claims in the benign and mixed fixtures.",
-      "target": "≤10% initially and lower than conservative subsystem invalidation by a preregistered margin.",
+      "target": "\u226410% initially and lower than conservative subsystem invalidation by a preregistered margin.",
       "exclusions": "Claims whose validity cannot be adjudicated stay unknown and are not counted as true negatives."
     },
     {
@@ -2540,7 +2566,7 @@
       "id": "M5",
       "name": "Actionable precision",
       "definition": "Review findings accepted as correctly evidenced and action-relevant divided by all review findings presented as actionable.",
-      "target": "≥80% on the evaluation corpus, reported by severity and finding class.",
+      "target": "\u226580% on the evaluation corpus, reported by severity and finding class.",
       "exclusions": "Unverified suspicions are a separate product output and cannot be removed from the review-volume report."
     },
     {
@@ -2568,7 +2594,7 @@
       "id": "M9",
       "name": "Unknown retention",
       "definition": "Known gaps and unresolved contradictions visible with a destination in the final artifact divided by those present in the source situation model.",
-      "target": "100% for blocking unknowns and ≥95% overall.",
+      "target": "100% for blocking unknowns and \u226595% overall.",
       "exclusions": "Resolved items require resolution evidence; compression alone is not resolution."
     },
     {
@@ -2763,7 +2789,7 @@
   "risks": [
     {
       "risk": "The product becomes a general knowledge platform and loses its code-evidence advantage.",
-      "signal": "Roadmap work adds generic orchestration, ontology, or collaboration infrastructure before M2–M7 improve.",
+      "signal": "Roadmap work adds generic orchestration, ontology, or collaboration infrastructure before M2\u2013M7 improve.",
       "mitigation": "Require every Amanuensis feature to improve a named codebase decision metric; move general session machinery behind a Chorusmith contract.",
       "owner": "Product"
     },
@@ -2851,7 +2877,7 @@
           "VP20"
         ],
         "use": "Mechanical halting gates, red-gate demonstrations, fan-in reconciliation, determinism delivery, clean export, and three-axis read-back.",
-        "verification": "Every initiative has a red gate; A0, A3–A5, A8–A10, and A17 name the machine checks that block completion."
+        "verification": "Every initiative has a red gate; A0, A3\u2013A5, A8\u2013A10, and A17 name the machine checks that block completion."
       },
       {
         "ids": [

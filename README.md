@@ -94,7 +94,7 @@ record through source examination; it does not make every subsystem fully survey
 
 ## Beta means beta
 
-The current published release is [0.2.0-beta.3](https://github.com/nfeldman/amanuensis/releases/tag/v0.2.0-beta.3),
+The current published release is [0.2.0-beta.4](https://github.com/nfeldman/amanuensis/releases/tag/v0.2.0-beta.4),
 available as `latest` on npm. Its internal contracts and failure
 gates are extensively tested, and the tool is being dogfooded in active development.
 
