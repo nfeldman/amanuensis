@@ -588,6 +588,18 @@ async function main(mods) {
           () => decline(ctx, { slot: "account", reason: "x".repeat(401) }),
           stemD,
           "a 401-byte account reason (the reason cap is 400 for either slot)",
+        ) ??
+        refusesWith(
+          ctx,
+          () => decline(ctx, { reason: "First paragraph.\r\rSecond paragraph." }),
+          `${DECLINE} refuses: a reason is one paragraph`,
+          "a reason whose blank line is written in carriage returns",
+        ) ??
+        refusesWith(
+          ctx,
+          () => decline(ctx, { reason: "It has no account.\r# Sneaked" }),
+          `${DECLINE} refuses: a reason is one paragraph`,
+          "a reason that opens a heading after a carriage return",
         )
       );
     });
@@ -602,6 +614,17 @@ async function main(mods) {
         ["a dash list line", "- one item"],
         ["a star list line", "First sentence.\n* one item"],
         ["a table line", "| a | b |"],
+        // The page splits lines on every separator Python's splitlines() knows, so
+        // a heading behind any of them is a heading to the reader (F2/claude, final).
+        ["a carriage-return heading", "First sentence.\r## Sneaked"],
+        ["a blank line in carriage returns", "First sentence.\r\rSecond sentence."],
+        ["a blank line in CRLF", "First sentence.\r\n\r\nSecond sentence."],
+        ["a heading behind a line separator", "First sentence.\u2028# Sneaked"],
+        ["a list behind a paragraph separator", "First sentence.\u2029- one item"],
+        ["a list behind a form feed", "First sentence.\f- one item"],
+        ["a table behind a vertical tab", "First sentence.\v| a | b |"],
+        ["a heading behind a next line", "First sentence.\u0085# Sneaked"],
+        ["a heading behind a file separator", "First sentence.\u001c# Sneaked"],
       ]) {
         const wrong = refusesWith(ctx, () => rec({ body }), stemP, label);
         if (wrong) return wrong;
@@ -615,9 +638,17 @@ async function main(mods) {
       const listy = "It has three parts.\n\n- the reader\n* the writer\n1. the gate\n\nControl passes through each in turn.";
       const accepted = refusal(() => rec({ slot: "account", body: listy }));
       if (accepted) return `an account with list lines and a blank line was refused: ${accepted.slice(0, 120)}`;
+      const crlf = "It has three parts.\r\n\r\n- the reader\r\n- the writer\r\n";
+      const acceptedCrlf = refusal(() => rec({ slot: "account", body: crlf }));
+      if (acceptedCrlf) return `an account with CRLF line ends was refused: ${acceptedCrlf.slice(0, 120)}`;
       for (const [label, body] of [
         ["a heading line", "Intro.\n## How it works"],
         ["a table line", "Intro.\n| a | b |"],
+        ["a carriage-return heading", "Intro.\r## How it works"],
+        ["a CRLF heading", "Intro.\r\n# Sneaked"],
+        ["a heading behind a line separator", "Intro.\u2028## Sneaked"],
+        ["a heading behind a form feed", "Intro.\f# Sneaked"],
+        ["a table behind a vertical tab", "Intro.\v| a | b |"],
       ]) {
         const said = refusal(() => rec({ slot: "account", body }));
         if (!said) return `an account with ${label} was accepted; it could introduce structure above H3`;
