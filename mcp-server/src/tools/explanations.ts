@@ -22,6 +22,8 @@ const BODY_CAPS = { purpose: 400, account: 4096 } as const;
 const REASON_CAP = 400;
 /** A read serves every cited id, so the response is bounded only if the count is. */
 const EVIDENCE_CAP = 64;
+/** The read echoes the subject id and `upsert_subsystem` takes one of any size, so the envelope is bounded only if the read refuses a longer one. */
+const READ_SUBJECT_ID_CAP = 256;
 
 /** Evidence kinds that rest on a name or a pattern and so cannot carry an explanation alone. */
 const NAME_AND_PATTERN_KINDS: readonly string[] = ["name-inferred", "pattern-matched"];
@@ -180,6 +182,11 @@ function resolveReadSubject(ctx: ServerContext, args: Record<string, unknown>) {
   }
   if (suppliedId === null || suppliedId === "") {
     throw new ToolError("subject_id is required for a subsystem explanation");
+  }
+  if (byteLength(suppliedId) > READ_SUBJECT_ID_CAP) {
+    throw new ToolError(
+      `get_explanations serves a subject_id of at most ${READ_SUBJECT_ID_CAP} bytes, which keeps its response bounded; list_subsystems names the ids`,
+    );
   }
   if (readSubsystemStatus(ctx.db, suppliedId) === null) {
     throw new ToolError(`unknown subsystem: ${suppliedId}; list_subsystems names them`);

@@ -1080,6 +1080,7 @@ try {
     mods.resolveProject = project.resolveProject;
     mods.ensureProjectStorage = project.ensureProjectStorage;
     mods.openDatabase = db.openDatabase;
+    mods.workspaceIsBound = (await import("./dist/helpers.js")).workspaceIsBound;
     const [evidence, project_, subsystems] = await Promise.all([
       import("./dist/tools/evidence.js"),
       import("./dist/tools/project.js"),

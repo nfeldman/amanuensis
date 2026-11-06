@@ -17,6 +17,7 @@ import {
   isCitationToken,
   resolveWorkspaceAnchors,
   resolveWorkspaceCommits,
+  workspaceIsBound,
   ToolError,
 } from "./helpers.js";
 import {
@@ -472,7 +473,7 @@ export function readExplanation(
           [],
         );
   let resolvable: Set<string> | null = null;
-  if (workspacePath !== null) {
+  if (workspacePath !== null && workspaceIsBound(workspacePath)) {
     const resolved = resolveWorkspaceCommits(
       workspacePath,
       rows.map((row) => row.ref_sha),

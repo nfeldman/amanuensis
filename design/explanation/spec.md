@@ -392,7 +392,11 @@ For a `(subject_type, subject_id, slot)`:
 - **With a bound workspace**, the effective row is the row with the greatest `id` whose
   `ref_sha` resolves to a commit in that workspace.
 - **Without a bound workspace**, nothing can be resolved: the row with the greatest `id` is
-  effective and the reading carries `checked: false`, as `readVocabularyDischarge` does.
+  effective and the reading carries `checked: false`, as `readVocabularyDischarge` does. A path
+  is bound when git reports it inside a work tree; a directory that is no repository, a path that
+  does not exist and a repository whose metadata has gone are not bound. Settled by the final
+  review (F2/codex, F19/claude), where the two readers disagreed on such a path; the shared case
+  file carries the rule as `workspace_binding`.
 
 The state is `recorded` or `declined` when the effective row has that disposition, and
 `not-recorded` when there is no effective row or the effective row is `withdrawn`. For a
@@ -457,7 +461,10 @@ not require truncating one. A purpose is one paragraph: no blank line and no lin
 `#`, `-`, `*` or `|`. An account is prose and lists: no line starting with `#` or `|`.
 
 There is no minimum length and no required count of evidence rows beyond one. The whole
-`get_explanations` envelope stays under 70,000 bytes at every cap, measured by EX15's gate.
+`get_explanations` envelope stays under 70,000 bytes at every cap, measured by EX15's gate. The
+envelope echoes the subject id, so `get_explanations` refuses a `subject_id` over 256 UTF-8 bytes
+without echoing it (added by the final review, F3/codex: `upsert_subsystem` takes an id of any
+size).
 
 `decline_explanation` records `disposition = 'declined'` with the reason as `body`. It applies
 the conditions of R1–R4 with its own message stems, each beginning `decline_explanation

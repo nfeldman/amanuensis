@@ -207,6 +207,23 @@ export function resolveWorkspaceCommits(
   return resolved;
 }
 
+/**
+ * Whether git reports `workspacePath` inside a work tree, so that a revision can
+ * be resolved there at all. A directory that is no repository, a path that does
+ * not exist and a repository whose metadata has gone all answer no: asking them
+ * resolves nothing, which says nothing about whether a revision is reachable.
+ * The materializer's `workspace_is_bound` asks the same question, and both run
+ * the `workspace_binding` cases of `contracts/explanation-effective-cases.json`.
+ */
+export function workspaceIsBound(workspacePath: string): boolean {
+  const result = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return !result.error && result.status === 0 && String(result.stdout).trim() === "true";
+}
+
 export function requireString(args: Record<string, unknown>, key: string): string {
   const v = args[key];
   if (typeof v !== "string" || v.length === 0) {

@@ -122,12 +122,13 @@ row written at a revision that has since been rewritten away is passed over for
 the older row that resolves. `earlier_rows` counts the rows kept below it. A
 subsystem that has not been read to `structural` reads `not-recorded` whatever
 rows exist, the project's account reads the same while no subsystem has been, and
-`checked` is false when no workspace was bound to resolve
-revisions against. The body is served whole, so a response carries at most the
+`checked` is false when no workspace was bound to resolve revisions against, or
+when the bound path is one git cannot answer in; the newest row is effective then. The body is served whole, so a response carries at most the
 400-byte purpose and the 4096-byte account with their fields and 64 evidence ids
 each. The whole envelope stays under 70,000 bytes in the worst case, a body of
 control characters at every cap; prose at every cap measures about 17,000. An unknown
-subsystem, or a subsystem call without `subject_id`, is refused.
+subsystem, a `subject_id` over 256 bytes (the envelope echoes it), or a subsystem
+call without `subject_id`, is refused.
 
 ### A reset withdraws
 
