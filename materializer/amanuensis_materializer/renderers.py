@@ -13,7 +13,7 @@ import json
 import re
 import sqlite3
 import subprocess
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha1, sha256
@@ -597,6 +597,48 @@ def _count(n: int, singular: str, plural: str | None = None) -> str:
     a schema artifact showing through."""
 
     return f"{n} {singular if n == 1 else (plural or singular + 's')}"
+
+
+LEDGER_NO_REASON = "No reason recorded"
+LEDGER_NO_REVISION = "no revision recorded"
+
+
+def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]:
+    """The file ledger as groups of rows sharing `(classification, why_in_scope)` (§2.4).
+
+    `file_ledger.ref_sha` is set for every classification and `examined_at` only
+    for examined rows, so the revision on a candidate or exempt row is the one it
+    was recorded at, and only an examined row's revision is an examination.
+    Groups keep the ledger's order: classification, then the group's first path.
+    """
+
+    groups: dict[tuple[str, str], list[Mapping[str, object]]] = {}
+    for f in files:
+        key = (str(f["classification"] or "—"), str(f["why_in_scope"] or "").strip())
+        groups.setdefault(key, []).append(f)
+    out: list[str] = []
+    for (classification, why), members in groups.items():
+        revisions = {str(m["ref_sha"] or "") for m in members}
+        label = "examined at" if classification == "examined" else "recorded at"
+        if len(revisions) > 1:
+            revision = f"{label} {len(revisions)} revisions"
+        else:
+            sha = next(iter(revisions))
+            revision = f"{label} `{sha[:8]}`" if sha else LEDGER_NO_REVISION
+        reason = " ".join(why.split()) or LEDGER_NO_REASON
+        out.append(
+            f"- **{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"
+        )
+        for m in members:
+            path = str(m["file_path"])
+            sha = str(m["ref_sha"] or "")
+            own = (
+                f" (`{sha[:8]}`)" if len(revisions) > 1 and sha else
+                f" ({LEDGER_NO_REVISION})" if len(revisions) > 1 else ""
+            )
+            out.append(f'    - <a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')
+    out.append("")
+    return out
 
 
 def _metric_table(pairs: Sequence[tuple[str, str]]) -> list[str]:
@@ -1483,16 +1525,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     out += ["## Survey record", ""]
     out += ["### File ledger", ""]
     if files:
-        out += ["| Path | Classification | Why in scope | Examined at |", "|---|---|---|---|"]
-        for f in files:
-            path = str(f["file_path"])
-            out.append(
-                f'| <a id="{ledger_entry_anchor(str(sid), path)}"></a>`{path}`'
-                f" | {f['classification'] or '—'}"
-                f" | {(f['why_in_scope'] or '—').replace('|', '/')}"
-                f" | `{(str(f['ref_sha'] or '—'))[:8]}` |"
-            )
-        out.append("")
+        out += _ledger_groups(str(sid), files)
     else:
         out += ["No file is recorded in this subsystem's ledger.", ""]
 

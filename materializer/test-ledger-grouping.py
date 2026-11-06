@@ -398,12 +398,12 @@ def main() -> int:
                 n = len(re.findall(rf'id="{a}"', html))
                 if n != 1:
                     return f"the HTML anchor for `{path}` appears {n} times, not once"
-                if not re.search(rf"<li>(?:(?!</li>).)*?<a id=\"{a}\"", html, re.S):
+                if not re.search(rf"<li><span id=\"{a}\"", html, re.S):
                     return f"`{path}` is not inside its own <li> in the HTML"
-            li_per_path = re.findall(r'<li>\s*<a id="le-[0-9a-f]{10}"', html)
+            li_per_path = re.findall(r'<li><span id="le-[0-9a-f]{10}"', html)
             if len(li_per_path) != len(ROWS):
                 return f"the HTML has {len(li_per_path)} path <li> elements for {len(ROWS)} paths"
-            if "<ul><li><a id=\"le-" not in html.replace("\n", ""):
+            if "<ul><li><span id=\"le-" not in html:
                 return "the HTML paths are not a nested <ul> opening on a path item"
             if html.count(R_SHARED) != 1:
                 return f"the shared reason appears {html.count(R_SHARED)} times in the HTML"
