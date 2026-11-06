@@ -129,6 +129,11 @@ export function resolveWorkspaceCommit(
   requested: string,
   label = "ref_sha",
 ): string {
+  // `cwd: null` would run git in the server's own directory and answer for
+  // whichever repository that happens to be.
+  if (!ctx.project.workspacePath) {
+    throw new ToolError(`${label} ${requested} cannot be resolved: no workspace is bound`);
+  }
   const result = spawnSync("git", ["rev-parse", "--verify", `${requested}^{commit}`], {
     cwd: ctx.project.workspacePath,
     encoding: "utf8",

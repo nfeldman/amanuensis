@@ -131,4 +131,7 @@ subsystem, or a subsystem call without `subject_id`, is refused.
 the reset's reason as its body, for each slot of that subsystem that has any row,
 and needs an active session to attribute it. The earlier rows are kept, both slots
 read `not-recorded`, and the resurveyed subsystem owes a new explanation:
-`record_explanation` makes the next row effective.
+`record_explanation` makes the next row effective. The withdrawn row is written at
+the workspace's current revision. When that cannot be resolved it is written at
+each revision the slot's rows name, so the withdrawal still holds in whichever
+workspace is bound later.

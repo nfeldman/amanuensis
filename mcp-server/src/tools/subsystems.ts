@@ -341,24 +341,27 @@ export const subsystemTools: ToolDefinition[] = [
       // has something to withdraw needs one.
       const explained = ctx.db
         .prepare(
-          `SELECT slot, ref_sha FROM explanations
-            WHERE id IN (SELECT MAX(id) FROM explanations
-                          WHERE subject_type = 'subsystem' AND subject_id = ?
-                          GROUP BY slot)
-            ORDER BY slot`,
+          `SELECT slot, ref_sha, MAX(id) AS newest FROM explanations
+            WHERE subject_type = 'subsystem' AND subject_id = ?
+            GROUP BY slot, ref_sha
+            ORDER BY slot, newest`,
         )
         .all(id) as Array<{ slot: string; ref_sha: string }>;
+      const withdrawnSlots = [...new Set(explained.map((row) => row.slot))];
       const withdrawnBy =
         explained.length > 0 ? requireActiveSession(ctx, "reset_subsystem") : null;
       // The withdrawn row has to resolve in the workspace or the reader would skip
       // it and fall back to the row it withdraws, so it is written at the
-      // workspace's current revision. Without one it keeps the slot's last revision.
-      let withdrawnAt: string | null = null;
+      // workspace's current revision. When that cannot be resolved, one row is
+      // written at each revision the slot's rows name: whichever of them a later
+      // workspace still reaches, a withdrawal at that revision outranks it.
+      let withdrawals = explained;
       if (explained.length > 0) {
         try {
-          withdrawnAt = resolveWorkspaceCommit(ctx, "HEAD");
+          const head = resolveWorkspaceCommit(ctx, "HEAD");
+          withdrawals = withdrawnSlots.map((slot) => ({ slot, ref_sha: head }));
         } catch {
-          withdrawnAt = null;
+          /* no revision to name here, so the rows' own revisions stand */
         }
       }
 
@@ -420,13 +423,13 @@ export const subsystemTools: ToolDefinition[] = [
             .prepare("DELETE FROM claims WHERE substr(claim_key, 1, length(?)) = ?")
             .run(prefix, prefix).changes;
         }
-        for (const slot of explained) {
+        for (const slot of withdrawals) {
           ctx.db
             .prepare(
               `INSERT INTO explanations (subject_type, subject_id, slot, disposition, body, ref_sha, session_id)
                VALUES ('subsystem', ?, ?, 'withdrawn', ?, ?, ?)`,
             )
-            .run(id, slot.slot, reason, withdrawnAt ?? slot.ref_sha, withdrawnBy);
+            .run(id, slot.slot, reason, slot.ref_sha, withdrawnBy);
         }
         ctx.db
           .prepare(
@@ -451,7 +454,7 @@ export const subsystemTools: ToolDefinition[] = [
         previous_status: row.status,
         new_status: toStatus,
         deleted,
-        withdrawn_explanations: explained.length,
+        withdrawn_explanations: withdrawnSlots.length,
       });
     },
   },
