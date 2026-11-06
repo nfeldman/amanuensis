@@ -2800,25 +2800,9 @@ class MarkdownRenderer:
                 body.append(self._table(headers, normalized_rows, caption))
                 continue
 
-            list_match = re.match(r"^\s*([-*+] |\d+\. )(.*)$", line)
-            if list_match:
-                ordered = list_match.group(1)[0].isdigit()
-                tag = "ol" if ordered else "ul"
-                items: list[str] = []
-                while i < len(lines):
-                    item = re.match(r"^\s*([-*+] |\d+\. )(.*)$", lines[i])
-                    if not item or item.group(1)[0].isdigit() != ordered:
-                        break
-                    value = item.group(2)
-                    i += 1
-                    continuation: list[str] = []
-                    while i < len(lines) and lines[i].startswith(("  ", "    ")) and not re.match(r"^\s*[-*+] ", lines[i]):
-                        continuation.append(lines[i].strip())
-                        i += 1
-                    if continuation:
-                        value += " " + " ".join(continuation)
-                    items.append(f"<li>{_inline(value)}</li>")
-                body.append(f"<{tag}>{''.join(items)}</{tag}>")
+            if _LIST_ITEM.match(line):
+                markup, i = _render_list(lines, i)
+                body.append(markup)
                 continue
 
             if line.startswith(">"):
@@ -2842,6 +2826,51 @@ class MarkdownRenderer:
         if in_section:
             body.append("</section>")
         return title, "\n".join(_compose_prose_runs(body))
+
+
+_LIST_ITEM = re.compile(r"^(\s*)([-*+] |\d+\. )(.*)$")
+
+
+def _render_list(lines: list[str], start: int, nested: bool = False) -> tuple[str, int]:
+    """Render the list whose first item is `lines[start]`; return it and the next line.
+
+    An item indented deeper than the list's first item is a child list of the
+    preceding item, one level at a time, so a claim's statement is its own `<li>`
+    and its coordinates a `<ul>` inside it.  At the top level an item indented
+    less than the first is still a sibling, as it always was; a nested list ends
+    at the first item shallower than its own.
+    """
+
+    first = _LIST_ITEM.match(lines[start])
+    assert first is not None
+    base = len(first.group(1))
+    ordered = first.group(2)[0].isdigit()
+    tag = "ol" if ordered else "ul"
+    items: list[str] = []
+    i = start
+    while i < len(lines):
+        item = _LIST_ITEM.match(lines[i])
+        if not item:
+            break
+        indent = len(item.group(1))
+        if nested and indent < base:
+            break
+        if indent > base and items:
+            child, i = _render_list(lines, i, nested=True)
+            items[-1] = items[-1][: -len("</li>")] + child + "</li>"
+            continue
+        if item.group(2)[0].isdigit() != ordered:
+            break
+        value = item.group(3)
+        i += 1
+        continuation: list[str] = []
+        while i < len(lines) and lines[i].startswith(("  ", "    ")) and not _LIST_ITEM.match(lines[i]):
+            continuation.append(lines[i].strip())
+            i += 1
+        if continuation:
+            value += " " + " ".join(continuation)
+        items.append(f"<li>{_inline(value)}</li>")
+    return f"<{tag}>{''.join(items)}</{tag}>", i
 
 
 def _compose_prose_runs(elements: list[str]) -> list[str]:

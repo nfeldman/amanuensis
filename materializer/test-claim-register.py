@@ -163,7 +163,7 @@ CLAIMS: dict[str, tuple[str, str, str, str, str, tuple[tuple[str, str | None, st
     "c5": (
         "B-02/flow/q",
         "B-02",
-        "STATEMENT outside q: the writer drains B-01's queue",
+        "STATEMENT outside q: the writer drains the shared queue",
         "inferred-intent",
         SHA_B,
         (("src/queue.ts", "1-4", "supports"),),
@@ -480,9 +480,7 @@ def main() -> int:
                 if sorted(found) != sorted(wanted):
                     return f"under `{heading}` are {sorted(found)}, not {sorted(wanted)}"
                 if heading == "Recoverability":
-                    keys = [
-                        k for k in re.findall(r"^    - `([^`]+)`", body, flags=re.M)
-                    ]
+                    keys = re.findall(r"^    - `([^`]+)`", body, flags=re.M)
                     if keys != sorted(keys):
                         return f"claims under `{heading}` are not in key order: {keys}"
             return None
@@ -523,7 +521,7 @@ def main() -> int:
             }
             for label, (claim_id, text) in cases.items():
                 line = next(
-                    (l for l in structure.splitlines() if l.startswith(f"    - `{CLAIMS[claim_id][0]}`")),
+                    (ln for ln in structure.splitlines() if ln.startswith(f"    - `{CLAIMS[claim_id][0]}`")),
                     "",
                 )
                 if not line.endswith(text):
@@ -553,8 +551,9 @@ def main() -> int:
                 record = [c for c in nested[0].children if isinstance(c, Node) and c.tag == "li"]
                 if len(record) != 1 or key not in record[0].text():
                     return f"`{key}`: the nested `<ul>` is not one `<li>` carrying the key"
-                want = evidence_text(claim_id)
-                if want not in record[0].text().replace(" ", " "):
+                # Code spans are `<code>` elements, so their backticks are markup.
+                want = evidence_text(claim_id).replace("`", "")
+                if want not in record[0].text():
                     return f"`{key}`: the nested record's text lacks `{want}`"
                 if any(n.tag == "script" for n in own[0].walk()):
                     return f"`{key}`: the nested list needs a script"

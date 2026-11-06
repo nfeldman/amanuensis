@@ -138,10 +138,12 @@ SURVEY_NOTE_LABEL = (
 NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
 
 # §9.1's five structural categories, as the `claim_key` segment that names each
-# and the heading it groups under.  A claim reached through its subject or its
-# evidence rather than through the subsystem's own namespace has no segment to
-# read, so it groups last under its own heading rather than being dropped or
-# filed under a category nothing recorded it as (BP6).
+# and the heading it groups under.  Any other segment a survey recorded is its
+# own group, headed by the segment's humanised name (§2.2), so the register says
+# what each claim was recorded as instead of filing it under a heading nothing
+# recorded.  `other` is only a claim reached through its subject or its evidence
+# whose key is outside the subsystem's `<sid>/` namespace: it has no segment to
+# read, so it groups last rather than being dropped (BP6).
 CLAIM_KIND_HEADINGS: tuple[tuple[str, str], ...] = (
     ("key-type", "Key types"),
     ("state-container", "State containers"),
@@ -150,7 +152,12 @@ CLAIM_KIND_HEADINGS: tuple[tuple[str, str], ...] = (
     ("seam", "Seam contracts"),
     ("other", "Other claims"),
 )
-_CLAIM_KINDS = frozenset(kind for kind, _ in CLAIM_KIND_HEADINGS if kind != "other")
+# `other` is the heading for claims outside the namespace, never a segment a key
+# can name: a key `<sid>/other/x` is headed "Other", like any unrecognised one.
+OTHER_CLAIMS_HEADING = dict(CLAIM_KIND_HEADINGS)["other"]
+_CLAIM_KIND_HEADING = {kind: heading for kind, heading in CLAIM_KIND_HEADINGS if kind != "other"}
+NO_SEGMENT_HEADING = "No segment"
+NO_EVIDENCE_ATTACHED = "evidence: none attached"
 
 
 def _like_prefix(sid: str) -> str:
@@ -199,14 +206,74 @@ def _nest_prose(text: str, under: int) -> str:
     return "\n".join(out)
 
 
-def _claim_kind(sid: str, claim_key: str) -> str:
-    """The §9.1 category a `claim_key` names, or `other` when it names none."""
+def _claim_segment(sid: str, claim_key: str) -> str | None:
+    """The first segment of a `claim_key` after `<sid>/`; `None` outside the namespace."""
 
     prefix = f"{sid}/"
     if not claim_key.startswith(prefix):
-        return "other"
-    segment = claim_key[len(prefix) :].split("/", 1)[0]
-    return segment if segment in _CLAIM_KINDS else "other"
+        return None
+    return claim_key[len(prefix) :].split("/", 1)[0]
+
+
+def _segment_heading(segment: str | None) -> str:
+    """`storage-lifecycle` → `Storage lifecycle`; a recognised kind keeps its own."""
+
+    if segment is None:
+        return OTHER_CLAIMS_HEADING
+    if segment in _CLAIM_KIND_HEADING:
+        return _CLAIM_KIND_HEADING[segment]
+    text = segment.replace("-", " ")
+    return text[:1].upper() + text[1:] if text else NO_SEGMENT_HEADING
+
+
+def _claim_groups(
+    sid: str, claims: list[dict[str, Any]]
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """§2.2's groups: recognised kinds, other segments alphabetically, then the rest."""
+
+    by_segment: dict[str | None, list[dict[str, Any]]] = {}
+    for c in claims:
+        by_segment.setdefault(_claim_segment(sid, str(c["claim_key"])), []).append(c)
+    recognised = [k for k in _CLAIM_KIND_HEADING if k in by_segment]
+    others = sorted(k for k in by_segment if k is not None and k not in _CLAIM_KIND_HEADING)
+    ordered: list[str | None] = [*recognised, *others]
+    if None in by_segment:
+        ordered.append(None)
+    return [(_segment_heading(segment), by_segment[segment]) for segment in ordered]
+
+
+def _claim_evidence(
+    conn: sqlite3.Connection, claim_ids: list[str]
+) -> dict[str, list[dict[str, Any]]]:
+    """Each claim's `claim_evidence` rows joined to `evidence`, in evidence id order."""
+
+    by_claim: dict[str, list[dict[str, Any]]] = {}
+    if not claim_ids:
+        return by_claim
+    marks = ",".join("?" * len(claim_ids))
+    for cited in rows(
+        conn,
+        "SELECT ce.claim_id, ce.role, e.file_path, e.line_range"
+        " FROM claim_evidence ce JOIN evidence e ON e.id = ce.evidence_id"
+        f" WHERE ce.claim_id IN ({marks}) ORDER BY e.id",
+        tuple(claim_ids),
+    ):
+        by_claim.setdefault(str(cited["claim_id"]), []).append(cited)
+    return by_claim
+
+
+def _evidence_text(rows: list[dict[str, Any]]) -> str:
+    """`evidence:` and the files a claim's rows cite, in evidence id order (§2.2)."""
+
+    if not rows:
+        return NO_EVIDENCE_ATTACHED
+    files = []
+    for attached in rows:
+        path = str(attached["file_path"])
+        text = f"`{path}:{attached['line_range']}`" if attached["line_range"] else f"`{path}`"
+        role = str(attached["role"] or "supports")
+        files.append(text if role == "supports" else f"{text} ({role})")
+    return "evidence: " + ", ".join(files)
 
 THESIS_SOURCE = "entry-point.md"
 THESIS_SECTION_PATTERN = re.compile(
@@ -1173,24 +1240,22 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             " and to the evidence attached to it; a superseded claim is not shown here.",
             "",
         ]
-        for kind, heading in CLAIM_KIND_HEADINGS:
-            group = [c for c in claims if _claim_kind(sid, str(c["claim_key"])) == kind]
-            if not group:
-                continue
-            out += [
-                f"### {heading}",
-                "",
-                "| Claim | Subject | Statement | Epistemic kind | Asserted at |",
-                "|---|---|---|---|---|",
-            ]
+        claim_evidence = _claim_evidence(conn, [str(c["claim_id"]) for c in claims])
+        for heading, group in _claim_groups(str(sid), claims):
+            out += [f"### {heading}", ""]
             for c in group:
-                statement = str(c["statement"] or "—").replace("|", "/")
                 kind = str(c["epistemic_kind"] or "")
-                out.append(
-                    f"| `{c['claim_key']}` | `{c['subject_id']}` | {statement}"
-                    f" | {epistemic_labels.get(kind, kind) or '—'}"
-                    f" | {_short(str(c['asserted_at_sha'] or ''))} |"
-                )
+                # The statement is the item's first text and its coordinates are
+                # one nested item, so a reader meets the sentence before the key
+                # (§2.2).  Whitespace runs collapse because a newline inside the
+                # statement would end the item.
+                out += [
+                    f"- {' '.join(str(c['statement'] or '—').split())}",
+                    f"    - `{c['claim_key']}` · subject `{c['subject_id']}`"
+                    f" · {epistemic_labels.get(kind, kind) or '—'}"
+                    f" · asserted at {_short(str(c['asserted_at_sha'] or ''))}"
+                    f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}",
+                ]
             out.append("")
     else:
         out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
