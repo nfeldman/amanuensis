@@ -32,7 +32,7 @@ Turns red when:
     carries different rows;
   - `phase-5-packaging.md` step 5 does not read `unfilled_slots` and fill or
     report each row;
-  - a line or paragraph about the census calls it a gate or a guard;
+  - a sentence about the census calls it a gate or a guard;
   - the gate is not listed in `.github/workflows/test.yml`.
 
 False green it cannot exclude: the discharge names the right file and tool and
@@ -550,7 +550,10 @@ def main() -> int:
 
             text = read(path)
             heading = next(
-                (m for m in re.findall(r"^(#{1,6}\s*What is this[^\n]*)$", text, re.M | re.I)),
+                iter(
+                    re.findall(r"^(#{1,6}\s*What is this[^\n`]*)$", text, re.M | re.I)
+                    + re.findall(r"`(#{1,6}\s*What is this[^`\n]*)`", text, re.I)
+                ),
                 "",
             )
             runtime = re.search(
@@ -635,13 +638,16 @@ def main() -> int:
                     return f"{path.name} is not readable"
                 blocks = re.split(r"\n\s*\n", text)
                 for block in blocks:
-                    if re.search(r"unfilled[_ ]slot|census", block, re.I):
+                    sentences = re.split(r"(?<=[.!?])\s+", " ".join(block.split()))
+                    for sentence in sentences:
+                        if not re.search(r"unfilled[_ ]slot|census", sentence, re.I):
+                            continue
                         seen += 1
-                        hit = re.search(r"\b(gate|guard)s?\b", block, re.I)
+                        hit = re.search(r"\b(gate|guard)s?\b", sentence, re.I)
                         if hit:
-                            return f"{path.name} calls the census a {hit.group(0).lower()}: {block.strip()[:80]}"
+                            return f"{path.name} calls the census a {hit.group(0).lower()}: {sentence[:80]}"
             if seen < 4:
-                return f"only {seen} paragraphs across the census text mention it"
+                return f"only {seen} sentences across the census text mention it"
             return None
 
         check("no text calls the census a gate or a guard", not_a_guard)

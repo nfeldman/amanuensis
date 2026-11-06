@@ -214,13 +214,18 @@ def staleness_map(conn: sqlite3.Connection) -> str:
     return "\n".join(lines)
 
 
-_RUNTIME_BOUNDARY_HEADERS = (
-    "runtime / process",
-    "language",
-    "communicates with",
-    "mechanism",
-    "notes",
+RUNTIME_BOUNDARY_COLUMNS = (
+    "Runtime / Process",
+    "Language",
+    "Communicates with",
+    "Mechanism",
+    "Notes",
 )
+_RUNTIME_BOUNDARY_HEADERS = tuple(column.lower() for column in RUNTIME_BOUNDARY_COLUMNS)
+
+#: What the architecture page says while the onboarding record holds no table.
+#: The page prints it between underscores; the census names the same state.
+RUNTIME_BOUNDARY_ABSENT = "No structured runtime boundary map is recorded yet."
 
 
 def _table_cells(line: str) -> list[str]:
@@ -262,12 +267,21 @@ def _runtime_boundary_table(markdown: str) -> str | None:
     return "\n".join(table_lines) if len(table_lines) > 2 else None
 
 
+def _recorded_runtime_table(storage: Path) -> str | None:
+    source = storage / "onboarding-report.md"
+    return _runtime_boundary_table(source.read_text() if source.exists() else "")
+
+
+def runtime_boundary_state(storage: Path) -> str:
+    """`recorded` or `absent`: the one answer the page and the census both read."""
+    return "recorded" if _recorded_runtime_table(storage) else "absent"
+
+
 def runtime_boundary_map(storage: Path) -> str:
     """Project the recorded onboarding runtime table into architecture output."""
-    source = storage / "onboarding-report.md"
-    table = _runtime_boundary_table(source.read_text() if source.exists() else "")
-    if not table:
-        return "_No structured runtime boundary map is recorded yet._"
+    if runtime_boundary_state(storage) == "absent":
+        return f"_{RUNTIME_BOUNDARY_ABSENT}_"
+    table = _recorded_runtime_table(storage)
     return "\n\n".join(
         [
             "_Projected from the recorded [onboarding runtime boundary table]"

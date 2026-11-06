@@ -76,6 +76,16 @@ re-links every ID across pages. It then publishes synchronized HTML and
 Markdown views and reads both back. Treat the returned `html_entrypoint` as
 the primary human handoff; Markdown remains the portable audit companion.
 
+The result also carries `unfilled_slots`, a list of rows
+`{slot, page, subject, state, discharge}`, one for each slot a page prints as
+unrecorded: the project thesis, the runtime boundary map, and a subsystem's
+vocabulary. Read it before the session summary. For each row, either fill the
+slot now, by making the edit or the tool call its `discharge` names and then
+running `materialize_docs()` again, or report the row in the session summary
+with its slot, subject and `discharge`. An empty list means every slot is
+recorded or declined. The render is published whichever you choose, so a row
+you leave open is a fact to report and not a reason to stop.
+
 ### 6. Contradiction detection
 
 For each finding in this pass:

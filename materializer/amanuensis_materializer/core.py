@@ -412,6 +412,11 @@ class Materializer:
                 if not self.summary.readback["ok"]:
                     self.summary.ok = False
 
+            # A report of what no session has written yet, from the same
+            # predicates the pages print by. It is read by the caller and
+            # never by the publication above.
+            unfilled = renderers.unfilled_slots(conn, self.storage)
+
             return {
                 "ok": self.summary.ok,
                 "output_dir": str(self.output),
@@ -427,6 +432,7 @@ class Materializer:
                 "html_pages_retired": self.summary.html_pages_retired,
                 "warnings": self.summary.warnings,
                 "readback": self.summary.readback,
+                "unfilled_slots": unfilled,
             }
         finally:
             conn.close()

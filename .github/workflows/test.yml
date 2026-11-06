@@ -630,6 +630,9 @@ jobs:
       - name: File ledger groups rows that share a reason
         working-directory: materializer
         run: python3 test-ledger-grouping.py
+      - name: Unfilled-slot census and the skill text that feeds it
+        working-directory: materializer
+        run: python3 test-placeholder-census.py
       - name: Unresolved and History pages, the resolution basis, and the reader's guide
         working-directory: materializer
         run: python3 test-history-and-disagreements.py

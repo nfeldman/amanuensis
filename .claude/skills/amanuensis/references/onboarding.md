@@ -43,7 +43,22 @@ confidence, notes). Continue to Phase 2.
 
 Processes, services, IPC mechanisms, external dependencies. Produce the
 **runtime boundary table** (one row per process / service: language,
-peers, mechanism). Continue to Phase 3.
+peers, mechanism). Record it in `onboarding-report.md` under the heading
+`## Runtime boundary map`, as this five-column table, with these column
+names and no others:
+
+```markdown
+## Runtime boundary map
+
+| Runtime / Process | Language | Communicates with | Mechanism | Notes |
+|---|---|---|---|---|
+| [process or service] | [language] | [peers] | [IPC or protocol] | [anything a reader needs] |
+```
+
+The architecture page is built from that table and from nothing else. Under
+any other heading, or with other column names, the page says no map is
+recorded and `materialize_docs` lists the slot in `unfilled_slots`. Continue
+to Phase 3.
 
 ## Phase 3 · Stateful entity identification
 
@@ -174,14 +189,22 @@ will see the queue at the Phase 7 checkpoint.
   - `entry-point.md` — must pass the acceptance gate: a new LLM
     reading only this file must answer "what does this system do? what
     do I map first? given a bug report, what do I read first? given a
-    feature request, what mode applies?"
+    feature request, what mode applies?" Put the answer to the first
+    question under the heading `## What is this codebase?`, in 3–6
+    sentences with no status vocabulary and no count. The overview page
+    takes its thesis from that section and from nowhere else; under any
+    other heading it says no thesis is recorded.
   - `field-notes.md` — seeded with onboarding observations.
 - For each artifact, call `register_artifact(path, kind, ...)` then
   `rehash_artifact(path, ref_sha=onboarding_sha)` so the materializer
   sees the content.
 - Call `materialize_docs()` to render the navigable human docs. It returns an
   `html_entrypoint`; this self-contained HTML index is the primary human
-  surface, with synchronized Markdown companions alongside it.
+  surface, with synchronized Markdown companions alongside it. It also
+  returns `unfilled_slots`: one row for each thesis, runtime boundary map or
+  subsystem vocabulary that nobody has recorded, with the file edit or tool
+  call that fills it. Fill the rows you can and report the others in the
+  Phase 7 checkpoint summary; the render is published either way.
 - Call `end_session(outcome="completed")`.
 
 Commit at every phase boundary. Storage is a git repo;
@@ -195,6 +218,7 @@ Once `materialize_docs()` returns, emit a one-screen summary:
 - Concerns derived (count by territory applicability vs. disqualified).
 - Open-question queue (count by category, with a one-line preview of
   the highest-impact entries).
+- Each `unfilled_slots` row that is still open, with its `discharge`.
 - Exact `html_entrypoint`, plus the path to the prose artifacts. Do not make a
   person infer the HTML entry page from the output directory.
 

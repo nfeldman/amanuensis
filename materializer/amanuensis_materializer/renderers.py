@@ -22,8 +22,11 @@ from typing import Any
 
 from .db import row, rows, table_exists
 from .diagrams import (
+    RUNTIME_BOUNDARY_ABSENT,
+    RUNTIME_BOUNDARY_COLUMNS,
     concern_coverage_heatmap,
     runtime_boundary_map,
+    runtime_boundary_state,
     seam_graph,
     staleness_map,
     subsystem_dependency_view,
@@ -125,6 +128,13 @@ def _sev_badge(sev: str) -> str:
 NO_PURPOSE_SENTENCE = "No purpose statement is recorded for this subsystem"
 NO_PURPOSE_WITH_SCOPE = f"{NO_PURPOSE_SENTENCE}; the scope below states what it covers."
 NO_PURPOSE_ALONE = f"{NO_PURPOSE_SENTENCE}."
+
+#: The subsystem page's vocabulary line for the state nobody has answered. The
+#: label comes from the vocabulary contract, so the page and the census cannot
+#: word the same state differently.
+VOCABULARY_NOT_RECORDED = (
+    f"**Domain vocabulary** — {labels('vocabulary_discharge').get('not-recorded', 'not recorded').lower()}."
+)
 
 # §9.1's literal and §3.4's label, verbatim.  The subsystem page and
 # `describe_locus` say the same words for the same state, because a reader who
@@ -318,6 +328,8 @@ class Thesis:
     text: str
     recorded: bool
     violations: tuple[str, ...] = ()
+    #: `absent`, `refused` or `filled`: the state the census reads (§2.5).
+    state: str = "filled"
 
 
 def _thesis_body(prose: str) -> str:
@@ -360,18 +372,26 @@ def read_thesis(storage: Path) -> Thesis:
     path = storage / THESIS_SOURCE
     body = _thesis_body(path.read_text()) if path.is_file() else ""
     if not body:
-        return Thesis(THESIS_ABSENT, recorded=False)
+        return Thesis(THESIS_ABSENT, recorded=False, state="absent")
     violations = tuple(orientation_violations(body))
     if violations:
-        return Thesis(THESIS_REFUSED, recorded=True, violations=violations)
+        return Thesis(THESIS_REFUSED, recorded=True, violations=violations, state="refused")
     # C32 forbids a composite score in the overview, and the thesis is the one
     # slot on it a session writes by hand. Refusing it here is what keeps the
     # figure out of the published bytes; the whole-page lint below is what makes
     # the publish red whoever put it there (F5/codex, slice-S7).
     composite = tuple(composite_index_violations(body))
     if composite:
-        return Thesis(THESIS_REFUSED_COMPOSITE, recorded=True, violations=composite)
+        return Thesis(
+            THESIS_REFUSED_COMPOSITE, recorded=True, violations=composite, state="refused"
+        )
     return Thesis(body, recorded=True)
+
+
+def thesis_state(storage: Path) -> str:
+    """The thesis slot's state for the project: the overview prints by it too."""
+
+    return read_thesis(storage).state
 
 
 #: What a page is titled when nothing in the record names the project. A
@@ -1399,9 +1419,8 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             "",
         ]
     elif vocabulary_state == "not-recorded":
-        discharge_label = labels("vocabulary_discharge").get("not-recorded", "not recorded")
         out += [
-            f"**Domain vocabulary** — {discharge_label.lower()}."
+            f"{VOCABULARY_NOT_RECORDED}"
             f" {meanings('vocabulary_discharge').get('not-recorded', '')}",
             "",
         ]
@@ -2463,6 +2482,95 @@ def _declination_sentence(record: dict[str, Any]) -> str:
         f"Declared at {_short(str(record['ref_sha'] or ''))} in session"
         f" `{record['session_id']}`: _{record['reason']}_"
     )
+
+
+#: The fixed sentences a page prints for a slot nobody has filled (§2.5). The
+#: reader-prose measure counts six strings, and each of them occurs in one of
+#: these. No other empty-state sentence is listed: "No seams recorded yet" and
+#: "No dependency edges are recorded" describe an empty relation, not a slot.
+PLACEHOLDER_SENTENCES: tuple[str, ...] = (
+    THESIS_ABSENT,
+    THESIS_REFUSED,
+    THESIS_REFUSED_COMPOSITE,
+    RUNTIME_BOUNDARY_ABSENT,
+    VOCABULARY_NOT_RECORDED,
+    NO_PURPOSE_WITH_SCOPE,
+    NO_PURPOSE_ALONE,
+)
+
+_THESIS_HEADING = "## What is this codebase?"
+_RUNTIME_HEADING = "## Runtime boundary map"
+
+
+def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, str]]:
+    """One row per slot that applies and is unfilled, from the predicates the pages use.
+
+    The thesis, the runtime boundary map and a subsystem's vocabulary are each
+    decided by one function that the renderer calls to choose what to print:
+    `thesis_state`, `runtime_boundary_state` and `_vocabulary_state`. The rows
+    below are emitted by asking the same three, so a row exists exactly when the
+    page prints the slot's sentence. A declined slot is filled and has no row.
+    Publication does not read this list; it only reports it.
+    """
+
+    census: list[dict[str, str]] = []
+    state = thesis_state(storage)
+    if state == "absent":
+        census.append(
+            {
+                "slot": "thesis",
+                "page": "index.md",
+                "subject": "project",
+                "state": state,
+                "discharge": f"add a '{_THESIS_HEADING}' section to {THESIS_SOURCE}",
+            }
+        )
+    elif state == "refused":
+        census.append(
+            {
+                "slot": "thesis",
+                "page": "index.md",
+                "subject": "project",
+                "state": state,
+                "discharge": (
+                    f"correct the '{_THESIS_HEADING}' section of {THESIS_SOURCE}, so that it"
+                    " carries no status vocabulary and no composite figure"
+                ),
+            }
+        )
+    if runtime_boundary_state(storage) == "absent":
+        census.append(
+            {
+                "slot": "runtime-boundary-map",
+                "page": "architecture.md",
+                "subject": "project",
+                "state": "absent",
+                "discharge": (
+                    f"add a '{_RUNTIME_HEADING}' table with the columns"
+                    f" {', '.join(RUNTIME_BOUNDARY_COLUMNS)} to onboarding-report.md"
+                ),
+            }
+        )
+    declined = _declinations(conn)
+    scoped_terms = _vocabulary_terms(conn)
+    workspace = resolve_workspace(storage)
+    for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
+        sid = str(sub["id"])
+        vocabulary = _vocabulary_state(scoped_terms.get(sid, []), declined.get(sid, []), workspace)
+        if vocabulary == "not-recorded":
+            census.append(
+                {
+                    "slot": "subsystem-vocabulary",
+                    "page": subsystem_page(sid, str(sub["name"])),
+                    "subject": sid,
+                    "state": vocabulary,
+                    "discharge": (
+                        f"call define_term for a term scoped to {sid}, or"
+                        f" decline_domain_vocabulary for {sid} with the reason it has none"
+                    ),
+                }
+            )
+    return census
 
 
 def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
