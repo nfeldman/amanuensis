@@ -39,6 +39,19 @@ False green it cannot exclude: the discharge names the right file and tool and
 a session still cannot act on it. This gate asserts the text, not whether a
 session follows it.
 
+Extended by EX12 (spec.md §2.5, §3.7; claims C35) with the three explanation
+slots, by addition: the fixtures above keep their rows, with every explanation
+slot declined so that none of them adds one, except `empty`, which records
+nothing and so also holds the explanation rows. Added fixtures:
+
+  - `eligible-empty`: eligible subsystems with nothing recorded;
+  - `declined` and `recorded`: every explanation slot filled, no explanation row;
+  - `partial`: one slot of each eligible subsystem filled, and `subsystem-account`
+    asserted one-directionally;
+  - `no-eligible`: a `deferred` and an `unmapped` subsystem holding recorded rows
+    contribute no explanation row, print the no-purpose sentence, and keep their
+    vocabulary rows; the project account has no row, though its page says so.
+
 Output protocol: exactly one status line, last, on stdout. Every subprocess is
 captured and never echoed, and every message is scrubbed, so a missing
 deliverable reports as an assertion failure and not as a crash.
@@ -142,6 +155,13 @@ RUNTIME_SENTENCE = "No structured runtime boundary map is recorded yet"
 VOCABULARY_SENTENCE = "**Domain vocabulary** — not recorded"
 ALL_THESIS = tuple(THESIS_SENTENCES.values())
 SLOTS_IN_SCOPE = {"thesis", "runtime-boundary-map", "subsystem-vocabulary"}
+EXPLANATION_SLOTS = {"subsystem-purpose", "subsystem-account", "project-account"}
+NO_PURPOSE_STEM = "No purpose statement is recorded for this subsystem"
+NO_ACCOUNT_SENTENCE = "No account of how the parts fit together is recorded."
+ACCOUNT_DECLINED_STEM = "declined to write an account of how this subsystem works"
+# The not-recorded sentence ends at `.` or `;`. A declined purpose opens with the same
+# words and a `:`, and is a filled slot.
+NO_PURPOSE_PATTERN = re.compile(re.escape(NO_PURPOSE_STEM) + r"[.;]")
 NOT_SLOTS = ("No seams recorded yet", "No dependency edges are recorded")
 ROW_FIELDS = {"slot", "page", "subject", "state", "discharge"}
 
@@ -193,8 +213,15 @@ def seed(
     entry: str | None,
     onboarding: str | None,
     vocab: dict[str, str],
+    explain: str = "declined",
+    statuses: tuple[str, str] = ("mapped", "mapped"),
 ) -> None:
-    """`vocab` maps a subsystem id to `term`, `declined` or `declined-unresolved`."""
+    """`vocab` maps a subsystem id to `term`, `declined` or `declined-unresolved`.
+
+    `explain` is `declined` or `recorded` (every explanation slot of both
+    subsystems and the project), `partial` (B-01's purpose and B-02's account
+    recorded, nothing else) or `none`. `statuses` are B-01's and B-02's.
+    """
 
     db = sqlite3.connect(storage / "memory.db")
     db.executescript(SCHEMA.read_text())
@@ -207,11 +234,13 @@ def seed(
     )
     cur.execute("INSERT INTO sessions (session_id, intent) VALUES ('ex6', 'fixture')")
     cur.execute(
-        "INSERT INTO subsystems (id, name, status, layer) VALUES ('B-01', 'Queue', 'mapped', 'backend')"
+        "INSERT INTO subsystems (id, name, status, layer) VALUES ('B-01', 'Queue', ?, 'backend')",
+        (statuses[0],),
     )
     cur.execute(
         "INSERT INTO subsystems (id, name, status, layer, scope)"
-        " VALUES ('B-02', 'Lease', 'mapped', 'backend', 'The lease clock and its renewal.')"
+        " VALUES ('B-02', 'Lease', ?, 'backend', 'The lease clock and its renewal.')",
+        (statuses[1],),
     )
     for sid, how in vocab.items():
         if how == "term":
@@ -231,6 +260,22 @@ def seed(
                 " VALUES (?, 'the names here are ordinary words', 'ex6', ?)",
                 (sid, ref),
             )
+    explanations: list[tuple[str, str, str, str, str]] = []
+    if explain in ("declined", "recorded"):
+        verb = "declined" if explain == "declined" else "recorded"
+        for sid in ("B-01", "B-02"):
+            for slot in ("purpose", "account"):
+                explanations.append(("subsystem", sid, slot, verb, f"{slot} of {sid}: the reason or the text."))
+        explanations.append(("project", "project", "account", verb, "how the parts of the queue fit together."))
+    elif explain == "partial":
+        explanations.append(("subsystem", "B-01", "purpose", "recorded", "the queue drains jobs into a store."))
+        explanations.append(("subsystem", "B-02", "account", "recorded", "a lease is taken, renewed, then released."))
+    for subject_type, sid, slot, disposition, body in explanations:
+        cur.execute(
+            "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+            " ref_sha, session_id) VALUES (?, ?, ?, ?, ?, ?, 'ex6')",
+            (subject_type, sid, slot, disposition, body, head),
+        )
     db.commit()
     db.close()
     if entry is not None:
@@ -268,6 +313,7 @@ class Fixture:
 
     def __init__(self, root: Path, name: str, **seed_args: object) -> None:
         self.name = name
+        self.explain = str(seed_args.get("explain", "declined"))
         self.storage = root / name
         self.storage.mkdir()
         self.error: str | None = None
@@ -315,8 +361,13 @@ def expected_rows(
     thesis: tuple[str, str] | None,
     runtime: bool,
     vocabulary: list[str],
+    explanations: bool = False,
 ) -> list[tuple[str, str, str]]:
-    """(slot, subject, state) for each slot whose sentence is on its page."""
+    """(slot, subject, state) for each slot whose sentence is on its page.
+
+    `explanations` adds the rows of a fixture that records no explanation: a
+    purpose and an account for each eligible subsystem, and the project account.
+    """
 
     out: list[tuple[str, str, str]] = []
     if thesis is not None:
@@ -324,6 +375,10 @@ def expected_rows(
     if runtime:
         out.append(("runtime-boundary-map", "project", "absent"))
     out += [("subsystem-vocabulary", sid, "not-recorded") for sid in vocabulary]
+    if explanations:
+        for sid in ("B-01", "B-02"):
+            out += [("subsystem-purpose", sid, "not-recorded"), ("subsystem-account", sid, "not-recorded")]
+        out.append(("project-account", "project", "not-recorded"))
     return out
 
 
@@ -374,8 +429,9 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
     for r in rows:
         if set(r) != ROW_FIELDS:
             return f"a {fx.name} row carries fields {sorted(r)}, not {sorted(ROW_FIELDS)}"
-        if r["slot"] not in SLOTS_IN_SCOPE:
-            return f"a {fx.name} row names the slot `{r['slot']}`, outside the three in scope"
+        allowed = SLOTS_IN_SCOPE | (EXPLANATION_SLOTS if fx.explain == "none" else set())
+        if r["slot"] not in allowed:
+            return f"a {fx.name} row names the slot `{r['slot']}`, outside the slots in scope"
         discharge = str(r["discharge"])
         slot = r["slot"]
         if slot == "thesis":
@@ -390,6 +446,8 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
                 or "onboarding-report.md" not in discharge
             ):
                 return f"the runtime row's page or discharge is wrong: {r}"
+        elif slot in EXPLANATION_SLOTS:
+            continue
         else:
             rel, _text = fx.subsystem_page(str(r["subject"]))
             if not rel or r["page"] != rel:
@@ -399,12 +457,91 @@ def row_shape(fx: Fixture, want: list[tuple[str, str, str]]) -> str | None:
     return None
 
 
+def explanation_correspondence(fx: Fixture, eligible: dict[str, bool]) -> str | None:
+    """EX12: the explanation rows against the sentences and sections the pages print (§2.5).
+
+    A purpose row exists if and only if an eligible subsystem's page prints the
+    no-purpose sentence; an ineligible subsystem prints it and has no row.
+    `subsystem-account` has no sentence, so it is one-directional: a row exists
+    if and only if an eligible page has neither `## How it works` nor an account
+    declination. The project account has a row if and only if its sentence is on
+    the architecture page and at least one subsystem is eligible.
+    """
+
+    rows = fx.rows()
+    if isinstance(rows, str):
+        return rows
+    keys = {(str(r.get("slot")), str(r.get("subject"))) for r in rows}
+    for sid, is_eligible in eligible.items():
+        _rel, text = fx.subsystem_page(sid)
+        if not text:
+            return f"the {fx.name} fixture has no page for {sid}"
+        prints_purpose_sentence = bool(NO_PURPOSE_PATTERN.search(text))
+        if is_eligible and prints_purpose_sentence != (("subsystem-purpose", sid) in keys):
+            return (
+                f"the {fx.name} page for {sid} {'prints' if prints_purpose_sentence else 'omits'}"
+                " the no-purpose sentence and the census disagrees"
+            )
+        owed = "## How it works" not in text and ACCOUNT_DECLINED_STEM not in text
+        if is_eligible and owed != (("subsystem-account", sid) in keys):
+            return (
+                f"the {fx.name} page for {sid} {'owes' if owed else 'has'} an account"
+                " and the census disagrees"
+            )
+        if not is_eligible:
+            if not prints_purpose_sentence:
+                return f"the {fx.name} page for {sid}, which is not eligible, omits the no-purpose sentence"
+            for slot in ("subsystem-purpose", "subsystem-account"):
+                if (slot, sid) in keys:
+                    return f"the {fx.name} census holds a `{slot}` row for {sid}, which is not explanation-eligible"
+    sentence = NO_ACCOUNT_SENTENCE in fx.page("architecture.md")
+    if any(eligible.values()):
+        if sentence != (("project-account", "project") in keys):
+            return (
+                f"the {fx.name} architecture page {'prints' if sentence else 'omits'}"
+                " the no-account sentence and the census disagrees"
+            )
+    else:
+        if ("project-account", "project") in keys:
+            return f"the {fx.name} census holds a project-account row with no eligible subsystem"
+        if not sentence:
+            return f"the {fx.name} architecture page omits the no-account sentence"
+    return None
+
+
+def explanation_shape(fx: Fixture, want: set[tuple[str, str]]) -> str | None:
+    """EX12: exactly these `(slot, subject)` explanation rows, each well formed."""
+
+    rows = fx.rows()
+    if isinstance(rows, str):
+        return rows
+    got = {(str(r.get("slot")), str(r.get("subject"))) for r in rows if r.get("slot") in EXPLANATION_SLOTS}
+    if got != want:
+        return f"the {fx.name} explanation rows are {sorted(got)}, not {sorted(want)}"
+    for r in rows:
+        if r.get("slot") not in EXPLANATION_SLOTS:
+            continue
+        if set(r) != ROW_FIELDS or r.get("state") != "not-recorded":
+            return f"a {fx.name} explanation row is malformed: {r}"
+        discharge = str(r.get("discharge"))
+        if "record_explanation" not in discharge or "decline_explanation" not in discharge:
+            return f"the {fx.name} explanation discharge names neither tool: {discharge}"
+        if r["slot"] == "project-account":
+            if r.get("page") != "architecture.md":
+                return f"the project-account row names page `{r.get('page')}`"
+        else:
+            rel, _text = fx.subsystem_page(str(r["subject"]))
+            if not rel or r.get("page") != rel:
+                return f"the {r['slot']} row for {r['subject']} names page `{r.get('page')}`, not `{rel}`"
+    return None
+
+
 def main() -> int:
     emit("GATE EX6 — the unfilled-slot census")
     emit("")
     root = Path(tempfile.mkdtemp(prefix="amanuensis-ex6-"))
     try:
-        empty = Fixture(root, "empty", entry=None, onboarding=None, vocab={})
+        empty = Fixture(root, "empty", entry=None, onboarding=None, vocab={}, explain="none")
         refused = Fixture(root, "refused", entry=ENTRY_REFUSED, onboarding=ONBOARDING_OK, vocab={"B-01": "term", "B-02": "declined"})
         composite = Fixture(root, "composite", entry=ENTRY_COMPOSITE, onboarding=ONBOARDING_OK, vocab={"B-01": "term", "B-02": "declined"})
         mixed = Fixture(root, "mixed", entry=ENTRY_OK, onboarding=None, vocab={"B-01": "term", "B-02": "declined-unresolved"})
@@ -413,10 +550,12 @@ def main() -> int:
         # -- 1. the first assertion: every printed placeholder has its row -------
         check("empty: a row exists if and only if its sentence is on its page", lambda: sentence_correspondence(empty))
         check(
-            "empty: the census is the thesis, the runtime map and both vocabularies",
+            "empty: the census is the thesis, the runtime map, both vocabularies and the explanation slots",
             lambda: row_shape(
                 empty,
-                expected_rows(empty, thesis=("absent", ""), runtime=True, vocabulary=["B-01", "B-02"]),
+                expected_rows(
+                    empty, thesis=("absent", ""), runtime=True, vocabulary=["B-01", "B-02"], explanations=True
+                ),
             ),
         )
         check("refused: the correspondence holds for a refused thesis", lambda: sentence_correspondence(refused))
@@ -462,8 +601,9 @@ def main() -> int:
                 rows = fx.rows()
                 if isinstance(rows, str):
                     return rows
+                allowed = SLOTS_IN_SCOPE | (EXPLANATION_SLOTS if fx.explain == "none" else set())
                 for r in rows:
-                    if r.get("slot") not in SLOTS_IN_SCOPE:
+                    if r.get("slot") not in allowed:
                         return f"{fx.name} carries a row for `{r.get('slot')}`"
             seams = empty.page("seams.md") + empty.page("architecture.md")
             if not any(s in seams for s in NOT_SLOTS):
@@ -664,6 +804,122 @@ def main() -> int:
             return None
 
         check("no text calls the census a gate or a guard", not_a_guard)
+
+        # -- 9. EX12: the explanation slots (§2.5, §3.7) -------------------------
+        both = {"B-01": True, "B-02": True}
+        eligible_empty = Fixture(
+            root, "eligible-empty", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={"B-01": "term", "B-02": "declined"}, explain="none",
+        )
+        declined_all = Fixture(
+            root, "declined-all", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={"B-01": "term", "B-02": "declined"}, explain="declined",
+        )
+        recorded_all = Fixture(
+            root, "recorded-all", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={"B-01": "term", "B-02": "declined"}, explain="recorded",
+        )
+        partial = Fixture(
+            root, "partial", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={"B-01": "term", "B-02": "declined"}, explain="partial",
+        )
+        # A `deferred` and an `unmapped` subsystem holding recorded rows: nothing
+        # may be recorded for them, so nothing is unfilled.
+        deferred_only = Fixture(
+            root, "no-eligible-deferred", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={}, explain="recorded", statuses=("deferred", "unmapped"),
+        )
+        mixed_eligibility = Fixture(
+            root, "one-deferred", entry=ENTRY_OK, onboarding=ONBOARDING_OK,
+            vocab={}, explain="none", statuses=("mapped", "deferred"),
+        )
+
+        check(
+            "eligible-empty: every unfilled explanation slot has a row and its sentence or absent section is on its page",
+            lambda: explanation_correspondence(eligible_empty, both),
+        )
+        check(
+            "eligible-empty: a purpose and an account per eligible subsystem, and the project account",
+            lambda: explanation_shape(
+                eligible_empty,
+                {
+                    ("subsystem-purpose", "B-01"), ("subsystem-account", "B-01"),
+                    ("subsystem-purpose", "B-02"), ("subsystem-account", "B-02"),
+                    ("project-account", "project"),
+                },
+            ),
+        )
+        check("declined: every slot declined is filled and has no row", lambda: explanation_shape(declined_all, set()))
+        check("declined: the correspondence holds", lambda: explanation_correspondence(declined_all, both))
+        check("recorded: every slot recorded has no row", lambda: explanation_shape(recorded_all, set()))
+        check("recorded: the correspondence holds", lambda: explanation_correspondence(recorded_all, both))
+
+        def filled_explanations_empty() -> str | None:
+            for fx in (declined_all, recorded_all):
+                rows = fx.rows()
+                if isinstance(rows, str):
+                    return rows
+                if rows != []:
+                    return f"the {fx.name} store, with every slot filled, returns {rows}"
+                text = fx.page("architecture.md") + fx.subsystem_page("B-01")[1] + fx.subsystem_page("B-02")[1]
+                if NO_ACCOUNT_SENTENCE in text or NO_PURPOSE_PATTERN.search(text):
+                    return f"the {fx.name} store still prints a not-recorded sentence"
+            return None
+
+        check("a store with every slot, explanations included, filled returns an empty list", filled_explanations_empty)
+        check(
+            "partial: the rows are the slots left open, subject by subject",
+            lambda: explanation_shape(
+                partial,
+                {("subsystem-account", "B-01"), ("subsystem-purpose", "B-02"), ("project-account", "project")},
+            ),
+        )
+        check("partial: subsystem-account is read one-directionally from the page", lambda: explanation_correspondence(partial, both))
+        check(
+            "no-eligible: a deferred and an unmapped subsystem have no explanation row, and no project-account row",
+            lambda: explanation_shape(deferred_only, set()),
+        )
+        check(
+            "no-eligible: both print the no-purpose sentence and the project account sentence stands without a row",
+            lambda: explanation_correspondence(deferred_only, {"B-01": False, "B-02": False}),
+        )
+
+        def ineligible_keeps_vocabulary() -> str | None:
+            rows = deferred_only.rows()
+            if isinstance(rows, str):
+                return rows
+            subjects = sorted(str(r.get("subject")) for r in rows if r.get("slot") == "subsystem-vocabulary")
+            if subjects != ["B-01", "B-02"]:
+                return f"an ineligible subsystem lost its vocabulary row: {subjects}"
+            return None
+
+        check("an ineligible subsystem keeps its vocabulary row", ineligible_keeps_vocabulary)
+        check(
+            "one-deferred: the eligible subsystem owes its slots and the deferred one owes none",
+            lambda: explanation_shape(
+                mixed_eligibility,
+                {("subsystem-purpose", "B-01"), ("subsystem-account", "B-01"), ("project-account", "project")},
+            ),
+        )
+        check(
+            "one-deferred: the correspondence holds subject by subject",
+            lambda: explanation_correspondence(mixed_eligibility, {"B-01": True, "B-02": False}),
+        )
+
+        def explanation_sentences_listed() -> str | None:
+            sys.path.insert(0, str(ROOT))
+            try:
+                from amanuensis_materializer import renderers  # noqa: PLC0415
+            except Exception as exc:
+                return f"the renderers could not be imported — {scrub(exc)}"
+            sentences = getattr(renderers, "PLACEHOLDER_SENTENCES", ())
+            if NO_ACCOUNT_SENTENCE not in sentences:
+                return "PLACEHOLDER_SENTENCES omits the project-account sentence"
+            if not any(NO_PURPOSE_STEM in s for s in sentences):
+                return "PLACEHOLDER_SENTENCES omits the no-purpose sentence"
+            return None
+
+        check("PLACEHOLDER_SENTENCES lists the explanation slots' sentences", explanation_sentences_listed)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
