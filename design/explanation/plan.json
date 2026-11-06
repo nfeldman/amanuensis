@@ -654,8 +654,8 @@
       "attempts": 1,
       "start_sha": "d4c4ca06d5e3d8ef9a903a50d7e9192d16bda1d5",
       "red_sha": "0a5d97c732496571f36544d026c59bfe5b05f350",
-      "green_sha": "d13b08563d5c3be0cb2bd8cbc05e3be8b67c436b",
-      "verified_by_launcher": false,
+      "green_sha": "21aea9f70e2ecb635105e14a25c6135f68789dcd",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Outcomes: 10 successor, 4 repaired, 0 ruled out. Successor ids avoid every live and archived id; B03-R6 records that 8 ids already collide and a Pecia reference resolves wrongly. B05-R1 is repaired though a green publish can still carry the placeholder, per spec 2.5. Deviation: 15 of 21 newly ledgered paths are candidate, not their neighbours' examined, because this session did not read them in full. Gate reads Why it matters as the table column spec 2.1 defines."
     },
