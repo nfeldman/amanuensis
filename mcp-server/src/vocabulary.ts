@@ -80,22 +80,6 @@ export type SubsystemStatus = (typeof SUBSYSTEM_STATUSES)[number];
 export const VOCABULARY_DISCHARGES = ["terms", "declined", "not-recorded"] as const;
 export type VocabularyDischarge = (typeof VOCABULARY_DISCHARGES)[number];
 
-/** explanation_subject — explanation axis. */
-export const EXPLANATION_SUBJECTS = ["subsystem", "project"] as const;
-export type ExplanationSubject = (typeof EXPLANATION_SUBJECTS)[number];
-
-/** explanation_slot — explanation axis. */
-export const EXPLANATION_SLOTS = ["purpose", "account"] as const;
-export type ExplanationSlot = (typeof EXPLANATION_SLOTS)[number];
-
-/** explanation_disposition — explanation axis. */
-export const EXPLANATION_DISPOSITIONS = ["recorded", "declined", "withdrawn"] as const;
-export type ExplanationDisposition = (typeof EXPLANATION_DISPOSITIONS)[number];
-
-/** explanation_discharge — explanation axis. */
-export const EXPLANATION_DISCHARGES = ["recorded", "declined", "not-recorded"] as const;
-export type ExplanationDischarge = (typeof EXPLANATION_DISCHARGES)[number];
-
 /** evidence_kind — evidence axis. */
 export const EVIDENCE_KINDS = [
   "code-verified",
@@ -247,7 +231,6 @@ export interface VocabularyValue {
   cannot_justify: string;
   authorizes?: string;
   obligation_bearing?: boolean;
-  explanation_eligible?: boolean;
 }
 
 export interface VocabularyEnum {
@@ -523,7 +506,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
           "This subsystem has not yet been surveyed; no architectural claims are authorized.",
         cannot_justify: "any claim about this subsystem's behavior",
         authorizes: "nothing",
-        explanation_eligible: false,
       },
       {
         value: "scoping",
@@ -531,7 +513,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning: "Only the subsystem boundary and file scope are established so far.",
         cannot_justify: "any behavioral claim; file scope is all that is established",
         authorizes: "which files are in scope for this subsystem",
-        explanation_eligible: false,
       },
       {
         value: "structural",
@@ -540,7 +521,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
           "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
         cannot_justify: "any correctness claim",
         authorizes: "claims about types, state containers, flows, and the concurrency model",
-        explanation_eligible: true,
       },
       {
         value: "concerns",
@@ -548,7 +528,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning: "Structural mapping is complete and concern-by-concern review is in progress.",
         cannot_justify: "that a finding survived adversarial challenge",
         authorizes: "concern review decisions that cite evidence",
-        explanation_eligible: true,
       },
       {
         value: "adversarial",
@@ -557,7 +536,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         cannot_justify: "that the challenge pass has finished",
         authorizes:
           "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
-        explanation_eligible: true,
       },
       {
         value: "mapped",
@@ -567,7 +545,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         cannot_justify: "that the reading is current at the repository head",
         authorizes:
           "the recorded survey through structural analysis, concern review, and adversarial challenge",
-        explanation_eligible: true,
       },
       {
         value: "deferred",
@@ -575,7 +552,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning: "This subsystem is intentionally outside the active survey plan.",
         cannot_justify: "anything about this subsystem's behavior",
         authorizes: "nothing",
-        explanation_eligible: false,
       },
     ],
   },
@@ -606,108 +582,6 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
           "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
         cannot_justify:
           "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'",
-      },
-    ],
-  },
-  explanation_subject: {
-    axis: "explanation",
-    open_vocabulary: false,
-    values: [
-      {
-        value: "subsystem",
-        label: "Subsystem",
-        meaning: "The explanation is about one subsystem, named by its id.",
-        cannot_justify:
-          "that the subsystem still has the status it had when the row was written; eligibility is read from the status at the time of each reading",
-      },
-      {
-        value: "project",
-        label: "Project",
-        meaning:
-          "The explanation is about the codebase as a whole, and its subject id is the literal 'project'.",
-        cannot_justify:
-          "a purpose for the project; the project's purpose is the thesis in entry-point.md, and only an account is recorded here",
-      },
-    ],
-  },
-  explanation_slot: {
-    axis: "explanation",
-    open_vocabulary: false,
-    values: [
-      {
-        value: "purpose",
-        label: "Purpose",
-        meaning:
-          "One paragraph on what this part is for, in terms of what the rest of the system or its users get from it.",
-        cannot_justify:
-          "that the paragraph is a restatement of scope or a list of files; a purpose is a judgement and the record cannot check it",
-      },
-      {
-        value: "account",
-        label: "Account",
-        meaning:
-          "A short prose account of how the subject works: its moving parts, the rules it enforces and where, what it depends on, what a newcomer gets wrong, and where to start reading.",
-        cannot_justify:
-          "that the account is complete or current; it is bound to the revision it was written at",
-      },
-    ],
-  },
-  explanation_disposition: {
-    axis: "explanation",
-    open_vocabulary: false,
-    values: [
-      {
-        value: "recorded",
-        label: "Recorded",
-        meaning: "A survey session wrote the explanation, at a revision and over cited evidence.",
-        cannot_justify:
-          "that the explanation is true; the record establishes who wrote it, at which revision and over which evidence",
-      },
-      {
-        value: "declined",
-        label: "Declined",
-        meaning:
-          "A survey session read the subject and declined to write the explanation, with the reason.",
-        cannot_justify:
-          "that nothing true can be said about the subject; it says only that the session could not say something true and specific",
-      },
-      {
-        value: "withdrawn",
-        label: "Withdrawn",
-        meaning:
-          "An earlier explanation was withdrawn, with the reason, and the subject owes a new one.",
-        cannot_justify:
-          "that the earlier explanation was wrong; it says only that it no longer stands for this subject",
-      },
-    ],
-  },
-  explanation_discharge: {
-    axis: "explanation",
-    open_vocabulary: false,
-    values: [
-      {
-        value: "recorded",
-        label: "Recorded",
-        meaning:
-          "The effective row for this slot is an explanation a survey session recorded, at a revision the workspace can resolve and over cited evidence.",
-        cannot_justify:
-          "that the explanation is true; the record establishes who wrote it, at which revision and over which evidence, and not that it is true",
-      },
-      {
-        value: "declined",
-        label: "Declined",
-        meaning:
-          "The effective row for this slot is a declination: a survey session read the subject and gave the reason it wrote none.",
-        cannot_justify:
-          "that nothing can be said about the subject; the reason is a judgement the record keeps and cannot check",
-      },
-      {
-        value: "not-recorded",
-        label: "Not recorded",
-        meaning:
-          "There is no effective row for this slot: none was written, the newest one was withdrawn, none resolves at a reachable revision, or the subject is not explanation-eligible.",
-        cannot_justify:
-          "that the subject has no purpose or account worth writing; nothing was asked or nothing stands, which is not the same as declined",
       },
     ],
   },
@@ -1417,9 +1291,6 @@ export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly Vocabular
     { table: "subsystem_status_transitions", column: "from_status" },
     { table: "subsystem_status_transitions", column: "to_status" },
   ],
-  explanation_subject: [{ table: "explanations", column: "subject_type" }],
-  explanation_slot: [{ table: "explanations", column: "slot" }],
-  explanation_disposition: [{ table: "explanations", column: "disposition" }],
   evidence_kind: [{ table: "evidence", column: "kind" }],
   evidence_quality: [{ table: "dispositions", column: "evidence_quality" }],
   disposition_classification: [{ table: "dispositions", column: "classification" }],
@@ -1448,9 +1319,6 @@ export const SQL_CONSTRAINED_VOCABULARIES: Readonly<Record<string, readonly stri
   finding_status: FINDING_STATUSES,
   file_classification: FILE_CLASSIFICATIONS,
   subsystem_status: SUBSYSTEM_STATUSES,
-  explanation_subject: EXPLANATION_SUBJECTS,
-  explanation_slot: EXPLANATION_SLOTS,
-  explanation_disposition: EXPLANATION_DISPOSITIONS,
   evidence_kind: EVIDENCE_KINDS,
   evidence_quality: EVIDENCE_QUALITIES,
   disposition_classification: DISPOSITION_CLASSIFICATIONS,

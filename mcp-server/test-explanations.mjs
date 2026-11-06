@@ -21,7 +21,9 @@
 // The first assertion (E1) is the packet's red_expect: the writer is refused for
 // a subsystem that is not explanation-eligible. On a tree with no writer, the
 // tool is absent and E1 reports exactly that, so the red run reaches an
-// assertion and never a stack trace.
+// assertion and never a stack trace. The launcher matches red_expect from the
+// start of the status line's reason, so E1's label opens with the phrase and
+// carries its id at the end, unlike every other label here.
 //
 // Must-stay-green controls (a kill proves a gate can fire, never that it fires
 // selectively):
@@ -329,7 +331,7 @@ async function main(mods) {
     const stemR2 = (tool, id, status) =>
       `${tool} refuses: ${id} is '${status}'. An explanation is written by a pass that has read the subsystem`;
 
-    check("E1 record_explanation is not refused for a subsystem that is not explanation-eligible", () => {
+    check("record_explanation is not refused for a subsystem that is not explanation-eligible (E1)", () => {
       // The red_expect assertion. On a tree without the tool the failure says so.
       const missing = absent(RECORD);
       if (missing) {
@@ -1166,7 +1168,7 @@ try {
     // fail and says so; E1 carries the red_expect phrase.
     checked++;
     failures.push(
-      `E1 record_explanation is not refused for a subsystem that is not explanation-eligible — ${loadError}`,
+      `record_explanation is not refused for a subsystem that is not explanation-eligible (E1) — ${loadError}`,
     );
   } else {
     // Probe the table on a throwaway store, so the assertions can tell a missing

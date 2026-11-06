@@ -25,8 +25,8 @@ Turns red when:
   - `subsystems.notes` is not under `## Scope` as `### Survey note` with the
     fixed label sentence, whether or not the subsystem has claims or an
     artifact, or appears more than once on its page;
-  - the allowlist is not exactly the eight seam prose columns and, until EX11
-    renders it, `explanations.body`, or lists one whose sentinel appears;
+  - the allowlist is not exactly the eight seam prose columns, or lists one
+    whose sentinel appears;
   - the findings header literal in `test-materializer.py` is not the new one;
   - the gate is not listed in `.github/workflows/test.yml`.
 
@@ -154,25 +154,7 @@ ALLOWLIST: dict[str, str] = {
     "seams.staleness_tolerance": SEAM_REASON,
     "seams.schema_owner": SEAM_REASON,
 }
-
-# EX9 adds the explanation record, whose body no renderer reads yet: it is seeded
-# so that the field cannot be forgotten, and allowlisted until EX11 renders it.
-# EX11 removes this entry, and the allowlist is then the eight seam columns again.
-EXPLANATION_REASON = "rendered by EX11"
-ALLOWLIST["explanations.body"] = EXPLANATION_REASON
-EXPECTED_ALLOWLIST = frozenset(
-    {
-        "seams.a_writes",
-        "seams.a_reads",
-        "seams.b_writes",
-        "seams.b_reads",
-        "seams.ordering_assumption",
-        "seams.cardinality",
-        "seams.staleness_tolerance",
-        "seams.schema_owner",
-        "explanations.body",
-    }
-)
+EXPECTED_ALLOWLIST = frozenset(ALLOWLIST)
 
 NEW_HEADER = "| ID | Status | Symptom | Why it matters | Root cause | Ref SHA |"
 OLD_HEADER = "| ID | Status | Symptom | Root cause | Ref SHA |"
@@ -339,11 +321,6 @@ def seed(storage: Path) -> None:
         ),
     )
     cur.execute(
-        "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
-        " ref_sha, session_id) VALUES ('subsystem', 'B-01', 'account', 'recorded', ?, ?, 'ex2')",
-        (sentinel("explanations.body"), SHA),
-    )
-    cur.execute(
         "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha, session_id)"
         " VALUES (?, 'subsystem-survey', 'B-01', 'abc123abc123', ?, 'ex2')",
         (ARTIFACT_NAME, SHA),
@@ -428,16 +405,13 @@ def main() -> int:
 
         # -- 2. the allowlist is exactly the eight seam columns, two-sided ----
         def allowlist_is_exact() -> str | None:
-            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or len(ALLOWLIST) != 9:
+            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or len(ALLOWLIST) != 8:
                 return f"the allowlist is {sorted(ALLOWLIST)}"
             if any(not reason for reason in ALLOWLIST.values()):
                 return "an allowlist entry has no reason"
             return None
 
-        check(
-            "the allowlist holds exactly the eight seam prose columns and explanations.body",
-            allowlist_is_exact,
-        )
+        check("the allowlist holds exactly the eight seam prose columns", allowlist_is_exact)
 
         def allowlist_is_not_stale() -> str | None:
             if seed_error or outcome.get("returncode") != 0:

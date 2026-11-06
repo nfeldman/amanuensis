@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_211 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
+_209 tools across 43 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -391,13 +391,6 @@ _211 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | `get_evidence` | Fetch evidence rows. Filter by id, file_path, kind, ref_sha, or any combination. Returns the full row with collected_at timestamp. |
 | `get_disposition_evidence` | Return all evidence rows attached to a disposition, including role. |
 | `get_finding_evidence` | Return all evidence rows attached to a finding, including role. |
-
-### `explanations` (2)
-
-| Tool | Description |
-|---|---|
-| `record_explanation` | Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough. Refused for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body. |
-| `decline_explanation` | Declare that no explanation is written for a subsystem or project slot, with the reason: the other way to answer the obligation record_explanation carries. The reason is one paragraph of at most 400 UTF-8 bytes, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject conditions as record_explanation. It is accepted whether or not an explanation is already recorded: the newest row is the effective one. The record is append-only. Returns a receipt and does not echo the reason. |
 
 ### `field-notes` (3)
 
