@@ -207,6 +207,8 @@ function checkFindings() {
   let column = -1;
   let filled = 0;
   for (const line of lines) {
+    // The renderer puts a finding's anchor comment between its table's rows.
+    if (line.startsWith("<!--")) continue;
     if (!line.trim().startsWith("|")) {
       column = -1;
       continue;
