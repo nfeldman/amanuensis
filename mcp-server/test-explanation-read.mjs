@@ -747,6 +747,67 @@ async function main(mods) {
     });
   }
 
+  // -------------------------------- U: a reset with no workspace to resolve against
+
+  // With no workspace bound, `git rev-parse HEAD` answered from the server's own
+  // directory, so the withdrawn row named a commit of some other repository. Once
+  // the workspace was bound again the reader skipped that row and the withdrawn
+  // purpose came back as recorded (slice-S2, F3/codex).
+  {
+    const ctx = world("reset-unbound");
+    const unbound = { ...ctx, project: { ...ctx.project, workspacePath: null } };
+    const reason = "the subsystem is resurveyed from the start";
+    const elsewhere = git(here, "rev-parse", "HEAD");
+    seedSubsystem(ctx, "S-01", "concerns");
+    seedSubsystem(ctx, "S-02", "concerns");
+    const ev = evidence(ctx);
+    const purposeId = record(ctx, "S-01", "purpose", "It is withdrawn with no workspace bound.", [ev]).id;
+    const reachable = record(ctx, "S-02", "purpose", "An older row the workspace still reaches.", [ev]).id;
+    // S-02's newest row names a revision the workspace cannot reach, so a withdrawal
+    // written only at that revision would be skipped along with it.
+    rawRow(ctx, "subsystem", "S-02", "purpose", "recorded", "A newer row at a lost revision.", UNREACHABLE_SHA);
+
+    await check("U1 a reset with no workspace stays withdrawn once the workspace is bound again", async () => {
+      const result = call("reset_subsystem", { id: "S-01", to_status: "structural", reason }, unbound);
+      if (result?.ok === false) return `the reset was refused: ${result.error}`;
+      const added = explanationRows(ctx, "S-01").filter((r) => r.id > purposeId);
+      if (added.length !== 1 || added[0].disposition !== "withdrawn") {
+        return `the reset appended ${JSON.stringify(added.map((r) => r.disposition))}, expected one withdrawn row`;
+      }
+      if (added[0].ref_sha === elsewhere) return "the withdrawn row names the server directory's HEAD";
+      if (added[0].ref_sha !== headSha(ctx)) return `the withdrawn row names ${added[0].ref_sha}, not the slot's revision`;
+      const { payload, failed } = await read(ctx, { subject_type: "subsystem", subject_id: "S-01" });
+      if (failed) return failed;
+      return slotDiff(slotOf(payload, "purpose"), { state: "not-recorded", earlier_rows: 1, row: null }, "after rebinding");
+    });
+
+    await check("U2 it stays withdrawn when the slot's newest revision is the one that is lost", async () => {
+      const result = call("reset_subsystem", { id: "S-02", to_status: "structural", reason }, unbound);
+      if (result?.ok === false) return `the reset was refused: ${result.error}`;
+      const { payload, failed } = await read(ctx, { subject_type: "subsystem", subject_id: "S-02" });
+      if (failed) return failed;
+      const purpose = slotOf(payload, "purpose");
+      if (purpose?.state !== "not-recorded") {
+        return `the purpose reads ${purpose?.state} from row ${purpose?.row?.id} (the older row is ${reachable})`;
+      }
+      return purpose.row === null ? null : "a withdrawn slot served a row";
+    });
+
+    await check("U3 a writer with no workspace does not resolve a revision in the server's directory", async () => {
+      let accepted = null;
+      try {
+        accepted = call(
+          "record_explanation",
+          { subject_type: "subsystem", subject_id: "S-01", slot: "purpose", body: "It names another repository.", evidence_ids: [ev], ref_sha: elsewhere },
+          unbound,
+        );
+      } catch {
+        return null;
+      }
+      return accepted?.ok === false ? null : `record_explanation stored row ${accepted?.id} at the server directory's HEAD`;
+    });
+  }
+
   // ---------------------------------------------------- L: the gate is wired in
 
   await check("L2 the gate is listed in the workflow beside its neighbours", async () => {
