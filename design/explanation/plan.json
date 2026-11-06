@@ -1202,14 +1202,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 2,
       "start_sha": "e091ed258f51538c7da88208586d14b7f0c39964",
-      "red_sha": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
-      "green_sha": "c4dbf78cbc1c15009df62c7ff14bcaf5eacc6e96",
+      "red_sha": "1b43151d982bb15f7bfbbd7d796477ec473c2e11",
+      "green_sha": "f5b2cc89c738341a3745e6aa6994a6e137241720",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "attempt 1 was marked done but the launcher refused it: VERIFY EX13: red output does not match gate.red_expect (GATE EX13 RED: the reported wire bytes differ from the response measured)"
+      "notes": "Attempt 2 repaired the RED line, which printed M1: before the phrase; red_expect is anchored on the marker. The new red commit withdraws the script and the next green commit restores it byte for byte, so attempt 1's bfafcd5 is not the proof. Only a missing or wrong wire figure now says the phrase; other failures give their own reason. A default call on each dogfood locus serves no item and its floor (9468-9620) exceeds the 8192 budget."
     },
     {
       "id": "EX14",
