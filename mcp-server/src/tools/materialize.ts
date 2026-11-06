@@ -231,9 +231,14 @@ function execute(
   const result = spawnSync(
     py,
     [
-      script, "--storage", ctx.project.storagePath,
-      "--workspace", ctx.project.workspacePath,
-      "--output", outputDir, ...extraArgs,
+      script,
+      "--storage",
+      ctx.project.storagePath,
+      "--workspace",
+      ctx.project.workspacePath,
+      "--output",
+      outputDir,
+      ...extraArgs,
     ],
     { encoding: "utf8" },
   );
