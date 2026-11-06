@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+  "repository_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
   "recorded_at": "2026-11-06",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+    "checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,7 +21,7 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+        "detected_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
         "tree_digest": "df0e74ae565b4e5a63d73be4ceb26cd0ad01755f770284166f0775ca9a641e89",
         "ledger_digest": "d3ed1de3b26c606b80793323440211d1c4b13439b1e1e18f9457a645ae0047fa",
         "ledger": [
@@ -2791,7 +2791,7 @@
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": "mw4qntg4-bj7sizxr"
+        "session_id": "mw54hhxl-35za3e2a"
       }
     },
     "B2": {
@@ -4216,9 +4216,9 @@
   },
   "reported": {
     "ledger_rows": 690,
-    "evidence": 145,
+    "evidence": 159,
     "dispositions": 50,
-    "evidence_per_disposition": 2.9,
+    "evidence_per_disposition": 3.18,
     "attached_dispositions": 50,
     "attached_coverage": 1,
     "unattached_dispositions": 0,
@@ -4234,7 +4234,7 @@
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 33,
+    "sessions": 35,
     "finding_status_histogram": {
       "confirmed-bug": 20,
       "fixed": 1
@@ -4253,9 +4253,9 @@
       "delta": 187
     },
     "evidence": {
-      "candidate": 145,
+      "candidate": 159,
       "baseline": 133,
-      "delta": 12
+      "delta": 26
     },
     "dispositions": {
       "candidate": 50,
@@ -4263,9 +4263,9 @@
       "delta": -78
     },
     "evidence_per_disposition": {
-      "candidate": 2.9,
+      "candidate": 3.18,
       "baseline": 1.0391,
-      "delta": 1.8609
+      "delta": 2.1409000000000002
     },
     "attached_dispositions": {
       "candidate": 50,
@@ -4343,9 +4343,9 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 33,
+      "candidate": 35,
       "baseline": 35,
-      "delta": -2
+      "delta": 0
     },
     "finding_status_histogram": {
       "confirmed-bug": 7,

@@ -7,7 +7,7 @@
 
 Turns the store into the pages a person reads: Markdown and self-contained HTML, generated from the record and then read back against it. A clean publish that fails a render or its read-back leaves the previous pages in place, so what it publishes has passed its checks.
 
-*Written by a survey session at `1015b8e2` from 3 evidence row(s). None of the 3 file(s) it cites has changed since.*
+*Written by a survey session at `1015b8e2` from 3 evidence row(s). 1 of the 3 file(s) it cites changed since: `materializer/amanuensis_materializer/readback.py`.*
 
 ## Scope
 
@@ -35,7 +35,7 @@ A newcomer is likely to edit a generated page or to look for a defect in one. `d
 
 Start with `_plan` in `core.py`, then `render_subsystem` in `renderers.py`, then `ProjectionVerifier.verify` in `readback.py`. `lint.py` is short and states the rule for prose.
 
-*Written by a survey session at `e63981bf` from 15 evidence row(s). None of the 10 file(s) it cites has changed since.*
+*Written by a survey session at `e63981bf` from 15 evidence row(s). 2 of the 10 file(s) it cites changed since: `materializer/amanuensis_materializer/readback.py`, `materializer/amanuensis_materializer/renderers.py`.*
 
 ## Structure
 
@@ -70,7 +70,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 24 of 101 ledger rows |
 | Files in scope, not yet read | 7 of 101 |
 | Files excluded from the survey obligation | 70 of 101 |
-| Ledger rows the repository has changed under | 80 of 101 |
+| Ledger rows the repository has changed under | 83 of 101 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 8 confirmed-acceptable, 1 ruled-out, 2 out-of-scope |
 | Findings by resolution state | 6 open |
 | Seams assessable from both sides | no seam names this subsystem |

@@ -1,13 +1,13 @@
 # Files
 
-690 distinct paths across 690 ledger rows, read at `e63981bf15c4`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
+690 distinct paths across 690 ledger rows, read at `7fc7f0654904`. Every owner of a path is listed, and the examined revision is the one that owner recorded — two subsystems may have read the same file at different revisions.
 
 | File | Owners | Standing | Examined at | Open defects |
 |---|---|---|---|---|
 | <a id="f-a7c652762b"></a>`.claude/skills/amanuensis/SKILL.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-017d152868) | Examined, since changed | `a521e28` | 0 |
 | <a id="f-3a6f56ce8c"></a>`.claude/skills/amanuensis/references/artifact-templates.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-592927548e) | Examined, since changed | `c0734040` | 0 |
 | <a id="f-01232726e7"></a>`.claude/skills/amanuensis/references/concern-territories.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-18b6f1fc80) | Examined | `c0734040` | 0 |
-| <a id="f-d2fb6ed1a3"></a>`.claude/skills/amanuensis/references/explanations.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-844b050664) | Examined | `e63981bf` | 0 |
+| <a id="f-d2fb6ed1a3"></a>`.claude/skills/amanuensis/references/explanations.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-844b050664) | Examined, since changed | `e63981bf` | 0 |
 | <a id="f-d9f9a9a0dc"></a>`.claude/skills/amanuensis/references/memory-audit.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-87251d5427) | Examined | `c0734040` | 0 |
 | <a id="f-2253c44398"></a>`.claude/skills/amanuensis/references/notes.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-6a8610a679) | Examined | `c0734040` | 0 |
 | <a id="f-d5f209571e"></a>`.claude/skills/amanuensis/references/onboarding.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-fc1d1bfe9e) | Examined, since changed | `c0734040` | 0 |
@@ -18,7 +18,7 @@
 | <a id="f-c4ffb3cc1b"></a>`.claude/skills/amanuensis/references/phase-4-adversarial.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-28758b2404) | Examined, since changed | `c0734040` | 1 |
 | <a id="f-3e8b7e4f01"></a>`.claude/skills/amanuensis/references/phase-5-packaging.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-87d1cc2ac1) | Examined, since changed | `c0734040` | 0 |
 | <a id="f-8070c1ca56"></a>`.claude/skills/amanuensis/references/refresh.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-b9d0f2a875) | Examined, since changed | `c0734040` | 0 |
-| <a id="f-252627ea9b"></a>`.claude/skills/amanuensis/references/reporting-style.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-10fb8244f3) | Examined | `c0734040` | 0 |
+| <a id="f-252627ea9b"></a>`.claude/skills/amanuensis/references/reporting-style.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-10fb8244f3) | Examined, since changed | `c0734040` | 0 |
 | <a id="f-f4674d519d"></a>`.claude/skills/amanuensis/references/setup.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-056443afa8) | Examined | `a521e28` | 0 |
 | <a id="f-3ff54d4478"></a>`.claude/skills/amanuensis/references/subsystem-survey.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md#le-a19a8b2374) | Examined | `c0734040` | 0 |
 | <a id="f-4123588cde"></a>`.github/FUNDING.yml` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md#le-f55c3d9a96) | Examined | `410d769b` | 0 |
@@ -67,7 +67,7 @@
 | <a id="f-c1c889e556"></a>`design/explanation/claims.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-6fab54381b) | In scope, not yet read | `2ceb0d2d` | 0 |
 | <a id="f-cf9fc11ebd"></a>`design/explanation/decisions.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4e216ccb8a) | Examined | `2ceb0d2d` | 0 |
 | <a id="f-dcb26e04a2"></a>`design/explanation/explain-progress.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-6b5d4f39b8) | Examined | `e63981bf` | 0 |
-| <a id="f-015d3cd19a"></a>`design/explanation/locus-default-measure.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ac67c751c2) | Examined | `e63981bf` | 0 |
+| <a id="f-015d3cd19a"></a>`design/explanation/locus-default-measure.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ac67c751c2) | Examined, since changed | `e63981bf` | 0 |
 | <a id="f-14f2709c9c"></a>`design/explanation/plan.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-30d525190a) | In scope, not yet read | `2ceb0d2d` | 0 |
 | <a id="f-dd2aaef9e7"></a>`design/explanation/plan.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-eba87f941c) | In scope, not yet read | `2ceb0d2d` | 0 |
 | <a id="f-2750ec3da3"></a>`design/explanation/rationale.md` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-17f06e9831) | In scope, not yet read | `2ceb0d2d` | 0 |
@@ -495,7 +495,7 @@
 | <a id="f-731bdbd005"></a>`mcp-server/src/tools/dispositions.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-23127afcd5) | Examined | `c0734040` | 0 |
 | <a id="f-fd30942f15"></a>`mcp-server/src/tools/evaluation.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-2412897637) | Examined | `410d769b` | 0 |
 | <a id="f-27ee6eecd1"></a>`mcp-server/src/tools/evidence.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-ed6472d9a0) | Examined | `c0734040` | 2 |
-| <a id="f-ac74a2cd03"></a>`mcp-server/src/tools/explanations.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-322161f095) | Examined | `e63981bf` | 0 |
+| <a id="f-ac74a2cd03"></a>`mcp-server/src/tools/explanations.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-322161f095) | Examined, since changed | `e63981bf` | 0 |
 | <a id="f-89ae267833"></a>`mcp-server/src/tools/field-notes.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-4020309e5e) | Examined | `c0734040` | 0 |
 | <a id="f-9866559848"></a>`mcp-server/src/tools/files.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-566054a018) | Examined | `c0734040` | 0 |
 | <a id="f-4598fd18c5"></a>`mcp-server/src/tools/findings.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md#le-44c699c32a) | Examined | `c0734040` | 3 |

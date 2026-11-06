@@ -35,7 +35,7 @@ A newcomer is likely to assume more was checked than was. `add_evidence` checks 
 
 Start with `dispositions.ts` for the guard shape, `detect_changes` in `git.ts` for reconciliation, then `composition.ts` for land and score. `locus.ts` is the long one and can wait.
 
-*Written by a survey session at `e63981bf` from 13 evidence row(s). None of the 12 file(s) it cites has changed since.*
+*Written by a survey session at `e63981bf` from 13 evidence row(s). 1 of the 12 file(s) it cites changed since: `mcp-server/src/invariants.ts`.*
 
 ## Structure
 
@@ -86,7 +86,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 44 of 44 ledger rows |
 | Files in scope, not yet read | 0 of 44 |
 | Files excluded from the survey obligation | 0 of 44 |
-| Ledger rows the repository has changed under | 2 of 44 |
+| Ledger rows the repository has changed under | 3 of 44 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 9 confirmed-acceptable, 2 out-of-scope |
 | Findings by resolution state | 6 open |
 | Seams assessable from both sides | no seam names this subsystem |

@@ -7,7 +7,7 @@
 
 Gives an agent the procedure for reading a codebase and writing what it learned into the store: which phase comes next, what each phase owes, and what the server will refuse. The ADRs beside it say why each rule exists, so a later change cannot pass a gate by redefining a word in it.
 
-*Written by a survey session at `1015b8e2` from 4 evidence row(s). None of the 4 file(s) it cites has changed since.*
+*Written by a survey session at `1015b8e2` from 4 evidence row(s). 2 of the 4 file(s) it cites changed since: `.claude/skills/amanuensis/references/onboarding.md`, `mcp-server/src/invariants.ts`.*
 
 ## Scope
 
@@ -35,7 +35,7 @@ A newcomer is likely to treat a reference as authoritative over the server. `pha
 
 Start with `SKILL.md`, then Phase 5 of `onboarding.md` for the ladder, then `phase-2-structural.md` and `refresh.md`. `dev/adr/0001-living-conspectus-terms.md` defines the words the gates use.
 
-*Written by a survey session at `e63981bf` from 15 evidence row(s). None of the 10 file(s) it cites has changed since.*
+*Written by a survey session at `e63981bf` from 15 evidence row(s). 2 of the 10 file(s) it cites changed since: `.claude/skills/amanuensis/references/onboarding.md`, `mcp-server/src/invariants.ts`.*
 
 ## Structure
 
@@ -66,7 +66,7 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 | Files read | 38 of 38 ledger rows |
 | Files in scope, not yet read | 0 of 38 |
 | Files excluded from the survey obligation | 0 of 38 |
-| Ledger rows the repository has changed under | 7 of 38 |
+| Ledger rows the repository has changed under | 9 of 38 |
 | Active concerns with a disposition recorded here | 12 of 12 — 8 confirmed-acceptable, 4 out-of-scope |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |

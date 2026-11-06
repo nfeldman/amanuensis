@@ -171,7 +171,7 @@
     "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; five are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
   },
   "end": {
-    "at_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+    "at_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
     "obligation_bearing": 534,
     "examined": 372,
     "fraction": 0.6966,
@@ -182,5 +182,5 @@
     "gate": "node dev/test-survey-depth.mjs prints GATE P10 GREEN — GATE D0 GREEN; both arms hold B1-B6 and agree.",
     "not_claimed": "139 tracked paths remain classified 'candidate' — scoped and unread, not exempt, and the ledger reports them as such. They are B-05's mcp-server test suite (65) and B-07's research corpus (74). No subsystem status was advanced in this packet, so nothing in the store claims a survey depth this reading did not reach. The acceptance predicate is a threshold on D3%, not full coverage."
   },
-  "derived_fields_rewritten_at": "e63981bf15c4cf4dae43b760700bb8f601c88154"
+  "derived_fields_rewritten_at": "7fc7f0654904a0b92159dc5aa7355f358c3e872f"
 }

@@ -1,10 +1,10 @@
 # Stale knowledge
 
-53 of 534 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `e63981bf15c4` on `main`. 69 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
+66 of 534 files carrying a survey obligation are recorded as changed since the revision the ledger names, checked at `7fc7f0654904` on `main`. 69 of 156 scoped files exempt from that obligation have also changed; they are counted on the [overview](index.md) and are not recorded here, because drift in generated or vendored territory is not survey staleness.
 
 ## Examined files the repository has changed under
 
-42 of 372 examined files have changed since the revision they were read at.
+46 of 372 examined files have changed since the revision they were read at.
 
 | File | Owner | Read at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
@@ -12,6 +12,8 @@
 | <a id="ls-095076d1b5"></a>`.claude/skills/amanuensis/SKILL.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `a521e28` | 2026-11-06 08:51 UTC | git-drift | The coordinator's contract: autonomy default, the stop conditions, the command routing table, the authorized-claims ladder, and the hard constraints. |
 <!-- amanuensis:ledger-stale:f5851e65b95b095833926180c4aaafa19a50ca18f3c8d98eb704a071f2b106ac -->
 | <a id="ls-f5851e65b9"></a>`.claude/skills/amanuensis/references/artifact-templates.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `c0734040` | 2026-11-06 05:56 UTC | git-drift | The prose artifact formats the materializer's diff reads, and the entry-point acceptance gate. |
+<!-- amanuensis:ledger-stale:2f59af720dd9500414bb07637310c7fe077855a584f8e073e747043cb1e31ffb -->
+| <a id="ls-2f59af720d"></a>`.claude/skills/amanuensis/references/explanations.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The content brief and tool reference for purposes and accounts. Read in full by EX14. |
 <!-- amanuensis:ledger-stale:9f7d7b8546012f62ae4526c9ac4a526893143735e26d4f48701bfb7523eac330 -->
 | <a id="ls-9f7d7b8546"></a>`.claude/skills/amanuensis/references/onboarding.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `c0734040` | 2026-11-06 05:29 UTC | git-drift | The eight-phase first pass, and the one place every status-advance refusal is quoted in the words the server returns. |
 <!-- amanuensis:ledger-stale:824ea81a366839cf61d27630879aeb8647f5582d07eb11cbc8fc774c016193d9 -->
@@ -22,6 +24,8 @@
 | <a id="ls-08c29c1dff"></a>`.claude/skills/amanuensis/references/phase-5-packaging.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `c0734040` | 2026-11-06 05:29 UTC | git-drift | Phase 5: the four prose artifacts, register/rehash, materialize, contradiction detection, seam assessability, and the mapped advance. |
 <!-- amanuensis:ledger-stale:55c5c6c1ddcbf0c0e8dfd60d6d2bf08fb561ac45dca6081a12ef96f22afe1b38 -->
 | <a id="ls-55c5c6c1dd"></a>`.claude/skills/amanuensis/references/refresh.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `c0734040` | 2026-11-06 08:51 UTC | git-drift | The drift-discharge loop, the cardinal rule against clearing what was not read, and the reinitialization section carrying the carry contract. |
+<!-- amanuensis:ledger-stale:17d7dec462847e5eceae60a05215b770760a8db321a57e8c4a4cdc22d6fa7f5a -->
+| <a id="ls-17d7dec462"></a>`.claude/skills/amanuensis/references/reporting-style.md` | [Survey methodology and agent contracts](subsystems/b01-survey-methodology-and-agent-contracts.md) | `c0734040` | 2026-11-06 15:21 UTC | git-drift | The IA/UI boundary, the register, the typed HTML projections, and the colour-per-enum rule the materializer implements. |
 <!-- amanuensis:ledger-stale:882b04762112eca1bab2b203e1ec7b4aef8255e302bcebe7bb7c1c03ebdeef5d -->
 | <a id="ls-882b047621"></a>`mcp-server/src/helpers.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) | `c0734040` | 2026-11-06 08:51 UTC | git-drift | The shared ingress guards: resolveWorkspaceCommit, the batched resolveWorkspaceCommits, path and citation validation, and the response envelope every budget is measured on. |
 <!-- amanuensis:ledger-stale:b9086dd15ce09bf74baeb91e422352f3c9a2225e1bbb6919a0718edf37100cf2 -->
@@ -30,6 +34,8 @@
 | <a id="ls-203e468b0a"></a>`mcp-server/src/schema.sql` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) | `c0734040` | 2026-11-06 08:51 UTC | git-drift | The durable substrate: 547 CREATE statements, 546 of them IF NOT EXISTS, and 176 immutability trigger lines that make the append-only tables append-only. |
 <!-- amanuensis:ledger-stale:08d671673b49f1ac73fdad40f64bbe4ff358ad6924a20045ef3ea7bc5d370bdf -->
 | <a id="ls-08d671673b"></a>`mcp-server/src/vocabulary.ts` | [MCP core, persistence, and lifecycle](subsystems/b02-mcp-core-persistence-and-lifecycle.md) | `c0734040` | 2026-11-06 08:51 UTC | git-drift | Generated from contracts/conspectus-vocabulary.json — the single source for every enum, the obligation-bearing split, and the SQL CHECK bindings. |
+<!-- amanuensis:ledger-stale:6d59de00efd55156e32730d15dd4d7b8ed0ff2cca07bb755c547c237f69c8a31 -->
+| <a id="ls-6d59de00ef"></a>`mcp-server/src/tools/explanations.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The tools that record, decline and read explanations. Read by EX14 when it used them. |
 <!-- amanuensis:ledger-stale:1eb1a11dc94ac182486b5d5c169d74e2fc72a51d37736f63e2b1161e9c9c76b1 -->
 | <a id="ls-1eb1a11dc9"></a>`mcp-server/src/tools/materialize.ts` | [Knowledge tools and workflow API](subsystems/b03-knowledge-tools-and-workflow-api.md) | `ec5824bc` | 2026-11-06 05:29 UTC | git-drift | The publication preflight that refuses on an incomplete reconciliation before anything renders, and the projection read-back recorded as an auditable run. |
 <!-- amanuensis:ledger-stale:a32873f093270791f64aa483c868370c82d0594207deda0294e4a16b9db775c1 -->
@@ -76,6 +82,8 @@
 | <a id="ls-708fa85b39"></a>`mcp-server/package.json` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a521e28` | 2026-11-06 05:29 UTC | git-drift | Packaging, installer, validation harnesses, contracts, fixtures and product documentation. |
 <!-- amanuensis:ledger-stale:e0426b924790c31d0b3bcc72404a81d6ac7a064ffbe9514effba0f5e92d94701 -->
 | <a id="ls-e0426b9247"></a>`mcp-server/scripts/gen-vocabulary.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `c0734040` | 2026-11-06 08:51 UTC | git-drift | The single-source generator: it writes the TypeScript and Python enum modules and asserts the schema's CHECK literals against the contract, and states why the schema is checked rather than rewritten. |
+<!-- amanuensis:ledger-stale:7738be818c08b8ea3153cc8378c10da35a87bed48d72fd01e5752be706c279d0 -->
+| <a id="ls-7738be818c"></a>`design/explanation/locus-default-measure.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The explanation design lane: the default describe_locus measure. Its figures per locus were read by EX14. |
 <!-- amanuensis:ledger-stale:00ee9e2973d810c672abc915c98a23b5213106711c4a9cc1132bb7875ec05c0a -->
 | <a id="ls-00ee9e2973"></a>`design/explanation/reader-measure.json` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `2ceb0d2d` | 2026-11-06 05:56 UTC | git-drift | The explanation design lane: the reader-prose measure the republish chain records. Read in full by EX8. |
 <!-- amanuensis:ledger-stale:93512fda326866329d340f2c53f5444877f93db3b63d8ac7bd3806fdb98b1b5b -->
@@ -95,20 +103,36 @@
 
 ## Scoped but unread, and changed since scoping
 
-11 of 162 files in scope but not yet read have changed since they were scoped.
+20 of 162 files in scope but not yet read have changed since they were scoped.
 
 | File | Owner | Scoped at | Drift recorded | Reason | Why in scope |
 |---|---|---|---|---|---|
+<!-- amanuensis:ledger-stale:5669fb5f0b488592a9b388038ec136f013a7921053d462af6e83cf82da103286 -->
+| <a id="ls-5669fb5f0b"></a>`materializer/test-explanation-orientation.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The diff-aware materializer's test suite: GATE EX12. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:d6e82667a59101640039484cd42056e9bc397904d466878a042ada3013b0014a -->
+| <a id="ls-d6e82667a5"></a>`materializer/test-explanation-pages.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The diff-aware materializer's test suite: GATE EX11. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:6434130c8a1cf7acc0d6174f46b5c59a35ab9022124be8fdd2f1f3da11dd6d30 -->
+| <a id="ls-6434130c8a"></a>`materializer/test-ledger-grouping.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `2ceb0d2d` | 2026-11-06 15:21 UTC | git-drift | The diff-aware materializer's test suite: GATE EX5. Assigned by convention; not read. |
 <!-- amanuensis:ledger-stale:2ec66f83d448b343f38d8bc7d6588f883aba72ef1ded6c10d202595d09a627d0 -->
 | <a id="ls-2ec66f83d4"></a>`materializer/test-placeholder-census.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `2ceb0d2d` | 2026-11-06 05:56 UTC | git-drift | The diff-aware materializer's test suite: GATE EX6. Assigned by convention; only its heading-parity check was read. |
 <!-- amanuensis:ledger-stale:515a75d90aa4329133cd096dd8c59fca9457f1eef8ae2ce3569b8685ad775382 -->
 | <a id="ls-515a75d90a"></a>`materializer/test-prose-retention.py` | [Diff-aware materializer](subsystems/b04-diff-aware-materializer.md) | `2ceb0d2d` | 2026-11-06 05:56 UTC | git-drift | The diff-aware materializer's test suite: GATE EX2. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:34343d94b2966dede5535ed577154fcc4e46a4361c8cba261b2b9a75f958dff2 -->
+| <a id="ls-34343d94b2"></a>`mcp-server/contracts/explanation-effective-cases.json` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The case file both readers of the effective explanation run. Assigned by convention; only its case names and expected states were read. |
 <!-- amanuensis:ledger-stale:e4decdb03dc9614dfbaa62d9c973e7c5a934b42586b9db3480b02d78c61a8315 -->
 | <a id="ls-e4decdb03d"></a>`mcp-server/test-disposition-evidence.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-11-06 08:51 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
+<!-- amanuensis:ledger-stale:313a5361023234ea2a0b57bbdf0c6246449cc250889cde9d07ade9ae0ea4e427 -->
+| <a id="ls-313a536102"></a>`mcp-server/test-explanation-gate.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The server's own test suite: GATE EX10. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:4284effd3e62e4fe343d15713f2d2b62c117b50c707937e5108b96847022a389 -->
+| <a id="ls-4284effd3e"></a>`mcp-server/test-explanation-read.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The server's own test suite: GATE EX15. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:bc0a9823b6a6dfbb5ab4908204ccfc7317939c51d6217873de85bd013da88ed0 -->
+| <a id="ls-bc0a9823b6"></a>`mcp-server/test-explanations.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `e63981bf` | 2026-11-06 15:21 UTC | git-drift | The server's own test suite: GATE EX9. Assigned by convention; not read. |
 <!-- amanuensis:ledger-stale:ad57fe6f1f055585740834b1c8d87ceef1ea49e7ad0a58cb2ce15ef5674450b6 -->
 | <a id="ls-ad57fe6f1f"></a>`mcp-server/test-invariants.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-11-06 08:51 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
 <!-- amanuensis:ledger-stale:5c1b25d1d5c4945e8375b25ec0f4dc106cbc78a95c987ffccd004e4bd381cf24 -->
 | <a id="ls-5c1b25d1d5"></a>`mcp-server/test-package-artifact.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-11-06 05:29 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
+<!-- amanuensis:ledger-stale:e45afb755221ce4a16719ba67a22cdb04e1894b2a8d88ada1d583da355f078e4 -->
+| <a id="ls-e45afb7552"></a>`mcp-server/test-residual-hardening.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a7f9384d` | 2026-11-06 15:21 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
 <!-- amanuensis:ledger-stale:af83dd01cb390cfd6263dec82d62f77fb3ca071eb40bd5c5e246aa9430185580 -->
 | <a id="ls-af83dd01cb"></a>`mcp-server/test-scope-reconciliation.mjs` | [Packaging, installer, validation, and product docs](subsystems/b05-packaging-installer-validation-and-product-docs.md) | `a521e28` | 2026-11-06 08:51 UTC | git-drift | Packaging, configuration, fixtures, checkers and the server's own test suite. |
 <!-- amanuensis:ledger-stale:41192a9b954c4691d7e1487cbf4b08a3c4656e4ef1725ca5d12208a853139745 -->
@@ -121,6 +145,8 @@
 | <a id="ls-5316c436a1"></a>`dev/measure-reader-prose.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `2ceb0d2d` | 2026-11-06 05:56 UTC | git-drift | The explanation design lane: the reader-prose measure. Assigned by convention; not read in full. |
 <!-- amanuensis:ledger-stale:b99daad2d8228665738953070730ed76260799c7f8573b82ccf3f3d6fc03e5f2 -->
 | <a id="ls-b99daad2d8"></a>`dev/test-reader-measure.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `2ceb0d2d` | 2026-11-06 05:56 UTC | git-drift | The explanation design lane: GATE EX1. Assigned by convention; not read. |
+<!-- amanuensis:ledger-stale:127b7ab485df36ce005c3c9d3617d3308bb9ec2075d62124f7bbaca2d93233c7 -->
+| <a id="ls-127b7ab485"></a>`dev/test-republish-chain.mjs` | [Conspectus design lanes, their drivers and receipts](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md) | `2ceb0d2d` | 2026-11-06 15:21 UTC | git-drift | The explanation design lane: GATE EX7. Assigned by convention; only its header was read. |
 
 ## Deferred files that changed after they were set aside
 

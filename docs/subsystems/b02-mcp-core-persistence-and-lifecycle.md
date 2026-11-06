@@ -7,7 +7,7 @@
 
 Everything durable depends on this part. It binds one server process to one workspace and one store, opens and upgrades the SQLite database, decides whether a write or a status advance is allowed, and makes a checkpoint of the store recoverable. The tool modules call into it for every rule they share.
 
-*Written by a survey session at `1015b8e2` from 6 evidence row(s). None of the 4 file(s) it cites has changed since.*
+*Written by a survey session at `1015b8e2` from 6 evidence row(s). 1 of the 4 file(s) it cites changed since: `mcp-server/src/invariants.ts`.*
 
 ## Scope
 
@@ -27,7 +27,7 @@ mcp-server/src/index.ts; src/db.ts; src/schema.sql; src/invariants.ts
 
 `index.ts` is the process. `parseArgs` selects a workspace from an argument, the environment or the launch directory, or leaves the server waiting for `get_project_info` to supply one. `project.ts` turns the choice into a binding receipt and a storage path, and `ensureDatabase` opens `memory.db` on first use. Each tool call is validated by Ajv against the tool's schema, re-asserts the binding with `assertProjectBinding`, and runs its handler synchronously. `openDatabase` in `db.ts` runs additive migrations, the whole of `schema.sql`, `mintStoreIdentity`, then `requireSchemaObjects` and `requireViews`, which refuse a store missing a declared object or either view the materializer reads. `storage-git.ts` commits the storage directory to a git repository: its own for a project-local store, an outer one when a shared repository hosts several stores. `standing.ts` computes what the record authorizes about a locus.
 
-A durable write needs an active session (`requireActiveSession`) and a revision that resolves in the bound workspace; `resolveWorkspaceCommit` in `helpers.ts` asks git on every call, caches nothing and stores the resolved name. A cited path must be relative, non-traversing and outside `.amanuensis` (`requireWorkspaceSourcePath`), so the store cannot cite itself as source. The status ladder is `STATUS_ORDER` in `invariants.ts`, and `enforceForwardPrerequisites` checks every rung between the current status and the target. Enum values come from `vocabulary.ts`, which is generated and never edited here.
+A write that records knowledge (`add_evidence`, `add_claim`, `set_disposition`, `add_finding`) needs an active session (`requireActiveSession`) and a revision that resolves in the bound workspace; `resolveWorkspaceCommit` in `helpers.ts` asks git on every call, caches nothing and stores the resolved name, and `add_claim` does the same through its own `resolveCommit`. Administrative writers such as `set_git_state` and `upsert_subsystem` check neither. A cited path must be relative, non-traversing and outside `.amanuensis` (`requireWorkspaceSourcePath`), so the store cannot cite itself as source. The status ladder is `STATUS_ORDER` in `invariants.ts`, and `enforceForwardPrerequisites` checks every rung between the current status and the target. Enum values come from `vocabulary.ts`, which is generated and never edited here.
 
 It depends on `git`, `better-sqlite3` and the vocabulary contract. The tool modules of [B-03](b03-knowledge-tools-and-workflow-api.md) call all of the above. The materializer of [B-04](b04-diff-aware-materializer.md) reads the store `mode=ro` and needs the two views named by `REQUIRED_VIEWS`. The installer, `cli.ts`, is in this part's ledger; it manages client configuration and is not on the request path above.
 
@@ -35,7 +35,7 @@ A newcomer is likely to assume `commitStorage` makes a commit recoverable. It do
 
 Start with `openDatabase` in `db.ts`, then `assertProjectBinding` in `project.ts`, then `enforcePhasePrerequisites` in `invariants.ts`.
 
-*Written by a survey session at `e63981bf` from 18 evidence row(s). None of the 10 file(s) it cites has changed since.*
+*Written by a survey session at `e63981bf` from 24 evidence row(s). 2 of the 16 file(s) it cites changed since: `mcp-server/src/helpers.ts`, `mcp-server/src/invariants.ts`.*
 
 ## Structure
 

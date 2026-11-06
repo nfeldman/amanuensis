@@ -1,13 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-11-06T08:55:06.033Z",
-  "repository_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+  "recorded_at": "2026-11-06T15:22:05.376Z",
+  "repository_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
   "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-explanation",
   "storage_path": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
   "store": {
-    "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+    "last_checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
     "canonical_branch": "main",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
@@ -63,9 +63,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-            "checked_at": "2026-11-06 08:54:51",
-            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+            "checked_at": "2026-11-06 15:21:50",
+            "repository_head": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
             "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
@@ -74,8 +74,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-              "last_checked_at": "2026-11-06 08:54:51"
+              "last_checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+              "last_checked_at": "2026-11-06 15:21:50"
             },
             "staleness_measured": true,
             "evidence_rows": 11,
@@ -358,7 +358,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 16070,
+      "wire_bytes": 16704,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -400,9 +400,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-            "checked_at": "2026-11-06 08:54:51",
-            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+            "checked_at": "2026-11-06 15:21:50",
+            "repository_head": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
             "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
@@ -411,11 +411,11 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-              "last_checked_at": "2026-11-06 08:54:51"
+              "last_checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+              "last_checked_at": "2026-11-06 15:21:50"
             },
             "staleness_measured": true,
-            "evidence_rows": 4,
+            "evidence_rows": 6,
             "claims_recorded": 1
           },
           "unknown": [
@@ -511,7 +511,7 @@
             ]
           },
           "history_pointer": {
-            "census": 6,
+            "census": 7,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
@@ -575,17 +575,27 @@
                 "ref_sha": null,
                 "revision_bound": false,
                 "authored": "code"
+              },
+              {
+                "kind": "session",
+                "session_id": "mw54hd4s-mjt9ya3f",
+                "intent": "owner-granted correction of two false sentences in the B-02 and project accounts (final review F4/codex, F5/claude)",
+                "started_at": "2026-11-06 15:21:44",
+                "ended_at": "2026-11-06 15:21:44",
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "code"
               }
             ],
             "counts": {
               "finding_resolution_events": 3,
-              "sessions": 3
+              "sessions": 4
             },
             "session_attribution": "by-citation"
           }
         },
         "census": {
-          "total": 15,
+          "total": 16,
           "by_section": {
             "purpose": 1,
             "structure": 1,
@@ -594,7 +604,7 @@
             "boundaries": 0,
             "terms": 2,
             "leads": 1,
-            "history_pointer": 6,
+            "history_pointer": 7,
             "unknown": 1
           }
         },
@@ -634,8 +644,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 7677,
-          "response_bytes": 16070,
+          "payload_bytes": 7980,
+          "response_bytes": 16704,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": false,
           "within_budget": true,
@@ -701,9 +711,9 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-            "checked_at": "2026-11-06 08:54:51",
-            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+            "checked_at": "2026-11-06 15:21:50",
+            "repository_head": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
             "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
@@ -712,8 +722,8 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
-              "last_checked_at": "2026-11-06 08:54:51"
+              "last_checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
+              "last_checked_at": "2026-11-06 15:21:50"
             },
             "staleness_measured": true,
             "evidence_rows": 4,
@@ -965,7 +975,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 11876,
+    "wire_bytes": 11932,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -985,7 +995,7 @@
         "path_prefix": null,
         "resolved": true
       },
-      "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+      "checked_sha": "7fc7f0654904a0b92159dc5aa7355f358c3e872f",
       "sections": {
         "open": {
           "census": 20,
@@ -1029,18 +1039,7 @@
           "census": 6,
           "recorded": true,
           "requested": true,
-          "items": [
-            {
-              "question_id": 3,
-              "label": "unknown",
-              "category": "ambiguous-evidence",
-              "subsystem_id": "B-05",
-              "question": "B05-R1's observed runtime/package version mismatch is absent at beta.3, but its root-cause claim also names the lack of a mechanical version-parity gate. Should this finding be narrowed to that surviving recurrence risk or closed for the concrete mismatch with a successor guard obligation?",
-              "ref_sha": "a521e28",
-              "revision_bound": true,
-              "authored": "model"
-            }
-          ],
+          "items": [],
           "ordering_basis": "category-then-id"
         },
         "leads": {
@@ -1059,15 +1058,15 @@
           "ordering_basis": "id"
         },
         "stale": {
-          "census": 53,
+          "census": 66,
           "recorded": true,
           "requested": true,
           "items": [],
           "statement": "The two sources are counted apart and never summed. Drifted rows nobody has read are in the ledger under policy: no reading of them has gone stale.",
           "counts": {
             "claim": 0,
-            "ledger": 42,
-            "drifted_unread": 11,
+            "ledger": 46,
+            "drifted_unread": 20,
             "drifted_deferred": 0
           },
           "ordering_basis": "claims-then-ledger-rows-by-subsystem-and-path"
@@ -1083,14 +1082,14 @@
         }
       },
       "census": {
-        "total": 99,
+        "total": 112,
         "by_section": {
           "open": 20,
           "awaiting_verification": 0,
           "undiscriminated": 0,
           "decisions": 6,
           "leads": 11,
-          "stale": 53,
+          "stale": 66,
           "hot_spots": 9
         }
       },
@@ -1125,8 +1124,9 @@
         {
           "section": "decisions",
           "reason": "budget",
-          "count": 5,
+          "count": 6,
           "ids": [
+            "question:3",
             "question:5",
             "question:2",
             "question:4",
@@ -1157,44 +1157,53 @@
         {
           "section": "stale",
           "reason": "policy",
-          "count": 11,
+          "count": 20,
           "ids": [
+            "ledger:B-04/materializer/test-explanation-orientation.py",
+            "ledger:B-04/materializer/test-explanation-pages.py",
+            "ledger:B-04/materializer/test-ledger-grouping.py",
             "ledger:B-04/materializer/test-placeholder-census.py",
             "ledger:B-04/materializer/test-prose-retention.py",
+            "ledger:B-05/mcp-server/contracts/explanation-effective-cases.json",
             "ledger:B-05/mcp-server/test-disposition-evidence.mjs",
+            "ledger:B-05/mcp-server/test-explanation-gate.mjs",
+            "ledger:B-05/mcp-server/test-explanation-read.mjs",
+            "ledger:B-05/mcp-server/test-explanations.mjs",
             "ledger:B-05/mcp-server/test-invariants.mjs",
             "ledger:B-05/mcp-server/test-package-artifact.mjs",
+            "ledger:B-05/mcp-server/test-residual-hardening.mjs",
             "ledger:B-05/mcp-server/test-scope-reconciliation.mjs",
             "ledger:B-09/design/explanation/plan.json",
             "ledger:B-09/design/explanation/plan.md",
             "ledger:B-09/design/explanation/spec.md",
             "ledger:B-09/dev/measure-reader-prose.mjs",
-            "ledger:B-09/dev/test-reader-measure.mjs"
+            "ledger:B-09/dev/test-reader-measure.mjs",
+            "ledger:B-09/dev/test-republish-chain.mjs"
           ],
           "ids_truncated": false
         },
         {
           "section": "stale",
           "reason": "budget",
-          "count": 42,
+          "count": 46,
           "ids": [
             "ledger:B-01/.claude/skills/amanuensis/SKILL.md",
             "ledger:B-01/.claude/skills/amanuensis/references/artifact-templates.md",
+            "ledger:B-01/.claude/skills/amanuensis/references/explanations.md",
             "ledger:B-01/.claude/skills/amanuensis/references/onboarding.md",
             "ledger:B-01/.claude/skills/amanuensis/references/phase-2-structural.md",
             "ledger:B-01/.claude/skills/amanuensis/references/phase-4-adversarial.md",
             "ledger:B-01/.claude/skills/amanuensis/references/phase-5-packaging.md",
             "ledger:B-01/.claude/skills/amanuensis/references/refresh.md",
+            "ledger:B-01/.claude/skills/amanuensis/references/reporting-style.md",
             "ledger:B-02/mcp-server/src/helpers.ts",
             "ledger:B-02/mcp-server/src/invariants.ts",
             "ledger:B-02/mcp-server/src/schema.sql",
             "ledger:B-02/mcp-server/src/vocabulary.ts",
+            "ledger:B-03/mcp-server/src/tools/explanations.ts",
             "ledger:B-03/mcp-server/src/tools/materialize.ts",
             "ledger:B-03/mcp-server/src/tools/subsystems.ts",
-            "ledger:B-04/materializer/amanuensis_materializer/__init__.py",
-            "ledger:B-04/materializer/amanuensis_materializer/diagrams.py",
-            "ledger:B-04/materializer/amanuensis_materializer/html_projection.py",
-            "ledger:B-04/materializer/amanuensis_materializer/lint.py"
+            "ledger:B-04/materializer/amanuensis_materializer/__init__.py"
           ],
           "ids_truncated": true
         },
@@ -1220,8 +1229,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5646,
-        "response_bytes": 11876,
+        "payload_bytes": 5678,
+        "response_bytes": 11932,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1334,7 +1343,7 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-3f333679-bebd-41d4-acfe-435c419db2a2",
+      "projection_run_id": "projection-350e66f2-3080-4471-8fbf-e9ffa75f24ca",
       "pages_rendered": 33,
       "html_pages_rendered": 33,
       "summary": {
@@ -1393,17 +1402,17 @@
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-3f333679-bebd-41d4-acfe-435c419db2a2"
+        "projection_run_id": "projection-350e66f2-3080-4471-8fbf-e9ffa75f24ca"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "1abe671ec9f24b8d3bbda8eb83bcac7f97fa8635fa8e469a8aba06f27e5ad29f",
-      "manifest_sha256": "3e27f517074a07df66d62a0f676491313bedd257c2489ff4881b38350ac3a99c",
+      "projection_contract_sha256": "54819482c9d2a15b2f409a97eca28fed5153b4b6196039e9c1d3bc89cec8f1f3",
+      "manifest_sha256": "dc55f91188854788f926d3d8ad71c54efadb82c67887cf829e44fa65b571de27",
       "page_count": 67,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-11-06T08:55:05.235Z",
+      "promoted_at": "2026-11-06T15:22:04.639Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",
