@@ -158,8 +158,9 @@ the scope text, as:
 <notes, verbatim>
 ```
 
-It is an H3 under `## Scope`, never a new H2. The existing fallback that prints the notes under
-Structure when there are no claims and no artifact is removed, so the notes appear once.
+It is an H3 under `## Scope`, never a new H2: a heading inside the note is nested beneath the H3,
+and only its level moves (final review, F17/claude). The existing fallback that prints the notes
+under Structure when there are no claims and no artifact is removed, so the notes appear once.
 
 **The retention gate** (`materializer/test-prose-retention.py`) seeds a store in which every
 model-authored field carries a unique sentinel string, materializes it, and asserts that each
@@ -267,9 +268,11 @@ existing order (classification, then the first path).
   `examined_at` only for examined rows, so a revision on a candidate or exempt row is the
   revision it was recorded at and not an examination.
 - When a group's rows carry more than one `ref_sha`, the head line says `<revision label> <k>
-  revisions` and each path is followed by its own `` (`<sha8>`) ``.
+  revisions` and each path is followed by its own `` (`<sha8>`) ``. An absent `ref_sha` is not
+  counted as a revision (final review, F18/claude).
 - A row with no reason groups under **No reason recorded**; a row with no revision prints
-  `no revision recorded`.
+  `no revision recorded`, on the head when no row in the group has one and beside its own path
+  otherwise.
 - The page-level `files.md` and its links are unchanged.
 
 ### 2.5 The unfilled-slot census (EX6)

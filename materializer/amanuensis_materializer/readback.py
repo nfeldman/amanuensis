@@ -457,10 +457,12 @@ def _flat(text: str) -> str:
     while its words do not; presence is a question about the words. The
     publication also links every subsystem id an account names and bolds the
     page's own id, so a link is read as its label and bold marks are dropped on
-    both sides of the comparison.
+    both sides of the comparison. Every line break counts as one, since a recorded
+    heading behind a carriage return is nested on the page like any other.
     """
 
-    unlinked = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text).replace("**", "")
+    lines = "\n".join(text.splitlines())
+    unlinked = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", lines).replace("**", "")
     return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
 
 

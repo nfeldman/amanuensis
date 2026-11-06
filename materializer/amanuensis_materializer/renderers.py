@@ -246,6 +246,9 @@ def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bo
     return "structure-narrative" if has_claims else "inventory-fallback"
 
 
+_LINE_BREAK = re.compile(r"\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]")
+
+
 def _nest_prose(text: str, under: int) -> str:
     """Shift a recorded document's ATX headings beneath a page heading.
 
@@ -255,11 +258,14 @@ def _nest_prose(text: str, under: int) -> str:
     does not.  Only the heading *level* moves; the heading text, the order, and
     every other line are the recorded bytes.  Levels saturate at six rather than
     wrapping, so a deeply nested source flattens instead of re-opening the page.
+    A line ends at every break the HTML projection's `splitlines()` recognizes, so
+    a heading cannot wait behind a carriage return; each such break becomes a
+    newline on the page.
     """
 
     out: list[str] = []
     fence: tuple[str, int] | None = None
-    for line in text.split("\n"):
+    for line in _LINE_BREAK.split(text):
         opener = _FENCE.match(line)
         if fence is None:
             # CommonMark: a fence opens on three or more backticks or tildes.
@@ -682,13 +688,16 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
         groups.setdefault(key, []).append(f)
     out: list[str] = []
     for (classification, why), members in groups.items():
-        revisions = {str(m["ref_sha"] or "") for m in members}
+        # An absent revision is not a revision: the row says it has none, and the
+        # head counts only the ones recorded.
+        revisions = {str(m["ref_sha"]) for m in members if m["ref_sha"]}
         label = "examined at" if classification == "examined" else "recorded at"
         if len(revisions) > 1:
             revision = f"{label} {len(revisions)} revisions"
+        elif revisions:
+            revision = f"{label} `{next(iter(revisions))[:8]}`"
         else:
-            sha = next(iter(revisions))
-            revision = f"{label} `{sha[:8]}`" if sha else LEDGER_NO_REVISION
+            revision = LEDGER_NO_REVISION
         reason = " ".join(why.split()) or LEDGER_NO_REASON
         out.append(
             f"- **{reason}** — {classification}, {_count(len(members), 'file')}, {revision}"
@@ -698,7 +707,7 @@ def _ledger_groups(sid: str, files: Sequence[Mapping[str, object]]) -> list[str]
             sha = str(m["ref_sha"] or "")
             own = (
                 f" (`{sha[:8]}`)" if len(revisions) > 1 and sha else
-                f" ({LEDGER_NO_REVISION})" if len(revisions) > 1 else ""
+                f" ({LEDGER_NO_REVISION})" if revisions and not sha else ""
             )
             out.append(f'    - <a id="{ledger_entry_anchor(sid, path)}"></a>`{path}`{own}')
     out.append("")
@@ -1565,7 +1574,14 @@ def render_subsystem(
         ]
     survey_note = str(s.get("notes") or "").strip()
     if survey_note:
-        out += [f"### {SURVEY_NOTE_HEADING}", "", f"*{SURVEY_NOTE_LABEL}*", "", survey_note, ""]
+        out += [
+            f"### {SURVEY_NOTE_HEADING}",
+            "",
+            f"*{SURVEY_NOTE_LABEL}*",
+            "",
+            _nest_prose(survey_note, 3),
+            "",
+        ]
 
     # 2. Start here.
     if s.get("jump_in_reading"):

@@ -1120,8 +1120,9 @@ def main() -> int:
             for heading in NESTED_HEADINGS:
                 if heading in h2s(text):
                     return f"the account opened a new section on the Markdown page: {heading!r}"
-                if heading not in h3s(section(text, "How it works")):
-                    return f"{heading!r} is not an H3 under How it works: {h3s(section(text, 'How it works'))}"
+                body = section(text, "How it works")
+                if not re.search(rf"(?m)^#{{3,6}} {re.escape(heading)}$", body):
+                    return f"{heading!r} is not a heading below H2 under How it works: {body[:200]!r}"
                 if heading in outline:
                     return f"the account opened a new section on the HTML page: {heading!r}"
                 if heading not in outline.get("How it works", ""):
