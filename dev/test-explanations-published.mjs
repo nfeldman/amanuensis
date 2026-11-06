@@ -350,12 +350,12 @@ function main() {
   const vocab = vocabulary();
   runControls(vocab);
   const texts = checkPages(vocab);
-  checkProgress(texts, vocab);
   checkCensus();
   checkArchitecture(vocab);
   checkRefusals();
   runSubGates();
   checkMeasure();
+  checkProgress(texts, vocab);
   checkListed();
 }
 
