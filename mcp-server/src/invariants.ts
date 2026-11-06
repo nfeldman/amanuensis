@@ -19,7 +19,12 @@ import {
   resolveWorkspaceCommits,
   ToolError,
 } from "./helpers.js";
-import { type ExplanationDischarge, VOCABULARY, type VocabularyDischarge } from "./vocabulary.js";
+import {
+  EXPLANATION_SLOTS,
+  type ExplanationDischarge,
+  VOCABULARY,
+  type VocabularyDischarge,
+} from "./vocabulary.js";
 
 export type SubsystemStatus =
   | "unmapped"
@@ -486,7 +491,7 @@ export function requireExplanationDischarge(
   workspacePath: string | null,
 ): string[] {
   if (targetStatus !== "mapped" || currentStatus === "mapped") return [];
-  const readings = (["purpose", "account"] as const).map((slot) => ({
+  const readings = EXPLANATION_SLOTS.map((slot) => ({
     slot,
     reading: readExplanation(db, workspacePath, "subsystem", subsystemId, slot, targetStatus),
   }));
