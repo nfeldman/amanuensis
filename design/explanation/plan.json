@@ -763,14 +763,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "478eaf7a79c285086dca130c543f6e99e513f6d5",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "f950ae06725c7ac42b0e3a5060727fadbecbefb4",
+      "green_sha": "2a87bbc2b850e7351eafcd5e13175bac38308d67",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Gap fills: the account-shape refusal sentence (no # or | line) is mine, as are the shared case-file schema (kind/eligible/workspace/resolvable/expect) and selectExplanation/readExplanation's earlierRows (rows with a lower id than the effective row). Input-shape errors (subject_id, blank body) use plain messages, not 'refuses:'. test-prose-retention.py's allowlist is now the eight seam columns plus explanations.body, with an explicit expected set. gen-vocabulary.mjs gained explanation_eligible emission and validation only. evidence_ids has no minItems so R5 is reachable on the wire."
     },
     {
       "id": "EX15",
