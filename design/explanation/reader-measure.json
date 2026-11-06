@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "label": "before",
+      "commit": "aaa1db1aabca60de93a188691556eda1f050990e",
+      "contract_sha256": "15b2d0719eeb0002b4288621a6b74ba4fd50fe0662e91cf7d3631168a53a922c",
+      "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
+      "totals": {
+        "pages": 33,
+        "table_chars": 368405,
+        "prose_chars": 141149,
+        "table_share": 0.723,
+        "placeholders": 15
+      }
+    }
+  ]
+}
