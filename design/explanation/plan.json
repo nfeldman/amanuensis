@@ -252,8 +252,8 @@
       "attempts": 1,
       "start_sha": "5af156d0a7d4fad348bd796aeb05a4853afda2a8",
       "red_sha": "c87bac60493c5eab00527eae395f74a486e6408a",
-      "green_sha": "7c143aff7fc35d2a083132160cb1d60d2ecca363",
-      "verified_by_launcher": false,
+      "green_sha": "d9bfe4fde578431af03eaed5dcec0b9520e04c0c",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Evidence rows print in evidence id order and 'asserted at' uses the renderer's existing 12-character _short revision (spec's example says sha8); a statement's whitespace runs collapse so a newline cannot end its list item. html_projection now nests items indented deeper than the list's first item and treats indented ordered items as list items rather than continuation; no existing test expectation needed changing."
     },

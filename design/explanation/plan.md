@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | EX1 | Measure what a reader sees | done (1 attempt) | — | `dev/test-reader-measure.mjs` | C13 |
 | EX2 | Render business context and survey notes; the retention gate | done (1 attempt) | EX1 | `materializer/test-prose-retention.py` | C1, C2, C3 |
-| EX3 | Claims as a readable register, grouped by recorded segment | ready (1 attempt) | EX2 | `materializer/test-claim-register.py` | C4, C5, C6, C41 |
+| EX3 | Claims as a readable register, grouped by recorded segment | done (1 attempt) | EX2 | `materializer/test-claim-register.py` | C4, C5, C6, C41 |
 | EX4 | Survey narrative inside Structure when claims exist | ready | EX3 | `materializer/test-narrative-placement.py` | C7, C41 |
 | EX5 | File ledger groups rows that share a reason | ready | EX4 | `materializer/test-ledger-grouping.py` | C8 |
 | EX6 | Unfilled-slot census and the skill text that feeds it | ready | EX5 | `materializer/test-placeholder-census.py` | C9, C10, C11, C12 |
