@@ -388,14 +388,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "fb4a44c99a7053a03ce81ac96ccef827da818880",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "6df5b55662fb3fd6afd8a2153dda4252d85ddb17",
+      "green_sha": "1eaba46fafccf2589b0a69c37d86fa79b00828a8",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Groups are built in _ledger_groups (renderers.py) from the existing ORDER BY classification, file_path, so group order is classification then first path. Heads read 'examined at'/'recorded at'; a multi-revision group says '<label> k revisions' and each path carries (sha8). Anchors render in HTML as span.record-anchor, which the gate matches."
     },
     {
       "id": "EX6",
