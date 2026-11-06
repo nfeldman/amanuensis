@@ -193,10 +193,32 @@ function checkRuntimeBoundary() {
   }
 }
 
+// The field is a column of the page's tables, so its presence is a header and a
+// value under it. A header over empty cells would not tell a reader why anything
+// matters.
 function checkFindings() {
-  if (!committedOrRed("docs/findings.md").includes("**Why it matters**")) {
-    red("docs/findings.md carries no Why it matters field");
+  const lines = committedOrRed("docs/findings.md").split("\n");
+  const cells = (line) =>
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  let column = -1;
+  let filled = 0;
+  for (const line of lines) {
+    if (!line.trim().startsWith("|")) {
+      column = -1;
+      continue;
+    }
+    const row = cells(line);
+    if (row.includes("Why it matters")) {
+      column = row.indexOf("Why it matters");
+    } else if (column >= 0 && !/^:?-{3,}:?$/.test(row[0]) && (row[column] ?? "").length > 1) {
+      filled += 1;
+    }
   }
+  if (!filled) red("docs/findings.md carries no filled Why it matters field");
 }
 
 function checkMeasure() {
