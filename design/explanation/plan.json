@@ -176,14 +176,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "40a7deba5f362892b5ec406de1bea1c717635763",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "44b7c715fe8fcd868d5c2ed5253c563184cea498",
+      "green_sha": "f354b9cb2bc1fe29adb5ddbff86516a1440da8d5",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Scoped vocabulary terms now render as ### term records (gloss, expansion, first seen) under 'Scoped to', matching codebase-wide terms; html_projection keeps the old five-column finding signature beside the new six-column one. Gate also asserts HTML records and a second store with empty resolved context; the survey-note fallback under Structure is removed."
     },
     {
       "id": "EX3",
