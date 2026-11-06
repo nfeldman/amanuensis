@@ -763,14 +763,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 2,
       "start_sha": "478eaf7a79c285086dca130c543f6e99e513f6d5",
-      "red_sha": "f950ae06725c7ac42b0e3a5060727fadbecbefb4",
-      "green_sha": "2a87bbc2b850e7351eafcd5e13175bac38308d67",
+      "red_sha": "ce6662e9887f656b5ff8c98f351211e2d76de471",
+      "green_sha": "439f3cb3ee2bd23cafbf4a9abe22b75f1fe03ba5",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "attempt 1 was marked done but the launcher refused it: VERIFY EX9: red output does not match gate.red_expect (GATE EX9 RED: record_explanation is not refused for a subsystem that is not explanation-eligible)"
+      "notes": "Attempt 2: the only defect was E1's label, whose id came before the red_expect phrase on the status line; the label now opens with the phrase. ce6662e reverts 2a87bbc so the corrected gate runs before the deliverables exist, and 439f3cb reapplies it unchanged, so the net change from attempt 1 is the label; f950ae0 stays in history as a superseded red commit."
     },
     {
       "id": "EX15",
