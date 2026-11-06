@@ -19,7 +19,7 @@ import {
   resolveWorkspaceCommits,
   ToolError,
 } from "./helpers.js";
-import type { VocabularyDischarge } from "./vocabulary.js";
+import { type ExplanationDischarge, VOCABULARY, type VocabularyDischarge } from "./vocabulary.js";
 
 export type SubsystemStatus =
   | "unmapped"
@@ -315,6 +315,123 @@ export function readVocabularyDischarge(
     unreachableDeclinations,
     checked: workspacePath !== null,
   };
+}
+
+/**
+ * The subsystem statuses at which a survey pass has read the subsystem closely
+ * enough to write an explanation of it (design/explanation/spec.md §3.1).
+ * Read from the vocabulary contract's one `explanation_eligible` field, so the
+ * tools, the effective-row reader, the renderers and the census cannot
+ * disagree about which statuses count.
+ */
+export const EXPLANATION_ELIGIBLE_STATUSES: readonly string[] = (
+  VOCABULARY.subsystem_status?.values ?? []
+)
+  .filter((entry) => entry.explanation_eligible === true)
+  .map((entry) => entry.value);
+
+export function isExplanationEligible(status: string | null): boolean {
+  return status !== null && EXPLANATION_ELIGIBLE_STATUSES.includes(status);
+}
+
+export interface ExplanationRow {
+  id: number;
+  subject_type: string;
+  subject_id: string;
+  slot: string;
+  disposition: string;
+  body: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** What the selection needs of a row; the shared case file carries exactly these. */
+export interface ExplanationCandidate {
+  id: number;
+  disposition: string;
+  ref_sha: string;
+}
+
+export interface ExplanationSelection<R extends ExplanationCandidate = ExplanationRow> {
+  state: ExplanationDischarge;
+  /** The effective row, or null when the state is `not-recorded`. */
+  row: R | null;
+  /** False when there was no workspace to resolve revisions against. */
+  checked: boolean;
+  /** Rows kept for this slot with an id below the effective row's; every row when none is effective. */
+  earlierRows: number;
+}
+
+/**
+ * §3.2's rule as a pure function over `(rows, resolvable revisions, eligibility)`.
+ * `readExplanation` supplies the rows and asks git which revisions resolve; the
+ * materializer implements the same rule in Python, and both run the shared case
+ * file `contracts/explanation-effective-cases.json` through it.
+ *
+ * With a workspace (`resolvable` is a set), the effective row is the one with the
+ * greatest `id` whose `ref_sha` is in the set. Without one (`null`) nothing can be
+ * resolved, the row with the greatest `id` is effective and the selection is
+ * `checked: false`. The state is the effective row's disposition, except that a
+ * `withdrawn` row, no effective row, or a subsystem that is not eligible is
+ * `not-recorded`. Earlier rows are kept and never selected: a correction is a new
+ * row, and it may be written at the same commit as the row it replaces, so the
+ * greatest id and not the newest revision decides.
+ */
+export function selectExplanation<R extends ExplanationCandidate>(
+  rows: readonly R[],
+  resolvable: ReadonlySet<string> | null,
+  eligible: boolean,
+): ExplanationSelection<R> {
+  const checked = resolvable !== null;
+  let effective: R | null = null;
+  if (eligible) {
+    for (const row of rows) {
+      if (resolvable !== null && !resolvable.has(row.ref_sha)) continue;
+      if (effective === null || row.id > effective.id) effective = row;
+    }
+  }
+  const earlierRows =
+    effective === null ? rows.length : rows.filter((row) => row.id < (effective as R).id).length;
+  const state: ExplanationDischarge =
+    effective !== null &&
+    (effective.disposition === "recorded" || effective.disposition === "declined")
+      ? effective.disposition
+      : "not-recorded";
+  return { state, row: state === "not-recorded" ? null : effective, checked, earlierRows };
+}
+
+/**
+ * One slot's effective explanation, re-derived from the rows at every read
+ * (spec.md §3.2). The gate of the `mapped` advance, the tools and the read tool
+ * all call this, and nothing keeps a flag.
+ */
+export function readExplanation(
+  db: DB,
+  workspacePath: string | null,
+  subjectType: string,
+  subjectId: string,
+  slot: string,
+): ExplanationSelection {
+  const rows = db
+    .prepare(
+      `SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id, recorded_at
+         FROM explanations
+        WHERE subject_type = ? AND subject_id = ? AND slot = ?
+        ORDER BY id DESC`,
+    )
+    .all(subjectType, subjectId, slot) as ExplanationRow[];
+  const eligible =
+    subjectType === "project" ? true : isExplanationEligible(readSubsystemStatus(db, subjectId));
+  let resolvable: Set<string> | null = null;
+  if (workspacePath !== null) {
+    const resolved = resolveWorkspaceCommits(
+      workspacePath,
+      rows.map((row) => row.ref_sha),
+    );
+    resolvable = new Set([...resolved].filter(([, sha]) => sha !== null).map(([key]) => key));
+  }
+  return selectExplanation(rows, resolvable, eligible);
 }
 
 /**

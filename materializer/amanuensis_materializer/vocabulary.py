@@ -78,6 +78,32 @@ VOCABULARY_DISCHARGES: tuple[str, ...] = (
     "not-recorded",
 )
 
+# explanation_subject — explanation axis.
+EXPLANATION_SUBJECTS: tuple[str, ...] = (
+    "subsystem",
+    "project",
+)
+
+# explanation_slot — explanation axis.
+EXPLANATION_SLOTS: tuple[str, ...] = (
+    "purpose",
+    "account",
+)
+
+# explanation_disposition — explanation axis.
+EXPLANATION_DISPOSITIONS: tuple[str, ...] = (
+    "recorded",
+    "declined",
+    "withdrawn",
+)
+
+# explanation_discharge — explanation axis.
+EXPLANATION_DISCHARGES: tuple[str, ...] = (
+    "recorded",
+    "declined",
+    "not-recorded",
+)
+
 # evidence_kind — evidence axis.
 EVIDENCE_KINDS: tuple[str, ...] = (
     "code-verified",
@@ -491,6 +517,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "This subsystem has not yet been surveyed; no architectural claims are authorized.",
                 "cannot_justify": "any claim about this subsystem's behavior",
                 "authorizes": "nothing",
+                "explanation_eligible": False,
             },
             {
                 "value": "scoping",
@@ -498,6 +525,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "Only the subsystem boundary and file scope are established so far.",
                 "cannot_justify": "any behavioral claim; file scope is all that is established",
                 "authorizes": "which files are in scope for this subsystem",
+                "explanation_eligible": False,
             },
             {
                 "value": "structural",
@@ -505,6 +533,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
                 "cannot_justify": "any correctness claim",
                 "authorizes": "claims about types, state containers, flows, and the concurrency model",
+                "explanation_eligible": True,
             },
             {
                 "value": "concerns",
@@ -512,6 +541,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "Structural mapping is complete and concern-by-concern review is in progress.",
                 "cannot_justify": "that a finding survived adversarial challenge",
                 "authorizes": "concern review decisions that cite evidence",
+                "explanation_eligible": True,
             },
             {
                 "value": "adversarial",
@@ -519,6 +549,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "Candidate conclusions are being challenged; treat them as provisional.",
                 "cannot_justify": "that the challenge pass has finished",
                 "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
+                "explanation_eligible": True,
             },
             {
                 "value": "mapped",
@@ -526,6 +557,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "Survey complete through structural analysis, concern review, and adversarial challenge.",
                 "cannot_justify": "that the reading is current at the repository head",
                 "authorizes": "the recorded survey through structural analysis, concern review, and adversarial challenge",
+                "explanation_eligible": True,
             },
             {
                 "value": "deferred",
@@ -533,6 +565,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "meaning": "This subsystem is intentionally outside the active survey plan.",
                 "cannot_justify": "anything about this subsystem's behavior",
                 "authorizes": "nothing",
+                "explanation_eligible": False,
             },
         ),
     },
@@ -557,6 +590,90 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "label": "Not recorded",
                 "meaning": "Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way.",
                 "cannot_justify": "that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none'",
+            },
+        ),
+    },
+    "explanation_subject": {
+        "axis": "explanation",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "subsystem",
+                "label": "Subsystem",
+                "meaning": "The explanation is about one subsystem, named by its id.",
+                "cannot_justify": "that the subsystem still has the status it had when the row was written; eligibility is read from the status at the time of each reading",
+            },
+            {
+                "value": "project",
+                "label": "Project",
+                "meaning": "The explanation is about the codebase as a whole, and its subject id is the literal 'project'.",
+                "cannot_justify": "a purpose for the project; the project's purpose is the thesis in entry-point.md, and only an account is recorded here",
+            },
+        ),
+    },
+    "explanation_slot": {
+        "axis": "explanation",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "purpose",
+                "label": "Purpose",
+                "meaning": "One paragraph on what this part is for, in terms of what the rest of the system or its users get from it.",
+                "cannot_justify": "that the paragraph is a restatement of scope or a list of files; a purpose is a judgement and the record cannot check it",
+            },
+            {
+                "value": "account",
+                "label": "Account",
+                "meaning": "A short prose account of how the subject works: its moving parts, the rules it enforces and where, what it depends on, what a newcomer gets wrong, and where to start reading.",
+                "cannot_justify": "that the account is complete or current; it is bound to the revision it was written at",
+            },
+        ),
+    },
+    "explanation_disposition": {
+        "axis": "explanation",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "recorded",
+                "label": "Recorded",
+                "meaning": "A survey session wrote the explanation, at a revision and over cited evidence.",
+                "cannot_justify": "that the explanation is true; the record establishes who wrote it, at which revision and over which evidence",
+            },
+            {
+                "value": "declined",
+                "label": "Declined",
+                "meaning": "A survey session read the subject and declined to write the explanation, with the reason.",
+                "cannot_justify": "that nothing true can be said about the subject; it says only that the session could not say something true and specific",
+            },
+            {
+                "value": "withdrawn",
+                "label": "Withdrawn",
+                "meaning": "An earlier explanation was withdrawn, with the reason, and the subject owes a new one.",
+                "cannot_justify": "that the earlier explanation was wrong; it says only that it no longer stands for this subject",
+            },
+        ),
+    },
+    "explanation_discharge": {
+        "axis": "explanation",
+        "open_vocabulary": False,
+        "values": (
+            {
+                "value": "recorded",
+                "label": "Recorded",
+                "meaning": "The effective row for this slot is an explanation a survey session recorded, at a revision the workspace can resolve and over cited evidence.",
+                "cannot_justify": "that the explanation is true; the record establishes who wrote it, at which revision and over which evidence, and not that it is true",
+            },
+            {
+                "value": "declined",
+                "label": "Declined",
+                "meaning": "The effective row for this slot is a declination: a survey session read the subject and gave the reason it wrote none.",
+                "cannot_justify": "that nothing can be said about the subject; the reason is a judgement the record keeps and cannot check",
+            },
+            {
+                "value": "not-recorded",
+                "label": "Not recorded",
+                "meaning": "There is no effective row for this slot: none was written, the newest one was withdrawn, none resolves at a reachable revision, or the subject is not explanation-eligible.",
+                "cannot_justify": "that the subject has no purpose or account worth writing; nothing was asked or nothing stands, which is not the same as declined",
             },
         ),
     },

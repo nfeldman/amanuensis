@@ -54,6 +54,12 @@ const ADDITIVE_TOOLS = new Set([
   // pair `schema.sql` ships rather than by this list (spec.md §4.3): the tool
   // inserts one row and no path in the server can update or delete it.
   "decline_domain_vocabulary",
+  // `explanations` and `explanation_evidence` are append-only in the substrate,
+  // by the trigger pairs `schema.sql` ships (spec.md §3.1): each writer inserts
+  // rows and no path in the server can update or delete one. A correction is a
+  // new row.
+  "record_explanation",
+  "decline_explanation",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -102,6 +108,7 @@ import { dispatchTools } from "./tools/dispatch.js";
 import { dispositionTools } from "./tools/dispositions.js";
 import { evaluationTools } from "./tools/evaluation.js";
 import { evidenceTools } from "./tools/evidence.js";
+import { explanationTools } from "./tools/explanations.js";
 import { fieldNoteTools } from "./tools/field-notes.js";
 import { fileTools } from "./tools/files.js";
 import { findingTools } from "./tools/findings.js";
@@ -287,6 +294,7 @@ async function main(): Promise<void> {
     ...findingTools,
     ...fieldNoteTools,
     ...vocabularyTools,
+    ...explanationTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,
