@@ -11,10 +11,10 @@
 //
 // Definitions, fixed so that every recorded label counts the same thing:
 //   - A table line starts, after any indentation, with `|`. Its characters are
-//     the lengths of its trimmed cells, so delimiters and padding are not text.
+//     the line's, less its unescaped `|` delimiters, so padding is counted.
 //     A separator row (every cell is dashes with optional colons) counts nothing.
 //   - Prose is every other non-blank line that is not a heading and not inside
-//     a fenced block. Its characters are the length of the trimmed line.
+//     a fenced block. Its characters are the line's.
 //   - Lines inside a fenced block are neither table nor prose.
 //   - A placeholder is one occurrence of a MEASURE_PLACEHOLDERS string anywhere
 //     in the page, fenced or not.
@@ -62,6 +62,8 @@ function markdownFiles(root, relDir = "") {
   return found;
 }
 
+const UNESCAPED_DELIMITER = /(?<!\\)\|/g;
+
 function tableCells(line) {
   const body = line.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "");
   return body.split(/(?<!\\)\|/).map((cell) => cell.trim());
@@ -88,9 +90,9 @@ export function measurePage(text) {
     if (line.startsWith("|")) {
       const cells = tableCells(line);
       if (cells.every((cell) => /^:?-+:?$/.test(cell))) continue;
-      table += cells.reduce((sum, cell) => sum + cell.length, 0);
+      table += raw.length - (raw.match(UNESCAPED_DELIMITER) ?? []).length;
     } else {
-      prose += line.length;
+      prose += raw.length;
     }
   }
   const placeholders = MEASURE_PLACEHOLDERS.reduce(

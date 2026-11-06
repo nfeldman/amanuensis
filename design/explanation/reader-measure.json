@@ -7,9 +7,9 @@
       "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
       "totals": {
         "pages": 33,
-        "table_chars": 368405,
-        "prose_chars": 141149,
-        "table_share": 0.723,
+        "table_chars": 384485,
+        "prose_chars": 141203,
+        "table_share": 0.7314,
         "placeholders": 15
       }
     },
@@ -20,9 +20,9 @@
       "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
       "totals": {
         "pages": 33,
-        "table_chars": 263048,
-        "prose_chars": 255552,
-        "table_share": 0.5072,
+        "table_chars": 274522,
+        "prose_chars": 258358,
+        "table_share": 0.5152,
         "placeholders": 13
       }
     }
