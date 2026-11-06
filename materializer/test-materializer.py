@@ -462,7 +462,7 @@ def main() -> None:
         findings = (docs / "findings.md").read_text()
         assert "](subsystems/b02-auth-service.md)" in findings, "expected B-02 link in findings.md"
         assert "### [Auth Service](subsystems/b02-auth-service.md)" in findings
-        assert "| ID | Status | Symptom | Root cause | Ref SHA |" in findings
+        assert "| ID | Status | Symptom | Why it matters | Root cause | Ref SHA |" in findings
         assert "| ID | Subsystem |" not in findings
         # Concerns page should link CC-1 as an anchor target.
         concerns = (docs / "concerns.md").read_text()

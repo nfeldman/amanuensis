@@ -510,7 +510,17 @@ def main() -> int:
         # -- 4. the vocabulary page renders a scoped expansion ----------------
         def scoped_expansion() -> str | None:
             vocab = markdown.get("vocabulary.md", "")
-            scoped = section(vocab, "Scoped to **B-01**")
+            # The renderer links the subsystem id, so the heading is matched by
+            # its leading words and the id inside it.
+            scoped_heading = next(
+                (
+                    line[3:].strip()
+                    for line in vocab.splitlines()
+                    if line.startswith("## Scoped to ") and "B-01" in line
+                ),
+                "",
+            )
+            scoped = section(vocab, scoped_heading) if scoped_heading else ""
             if sentinel("vocabulary.expansion.scoped") not in scoped:
                 return "the scoped term's expansion is not under its subsystem heading"
             if sentinel("vocabulary.gloss") not in scoped:

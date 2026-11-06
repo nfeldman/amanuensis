@@ -130,6 +130,11 @@ NO_PURPOSE_ALONE = f"{NO_PURPOSE_SENTENCE}."
 # `describe_locus` say the same words for the same state, because a reader who
 # meets both must not have to work out whether they mean the same thing.
 NO_STRUCTURAL_CLAIMS = "Structural inventory not recorded as claims"
+WHY_IT_MATTERS = "Why it matters"
+SURVEY_NOTE_HEADING = "Survey note"
+SURVEY_NOTE_LABEL = (
+    "A note the survey left on the subsystem record; not bound to a revision."
+)
 NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
 
 # §9.1's five structural categories, as the `claim_key` segment that names each
@@ -1142,6 +1147,9 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             " recorded in its ledger. Nothing here states what it contains.",
             "",
         ]
+    survey_note = str(s.get("notes") or "").strip()
+    if survey_note:
+        out += [f"### {SURVEY_NOTE_HEADING}", "", f"*{SURVEY_NOTE_LABEL}*", "", survey_note, ""]
 
     # 2. Start here.
     if s.get("jump_in_reading"):
@@ -1186,7 +1194,6 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             out.append("")
     else:
         out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
-        narrative = str(s.get("notes") or "").strip()
         if survey_prose.strip():
             narrative_promoted = True
             out += [
@@ -1195,15 +1202,6 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                 + (f" Its source is {provenance}." if provenance else ""),
                 "",
                 _nest_prose(survey_prose.strip(), 3),
-                "",
-            ]
-        elif narrative:
-            out += [
-                "No structural claim is recorded for this subsystem, and no survey"
-                " artifact is recorded either. What follows is the note the survey left"
-                " on the subsystem record; it is not bound to a revision.",
-                "",
-                _nest_prose(narrative, 3),
                 "",
             ]
         else:
@@ -1495,15 +1493,17 @@ def _finding_table(subsystem_rows: Sequence[dict[str, Any]], level: int = 3) -> 
     out = [
         f"{'#' * level} [{subsystem_name}]({subsystem_page(subsystem_id, subsystem_name)})",
         "",
-        "| ID | Status | Symptom | Root cause | Ref SHA |",
-        "|---|---|---|---|---|",
+        f"| ID | Status | Symptom | {WHY_IT_MATTERS} | Root cause | Ref SHA |",
+        "|---|---|---|---|---|---|",
     ]
     for f in subsystem_rows:
         out.append(finding_marker(str(f["finding_id"])))
+        context = str(f.get("business_context") or "").strip().replace("|", "/")
         out.append(
             f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
             f"{f['resolution_state']} | "
-            f"{f['symptom'].replace('|', '/')} | {f['root_cause'].replace('|', '/')} | "
+            f"{f['symptom'].replace('|', '/')} | {context} | "
+            f"{f['root_cause'].replace('|', '/')} | "
             f"`{(f['ref_sha'] or '—')[:8]}` |"
         )
     out.append("")
@@ -1817,6 +1817,9 @@ def _resolved_records(
         out.append(f'<a id="{fid.lower()}"></a>')
         out += [f"#### {fid} · `{f['severity']}`", ""]
         out += [str(f["symptom"]).strip(), ""]
+        context = str(f.get("business_context") or "").strip()
+        if context:
+            out.append(f"- **{WHY_IT_MATTERS}** — {context}")
         out.append(f"- **Root cause** — {str(f['root_cause']).strip()}")
         recorded = str(f["resolution_recorded_at"] or "")
         out.append(
@@ -2357,8 +2360,13 @@ def render_vocabulary(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             for sid, items in by_ss.items():
                 out += [f"## Scoped to **{sid}**", ""]
                 for t in items:
-                    out.append(f"- **{t['term']}** — {t['gloss']}")
-                out.append("")
+                    out.append(f"### {t['term']}")
+                    out += ["", f"_{t['gloss']}_"]
+                    if t.get("expansion"):
+                        out += ["", t["expansion"]]
+                    if t.get("first_seen"):
+                        out += ["", f"First seen: `{t['first_seen']}`"]
+                    out.append("")
 
     # §4.5: a subsystem that answered "none" is listed, with its reason, so a
     # reader can tell it from a subsystem nobody asked. The denominator is

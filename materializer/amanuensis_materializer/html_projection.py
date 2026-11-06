@@ -1562,6 +1562,9 @@ def _header_key(value: str) -> str:
 
 
 _RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
+    ("id", "status", "symptom", "why it matters", "root cause", "ref sha"): RecordProjection(
+        "finding", "id", ("status", "ref sha"), ("symptom", "why it matters", "root cause")
+    ),
     ("id", "status", "symptom", "root cause", "ref sha"): RecordProjection(
         "finding", "id", ("status", "ref sha"), ("symptom", "root cause")
     ),
@@ -1872,6 +1875,11 @@ class MarkdownRenderer:
                     fields.append(
                         '<div class="record-field"><p class="record-label">Observed behavior</p>'
                         f'<div class="record-copy">{_inline(parts[1])}</div></div>'
+                    )
+                if _plain(record.get("why it matters", "")):
+                    fields.append(
+                        '<div class="record-field"><p class="record-label">Why it matters</p>'
+                        f'<div class="record-copy">{_inline(record["why it matters"])}</div></div>'
                     )
                 fields.append(
                     '<div class="record-field"><p class="record-label">Root cause</p>'
