@@ -28,6 +28,11 @@ On `main` at `ee12bed` three gates are red: `dev/test-reader-lenses-dogfood.mjs`
 receipt chain when it republishes, and decides the 14 undecided carried findings with evidence.
 The branch ends with all three green.
 
+Scope note added by the design session after measuring the full baseline: five further gates
+are red or unable to run on `main` for reasons outside this decision (`spec.md` §4.1). They are
+not restored by this lane. A branch that restores the three named here therefore does not by
+itself make CI green; the remaining gates need their own decisions.
+
 ## 5. The MCP wire is not changed by this lane
 
 `describe_locus` keeps its budgets and its response shape. The lane measures what a default call
