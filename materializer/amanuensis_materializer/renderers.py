@@ -136,6 +136,8 @@ SURVEY_NOTE_LABEL = (
     "A note the survey left on the subsystem record; not bound to a revision."
 )
 NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
+SURVEY_NARRATIVE = "Survey narrative"
+NARRATIVE_POINTER = "The survey artifact is rendered above, under Structure."
 
 # §9.1's five structural categories, as the `claim_key` segment that names each
 # and the heading it groups under.  Any other segment a survey recorded is its
@@ -172,6 +174,22 @@ def _like_prefix(sid: str) -> str:
 # as prose, and a `#` inside one was demoted as if it were a document heading
 # (slice-S3, F10/codex).
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+
+
+def narrative_placement(*, has_account: bool, has_claims: bool, has_artifact: bool) -> str:
+    """Where a subsystem's survey narrative renders (spec §2.3).
+
+    A recorded account takes precedence whatever the claim count; without one,
+    the narrative stands in for claims that are absent and follows the ones that
+    are present.  EX4 calls this with `has_account=False` because no account
+    record exists yet.
+    """
+
+    if not has_artifact:
+        return "none"
+    if has_account:
+        return "survey-record"
+    return "structure-narrative" if has_claims else "inventory-fallback"
 
 
 def _nest_prose(text: str, under: int) -> str:
@@ -1226,7 +1244,11 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     #    With none, §9.1's literal and the labelled narrative fallback: unbound
     #    prose is never presented where a revision-bound inventory belongs.
     out += ["## Structure", ""]
-    narrative_promoted = False
+    placement = narrative_placement(
+        has_account=False,
+        has_claims=bool(claims),
+        has_artifact=bool(survey_prose.strip()),
+    )
     provenance = ", ".join(
         f"`{sv['path']}` at content hash `{str(sv['content_hash'] or '—')[:12]}`"
         f", recorded at {_short(str(sv['ref_sha'] or ''))}"
@@ -1257,10 +1279,18 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                     f" · {_evidence_text(claim_evidence.get(str(c['claim_id']), []))}",
                 ]
             out.append("")
+        if placement == "structure-narrative":
+            out += [
+                f"### {SURVEY_NARRATIVE}",
+                "",
+                f"*{NARRATIVE_LABEL}.*" + (f" Its source is {provenance}." if provenance else ""),
+                "",
+                _nest_prose(survey_prose.strip(), 3),
+                "",
+            ]
     else:
         out += ["### " + NO_STRUCTURAL_CLAIMS, ""]
-        if survey_prose.strip():
-            narrative_promoted = True
+        if placement == "inventory-fallback":
             out += [
                 "No structural claim is recorded for this subsystem."
                 f" *{NARRATIVE_LABEL}.*"
@@ -1482,8 +1512,15 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     else:
         out += ["No concern has been dispositioned in this subsystem.", ""]
 
-    if survey_prose and not narrative_promoted:
+    if survey_prose and placement in ("survey-record", "none"):
         out += ["### Survey artifact", "", _nest_prose(survey_prose, 3)]
+    elif placement == "structure-narrative":
+        out += [
+            "### Survey artifact",
+            "",
+            NARRATIVE_POINTER + (f" Its source is {provenance}." if provenance else ""),
+            "",
+        ]
     elif survey_prose:
         # §7.3 keeps the artifact in the survey record and §9.1 promotes it into
         # Structure when no claim stands in its place.  Rendering it twice would
