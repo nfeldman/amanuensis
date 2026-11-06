@@ -39,6 +39,11 @@ jobs:
       # hand-counted fixture; it reads no store and needs no build.
       - name: Reader-prose measure — table share and placeholders on a counted fixture
         run: node dev/test-reader-measure.mjs
+      # GATE EX7 (design/explanation/spec.md §4.2). The republish chain over stubbed
+      # steps. It opens no store; the one real subprocess, the depth recorder, runs
+      # in a throwaway repository over a store built from schema.sql.
+      - name: Republish chain — order, stops and the progress rewrite over stubbed steps
+        run: node dev/test-republish-chain.mjs
 
   # The Amanuensis→Pecia defect projection. Pecia is a uv PEP-723 script in a
   # separate PRIVATE repository, so this gate cannot run from a bare checkout.

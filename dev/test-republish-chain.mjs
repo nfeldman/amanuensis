@@ -267,7 +267,8 @@ function world(options = {}) {
       log.push("build");
       return { status: options.buildStatus ?? 0 };
     },
-    storeProblem() {
+    // Async, as the real one is: an un-awaited call reads as a problem, or as none.
+    async storeProblem() {
       log.push("store-opens");
       return options.storeProblem ?? null;
     },
@@ -1022,6 +1023,25 @@ await check("the progress step's output satisfies the depth gate's four relation
     if (wrong) return wrong;
   }
   return null;
+});
+
+await check("the progress step adds a derived field a record lacks, and an empty section stays valid", async () => {
+  const absent = notLoaded();
+  if (absent) return absent;
+  const lacking = PROGRESS_FIXTURE.replace('    "fraction": 1.00,\n', "").replace('    "successors": [],\n', "");
+  const empty = PROGRESS_FIXTURE.replace(/"end": \{[^}]*\}/, '"end": {}');
+  if (lacking === PROGRESS_FIXTURE || empty === PROGRESS_FIXTURE) return "the fixture variants did not apply";
+  for (const progress of [lacking, empty]) {
+    const w = await run({ progress }, PROGRESS_ARGV);
+    if (w.exit !== 0) return `the step exits ${w.exit}: ${scrub(said(w))}`;
+    const wrong = relations(JSON.parse(progressAfter(w)), RECEIPT_FIXTURE);
+    if (wrong) return wrong;
+    if (!progressAfter(w).includes('"keep \\"quoted\\" } ] braces"')) return "another key moved";
+  }
+  const noSection = PROGRESS_FIXTURE.replace('"end": {', '"not_end": {');
+  const refused = await run({ progress: noSection }, PROGRESS_ARGV);
+  if (refused.exit === 0) return "a record with no end object exits 0";
+  return progressAfter(refused) === noSection ? null : "a refused record was rewritten";
 });
 
 await check("the progress step leaves the committed record's other keys alone, and a second run changes nothing", async () => {

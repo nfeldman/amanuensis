@@ -22,8 +22,10 @@
 //   B4  one row per subsystem, with its scoped terms' anchors and its effective
 //       declination. A per-subsystem boolean cannot say which record discharged
 //       it.
-//   B5  every carried record with its outcome, its `repaired_sha` and the
-//       revisions of the evidence attached to it.
+//   B5  every carried record with its outcome, its `successor_id`, its
+//       `repaired_sha` and the revisions of the evidence attached to it. The
+//       progress record's successor list is derived from these rows
+//       (dev/republish-docs.mjs, explanation spec.md §4.2 step 8).
 //
 // Beside them, `reported_deltas`: every reported axis paired with the frozen
 // fixture's value and the signed difference (§7.5, claim C31). The counts alone
@@ -235,7 +237,7 @@ const declinations = all(
 const carried = all(
   `SELECT c.carried_id, c.archived_store_id, c.archived_finding_id, c.subsystem_id,
           c.archived_resolution, c.severity,
-          o.outcome, o.repaired_sha, o.rationale
+          o.outcome, o.successor_id, o.repaired_sha, o.rationale
      FROM carried_findings c
 LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id
     ORDER BY c.carried_id`,
@@ -298,6 +300,7 @@ const B5rows = carried.map((row) => ({
   subsystem_id: row.subsystem_id,
   archived_resolution: row.archived_resolution,
   outcome: row.outcome ?? null,
+  successor_id: row.successor_id ?? null,
   repaired_sha: row.repaired_sha ?? null,
   evidence_revisions: carriedEvidence
     .filter((e) => e.carried_id === row.carried_id)
