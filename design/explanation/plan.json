@@ -16,10 +16,10 @@
         "EX8"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "0bc4809fc26c0d5753be792e4a4c1ded2f4396d4",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "b6d6ba907f75ddf4510d379186bfcf1d1462e64c",
+        "findings": 4
       }
     },
     {
