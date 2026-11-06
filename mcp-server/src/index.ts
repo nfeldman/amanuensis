@@ -23,14 +23,17 @@ import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
 import { locusTools } from "./tools/locus.js";
 
-// §5.4: the consumer route opens, the producer route follows it. Hosts inject
+// §5.4: the consumer route opens, the workspace handshake it depends on comes
+// next, and the producer route follows. Hosts inject
 // this string once per session, so it names the three reader tools and the two
 // standings that stop an answer, and stops there — the method itself is the
 // skill's, not this string's. The producer sentence keeps the phrase
 // "evidence-backed codebase conspectus" that test-mcp-compatibility.mjs reads
 // back from the initialize result.
+const CONSUMER_OPENING =
+  "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first.";
 const SERVER_INSTRUCTIONS =
-  "To learn what is recorded about a file, symbol, subsystem, or term, call describe_locus first. Its standing states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
+  "The standing describe_locus returns states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
 const WORKSPACE_INSTRUCTIONS =
   "Before using project tools, call get_project_info with workspace set to the absolute project directory from this chat's environment context (not the MCP process cwd). An unbound response is not a cold start. The first workspace handshake binds this server process once; a different workspace is refused before database access.";
 const SERVER_VERSION = "0.2.0-beta.4";
@@ -328,7 +331,7 @@ async function main(): Promise<void> {
       capabilities: {
         tools: {},
       },
-      instructions: `${WORKSPACE_INSTRUCTIONS} ${SERVER_INSTRUCTIONS}`,
+      instructions: `${CONSUMER_OPENING} ${WORKSPACE_INSTRUCTIONS} ${SERVER_INSTRUCTIONS}`,
     },
   );
 
