@@ -842,14 +842,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "928c380d26694f661d6e2ada93b028608f86373c",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "a37334c1b5f99d4c2de7eb68d04ff9178e68fd47",
+      "green_sha": "f0e59329d34fc36e8e605b18fa9d425268cbc51d",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "get_explanations is added in tools/explanations.ts (project subject reads its account only; unknown subsystem or missing id refused with a non-'refuses:' ToolError; unread subsystems read not-recorded). reset_subsystem now appends a withdrawn row per slot with a row, at workspace HEAD so it resolves (else the slot's last ref_sha), and requires an active session only when it has rows to withdraw; its result gains withdrawn_explanations. Largest response measured 5602 bytes (both caps, 4 evidence rows each); gate drives built server over stdio and digests the store around reads."
     },
     {
       "id": "EX10",
