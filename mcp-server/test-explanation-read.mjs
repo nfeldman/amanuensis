@@ -46,6 +46,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "..");
@@ -763,9 +764,16 @@ async function main(mods) {
 
 let exitCode = 0;
 try {
+  // `dist/` is a build artifact, so a gate that imports it without compiling
+  // certifies whatever was last built rather than the source under review: the
+  // explanation lane's slice-S2 review inverted this subject's source and the
+  // gate stayed green until a rebuild (F1/codex). A compile failure is this
+  // gate's red line, not a pass against stale bytes.
+  const built = ensureBuilt();
   const mods = { toolArrays: [] };
   let loadError = null;
   try {
+    if (!built.ok) throw new Error(built.detail);
     const project = await import("./dist/project.js");
     const db = await import("./dist/db.js");
     mods.resolveProject = project.resolveProject;
