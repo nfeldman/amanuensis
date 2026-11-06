@@ -30,6 +30,9 @@ Turns red when:
     a record built out of that text;
   - an unfilled slot makes the publication fail, or the clean-publish summary
     carries different rows;
+  - `phase-5-packaging.md` or `onboarding.md` lists fewer than the six slots
+    `unfilled_slots` can hold, or step 5 does not say that `subsystem-account` has
+    no sentence on the page;
   - `phase-5-packaging.md` step 5 does not read `unfilled_slots` and fill or
     report each row;
   - a sentence about the census calls it a gate or a guard;
@@ -781,6 +784,31 @@ def main() -> int:
             return None
 
         check("phase-5 step 5 reads unfilled_slots and fills or reports each row", packaging)
+
+        # The skill text listed three of the six, so a reader of it would miss the
+        # slots this lane added (F5/codex, F6/claude, final). `subsystem-account` is
+        # the one slot with no sentence on the page, so step 5 has to say so.
+        def references_name_every_slot() -> str | None:
+            emitted = {str(row.get("slot")) for row in (empty.summary.get("unfilled_slots") or [])}
+            if emitted != SLOTS_IN_SCOPE | EXPLANATION_SLOTS:
+                return f"the empty fixture's census holds {sorted(emitted)}, not the six slots"
+            step = re.search(r"^### 5\.[^\n]*\n(.*?)(?=^### 6\.)", read(PACKAGING), re.S | re.M)
+            onboarding = next(
+                (part for part in read(ONBOARDING).split("\n\n") if "`unfilled_slots`" in part),
+                "",
+            )
+            for name, text in (
+                ("phase-5-packaging.md step 5", step.group(1) if step else ""),
+                ("onboarding.md", onboarding),
+            ):
+                absent = sorted(slot for slot in emitted if f"`{slot}`" not in text)
+                if absent:
+                    return f"{name} does not name {', '.join(absent)} where it describes unfilled_slots"
+            if step is None or "## How it works" not in step.group(1):
+                return "step 5 does not say that subsystem-account prints no sentence: the section is absent"
+            return None
+
+        check("the references name all six slots unfilled_slots can hold", references_name_every_slot)
 
         # -- 8. nothing calls the census a gate or a guard -----------------------
         def not_a_guard() -> str | None:

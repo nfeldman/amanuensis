@@ -587,6 +587,17 @@ function contractChecks() {
     return run.status === 0 ? null : `check-refusal-parity.mjs does not pass: ${run.stderr}`;
   });
 
+  // Onboarding's Phase 5 is the list of the ladder's refusals, quoted in the server's
+  // words, and it stopped short of this one (F16/claude, final).
+  check("P2b onboarding.md Phase 5 lists the refusal among the ladder's", () => {
+    const text = section(readSkill("references/onboarding.md"), "## Phase 5");
+    if (!text) return "references/onboarding.md has no section headed 'Phase 5'";
+    for (const quoted of ["no purpose is recorded or declined", "no account is recorded or declined"]) {
+      if (!text.includes(quoted)) return `its refusal list does not quote "${quoted}"`;
+    }
+    return null;
+  });
+
   check("P2 phase-5-packaging.md quotes the refusal whole", () => {
     const text = readSkill("references/phase-5-packaging.md");
     if (!text.includes("cannot advance <sid> to 'mapped'")) return "it does not open the quote with the refusal's first words";
