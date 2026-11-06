@@ -4,6 +4,7 @@ import {
   optString,
   requireEnum,
   requireString,
+  resolveWorkspaceCommit,
   type ToolDefinition,
 } from "../helpers.js";
 import {
@@ -11,6 +12,7 @@ import {
   enforceMonotonicTransition,
   readSubsystemStatus,
   recordStatusTransition,
+  requireActiveSession,
   STATUS_ORDER,
   type SubsystemStatus,
 } from "../invariants.js";
@@ -277,7 +279,11 @@ export const subsystemTools: ToolDefinition[] = [
       "tool rejects regressions. reset_subsystem deletes dependent rows " +
       "(dispositions, findings, field-notes, xrefs, artifact manifest " +
       "entries for this subsystem) so the conspectus remains internally " +
-      "consistent with the new status. The reason is recorded for " +
+      "consistent with the new status. Explanations are append-only: " +
+      "instead of deleting them it appends a withdrawn row, with the " +
+      "reason as its body, for each slot that has one (this needs an " +
+      "active session), so the resurveyed subsystem owes a new explanation. " +
+      "The reason is recorded for " +
       "audit; supply enough context that a future analyst understands " +
       "why the earlier survey was discarded.",
     inputSchema: {
@@ -306,6 +312,33 @@ export const subsystemTools: ToolDefinition[] = [
         | { status: string }
         | undefined;
       if (!row) return { ok: false, error: `unknown subsystem: ${id}` };
+
+      // An explanation is append-only, so the reset cannot delete the ones this
+      // subsystem holds; it withdraws them instead (spec.md §3.1). The withdrawn
+      // row is attributed to a session like every explanation row, so a reset that
+      // has something to withdraw needs one.
+      const explained = ctx.db
+        .prepare(
+          `SELECT slot, ref_sha FROM explanations
+            WHERE id IN (SELECT MAX(id) FROM explanations
+                          WHERE subject_type = 'subsystem' AND subject_id = ?
+                          GROUP BY slot)
+            ORDER BY slot`,
+        )
+        .all(id) as Array<{ slot: string; ref_sha: string }>;
+      const withdrawnBy =
+        explained.length > 0 ? requireActiveSession(ctx, "reset_subsystem") : null;
+      // The withdrawn row has to resolve in the workspace or the reader would skip
+      // it and fall back to the row it withdraws, so it is written at the
+      // workspace's current revision. Without one it keeps the slot's last revision.
+      let withdrawnAt: string | null = null;
+      if (explained.length > 0) {
+        try {
+          withdrawnAt = resolveWorkspaceCommit(ctx, "HEAD");
+        } catch {
+          withdrawnAt = null;
+        }
+      }
 
       const deleted: Record<string, number> = {};
       const txn = ctx.db.transaction(() => {
@@ -365,6 +398,14 @@ export const subsystemTools: ToolDefinition[] = [
             .prepare("DELETE FROM claims WHERE substr(claim_key, 1, length(?)) = ?")
             .run(prefix, prefix).changes;
         }
+        for (const slot of explained) {
+          ctx.db
+            .prepare(
+              `INSERT INTO explanations (subject_type, subject_id, slot, disposition, body, ref_sha, session_id)
+               VALUES ('subsystem', ?, ?, 'withdrawn', ?, ?, ?)`,
+            )
+            .run(id, slot.slot, reason, withdrawnAt ?? slot.ref_sha, withdrawnBy);
+        }
         ctx.db
           .prepare(
             "UPDATE subsystems SET status=?, updated_at=datetime('now'), notes = COALESCE(notes, '') || char(10) || ? WHERE id = ?",
@@ -388,6 +429,7 @@ export const subsystemTools: ToolDefinition[] = [
         previous_status: row.status,
         new_status: toStatus,
         deleted,
+        withdrawn_explanations: explained.length,
       });
     },
   },

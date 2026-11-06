@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_211 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
+_212 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -392,12 +392,13 @@ _211 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | `get_disposition_evidence` | Return all evidence rows attached to a disposition, including role. |
 | `get_finding_evidence` | Return all evidence rows attached to a finding, including role. |
 
-### `explanations` (2)
+### `explanations` (3)
 
 | Tool | Description |
 |---|---|
 | `record_explanation` | Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough. Refused for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body. |
 | `decline_explanation` | Declare that no explanation is written for a subsystem or project slot, with the reason: the other way to answer the obligation record_explanation carries. The reason is one paragraph of at most 400 UTF-8 bytes, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject conditions as record_explanation. It is accepted whether or not an explanation is already recorded: the newest row is the effective one. The record is append-only. Returns a receipt and does not echo the reason. |
+| `get_explanations` | Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing. |
 
 ### `field-notes` (3)
 
@@ -614,7 +615,7 @@ _211 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | `upsert_subsystem` | Create or replace a subsystem entry. status defaults to 'unmapped'. `priority` (integer, 1 = survey first) is optional — set it during onboarding Phase 5 so the master plan orders subsystems by survey urgency. Omit priority to leave it unchanged on update. Use update_subsystem_status to advance status without rewriting the other fields. |
 | `update_subsystem_status` | Advance a subsystem's status along the survey progression (unmapped → scoping → structural → concerns → adversarial → mapped). Transitions are monotonic: the server rejects regressions so dependent dispositions and findings cannot be silently orphaned. Use reset_subsystem to explicitly discard prior survey data and restart from an earlier phase. The 'deferred' flag is orthogonal and can be set or cleared from any status. Returns the previous status. |
 | `set_subsystem_priority` | Set a subsystem's survey priority (1 = survey first). Pass `priority: null` to clear. The coordinator assigns these during onboarding Phase 5 (ranking every identified subsystem by how much downstream work depends on it) and may refine them later when new dependencies are discovered or a human answers a `priority-ranking` open question. |
-| `reset_subsystem` | Discard a subsystem's survey artifacts and reset its status to an earlier phase. This is the only path that regresses a subsystem's knowledge depth — the normal update_subsystem_status tool rejects regressions. reset_subsystem deletes dependent rows (dispositions, findings, field-notes, xrefs, artifact manifest entries for this subsystem) so the conspectus remains internally consistent with the new status. The reason is recorded for audit; supply enough context that a future analyst understands why the earlier survey was discarded. |
+| `reset_subsystem` | Discard a subsystem's survey artifacts and reset its status to an earlier phase. This is the only path that regresses a subsystem's knowledge depth — the normal update_subsystem_status tool rejects regressions. reset_subsystem deletes dependent rows (dispositions, findings, field-notes, xrefs, artifact manifest entries for this subsystem) so the conspectus remains internally consistent with the new status. Explanations are append-only: instead of deleting them it appends a withdrawn row, with the reason as its body, for each slot that has one (this needs an active session), so the resurveyed subsystem owes a new explanation. The reason is recorded for audit; supply enough context that a future analyst understands why the earlier survey was discarded. |
 
 ### `vocabulary` (4)
 

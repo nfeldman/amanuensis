@@ -11,6 +11,7 @@ import {
 import {
   EXPLANATION_ELIGIBLE_STATUSES,
   isExplanationEligible,
+  readExplanation,
   readSubsystemStatus,
   requireActiveSession,
 } from "../invariants.js";
@@ -150,6 +151,36 @@ const SUBJECT_PROPERTIES = {
   slot: { type: "string", enum: [...EXPLANATION_SLOTS] },
 } as const;
 
+/** The slots a subject holds: a subsystem has both, the project only its account. */
+const SLOTS_OF = {
+  subsystem: ["purpose", "account"],
+  project: ["account"],
+} as const;
+
+/**
+ * Which subject `get_explanations` was asked about. A read does not apply the
+ * writers' eligibility conditions: an unread subsystem reads `not-recorded`
+ * through `readExplanation` (spec.md §3.2) and a project with no subsystem read
+ * reads the same. Only a subject that cannot exist is refused.
+ */
+function resolveReadSubject(ctx: ServerContext, args: Record<string, unknown>) {
+  const type = requireEnum(args, "subject_type", EXPLANATION_SUBJECTS);
+  const suppliedId = optString(args, "subject_id");
+  if (type === "project") {
+    if (suppliedId !== null && suppliedId !== "project") {
+      throw new ToolError("subject_id must be 'project' for a project explanation, or omitted");
+    }
+    return { type, id: "project" };
+  }
+  if (suppliedId === null || suppliedId === "") {
+    throw new ToolError("subject_id is required for a subsystem explanation");
+  }
+  if (readSubsystemStatus(ctx.db, suppliedId) === null) {
+    throw new ToolError(`unknown subsystem: ${suppliedId}; list_subsystems names them`);
+  }
+  return { type, id: suppliedId };
+}
+
 export const explanationTools: ToolDefinition[] = [
   {
     name: "record_explanation",
@@ -253,6 +284,66 @@ export const explanationTools: ToolDefinition[] = [
         )
         .run(subject.type, subject.id, subject.slot, reason, refSha, sessionId);
       return receipt(result.lastInsertRowid, subject, "declined", refSha);
+    },
+  },
+  {
+    name: "get_explanations",
+    description:
+      "Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        subject_type: SUBJECT_PROPERTIES.subject_type,
+        subject_id: SUBJECT_PROPERTIES.subject_id,
+      },
+      required: ["subject_type"],
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const subject = resolveReadSubject(ctx, args);
+      const slots = SLOTS_OF[subject.type as keyof typeof SLOTS_OF].map((slot) => {
+        const reading = readExplanation(
+          ctx.db,
+          ctx.project.workspacePath,
+          subject.type,
+          subject.id,
+          slot,
+        );
+        const row = reading.row;
+        const evidenceIds = row
+          ? (
+              ctx.db
+                .prepare(
+                  "SELECT evidence_id FROM explanation_evidence WHERE explanation_id = ? ORDER BY evidence_id",
+                )
+                .all(row.id) as Array<{ evidence_id: number }>
+            ).map((link) => link.evidence_id)
+          : [];
+        return {
+          slot,
+          state: reading.state,
+          checked: reading.checked,
+          authored: "model" as const,
+          row: row
+            ? {
+                id: row.id,
+                disposition: row.disposition,
+                body: row.body,
+                ref_sha: row.ref_sha,
+                session_id: row.session_id,
+                recorded_at: row.recorded_at,
+                evidence_ids: evidenceIds,
+              }
+            : null,
+          earlier_rows: reading.earlierRows,
+        };
+      });
+      return ok({
+        subject_type: subject.type,
+        subject_id: subject.id,
+        slots,
+        model_calls: 0,
+      });
     },
   },
 ];

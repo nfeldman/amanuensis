@@ -16,7 +16,7 @@ specific says so, with the reason, and the reason is kept.
 
 ## Tools
 
-Both tools need an active session, attribute the row to it, and resolve
+The two writers need an active session, attribute the row to it, and resolve
 `ref_sha` in the bound workspace. `subject_id` names the subsystem and is
 omitted for the project. A successful write returns only
 `{id, subject_type, subject_id, slot, disposition, ref_sha}`; it never echoes
@@ -58,3 +58,32 @@ It applies the subject conditions of `record_explanation` with its own sentences
 - `decline_explanation refuses: the project's purpose is the thesis in entry-point.md` — only the account is declined for the project.
 - `decline_explanation refuses: a reason is limited to 400 bytes` — the reason is too long.
 - `decline_explanation refuses: a reason is one paragraph` — the reason has a blank line or a line starting with `#`, `-`, `*` or `|`.
+
+### `get_explanations`
+
+`get_explanations(subject_type, subject_id?)` reads back what was recorded. It is
+the way a later pass sees an earlier one's explanation; `describe_locus` does not
+serve one. It needs no session and writes nothing. For each slot of the subject (a
+subsystem has `purpose` and `account`, the project only `account`) it returns
+
+    {slot, state, checked, authored: "model",
+     row: {id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids} | null,
+     earlier_rows}
+
+and `model_calls: 0`. `state` is `recorded`, `declined` or `not-recorded`. `row` is
+the effective row: the newest whose `ref_sha` the workspace still reaches, so a
+row written at a revision that has since been rewritten away is passed over for
+the older row that resolves. `earlier_rows` counts the rows kept below it. A
+subsystem that has not been read to `structural` reads `not-recorded` whatever
+rows exist, and `checked` is false when no workspace was bound to resolve
+revisions against. The body is served whole, so a response carries at most the
+400-byte purpose and the 4096-byte account with their fields. An unknown
+subsystem, or a subsystem call without `subject_id`, is refused.
+
+### A reset withdraws
+
+`reset_subsystem` does not delete explanations. It appends a `withdrawn` row, with
+the reset's reason as its body, for each slot of that subsystem that has any row,
+and needs an active session to attribute it. The earlier rows are kept, both slots
+read `not-recorded`, and the resurveyed subsystem owes a new explanation:
+`record_explanation` makes the next row effective.
