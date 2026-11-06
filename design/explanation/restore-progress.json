@@ -1,9 +1,13 @@
 {
-  "carried_decided": 1,
+  "carried_decided": 2,
   "records": [
     {
       "id": "B01-R1",
       "outcome": "successor-finding"
+    },
+    {
+      "id": "B02-R1",
+      "outcome": "repaired"
     }
   ]
 }
