@@ -1202,14 +1202,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 120,
-      "status": "done",
+      "status": "ready",
       "attempts": 1,
       "start_sha": "e091ed258f51538c7da88208586d14b7f0c39964",
       "red_sha": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
       "green_sha": "c4dbf78cbc1c15009df62c7ff14bcaf5eacc6e96",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "The script clones the workspace (sharing objects) and copies .amanuensis as files, rewriting the path-bound identity and completion marker for local stores, so the original is never opened. Measured on this worktree's store: a default call on each of the three dogfood loci serves 0 items and is over budget (wire 9468-9620 vs 8192; floor equals wire, since the floor's ledger is as received). Gate extends no other file; CI step added after the republish-chain step."
+      "notes": "attempt 1 was marked done but the launcher refused it: VERIFY EX13: red output does not match gate.red_expect (GATE EX13 RED: the reported wire bytes differ from the response measured)"
     },
     {
       "id": "EX14",
