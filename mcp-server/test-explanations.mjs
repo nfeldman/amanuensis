@@ -1035,11 +1035,21 @@ async function main(mods) {
     return wrong.length === 0 ? null : wrong.join("; ");
   });
 
-  check("T3 the retention gate seeds explanations.body with the allowlist entry 'rendered by EX11'", () => {
+  // §0.2: the rule this encodes changed state at EX11, which renders the body.
+  // Before it the field is allowlisted as 'rendered by EX11'; after it the field
+  // is one of the retention gate's RENDERED_FIELDS and is not allowlisted. The
+  // must-fail case stays: a gate that seeds the body and accounts for it in
+  // neither list is red.
+  check("T3 the retention gate seeds explanations.body and accounts for it: allowlisted until EX11, rendered after", () => {
     const text = readIfPresent(join(repo, "materializer", "test-prose-retention.py"));
     if (text === null) return "materializer/test-prose-retention.py is unreadable";
     if (!text.includes('"explanations.body"')) return "test-prose-retention.py does not seed explanations.body";
-    return text.includes("rendered by EX11") ? null : "the allowlist has no 'rendered by EX11' entry";
+    if (text.includes("rendered by EX11")) return null;
+    const rendered = /RENDERED_FIELDS[^=]*=\s*\(([^)]*)\)/s.exec(text);
+    const accounted = rendered !== null && rendered[1].includes('"explanations.body"');
+    const allowlisted = /ALLOWLIST\[\s*"explanations\.body"\s*\]/.test(text);
+    if (allowlisted) return "explanations.body is allowlisted without the 'rendered by EX11' reason";
+    return accounted ? null : "explanations.body is neither a rendered field nor allowlisted with 'rendered by EX11'";
   });
 
   // ------------------------------------------------------ V1: the served surface
