@@ -772,6 +772,35 @@ def main() -> int:
 
         check("a subsystem with no notes prints no Survey note", no_note_when_empty)
 
+        # §2.1: an H3 under Scope, never a new H2, whatever the note holds. The old
+        # fallback nested the note; moving it under Scope lost that (F17/claude, final).
+        def note_cannot_open_a_section() -> str | None:
+            if seed_error:
+                return seed_error
+            nested = root / "nested-note"
+            nested.mkdir()
+            seed(nested)
+            db = sqlite3.connect(nested / "memory.db")
+            db.execute(
+                "UPDATE subsystems SET notes = ? WHERE id = 'B-03'",
+                ("A note.\n\n## Note heading\n\nBelow it.\n\n# Note title\n\nEnd.",),
+            )
+            db.commit()
+            db.close()
+            done = publish(nested)
+            if done.get("returncode") != 0:
+                return f"the materializer failed — {done.get('diagnostic')}"
+            text = subsystem_page(nested / "docs", "B-03")
+            outline = [ln[3:].strip() for ln in text.splitlines() if ln.startswith("## ")]
+            for heading in ("Note heading", "Note title"):
+                if heading in outline:
+                    return f"the survey note opened a new section: {heading!r}"
+                if heading not in section(section(text, "Scope"), "Survey note", level=3):
+                    return f"{heading!r} is not under ### Survey note"
+            return None
+
+        check("a survey note cannot open a section on the page", note_cannot_open_a_section)
+
         def fallback_removed() -> str | None:
             page = subsystem_page(docs, "B-02")
             structure = section(page, "Structure")

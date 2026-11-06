@@ -172,6 +172,13 @@ ACCOUNT_B05 = "ACCOUNT-B-05 the console reads a socket."
 PURPOSE_B06 = "PURPOSE-B-06 the index orders keys."
 PURPOSE_B07 = "PURPOSE-B-07 the gate admits writers."
 
+# An account holding what the writers now refuse, behind each kind of line break.
+NESTED_HEADINGS = ("Sneaked heading", "Carriage heading", "Separator heading")
+NESTED_ACCOUNT = (
+    "Intro line.\n\n## Sneaked heading\n\nBody under it.\r# Carriage heading\rTail."
+    "\u2028## Separator heading\u2028End."
+)
+
 # True sentences the projection renders in other words: a status chip, a renamed phrase.
 PURPOSE_CHIP = "The status `mapped` follows an explicit review."
 ACCOUNT_CHIP = (
@@ -1093,6 +1100,35 @@ def main() -> int:
             return None
 
         check("a moved head moves the page's ageing line and its source hash", head_moves)
+
+        # The writers refuse a heading in an account, which is why removing the nesting
+        # left this gate green. A row can still hold one: it was written around the
+        # tools, or before they read every line break (F10/claude, F2/claude, final).
+        def account_is_nested() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "nested"
+            storage.mkdir()
+            seed(storage, shas, shas["c2"])
+            append_row(storage, "B-02", "account", "recorded", NESTED_ACCOUNT, shas["c1"], (WRITER,))
+            done = run_materializer(storage, "--clean-publish", workspace=repo)
+            if not done.get("ok") or not done.get("published"):
+                return f"an account holding a heading did not publish — {done.get('_diagnostic')}"
+            text = subsystem_page(storage / "docs", "B-02")
+            found = next(iter(sorted((storage / "docs" / "subsystems").glob("b02-*.html"))), None)
+            outline = html_sections(read(found)) if found else {}
+            for heading in NESTED_HEADINGS:
+                if heading in h2s(text):
+                    return f"the account opened a new section on the Markdown page: {heading!r}"
+                if heading not in h3s(section(text, "How it works")):
+                    return f"{heading!r} is not an H3 under How it works: {h3s(section(text, 'How it works'))}"
+                if heading in outline:
+                    return f"the account opened a new section on the HTML page: {heading!r}"
+                if heading not in outline.get("How it works", ""):
+                    return f"{heading!r} is not under How it works on the HTML page"
+            return None
+
+        check("an account cannot open a section, whichever line break precedes the heading", account_is_nested)
 
         # -- 8b. a status in a code span --------------------------------------
         # The projection turns `mapped` into a chip reading "Mapped", and renames a

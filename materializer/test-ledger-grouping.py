@@ -118,6 +118,8 @@ R_CAND = "CANDIDATE-REASON: scoped for the next reading"
 R_EXEMPT = "EXEMPT-REASON: emitted by the schema generator"
 R_MULTI = "MULTI-REASON: read twice at different revisions"
 R_NOREV = "NOREV-REASON: read before revisions were kept"
+R_MIX_ONE = "MIX-ONE-REASON: one revision and one row with none"
+R_MIX_TWO = "MIX-TWO-REASON: two revisions and one row with none"
 
 # (path, why_in_scope, classification, ref_sha)
 ROWS: list[tuple[str, str | None, str, str | None]] = (
@@ -133,12 +135,19 @@ ROWS: list[tuple[str, str | None, str, str | None]] = (
         ("src/multi/m1.ts", R_MULTI, "examined", SHA2),
         ("src/noreason.ts", None, "examined", SHA1),
         ("src/norev.ts", R_NOREV, "examined", None),
+        ("src/mix/a.ts", R_MIX_ONE, "examined", SHA1),
+        ("src/mix/b.ts", R_MIX_ONE, "examined", None),
+        ("src/mix/c.ts", R_MIX_TWO, "examined", SHA1),
+        ("src/mix/d.ts", R_MIX_TWO, "examined", SHA2),
+        ("src/mix/e.ts", R_MIX_TWO, "examined", None),
     ]
 )
 
 # Group heads in the order §2.4 gives: classification, then the first path.
 EXPECTED_GROUPS: list[tuple[str, str, int]] = [
     (R_CAND, "candidate", 3),
+    (R_MIX_ONE, "examined", 2),
+    (R_MIX_TWO, "examined", 3),
     (R_MULTI, "examined", 2),
     ("No reason recorded", "examined", 1),
     (R_NOREV, "examined", 1),
@@ -386,6 +395,33 @@ def main() -> int:
             return None
 
         check("no reason and no revision are labelled", missing)
+
+        # An absent revision is not a revision, so one sha and one empty row is not
+        # "2 revisions" (F18/claude, final). The row says it has none.
+        def missing_beside_a_revision() -> str | None:
+            if (why := published()):
+                return why
+            for reason, head, own in (
+                (R_MIX_ONE, f"examined at `{SHA1[:8]}`", ("", "(no revision recorded)")),
+                (
+                    R_MIX_TWO,
+                    "examined at 2 revisions",
+                    (f"(`{SHA1[:8]}`)", f"(`{SHA2[:8]}`)", "(no revision recorded)"),
+                ),
+            ):
+                g = next((g for g in groups if g["why"] == reason), None)
+                if g is None:
+                    return f"the group `{reason}` is absent"
+                if str(g["rev"]).strip() != head:
+                    return f"the group `{reason}` has the head `{g['rev']}`, not `{head}`"
+                for item, want in zip(g["items"], own, strict=True):  # type: ignore[arg-type]
+                    if want and want not in str(item):
+                        return f"`{item}` does not carry `{want}`"
+                    if not want and "(" in str(item).split("`")[-1]:
+                        return f"`{item}` carries a revision its group's head already gives"
+            return None
+
+        check("a row with no revision is not counted as a revision", missing_beside_a_revision)
 
         # -- 6. HTML: one li per path in a nested ul ----------------------------
         def html_nesting() -> str | None:
