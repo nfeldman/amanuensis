@@ -80,6 +80,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dischargeExplanations } from "../mcp-server/fixtures/explanation-discharge.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -285,7 +286,7 @@ try {
 }
 if (built.ok) {
   try {
-    const [db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary] =
+    const [db, project, subsystems, files, artifacts, claims, evidence, explanations, projectTools, dispositions, concerns, gitTools, vocabulary] =
       await Promise.all([
         import("../mcp-server/dist/db.js"),
         import("../mcp-server/dist/project.js"),
@@ -294,13 +295,14 @@ if (built.ok) {
         import("../mcp-server/dist/tools/artifacts.js"),
         import("../mcp-server/dist/tools/claims.js"),
         import("../mcp-server/dist/tools/evidence.js"),
+        import("../mcp-server/dist/tools/explanations.js"),
         import("../mcp-server/dist/tools/project.js"),
         import("../mcp-server/dist/tools/dispositions.js"),
         import("../mcp-server/dist/tools/concerns.js"),
         import("../mcp-server/dist/tools/git.js"),
         import("../mcp-server/dist/tools/vocabulary.js"),
       ]);
-    mods = { db, project, subsystems, files, artifacts, claims, evidence, projectTools, dispositions, concerns, gitTools, vocabulary };
+    mods = { db, project, subsystems, files, artifacts, claims, evidence, explanations, projectTools, dispositions, concerns, gitTools, vocabulary };
   } catch (e) {
     loadError = e && e.message ? e.message : String(e);
   }
@@ -326,6 +328,7 @@ function toolNamed(name) {
     mods?.artifacts?.artifactTools,
     mods?.claims?.claimTools,
     mods?.evidence?.evidenceTools,
+    mods?.explanations?.explanationTools,
     mods?.projectTools?.projectTools,
     mods?.dispositions?.dispositionTools,
     mods?.concerns?.concernTools,
@@ -555,6 +558,7 @@ check("recording the outcome admits the advance, and the transition is recorded"
   // last ledger write, so the advance is refused only by the prerequisite this
   // check is about.
   call("detect_changes", { current_sha: fixture.head }, fixture.ctx);
+  dischargeExplanations(call, fixture.ctx, "B-R1", fixture.base);
   const denied = refusal("update_subsystem_status", { id: "B-R1", status: "mapped" }, fixture.ctx);
   if (denied !== null) return `the advance was still refused after the outcome was recorded: ${denied}`;
   const rows = fixture.db

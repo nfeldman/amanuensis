@@ -16,6 +16,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { concernTools } from "./dist/tools/concerns.js";
 import { dispositionTools } from "./dist/tools/dispositions.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
+import { explanationTools } from "./dist/tools/explanations.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
 import { fileTools } from "./dist/tools/files.js";
@@ -24,6 +25,7 @@ import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
+import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 
 let passed = 0,
   failed = 0;
@@ -65,6 +67,7 @@ const allTools = new Map(
     ...findingTools,
     ...fieldNoteTools,
     ...evidenceTools,
+    ...explanationTools,
     ...claimTools,
     ...fileTools,
     ...artifactTools,
@@ -310,6 +313,8 @@ function advanceTo(ctx, id, status) {
       // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
       seedChallengeOutcomes(ctx, id);
       reconcileStore(ctx);
+      // …and the two answers §3.4 of the explanation spec owes at this advance.
+      dischargeExplanations(call, ctx, id, headSha(ctx));
     }
     call("update_subsystem_status", { id, status: order[i] }, ctx);
   }
@@ -1105,6 +1110,7 @@ t("phase prerequisites: happy path passes all gates", () => {
     // against the repository's tree at HEAD (§3.3).
     seedChallengeOutcomes(ctx, "B-01");
     reconcileStore(ctx);
+    dischargeExplanations(call, ctx, "B-01", headSha(ctx));
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
   } finally {

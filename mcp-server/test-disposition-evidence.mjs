@@ -67,6 +67,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -862,6 +863,7 @@ function main(mods) {
       // the next one. This control is about §2.3's attachment rule, so the
       // reconciliation is a prerequisite it satisfies rather than one it tests.
       reconcileStore(ctx);
+      dischargeExplanations(call, ctx, "B-01", headSha(ctx));
       let result;
       const toMapped = refusal(() => {
         result = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
@@ -997,13 +999,14 @@ try {
     ({ resolveProject: mods.resolveProject, ensureProjectStorage: mods.ensureProjectStorage } =
       await import("./dist/project.js"));
     mods.invariants = await import("./dist/invariants.js");
-    const [artifacts, claims, concerns, dispositions, evidence, files, gitModule, project, subsystems, vocabulary] =
+    const [artifacts, claims, concerns, dispositions, evidence, explanations, files, gitModule, project, subsystems, vocabulary] =
       await Promise.all([
         import("./dist/tools/artifacts.js"),
         import("./dist/tools/claims.js"),
         import("./dist/tools/concerns.js"),
         import("./dist/tools/dispositions.js"),
         import("./dist/tools/evidence.js"),
+        import("./dist/tools/explanations.js"),
         import("./dist/tools/files.js"),
         import("./dist/tools/git.js"),
         import("./dist/tools/project.js"),
@@ -1016,6 +1019,7 @@ try {
       concerns.concernTools,
       dispositions.dispositionTools,
       evidence.evidenceTools,
+      explanations.explanationTools,
       files.fileTools,
       gitModule.gitTools,
       project.projectTools,

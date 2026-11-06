@@ -80,6 +80,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -445,6 +446,7 @@ function main(mods) {
   /** Try the advance §3.3 guards, returning its refusal or null. */
   function advanceToMapped(ctx, id) {
     seedChallenges(ctx, id);
+    dischargeExplanations(call, ctx, id, headSha(ctx));
     return refusal(() => call("update_subsystem_status", { id, status: "mapped" }, ctx));
   }
 
@@ -1174,6 +1176,7 @@ try {
       concerns,
       dispositions,
       evidence,
+      explanations,
       files,
       gitModule,
       materialize,
@@ -1186,6 +1189,7 @@ try {
       import("./dist/tools/concerns.js"),
       import("./dist/tools/dispositions.js"),
       import("./dist/tools/evidence.js"),
+      import("./dist/tools/explanations.js"),
       import("./dist/tools/files.js"),
       import("./dist/tools/git.js"),
       import("./dist/tools/materialize.js"),
@@ -1199,6 +1203,7 @@ try {
       concerns.concernTools,
       dispositions.dispositionTools,
       evidence.evidenceTools,
+      explanations.explanationTools,
       files.fileTools,
       gitModule.gitTools,
       materialize.materializeTools,
