@@ -1,5 +1,5 @@
 {
-  "carried_decided": 13,
+  "carried_decided": 14,
   "records": [
     {
       "id": "B01-R1",
@@ -51,6 +51,10 @@
     },
     {
       "id": "B07-R1",
+      "outcome": "successor-finding"
+    },
+    {
+      "id": "B07-R2",
       "outcome": "successor-finding"
     }
   ]
