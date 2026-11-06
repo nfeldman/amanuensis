@@ -136,6 +136,8 @@ READER = "src/reader.py"
 REGISTRY = "src/registry.py"
 WRITER = "src/writer.py"
 OTHER = "src/other.py"
+# Paths git quotes, trims or reads as pathspec magic unless it is asked not to.
+AWKWARD = (" lead.py", ":magic.py", "src/café.py")
 
 PURPOSE_B01 = "PURPOSE-B-01 the read path hands each caller a committed snapshot of the rows."
 ACCOUNT_B01 = (
@@ -189,7 +191,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def build_repository(repo: Path) -> dict[str, str]:
-    """Three commits: C1 has every file, C2 changes only `other`, C3 changes `reader`."""
+    """C1 has every file, C2 changes only `other`, C3 `reader`; C4 adds and C5 changes the awkward paths."""
 
     repo.mkdir(parents=True)
     git(repo, "init", "-q", "-b", "main")
@@ -205,7 +207,17 @@ def build_repository(repo: Path) -> dict[str, str]:
     (repo / READER).write_text(f"# {READER}\nVERSION = 3\n")
     git(repo, "commit", "-q", "-am", "c3")
     c3 = git(repo, "rev-parse", "HEAD")
-    return {"c1": c1, "c2": c2, "c3": c3}
+    for rel in AWKWARD:
+        (repo / rel).write_text(f"# {rel}\nVERSION = 4\n")
+    git(repo, "add", "-A", "--", ".")
+    git(repo, "commit", "-q", "-m", "c4")
+    c4 = git(repo, "rev-parse", "HEAD")
+    for rel in AWKWARD:
+        (repo / rel).write_text(f"# {rel}\nVERSION = 5\n")
+    git(repo, "add", "-A", "--", ".")
+    git(repo, "commit", "-q", "-m", "c5")
+    c5 = git(repo, "rev-parse", "HEAD")
+    return {"c1": c1, "c2": c2, "c3": c3, "c4": c4, "c5": c5}
 
 
 # ---------------------------------------------------------------------------
@@ -339,6 +351,31 @@ def add_violations(storage: Path, c1: str) -> None:
                 "INSERT INTO explanation_evidence (explanation_id, evidence_id) VALUES (?, ?)",
                 (cur.lastrowid, evidence_id),
             )
+    db.commit()
+    db.close()
+
+
+def add_awkward_purpose(storage: Path, c4: str) -> None:
+    """B-07's newest purpose, written at C4 and citing the paths C5 changes."""
+
+    db = sqlite3.connect(storage / "memory.db")
+    cur = db.cursor()
+    cur.execute(
+        "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+        " ref_sha, session_id) VALUES ('subsystem', 'B-07', 'purpose', 'recorded', ?, ?, 'ex11')",
+        ("It cites files whose names git would rather quote.", c4),
+    )
+    explanation_id = cur.lastrowid
+    for rel in AWKWARD:
+        cur.execute(
+            "INSERT INTO evidence (file_path, ref_sha, kind, session_id)"
+            " VALUES (?, ?, 'code-verified', 'ex11')",
+            (rel, c4),
+        )
+        cur.execute(
+            "INSERT INTO explanation_evidence (explanation_id, evidence_id) VALUES (?, ?)",
+            (explanation_id, cur.lastrowid),
+        )
     db.commit()
     db.close()
 
@@ -488,6 +525,15 @@ def main() -> int:
                 stores["lost"] = new_store("lost", "d" * 40)
                 # No workspace bound, and the store's parent is not a repository.
                 stores["unbound"] = new_store("unbound", shas["c2"], bound=False)
+                # H = C5: every cited path is one git quotes, trims or reads as magic.
+                awkward = root / "awkward"
+                awkward.mkdir()
+                seed(awkward, shas, shas["c5"])
+                add_awkward_purpose(awkward, shas["c4"])
+                stores["awkward"] = (
+                    awkward,
+                    run_materializer(awkward, "--output", str(awkward / "docs"), workspace=repo),
+                )
             except Exception as exc:
                 seed_error = f"the fixture could not be seeded — {scrub(exc)}"
 
@@ -684,6 +730,21 @@ def main() -> int:
             return None
 
         check("the ageing sentence is computed for none, some, and not measured", ageing)
+
+        # A changed file must read as changed whatever its name: git quotes a
+        # non-ASCII path and the set intersection missed it, so "None of the 1
+        # file(s)" was printed over a real change (slice-S2, F4/codex).
+        def ageing_awkward_paths() -> str | None:
+            if (why := published("awkward")):
+                return why
+            paths = ", ".join(f"`{rel}`" for rel in sorted(AWKWARD))
+            sentence = f"{len(AWKWARD)} of the {len(AWKWARD)} file(s) it cites changed since: {paths}."
+            body = section(page("awkward", "B-07"), "Purpose")
+            if provenance(shas["c4"], len(AWKWARD), sentence) not in body:
+                return f"a change to a path git quotes, trims or reads as magic is misreported: {body.strip()!r}"
+            return None
+
+        check("the ageing sentence sees a change to a path git would quote", ageing_awkward_paths)
 
         # -- 6. the effective-row rule and its shared cases --------------------
         def effective_cases() -> str | None:
