@@ -325,6 +325,8 @@ everything.
   overturn each confirmed finding).
 - `references/phase-5-packaging.md` — Phase 5 detail (master plan
   updates, materialization, session close).
+- `references/explanations.md` — what a purpose and an account contain,
+  when each is written, and the tools that record, decline and read them.
 - `references/notes.md` — conversational observer mode.
 - `references/memory-audit.md` — hygiene sweep.
 - `references/refresh.md` — discharge drift: reconcile scope, then

@@ -228,6 +228,20 @@
       ]
     },
     {
+      "id": "explanation-mapped-discharge",
+      "note": "New, explanation spec.md §3.4. Checked on its own path by both status writers, since the forward walk returns early from deferred. Discharge or decline, never a floor.",
+      "refuses": ["update_subsystem_status", "upsert_subsystem"],
+      "instructs": ["record_explanation", "decline_explanation"],
+      "server": {
+        "file": "src/invariants.ts",
+        "phrase": "Either record_explanation with the evidence it was written from, or decline_explanation with the reason none is written"
+      },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-5-packaging.md" },
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" }
+      ]
+    },
+    {
       "id": "explanation-record-no-subsystem",
       "note": "New, spec.md §3.3 R1.",
       "refuses": ["record_explanation"],

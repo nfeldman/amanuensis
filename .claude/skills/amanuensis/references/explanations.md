@@ -14,6 +14,51 @@ bytes. The project has no purpose slot: its purpose is the thesis in
 Declining is a real answer. A session that cannot say something true and
 specific says so, with the reason, and the reason is kept.
 
+## What to write
+
+**Purpose** (subsystem): one paragraph on what this part is for, in terms of what
+the rest of the system or its users get from it. Not a file list, not a
+restatement of scope.
+
+**Account** (subsystem), in this order, as short prose:
+
+1. the moving parts and how control or data passes through them;
+2. the rules it enforces and where each is enforced, which is where the business
+   logic is;
+3. what it depends on and what depends on it;
+4. what a newcomer is likely to get wrong;
+5. where to start reading.
+
+**Account** (project): what the system does and for whom; the main parts and how
+one request or record passes through them end to end; the rules that hold
+everywhere (invariants, trust boundaries, conventions); and the concepts a reader
+has to hold. Each such concept is a vocabulary term with an expansion, and the
+account uses the term. A concept that already exists as a term scoped to a
+subsystem is used as it stands, with its expansion written or revised through
+`define_term`; its scope is not changed. A new concept that belongs to no one
+subsystem is defined without `subsystem_id`. Either way the term's `first_seen` is
+an anchor *"whose revision must resolve and whose path must exist in that
+revision's tree"*.
+
+Rules for all three: written for an experienced practitioner new to this codebase;
+the codebase's own vocabulary; no survey-status or coverage language; every
+non-trivial statement traceable to attached evidence; when the session cannot say
+something true and specific, it declines with the reason.
+
+There is no length floor. A short explanation that is true is better than a long
+one written to look finished. Declining with a reason is a complete answer, and a
+later pass that knows more records over it.
+
+## When each is written
+
+| Phase | What happens |
+|---|---|
+| Structural (`phase-2-structural.md`) | After the advance to `structural`, record the purpose and a draft account, or decline each. |
+| Adversarial (`phase-4-adversarial.md`) | Read both with `get_explanations`, then against the code. A sentence the code contradicts becomes a field note with the evidence. |
+| Packaging (`phase-5-packaging.md`) | Read the account with `get_explanations`, then revise it by recording a new version or confirm it stands. The advance to `mapped` refuses a slot that is neither recorded nor declined. |
+| Onboarding (`onboarding.md`) | The project account is recorded once the first subsystem reaches `structural`, and revised at each later packaging. |
+| Refresh (`refresh.md`) | An explanation that cites changed files is read with `get_explanations` and revised or confirmed. |
+
 ## Tools
 
 The two writers need an active session, attribute the row to it, and resolve

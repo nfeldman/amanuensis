@@ -46,6 +46,10 @@ Find those.
   exactly those rows — the prefix is matched on the server, so a
   target cannot be lost to a filter you forgot to write. Every one of
   them is a target; none is exempt for being small.
+- The subsystem's **purpose and account**. Read what Phase 2 recorded
+  with `get_explanations(subject_type="subsystem", subject_id="<sid>")`,
+  then read it against the code. A slot Phase 2 declined has no sentences
+  to test; note whether this pass can now say what it could not.
 
 ### 2. For each target, formulate the disproof question
 
@@ -150,6 +154,12 @@ And for each claim outcome:
   for claim ${claim_key} did not overturn it", location=<sid>)`
   alongside the artifact entry.
 
+For the purpose and the account, record a field note naming any sentence
+the code contradicts, with the evidence: `add_evidence` for what you read,
+then `add_field_note(category="anomaly", observation="<slot> says '<the
+sentence>'; <what the code does> at <file:symbol@sha>", location=<sid>)`.
+Phase 5 reads these notes when it revises the account.
+
 ### 6. Contradiction detection across sessions
 
 Before handing back, check for contradictions between your findings
@@ -174,6 +184,7 @@ Return to the coordinator with a one-line summary:
 - Counts per claim outcome (`survived`, `overturned`, `superseded`),
   and the `claim_key` of any target you did not reach.
 - Contradictions detected and their resolutions.
+- Sentences of the purpose or account the code contradicts.
 - Linchpin-dependent dispositions that remain — these are the
   legitimate ongoing fragility the materializer will surface.
 - Open questions logged this phase.

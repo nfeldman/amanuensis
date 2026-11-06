@@ -207,6 +207,22 @@ will see the queue at the Phase 7 checkpoint.
   Phase 7 checkpoint summary; the render is published either way.
 - Call `end_session(outcome="completed")`.
 
+The thesis under `## What is this codebase?` answers what the system does in a
+paragraph. The longer explanation is the **project account**, which
+`references/explanations.md` describes. No subsystem has been read yet, so it
+is not written here: `record_explanation` refuses until one has, saying *"no
+subsystem has been read to 'structural'"*. The project account is recorded once
+the first subsystem reaches `structural`, with `record_explanation(
+subject_type="project", slot="account", body, evidence_ids, ref_sha)`, or
+declined with `decline_explanation` and the reason. It is revised at each later
+packaging.
+
+A subsystem owes its own purpose and account before it reaches `mapped`. The
+advance refuses, through `update_subsystem_status` and `upsert_subsystem` alike,
+when either is neither recorded nor declined: *"Either record_explanation with
+the evidence it was written from, or decline_explanation with the reason none is
+written"*.
+
 Commit at every phase boundary. Storage is a git repo;
 `commit_phase_gate(label="Onboarding Phase N · <name>")` covers it.
 

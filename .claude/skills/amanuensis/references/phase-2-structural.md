@@ -226,17 +226,39 @@ Return to the coordinator with a one-line summary:
 - Vocabulary additions.
 - Field notes from reading.
 - Open questions logged this phase.
+- A purpose and a draft account with the `add_evidence` ids each was
+  written from, or the reason none can be written.
 
-The coordinator advances status to `structural` and starts Phase 3
-immediately. No pause. That advance is refused if step 7 recorded no
-claim, so hand back only once at least one current `<sid>/` claim
-exists.
+The coordinator advances status to `structural`, answers the two
+explanation slots below, and starts Phase 3 immediately. No pause. That
+advance is refused if step 7 recorded no claim, so hand back only once at
+least one current `<sid>/` claim exists.
 
 For seams where you genuinely cannot tell the contract from this
 side (e.g. ordering depends on a runtime config you can't read),
 fill in what you can and
 `record_open_question(category="ambiguous-evidence", what_assumed=...)`
 for the rest.
+
+## After the advance
+
+Once the status reads `structural`, record the purpose and a draft account,
+or decline each. `references/explanations.md` says what each contains. Both
+writers refuse earlier, since *"An explanation is written by a pass that has
+read the subsystem"*.
+
+```
+record_explanation(subject_type="subsystem", subject_id, slot="purpose",
+  body, evidence_ids, ref_sha=<session sha>)
+record_explanation(subject_type="subsystem", subject_id, slot="account",
+  body, evidence_ids, ref_sha=<session sha>)
+```
+
+Where the session cannot say something true and specific yet, use
+`decline_explanation(subject_type="subsystem", subject_id, slot, reason,
+ref_sha)` for that slot. Declining with a reason is a complete answer.
+The account is a draft at this point: Phase 4 reads it against the code and
+Phase 5 revises or confirms it.
 
 ## Rules
 

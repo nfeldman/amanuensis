@@ -318,11 +318,11 @@ One per mapped subsystem. Written incrementally by the phase agents.
 **Status**: [current status]
 **Jump-in reading**: [2–3 files]
 
-## Tier 1 summary
+## Purpose and account
 
-[The compressed summary for future consultation. Produced during Phase
-5 packaging. Uses the codebase's own vocabulary; maintains seven-field
-invariant (what, how, where, when, why, confidence, see-also).]
+[Not written here. The compressed summary for future consultation is the
+recorded account: read it with `get_explanations(subject_type="subsystem",
+subject_id="<id>")`. `references/explanations.md` says what it contains.]
 
 ## Structural inventory (Phase 2)
 

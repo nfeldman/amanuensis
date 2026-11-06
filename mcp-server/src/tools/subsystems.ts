@@ -13,6 +13,7 @@ import {
   readSubsystemStatus,
   recordStatusTransition,
   requireActiveSession,
+  requireExplanationDischarge,
   STATUS_ORDER,
   type SubsystemStatus,
 } from "../invariants.js";
@@ -133,6 +134,17 @@ export const subsystemTools: ToolDefinition[] = [
         status,
         ctx.project.workspacePath,
       );
+      // On its own path, since the forward walk returns early from `deferred`
+      // and a write into `mapped` from there owes the same two answers.
+      reported.push(
+        ...requireExplanationDischarge(
+          ctx.db,
+          id,
+          previousStatus,
+          status,
+          ctx.project.workspacePath,
+        ),
+      );
 
       // COALESCE on the UPDATE path: omitted priority leaves the
       // prior value alone. Pass explicit priority=null in the future
@@ -206,6 +218,16 @@ export const subsystemTools: ToolDefinition[] = [
         currentStatus,
         status,
         ctx.project.workspacePath,
+      );
+      // §3.4, on its own path — see `upsert_subsystem` above.
+      reported.push(
+        ...requireExplanationDischarge(
+          ctx.db,
+          id,
+          currentStatus,
+          status,
+          ctx.project.workspacePath,
+        ),
       );
 
       ctx.db

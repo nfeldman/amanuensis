@@ -56,6 +56,37 @@ rehash_artifact(path, ref_sha=<session sha>)
 This is what the materializer reads to decide whether to re-render
 the page.
 
+### Settle the explanations
+
+Before materializing, read what the earlier phases recorded:
+
+```
+get_explanations(subject_type="subsystem", subject_id=<id>)
+```
+
+Read the account against what Phases 3 and 4 found, including any field
+note naming a sentence the code contradicts. Then either revise it by
+recording a new version, or confirm it stands:
+
+- **Revise.** `record_explanation(subject_type="subsystem", subject_id,
+  slot, body, evidence_ids, ref_sha=<session sha>)`. The newest row is
+  effective and the earlier one is kept. Do the same for a purpose this
+  pass has shown to be wrong, or for a slot declined earlier that this
+  pass can now answer.
+- **Confirm.** Leave the row and say so in the survey-pass summary. If
+  the files it cites have changed and it still holds, record the same body
+  at the session revision, which is what moves the revision a reader sees
+  on the page.
+
+A slot that still cannot be said is declined with the reason:
+`decline_explanation(subject_type="subsystem", subject_id, slot, reason,
+ref_sha)`. Declining with a reason is a complete answer.
+`references/explanations.md` says what each contains.
+
+Do the same for the project account:
+`get_explanations(subject_type="project")`, then revise it where this pass
+changed what it says, or confirm it stands.
+
 ### 5. Materialize
 
 ```
@@ -127,6 +158,23 @@ The DB enforces the knowledge-depth contract; if this raises
 `ToolError`, a Phase 1-4 deliverable is missing. Investigate;
 don't force.
 
+Every write into `mapped`, from any status including `deferred`, also needs
+the effective purpose and the effective account each to be recorded or
+declined. Otherwise it refuses:
+
+```
+cannot advance <sid> to 'mapped': <what is missing> for this subsystem. Either
+record_explanation with the evidence it was written from, or decline_explanation with the
+reason none is written. There is no length floor, and declining is a real answer that has to be
+said out loud.
+```
+
+`<what is missing>` is `no purpose is recorded or declined`, `no account is
+recorded or declined`, or both joined by `and`. A row whose revision no longer
+resolves is named after the sentence and does not count. Without a bound
+workspace a slot with a row proceeds and the result's `reported` says its
+revision was not resolved; a slot with no row is still refused.
+
 ### 10. Commit the final gate
 
 ```
@@ -147,6 +195,7 @@ Emit the survey-pass summary (status block, not a gate):
 - Linchpin-dependent findings that remain.
 - Field notes that came out of the pass.
 - Open questions logged this pass (by category).
+- Whether the purpose and account were revised, confirmed or declined.
 - Seams that became assessable as a result of this pass.
 - The exact `html_entrypoint` returned by `materialize_docs`.
 

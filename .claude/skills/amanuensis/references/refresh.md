@@ -95,6 +95,15 @@ A file that invalidates a claim is the reason this loop exists. Treating
 it as a flag to lower is how a conspectus rots while reporting itself
 healthy.
 
+**The subsystem's explanation.** A refresh that re-examines a subsystem whose
+explanation cites changed files reads it with
+`get_explanations(subject_type="subsystem", subject_id=<id>)`, whose
+`evidence_ids` name what each slot cites, and revises or confirms it. To revise,
+`record_explanation` at HEAD; *"an explanation cites the evidence it was written
+from"*, so attach fresh evidence first. To confirm a body that still holds,
+record the same text at HEAD, which is what moves the revision on the page. The
+project account is read and revised the same way.
+
 ### 4. Checkpoint as you go
 
 The backlog can be large. Work it in heat order, and

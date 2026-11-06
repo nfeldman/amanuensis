@@ -401,10 +401,20 @@ export function selectExplanation<R extends ExplanationCandidate>(
   return { state, row: state === "not-recorded" ? null : effective, checked, earlierRows };
 }
 
+/** A selection, and the newer rows it passed over because their revision does not resolve. */
+export interface ExplanationReading extends ExplanationSelection {
+  unreachable: ExplanationRow[];
+}
+
 /**
  * One slot's effective explanation, re-derived from the rows at every read
  * (spec.md §3.2). The gate of the `mapped` advance, the tools and the read tool
  * all call this, and nothing keeps a flag.
+ *
+ * Eligibility is read at the subsystem's own status unless `atStatus` names
+ * another. The gate names its target: a parked subsystem is `deferred` and so
+ * not eligible, and the question the advance asks is whether the explanation
+ * it wrote before it was parked stands now that it is coming out at `mapped`.
  */
 export function readExplanation(
   db: DB,
@@ -412,7 +422,8 @@ export function readExplanation(
   subjectType: string,
   subjectId: string,
   slot: string,
-): ExplanationSelection {
+  atStatus?: SubsystemStatus,
+): ExplanationReading {
   const rows = db
     .prepare(
       `SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id, recorded_at
@@ -422,7 +433,9 @@ export function readExplanation(
     )
     .all(subjectType, subjectId, slot) as ExplanationRow[];
   const eligible =
-    subjectType === "project" ? true : isExplanationEligible(readSubsystemStatus(db, subjectId));
+    subjectType === "project"
+      ? true
+      : isExplanationEligible(atStatus ?? readSubsystemStatus(db, subjectId));
   let resolvable: Set<string> | null = null;
   if (workspacePath !== null) {
     const resolved = resolveWorkspaceCommits(
@@ -431,7 +444,80 @@ export function readExplanation(
     );
     resolvable = new Set([...resolved].filter(([, sha]) => sha !== null).map(([key]) => key));
   }
-  return selectExplanation(rows, resolvable, eligible);
+  const selection = selectExplanation(rows, resolvable, eligible);
+  const reachable = resolvable;
+  const unreachable =
+    reachable === null || !eligible
+      ? []
+      : rows.filter(
+          (row) =>
+            !reachable.has(row.ref_sha) && (selection.row === null || row.id > selection.row.id),
+        );
+  return { ...selection, unreachable };
+}
+
+/**
+ * §3.4, checked at every write into `mapped`, on its own path.
+ *
+ * Both status writers call this directly, beside {@link enforceForwardPrerequisites}
+ * and after it, and not from the `case "mapped"` branch: a transition from
+ * `deferred` returns early from the forward walk, and `deferred` would otherwise
+ * be a door around the check. After, so the first refusal a caller sees is still
+ * the phase that was skipped; a write that leaves a `mapped` subsystem `mapped`
+ * climbed nothing and owes nothing. The rule is forward-only: an existing store
+ * is swept by the census (§2.5), not here.
+ *
+ * Discharge or decline, never a floor, for the reasons {@link requireVocabularyDischarge}
+ * records. What binds is that each slot was answered, in one of the two ways an
+ * honest answer can take. Whether the answer is true is the adversarial pass's
+ * obligation and is not checked here.
+ *
+ * Without a bound workspace `readExplanation` takes the newest row of a slot as
+ * effective and is unchecked, so a slot with a row proceeds and the advance says
+ * its revision was not resolved; a slot with no row is still refused, since no
+ * git is needed to see that nothing was written. An empty array is the ordinary
+ * result.
+ */
+export function requireExplanationDischarge(
+  db: DB,
+  subsystemId: string,
+  currentStatus: SubsystemStatus | null,
+  targetStatus: SubsystemStatus,
+  workspacePath: string | null,
+): string[] {
+  if (targetStatus !== "mapped" || currentStatus === "mapped") return [];
+  const readings = (["purpose", "account"] as const).map((slot) => ({
+    slot,
+    reading: readExplanation(db, workspacePath, "subsystem", subsystemId, slot, targetStatus),
+  }));
+  const missing = readings.filter(({ reading }) => reading.state === "not-recorded");
+  if (missing.length === 0) {
+    if (readings.every(({ reading }) => reading.checked)) return [];
+    return [
+      `${subsystemId} advanced to 'mapped' without a bound workspace, so the revisions of its ` +
+        `purpose and account were not resolved: whether each still opens at the revision it ` +
+        `names is unverified for this advance.`,
+    ];
+  }
+  // Name what was found and passed over: "nothing is recorded" and "an account is
+  // recorded at a revision that is gone" are the same refusal and different repairs.
+  const rejected = missing.flatMap(({ slot, reading }) => {
+    const newest = reading.unreachable[0];
+    return newest
+      ? [
+          `the newest ${slot} is anchored at ${newest.ref_sha.slice(0, 7)}, which the workspace ` +
+            `can no longer reach`,
+        ]
+      : [];
+  });
+  const found = rejected.length > 0 ? ` What is recorded: ${rejected.join("; ")}.` : "";
+  const named = missing.map(({ slot }) => `no ${slot} is recorded or declined`).join(" and ");
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'mapped': ${named} for this subsystem. Either ` +
+      `record_explanation with the evidence it was written from, or decline_explanation with the ` +
+      `reason none is written. There is no length floor, and declining is a real answer that has ` +
+      `to be said out loud.${found}`,
+  );
 }
 
 /**
