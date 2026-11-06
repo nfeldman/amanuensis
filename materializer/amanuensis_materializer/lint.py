@@ -168,3 +168,19 @@ def orientation_violations(text: str | None) -> list[str]:
         seen.add(violation)
         violations.append(violation)
     return violations
+
+
+# §3.6: a recorded explanation or declination reason is printed only when the
+# orientation lint clears it. The sentence that stands in its place lives here,
+# beside the rule, so the renderer that prints it and the read-back that expects
+# it cannot word it differently.
+EXPLANATION_REFUSED = (
+    "The recorded {slot} carries survey-status vocabulary and was not published;"
+    " record a corrected version."
+)
+
+
+def explanation_refusal(slot: str) -> str:
+    """The sentence a page prints where a refused `purpose` or `account` would be."""
+
+    return EXPLANATION_REFUSED.format(slot=slot)

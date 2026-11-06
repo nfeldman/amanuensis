@@ -537,7 +537,7 @@ class Materializer:
             plan.append(
                 PagePlan(
                     path=subsystem_page(s["id"], s["name"]),
-                    build=(lambda row=s: renderers.render_subsystem(conn, storage, row)),
+                    build=(lambda row=s: renderers.render_subsystem(conn, storage, row, warn=self._warn)),
                     xref_id=s["id"],
                     xref_display=f"{s['id']}",
                     title=s["name"],

@@ -31,7 +31,7 @@ from .diagrams import (
     staleness_map,
     subsystem_dependency_view,
 )
-from .lint import composite_index_violations, orientation_violations
+from .lint import composite_index_violations, explanation_refusal, orientation_violations
 from .manifest import sha256_bytes, sha256_json
 from .readback import (
     CARRIED_HEADING,
@@ -46,6 +46,7 @@ from .readback import (
     WHY_NO_TREE,
     WHY_NONE_AT_ALL,
     WHY_NONE_RECORDED,
+    ExplanationReading,
     ReconciliationStanding,
     anchor_opens,
     carried_anchor,
@@ -53,13 +54,18 @@ from .readback import (
     carried_page,
     carried_records,
     carry_was_run,
+    effective_explanations,
+    explanation_rows,
     finding_marker,
     finding_page,
+    git_answer,
     ledger_stale_anchor,
     ledger_stale_marker,
     reconciliation_standing,
     resolve_workspace,
+    revision_resolves,
     stale_marker,
+    workspace_is_bound,
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
@@ -158,6 +164,26 @@ SURVEY_NOTE_LABEL = (
 NARRATIVE_LABEL = "Narrative from the survey artifact; not individually bound to a revision"
 SURVEY_NARRATIVE = "Survey narrative"
 NARRATIVE_POINTER = "The survey artifact is rendered above, under Structure."
+
+# §3.6: the explanation a subsystem page leads with. The state word the
+# declination sentences carry comes from the enum source, so a page and the
+# contract cannot word the same state differently.
+_DISCHARGE_LABELS = labels("explanation_discharge")
+_DECLINED = _DISCHARGE_LABELS.get("declined", "declined").lower()
+PURPOSE_DECLINED = (
+    f"{NO_PURPOSE_SENTENCE}: a survey session {_DECLINED} to write one at"
+    " `{sha}`. {reason}"
+)
+ACCOUNT_DECLINED = (
+    f"A survey session {_DECLINED} to write an account of how this subsystem works"
+    " at `{sha}`. {reason}"
+)
+PROVENANCE_LINE = "*Written by a survey session at `{sha}` from {n} evidence row(s). {ageing}*"
+AGEING_UNCHANGED = "None of the {n} file(s) it cites has changed since."
+AGEING_CHANGED = "{k} of the {n} file(s) it cites changed since: {paths}."
+AGEING_NOT_MEASURED = "Whether the files it cites have changed since is not measured here."
+AGEING_PATH_LIMIT = 5
+NARRATIVE_IN_RECORD = "The survey artifact is rendered below, under Survey record."
 
 # §9.1's five structural categories, as the `claim_key` segment that names each
 # and the heading it groups under.  Any other segment a survey recorded is its
@@ -687,6 +713,70 @@ def _prose_source(storage: Path, rel: str) -> dict[str, str]:
     return {f"prose:{rel}": sha256_bytes(p.read_bytes())}
 
 
+def _ageing_sentence(
+    workspace: Path, bound: bool, record: Mapping[str, Any], head: str
+) -> str:
+    """How far the files an explanation cites have moved since it was written (§3.6).
+
+    Computed by `git diff` between the explanation's revision and the checked
+    revision over the cited files, and never authored. Anything that cannot be
+    measured says so; "not measured" is never rendered as "unchanged".
+    """
+
+    files = sorted({str(path) for path in record.get("cited_files") or []})
+    ref_sha = str(record.get("ref_sha") or "")
+    if not (
+        bound
+        and files
+        and head
+        and revision_resolves(workspace, ref_sha)
+        and revision_resolves(workspace, head)
+    ):
+        return AGEING_NOT_MEASURED
+    # `git_answer`, not `_git_output`: an empty diff is the answer "nothing moved",
+    # which `_git_output` folds into "git could not answer".
+    changed = git_answer(
+        workspace, "diff", "--name-only", "--no-renames", ref_sha, head, "--", *files
+    )
+    if changed is None:
+        return AGEING_NOT_MEASURED
+    moved = sorted(set(changed.splitlines()) & set(files))
+    if not moved:
+        return AGEING_UNCHANGED.format(n=len(files))
+    shown = ", ".join(f"`{path}`" for path in moved[:AGEING_PATH_LIMIT])
+    if len(moved) > AGEING_PATH_LIMIT:
+        shown += ", and others"
+    return AGEING_CHANGED.format(k=len(moved), n=len(files), paths=shown)
+
+
+def _provenance_line(
+    workspace: Path, bound: bool, record: Mapping[str, Any], head: str
+) -> str:
+    return PROVENANCE_LINE.format(
+        sha=str(record["ref_sha"])[:8],
+        n=len(record.get("cited_files") or []),
+        ageing=_ageing_sentence(workspace, bound, record, head),
+    )
+
+
+def _published_explanation(
+    sid: str, slot: str, body: str, warn: Callable[[str], None] | None
+) -> tuple[str, bool]:
+    """The text to print for a recorded body or declination reason, and whether it is the body.
+
+    The orientation lint decides (§3.6). A refused text is replaced by the
+    refusal sentence and reported through `warn`, which fails the publish, so
+    survey-status vocabulary cannot reach a page through a slot a session wrote.
+    """
+
+    violations = orientation_violations(body)
+    if not violations:
+        return body, True
+    if warn is not None:
+        warn(f"{sid}: the recorded {slot} was not published because it " + "; ".join(violations))
+    return explanation_refusal(slot), False
+
+
 def _db_source(name: str, data: Any) -> dict[str, str]:
     return {f"db:{name}": sha256_json(data)}
 
@@ -1161,7 +1251,12 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     return text, _db_source("master-plan:subs", subs) | _db_source("master-plan:finds", finds)
 
 
-def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any]) -> RenderResult:
+def render_subsystem(
+    conn: sqlite3.Connection,
+    storage: Path,
+    s: dict[str, Any],
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult:
     """One subsystem, in §7.3's order.
 
     What changed and why: the scope statement leads under its own **Scope**
@@ -1177,6 +1272,11 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     defects link to the page their resolution state selects and carry no
     durable marker, because a finding renders as a full record exactly once
     (§6.2).
+
+    A recorded or declined purpose leads the page and a recorded account follows
+    Start here (§3.6); both come from the effective explanation, and neither
+    heading renders without one. `warn` receives each orientation-lint refusal
+    so the publish can turn red on it.
     """
 
     sid = s["id"]
@@ -1273,6 +1373,22 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             survey_prose += prose_path.read_text() + "\n\n"
             prose_sources.update(_prose_source(storage, sv["path"]))
 
+    # The effective explanation (§3.2), read by the function the read-back reads
+    # so the page and its custody check cannot name different rows.
+    readings = effective_explanations(conn, storage, str(sid))
+    unrecorded = ExplanationReading("not-recorded", None, False)
+    purpose = readings.get(("subsystem", str(sid), "purpose"), unrecorded)
+    account = readings.get(("subsystem", str(sid), "account"), unrecorded)
+    explanations = [r for r in explanation_rows(conn) if r["subject_id"] == sid]
+    checked_head = str(
+        (row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get(
+            "last_checked_sha"
+        )
+        or ""
+    )
+    workspace = resolve_workspace(storage)
+    bound = workspace_is_bound(workspace)
+
     out = [
         f"# {sid} — {s['name']}",
         "",
@@ -1280,6 +1396,23 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         f"**Layer**: {s.get('layer') or '—'}",
         "",
     ]
+
+    # 0. Purpose — only from an effective record, recorded or declined. A page
+    #    with neither keeps today's opening: Scope and the no-purpose sentence.
+    if purpose.state in ("recorded", "declined") and purpose.row is not None:
+        text, is_body = _published_explanation(
+            str(sid), "purpose", str(purpose.row["body"]), warn
+        )
+        out += ["## Purpose", ""]
+        if purpose.state == "recorded":
+            out += [_nest_prose(text.strip(), 2), ""]
+            if is_body:
+                out += [_provenance_line(workspace, bound, purpose.row, checked_head), ""]
+        else:
+            out += [
+                PURPOSE_DECLINED.format(sha=str(purpose.row["ref_sha"])[:8], reason=text.strip()),
+                "",
+            ]
 
     # 1. Scope — verbatim, under that heading, never as a purpose sentence.
     #
@@ -1289,7 +1422,8 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     # heading and reads as a statement of what the subsystem is for, which is
     # the relabelling §3.1 forbids and BP6 names (F10/codex).
     out += ["## Scope", ""]
-    out += [NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE, ""]
+    if purpose.state == "not-recorded":
+        out += [NO_PURPOSE_WITH_SCOPE if s.get("scope") else NO_PURPOSE_ALONE, ""]
     if s.get("scope"):
         out += [str(s["scope"]), ""]
     elif files:
@@ -1312,12 +1446,23 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
     if s.get("jump_in_reading"):
         out += ["## Start here", "", str(s["jump_in_reading"]), ""]
 
+    # 2b. How it works — the recorded account, nested so that it cannot open a
+    #     heading above H3. A declined account prints one sentence under the
+    #     survey record instead.
+    if account.state == "recorded" and account.row is not None:
+        text, is_body = _published_explanation(
+            str(sid), "account", str(account.row["body"]), warn
+        )
+        out += ["## How it works", "", _nest_prose(text.strip(), 2), ""]
+        if is_body:
+            out += [_provenance_line(workspace, bound, account.row, checked_head), ""]
+
     # 3. Structure — current claims, grouped by what each one records (§7.3).
     #    With none, §9.1's literal and the labelled narrative fallback: unbound
     #    prose is never presented where a revision-bound inventory belongs.
     out += ["## Structure", ""]
     placement = narrative_placement(
-        has_account=False,
+        has_account=account.state == "recorded",
         has_claims=bool(claims),
         has_artifact=bool(survey_prose.strip()),
     )
@@ -1369,6 +1514,12 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                 + (f" Its source is {provenance}." if provenance else ""),
                 "",
                 _nest_prose(survey_prose.strip(), 3),
+                "",
+            ]
+        elif placement == "survey-record":
+            out += [
+                f"No structural claim is recorded for this subsystem. {NARRATIVE_IN_RECORD}"
+                + (f" Its source is {provenance}." if provenance else ""),
                 "",
             ]
         else:
@@ -1552,6 +1703,14 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
 
     # 8. Survey record — apparatus, last.
     out += ["## Survey record", ""]
+    if account.state == "declined" and account.row is not None:
+        reason, _is_body = _published_explanation(
+            str(sid), "account", str(account.row["body"]), warn
+        )
+        out += [
+            ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=reason.strip()),
+            "",
+        ]
     out += ["### File ledger", ""]
     if files:
         out += _ledger_groups(str(sid), files)
@@ -1611,6 +1770,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
         | _db_source(f"subsystem:{sid}:standing", standing)
         | _db_source(f"subsystem:{sid}:claims", claims)
         | _db_source(f"subsystem:{sid}:artifacts", survey_rows)
+        | _db_source(f"subsystem:{sid}:explanations", {"head": checked_head, "rows": explanations})
         | prose_sources
     )
     return text, sources

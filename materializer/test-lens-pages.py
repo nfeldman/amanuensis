@@ -258,6 +258,7 @@ SUBSYSTEMS: tuple[tuple[str, str, str, str, str | None, str | None, str | None],
     ("F-02", "Widgets", "deferred", "frontend", None, None, None),
 )
 SUBSYSTEM_COUNT = len(SUBSYSTEMS)
+UNRECORDED_PURPOSE = "LENS-PURPOSE-NOT-EFFECTIVE the console prints status."
 DEFERRED_SUBSYSTEMS = tuple(s[0] for s in SUBSYSTEMS if s[2] == "deferred")
 
 # Three paths that collide under `slugify` (every non-alphanumeric run becomes
@@ -482,6 +483,21 @@ def seed(storage: Path) -> None:
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
         list(SUBSYSTEMS),
     )
+    # Explanation rows that are not an effective record (spec §3.2, §0.2): two on
+    # subsystems that are not explanation-eligible, and a purpose on an eligible
+    # one whose newest row is a withdrawal. None of them may produce a Purpose
+    # heading, so these pages keep today's opening.
+    for subject, disposition, body in (
+        ("F-01", "recorded", UNRECORDED_PURPOSE),
+        ("B-03", "recorded", UNRECORDED_PURPOSE),
+        ("B-02", "recorded", UNRECORDED_PURPOSE),
+        ("B-02", "withdrawn", "reset: the subsystem was resurveyed"),
+    ):
+        cur.execute(
+            "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+            " ref_sha, session_id) VALUES ('subsystem', ?, 'purpose', ?, ?, ?, 'p8')",
+            (subject, disposition, body, CHECKED_SHA),
+        )
     cur.executemany(
         "INSERT INTO file_ledger (subsystem_id, file_path, why_in_scope, classification,"
         " ref_sha, stale, stale_since, stale_reason)"
@@ -1452,6 +1468,31 @@ def main() -> int:
         check(
             "every Scope section says no purpose statement is recorded",
             scope_says_no_purpose_is_recorded,
+        )
+
+        def purpose_never_renders_without_a_record() -> str | None:
+            """§0.2, §7: the no-purpose sentence is conditional on the state it describes.
+
+            It is still required where it is true, and a Purpose heading is never
+            reached without an effective record. The control rows seeded above are
+            an ineligible subsystem, a deferred one, and an eligible one whose
+            newest row withdraws its purpose.
+            """
+            for sid in ("B-02", "B-03", "F-01"):
+                page = subsystem_md.get(sid, "")
+                if not page:
+                    return f"the {sid} subsystem page could not be read"
+                if "Purpose" in headings(page):
+                    return f"{sid} renders a Purpose heading without an effective record"
+                if UNRECORDED_PURPOSE in page:
+                    return f"{sid} prints a purpose that is not its effective record"
+                if headings(page)[0] != "Scope":
+                    return f"{sid} no longer opens with Scope"
+            return None
+
+        check(
+            "a Purpose heading never renders without an effective record",
+            purpose_never_renders_without_a_record,
         )
 
         def absent_scope_says_so() -> str | None:

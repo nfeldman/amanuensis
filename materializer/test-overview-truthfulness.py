@@ -218,6 +218,13 @@ NEGATIVE_CORPUS = (
     "Compaction re-anchored the B-tree root after the split.",
     "LedgerFixture appends rows durably and serves them from a read path.",
     "The freshness digest names each shape whose plan went out of scope.",
+    # §3.6: the lint is applied to every recorded purpose, account and declination
+    # reason, and those are written about a subsystem by its id. Each of these
+    # names a subsystem as its subject and says nothing about the survey, so a
+    # lint that flagged the subject alone would refuse correct explanations.
+    "B-01 serves reads from a memory-mapped page cache, so readers never block the writer.",
+    "B-03 drains one queue per tick; each tick applies at most one batch and then yields.",
+    "B-02 is a thin wrapper over the standard library, and its callers in B-01 pass validated rows.",
 )
 
 

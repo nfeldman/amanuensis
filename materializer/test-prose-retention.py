@@ -25,8 +25,8 @@ Turns red when:
   - `subsystems.notes` is not under `## Scope` as `### Survey note` with the
     fixed label sentence, whether or not the subsystem has claims or an
     artifact, or appears more than once on its page;
-  - the allowlist is not exactly the eight seam prose columns and, until EX11
-    renders it, `explanations.body`, or lists one whose sentinel appears;
+  - the allowlist is not exactly the eight seam prose columns, or lists one
+    whose sentinel appears (`explanations.body` left it at EX11);
   - the findings header literal in `test-materializer.py` is not the new one;
   - the gate is not listed in `.github/workflows/test.yml`.
 
@@ -138,6 +138,7 @@ RENDERED_FIELDS: tuple[str, ...] = (
     "vocabulary.expansion.global",
     "seams.shared_object",
     "seams.notes",
+    "explanations.body",
     "survey artifact",
 )
 
@@ -155,11 +156,9 @@ ALLOWLIST: dict[str, str] = {
     "seams.schema_owner": SEAM_REASON,
 }
 
-# EX9 adds the explanation record, whose body no renderer reads yet: it is seeded
-# so that the field cannot be forgotten, and allowlisted until EX11 renders it.
-# EX11 removes this entry, and the allowlist is then the eight seam columns again.
-EXPLANATION_REASON = "rendered by EX11"
-ALLOWLIST["explanations.body"] = EXPLANATION_REASON
+# EX9 added the explanation record and allowlisted its body until a renderer read
+# it; EX11 renders it on the subsystem page, so the allowlist is the eight seam
+# columns again and `explanations.body` is a field that must reach a page.
 EXPECTED_ALLOWLIST = frozenset(
     {
         "seams.a_writes",
@@ -170,7 +169,6 @@ EXPECTED_ALLOWLIST = frozenset(
         "seams.cardinality",
         "seams.staleness_tolerance",
         "seams.schema_owner",
-        "explanations.body",
     }
 )
 
@@ -428,14 +426,14 @@ def main() -> int:
 
         # -- 2. the allowlist is exactly the eight seam columns, two-sided ----
         def allowlist_is_exact() -> str | None:
-            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or len(ALLOWLIST) != 9:
+            if set(ALLOWLIST) != EXPECTED_ALLOWLIST or len(ALLOWLIST) != 8:
                 return f"the allowlist is {sorted(ALLOWLIST)}"
             if any(not reason for reason in ALLOWLIST.values()):
                 return "an allowlist entry has no reason"
             return None
 
         check(
-            "the allowlist holds exactly the eight seam prose columns and explanations.body",
+            "the allowlist holds exactly the eight seam prose columns",
             allowlist_is_exact,
         )
 

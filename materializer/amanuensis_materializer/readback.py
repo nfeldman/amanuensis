@@ -27,10 +27,13 @@ from pathlib import Path
 from typing import Any
 
 from .db import open_ro, row, rows, table_exists
+from .lint import explanation_refusal, orientation_violations
 from .manifest import sha256_bytes
+from .slugs import subsystem_page
 from .vocabulary import (
     OBLIGATION_BEARING_CLASSIFICATIONS,
     OBLIGATION_BEARING_SQL,
+    VOCABULARY,
     values_of,
 )
 
@@ -260,6 +263,168 @@ def anchor_opens(workspace: Path, anchor: object) -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
     return result.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# The effective explanation (spec §3.2)
+# ---------------------------------------------------------------------------
+
+#: Statuses at which a subsystem owes an explanation, from the one field the
+#: contract carries (§3.1). Every reader asks it, so none restates the list.
+EXPLANATION_ELIGIBLE_STATUSES: tuple[str, ...] = tuple(
+    str(entry["value"])
+    for entry in VOCABULARY["subsystem_status"]["values"]  # type: ignore[index, union-attr]
+    if entry.get("explanation_eligible")  # type: ignore[union-attr]
+)
+
+
+@dataclass(frozen=True)
+class ExplanationReading:
+    """What a slot's effective row says: its state, the row, and whether it was checked."""
+
+    state: str
+    row: dict[str, Any] | None
+    checked: bool
+
+
+def select_explanation(
+    candidates: list[dict[str, Any]],
+    resolvable: set[str] | None,
+    eligible: bool,
+) -> ExplanationReading:
+    """§3.2 as a pure function over `(rows, resolvable revisions, eligibility)`.
+
+    With a bound workspace (`resolvable` is a set) the effective row is the one
+    with the greatest `id` whose `ref_sha` is in it; without one (`None`) nothing
+    can be resolved, the greatest `id` is effective and the reading is unchecked.
+    A `withdrawn` effective row, no row, or an ineligible subject all read
+    `not-recorded`. The TypeScript reader runs the same cases from
+    `mcp-server/contracts/explanation-effective-cases.json`.
+    """
+
+    checked = resolvable is not None
+    if not eligible:
+        return ExplanationReading("not-recorded", None, checked)
+    pool = [
+        candidate
+        for candidate in candidates
+        if resolvable is None or str(candidate["ref_sha"]) in resolvable
+    ]
+    if not pool:
+        return ExplanationReading("not-recorded", None, checked)
+    effective = max(pool, key=lambda candidate: int(candidate["id"]))
+    disposition = str(effective["disposition"])
+    if disposition == "withdrawn":
+        return ExplanationReading("not-recorded", None, checked)
+    return ExplanationReading(disposition, effective, checked)
+
+
+def workspace_is_bound(workspace: Path) -> bool:
+    """Whether `workspace` is a git work tree revisions can be resolved in."""
+
+    if not workspace.is_dir():
+        return False
+    return git_answer(workspace, "rev-parse", "--is-inside-work-tree") == "true"
+
+
+def git_answer(workspace: Path, *args: str) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(workspace), *args],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def revision_resolves(workspace: Path, revision: object) -> bool:
+    """Whether the repository has a commit named `revision`."""
+
+    text = str(revision or "").strip()
+    return bool(text) and git_answer(workspace, "rev-parse", "--verify", "--quiet", f"{text}^{{commit}}") is not None
+
+
+def explanation_rows(conn: Any) -> list[dict[str, Any]]:
+    """Every stored explanation row, oldest first, with the files its evidence cites."""
+
+    if not table_exists(conn, "explanations"):
+        return []
+    cited: dict[int, list[str]] = {}
+    if table_exists(conn, "explanation_evidence"):
+        for link in rows(
+            conn,
+            "SELECT x.explanation_id, e.file_path FROM explanation_evidence x"
+            " JOIN evidence e ON e.id = x.evidence_id ORDER BY e.id",
+        ):
+            cited.setdefault(int(link["explanation_id"]), []).append(str(link["file_path"]))
+    stored = rows(
+        conn,
+        "SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id"
+        " FROM explanations ORDER BY id",
+    )
+    for record in stored:
+        record["cited_files"] = cited.get(int(record["id"]), [])
+    return stored
+
+
+def effective_explanations(
+    conn: Any, storage: Path, subject_id: str | None = None
+) -> dict[tuple[str, str, str], ExplanationReading]:
+    """The reading for every `(subject_type, subject_id, slot)` that has a row.
+
+    One implementation for the pages and the read-back, so the two cannot
+    disagree about which row is effective. A subject with no row is absent from
+    the result and reads `not-recorded` by omission. `subject_id` limits the
+    reading to one subject, so a page resolves only the revisions it cites.
+    """
+
+    stored = [
+        record
+        for record in explanation_rows(conn)
+        if subject_id is None or record["subject_id"] == subject_id
+    ]
+    if not stored:
+        return {}
+    workspace = resolve_workspace(storage)
+    bound = workspace_is_bound(workspace)
+    resolvable: set[str] | None = None
+    if bound:
+        resolvable = {
+            sha for sha in {str(r["ref_sha"]) for r in stored} if revision_resolves(workspace, sha)
+        }
+    statuses = {
+        str(r["id"]): str(r["status"] or "")
+        for r in rows(conn, "SELECT id, status FROM subsystems")
+    }
+    any_eligible = any(status in EXPLANATION_ELIGIBLE_STATUSES for status in statuses.values())
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for record in stored:
+        key = (str(record["subject_type"]), str(record["subject_id"]), str(record["slot"]))
+        grouped.setdefault(key, []).append(record)
+    readings: dict[tuple[str, str, str], ExplanationReading] = {}
+    for key, candidates in grouped.items():
+        subject_type, subject_id, _slot = key
+        eligible = (
+            statuses.get(subject_id, "") in EXPLANATION_ELIGIBLE_STATUSES
+            if subject_type == "subsystem"
+            else any_eligible
+        )
+        readings[key] = select_explanation(candidates, resolvable, eligible)
+    return readings
+
+
+def _flat(text: str) -> str:
+    """Whitespace-collapsed text with heading marks removed, for presence checks.
+
+    An account is nested beneath the page's own headings, so its `#` marks move
+    while its words do not; presence is a question about the words.
+    """
+
+    return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", text).split())
 
 
 def set_digest(parts: list[str]) -> str:
@@ -698,6 +863,7 @@ class ProjectionVerifier:
             mismatches.extend(self._locus_index_census(conn, projection))
             mismatches.extend(self._carried_record_census(conn, projection))
             mismatches.extend(self._coverage_measurement_census(conn, projection))
+            mismatches.extend(self._explanation_census(conn, projection))
         finally:
             conn.close()
         # The Markdown and HTML views must each carry authoritative markers.
@@ -1329,6 +1495,41 @@ class ProjectionVerifier:
                             ),
                         }
                     )
+        return mismatches
+
+    def _explanation_census(
+        self, conn: Any, projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Every effective recorded explanation is on the page that owes it (§3.6).
+
+        The effective row comes from `effective_explanations`, the function the
+        renderer reads, and the body is searched for on the subsystem's own page
+        in the Markdown projection. A body the orientation lint refuses is not
+        printed by design, so the page owes the refusal sentence in its place.
+        A project account is owed by the overview or the architecture page, which
+        a later packet adds to this census.
+        """
+
+        mismatches: list[dict[str, str]] = []
+        names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+        readings = effective_explanations(conn, self.storage)
+        for (subject_type, subject_id, slot), reading in sorted(readings.items()):
+            if subject_type != "subsystem" or reading.state != "recorded" or reading.row is None:
+                continue
+            page = subsystem_page(subject_id, names.get(subject_id, subject_id))
+            body = str(reading.row["body"])
+            owed = explanation_refusal(slot) if orientation_violations(body) else body
+            if _flat(owed) not in _flat(projection.get(page, "")):
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "explanation",
+                        "object_id": f"{subject_id}:{slot}",
+                        "detail": (
+                            f"the effective recorded {slot} (row {reading.row['id']}) is not on {page}"
+                        ),
+                    }
+                )
         return mismatches
 
     def _coverage_measurement_census(
