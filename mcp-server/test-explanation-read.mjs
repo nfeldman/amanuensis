@@ -43,10 +43,13 @@
 //   lift or move the evidence cap                                      → N1, N2
 //   delete the earlier rows at reset                                   → R1
 //   forget the gate in test.yml or the tool in the inventory           → L1, L2
+//   report `checked: true` whatever the reading says                   → U4, U5, U6
+//   read a path git cannot answer in as a bound workspace              → U5, U6, U7
+//   echo a subject id of any size                                      → N4, N5
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -243,6 +246,8 @@ const ACCOUNT_CAP = 4096;
 const EVIDENCE_CAP = 64;
 /** What references/explanations.md promises a whole `get_explanations` envelope stays under. */
 const WIRE_BOUND = 70_000;
+/** The longest `subject_id` the read serves, in UTF-8 bytes; the envelope echoes it. */
+const SUBJECT_ID_CAP = 256;
 
 async function main(mods) {
   const { openDatabase, resolveProject, ensureProjectStorage, toolArrays } = mods;
@@ -713,6 +718,35 @@ async function main(mods) {
       }
       return null;
     });
+
+    // The envelope echoes the subject id, and `upsert_subsystem` takes an id of any
+    // size: 40,002 bytes of id made an 80,853-byte envelope with no row in it
+    // (F3/codex, final). The refusal does not echo the id either.
+    await check("N4 a subject id too long for the bound is refused without being echoed", async () => {
+      const longId = `S-${"x".repeat(40_000)}`;
+      const written = call("upsert_subsystem", { id: longId, name: "long id", status: "unmapped" }, ctx);
+      if (written?.ok === false) return `the fixture's long id was refused: ${written.error}`;
+      for (const id of [longId, `S-${"y".repeat(40_000)}`, "S-".padEnd(SUBJECT_ID_CAP + 1, "z")]) {
+        const { failed, response } = await read(ctx, { subject_type: "subsystem", subject_id: id });
+        if (!failed) return `an id of ${id.length} bytes was answered in ${response.wire} bytes`;
+        if (!String(failed).includes(`${SUBJECT_ID_CAP} bytes`)) return `the refusal reads ${String(failed).slice(0, 120)}`;
+        if (response.wire > 2_000) return `the refusal of an id of ${id.length} bytes is ${response.wire} bytes`;
+      }
+      return null;
+    });
+
+    await check("N5 the widest subject id it serves stays under the bound with every other field at its cap", async () => {
+      const id = "S-".padEnd(SUBJECT_ID_CAP, "\u0001");
+      if (Buffer.byteLength(id) !== SUBJECT_ID_CAP) return `the fixture id is ${Buffer.byteLength(id)} bytes`;
+      seedSubsystem(ctx, id, "structural");
+      record(ctx, id, "purpose", "\u0001".repeat(PURPOSE_CAP), widest);
+      record(ctx, id, "account", "\u0001".repeat(ACCOUNT_CAP), widest);
+      const { payload, response, failed } = await read(ctx, { subject_type: "subsystem", subject_id: id });
+      if (failed) return failed;
+      if (payload.subject_id !== id) return "the id at its cap was not served";
+      notes.push(`whole envelope with the widest id: ${response.wire} bytes`);
+      return response.wire > WIRE_BOUND ? `the envelope is ${response.wire} bytes, over ${WIRE_BOUND}` : null;
+    });
   }
 
   // ------------------------------------------------------------- R: the reset rule
@@ -884,6 +918,106 @@ async function main(mods) {
         return null;
       }
       return accepted?.ok === false ? null : `record_explanation stored row ${accepted?.id} at the server directory's HEAD`;
+    });
+  }
+
+  // A reading nobody resolved has to say so. `checked` defaulted to true in this
+  // gate's own comparison, and no case expected false, so a reader that always
+  // claimed a check stayed green (F4/claude, final). A path git cannot answer in is
+  // the same state: the server read it as bound and resolved nothing, so it said
+  // not-recorded and checked while the materializer printed the row, unchecked
+  // (F2/codex, F19/claude, final).
+  {
+    const ctx = world("unresolved");
+    seedSubsystem(ctx, "S-01", "structural");
+    const ev = evidence(ctx);
+    const body = "It stands whether or not a revision can be resolved.";
+    const older = record(ctx, "S-01", "purpose", "An older row.", [ev]).id;
+    const newest = record(ctx, "S-01", "purpose", body, [ev]).id;
+    const want = {
+      state: "recorded",
+      checked: false,
+      earlier_rows: 1,
+      row: expectedRow(ctx, newest, "recorded", body, headSha(ctx), [ev]),
+    };
+    const atPath = (workspacePath) => ({ ...ctx, project: { ...ctx.project, workspacePath } });
+    const handlerRead = (workspacePath) =>
+      call("get_explanations", { subject_type: "subsystem", subject_id: "S-01" }, atPath(workspacePath));
+    const plain = join(scratch, "not-a-repository");
+    mkdirSync(plain, { recursive: true });
+
+    await check("U4 with no workspace bound the newest row is effective and the reading says it is unchecked", async () => {
+      const payload = handlerRead(null);
+      return (
+        slotDiff(slotOf(payload, "purpose"), want, "no workspace") ??
+        slotDiff(slotOf(payload, "account"), { state: "not-recorded", checked: false, earlier_rows: 0, row: null }, "no workspace, no row")
+      );
+    });
+
+    await check("U5 a workspace path git cannot answer in reads the same as no workspace", async () => {
+      for (const [label, path] of [
+        ["a directory that is no repository", plain],
+        ["a path that does not exist", join(scratch, "no-such-directory")],
+      ]) {
+        const wrong = slotDiff(slotOf(handlerRead(path), "purpose"), want, label);
+        if (wrong) return wrong;
+      }
+      return null;
+    });
+
+    await check("U6 over the wire, a bound workspace that lost its git metadata reads unchecked", async () => {
+      const { payload: before, failed } = await read(ctx, { subject_type: "subsystem", subject_id: "S-01" });
+      if (failed) return `before: ${failed}`;
+      const control = slotDiff(
+        slotOf(before, "purpose"),
+        { ...want, checked: true },
+        "with the metadata in place",
+      );
+      if (control) return control;
+      const { project } = ctx;
+      ctx.server().close();
+      let server = null;
+      renameSync(join(project.workspacePath, ".git"), join(project.workspacePath, ".git-gone"));
+      try {
+        server = startServer(project.workspacePath, storageRoot);
+        const response = await server.call("get_explanations", { subject_type: "subsystem", subject_id: "S-01" });
+        if (response.isError) return `the read was refused: ${String(response.error).slice(0, 160)}`;
+        return slotDiff(slotOf(response.payload, "purpose"), want, "with the metadata gone");
+      } finally {
+        server?.close();
+        renameSync(join(project.workspacePath, ".git-gone"), join(project.workspacePath, ".git"));
+      }
+    });
+
+    await check("U7 the shared binding cases hold for the path the reader is given", async () => {
+      if (typeof mods.workspaceIsBound !== "function") return "dist/helpers.js exports no workspaceIsBound";
+      const shared = JSON.parse(readFileSync(join(here, "contracts", "explanation-effective-cases.json"), "utf8"));
+      const cases = shared.workspace_binding ?? [];
+      const kinds = new Set(cases.map((c) => c.kind));
+      for (const kind of ["git-work-tree", "plain-directory", "missing-path", "git-metadata-removed"]) {
+        if (!kinds.has(kind)) return `the case file has no workspace_binding case of kind ${kind}`;
+      }
+      const repository = ctx.project.workspacePath;
+      for (const entry of cases) {
+        let path;
+        let after = () => {};
+        if (entry.kind === "git-work-tree") path = repository;
+        else if (entry.kind === "plain-directory") path = plain;
+        else if (entry.kind === "missing-path") path = join(scratch, "no-such-directory");
+        else {
+          renameSync(join(repository, ".git"), join(repository, ".git-gone"));
+          after = () => renameSync(join(repository, ".git-gone"), join(repository, ".git"));
+          path = repository;
+        }
+        let got;
+        try {
+          got = mods.workspaceIsBound(path);
+        } finally {
+          after();
+        }
+        if (got !== entry.bound) return `${entry.id}: bound is ${got}, expected ${entry.bound}`;
+      }
+      return older > 0 ? null : "the fixture wrote no older row";
     });
   }
 

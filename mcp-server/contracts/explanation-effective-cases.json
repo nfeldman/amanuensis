@@ -1,7 +1,7 @@
 {
   "contract": "explanation-effective-cases/1",
   "what": "The shared cases for design/explanation/spec.md \u00a73.2, the effective-explanation rule. The TypeScript selection function (mcp-server/src/invariants.ts selectExplanation, run by mcp-server/test-explanations.mjs) and the Python one in the materializer both run every case, so the Python gate needs no built server.",
-  "how_to_read": "rows is the set of stored rows for one (subject_type, subject_id, slot), in no guaranteed order. eligible is whether the subject is explanation-eligible. workspace is whether a workspace is bound; when it is, resolvable lists the ref_sha values it can resolve, and when it is not the field is absent and nothing can be resolved. expect gives the state (recorded, declined, not-recorded), the id of the effective row or null, and whether the reading is checked. kind groups the cases: superseded, declined, withdrawn, unreachable, no-workspace, ineligible, empty. subject_eligibility is the rule that supplies eligible: a subsystem by its own status, the project by whether any subsystem is eligible, which is the condition its account is written under. Both languages run those cases too.",
+  "how_to_read": "rows is the set of stored rows for one (subject_type, subject_id, slot), in no guaranteed order. eligible is whether the subject is explanation-eligible. workspace is whether a workspace is bound; when it is, resolvable lists the ref_sha values it can resolve, and when it is not the field is absent and nothing can be resolved. expect gives the state (recorded, declined, not-recorded), the id of the effective row or null, and whether the reading is checked. kind groups the cases: superseded, declined, withdrawn, unreachable, no-workspace, ineligible, empty. subject_eligibility is the rule that supplies eligible: a subsystem by its own status, the project by whether any subsystem is eligible, which is the condition its account is written under. Both languages run those cases too. workspace_binding is the rule that supplies workspace: a path is bound when git reports it inside a work tree, so a directory that is no repository, a path that does not exist and a repository whose metadata has gone all read as no workspace. Each kind names how a gate builds the path.",
   "cases": [
     {
       "id": "superseded",
@@ -463,6 +463,32 @@
       "status": null,
       "all_statuses": [],
       "eligible": false
+    }
+  ],
+  "workspace_binding": [
+    {
+      "id": "a-work-tree",
+      "kind": "git-work-tree",
+      "description": "a directory inside a git work tree is bound",
+      "bound": true
+    },
+    {
+      "id": "not-a-repository",
+      "kind": "plain-directory",
+      "description": "a directory that is no repository resolves nothing",
+      "bound": false
+    },
+    {
+      "id": "no-such-path",
+      "kind": "missing-path",
+      "description": "a path that does not exist resolves nothing",
+      "bound": false
+    },
+    {
+      "id": "metadata-gone",
+      "kind": "git-metadata-removed",
+      "description": "a work tree whose git metadata has gone resolves nothing, and says it did not check",
+      "bound": false
     }
   ]
 }
