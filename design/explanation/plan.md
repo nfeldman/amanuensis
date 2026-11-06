@@ -12,7 +12,7 @@
 | EX4 | Survey narrative inside Structure when claims exist | done (1 attempt) | EX3 | `materializer/test-narrative-placement.py` | C7, C41 |
 | EX5 | File ledger groups rows that share a reason | done (1 attempt) | EX4 | `materializer/test-ledger-grouping.py` | C8 |
 | EX6 | Unfilled-slot census and the skill text that feeds it | done (1 attempt) | EX5 | `materializer/test-placeholder-census.py` | C9, C10, C11, C12 |
-| EX7 | The republish chain as one command | ready | EX6 | `dev/test-republish-chain.mjs` | C14 |
+| EX7 | The republish chain as one command | ready (1 attempt) | EX6 | `dev/test-republish-chain.mjs` | C14 |
 | EX8 | Decide the carried findings, fix the thesis slots, republish, restore the receipt gates | ready | EX7 | `dev/test-receipt-gates-restored.mjs` | C15, C16, C17, C39, C40 |
 
 ## S2 · The explanation record, its gate, its authoring and its rendering (review: pending)
