@@ -1,0 +1,421 @@
+{
+  "contract": "explanation-effective-cases/1",
+  "what": "The shared cases for design/explanation/spec.md \u00a73.2, the effective-explanation rule. The TypeScript selection function (mcp-server/src/invariants.ts selectExplanation, run by mcp-server/test-explanations.mjs) and the Python one in the materializer both run every case, so the Python gate needs no built server.",
+  "how_to_read": "rows is the set of stored rows for one (subject_type, subject_id, slot), in no guaranteed order. eligible is whether the subject is explanation-eligible. workspace is whether a workspace is bound; when it is, resolvable lists the ref_sha values it can resolve, and when it is not the field is absent and nothing can be resolved. expect gives the state (recorded, declined, not-recorded), the id of the effective row or null, and whether the reading is checked. kind groups the cases: superseded, declined, withdrawn, unreachable, no-workspace, ineligible, empty.",
+  "cases": [
+    {
+      "id": "superseded",
+      "kind": "superseded",
+      "description": "a later row at a later commit replaces an earlier one",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "recorded",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 2,
+        "checked": true
+      }
+    },
+    {
+      "id": "same-commit-correction",
+      "kind": "superseded",
+      "description": "a correction written at the same commit as the row it replaces is effective; the greatest id decides, not the revision",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 2,
+        "checked": true
+      }
+    },
+    {
+      "id": "rows-out-of-order",
+      "kind": "superseded",
+      "description": "the rows arrive in no particular order; the greatest id still decides",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 3,
+          "disposition": "recorded",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "declined",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 3,
+        "checked": true
+      }
+    },
+    {
+      "id": "declined",
+      "kind": "declined",
+      "description": "a declination is the effective row and reads as declined",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "declined",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expect": {
+        "state": "declined",
+        "row_id": 2,
+        "checked": true
+      }
+    },
+    {
+      "id": "recorded-after-declined",
+      "kind": "declined",
+      "description": "a later explanation replaces an earlier declination",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "declined",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "recorded",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 2,
+        "checked": true
+      }
+    },
+    {
+      "id": "withdrawn",
+      "kind": "withdrawn",
+      "description": "a withdrawn effective row reads as not-recorded with no row",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "withdrawn",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": true
+      }
+    },
+    {
+      "id": "recorded-after-withdrawn",
+      "kind": "withdrawn",
+      "description": "a row written after a withdrawal is effective again",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "withdrawn",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 3,
+          "disposition": "recorded",
+          "ref_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 3,
+        "checked": true
+      }
+    },
+    {
+      "id": "unreachable-newest",
+      "kind": "unreachable",
+      "description": "a newer row whose ref_sha the workspace cannot resolve is skipped; the older row that resolves is effective",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "recorded",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 1,
+        "checked": true
+      }
+    },
+    {
+      "id": "unreachable-withdrawal",
+      "kind": "unreachable",
+      "description": "a withdrawal at an unreachable revision is skipped as well; the older explanation stands",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "withdrawn",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 1,
+        "checked": true
+      }
+    },
+    {
+      "id": "unreachable-only",
+      "kind": "unreachable",
+      "description": "when no row resolves there is no effective row",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": true
+      }
+    },
+    {
+      "id": "no-workspace",
+      "kind": "no-workspace",
+      "description": "without a bound workspace nothing resolves: the greatest id is effective and the reading is unchecked",
+      "eligible": true,
+      "workspace": false,
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "recorded",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "recorded",
+        "row_id": 2,
+        "checked": false
+      }
+    },
+    {
+      "id": "no-workspace-declined",
+      "kind": "no-workspace",
+      "description": "without a bound workspace a declination with the greatest id is effective, unchecked",
+      "eligible": true,
+      "workspace": false,
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "declined",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "declined",
+        "row_id": 2,
+        "checked": false
+      }
+    },
+    {
+      "id": "no-workspace-withdrawn",
+      "kind": "no-workspace",
+      "description": "without a bound workspace a withdrawn effective row still reads as not-recorded, unchecked",
+      "eligible": true,
+      "workspace": false,
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "withdrawn",
+          "ref_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": false
+      }
+    },
+    {
+      "id": "ineligible",
+      "kind": "ineligible",
+      "description": "a subsystem that is not explanation-eligible reads as not-recorded whatever rows exist",
+      "eligible": false,
+      "workspace": true,
+      "resolvable": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "id": 2,
+          "disposition": "declined",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": true
+      }
+    },
+    {
+      "id": "ineligible-no-workspace",
+      "kind": "ineligible",
+      "description": "eligibility is checked without a workspace as well",
+      "eligible": false,
+      "workspace": false,
+      "rows": [
+        {
+          "id": 1,
+          "disposition": "recorded",
+          "ref_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": false
+      }
+    },
+    {
+      "id": "no-rows",
+      "kind": "empty",
+      "description": "no row at all is not-recorded",
+      "eligible": true,
+      "workspace": true,
+      "resolvable": [],
+      "rows": [],
+      "expect": {
+        "state": "not-recorded",
+        "row_id": null,
+        "checked": true
+      }
+    }
+  ]
+}
