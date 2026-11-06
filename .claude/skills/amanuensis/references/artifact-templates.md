@@ -122,7 +122,7 @@ is incomplete.
 
 ## What is this codebase?
 
-[3–6 sentences: runtime processes, primary coordination language,
+[Runtime processes, primary coordination language,
 primary data stores. Must stand alone — no external references.]
 
 ## Domain vocabulary

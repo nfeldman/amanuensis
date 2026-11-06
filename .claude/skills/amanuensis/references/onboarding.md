@@ -190,8 +190,8 @@ will see the queue at the Phase 7 checkpoint.
     reading only this file must answer "what does this system do? what
     do I map first? given a bug report, what do I read first? given a
     feature request, what mode applies?" Put the answer to the first
-    question under the heading `## What is this codebase?`, in 3–6
-    sentences with no status vocabulary and no count. The overview page
+    question under the heading `## What is this codebase?`, with no
+    status vocabulary and no count. The overview page
     takes its thesis from that section and from nowhere else; under any
     other heading it says no thesis is recorded.
   - `field-notes.md` — seeded with onboarding observations.

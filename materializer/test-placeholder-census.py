@@ -610,6 +610,19 @@ def main() -> int:
 
         check("onboarding.md names the runtime heading and its five columns", onboarding_asks)
 
+        def no_numeric_floor() -> str | None:
+            # decisions.md §7: no numeric floor on any authored field.
+            for path in sorted(SKILL.rglob("*.md")):
+                found = re.search(
+                    r"\b\d+(?:\s*[–—-]\s*\d+)?\s+(?:sentences?|words?|paragraphs?)\b",
+                    read(path),
+                )
+                if found:
+                    return f"{path.name} sets a numeric floor on authored text: {' '.join(found.group(0).split())}"
+            return None
+
+        check("the skill text sets no numeric floor on authored text", no_numeric_floor)
+
         # -- 7. packaging step 5 ------------------------------------------------
         def packaging() -> str | None:
             text = read(PACKAGING)
