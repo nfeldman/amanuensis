@@ -31,9 +31,10 @@
 //   exit 0  `GATE EX13 GREEN`          — every assertion held
 //   exit 1  `GATE EX13 RED: <reason>`  — the first assertion that failed
 //
-// The first assertion (M1) carries the packet's red_expect phrase. With the
-// script absent it reports that, so the red run reaches an assertion and never a
-// stack trace.
+// The first assertion (M1) carries the packet's red_expect phrase, directly after
+// the marker. With the script absent it reports that, so the red run reaches an
+// assertion and never a stack trace. A wrong wire figure says the same; every
+// other failure names its own label and reason.
 //
 // What a reviewer should sabotage, and what must go red:
 //   report the payload bytes, or the text block alone, as the wire bytes   → M2
@@ -130,8 +131,13 @@ function finish() {
   const first = failures[0];
   const rest = failures.slice(1, 6).map((f) => `${f.label}: ${f.detail}`);
   for (const line of rest) process.stdout.write(`  also failed — ${line}\n`);
-  const lead = first.label === "M1" ? "" : `${RED_EXPECT} — `;
-  process.stdout.write(`GATE EX13 RED: ${lead}${first.label}: ${first.detail}\n`);
+  // red_expect is anchored on the marker, so the phrase has to open the reason.
+  // Only a missing or wrong wire figure says it: any other failure gives its own
+  // reason, so a broken fixture cannot pass for the packet's red condition.
+  const reason = first.detail.startsWith(RED_EXPECT)
+    ? `${first.detail} (${first.label})`
+    : `${first.label}: ${first.detail}`;
+  process.stdout.write(`GATE EX13 RED: ${reason}\n`);
   process.exit(1);
 }
 
@@ -458,10 +464,10 @@ function judgeEntry(entry, measured) {
   if (!response || typeof response !== "object") return `${entry.locus}: the entry carries no response`;
   const ownWire = measured ? bytes(measured.rawResult) : bytes(envelope(response));
   if (!Number.isInteger(entry.wire_bytes) || entry.wire_bytes <= 0) {
-    return `${entry.locus}: wire_bytes is ${JSON.stringify(entry.wire_bytes)}, not a positive integer`;
+    return `${RED_EXPECT}: ${entry.locus}: wire_bytes is ${JSON.stringify(entry.wire_bytes)}, not a positive integer`;
   }
   if (entry.wire_bytes !== ownWire) {
-    return `${entry.locus}: the report says ${entry.wire_bytes} wire bytes and the response measured ${ownWire}`;
+    return `${RED_EXPECT}: ${entry.locus}: the report says ${entry.wire_bytes} wire bytes and the response measured ${ownWire}`;
   }
   if (measured && JSON.stringify(response) !== JSON.stringify(measured.payload)) {
     return `${entry.locus}: the response the script reports is not the response a second server returned`;
@@ -557,7 +563,7 @@ async function main() {
     built = { ok: false, detail: scrub(error?.message ?? error) };
   }
   if (!built.ok) {
-    failures.push({ label: "M1", detail: `${RED_EXPECT}: the server was not built — ${built.detail}` });
+    failures.push({ label: "M1", detail: `the server was not built — ${built.detail}` });
     return;
   }
 
@@ -565,7 +571,7 @@ async function main() {
   try {
     fixture = await buildFixture();
   } catch (error) {
-    failures.push({ label: "M1", detail: `${RED_EXPECT}: the fixture store could not be built — ${scrub(error?.message ?? error)}` });
+    failures.push({ label: "M1", detail: `the fixture store could not be built — ${scrub(error?.message ?? error)}` });
     return;
   }
   const storeRoot = join(fixture.ws, ".amanuensis");
@@ -764,7 +770,7 @@ function pathToUrl(path) {
 try {
   await main();
 } catch (error) {
-  failures.unshift({ label: "M1", detail: `${RED_EXPECT}: the gate threw — ${scrub(error?.message ?? error)}` });
+  failures.unshift({ label: "M1", detail: `the gate threw — ${scrub(error?.message ?? error)}` });
 } finally {
   cleanup();
 }
