@@ -35,6 +35,10 @@ jobs:
       # else this runner does not already have.
       - name: Carried-finding references — a destroyed referent is not a reopened one
         run: node dev/test-carried-finding-references.mjs
+      # GATE EX1 (design/explanation/spec.md §1). The reader-prose measure on a
+      # hand-counted fixture; it reads no store and needs no build.
+      - name: Reader-prose measure — table share and placeholders on a counted fixture
+        run: node dev/test-reader-measure.mjs
 
   # The Amanuensis→Pecia defect projection. Pecia is a uv PEP-723 script in a
   # separate PRIVATE repository, so this gate cannot run from a bare checkout.
