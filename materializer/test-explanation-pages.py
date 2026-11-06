@@ -45,6 +45,12 @@ Also turns red when the HTML page drops Purpose, How it works or a declination,
 the read-back misses an explanation removed from the HTML page, or the ageing
 sentence misreads a change to a path git quotes, trims or reads as magic.
 
+Also turns red when an explanation that names a status in a code span cannot
+pass the clean publish, when a wrong status word in that place passes the
+read-back, or when a workspace path git cannot answer in reads other than
+unchecked with its newest row printed (final review: F1/codex, F2/codex,
+F19/claude).
+
 Output protocol: exactly one status line, last, on stdout. Every subprocess is
 captured and never echoed, and every message is scrubbed, so a missing
 deliverable reports as an assertion failure and not as a crash.
@@ -156,6 +162,15 @@ PURPOSE_B05 = "PURPOSE-B-05 the console prints status."
 ACCOUNT_B05 = "ACCOUNT-B-05 the console reads a socket."
 PURPOSE_B06 = "PURPOSE-B-06 the index orders keys."
 PURPOSE_B07 = "PURPOSE-B-07 the gate admits writers."
+
+# True sentences the projection renders in other words: a status chip, a renamed phrase.
+PURPOSE_CHIP = "The status `mapped` follows an explicit review."
+ACCOUNT_CHIP = (
+    "A row at `structural` is read before the `concerns` pass, and the jump-in reading comes first.\n\n"
+    "- `deferred` parks it\n\n"
+    "```\nthe literal `mapped` in a fence\n```"
+)
+REASON_CHIP = "The queue reaches `adversarial` with no purpose beyond its caller."
 
 # Each carries survey-status vocabulary the orientation lint refuses.
 VIOLATING_PURPOSE = "B-01 is mapped and its ledger is complete."
@@ -355,6 +370,39 @@ def add_violations(storage: Path, c1: str) -> None:
                 "INSERT INTO explanation_evidence (explanation_id, evidence_id) VALUES (?, ?)",
                 (cur.lastrowid, evidence_id),
             )
+    db.commit()
+    db.close()
+
+
+def append_row(
+    storage: Path,
+    sid: str,
+    slot: str,
+    disposition: str,
+    body: str,
+    ref: str,
+    cites: tuple[str, ...] = (),
+) -> None:
+    """A newer row on its own, each cited path through an evidence row of its own."""
+
+    db = sqlite3.connect(storage / "memory.db")
+    cur = db.cursor()
+    cur.execute(
+        "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+        " ref_sha, session_id) VALUES ('subsystem', ?, ?, ?, ?, ?, 'ex11')",
+        (sid, slot, disposition, body, ref),
+    )
+    explanation_id = cur.lastrowid
+    for rel in cites:
+        cur.execute(
+            "INSERT INTO evidence (file_path, ref_sha, kind, session_id)"
+            " VALUES (?, ?, 'code-verified', 'ex11')",
+            (rel, ref),
+        )
+        cur.execute(
+            "INSERT INTO explanation_evidence (explanation_id, evidence_id) VALUES (?, ?)",
+            (explanation_id, cur.lastrowid),
+        )
     db.commit()
     db.close()
 
@@ -872,6 +920,120 @@ def main() -> int:
             return None
 
         check("lint violations print the refusal and turn the clean publish red", lint_refusal)
+
+        # -- 8b. a status in a code span --------------------------------------
+        # The projection turns `mapped` into a chip reading "Mapped", and renames a
+        # few schema phrases, so a read-back comparing the raw words failed a true
+        # explanation with no hint of the cause (F1/codex, final). The expected line
+        # comes from the projection's own inline renderer, which keeps the check
+        # exact: a different status word in that place is still a missing line.
+        def status_in_code_span() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "chips"
+            storage.mkdir()
+            seed(storage, shas, shas["c2"])
+            c1 = shas["c1"]
+            append_row(storage, "B-01", "purpose", "recorded", PURPOSE_CHIP, c1, (READER,))
+            append_row(storage, "B-01", "account", "recorded", ACCOUNT_CHIP, c1, (READER,))
+            append_row(storage, "B-03", "purpose", "declined", REASON_CHIP, c1)
+            done = run_materializer(storage, "--clean-publish", workspace=repo)
+            if not done.get("ok") or not done.get("published"):
+                readback = done.get("readback")
+                listed = readback.get("mismatches") if isinstance(readback, dict) else None
+                absent = [
+                    str(m.get("detail"))[:160]
+                    for m in listed or done.get("mismatches") or []
+                    if "explanation" in str(m.get("object_type"))
+                ]
+                return (
+                    "a true explanation naming a status in a code span failed the clean publish:"
+                    f" {absent or done.get('_diagnostic')}"
+                )
+            docs = storage / "docs"
+            target = next(iter(sorted((docs / "subsystems").glob("b01-*.html"))), None)
+            if target is None:
+                return "the B-01 HTML page is absent"
+            original = target.read_text()
+            wrong = re.sub(
+                r"(The status\s*<span[^>]*>)Mapped(</span>)", r"\1Unmapped\2", original, count=1
+            )
+            if wrong == original:
+                return "the HTML page does not render the code span as the projection's chip"
+            target.write_text(wrong)
+            try:
+                red = run_materializer(
+                    storage, "--readback-only", "--output", str(docs), workspace=repo
+                )
+            finally:
+                target.write_text(original)
+            hits = [
+                m
+                for m in red.get("mismatches") or []
+                if m.get("axis") == "state" and m.get("object_type") == "explanation-html"
+            ]
+            if red.get("ok") or not hits:
+                return "a different status word in the explanation's place passed the read-back"
+            return None
+
+        check("a status in a code span publishes, and a wrong one does not read back", status_in_code_span)
+
+        # -- 8c. a workspace path git cannot answer in --------------------------
+        # The same state the server reads: the newest row, unchecked, and its age
+        # not measured (F2/codex, F19/claude, final).
+        def workspace_git_cannot_answer() -> str | None:
+            if seed_error:
+                return seed_error
+            plain = root / "not-a-repository"
+            plain.mkdir()
+            storage = root / "unanswered"
+            storage.mkdir()
+            seed(storage, shas, shas["c2"])
+            done = run_materializer(storage, "--clean-publish", workspace=plain)
+            if not done.get("ok") or not done.get("published"):
+                return f"the publish over a path git cannot answer in failed — {done.get('_diagnostic')}"
+            text = subsystem_page(storage / "docs", "B-01")
+            body = section(text, "Purpose")
+            if PURPOSE_B01 not in body:
+                return "the newest row is not printed for a path git cannot answer in"
+            if provenance(shas["c1"], 2, NOT_MEASURED) not in body:
+                return f"the age is not 'not measured' for such a path: {body.strip()!r}"
+            return None
+
+        check("a workspace path git cannot answer in reads as no workspace", workspace_git_cannot_answer)
+
+        def shared_binding_cases() -> str | None:
+            if seed_error:
+                return seed_error
+            readback = load_readback()
+            bound = getattr(readback, "workspace_is_bound", None)
+            if not callable(bound):
+                return "readback.workspace_is_bound is absent"
+            cases = json.loads(CASES.read_text()).get("workspace_binding") or []
+            kinds = {c.get("kind") for c in cases}
+            for kind in ("git-work-tree", "plain-directory", "missing-path", "git-metadata-removed"):
+                if kind not in kinds:
+                    return f"the case file has no workspace_binding case of kind {kind}"
+            plain = root / "binding-plain"
+            plain.mkdir()
+            for case in cases:
+                kind = case["kind"]
+                if kind == "git-metadata-removed":
+                    moved = repo / ".git-gone"
+                    (repo / ".git").rename(moved)
+                    try:
+                        got = bound(repo)
+                    finally:
+                        moved.rename(repo / ".git")
+                else:
+                    got = bound(
+                        {"git-work-tree": repo, "plain-directory": plain}.get(kind, root / "no-such-path")
+                    )
+                if got is not case["bound"]:
+                    return f"{case['id']}: bound {got!r}, not {case['bound']!r}"
+            return None
+
+        check("the workspace check agrees with every shared binding case", shared_binding_cases)
 
         # -- 9. custody: sources and the read-back state axis ------------------
         def custody_sources() -> str | None:
