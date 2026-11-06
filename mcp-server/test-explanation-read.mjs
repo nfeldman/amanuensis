@@ -213,6 +213,7 @@ function startServer(workspace, storageRoot) {
       return {
         payload,
         text,
+        wire: Buffer.byteLength(JSON.stringify(message.result ?? null), "utf8"),
         isError,
         error: isError ? (payload?.error ?? (text || JSON.stringify(message.error))) : null,
       };
@@ -235,6 +236,9 @@ const SLOT_KEYS = ["authored", "checked", "earlier_rows", "row", "slot", "state"
 const UNREACHABLE_SHA = "b0a7e5d4c3b2a1908f7e6d5c4b3a29180f7e6d5c";
 const PURPOSE_CAP = 400;
 const ACCOUNT_CAP = 4096;
+const EVIDENCE_CAP = 64;
+/** What references/explanations.md promises a whole `get_explanations` envelope stays under. */
+const WIRE_BOUND = 70_000;
 
 async function main(mods) {
   const { openDatabase, resolveProject, ensureProjectStorage, toolArrays } = mods;
@@ -633,6 +637,77 @@ async function main(mods) {
       notes.push(`largest response (both slots at their caps, ${evidenceIds.length} evidence rows each): ${bytes} bytes`);
       const bound = PURPOSE_CAP + ACCOUNT_CAP + 1536;
       return bytes <= bound ? null : `the response is ${bytes} bytes, over the ${bound} the two caps and their fields allow`;
+    });
+  }
+
+  // ---------------------------------------- N: the bound holds on the whole envelope
+
+  // M1 seeds four evidence ids and measures the text block. A ten-byte purpose
+  // citing 10,000 rows was accepted and read back at 219,104 bytes on the wire
+  // (slice-S2, F6/codex), so the count is capped and the envelope is what is measured.
+  {
+    const ctx = world("evidence-bound");
+    seedSubsystem(ctx, "S-01", "structural");
+    seedSubsystem(ctx, "S-02", "structural");
+    const insertEvidence = ctx.db.prepare(
+      `INSERT INTO evidence (id, file_path, symbol, line_range, ref_sha, kind, session_id)
+       VALUES (?, 'src/a.ts', 'Unit', '1-1', ?, 'code-verified', ?)`,
+    );
+    // The widest ids a JSON number carries exactly, so the measurement is the worst one.
+    const seedEvidence = (count, top) =>
+      ctx.db.transaction(() => {
+        const ids = [];
+        for (let i = 0; i < count; i++) {
+          insertEvidence.run(top - i, headSha(ctx), ctx.sessionId);
+          ids.push(top - i);
+        }
+        return ids;
+      })();
+    const widest = seedEvidence(EVIDENCE_CAP, Number.MAX_SAFE_INTEGER);
+    const tooMany = seedEvidence(10_000, 1_000_000);
+    const refusal = (fn) => {
+      try {
+        const result = fn();
+        return result?.ok === false ? String(result.error) : null;
+      } catch (error) {
+        return String(error?.message ?? error);
+      }
+    };
+
+    await check("N1 record_explanation refuses more evidence rows than a response can carry", async () => {
+      const before = explanationRows(ctx, "S-02").length;
+      const stem = `record_explanation refuses: an explanation cites at most ${EVIDENCE_CAP} evidence rows`;
+      for (const ids of [tooMany, tooMany.slice(0, EVIDENCE_CAP + 1)]) {
+        const said = refusal(() => record(ctx, "S-02", "purpose", "ten bytes.", ids));
+        if (said === null) return `a purpose citing ${ids.length} evidence rows was accepted`;
+        if (!said.startsWith(stem)) return `the refusal reads ${said.slice(0, 120)}`;
+      }
+      return explanationRows(ctx, "S-02").length === before ? null : "a refused write stored a row";
+    });
+
+    await check("N2 a set at the evidence cap is accepted and served whole", async () => {
+      const said = refusal(() => record(ctx, "S-02", "purpose", "ten bytes.", tooMany.slice(0, EVIDENCE_CAP)));
+      if (said) return `a set at the cap was refused: ${said.slice(0, 120)}`;
+      const { payload, failed } = await read(ctx, { subject_type: "subsystem", subject_id: "S-02" });
+      if (failed) return failed;
+      const served = slotOf(payload, "purpose")?.row?.evidence_ids ?? [];
+      return served.length === EVIDENCE_CAP ? null : `${served.length} of ${EVIDENCE_CAP} ids were served`;
+    });
+
+    await check("N3 the whole envelope stays under its bound at every cap, in prose and in escapes", async () => {
+      // A control character is the widest a byte can become: six bytes in
+      // structuredContent and seven in the escaped text block.
+      for (const [label, unit] of [["prose", "a"], ["escapes", "\u0001"]]) {
+        record(ctx, "S-01", "purpose", unit.repeat(PURPOSE_CAP), widest);
+        record(ctx, "S-01", "account", unit.repeat(ACCOUNT_CAP), widest);
+        const { payload, response, failed } = await read(ctx, { subject_type: "subsystem", subject_id: "S-01" });
+        if (failed) return `${label}: ${failed}`;
+        if (slotOf(payload, "account")?.row?.evidence_ids?.length !== EVIDENCE_CAP) return `${label}: the fixture did not reach the evidence cap`;
+        if (slotOf(payload, "account")?.row?.body?.length !== ACCOUNT_CAP) return `${label}: the account was not served whole`;
+        notes.push(`whole envelope at every cap (${label}): ${response.wire} bytes`);
+        if (response.wire > WIRE_BOUND) return `${label}: the envelope is ${response.wire} bytes, over ${WIRE_BOUND}`;
+      }
+      return null;
     });
   }
 
