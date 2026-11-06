@@ -551,8 +551,8 @@
       "attempts": 1,
       "start_sha": "f974a6ba3bb802397eb7a36a0b9c4ee88d6c9651",
       "red_sha": "5243f13e5f427e3d01cd4678da5091b3dc6bac58",
-      "green_sha": "3de195d951c338f9ce9d83255d811162f52a5b01",
-      "verified_by_launcher": false,
+      "green_sha": "771d2c24dc1990ff593fb65320097cd0dc26a638",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Touches dev/record-survey-depth.mjs, outside the deliverables: B5 rows gain successor_id, since step 8 derives the successors list from the receipt and the receipt had no such field; A1's --check reports drift on blocking until EX8 re-records (already red at baseline). Choices the spec left open: preflight runs npm run build rather than inferring freshness; the census is written only on a green publish; to_decide counts records not archived-terminal, which reproduces the committed 14; state files live in the system temp dir, so no tracked path is added and the primary checkout's git dir is not written; reconcile also stops on absent ledger rows, preflight on an untracked receipt file, promote on an untracked docs page. EX8: commit restore-progress.json before running, as preflight stops on it. Not run against the live store; a scratch copy reached verify."
     },
