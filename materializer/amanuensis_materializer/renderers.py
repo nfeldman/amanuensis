@@ -87,6 +87,16 @@ SUBSYSTEM_STATUS_MEANINGS = meanings("subsystem_status")
 SUBSYSTEM_STATUS_LIMITS = cannot_justify("subsystem_status")
 
 
+def _one_line(text: Any) -> str:
+    """An authored value as one line, for a list item that a line break would end."""
+    return " ".join(line.strip() for line in str(text).splitlines() if line.strip())
+
+
+def _table_cell(text: Any) -> str:
+    """An authored value as one table cell: a line break would end the row."""
+    return _one_line(text).replace("|", "/")
+
+
 def _fmt_time(ts: str | None) -> str:
     if not ts:
         return "—"
@@ -1142,8 +1152,8 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
                 priority = "—" if s.get("priority") is None else str(s["priority"])
                 body.append(
                     f"| {priority} | **{s['id']}** | {s['name']} | {_badge(s['status'])} | "
-                    f"{(s['scope'] or '—').replace('|', '/')} | "
-                    f"{(s['jump_in_reading'] or '—').replace('|', '/')} | "
+                    f"{_table_cell(s['scope'] or '—')} | "
+                    f"{_table_cell(s['jump_in_reading'] or '—')} | "
                     f"{f['n']} ({f.get('open_bugs', 0)} open) |"
                 )
             body.append("")
@@ -1387,7 +1397,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
                     else "not yet: both parties must be `mapped`"
                 )
                 out.append(
-                    f"| **{sm['id']}** | {sm['shared_object']} | **{other}** |"
+                    f"| **{sm['id']}** | {_table_cell(sm['shared_object'])} | **{other}** |"
                     f" {assessable} |"
                 )
             out.append("")
@@ -1401,7 +1411,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             for x in xrefs:
                 out.append(
                     f"| **{x['from_id']}** | → | **{x['to_id']}** | {x['relationship']} | "
-                    f"{x['strength']} | {(x['context'] or '—').replace('|', '/')} |"
+                    f"{x['strength']} | {_table_cell(x['context'] or '—')} |"
                 )
             out.append("")
 
@@ -1558,7 +1568,7 @@ def render_subsystem(conn: sqlite3.Connection, storage: Path, s: dict[str, Any])
             lp = "🔗" if d["linchpin_dependent"] else ""
             out.append(
                 f"| **{d['concern_code']}** | {d['classification']} | {d['evidence_quality']} | "
-                f"{lp} | {(d['rationale'] or '—').replace('|', '/')} |"
+                f"{lp} | {_table_cell(d['rationale'] or '—')} |"
             )
         out.append("")
     else:
@@ -1652,12 +1662,12 @@ def _finding_table(subsystem_rows: Sequence[dict[str, Any]], level: int = 3) -> 
     ]
     for f in subsystem_rows:
         out.append(finding_marker(str(f["finding_id"])))
-        context = str(f.get("business_context") or "").strip().replace("|", "/")
+        context = _table_cell(f.get("business_context") or "")
         out.append(
             f"| <a id=\"{f['finding_id'].lower()}\"></a>**{f['finding_id']}** | "
             f"{f['resolution_state']} | "
-            f"{f['symptom'].replace('|', '/')} | {context} | "
-            f"{f['root_cause'].replace('|', '/')} | "
+            f"{_table_cell(f['symptom'])} | {context} | "
+            f"{_table_cell(f['root_cause'])} | "
             f"`{(f['ref_sha'] or '—')[:8]}` |"
         )
     out.append("")
@@ -1971,10 +1981,10 @@ def _resolved_records(
         out.append(f'<a id="{fid.lower()}"></a>')
         out += [f"#### {fid} · `{f['severity']}`", ""]
         out += [str(f["symptom"]).strip(), ""]
-        context = str(f.get("business_context") or "").strip()
+        context = _one_line(f.get("business_context") or "")
         if context:
             out.append(f"- **{WHY_IT_MATTERS}** — {context}")
-        out.append(f"- **Root cause** — {str(f['root_cause']).strip()}")
+        out.append(f"- **Root cause** — {_one_line(f['root_cause'])}")
         recorded = str(f["resolution_recorded_at"] or "")
         out.append(
             f"- **Resolution** — `{f['resolution_state']}`"
@@ -1989,7 +1999,7 @@ def _resolved_records(
                 f"- **Repair** — {_short(str(f['fix_sha'] or ''))} at"
                 f" `{f['fix_location'] or 'no location recorded'}`."
             )
-        out.append(f"- **Basis** — `{kind}`: {detail}")
+        out.append(f"- **Basis** — `{kind}`: {_one_line(detail)}")
         out.append("")
     return out
 
@@ -2103,7 +2113,7 @@ def render_concerns(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         for c in active:
             out.append(
                 f"| <a id=\"{c['code'].lower()}\"></a>**{c['code']}** | {c['category'] or '—'} | "
-                f"{c['origin']} | {c['discovered_in'] or '—'} | {(c['notes'] or '').replace('|', '/')} |"
+                f"{c['origin']} | {c['discovered_in'] or '—'} | {_table_cell(c['notes'] or '')} |"
             )
         out.append("")
     if retired:
@@ -2133,8 +2143,8 @@ def render_seams(conn: sqlite3.Connection, storage: Path) -> RenderResult:
             assessable = "✅" if a.get("assessable") else "⏳"
             parties = f"**{s['party_a']}** ↔ **{s['party_b']}**"
             out.append(
-                f"| <a id=\"{s['id'].lower()}\"></a>**{s['id']}** | {s['shared_object']} | {s['shared_object_kind'] or '—'} | "
-                f"{parties} | {assessable} | {(s['notes'] or '').replace('|', '/')} |"
+                f"| <a id=\"{s['id'].lower()}\"></a>**{s['id']}** | {_table_cell(s['shared_object'])} | {s['shared_object_kind'] or '—'} | "
+                f"{parties} | {assessable} | {_table_cell(s['notes'] or '')} |"
             )
         out.append("")
     return "\n".join(out) + "\n", _db_source("seams:all", seams) | _db_source("seams:assess", assess)
@@ -2212,8 +2222,8 @@ def render_contradictions(conn: sqlite3.Connection, storage: Path) -> RenderResu
 
     def cell(c: dict[str, Any]) -> list[str]:
         event = events.get(int(c["id"]))
-        rationale = str((event or {}).get("rationale") or "").replace("|", "/").strip()
-        scope_note = str(c["scope_note"] or "").replace("|", "/").strip()
+        rationale = _table_cell((event or {}).get("rationale") or "")
+        scope_note = _table_cell(c["scope_note"] or "")
         return [
             f"**{c['finding_a']}** / **{c['finding_b']}**",
             f"`{c['resolution']}`",
@@ -2261,7 +2271,7 @@ def render_diagnosticity(conn: sqlite3.Connection, storage: Path) -> RenderResul
             mid = f"DM-{m['id']}"
             out.append(
                 f"| [**{mid}**](diagnosticity/{matrix_slug(m['id'])}.md) | "
-                f"**{m['subsystem_id'] or '—'}** | {(m['symptom'] or '').replace('|', '/')} | "
+                f"**{m['subsystem_id'] or '—'}** | {_table_cell(m['symptom'] or '')} | "
                 f"{m['outcome']} | {m['leading_concern'] or '—'} | "
                 f"{_fmt_time(m['created_at'])} |"
             )
@@ -2890,8 +2900,8 @@ def _ledger_stale_table(
             f" [{name}]({subsystem_page(subsystem_id, name)}) |"
             f" `{(str(r['ref_sha'] or '—'))[:8]}` |"
             f" {_fmt_time(r['stale_since']) if r['stale_since'] else '—'} |"
-            f" {str(r['stale_reason'] or 'not recorded').replace('|', '/')} |"
-            f" {str(r['why_in_scope'] or '—').replace('|', '/')} |"
+            f" {_table_cell(r['stale_reason'] or 'not recorded')} |"
+            f" {_table_cell(r['why_in_scope'] or '—')} |"
         )
     out.append("")
     return out
@@ -2940,9 +2950,9 @@ def _vocabulary_tables() -> list[str]:
         ]
         for entry in definition.get("values") or ():  # type: ignore[union-attr]
             out.append(
-                f"| `{entry['value']}` | {str(entry['label']).replace('|', '/')}"
-                f" | {str(entry['meaning']).replace('|', '/')}"
-                f" | {str(entry['cannot_justify']).replace('|', '/')} |"
+                f"| `{entry['value']}` | {_table_cell(entry['label'])}"
+                f" | {_table_cell(entry['meaning'])}"
+                f" | {_table_cell(entry['cannot_justify'])} |"
             )
         out.append("")
     return out
@@ -2976,7 +2986,7 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]
         for path, label, hint, _group, subgroup in members:
             prefix = f"{subgroup} · " if subgroup else ""
             out.append(
-                f"| {prefix}[{label}]({path}) | {str(hint).replace('|', '/')} |"
+                f"| {prefix}[{label}]({path}) | {_table_cell(hint)} |"
             )
         out.append("")
     return out
@@ -3505,7 +3515,7 @@ def render_not_yet_surveyed(conn: sqlite3.Connection, storage: Path) -> RenderRe
     if deferred:
         out += ["| Subsystem | Layer | Recorded reason |", "|---|---|---|"]
         for s in deferred:
-            reason = str(s["notes"] or "").replace("|", "/").strip()
+            reason = _table_cell(s["notes"] or "")
             out.append(
                 f"| [{s['name']}]({subsystem_page(str(s['id']), str(s['name']))})"
                 f" **{s['id']}** | {s['layer'] or '—'} |"
@@ -3677,7 +3687,7 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
         for c in contradictions:
             anchor = contradiction_anchor(c["id"])
             locus = f"`{c['shared_location']}`" if c["shared_location"] else "—"
-            conflict = str(c["conflict_type"]).replace("|", "/")
+            conflict = _table_cell(c["conflict_type"])
             out.append(
                 f'| <a id="{anchor}"></a>**#{c["id"]}** |'
                 f" **{c['finding_a']}** / **{c['finding_b']}** | {locus} |"
@@ -3705,7 +3715,7 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
             )
             out.append(
                 f"| [DM-{m['id']}]({matrix_page(int(m['id']))}) | {subsystem} |"
-                f" {str(m['symptom'] or '').replace('|', '/')} |"
+                f" {_table_cell(m['symptom'] or '')} |"
                 f" `{m['outcome'] or 'open'}` | {_fmt_time(m['created_at'])} |"
             )
         out.append("")
@@ -3728,7 +3738,7 @@ def render_disagreements(conn: sqlite3.Connection, storage: Path) -> RenderResul
             name = names.get(subsystem_id, subsystem_id)
             quality = f"`{d['evidence_quality']}`" if d["evidence_quality"] else "not recorded"
             linchpin = "yes" if int(d["linchpin_dependent"] or 0) else "no"
-            rationale = str(d["rationale"] or "No rationale is recorded.").replace("|", "/")
+            rationale = _table_cell(d["rationale"] or "No rationale is recorded.")
             out.append(
                 f"| [{name}]({subsystem_page(subsystem_id, name)}) **{subsystem_id}** |"
                 f" **{d['concern_code']}** | {quality} | {linchpin} |"
@@ -4062,7 +4072,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     for e in finding_events:
         fid = str(e["finding_id"])
         page = finding_page(e["current_state"]) or FINDING_LENS_PAGES[0][1]
-        account = str(e["rationale"] or "").replace("|", "/").strip()
+        account = _table_cell(e["rationale"] or "")
         if e["fix_sha"] or e["fix_location"]:
             repair = f"Repair at `{e['fix_location'] or 'no location recorded'}`"
             account = f"{repair}, {_short(str(e['fix_sha'] or ''))}. {account}".strip()
@@ -4083,9 +4093,9 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     for e in contradiction_events:
         cid = e["contradiction_id"]
         page = contradiction_page(e["current_resolution"])
-        account = str(e["rationale"] or "").replace("|", "/").strip()
+        account = _table_cell(e["rationale"] or "")
         if e["scope_note"]:
-            account = f"{account} Scopes: {str(e['scope_note']).replace('|', '/')}".strip()
+            account = f"{account} Scopes: {_table_cell(e['scope_note'])}".strip()
         timeline.append(
             (
                 str(e["recorded_at"] or ""),
@@ -4221,7 +4231,7 @@ def render_resolved_leads(conn: sqlite3.Connection, storage: Path) -> RenderResu
         ]
         for n in notes:
             anchor = lead_anchor(n["id"])
-            observation = str(n["observation"]).replace("|", "/").replace("\n", " ")
+            observation = _table_cell(n["observation"])
             location = f" @ `{n['location']}`" if n["location"] else ""
             out.append(
                 f'| <a id="{anchor}"></a>**#{n["id"]}** | {n["category"]} |'
@@ -4290,11 +4300,11 @@ def render_sessions(conn: sqlite3.Connection, storage: Path) -> RenderResult:
     if sessions:
         out += ["| Session | Intent | Started | Ended | Outcome |", "|---|---|---|---|---|"]
         for s in sessions:
-            intent = str(s["intent"] or "").replace("|", "/")
+            intent = _table_cell(s["intent"] or "")
             out.append(
                 f"| `{s['session_id']}` | `{intent}` | {_fmt_time(s['started_at'])} |"
                 f" {_fmt_time(s['ended_at']) if s['ended_at'] else 'not closed'} |"
-                f" {str(s['outcome'] or 'not recorded').replace('|', '/')} |"
+                f" {_table_cell(s['outcome'] or 'not recorded')} |"
             )
         out.append("")
     else:
