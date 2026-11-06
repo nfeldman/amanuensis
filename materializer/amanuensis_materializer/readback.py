@@ -319,6 +319,20 @@ def select_explanation(
     return ExplanationReading(disposition, effective, checked)
 
 
+def subject_explanation_eligible(
+    subject_type: str, status: str | None, all_statuses: list[str | None]
+) -> bool:
+    """Whether a subject can hold an effective explanation, by the shared cases.
+
+    A subsystem answers by its own status. The project's account is written once a
+    subsystem has been read (R3), and reads `not-recorded` while none is eligible.
+    """
+
+    if subject_type == "project":
+        return any(value in EXPLANATION_ELIGIBLE_STATUSES for value in all_statuses)
+    return status in EXPLANATION_ELIGIBLE_STATUSES
+
+
 def workspace_is_bound(workspace: Path) -> bool:
     """Whether `workspace` is a git work tree revisions can be resolved in."""
 
@@ -422,7 +436,6 @@ def effective_explanations(
         str(r["id"]): str(r["status"] or "")
         for r in rows(conn, "SELECT id, status FROM subsystems")
     }
-    any_eligible = any(status in EXPLANATION_ELIGIBLE_STATUSES for status in statuses.values())
     grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for record in stored:
         key = (str(record["subject_type"]), str(record["subject_id"]), str(record["slot"]))
@@ -430,10 +443,8 @@ def effective_explanations(
     readings: dict[tuple[str, str, str], ExplanationReading] = {}
     for key, candidates in grouped.items():
         subject_type, subject_id, _slot = key
-        eligible = (
-            statuses.get(subject_id, "") in EXPLANATION_ELIGIBLE_STATUSES
-            if subject_type == "subsystem"
-            else any_eligible
+        eligible = subject_explanation_eligible(
+            subject_type, statuses.get(subject_id), list(statuses.values())
         )
         readings[key] = select_explanation(candidates, resolvable, eligible)
     return readings

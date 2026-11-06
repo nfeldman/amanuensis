@@ -9,8 +9,8 @@ import {
   ToolError,
 } from "../helpers.js";
 import {
-  EXPLANATION_ELIGIBLE_STATUSES,
   isExplanationEligible,
+  isProjectExplanationEligible,
   readExplanation,
   readSubsystemStatus,
   requireActiveSession,
@@ -105,13 +105,7 @@ function resolveSubject(ctx: ServerContext, tool: Tool, args: Record<string, unk
       throw new ToolError("subject_id must be 'project' for a project explanation, or omitted");
     }
     if (slot === "purpose") throw new ToolError(refusals.projectPurpose());
-    const read = ctx.db
-      .prepare(
-        `SELECT COUNT(*) AS n FROM subsystems
-          WHERE status IN (${EXPLANATION_ELIGIBLE_STATUSES.map(() => "?").join(", ")})`,
-      )
-      .get(...EXPLANATION_ELIGIBLE_STATUSES) as { n: number };
-    if (read.n === 0) throw new ToolError(refusals.noStructural());
+    if (!isProjectExplanationEligible(ctx.db)) throw new ToolError(refusals.noStructural());
     return { type, id: "project", slot };
   }
   if (suppliedId === null || suppliedId === "") {
@@ -289,7 +283,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "get_explanations",
     description:
-      "Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
+      "Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
     inputSchema: {
       type: "object",
       properties: {

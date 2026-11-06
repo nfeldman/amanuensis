@@ -396,7 +396,11 @@ For a `(subject_type, subject_id, slot)`:
 
 The state is `recorded` or `declined` when the effective row has that disposition, and
 `not-recorded` when there is no effective row or the effective row is `withdrawn`. For a
-subsystem that is not explanation-eligible the state is `not-recorded` whatever rows exist.
+subsystem that is not explanation-eligible the state is `not-recorded` whatever rows exist. The
+project's account is read the same way while no subsystem is explanation-eligible: that is the
+condition it is written under (R3) and the condition its census slot applies under (§2.5).
+Settled by the slice-S2 review (F5), where the two readers disagreed and EX12 already asserted
+this rule.
 
 Earlier rows are kept and never rendered as current. A correction is a new row, and it may be
 written at the same commit as the row it replaces.

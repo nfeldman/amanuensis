@@ -120,7 +120,8 @@ the effective row: the newest whose `ref_sha` the workspace still reaches, so a
 row written at a revision that has since been rewritten away is passed over for
 the older row that resolves. `earlier_rows` counts the rows kept below it. A
 subsystem that has not been read to `structural` reads `not-recorded` whatever
-rows exist, and `checked` is false when no workspace was bound to resolve
+rows exist, the project's account reads the same while no subsystem has been, and
+`checked` is false when no workspace was bound to resolve
 revisions against. The body is served whole, so a response carries at most the
 400-byte purpose and the 4096-byte account with their fields. An unknown
 subsystem, or a subsystem call without `subject_id`, is refused.

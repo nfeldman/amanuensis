@@ -339,6 +339,32 @@ export function isExplanationEligible(status: string | null): boolean {
   return status !== null && EXPLANATION_ELIGIBLE_STATUSES.includes(status);
 }
 
+/**
+ * Whether a subject can hold an effective explanation, as a pure function so both
+ * languages run `explanation-effective-cases.json` over it. A subsystem answers
+ * by its own status. The project's account is written once a subsystem has been
+ * read (R3), and reads `not-recorded` while none is eligible.
+ */
+export function isSubjectExplanationEligible(
+  subjectType: string,
+  subjectStatus: string | null,
+  allStatuses: readonly (string | null)[],
+): boolean {
+  return subjectType === "project"
+    ? allStatuses.some(isExplanationEligible)
+    : isExplanationEligible(subjectStatus);
+}
+
+/** Whether any subsystem in the store is explanation-eligible, the project's condition. */
+export function isProjectExplanationEligible(db: DB): boolean {
+  const statuses = db.prepare("SELECT status FROM subsystems").all() as Array<{ status: string }>;
+  return isSubjectExplanationEligible(
+    "project",
+    null,
+    statuses.map((row) => row.status),
+  );
+}
+
 export interface ExplanationRow {
   id: number;
   subject_type: string;
@@ -439,8 +465,12 @@ export function readExplanation(
     .all(subjectType, subjectId, slot) as ExplanationRow[];
   const eligible =
     subjectType === "project"
-      ? true
-      : isExplanationEligible(atStatus ?? readSubsystemStatus(db, subjectId));
+      ? isProjectExplanationEligible(db)
+      : isSubjectExplanationEligible(
+          subjectType,
+          atStatus ?? readSubsystemStatus(db, subjectId),
+          [],
+        );
   let resolvable: Set<string> | null = null;
   if (workspacePath !== null) {
     const resolved = resolveWorkspaceCommits(
