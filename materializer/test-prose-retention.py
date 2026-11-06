@@ -17,6 +17,8 @@ Turns red when:
     cause, is not empty-celled for a finding with none, is missing from the
     resolved-findings record or from either page's HTML record, or is present
     in a record whose value is empty;
+  - either page's HTML record does not put **Why it matters** after the symptom
+    and before the root cause;
   - a scoped vocabulary term prints its gloss and not its expansion;
   - `subsystems.notes` is not under `## Scope` as `### Survey note` with the
     fixed label sentence, whether or not the subsystem has claims or an
@@ -506,6 +508,65 @@ def main() -> int:
             return None
 
         check("both pages' HTML records carry Why it matters where non-empty", html_records)
+
+        def html_field_order() -> str | None:
+            def ordered(where: str, record: str, fid: str, why: str, root: str, context: str) -> str | None:
+                positions = [
+                    ("the symptom", record.find(sentinel("findings.symptom"))),
+                    ("the Why it matters label", record.find(why)),
+                    ("the business context", record.find(context)),
+                    ("the Root cause label", record.find(root)),
+                    ("the root cause", record.find(sentinel("findings.root_cause"))),
+                ]
+                for name, at in positions:
+                    if at < 0:
+                        return f"{where}'s record for {fid} has no {name}"
+                for (before, a), (after, b) in zip(positions, positions[1:]):
+                    if a >= b:
+                        return f"{where}'s record for {fid} puts {after} before {before}"
+                return None
+
+            def article(page: str, fid: str) -> str:
+                match = re.search(
+                    rf'<article class="record record-finding"[^>]*data-record-label="finding {fid}".*?</article>',
+                    page,
+                    re.S,
+                )
+                return match.group(0) if match else ""
+
+            html = read(docs / "findings.html")
+            label = '<p class="record-label">{}</p>'
+            reason = ordered(
+                "findings.html",
+                article(html, "B01-1"),
+                "B01-1",
+                label.format("Why it matters"),
+                label.format("Root cause"),
+                sentinel("findings.business_context"),
+            )
+            if reason:
+                return reason
+            empty = article(html, NO_CONTEXT_FINDING)
+            if not empty:
+                return f"findings.html has no record for {NO_CONTEXT_FINDING}"
+            if "Why it matters" in empty:
+                return f"findings.html's record for {NO_CONTEXT_FINDING} prints Why it matters with no value"
+
+            resolved = read(docs / "resolved-findings.html")
+            start = resolved.find('id="b01-3"')
+            end = resolved.find("</ul>", start)
+            if start < 0 or end < 0:
+                return "resolved-findings.html has no record for B01-3"
+            return ordered(
+                "resolved-findings.html",
+                resolved[start:end],
+                "B01-3",
+                "<strong>Why it matters</strong>",
+                "<strong>Root cause</strong>",
+                sentinel("findings.business_context resolved"),
+            )
+
+        check("each HTML record orders symptom, Why it matters, root cause", html_field_order)
 
         # -- 4. the vocabulary page renders a scoped expansion ----------------
         def scoped_expansion() -> str | None:
