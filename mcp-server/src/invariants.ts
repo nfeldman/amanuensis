@@ -17,8 +17,8 @@ import {
   isCitationToken,
   resolveWorkspaceAnchors,
   resolveWorkspaceCommits,
-  workspaceIsBound,
   ToolError,
+  workspaceIsBound,
 } from "./helpers.js";
 import {
   EXPLANATION_SLOTS,
