@@ -1206,8 +1206,8 @@
       "attempts": 2,
       "start_sha": "e091ed258f51538c7da88208586d14b7f0c39964",
       "red_sha": "1b43151d982bb15f7bfbbd7d796477ec473c2e11",
-      "green_sha": "f5b2cc89c738341a3745e6aa6994a6e137241720",
-      "verified_by_launcher": false,
+      "green_sha": "3c2f5ab3f6886fb98f1c6384c2f5bb96d1e176f1",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Attempt 2 repaired the RED line, which printed M1: before the phrase; red_expect is anchored on the marker. The new red commit withdraws the script and the next green commit restores it byte for byte, so attempt 1's bfafcd5 is not the proof. Only a missing or wrong wire figure now says the phrase; other failures give their own reason. A default call on each dogfood locus serves no item and its floor (9468-9620) exceeds the 8192 budget."
     },

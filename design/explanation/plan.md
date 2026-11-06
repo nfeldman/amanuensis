@@ -24,7 +24,7 @@
 | EX10 | The mapped gate, refusal parity and the authoring instructions | done (1 attempt) | EX15 | `mcp-server/test-explanation-gate.mjs` | C25, C26, C27, C28 |
 | EX11 | Subsystem page leads with Purpose and How it works | done (1 attempt) | EX9, EX5 | `materializer/test-explanation-pages.py` | C29, C30, C31, C32, C41, C44, C46 |
 | EX12 | Purpose on the master plan, hover text and architecture page; census rows | done (1 attempt) | EX11, EX6 | `materializer/test-explanation-orientation.py` | C33, C34, C35, C31, C44 |
-| EX13 | Measure what a default describe_locus call serves | ready (2 attempts) | EX9 | `dev/test-locus-default-measure.mjs` | C36, C37 |
+| EX13 | Measure what a default describe_locus call serves | done (2 attempts) | EX9 | `dev/test-locus-default-measure.mjs` | C36, C37 |
 
 ## S3 · Explain this repository and publish (review: pending)
 
