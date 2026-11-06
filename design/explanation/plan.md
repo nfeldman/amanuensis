@@ -19,17 +19,18 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| EX9 | The explanation record: schema, enums, reader and two tools | ready | EX8 | `mcp-server/test-explanations.mjs` | C18, C19, C20, C21, C22, C23, C24 |
-| EX10 | The mapped gate, refusal parity and the authoring instructions | ready | EX9 | `mcp-server/test-explanation-gate.mjs` | C25, C26, C27, C28 |
-| EX11 | Subsystem page leads with Purpose and How it works | ready | EX9, EX5 | `materializer/test-explanation-pages.py` | C29, C30, C31, C32, C41 |
-| EX12 | Purpose on the master plan, hover text and architecture page; census rows | ready | EX11, EX6 | `materializer/test-explanation-orientation.py` | C33, C34, C35 |
+| EX9 | The explanation record: schema, enums, effective-row reader and two writers | ready | EX8 | `mcp-server/test-explanations.mjs` | C18, C19, C20, C21, C22, C23, C24, C26, C46 |
+| EX15 | Read tool for explanations; a reset withdraws them | ready | EX9 | `mcp-server/test-explanation-read.mjs` | C42, C43 |
+| EX10 | The mapped gate, refusal parity and the authoring instructions | ready | EX15 | `mcp-server/test-explanation-gate.mjs` | C25, C26, C27, C28 |
+| EX11 | Subsystem page leads with Purpose and How it works | ready | EX9, EX5 | `materializer/test-explanation-pages.py` | C29, C30, C31, C32, C41, C44, C46 |
+| EX12 | Purpose on the master plan, hover text and architecture page; census rows | ready | EX11, EX6 | `materializer/test-explanation-orientation.py` | C33, C34, C35, C31, C44 |
 | EX13 | Measure what a default describe_locus call serves | ready | EX9 | `dev/test-locus-default-measure.mjs` | C36, C37 |
 
 ## S3 · Explain this repository and publish (review: pending)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| EX14 | Explain pass over the self-conspectus and the final republish | ready | EX10, EX11, EX12, EX13 | `dev/test-explanations-published.mjs` | C38, C16, C39 |
+| EX14 | Explain pass over the self-conspectus and the final republish | ready | EX10, EX11, EX12, EX13, EX15 | `dev/test-explanations-published.mjs` | C38, C16, C39, C45 |
 
 ## Completion
 
@@ -80,6 +81,7 @@
 - `node dev/test-republish-chain.mjs`
 - `node dev/test-receipt-gates-restored.mjs`
 - `cd mcp-server && node test-explanations.mjs`
+- `cd mcp-server && node test-explanation-read.mjs`
 - `cd mcp-server && node test-explanation-gate.mjs`
 - `cd materializer && python3 test-explanation-pages.py`
 - `cd materializer && python3 test-explanation-orientation.py`

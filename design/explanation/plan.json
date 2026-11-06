@@ -27,6 +27,7 @@
       "title": "The explanation record, its gate, its authoring and its rendering",
       "packets": [
         "EX9",
+        "EX15",
         "EX10",
         "EX11",
         "EX12",
@@ -95,8 +96,8 @@
       "acceptance": [
         "spec.md §1. dev/measure-reader-prose.mjs <docs-dir> prints the JSON shape of §1 with table_chars, prose_chars, table_share and placeholders per page and in totals, by §1's definitions.",
         "The gate builds a three-page fixture in a temporary directory with counts worked out by hand in the test: one page that is all table, one with a fenced block containing '|' characters that must not count as table text, one with two placeholder sentences. It asserts the exact figures, and that a stub returning zeros turns it red.",
-        "Until EX6, the three placeholder literals are pinned in the test (THESIS_ABSENT, the no-purpose sentence, the runtime-boundary sentence) and read from one constant in the script.",
-        "--record <label> appends {label, commit, contract_sha256, totals} to design/explanation/reader-measure.json; this packet records label 'before' over the tracked docs/ and commits the file.",
+        "MEASURE_PLACEHOLDERS is the fixed list of six strings in spec.md §1, defined once in the script and never changed by a later packet; the gate pins the six literals and the list's sha256.",
+        "--record <label> appends {label, commit, contract_sha256, placeholder_list_sha256, totals} to the entries array of design/explanation/reader-measure.json, replacing an existing entry with the same label and moving it to the end; this packet records label 'before' over the tracked docs/ and commits the file.",
         "The gate is listed in .github/workflows/test.yml beside the other dev gates and asserts that it is.",
         "No threshold is asserted on the measured figures."
       ],
@@ -165,11 +166,12 @@
         "node dev/test-reader-measure.mjs"
       ],
       "acceptance": [
-        "spec.md §2.1. findings.business_context renders as a field labelled 'Why it matters' on every full finding record, on findings.md and resolved-findings.md, after the symptom and before the root cause; a finding without one renders no such field. The HTML finding record carries the same field.",
+        "spec.md §2.1. findings.business_context renders as 'Why it matters', after the symptom and before the root cause: a column on the open-findings Markdown table (_finding_table), present for every row and empty where a finding has none; a field on the resolved-findings record list, omitted where empty; and a field on both pages' HTML finding records (html_projection.py, the finding branch and _RECORD_PROJECTIONS), omitted where empty.",
+        "vocabulary.expansion renders on the vocabulary page for a term scoped to a subsystem, in the same form render_vocabulary already uses for a codebase-wide term.",
         "subsystems.notes renders under '## Scope' as '### Survey note' with the fixed label sentence, whenever non-empty and whether or not the subsystem has claims or an artifact; the old no-claims fallback under Structure is removed so the notes appear once.",
-        "The gate seeds a store in which every field listed in spec.md §2.1 carries a unique sentinel, materializes it, and asserts each sentinel is on at least one page. Follow materializer/test-lens-pages.py for how a fixture store is built from mcp-server/src/schema.sql.",
-        "The allowlist holds exactly the five seam prose columns named in §2.1, each with its reason, and is two-sided: the gate fails when an allowlisted field's sentinel does appear.",
-        "Any existing assertion on a literal table header that changes (materializer/test-materializer.py) is updated to the new header and still asserts a value, not presence.",
+        "The gate seeds a store in which every field listed in spec.md §2.1 carries a unique sentinel (vocabulary.expansion on one scoped and one codebase-wide term; seams.shared_object and seams.notes included), materializes it, and asserts each sentinel is on at least one page. Follow materializer/test-lens-pages.py for how a fixture store is built from mcp-server/src/schema.sql.",
+        "The allowlist holds exactly the eight seam prose columns named in §2.1 (a_writes, a_reads, b_writes, b_reads, ordering_assumption, cardinality, staleness_tolerance, schema_owner), each with its reason, and is two-sided: the gate fails when an allowlisted field's sentinel does appear.",
+        "The findings table header literal asserted at materializer/test-materializer.py:465 is replaced by the new header (spec.md §7) and still asserts the full header, not presence.",
         "The gate is listed in .github/workflows/test.yml in the materializer job."
       ],
       "needs_mcp": false,
@@ -199,6 +201,7 @@
       ],
       "deliverables": [
         "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/html_projection.py",
         "materializer/test-claim-register.py",
         ".github/workflows/test.yml"
       ],
@@ -237,13 +240,14 @@
         "cd materializer && python3 test-prose-retention.py"
       ],
       "acceptance": [
-        "spec.md §2.2. Under '## Structure' each claim is a list item whose first text is the statement, followed by one indented coordinate line: claim key in a code span, subject, epistemic kind label, 'asserted at' short revision, and 'evidence:' with the cited files (with line range where the evidence row has one) or 'evidence: none attached'.",
+        "spec.md §2.2. Under '## Structure' each claim is a list item whose first text is the statement, with one nested list item beneath it (four-space indent) carrying: claim key in a code span, subject, epistemic kind label, 'asserted at' short revision, and 'evidence:' with the cited files (with ':<line_range>' where evidence.line_range is set, and the role in parentheses where claim_evidence.role is not 'supports') or 'evidence: none attached'.",
+        "html_projection.py's list parser gains one level of nesting: an item indented deeper than its list's first item becomes a child <ul> of the preceding <li>. The gate renders the fixture page to HTML and asserts each statement is its own <li> whose coordinates are in a nested <ul>, with no script. Run the whole materializer suite; where an existing page's HTML changes only because its Markdown already nested an item, update that expectation and say so in notes.",
         "No claim has its own heading. mcp-server/test-structural-claims.mjs stays green unmodified.",
         "Grouping follows §2.2: the five recognised segments keep their headings; any other segment is headed by its humanised name ('storage-lifecycle' → 'Storage lifecycle'); 'Other claims' holds only claims whose key is outside the subsystem's '<sid>/' namespace. Group order: recognised kinds, other segments alphabetically, Other claims.",
-        "The gate seeds claims with keys '<sid>/recoverability/x', '<sid>/key-type/y' and a key outside the namespace reached through evidence, and asserts the heading each lands under, that the statement precedes the key in the page text, and the evidence line's content for a claim with a ranged row, an unranged row and no row."
+        "The gate seeds claims with keys '<sid>/recoverability/x', '<sid>/key-type/y' and a key outside the namespace reached through evidence, and asserts the heading each lands under, that the statement precedes the key in the page text, and the evidence text for a claim with a ranged row, an unranged row, a 'contradicts' row and no row."
       ],
       "needs_mcp": false,
-      "budget_minutes": 120,
+      "budget_minutes": 150,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -306,11 +310,11 @@
         "cd materializer && python3 test-claim-register.py"
       ],
       "acceptance": [
-        "spec.md §2.3, rows 1 and 2. With current claims and a registered survey artifact, the artifact's prose renders inside '## Structure' after the last claim group under '### Survey narrative', led by the existing NARRATIVE_LABEL sentence and the provenance.",
+        "spec.md §2.3, the two rows with no recorded account. With current claims and a registered survey artifact, the artifact's prose renders inside '## Structure' after the last claim group under '### Survey narrative', led by the existing NARRATIVE_LABEL sentence and the provenance.",
         "'## Survey record' then carries '### Survey artifact' with the one pointer sentence of §2.3 and the provenance; the prose appears exactly once on the page (the gate counts a sentinel).",
         "With no current claim the page is byte-identical to what it is today (row 1); the gate asserts that control against the existing literal heading.",
         "With no artifact, no narrative heading renders.",
-        "Row 3 is not implemented here: this packet leaves one named helper that decides placement, returning the row-2 answer whenever claims exist, for EX11 to extend."
+        "The recorded-account row is not implemented here: this packet leaves one named helper that decides placement from (has_account, has_claims, has_artifact), called with has_account=False, for EX11 to supply."
       ],
       "needs_mcp": false,
       "budget_minutes": 90,
@@ -377,13 +381,13 @@
       ],
       "acceptance": [
         "spec.md §2.4. The subsystem page's file ledger is a list of groups keyed by (classification, why_in_scope), in the existing order; a unique pair is a group of one.",
-        "Each group's head line carries the reason in bold, the classification, the file count and 'examined at <sha8>'; with more than one revision in the group it says 'examined at <k> revisions' and each path carries its own.",
-        "Every ledger path keeps its ledger_entry_anchor anchor exactly once; the gate seeds 40 rows sharing one reason plus two singletons and asserts the reason appears once, all 42 anchors are present once each, and files.md's links still resolve to them.",
-        "A row with no reason groups under 'No reason recorded'; a row with no revision prints 'not examined'.",
+        "Each group's head line carries the reason in bold, the classification, the file count and a revision label with the short revision. The label is 'examined at' only for classification 'examined' and 'recorded at' for every other classification; with more than one revision in the group it says '<label> <k> revisions' and each path carries its own.",
+        "Each path is its own nested list item under the group, keeping its ledger_entry_anchor anchor exactly once; in HTML the paths are a nested <ul> (EX3's nesting). The gate seeds 40 examined rows sharing one reason, two singletons, a candidate group and an exempt group, and asserts: the shared reason appears once; all anchors are present once each; files.md's links still resolve to them; the candidate and exempt groups say 'recorded at' and never 'examined at'; the HTML has one <li> per path.",
+        "A row with no reason groups under 'No reason recorded'; a row with no revision prints 'no revision recorded'.",
         "The read-back coverage axis stays green on the fixture (python3 test-readback.py)."
       ],
       "needs_mcp": false,
-      "budget_minutes": 90,
+      "budget_minutes": 120,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -411,7 +415,6 @@
         "materializer/amanuensis_materializer/core.py",
         "materializer/amanuensis_materializer/renderers.py",
         "materializer/amanuensis_materializer/diagrams.py",
-        "dev/measure-reader-prose.mjs",
         ".claude/skills/amanuensis/references/onboarding.md",
         ".claude/skills/amanuensis/references/phase-5-packaging.md",
         "materializer/test-placeholder-census.py",
@@ -470,8 +473,8 @@
       ],
       "acceptance": [
         "spec.md §2.5. Materializer.materialize() returns 'unfilled_slots' with rows {slot, page, subject, state, discharge} for the first three slots of the §2.5 table; materialize_docs returns the key unchanged.",
-        "Each row is produced by the same predicate function the renderer calls for that placeholder; the gate asserts both directions on a fixture (every rendered placeholder sentence has a row; every row's sentence is on its page) and that a fixture with every slot filled returns an empty list.",
-        "PLACEHOLDER_SENTENCES is exported from the materializer and dev/measure-reader-prose.mjs reads it instead of its pinned literals; EX1's gate stays green.",
+        "For each slot one predicate function returns its state for a subject; the renderer calls it to decide what to print and the census calls it to decide whether to emit a row. The gate asserts, for these three slots, that a row exists if and only if the slot's sentence is on its page, and that a fixture with every slot filled returns an empty list. No other empty-state sentence is a slot.",
+        "PLACEHOLDER_SENTENCES is exported from the materializer. The gate asserts each of the six strings in dev/measure-reader-prose.mjs's MEASURE_PLACEHOLDERS occurs in a sentence the materializer can emit; the measure script itself is not changed.",
         "references/onboarding.md names '## What is this codebase?' and '## Runtime boundary map' with its five columns literally where it asks for them; references/phase-5-packaging.md step 5 reads unfilled_slots and fills or reports each row.",
         "The gate asserts parity: THESIS_SECTION_PATTERN matches the heading named in onboarding.md and artifact-templates.md, and the runtime heading and columns in both match what diagrams.py requires.",
         "Nothing halts on an unfilled slot, and no text calls the census a gate or guard."
@@ -501,6 +504,7 @@
       "deliverables": [
         "dev/republish-docs.mjs",
         "dev/test-republish-chain.mjs",
+        "design/explanation/unfilled-slots.json",
         ".github/workflows/test.yml"
       ],
       "gate": {
@@ -533,10 +537,11 @@
         "node dev/test-reader-measure.mjs"
       ],
       "acceptance": [
-        "spec.md §4.2. dev/republish-docs.mjs runs the eight steps in order as named, injectable functions; --plan prints them; --from <step> resumes; --measure-label <label> records dev/measure-reader-prose.mjs under that label as the last step.",
+        "spec.md §4.2. dev/republish-docs.mjs runs the ten steps in order as named, injectable functions (preflight, reconcile, freshness, publish, promote, dogfood receipt, depth receipt, progress record, measure, verify); --plan prints them; --from <step> resumes; --measure-label <label> enables the measure step.",
         "Read dev/record-dogfood-receipt.mjs for how a script drives the built server over stdio, dev/promote-docs.mjs and dev/record-survey-depth.mjs for their flags, and `git show 19c8442` for the chain as last run by hand.",
-        "With stubbed steps the gate asserts: the order; that an unledgered path stops the run before publish and names the path; that a red read-back or a lint refusal stops it before promote; that the dogfood recorder is never reached without a publish summary; that no reconcile step runs after publish; that the rebuild-* recorders are never invoked.",
-        "Step 7 rewrites only the derived rows of design/survey-depth/survey-progress.json (the end row and the adjudication totals) from the depth receipt; the gate runs it on a fixture receipt and asserts the rows equal the receipt's, and that every other key is byte-preserved.",
+        "With stubbed steps the gate asserts: the order of all ten; that an unledgered path stops the run before publish and names the path; that a dogfood locus (a path named in design/reader-lenses/dogfood-receipt.json) with an owner whose standing is not 'examined' stops it before publish and names the path and owner; that a red read-back or a lint refusal stops it before promote; that the dogfood recorder is never reached without a publish summary; that no reconcile step runs after publish; that the rebuild-* recorders are never invoked; that verify runs last, invokes all four gates of §0.3, and makes the command exit non-zero when any one is red.",
+        "The progress-record step rewrites exactly the derived fields §4.2 step 8 names, in end (at_sha, examined, obligation_bearing, fraction) and carried_adjudication (total, decided, to_decide, outcomes, and the successors and repaired lists), from the depth receipt, adds derived_fields_rewritten_at, and leaves every other key byte-identical. The gate runs it on a fixture receipt and fixture progress file and asserts the four relations dev/test-survey-depth.mjs:1278-1330 checks: each outcome count equals its list's length, outcomes sum to the total, the total equals the receipt's carried count, and the end row equals the receipt's coverage.",
+        "The publish step writes {commit, unfilled_slots} to design/explanation/unfilled-slots.json; this packet commits that file as {\"commit\": null, \"unfilled_slots\": []} so the path exists before the first reconcile.",
         "The script does not guess a subsystem or classification for an unledgered path.",
         "This packet does not run the chain against the live store; EX8 does."
       ],
@@ -569,6 +574,7 @@
       "deliverables": [
         "dev/test-receipt-gates-restored.mjs",
         "design/explanation/restore-progress.json",
+        "design/explanation/unfilled-slots.json",
         ".github/workflows/test.yml",
         "docs/",
         "design/reader-lenses/dogfood-receipt.json",
@@ -630,7 +636,7 @@
         "Write the gate first: dev/test-receipt-gates-restored.mjs runs the four gates of §0.3 as subprocesses in the order listed there, prints one summary line of its own per sub-gate and never a child's raw output, and on the first red one prints 'GATE EX8 RED: <its path> is red' with the child's exit code. It also asserts §4.4's file checks, including the CI build step before dev/test-carried-finding-references.mjs, and that reader-measure.json holds 'before' and 'recovered' entries with the last entry bound to the committed docs contract hash.",
         "Create design/explanation/restore-progress.json as {\"carried_decided\": 0, \"records\": []} before deciding anything, and commit it. After each carried record is decided, append its id and outcome and increment carried_decided, and commit. If the budget runs out, set status=blocked with the reason and stop; the launcher resumes you.",
         "Each of the 14 undecided carried records gets exactly one terminal outcome through record_carried_outcome, decided by reading the code it names at HEAD (§4.3's table). Evidence is attached to every outcome. No outcome is chosen to clear the gate.",
-        "Then §4.4: rename the thesis heading in the store's entry-point.md, add the runtime boundary map table to onboarding-report.md, rehash both; ledger every unledgered tracked path with add_files_to_scope (this lane's files included, classified by the convention their neighbours use); run `node dev/republish-docs.mjs --measure-label recovered`.",
+        "Then §4.4: rename the thesis heading in the store's entry-point.md, add the runtime boundary map table to onboarding-report.md, rehash both; ledger every unledgered tracked path with add_files_to_scope (this lane's files included, classified by the convention their neighbours use); run `node dev/republish-docs.mjs --measure-label recovered`. When it stops at the freshness step, re-examine each named locus: read the file at HEAD, record the examination at HEAD through the ledger tool, clear its staleness, and rerun the script. Never clear staleness on a file you have not read; leave other stale rows stale.",
         "Add no tracked path after the script's reconcile step: every file written after it already exists. Commit docs/ and the receipts together in one commit.",
         "In .github/workflows/test.yml, add npm ci and npm run build for mcp-server before the carried-finding references step in its job.",
         "The gates named in spec.md §4.1's second table are not this packet's; do not re-record a rebuild-* receipt.",
@@ -656,7 +662,7 @@
     {
       "id": "EX9",
       "slice": "S2",
-      "title": "The explanation record: schema, enums, reader and two tools",
+      "title": "The explanation record: schema, enums, effective-row reader and two writers",
       "model": "sonnet",
       "claims": [
         "C18",
@@ -665,7 +671,9 @@
         "C21",
         "C22",
         "C23",
-        "C24"
+        "C24",
+        "C26",
+        "C46"
       ],
       "depends_on": [
         "EX8"
@@ -674,12 +682,15 @@
         "mcp-server/src/schema.sql",
         "mcp-server/contracts/conspectus-vocabulary.json",
         "mcp-server/contracts/append-only-tables.txt",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/contracts/explanation-effective-cases.json",
         "mcp-server/src/invariants.ts",
         "mcp-server/src/tools/explanations.ts",
         "mcp-server/src/index.ts",
         "mcp-server/DEVELOPMENT.md",
         "mcp-server/src/vocabulary.ts",
         "materializer/amanuensis_materializer/vocabulary.py",
+        ".claude/skills/amanuensis/references/explanations.md",
         "mcp-server/test-explanations.mjs",
         "materializer/test-prose-retention.py",
         ".github/workflows/test.yml"
@@ -687,7 +698,7 @@
       "gate": {
         "test_path": "mcp-server/test-explanations.mjs",
         "command": "cd mcp-server && node test-explanations.mjs",
-        "red_expect": "GATE EX9 RED: record_explanation is not refused for a subsystem below structural",
+        "red_expect": "GATE EX9 RED: record_explanation is not refused for a subsystem that is not explanation-eligible",
         "red_rejects": [
           "MODULE_NOT_FOUND",
           "Cannot find module",
@@ -738,17 +749,99 @@
         "node dev/test-republish-chain.mjs"
       ],
       "acceptance": [
-        "spec.md §3.1–§3.3. Copy the vocabulary declination pattern end to end: mcp-server/src/schema.sql (vocabulary_declinations and its two triggers), contracts/append-only-tables.txt, src/tools/vocabulary.ts (decline_domain_vocabulary), src/invariants.ts (readVocabularyDischarge), the ADDITIVE_TOOLS entry in src/index.ts, and mcp-server/test-vocabulary-discharge.mjs for the gate's shape.",
-        "Tables explanations and explanation_evidence exactly as §3.1, append-only, created on open of an existing store; the three enums are added to conspectus-vocabulary.json with label, meaning and cannot_justify per value and regenerated into both vocabulary modules; the gate asserts the SQL CHECK lists equal the contract's values.",
-        "readExplanation in invariants.ts implements §3.2: the newest row whose ref_sha resolves is effective; without a workspace the newest row with checked:false.",
-        "record_explanation raises each of R1–R8 with the message stem in §3.3's table, and accepts a valid purpose and account; decline_explanation applies R1–R4 only. The gate drives the built server and asserts every refusal by its stem, the byte caps at the boundary (400 and 401, 4096 and 4097), that UPDATE and DELETE on both tables raise, that a second row at the same commit becomes effective, and that a row with an unreachable ref_sha is skipped.",
+        "spec.md §3.1–§3.3, the two writers only (get_explanations and the reset rule are EX15). Copy the vocabulary declination pattern end to end: mcp-server/src/schema.sql (vocabulary_declinations and its two triggers), contracts/append-only-tables.txt, src/tools/vocabulary.ts (decline_domain_vocabulary), src/invariants.ts (readVocabularyDischarge), the ADDITIVE_TOOLS entry in src/index.ts, and mcp-server/test-vocabulary-discharge.mjs for the gate's shape.",
+        "Tables explanations and explanation_evidence exactly as §3.1 (stored dispositions recorded, declined, withdrawn), append-only, created on open of an existing store.",
+        "conspectus-vocabulary.json gains explanation_subject, explanation_slot and explanation_disposition, each with the generator's `sql` binding to its explanations column, and explanation_discharge (recorded, declined, not-recorded) with no sql binding; every value has label, meaning and cannot_justify. subsystem_status values gain the boolean explanation_eligible (true for structural, concerns, adversarial, mapped). Regenerate both vocabulary modules with scripts/gen-vocabulary.mjs; extend the generator only as far as the new boolean field needs.",
+        "readExplanation in invariants.ts implements §3.2 around a pure selection function over (rows, resolvable revisions, eligibility). contracts/explanation-effective-cases.json holds the shared cases §3.2 lists, each with its expected state and row id; the gate runs the selection function over every case.",
+        "record_explanation raises each of R1–R8 with the message stem in §3.3's table and accepts a valid purpose and account; decline_explanation applies the conditions of R1–R4 with its own stems beginning 'decline_explanation refuses:', plus the 400-byte and one-paragraph rules on the reason. A successful write returns only {id, subject_type, subject_id, slot, disposition, ref_sha}.",
+        "The gate drives the built server and asserts: every refusal by its stem; the byte caps at the boundary (400 and 401, 4096 and 4097, and the reason cap); that UPDATE and DELETE on both tables raise; that a second row at the same commit becomes effective; that a row with an unreachable ref_sha is skipped; that the write response is the same size for a ten-byte body and a body at the cap; that a set mixing a ledger file with outside files is accepted (R7).",
         "No minimum length and no evidence count above one is enforced; the gate records a ten-byte purpose with one evidence row and expects success.",
+        "Every refusal sentence of both tools is registered in contracts/refusal-parity.json with references/explanations.md as its reference; create that reference with a 'Tools' section giving each tool's use and its refusal phrases (EX10 adds the content brief). scripts/check-refusal-parity.mjs and test-refusal-parity.mjs pass.",
         "The tool inventory and schemas are regenerated (scripts/gen-tool-inventory.mjs) and every checker in the regression list passes.",
-        "materializer/test-prose-retention.py gains explanations.body in its seeded fields, allowlisted with the reason 'rendered by EX11', so EX2's gate stays green; EX11 removes the entry.",
+        "materializer/test-prose-retention.py gains explanations.body in its seeded fields with the allowlist entry 'rendered by EX11', so EX2's gate stays green; EX11 removes the entry.",
         "mcp-server/src/tools/locus.ts is not modified."
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
+    },
+    {
+      "id": "EX15",
+      "slice": "S2",
+      "title": "Read tool for explanations; a reset withdraws them",
+      "model": "sonnet",
+      "claims": [
+        "C42",
+        "C43"
+      ],
+      "depends_on": [
+        "EX9"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/explanations.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/DEVELOPMENT.md",
+        ".claude/skills/amanuensis/references/explanations.md",
+        "mcp-server/test-explanation-read.mjs",
+        ".github/workflows/test.yml"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-explanation-read.mjs",
+        "command": "cd mcp-server && node test-explanation-read.mjs",
+        "red_expect": "GATE EX15 RED: get_explanations does not return the effective row",
+        "red_rejects": [
+          "MODULE_NOT_FOUND",
+          "Cannot find module",
+          "ENOENT",
+          "SyntaxError",
+          "ReferenceError",
+          "TypeError",
+          "is not a function",
+          "command not found",
+          "ModuleNotFoundError",
+          "ImportError",
+          "Traceback (most recent call last)",
+          "NameError",
+          "AttributeError"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build",
+        "cd mcp-server && node scripts/gen-tool-inventory.mjs --check",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node scripts/check-sql-identifiers.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && npx biome check src/",
+        "cd mcp-server && node test-smoke.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-vocabulary-discharge.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-locus-compactness.mjs",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-explanations.mjs"
+      ],
+      "acceptance": [
+        "spec.md §3.3. get_explanations {subject_type, subject_id?} returns, per slot of the subject, {slot, state, checked, authored: 'model', row: {id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids} | null, earlier_rows: <count>} and model_calls: 0, through readExplanation. It is a read tool: no session is required and nothing is written (the gate digests the store before and after).",
+        "The gate drives the built server and asserts the response for: nothing recorded; a recorded purpose; a correction (the newer row returned, earlier_rows 1); a declination; a row whose ref_sha does not resolve; a subsystem that is not explanation-eligible (state not-recorded whatever rows exist); and the project subject.",
+        "spec.md §3.1, Reset. reset_subsystem appends a 'withdrawn' row, with the reset's reason as its body, for each slot of that subsystem that has any row; earlier rows are kept. The gate records a purpose and an account, resets the subsystem, brings it back to 'structural', and asserts both slots read not-recorded and that record_explanation then makes a new row effective.",
+        "The largest possible response (both slots at their caps) is measured in the gate and recorded in notes.",
+        "references/explanations.md's Tools section gains get_explanations; the tool inventory and schemas are regenerated.",
+        "mcp-server/src/tools/locus.ts and contracts/locus-account.schema.json are not modified."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 120,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -770,7 +863,7 @@
         "C28"
       ],
       "depends_on": [
-        "EX9"
+        "EX15"
       ],
       "deliverables": [
         "mcp-server/src/invariants.ts",
@@ -824,6 +917,7 @@
         "cd mcp-server && node test-locus-compactness.mjs",
         "cd mcp-server && node test-existing-store-migration.mjs",
         "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-explanation-read.mjs",
         "cd mcp-server && node test-disposition-evidence.mjs",
         "cd mcp-server && node test-scope-reconciliation.mjs",
         "cd mcp-server && node test-workspace-binding.mjs",
@@ -835,11 +929,11 @@
         "node dev/test-living-conspectus.mjs"
       ],
       "acceptance": [
-        "spec.md §3.4. requireExplanationDischarge in invariants.ts refuses the advance to 'mapped' unless the effective purpose and the effective account are each recorded or declined; it is called where requireVocabularyDischarge is, so both status writers reach it. The message is §3.4's, naming what is missing.",
-        "The gate drives both status writers: refused with neither slot; refused with only one; allowed with two records; allowed with two declinations; allowed with one of each; an advance to 'adversarial' is not gated; without a bound workspace the advance proceeds and reports that anchors were not resolved.",
-        "Every existing test whose fixture advances a subsystem to 'mapped' gains declinations through one shared fixture helper. Find them by running the whole mcp-server test directory and dev/test-*.mjs before and after; no assertion is removed or relaxed, and the set of tests green before this packet is green after it.",
+        "spec.md §3.4. requireExplanationDischarge in invariants.ts refuses every status write whose target is 'mapped' and whose current status is not 'mapped', unless the effective purpose and the effective account are each recorded or declined. It is invoked on its own path by both status writers (mcp-server/src/tools/subsystems.ts), not only inside the `case \"mapped\"` branch, since assertStatusTransition and enforceForwardPrerequisites both return early for a transition from 'deferred'. The message is §3.4's, naming what is missing.",
+        "The gate drives both status writers and asserts: refused with neither slot; refused with only one; allowed with two records; allowed with two declinations; allowed with one of each; refused from 'deferred' with neither slot and allowed from 'deferred' with both, through each writer; a write that leaves a 'mapped' subsystem 'mapped' is not checked; an advance to 'adversarial' is not gated; without a bound workspace a slot with a row proceeds with a report that its revision was not resolved, and a slot with no row is refused.",
+        "Every existing test whose fixture moves a subsystem to 'mapped', from any status, gains declinations through one shared fixture helper. Find them by running the whole mcp-server test directory and dev/test-*.mjs before and after; no assertion is removed or relaxed, and the set of tests green before this packet is green after it.",
         "The refusal is registered in contracts/refusal-parity.json and quoted in references/phase-5-packaging.md; test-refusal-parity.mjs stays green.",
-        "spec.md §3.5. references/explanations.md is the content brief with the purpose, subsystem account and project account as specified, and the rules for all three; SKILL.md lists it; each row of §3.5's phase table is applied to its reference.",
+        "spec.md §3.5. references/explanations.md is the content brief with the purpose, subsystem account and project account as specified, and the rules for all three; SKILL.md lists it; each row of §3.5's phase table is applied to its reference, with get_explanations named as the way the adversarial, packaging and refresh phases read what was recorded.",
         "The skill text sets no length floor and says declining with a reason is a complete answer."
       ],
       "needs_mcp": false,
@@ -863,7 +957,9 @@
         "C30",
         "C31",
         "C32",
-        "C41"
+        "C41",
+        "C44",
+        "C46"
       ],
       "depends_on": [
         "EX9",
@@ -871,6 +967,8 @@
       ],
       "deliverables": [
         "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/readback.py",
         "materializer/amanuensis_materializer/lint.py",
         "materializer/test-explanation-pages.py",
         "materializer/test-lens-pages.py",
@@ -936,13 +1034,15 @@
         "Not-recorded state: the page is what it is today, opening with '## Scope' and the NO_PURPOSE sentence. materializer/test-lens-pages.py keeps its assertions for that state and gains a control that a Purpose heading never renders without a record (spec §0.2, §7).",
         "Recorded and declined states render the texts of §3.6; in both, '## Scope' prints no disclaimer; scope is never relabelled.",
         "Every rendered explanation carries the provenance line; the ageing sentence is computed per §3.6's table. The gate builds a temporary git repository, records an explanation citing two files, commits a change to one, and asserts the three sentences: none changed, one of two changed with its path, and not measured when the revision does not resolve.",
-        "A recorded body with an orientation-lint violation is not printed, the refusal sentence takes its place and the publish fails; the lint's negative corpus in test-overview-truthfulness.py gains purpose and account sentences whose subject is a subsystem id.",
-        "The effective-row rule in Python agrees with readExplanation: the gate seeds a superseded row, a declined row and a row with an unreachable ref_sha, and compares the page with the server's reading through the built server.",
-        "With a recorded account the survey narrative renders under '## Survey record' (§2.3 row 3); EX4's gate stays green.",
+        "A recorded body or declination reason with an orientation-lint violation is not printed, the refusal sentence takes its place and the publish fails. core.py passes the failure callback (warn=self._warn, as it does for render_index) to render_subsystem. The gate exercises the real clean-publish path: the refusal sentence is in the rendered page, the publish result is red, and the previously published output is untouched. The lint's negative corpus in test-overview-truthfulness.py gains purpose, account and declination sentences whose subject is a subsystem id.",
+        "The effective-row rule in Python is a pure selection function over (rows, resolvable revisions, eligibility); the gate runs it over every case in mcp-server/contracts/explanation-effective-cases.json and asserts the expected state and row id. The gate needs no built server and no node.",
+        "Custody: the subsystem page lists the explanation rows among its sources (_db_source), so recording one re-renders the page; readback.py's state axis checks that every effective recorded explanation's body is on the page that owes it. The gate has the red case: with the body removed from the rendered page, the read-back fails.",
+        "State words come from labels('explanation_discharge'); the gate asserts that a changed label in the contract fixture changes the page.",
+        "With a recorded account the survey narrative renders under '## Survey record' whatever the claim count (§2.3); the gate seeds a recorded account with current claims and with none; EX4's gate stays green.",
         "explanations.body leaves the retention allowlist in materializer/test-prose-retention.py and the gate passes."
       ],
       "needs_mcp": false,
-      "budget_minutes": 180,
+      "budget_minutes": 210,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -960,7 +1060,9 @@
       "claims": [
         "C33",
         "C34",
-        "C35"
+        "C35",
+        "C31",
+        "C44"
       ],
       "depends_on": [
         "EX11",
@@ -970,6 +1072,7 @@
         "materializer/amanuensis_materializer/renderers.py",
         "materializer/amanuensis_materializer/core.py",
         "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
         "materializer/test-explanation-orientation.py",
         "materializer/test-placeholder-census.py",
         ".github/workflows/test.yml"
@@ -1014,14 +1117,16 @@
         "cd materializer && python3 test-explanation-pages.py"
       ],
       "acceptance": [
-        "spec.md §3.7. The master plan's subsystem table has a Purpose column with the recorded purpose, 'not recorded' or 'declined'; html_projection.py's record projection for that table gains the column in the same change so test-materializer.py stays green.",
-        "A subsystem id's hover definition is its name and recorded purpose through the existing _compact_definition; unchanged without one.",
-        "The architecture page opens with '## How the parts fit together': the project account and its provenance line, then one line per subsystem with its purpose or 'no purpose recorded'; with no project account it prints the fixed sentence and the per-subsystem lines.",
-        "The census gains subsystem-purpose, subsystem-account and project-account rows by the same-predicate rule; a subsystem below 'structural' contributes no row; EX6's both-directions assertions cover the new rows.",
+        "spec.md §3.7. The master plan's subsystem table has a Purpose column with the recorded purpose (any '|' replaced by '/', as neighbouring cells do; the gate seeds a purpose containing '|') or the state's label from labels('explanation_discharge'); html_projection.py's record projection for that table gains the column in the same change so test-materializer.py stays green. The purpose there is an excerpt with no provenance line; the subsystem id beside it already links to the page whose section carries one.",
+        "A subsystem id's hover definition is its name and the first sentence of its recorded purpose through the existing _compact_definition; unchanged without one.",
+        "The architecture page opens with '## How the parts fit together': the project account and its provenance line, or the declination sentence of §3.7, or the no-account sentence; then one line per subsystem with its purpose or the state's label.",
+        "The project account and its declination reason pass the orientation lint with the same refusal sentence and the same failing publish as EX11; core.py passes the failure callback to render_architecture and render_master_plan; the gate seeds a violating project account and asserts the refusal sentence and the red publish.",
+        "The architecture and master-plan pages list the explanation rows they render among their sources, and the read-back check of EX11 covers the project account, with its red case.",
+        "The census gains subsystem-purpose, subsystem-account and project-account rows per §2.5's table: a subsystem that is not explanation-eligible (including 'deferred') prints the no-purpose sentence and has no explanation-slot row, asserted as a control, and keeps its vocabulary row; subsystem-account is asserted one-directionally as §2.5 states; project-account applies only when a subsystem is eligible; a declined slot has no row. The fixtures of §2.5's last bullet are all present. These cases extend EX6's gate file by addition.",
         "The overview page and its thesis are byte-identical for a store with no explanation rows."
       ],
       "needs_mcp": false,
-      "budget_minutes": 150,
+      "budget_minutes": 180,
       "status": "ready",
       "attempts": 0,
       "start_sha": "",
@@ -1114,13 +1219,15 @@
       "claims": [
         "C38",
         "C16",
-        "C39"
+        "C39",
+        "C45"
       ],
       "depends_on": [
         "EX10",
         "EX11",
         "EX12",
-        "EX13"
+        "EX13",
+        "EX15"
       ],
       "deliverables": [
         "dev/test-explanations-published.mjs",
@@ -1131,7 +1238,8 @@
         "design/survey-depth/acceptance-receipt.json",
         "design/survey-depth/survey-progress.json",
         "design/explanation/reader-measure.json",
-        "design/explanation/locus-default-measure.json"
+        "design/explanation/locus-default-measure.json",
+        "design/explanation/unfilled-slots.json"
       ],
       "gate": {
         "test_path": "dev/test-explanations-published.mjs",
@@ -1197,6 +1305,7 @@
         "node dev/test-republish-chain.mjs",
         "node dev/test-receipt-gates-restored.mjs",
         "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-explanation-read.mjs",
         "cd mcp-server && node test-explanation-gate.mjs",
         "cd materializer && python3 test-explanation-pages.py",
         "cd materializer && python3 test-explanation-orientation.py",
@@ -1204,12 +1313,13 @@
       ],
       "acceptance": [
         "spec.md §5. You are explicitly authorized to use the Amanuensis skill and MCP tools against this worktree's store for this packet. Call get_project_info with this worktree's absolute path first. Read .claude/skills/amanuensis/references/explanations.md before writing anything.",
-        "Write the gate first: dev/test-explanations-published.mjs asserts §5's five checks over tracked files, running the four gates of §0.3 as subprocesses with one summary line each and no child output.",
+        "Write the gate first: dev/test-explanations-published.mjs asserts §5's checks over tracked files in the order §5 lists them (the Purpose check first), running the four gates of §0.3 as subprocesses with one summary line each and no child output. It includes the account check (every page with '## Purpose' also has '## How it works' or the account-declination sentence) with a control in its own fixtures, and the check that the committed design/explanation/unfilled-slots.json holds no explanation-slot row.",
         "Create design/explanation/explain-progress.json as {\"subjects_done\": 0, \"subjects\": []} and commit it before recording anything. After each subject (a subsystem, or the project) is recorded or declined, append it and increment subjects_done, and commit. If the budget runs out, set status=blocked with the reason; the launcher resumes you.",
         "For each subsystem at 'structural' or later (B-01 to B-05 and B-07 at baseline): read its current claims, its findings, its survey artifact and the code they cite at HEAD; record evidence for what you rely on; then record_explanation for the purpose and the account, or decline_explanation with the reason. Subsystems below 'structural' are not touched.",
-        "Record the project account, and define_term each cross-cutting concept it relies on as a codebase-wide term with an expansion.",
+        "Record the project account. Each concept it relies on is a vocabulary term with an expansion: an existing scoped term keeps its scope and gains or keeps an expansion through define_term; a new concept that belongs to no one subsystem is defined without subsystem_id.",
+        "Read back what you recorded with get_explanations before publishing.",
         "Each explanation is specific to this codebase and true to the code you read: a sentence you cannot support from attached evidence is removed or the slot is declined. No survey-status or coverage language.",
-        "Then ledger every unledgered tracked path, run `node dev/republish-docs.mjs --measure-label explained`, and `node dev/measure-locus-default.mjs --record`. Add no tracked path after the script's reconcile step. Commit docs/ and the receipts together.",
+        "Then ledger every unledgered tracked path, run `node dev/republish-docs.mjs --measure-label explained`, and `node dev/measure-locus-default.mjs --record`. When the script stops at the freshness step, re-examine each named locus as EX8 did (read at HEAD, record the examination, clear staleness, rerun); never clear staleness unread. Add no tracked path after the script's reconcile step. Commit docs/ and the receipts together.",
         "The materialize_docs result's unfilled_slots lists no explanation slot for a subsystem at 'structural' or later; report any other row in your notes.",
         "EX8's gate is green again at this packet's HEAD."
       ],
@@ -1280,6 +1390,7 @@
       "node dev/test-republish-chain.mjs",
       "node dev/test-receipt-gates-restored.mjs",
       "cd mcp-server && node test-explanations.mjs",
+      "cd mcp-server && node test-explanation-read.mjs",
       "cd mcp-server && node test-explanation-gate.mjs",
       "cd materializer && python3 test-explanation-pages.py",
       "cd materializer && python3 test-explanation-orientation.py",

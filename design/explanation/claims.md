@@ -12,14 +12,16 @@ The self-conspectus store may be read at
 
 ### C1
 
-`findings.business_context` renders on every full finding record, open and resolved, as a field
-labelled **Why it matters**; a finding without one renders no such field.
+`findings.business_context` renders on every full finding record as **Why it matters**: a column
+on the open-findings Markdown table, present for every row and empty where a finding has none; a
+field on the resolved-findings record list and on both pages' HTML records, omitted where empty.
 
 Evidence:
 - `spec.md` §2.1.
+- `materializer/amanuensis_materializer/renderers.py:1486-1506` renders open findings as a table;
+  `materializer/test-materializer.py:465` pins its header.
 - `rg -n business_context materializer/amanuensis_materializer/` returns no match in a renderer.
 - `SELECT count(*), sum(business_context IS NOT NULL AND business_context <> '') FROM findings;` → `11|11`.
-- `git show d302237 --stat` removed the `_Business context_` line from finding records.
 
 ### C2
 
@@ -34,26 +36,31 @@ Evidence:
 
 ### C3
 
-A retention gate seeds a sentinel in every model-authored field and requires each to reach a
-generated page, with a reasoned allowlist that fails when an allowlisted field does render.
+A retention gate seeds a sentinel in every field of `spec.md` §2.1's list and requires each to
+reach a generated page, with a reasoned allowlist that fails when an allowlisted field does
+render; the allowlist is the eight seam prose columns no renderer reads.
 
 Evidence:
 - `spec.md` §2.1.
 - `design/reader-lenses/spec.md:420-426` lists the model-authored durable fields.
+- `mcp-server/src/schema.sql:1016-1023`: `a_writes`, `a_reads`, `b_writes`, `b_reads`,
+  `ordering_assumption`, `cardinality`, `staleness_tolerance`, `schema_owner`;
+  `rg "b_writes|b_reads|cardinality" materializer/amanuensis_materializer/` returns nothing.
 - Practice catalog VP4: every gate must be able to turn red; the two-sided allowlist is that case.
 
 ### C4
 
-A claim renders as a list item whose first text is its statement, followed by one coordinate
-line carrying the claim key, subject, epistemic kind, asserting revision and evidence; no claim
-has its own heading.
+In Markdown a claim renders as a list item whose first text is its statement, with its
+coordinates (claim key, subject, epistemic kind, asserting revision, evidence) as one nested list
+item beneath it and no heading of its own; in HTML the statement is its own `<li>` and the
+coordinates are a nested `<ul>`, which requires `html_projection.py`'s list parser to nest.
 
 Evidence:
 - `spec.md` §2.2.
 - `materializer/amanuensis_materializer/renderers.py:1168-1186` renders a five-column table with
   the claim key in the first column.
-- `.claude/skills/amanuensis/references/reporting-style.md`: an opaque identifier is "a
-  coordinate plus a definition".
+- `materializer/amanuensis_materializer/html_projection.py:2795-2812`: the list parser matches
+  indented items as siblings and joins continuation lines into the item's text.
 - `mcp-server/test-structural-claims.mjs` reads the text under each `###` heading up to the next
   heading.
 
@@ -72,14 +79,13 @@ Evidence:
 
 ### C6
 
-Each claim record lists the files its `claim_evidence` rows cite, with a line range where the
-evidence row has one, and prints `evidence: none attached` when no row is attached.
+Each claim record lists the files its `claim_evidence` rows cite, with `evidence.line_range`
+where set and the row's role where it is not `supports`, and prints `evidence: none attached`
+when no row is attached.
 
 Evidence:
 - `spec.md` §2.2.
-- `mcp-server/src/schema.sql:1326-1331` defines `claim_evidence`.
-- No renderer joins `claim_evidence`: `rg -n claim_evidence materializer/amanuensis_materializer/renderers.py`
-  matches only the Structure membership query at `:1086-1091`.
+- `mcp-server/src/schema.sql:1066-1071` (`evidence.line_range`), `:1326-1331` (`claim_evidence.role`).
 
 ### C7
 
@@ -91,32 +97,31 @@ twice.
 Evidence:
 - `spec.md` §2.3; `decisions.md` §1.
 - `materializer/amanuensis_materializer/renderers.py:1161-1215, 1422-1436`.
-- `.claude/skills/amanuensis/references/phase-2-structural.md` requires a claim before a
-  subsystem advances, so the zero-claim branch is unreachable for a surveyed subsystem.
 
 ### C8
 
 The subsystem file ledger renders as groups of rows sharing a classification and a reason; each
-reason prints once per group and every path keeps its ledger anchor exactly once.
+reason prints once per group, every path is a nested list item keeping its ledger anchor exactly
+once, and a revision is labelled `examined at` only for the classification `examined` and
+`recorded at` otherwise.
 
 Evidence:
 - `spec.md` §2.4.
 - `materializer/amanuensis_materializer/renderers.py:1391-1404`.
+- `mcp-server/src/tools/files.ts:70-78`: `ref_sha` is written for every classification and
+  `examined_at` only for `examined`.
 - `SELECT subsystem_id, count(*), count(DISTINCT why_in_scope) FROM file_ledger GROUP BY 1;`
-  shows subsystems whose rows outnumber their distinct reasons several times over.
-- `materializer/amanuensis_materializer/renderers.py` `render_files` links to
-  `ledger_entry_anchor` targets.
 
 ### C9
 
-`materialize_docs` returns `unfilled_slots`, one row per placeholder the pages render, each
-naming the slot, page, subject, state and the call or edit that discharges it; rows and rendered
-placeholders are produced by the same predicates.
+`materialize_docs` returns `unfilled_slots`, one row per slot of `spec.md` §2.5's table that
+applies to its subject and is unfilled, each naming the slot, page, subject, state and the call
+or edit that discharges it; a slot's state comes from one predicate that both the renderer and
+the census call; no other empty-state sentence is a slot.
 
 Evidence:
 - `spec.md` §2.5.
-- `materializer/amanuensis_materializer/core.py:259-432` returns the publish summary;
-  `mcp-server/src/tools/materialize.ts` passes summary keys through.
+- `materializer/amanuensis_materializer/core.py:259-432` returns the publish summary.
 - Practice catalog GP20: a gap is visible when the party that can close it is told how.
 
 ### C10
@@ -153,8 +158,8 @@ Evidence:
 ### C13
 
 `dev/measure-reader-prose.mjs` computes table-text share and placeholder count over generated
-Markdown by the definitions in `spec.md` §1, and records labelled totals bound to the published
-contract hash; no gate compares the figures with a threshold.
+Markdown by the definitions in `spec.md` §1, counting one fixed list of six placeholder strings
+whose hash is recorded with every entry; no gate compares the figures with a threshold.
 
 Evidence:
 - `spec.md` §1.
@@ -162,17 +167,19 @@ Evidence:
 
 ### C14
 
-`dev/republish-docs.mjs` runs the republish chain as ordered, injectable steps; it stops before
-publishing when a tracked path is unledgered, stops before promoting on a red read-back, never
-reconciles after publishing, and rewrites the derived rows of `survey-progress.json`.
+`dev/republish-docs.mjs` runs the republish chain as ten ordered, injectable steps; it stops
+before publishing when a tracked path is unledgered or a dogfood locus has an owner that is not
+`examined`, stops before promoting on a red read-back, never reconciles after publishing,
+rewrites every field of `survey-progress.json` that the depth gate compares with the receipt, and
+exits non-zero when a receipt gate is red.
 
 Evidence:
 - `spec.md` §4.2.
-- `dev/record-dogfood-receipt.mjs` reads the publish mode from the promotion receipt, which
-  `dev/promote-docs.mjs` writes only with `--publish-summary`.
-- `dev/test-reader-lenses-dogfood.mjs:55-57` compares the store's `last_checked_sha` with the receipt.
-- `dev/test-survey-depth.mjs:1308-1330` requires the progress record's `end` row to equal the
-  receipt's; `rg -l survey-progress dev/` names no writer.
+- `dev/record-dogfood-receipt.mjs` reads the publish mode from the promotion receipt.
+- `mcp-server/src/tools/git.ts:352-369`: `detect_changes` marks a drifted examined row stale;
+  `dev/test-reader-lenses-dogfood.mjs:298-314` requires every owner of each locus to be `examined`.
+- `dev/test-survey-depth.mjs:1278-1330`: outcome counts equal list lengths, outcomes sum to the
+  total, the total equals the receipt's carried count, the `end` row equals the receipt's coverage.
 - `git show 19c8442` performed the chain by hand.
 
 ### C15
@@ -211,8 +218,8 @@ Evidence:
 ### C18
 
 Explanations are stored in a new append-only table `explanations` keyed by subject type, subject
-id and slot, with a disposition, a body, a revision and a session; a project subject admits only
-the `account` slot.
+id and slot, with a stored disposition of `recorded`, `declined` or `withdrawn`, a body, a
+revision and a session; a project subject admits only the `account` slot.
 
 Evidence:
 - `spec.md` §3.1.
@@ -236,7 +243,7 @@ Evidence:
 
 ### C20
 
-The `entries` table is not used.
+The `entries` table is not used to store explanations.
 
 Evidence:
 - `spec.md` §3.1; `decisions.md` §6.
@@ -244,20 +251,24 @@ Evidence:
 
 ### C21
 
-Three enums, `explanation_subject`, `explanation_slot` and `explanation_discharge`, are added to
-`conspectus-vocabulary.json` with a label, meaning and `cannot_justify` per value;
-`claim_subject_type` is unchanged.
+`conspectus-vocabulary.json` gains `explanation_subject`, `explanation_slot` and
+`explanation_disposition`, each bound to its SQL column through the generator's `sql` binding,
+and `explanation_discharge` (`recorded`, `declined`, `not-recorded`), which is computed and never
+stored; `subsystem_status` values gain a boolean `explanation_eligible`; `claim_subject_type` is
+unchanged.
 
 Evidence:
 - `spec.md` §3.1.
-- `mcp-server/contracts/conspectus-vocabulary.json`: `vocabulary_discharge` is the pattern.
+- `mcp-server/scripts/gen-vocabulary.mjs:250-258` emits SQL-constrained vocabularies only for
+  enums with a `sql` binding; `vocabulary_discharge` has none.
 - `design/reader-lenses/decisions.md`: labels and enums have one source.
 
 ### C22
 
-The effective explanation for a subject and slot is the newest row whose `ref_sha` resolves in
-the workspace; earlier rows are kept; a correction is a new row and may share its predecessor's
-commit.
+With a bound workspace the effective explanation is the newest row whose `ref_sha` resolves in
+it; without one the newest row is effective and the reading is marked unchecked. A `withdrawn`
+effective row, or a subsystem that is not explanation-eligible, reads as `not-recorded`. Earlier
+rows are kept, and a correction is a new row that may share its predecessor's commit.
 
 Evidence:
 - `spec.md` §3.2.
@@ -267,21 +278,25 @@ Evidence:
 
 ### C23
 
-`record_explanation` refuses a subsystem below `structural`, a project purpose, missing or
-name-only evidence, evidence outside the subsystem's ledger, and a body over its cap; it sets no
-minimum length.
+`record_explanation` refuses a subsystem that is not explanation-eligible, a project purpose, an
+empty or unknown evidence list, an evidence set made only of `name-inferred` and
+`pattern-matched` rows, an evidence set none of whose files is in the subsystem's ledger, and a
+body over its cap; it sets no minimum length, and a successful write returns a receipt that does
+not echo the body.
 
 Evidence:
 - `spec.md` §3.3, refusals R1–R8.
-- Practice catalog GP10 (authority bounded by survey depth), BP6 (classification from naming),
-  BP4 (a quota on an authored field).
+- Practice catalog GP10 (assertion authority is gated by what was examined), BP6
+  (classification from naming), GP8 (a mechanical check on an authored field establishes its
+  form and attribution, not its truth).
 - `conspectus-vocabulary.json` `evidence_kind` includes `name-inferred` and `pattern-matched`.
 - `design/reader-lenses/spec.md` §4.1: 4096 bytes per optional section.
 
 ### C24
 
-`decline_explanation` records a reasoned declination as a row, and is accepted whether or not an
-explanation is already recorded.
+`decline_explanation` records a reasoned declination as a row, limits the reason to 400 bytes
+and one paragraph, uses its own refusal stems, and is accepted whether or not an explanation is
+already recorded.
 
 Evidence:
 - `spec.md` §3.3.
@@ -289,25 +304,29 @@ Evidence:
 
 ### C25
 
-Advancing a subsystem to `mapped` is refused unless its effective purpose and effective account
-are each recorded or declined, through both status writers; no other advance is gated and
-existing stores are not swept by the check.
+Every transition of a subsystem into `mapped`, from any status including `deferred`, is refused
+unless its effective purpose and effective account are each recorded or declined, through both
+status writers; without a bound workspace a slot with a row proceeds with a report and a slot
+with no row is refused; no other advance is gated and existing stores are not swept by the check.
 
 Evidence:
 - `spec.md` §3.4.
-- `mcp-server/src/invariants.ts:342-383, 933-938` and `mcp-server/src/tools/subsystems.ts:127-133, 201-207`:
-  the vocabulary gate and its two call sites.
-- Practice catalog VP24: a forward-only gate needs a separate sweep of what already exists;
-  the census of C9 is that sweep.
+- `mcp-server/src/invariants.ts:138-141, 1017-1023`: a transition from `deferred` returns before
+  any prerequisite is checked; `:969` is the `case "mapped"` branch.
+- `mcp-server/src/invariants.ts:342-383`: the vocabulary gate's no-workspace behaviour.
+- Practice catalog VP24: a retrofitted guard requires a historical sweep; the census of C9 is
+  that sweep.
 
 ### C26
 
-The `mapped` refusal is registered in `refusal-parity.json` and quoted by
-`references/phase-5-packaging.md`.
+Every refusal sentence of `record_explanation` and `decline_explanation`, and the `mapped`
+refusal, is registered in `refusal-parity.json` in the packet that introduces it, with a skill
+reference that carries its phrase.
 
 Evidence:
-- `spec.md` §3.4.
-- `mcp-server/contracts/refusal-parity.json`; `mcp-server/test-refusal-parity.mjs`.
+- `spec.md` §3.3, §3.4.
+- `mcp-server/scripts/check-refusal-parity.mjs:604-626` fails on a `<tool> refuses:` sentence
+  with no register entry; `mcp-server/test-refusal-parity.mjs`.
 
 ### C27
 
@@ -324,15 +343,15 @@ Evidence:
 ### C28
 
 A skill reference `references/explanations.md` states what a purpose, a subsystem account and a
-project account contain, and cross-cutting concepts are recorded as codebase-wide vocabulary
-terms with expansions.
+project account contain; each concept the project account relies on is a vocabulary term with an
+expansion, an existing scoped term keeping its scope and a new cross-subsystem concept defined
+without one.
 
 Evidence:
 - `spec.md` §3.5.
-- `mcp-server/src/tools/vocabulary.ts:63-82`: `define_term` takes an `expansion` and an optional
-  `subsystem_id`.
-- `rg -n -i 'purpose|how it works|cross-cutting' .claude/skills/amanuensis/references/phase-*.md`
-  finds no instruction to explain either.
+- `mcp-server/src/tools/vocabulary.ts:127-137`: `define_term` keeps an existing `subsystem_id`
+  when none is passed.
+- `SELECT count(*), sum(subsystem_id IS NOT NULL) FROM vocabulary;` → all terms are scoped.
 
 ### C29
 
@@ -347,12 +366,13 @@ Evidence:
 
 ### C30
 
-Every rendered explanation carries a provenance line with its revision, its evidence count and a
-computed ageing sentence; an explanation whose cited files changed is still rendered, and a
+Every explanation rendered as its own section carries a provenance line with its revision, its
+evidence count and a computed ageing sentence; a purpose repeated on another page is an excerpt
+that links to that section; an explanation whose cited files changed is still rendered, and a
 change that cannot be measured is reported as not measured.
 
 Evidence:
-- `spec.md` §3.6.
+- `spec.md` §3.6, §3.7.
 - `dev/adr/0001-living-conspectus-terms.md` defines stale for authority-bearing objects;
   `README.md` item 8 of this design states explanations are orientation, not authority.
 - Practice catalog GP27 (the ageing sentence is computed by code, with no model) and BP22
@@ -360,48 +380,60 @@ Evidence:
 
 ### C31
 
-The orientation lint applies to every recorded purpose and account at publication; a violating
-body is not printed, a refusal sentence takes its place and the publish fails.
+The orientation lint applies at publication to every recorded purpose, account and declination
+reason, on the subsystem pages and the architecture page; violating text is not printed, a
+refusal sentence takes its place and the publish fails, which requires passing the failure
+callback to those renderers.
 
 Evidence:
-- `spec.md` §3.6.
+- `spec.md` §3.6, §3.7.
 - `materializer/amanuensis_materializer/lint.py:1-30`; `renderers.py:260-284` applies it to the thesis.
-- `design/reader-lenses/spec.md` §11.1.
+- `materializer/amanuensis_materializer/core.py:494` passes `warn=self._warn` to `render_index`
+  only; `:534` builds subsystem pages without it.
 
 ### C32
 
-Once a subsystem has a recorded account, its survey narrative renders under `## Survey record`
-and not inside `## Structure`.
+A recorded account takes precedence over the claim count: once a subsystem has one, its survey
+narrative renders under `## Survey record` and not inside `## Structure`, with or without
+current claims.
 
 Evidence:
-- `spec.md` §2.3 row 3; `decisions.md` §1.
+- `spec.md` §2.3; `decisions.md` §1.
+- `mcp-server/src/tools/impact.ts:437-459` closes subsystem-subject claims without changing the
+  subsystem's status, so an account with no current claim is reachable.
 
 ### C33
 
-The master plan carries each subsystem's recorded purpose in a Purpose column, and a subsystem
-id's hover definition is its name and recorded purpose.
+The master plan carries each subsystem's recorded purpose in a Purpose column, with `|` replaced
+as neighbouring cells do, and a subsystem id's hover definition is its name and the first
+sentence of its recorded purpose as `_compact_definition` compacts it.
 
 Evidence:
 - `spec.md` §3.7.
-- `materializer/amanuensis_materializer/renderers.py:944-996`; `core.py:92-107, 571-642`.
+- `materializer/amanuensis_materializer/renderers.py:944-996`; `core.py:92-107` keeps the first
+  sentence, capped at 220 characters.
 
 ### C34
 
 The architecture page opens with `## How the parts fit together`: the project account with its
-provenance line, then one line per subsystem carrying its purpose or "no purpose recorded".
+provenance line, or its declination, or the no-account sentence; then one line per subsystem
+carrying its purpose or the state's label.
 
 Evidence:
 - `spec.md` §3.7.
-- `docs/architecture.md`: three of its four sections are placeholder sentences.
+- `docs/architecture.md`: three of its four sections are empty-state sentences.
 
 ### C35
 
-The census reports `subsystem-purpose`, `subsystem-account` and `project-account` slots, and a
-subsystem below `structural` contributes no row.
+The census reports `subsystem-purpose`, `subsystem-account` and `project-account` slots; a
+subsystem that is not explanation-eligible contributes no explanation-slot row and keeps its
+vocabulary row; `project-account` applies only when a subsystem is eligible.
 
 Evidence:
 - `spec.md` §2.5, §3.7.
-- C23: nothing can be recorded for such a subsystem.
+- C23: nothing can be recorded for an ineligible subsystem.
+- `docs/subsystems/b06-report-interface-design-and-validation-studies.md` prints both the
+  no-purpose sentence and the vocabulary not-recorded sentence for an `unmapped` subsystem.
 
 ### C36
 
@@ -456,9 +488,65 @@ Evidence:
 
 ### C41
 
-Where this design changes a rule an existing assertion encodes, the assertion becomes
-conditional on the state it describes and keeps its must-fail case.
+Where this design changes a rule an existing assertion encodes for one state, the assertion
+becomes conditional on that state and keeps its must-fail case; a literal that changes in every
+state is replaced and listed in `spec.md` §7; a later packet may extend an earlier gate file only
+where the specification names the extension, and only by adding cases.
 
 Evidence:
-- `spec.md` §0.2, §7.
+- `spec.md` §0.1, §0.2, §7.
 - Practice catalog VP25: a gate edited after it fires needs a red proof in the same change.
+
+### C42
+
+A read tool `get_explanations` returns, for a subject, each slot's effective state and row and a
+count of earlier rows, with zero model calls; the authoring phases read explanations through it;
+`describe_locus` is unchanged.
+
+Evidence:
+- `spec.md` §3.3, §3.5, §3.8.
+- `mcp-server/src/tools/locus.ts` serves `purpose: null` and has no account section.
+
+### C43
+
+`reset_subsystem` appends a `withdrawn` row for each slot of the subsystem that has a row, so a
+reset subsystem has no effective explanation and owes a new one.
+
+Evidence:
+- `spec.md` §3.1.
+- `mcp-server/src/tools/subsystems.ts:316-372`: a reset deletes the subsystem's claims, findings,
+  ledger and artifacts and returns its status to an earlier rung.
+
+### C44
+
+A page that renders an explanation lists the explanation rows among its sources, and the
+read-back's state axis checks that every effective recorded explanation's body is on the page
+that owes it.
+
+Evidence:
+- `spec.md` §3.6.
+- `materializer/amanuensis_materializer/renderers.py:1439-1453`: a page re-renders when one of
+  its listed sources changes.
+- `mcp-server/test-structural-claims.mjs` has the equivalent custody check for claims.
+
+### C45
+
+`vocabulary.expansion` renders on the vocabulary page for a term scoped to a subsystem, as it
+does for a codebase-wide term.
+
+Evidence:
+- `spec.md` §2.1.
+- `materializer/amanuensis_materializer/renderers.py:2352-2361` prints only the gloss for a
+  scoped term.
+
+### C46
+
+The effective-row rule has one shared case file, `mcp-server/contracts/explanation-effective-cases.json`,
+which both the TypeScript reader's gate and the Python reader's gate run, so the Python gate
+needs no built server.
+
+Evidence:
+- `spec.md` §3.2.
+- `.github/workflows/test.yml:586-625`: the materializer job installs Python and ruff and does
+  not install or build `mcp-server`.
+

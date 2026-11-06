@@ -13,11 +13,14 @@ Markdown artifacts beside it. "The materializer" is `materializer/amanuensis_mat
 
 ### 0.1 Gate protocol
 
-Each packet has one gate, a new test file that no other packet shares.
+Each packet has one gate, a new test file that is no other packet's gate. A later packet may
+extend an earlier packet's gate file where this specification names the extension (EX6 and EX12
+extend the census gate; EX9 and EX11 edit the retention gate's allowlist; EX8 and EX14 may extend
+the republish gate). An extension adds cases and never removes one.
 
 - The gate prints exactly one status line on stdout, last: `GATE <packet-id> RED: <one-line reason>`
   with a non-zero exit, or `GATE <packet-id> GREEN` with exit 0. The packet id is the plan's id
-  (`EX1` … `EX14`), whatever else the test calls itself.
+  (`EX1` … `EX15`; `EX15` runs between `EX9` and `EX10`), whatever else the test calls itself.
 - The gate must reach its assertions on the tree before the packet's deliverables exist. Load
   the code under test defensively (a guarded import, a guarded file read, a subprocess whose
   failure is caught) so that absence prints the RED line and not a stack trace.
@@ -88,13 +91,21 @@ Definitions, fixed here so that before and after are comparable:
   not a table line. `prose_chars` counts its characters.
 - `table_share` is `table_chars / (table_chars + prose_chars)`, rounded to four places, and
   `0` when both are zero.
-- A **placeholder** is one occurrence of a sentence in the placeholder list. The list is
-  exported by the materializer as `PLACEHOLDER_SENTENCES` (§2.5) and read by the script through
-  `python3 -c`, so the script and the renderer cannot disagree about what a placeholder is. Until
-  EX6 lands the script carries the three literals of §2.5's first three rows and the test pins
-  them; EX6 switches the script to the exported list.
+- A **placeholder** is one occurrence of a string in the script's fixed list
+  `MEASURE_PLACEHOLDERS`. The list is set once, in EX1, and never changes, so every recorded
+  label counts the same thing:
+  1. `No thesis section is recorded`
+  2. `The recorded thesis carries status vocabulary and was not published`
+  3. `The recorded thesis presents a composite index of the record and was not published`
+  4. `No purpose statement is recorded for this subsystem`
+  5. `No structured runtime boundary map is recorded yet`
+  6. `**Domain vocabulary** — not recorded`
+  Each entry in `reader-measure.json` carries `placeholder_list_sha256`, the hash of that list
+  joined by newlines, and the gates that read the file require every entry to carry the same
+  hash. EX6's gate asserts that each of the six strings occurs in a sentence the materializer
+  can emit, so the list cannot drift from the renderer.
 
-`--record <label>` appends an entry `{label, commit, contract_sha256, totals}` to the `entries`
+`--record <label>` appends an entry `{label, commit, contract_sha256, placeholder_list_sha256, totals}` to the `entries`
 array of `design/explanation/reader-measure.json`, where `contract_sha256` is the hash of
 `docs/.projection-contract.json`. Recording a label that already exists replaces that entry and
 moves it to the end. EX1 records `before`. The republish script records `recovered` in EX8 and
@@ -116,11 +127,25 @@ stated, and each changes the bytes of `docs/` only when `docs/` is republished (
 
 ### 2.1 Prose retention (EX2)
 
-**`findings.business_context`** renders on every full finding record, on the open-findings page
-and the resolved-findings page, as a labelled field **Why it matters**, after the symptom and
-before the root cause. A finding with no business context renders no such field. The HTML
-projection's finding record (`html_projection.py`, the finding branch and `_RECORD_PROJECTIONS`)
-gains the same field in the same change.
+**`findings.business_context`** renders on every full finding record as **Why it matters**,
+after the symptom and before the root cause.
+
+- On the open-findings page the Markdown is a table (`_finding_table`), so **Why it matters**
+  is a column present for every row, and its cell is empty for a finding with no business
+  context.
+- On the resolved-findings page the Markdown is a record list, and the field is omitted for a
+  finding with none.
+- In HTML both pages render finding records (`html_projection.py`, the finding branch and
+  `_RECORD_PROJECTIONS`); the field is added there in the same change and is omitted from a
+  record whose value is empty.
+
+The header literal asserted at `materializer/test-materializer.py:465` changes to the new
+header for every state; §7 lists it.
+
+**`vocabulary.expansion`** renders on the vocabulary page for a term scoped to a subsystem, as
+it already does for a codebase-wide term. At baseline the page prints only the gloss for a
+scoped term (`renderers.py`, `render_vocabulary`, the "Scoped to" branch), and all eight terms
+in the self-conspectus are scoped.
 
 **`subsystems.notes`** renders on the subsystem page whenever it is non-empty, directly after
 the scope text, as:
@@ -145,13 +170,16 @@ sentinel appears on at least one generated page. The fields are the list in
 `findings.symptom`, `findings.root_cause`, `findings.business_context`,
 `dispositions.rationale`, `finding_resolution_events.rationale`, `field_notes.observation`,
 `open_questions.question`, `open_questions.what_assumed`, `open_questions.answer`,
-`vocabulary.gloss`, `vocabulary.expansion`, the seam prose columns, and the survey artifact.
+`vocabulary.gloss`, `vocabulary.expansion` (seeded on one scoped term and one codebase-wide
+term), the eight seam prose columns named below, and the survey artifact.
 
 A field that is deliberately not rendered is named in an allowlist in the test, each entry with
 a reason. The allowlist is two-sided: an allowlisted field whose sentinel **does** appear fails
-the gate, so the list cannot go stale. At EX2 the allowlist holds the seam prose columns
-`a_writes`, `a_reads`, `ordering_assumption`, `staleness_tolerance` and `schema_owner`, with the
-reason "no published conspectus records a seam; rendering is deferred". EX9 adds
+the gate, so the list cannot go stale. At EX2 the allowlist holds exactly the eight seam prose
+columns that no renderer reads, `a_writes`, `a_reads`, `b_writes`, `b_reads`,
+`ordering_assumption`, `cardinality`, `staleness_tolerance` and `schema_owner`, each with the
+reason "no published conspectus records a seam; rendering is deferred". `seams.shared_object`
+and `seams.notes` are seeded and must render. EX9 adds
 `explanations.body` to the seeded fields with an allowlist entry "rendered by EX11", and EX11
 removes that entry.
 
@@ -163,14 +191,21 @@ The Structure section's claim tables become lists. For each group:
 ### <group heading>
 
 - <statement>
-  `<claim_key>` · subject `<subject_id>` · <epistemic kind label> · asserted at `<sha8>` · evidence: `<path>:<lines>`, `<path>`
+    - `<claim_key>` · subject `<subject_id>` · <epistemic kind label> · asserted at `<sha8>` · evidence: `<path>:<line_range>`, `<path>` (contradicts)
 ```
 
-- The statement is the first text of the item, verbatim. The coordinate line follows as an
-  indented continuation of the same list item. There is no per-claim heading.
+- The statement is the first text of the item, verbatim. Its coordinates are one nested list
+  item beneath it, indented four spaces. There is no per-claim heading.
 - `evidence:` lists the claim's `claim_evidence` rows joined to `evidence`, in evidence id
-  order: the file path, with `:<line_start>-<line_end>` when the row carries a range. A claim
-  with no attached row prints `evidence: none attached`.
+  order: the file path, with `:<line_range>` when `evidence.line_range` is set, and the row's
+  role in parentheses when it is not `supports`. A claim with no attached row prints
+  `evidence: none attached`.
+- **HTML.** `html_projection.py`'s list parser flattens an indented item into its parent list
+  and joins continuation lines into one run. It gains one level of nesting: an item indented
+  deeper than its list's first item becomes a child `<ul>` of the preceding `<li>`. The gate
+  renders the page to HTML and asserts that each statement is its own `<li>` whose coordinates
+  are in a nested `<ul>`, with no script involved. Where an existing page's HTML changes only
+  because its Markdown already nested an item, the nested rendering is the correct one.
 - **Grouping.** The group is the first segment of the claim key after `<sid>/`. The five
   recognised segments keep their headings (`CLAIM_KIND_HEADINGS`). Any other segment is its own
   group, headed by the segment with hyphens replaced by spaces and its first letter capitalised:
@@ -186,13 +221,16 @@ and must stay green.
 
 Owner decision 1. When a subsystem has a registered survey artifact:
 
-| State | Where the narrative renders |
-|---|---|
-| No current claim | Under `### Structural inventory not recorded as claims`, as today |
-| Claims, and no recorded account (§3.2) | Inside `## Structure`, after the last claim group, under `### Survey narrative` |
-| Claims, and a recorded account | Under `## Survey record`, as `### Survey artifact`, as today |
+| Recorded account (§3.2) | Current claims | Where the narrative renders |
+|---|---|---|
+| no | none | Under `### Structural inventory not recorded as claims`, as today |
+| no | one or more | Inside `## Structure`, after the last claim group, under `### Survey narrative` |
+| yes | any | Under `## Survey record`, as `### Survey artifact`, as today |
 
-In the second state the block is:
+A recorded account takes precedence whatever the claim count. A subsystem can hold an account
+and no current claim, since `apply_change_impact` closes claims without changing status.
+
+In the second row the block is:
 
 ```
 ### Survey narrative
@@ -207,7 +245,8 @@ using the existing `NARRATIVE_LABEL` and `provenance`. The survey record then ca
 Structure." and its provenance. The narrative never renders twice on one page.
 
 EX4 implements the first two rows with the third unreachable, since no account record exists
-yet. EX11 adds the third.
+yet. EX11 adds the third and its gate seeds a recorded account both with and without current
+claims.
 
 ### 2.4 The file ledger groups repeated reasons (EX5)
 
@@ -216,15 +255,21 @@ The subsystem page's file ledger becomes a list of groups. Rows are grouped by
 existing order (classification, then the first path).
 
 ```
-- **<why_in_scope>** — <classification>, <n> file(s), examined at `<sha8>`
-  <a id="<anchor>"></a>`<path>` · <a id="<anchor>"></a>`<path>` · …
+- **<why_in_scope>** — <classification>, <n> file(s), <revision label> `<sha8>`
+    - <a id="<anchor>"></a>`<path>`
+    - <a id="<anchor>"></a>`<path>`
 ```
 
-- Every path keeps its `ledger_entry_anchor` anchor, exactly once.
-- When a group's rows carry more than one `ref_sha`, the head line says `examined at <k> revisions`
-  and each path is followed by its own `` (`<sha8>`) ``.
+- Every path is its own nested list item and keeps its `ledger_entry_anchor` anchor, exactly
+  once. In HTML the paths are a nested `<ul>` under the group's `<li>` (§2.2's nesting).
+- The revision label is `examined at` only for the classification `examined`. For every other
+  classification it is `recorded at`: `file_ledger.ref_sha` is set for all classifications and
+  `examined_at` only for examined rows, so a revision on a candidate or exempt row is the
+  revision it was recorded at and not an examination.
+- When a group's rows carry more than one `ref_sha`, the head line says `<revision label> <k>
+  revisions` and each path is followed by its own `` (`<sha8>`) ``.
 - A row with no reason groups under **No reason recorded**; a row with no revision prints
-  `not examined`.
+  `no revision recorded`.
 - The page-level `files.md` and its links are unchanged.
 
 ### 2.5 The unfilled-slot census (EX6)
@@ -237,20 +282,33 @@ it through. Each row:
   "state": "absent", "discharge": "add a '## What is this codebase?' section to entry-point.md" }
 ```
 
-| Slot | Subject | States | Placeholder sentence on the page |
-|---|---|---|---|
-| `thesis` | `project` | `absent`, `refused` | `THESIS_ABSENT`, `THESIS_REFUSED`, `THESIS_REFUSED_COMPOSITE` |
-| `runtime-boundary-map` | `project` | `absent` | the architecture page's "No structured runtime boundary map is recorded yet." |
-| `subsystem-vocabulary` | subsystem id | `not-recorded` | the vocabulary section's not-recorded sentence |
-| `subsystem-purpose` | subsystem id | `not-recorded` | `NO_PURPOSE_*` (added by EX12) |
-| `subsystem-account` | subsystem id | `not-recorded` | none; the section is absent (added by EX12) |
-| `project-account` | `project` | `not-recorded` | §3.7's sentence (added by EX12) |
+The census has one row per **slot that applies and is unfilled**. The slots are exactly these
+six; no other empty-state sentence on any page ("No seams recorded yet", "No dependency edges
+are recorded") is a slot.
 
-- Each census row is produced by the same predicate function the renderer calls to decide
-  whether to print the placeholder. The gate asserts both directions on a fixture: every
-  rendered placeholder has a census row, and every census row's placeholder is on its page.
+| Slot | Subject | Applies to | Unfilled states | Sentence on the page |
+|---|---|---|---|---|
+| `thesis` | `project` | always | `absent`, `refused` | `THESIS_ABSENT`, `THESIS_REFUSED`, `THESIS_REFUSED_COMPOSITE` |
+| `runtime-boundary-map` | `project` | always | `absent` | the architecture page's "No structured runtime boundary map is recorded yet." |
+| `subsystem-vocabulary` | subsystem id | every subsystem | `not-recorded` | the vocabulary section's not-recorded sentence |
+| `subsystem-purpose` | subsystem id | an explanation-eligible subsystem (§3.1) | `not-recorded` | `NO_PURPOSE_*` (added by EX12) |
+| `subsystem-account` | subsystem id | an explanation-eligible subsystem | `not-recorded` | none: the section is absent (added by EX12) |
+| `project-account` | `project` | when at least one subsystem is explanation-eligible | `not-recorded` | §3.7's no-account sentence (added by EX12) |
+
+- For each slot there is one predicate function returning its state for a subject. The renderer
+  calls it to decide what to print, and the census calls it to decide whether to emit a row.
+- **Correspondence**, asserted by the gate on fixtures, is scoped to the slots that have a
+  sentence: a row exists if and only if that slot's sentence is on that page, **for subjects the
+  slot applies to**. A subsystem that is not explanation-eligible prints `NO_PURPOSE_*` and has
+  no `subsystem-purpose` row; the gate asserts that exemption as a control, including a
+  `deferred` subsystem. `subsystem-account` has no sentence, so its assertion is one-directional:
+  a row exists if and only if an eligible subsystem's page has no `## How it works` section and
+  no account declination.
+- A declined slot is filled and has no row.
 - `discharge` names the tool call or the file edit that fills the slot.
 - `PLACEHOLDER_SENTENCES` is exported from the materializer: the tuple of fixed sentences above.
+- The gate's fixtures cover: no eligible subsystem (no `project-account` row); an eligible
+  subsystem with nothing recorded; every slot declined; every slot recorded.
 - The census is **not a guard**. Publication never halts on an unfilled slot, and no text calls
   the census a gate.
 - A store with every slot filled returns an empty list, and the gate asserts that control.
@@ -278,8 +336,8 @@ CREATE TABLE IF NOT EXISTS explanations (
     subject_type  TEXT    NOT NULL CHECK (subject_type IN ('subsystem','project')),
     subject_id    TEXT    NOT NULL,   -- a subsystem id, or the literal 'project'
     slot          TEXT    NOT NULL CHECK (slot IN ('purpose','account')),
-    disposition   TEXT    NOT NULL CHECK (disposition IN ('recorded','declined')),
-    body          TEXT    NOT NULL,   -- the explanation, or the reason none is written
+    disposition   TEXT    NOT NULL CHECK (disposition IN ('recorded','declined','withdrawn')),
+    body          TEXT    NOT NULL,   -- the explanation, or the reason none is written or it was withdrawn
     ref_sha       TEXT    NOT NULL,
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -302,40 +360,78 @@ created by the ordinary schema path, so an existing store gains them on open
 Three enums are added to `mcp-server/contracts/conspectus-vocabulary.json`, each value with a
 `label`, `meaning` and `cannot_justify`, and generated into both vocabulary modules:
 
-| Enum | Values |
-|---|---|
-| `explanation_subject` | `subsystem`, `project` |
-| `explanation_slot` | `purpose`, `account` |
-| `explanation_discharge` | `recorded`, `declined`, `not-recorded` |
+| Enum | Values | `sql` binding |
+|---|---|---|
+| `explanation_subject` | `subsystem`, `project` | `explanations.subject_type` |
+| `explanation_slot` | `purpose`, `account` | `explanations.slot` |
+| `explanation_disposition` | `recorded`, `declined`, `withdrawn` | `explanations.disposition` |
+| `explanation_discharge` | `recorded`, `declined`, `not-recorded` | none: it is computed, like `vocabulary_discharge` |
 
-`cannot_justify` for `recorded` says that the record establishes who wrote the explanation, at
-which revision and over which evidence, and not that it is true. The CHECK lists above are
-verified against the contract by the gate. `claim_subject_type` is unchanged.
+The three bound enums follow the generator's existing `sql` binding (`scripts/gen-vocabulary.mjs`),
+so the existing vocabulary checks cover their CHECK lists. `explanation_discharge` is the state a
+reader sees and is never stored; `not-recorded` is the absence of an effective row. Reader-facing
+text for a state comes from `labels("explanation_discharge")` and `meanings(...)`, never from a
+literal in a renderer. `cannot_justify` for `recorded` says that the record establishes who
+wrote the explanation, at which revision and over which evidence, and not that it is true.
+`claim_subject_type` is unchanged.
+
+**Explanation-eligible.** A subsystem is explanation-eligible when its status is `structural`,
+`concerns`, `adversarial` or `mapped`. The contract's `subsystem_status` values gain a boolean
+field `explanation_eligible`, generated into both vocabulary modules, and the tools, the gate,
+the renderers and the census all read that one field. `unmapped`, `scoping` and `deferred` are
+not eligible.
+
+**Reset.** `reset_subsystem` appends a `withdrawn` row, with the reset's reason as its body, for
+each slot of that subsystem that has any row. The rows before it are kept. A resurveyed
+subsystem therefore starts with no effective explanation and owes a new one.
 
 ### 3.2 The effective explanation (EX9)
 
-For a `(subject_type, subject_id, slot)`, the **effective** row is the row with the greatest
-`id` whose `ref_sha` resolves to a commit in the bound workspace. Its state is that row's
-`disposition`; with no such row the state is `not-recorded`. Without a bound workspace the
-newest row is effective and the reading carries `checked: false`, as `readVocabularyDischarge`
-does.
+For a `(subject_type, subject_id, slot)`:
+
+- **With a bound workspace**, the effective row is the row with the greatest `id` whose
+  `ref_sha` resolves to a commit in that workspace.
+- **Without a bound workspace**, nothing can be resolved: the row with the greatest `id` is
+  effective and the reading carries `checked: false`, as `readVocabularyDischarge` does.
+
+The state is `recorded` or `declined` when the effective row has that disposition, and
+`not-recorded` when there is no effective row or the effective row is `withdrawn`. For a
+subsystem that is not explanation-eligible the state is `not-recorded` whatever rows exist.
 
 Earlier rows are kept and never rendered as current. A correction is a new row, and it may be
 written at the same commit as the row it replaces.
 
 One reader function in `invariants.ts`, `readExplanation(db, workspacePath, subjectType,
 subjectId, slot)`, implements this rule; the tools and the gate of §3.4 call it. The
-materializer implements the same rule in Python, and the EX11 gate asserts both agree on a
-fixture with a superseded row, a declined row and an unreachable `ref_sha`.
+materializer implements the same rule in Python. Both are written around a pure selection
+function over `(rows, the set of resolvable revisions, eligibility)`, and both gates run that
+function over one shared case file, `mcp-server/contracts/explanation-effective-cases.json`,
+which EX9 adds: a superseded row, a declined row, a withdrawn row, an unreachable `ref_sha`,
+no workspace, and an ineligible subsystem, each with its expected state and row id. The Python
+gate needs no built server.
 
-### 3.3 Tools (EX9)
+### 3.3 Tools (EX9 the two writers; EX15 the read tool and the reset rule)
 
 **`record_explanation`** `{ subject_type, subject_id?, slot, body, evidence_ids, ref_sha }`
 **`decline_explanation`** `{ subject_type, subject_id?, slot, reason, ref_sha }`
 
-Both require an active session, attribute the row to it, and resolve `ref_sha` in the workspace.
-`subject_id` is required for `subsystem` and is `project` for `project`. Both are registered
-like `decline_domain_vocabulary` (tool inventory, schemas, `ADDITIVE_TOOLS`).
+**`get_explanations`** `{ subject_type, subject_id? }`
+
+The two writers require an active session, attribute the row to it, and resolve `ref_sha` in
+the workspace. `subject_id` is required for `subsystem` and is `project` for `project`. All
+three are registered like `decline_domain_vocabulary` (tool inventory, schemas,
+`ADDITIVE_TOOLS`).
+
+A successful write returns a receipt and nothing else:
+`{ id, subject_type, subject_id, slot, disposition, ref_sha }`. It never echoes the body or the
+evidence rows; the gate asserts the response size is unchanged between a ten-byte body and a
+body at the cap.
+
+`get_explanations` is the read path the authoring phases use (§3.5). For the subject it returns,
+per slot, `{ slot, state, checked, authored: "model", row: { id, disposition, body, ref_sha,
+session_id, recorded_at, evidence_ids } | null, earlier_rows: <count> }`, and `model_calls: 0`.
+It applies §3.2 through `readExplanation`. Its response is bounded by the caps below. It is a
+new tool; `describe_locus` is not changed (§3.8).
 
 `record_explanation` refuses, each with a message that names the repair:
 
@@ -347,7 +443,7 @@ like `decline_domain_vocabulary` (tool inventory, schemas, `ADDITIVE_TOOLS`).
 | R4 | subject is `project` and slot is `purpose` | `record_explanation refuses: the project's purpose is the thesis in entry-point.md` |
 | R5 | `evidence_ids` is empty, or names a row that does not exist | `record_explanation refuses: an explanation cites the evidence it was written from` |
 | R6 | every cited row's kind is `name-inferred` or `pattern-matched` | `record_explanation refuses: an explanation resting only on names and patterns` |
-| R7 | subject is a subsystem and no cited row's file is in that subsystem's ledger | `record_explanation refuses: none of the cited evidence is in <id>'s ledger` |
+| R7 | subject is a subsystem and no cited row's file is in that subsystem's ledger (a set that mixes ledger files with others is accepted) | `record_explanation refuses: none of the cited evidence is in <id>'s ledger` |
 | R8 | `body` exceeds its cap, or a `purpose` is not one paragraph | `record_explanation refuses: <slot> is limited to <n> bytes` / `a purpose is one paragraph` |
 
 Caps, in UTF-8 bytes: `purpose` 400, `account` 4096. 4096 is the optional-section budget of
@@ -358,18 +454,37 @@ not require truncating one. A purpose is one paragraph: no blank line and no lin
 There is no minimum length and no required count of evidence rows beyond one.
 
 `decline_explanation` records `disposition = 'declined'` with the reason as `body`. It applies
-R1–R4 and no others. It is accepted whether or not an explanation is already recorded: the
-newest row is effective either way.
+the conditions of R1–R4 with its own message stems, each beginning `decline_explanation
+refuses:`, and one more: the reason is limited to 400 bytes and to one paragraph by the purpose
+rule above (`decline_explanation refuses: a reason is limited to 400 bytes` / `a reason is one
+paragraph`). It is accepted whether or not an explanation is already recorded: the newest row
+is effective either way.
+
+Every refusal sentence of both tools is registered in `mcp-server/contracts/refusal-parity.json`
+in the packet that introduces it (EX9), with `references/explanations.md` as its reference;
+`scripts/check-refusal-parity.mjs` fails on an unregistered `<tool> refuses:` sentence. EX9
+creates that reference with the tools' usage and refusals; EX10 adds the content brief to it.
 
 The orientation lint (§3.6) is applied at publication, in the materializer, and not in the
-tools, so the rule has one implementation.
+tools, so the rule has one implementation. It covers recorded bodies and declination reasons.
 
 ### 3.4 The `mapped` gate (EX10)
 
-Advancing a subsystem to `mapped` is refused unless the effective `purpose` and the effective
-`account` are each `recorded` or `declined`. The check is `requireExplanationDischarge` in
-`invariants.ts`, called where `requireVocabularyDischarge` is, and so reached from both status
-writers. The message:
+Every transition of a subsystem **into** `mapped` is refused unless the effective `purpose` and
+the effective `account` are each `recorded` or `declined`. The check is
+`requireExplanationDischarge` in `invariants.ts`.
+
+- It runs for every status write whose target is `mapped` and whose current status is not
+  `mapped`, **including from `deferred`**. `deferred` otherwise skips the forward prerequisites
+  (`invariants.ts`, `assertStatusTransition` and `enforceForwardPrerequisites` both return early
+  for it), so the check is invoked on its own path by both status writers and not only inside
+  the `case "mapped"` branch. A write that leaves an already-`mapped` subsystem `mapped` is not
+  checked.
+- **Without a bound workspace**, a slot with a row proceeds and the advance reports that its
+  revision was not resolved; a slot with no row is refused. This is the vocabulary gate's
+  behaviour (`requireVocabularyDischarge`).
+
+The message:
 
 ```
 cannot advance <sid> to 'mapped': <what is missing> for this subsystem. Either
@@ -380,8 +495,7 @@ said out loud.
 
 `<what is missing>` is `no purpose is recorded or declined`, `no account is recorded or
 declined`, or both joined by `and`. A row whose `ref_sha` no longer resolves is named in the
-message, as the vocabulary refusal names unreachable declinations. Without a bound workspace the
-advance proceeds and reports that the anchors were not resolved.
+message, as the vocabulary refusal names unreachable declinations.
 
 No other status advance is gated. The gate is forward-only: existing stores are swept by the
 census (§2.5), not by this check.
@@ -389,8 +503,8 @@ census (§2.5), not by this check.
 The refusal is registered in `mcp-server/contracts/refusal-parity.json`, and
 `references/phase-5-packaging.md` quotes it.
 
-Test fixtures that advance a subsystem to `mapped` gain a declination through a shared fixture
-helper; no fixture is weakened and no test's assertion is removed.
+Test fixtures that advance a subsystem to `mapped`, from any status, gain declinations through
+a shared fixture helper; no fixture is weakened and no test's assertion is removed.
 
 ### 3.5 Authoring (EX10)
 
@@ -410,9 +524,12 @@ the system or its users get from it. Not a file list, not a restatement of scope
 
 **Account** (project): what the system does and for whom; the main parts and how one request or
 record passes through them end to end; the rules that hold everywhere (invariants, trust
-boundaries, conventions); and the concepts a reader has to hold. Each such concept is recorded
-as a codebase-wide vocabulary term with an expansion through `define_term`, and the account
-uses the term.
+boundaries, conventions); and the concepts a reader has to hold. Each such concept is a
+vocabulary term with an expansion, and the account uses the term. A concept that already exists
+as a term scoped to a subsystem is used as it stands, with its expansion written or revised
+through `define_term`; its scope is not changed (`define_term` keeps an existing scope, and
+§2.1 renders scoped expansions). A new concept that belongs to no one subsystem is defined
+without `subsystem_id`.
 
 Rules for all three: written for an experienced practitioner new to this codebase; the
 codebase's own vocabulary; no survey-status or coverage language; every non-trivial statement
@@ -424,11 +541,11 @@ Phase changes:
 | Reference | Change |
 |---|---|
 | `phase-2-structural.md` | After the advance to `structural`: record the purpose and a draft account, or decline each |
-| `phase-4-adversarial.md` | The purpose and account are targets. Read them against the code; record a field note naming any sentence the code contradicts, with the evidence |
-| `phase-5-packaging.md` | Revise the account by recording a new version, or confirm it stands; then read the census (§2.5). Quotes the §3.4 refusal |
+| `phase-4-adversarial.md` | The purpose and account are targets. Read them with `get_explanations`, then against the code; record a field note naming any sentence the code contradicts, with the evidence |
+| `phase-5-packaging.md` | Read the account with `get_explanations`; revise it by recording a new version, or confirm it stands; then read the census (§2.5). Quotes the §3.4 refusal |
 | `onboarding.md` | Phase 7 names the thesis heading (§2.5). The project account is recorded once the first subsystem reaches `structural`, and revised at each later packaging |
 | `artifact-templates.md` | The "Tier 1 summary" section is replaced by a pointer to the recorded account |
-| `refresh.md` | A refresh that re-examines a subsystem whose explanation cites changed files revises or confirms it |
+| `refresh.md` | A refresh that re-examines a subsystem whose explanation cites changed files reads it with `get_explanations` and revises or confirms it |
 
 ### 3.6 The subsystem page (EX11)
 
@@ -456,7 +573,10 @@ then the provenance line. A declined account prints nothing here and one sentenc
 `## Survey record`: "A survey session declined to write an account of how this subsystem works
 at `<sha8>`. <reason>"
 
-**Provenance line**, one for each rendered explanation:
+**Provenance line**, one for each explanation rendered as its own section (`## Purpose`,
+`## How it works`, and the project account of §3.7). A purpose repeated elsewhere, on the master
+plan, in hover text or in the architecture page's per-subsystem lines, is an excerpt: it carries
+no provenance line and links to the subsystem page whose section does.
 
 ```
 *Written by a survey session at `<sha8>` from <n> evidence row(s). <ageing>*
@@ -474,35 +594,57 @@ evidence rows and H the store's `git_state.last_checked_sha`:
 An explanation is rendered in every one of these conditions. "Not measured" is never rendered
 as "unchanged".
 
-**Lint.** `lint.orientation_violations` is applied to every recorded body before it is printed.
-A body with a violation is not printed. In its place: "The recorded <slot> carries survey-status
-vocabulary and was not published; record a corrected version." The publish fails, as it does for
-a refused thesis. The lint's negative corpus in `materializer/test-overview-truthfulness.py`
-gains purpose and account sentences whose subject is a subsystem id.
+**Lint.** `lint.orientation_violations` is applied to every recorded body and every declination
+reason before it is printed. Text with a violation is not printed. In its place: "The recorded
+<slot> carries survey-status vocabulary and was not published; record a corrected version." The
+publish fails, as it does for a refused thesis.
+
+- **Plumbing.** At baseline only the overview receives the failure callback (`core.py`, the
+  `PagePlan` for `index.md` passes `warn=self._warn`; `render_subsystem` and
+  `render_architecture` receive none). EX11 passes it to `render_subsystem` and EX12 to
+  `render_architecture` and `render_master_plan`. The gate exercises the real clean-publish
+  path: the refusal sentence is in the rendered page, the publish result is red, and the
+  previously published output is untouched.
+- The lint's negative corpus in `materializer/test-overview-truthfulness.py` gains purpose,
+  account and declination sentences whose subject is a subsystem id.
+
+**Custody.** A page that renders an explanation lists the explanation rows among its `sources`
+(`_db_source`), so recording one re-renders the page. `readback.py`'s state axis gains a check
+that every effective recorded explanation's body is on the page that owes it, with a red case
+in the gate: a renderer that drops the body fails the read-back.
+
+**Labels.** The words for a slot's state (`not recorded`, `declined`) come from
+`labels("explanation_discharge")`; the gate asserts a changed label in the contract changes the
+page.
 
 **Narrative.** With a recorded account, the survey narrative takes the third row of §2.3.
 
 ### 3.7 Elsewhere on the pages (EX12)
 
-- **Master plan.** The subsystem table gains a **Purpose** column holding the recorded purpose,
-  or `not recorded`, or `declined`. `html_projection.py`'s record projection for that table
+- **Master plan.** The subsystem table gains a **Purpose** column holding the recorded purpose
+  with any `|` replaced by `/` as neighbouring cells do, or the state's label from
+  `labels("explanation_discharge")`. `html_projection.py`'s record projection for that table
   gains the column in the same change.
-- **Identifier definitions.** A subsystem id's hover definition is its name and recorded
-  purpose, compacted by the existing `_compact_definition`; without a recorded purpose it is
-  what it is today.
+- **Identifier definitions.** A subsystem id's hover definition is its name and the first
+  sentence of its recorded purpose, as the existing `_compact_definition` compacts it (first
+  sentence, 220 characters); without a recorded purpose it is what it is today.
 - **Architecture page.** A new first section, `## How the parts fit together`: the project
   account and its provenance line, then one line per subsystem, `**<id> — <name>**: <purpose>`
-  for a recorded purpose and `**<id> — <name>**: no purpose recorded` otherwise. With no
-  project account the section prints "No account of how the parts fit together is recorded."
-  and the per-subsystem lines still render.
-- **Census.** The three explanation slots of §2.5 are added. A subsystem below `structural`
-  contributes no row: nothing may be recorded for it, so nothing is unfilled.
+  for a recorded purpose and `**<id> — <name>**:` followed by the state's label otherwise.
+  With no project account the section prints "No account of how the parts fit together is
+  recorded." and the per-subsystem lines still render. A declined project account prints "A
+  survey session declined to write an account of how the parts fit together at `<sha8>`.
+  <reason>". The project account and its declination reason pass the lint of §3.6 with the
+  same refusal sentence and the same failing publish; EX12's gate seeds a violation.
+- **Census.** The three explanation slots of §2.5 are added. A subsystem that is not
+  explanation-eligible contributes no explanation-slot row: nothing may be recorded for it, so
+  nothing is unfilled. Its `subsystem-vocabulary` row is unaffected.
 - The overview and its thesis are unchanged.
 
 ### 3.8 The agent read surface (EX13)
 
 `mcp-server/src/tools/locus.ts` and the locus contract are not modified by this lane (owner
-decision 5).
+decision 5). An agent that wants a subsystem's explanation calls `get_explanations` (§3.3).
 
 `dev/measure-locus-default.mjs` copies a store to a temporary directory, spawns the built server
 against it, calls `describe_locus` with no `sections` for each locus given, and reports for each:
@@ -561,35 +703,55 @@ each a named function so the order is testable:
    any tracked path is unledgered, stop and print the paths. Assigning a path to a subsystem
    and a classification is a survey judgement, so the script does not guess; the session makes
    the `add_files_to_scope` calls and reruns the script.
-3. **publish**: `materialize_docs(clean_publish=true)`; write its response to a summary file.
+3. **freshness**: `detect_changes` marks an examined ledger row stale when its file differs
+   from the revision it was examined at, and the dogfood gate requires every owner of its three
+   loci to stand as `examined`. If any path named in `design/reader-lenses/dogfood-receipt.json`
+   has an owner whose standing is not `examined`, stop and print the paths and owners. The
+   session then re-examines each: it reads the file at `HEAD`, records the examination at `HEAD`
+   through the ledger tool and clears the staleness, and reruns the script. Staleness is never
+   cleared on a file the session has not read. Other stale rows are left stale and are
+   published as stale.
+4. **publish**: `materialize_docs(clean_publish=true)`; write its response to a summary file,
+   and write `{commit, unfilled_slots}` from it to `design/explanation/unfilled-slots.json`.
    Stop when it reports a red read-back or a lint refusal.
-4. **promote**: `dev/promote-docs.mjs` with both `--publish-summary` and `--receipt`.
-5. **dogfood receipt**: `dev/record-dogfood-receipt.mjs --promotion <receipt>`.
-6. **depth receipt**: `dev/record-survey-depth.mjs`.
-7. **progress record**: rewrite the derived rows of `design/survey-depth/survey-progress.json`
-   from the depth receipt: the `end` row's `examined`, `obligation_bearing`, `fraction` and
-   revision, and the adjudication totals. These rows had no writer and were edited by hand.
-8. **measure**: with `--measure-label <label>`, run `dev/measure-reader-prose.mjs docs --record <label>`.
-9. **verify**: run the four gates of §0.3 and print one line each. Exit non-zero if any is red.
+5. **promote**: `dev/promote-docs.mjs` with both `--publish-summary` and `--receipt`.
+6. **dogfood receipt**: `dev/record-dogfood-receipt.mjs --promotion <receipt>`.
+7. **depth receipt**: `dev/record-survey-depth.mjs`.
+8. **progress record**: rewrite the derived fields of `design/survey-depth/survey-progress.json`
+   from the depth receipt, and leave every other key byte-identical. The derived fields are the
+   ones `dev/test-survey-depth.mjs` compares with the receipt: in `end`, `at_sha`, `examined`,
+   `obligation_bearing` and `fraction`; in `carried_adjudication`, `total`, `decided`,
+   `to_decide`, `outcomes`, and the `successors` and `repaired` lists, so that each outcome count
+   equals the length of its list, the outcomes sum to the total, and the total equals the
+   receipt's carried-record count. The script adds `derived_fields_rewritten_at` with the
+   commit; the file's narrative strings predate it and are not rewritten. These fields had no
+   writer and were edited by hand.
+9. **measure**: with `--measure-label <label>`, run `dev/measure-reader-prose.mjs docs --record <label>`.
+10. **verify**: run the four gates of §0.3 and print one line each. Exit non-zero if any is red.
 
 The script does not run `dev/record-rebuild-depth.mjs` or any other `rebuild-*` recorder (§4.1).
 
 Rules:
 
-- The script never calls `detect_changes` after step 3. A reconciliation after the publish
+- The script never calls `detect_changes` after step 4. A reconciliation after the publish
   moves `last_checked_sha` past what the dogfood receipt records.
 - No tracked path may be added after step 2. Every file a later step writes, and every file the
   session commits with the receipts, already exists and is ledgered when step 2 runs. A new path
   after the reconciliation is a path the acceptance receipt has not inventoried.
-- Step 5 is refused when step 4 ran without the publish summary.
+- Step 6 is refused when step 5 ran without the publish summary.
+- `design/explanation/unfilled-slots.json` is created by EX7 as `{"commit": null,
+  "unfilled_slots": []}` so that the path exists before the first reconcile.
 - `--plan` prints the ordered steps without running them. `--from <step>` resumes.
 - Each step's subprocess is injected, so the gate replaces them with stubs.
 
-The gate (`dev/test-republish-chain.mjs`) asserts, with stubbed steps: the order; that an
-unledgered path stops the run before publish and names the path; that a red read-back stops it
-before promote; that the dogfood recorder is never reached without a publish summary; that no
-reconcile follows a publish; and that step 7 writes an `end` row equal to the receipt's on a
-fixture receipt.
+The gate (`dev/test-republish-chain.mjs`) asserts, with stubbed steps: the order of all ten;
+that an unledgered path stops the run before publish and names the path; that a dogfood locus
+whose owner is not `examined` stops it before publish and names the path; that a red read-back
+stops it before promote; that the dogfood recorder is never reached without a publish summary;
+that no reconcile follows a publish; that verification runs last, invokes all four gates, and
+makes the command exit non-zero when any one is red; and that step 8, run on a fixture receipt
+and a fixture progress file, produces a file satisfying the four relations above with every
+other key byte-identical.
 
 ### 4.3 Deciding the carried findings (EX8)
 
@@ -616,7 +778,8 @@ After the carried decisions, in this order:
    `onboarding-report.md` from the boundaries its "Runtime boundary" prose already states.
    Rehash both artifacts.
 2. Ledger every unledgered tracked path, including this lane's own files.
-3. Run `node dev/republish-docs.mjs --measure-label recovered`.
+3. Run `node dev/republish-docs.mjs --measure-label recovered`. When it stops at the freshness
+   step, re-examine the named loci as §4.2 step 3 describes and rerun it.
 4. Commit `docs/` and the receipts in one commit.
 
 The gate (`dev/test-receipt-gates-restored.mjs`) asserts over tracked files and by running the
@@ -653,6 +816,11 @@ The gate (`dev/test-explanations-published.mjs`) asserts over tracked files:
 
 - every `docs/subsystems/*.md` either has `## Purpose` or shows a status of `unmapped`,
   `scoping` or `deferred` on its status line (checked first);
+- every such page with `## Purpose` also has `## How it works` or the account-declination
+  sentence of §3.6, with a control in the gate's own fixtures: a page with a Purpose and
+  neither is red;
+- the committed `design/explanation/unfilled-slots.json` names the commit the receipts were
+  recorded at and holds no `subsystem-purpose`, `subsystem-account` or `project-account` row;
 - `docs/architecture.md` has `## How the parts fit together` and not the no-account sentence;
 - no page carries a refused-explanation sentence;
 - the four gates of §0.3 exit 0;
@@ -690,10 +858,14 @@ encode them. Each assertion is made state-conditional per §0.2.
 | Rule | Before | After | Assertions |
 |---|---|---|---|
 | §3.1 row 1, §7.3 item 1 | No durable purpose exists; every subsystem page says so | Purpose comes from the effective explanation; the sentence renders only in the not-recorded state | `materializer/test-lens-pages.py` (section order, first section, the disclaimer) |
-| §7.3 item 3, §9.1 | Narrative is promoted into Structure only when the claims list is empty | §2.3's three states | `materializer/test-lens-pages.py`; `mcp-server/test-structural-claims.mjs` |
-| §9.1 renderer contract | Claims render as a table under five headings and "Other claims" | §2.2's register and grouping | `mcp-server/test-structural-claims.mjs` |
+| §7.3 item 3, §9.1 | Narrative is promoted into Structure only when the claims list is empty | §2.3's three states | `materializer/test-lens-pages.py` |
+| §9.1 renderer contract | Claims render as a table under five headings and "Other claims" | §2.2's register and grouping | none changes: `mcp-server/test-structural-claims.mjs` stays green unmodified |
+| findings table header | Five columns | Gains **Why it matters** (§2.1), in every state | `materializer/test-materializer.py:465`: the literal is replaced by the new header |
 | §11.1 | The orientation lint is wired at the thesis | Wired at every recorded purpose and account as well | `materializer/test-overview-truthfulness.py` |
 | §3.4 list of model-authored fields | Ends at the narrative artifact | Adds `explanations.body` | `materializer/test-prose-retention.py` |
+
+A literal that changes for every state is replaced and listed here; an assertion about a state
+that still exists is made conditional and keeps its must-fail case (§0.2).
 
 Unchanged: §3.4's rule that no response contains text generated during the call; §3.4's rule
 that the wire attaches narrative only as a pointer and only with an empty claims list; §4's
@@ -713,8 +885,9 @@ budgets; §7.2's thesis by heading.
 | EX6 | `materializer/test-placeholder-census.py` | a rendered placeholder has no census row, or a census row has no placeholder, or a full store returns rows | a placeholder sentence added later without a predicate |
 | EX7 | `dev/test-republish-chain.mjs` | steps run out of order, or the run continues past an unledgered path or a red read-back | the real tools behave differently from the stubs |
 | EX8 | `dev/test-receipt-gates-restored.mjs` | any of the four gates is red, or the thesis is absent from `docs/index.md` | a carried record decided wrongly but with evidence attached |
-| EX9 | `mcp-server/test-explanations.mjs` | a refusal R1–R8 is not raised, a row can be updated or deleted, or the effective row is not the newest resolvable one | an explanation that is false and well-formed |
-| EX10 | `mcp-server/test-explanation-gate.mjs` | `mapped` is reached with a slot neither recorded nor declined, through either status writer | a declination with an empty reason in substance |
+| EX9 | `mcp-server/test-explanations.mjs` | a refusal is not raised, a row can be updated or deleted, the shared effective-row cases fail, or a write echoes its body | an explanation that is false and well-formed |
+| EX15 | `mcp-server/test-explanation-read.mjs` | `get_explanations` returns a row that is not the effective one, writes to the store, or a reset leaves an explanation effective | a reader that ignores what it read |
+| EX10 | `mcp-server/test-explanation-gate.mjs` | `mapped` is reached with a slot neither recorded nor declined, through either status writer, from any status including `deferred` | a declination with an empty reason in substance |
 | EX11 | `materializer/test-explanation-pages.py` | a Purpose heading renders without a record, the disclaimer is missing in the not-recorded state, the ageing sentence is wrong for a seeded change, or the two readers disagree | prose that passes the lint and misleads |
 | EX12 | `materializer/test-explanation-orientation.py` | the master plan, hover text or architecture page omits a recorded purpose, or the census omits an unfilled explanation slot | — |
 | EX13 | `dev/test-locus-default-measure.mjs` | the reported bytes differ from the response measured | the three dogfood loci are unrepresentative |

@@ -33,11 +33,16 @@ are red or unable to run on `main` for reasons outside this decision (`spec.md` 
 not restored by this lane. A branch that restores the three named here therefore does not by
 itself make CI green; the remaining gates need their own decisions.
 
-## 5. The MCP wire is not changed by this lane
+## 5. `describe_locus` is not changed by this lane
 
 `describe_locus` keeps its budgets and its response shape. The lane measures what a default call
 serves on the three dogfood loci and reports the numbers. Whether to raise the default budget so
 a purpose sentence fits is decided later, with those numbers.
+
+Clarification added by the design session after review: the lane adds one new read tool,
+`get_explanations`, since the adversarial, packaging and refresh phases have to read what an
+earlier phase recorded and no other path existed. It is a separate tool with its own bounded
+response. `describe_locus`, its contract and its budgets are untouched.
 
 ## 6. Cuts
 
