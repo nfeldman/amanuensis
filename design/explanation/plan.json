@@ -34,10 +34,10 @@
         "EX13"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "478eaf7a79c285086dca130c543f6e99e513f6d5",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "ec8d52616849852f14caab52d4e538331a1a7727",
+        "findings": 6
       }
     },
     {

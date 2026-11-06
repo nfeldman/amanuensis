@@ -15,7 +15,7 @@
 | EX7 | The republish chain as one command | done (1 attempt) | EX6 | `dev/test-republish-chain.mjs` | C14 |
 | EX8 | Decide the carried findings, fix the thesis slots, republish, restore the receipt gates | done (1 attempt) | EX7 | `dev/test-receipt-gates-restored.mjs` | C15, C16, C17, C39, C40 |
 
-## S2 · The explanation record, its gate, its authoring and its rendering (review: pending)
+## S2 · The explanation record, its gate, its authoring and its rendering (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
