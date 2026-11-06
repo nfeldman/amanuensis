@@ -53,6 +53,11 @@ jobs:
       # in a throwaway repository over a store built from schema.sql.
       - name: Republish chain — order, stops and the progress rewrite over stubbed steps
         run: node dev/test-republish-chain.mjs
+      # GATE EX13 (design/explanation/spec.md §3.8). The default describe_locus
+      # measure over a fixture store it builds through the built server, which
+      # the steps above have installed and compiled.
+      - name: Locus default measure — the reported wire bytes equal the response measured
+        run: node dev/test-locus-default-measure.mjs
 
   # The Amanuensis→Pecia defect projection. Pecia is a uv PEP-723 script in a
   # separate PRIVATE repository, so this gate cannot run from a bare checkout.
