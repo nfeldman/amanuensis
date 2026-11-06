@@ -27,6 +27,8 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -239,6 +241,29 @@ function checkMeasure() {
   const last = entries[entries.length - 1];
   if (last?.contract_sha256 !== contract) {
     red(`reader-measure.json's last entry ('${last?.label}') is not bound to the committed docs contract`);
+  }
+  // Each figure is what the measure reports over the tree it names, so a changed
+  // definition cannot leave a stale record behind it.
+  const before = entries.find((entry) => entry?.label === "before");
+  checkMeasuredTotals(before, before?.commit);
+  checkMeasuredTotals(last, "HEAD");
+}
+
+function checkMeasuredTotals(entry, revision) {
+  const scratch = mkdtempSync(join(tmpdir(), "ex8-measure-"));
+  try {
+    const archive = spawnSync("git", ["archive", "--format=tar", "-o", join(scratch, "docs.tar"), String(revision), "docs"], { cwd: REPO, encoding: "utf8" });
+    if (archive.status !== 0) red(`reader-measure.json's '${entry?.label}' entry names a revision with no docs tree`);
+    const untar = spawnSync("tar", ["-xf", join(scratch, "docs.tar"), "-C", scratch], { encoding: "utf8" });
+    if (untar.status !== 0) red(`the docs tree of reader-measure.json's '${entry?.label}' entry could not be read`);
+    const measure = spawnSync(process.execPath, [join(REPO, "dev/measure-reader-prose.mjs"), join(scratch, "docs")], { cwd: REPO, encoding: "utf8" });
+    if (measure.status !== 0) red("dev/measure-reader-prose.mjs did not measure a committed docs tree");
+    const { totals } = JSON.parse(measure.stdout);
+    if (JSON.stringify(totals) !== JSON.stringify(entry?.totals)) {
+      red(`reader-measure.json's '${entry?.label}' totals are not the measure of the docs tree they name`);
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
   }
 }
 

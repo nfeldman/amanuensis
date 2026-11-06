@@ -8,39 +8,44 @@
 // by guarded dynamic import, so its absence prints the RED line and not a
 // stack trace. A child's raw output is never echoed.
 //
-// The fixture is three pages whose counts are worked out here by hand. A
-// character count is the length of a trimmed line; a table line counts the
-// lengths of its trimmed cells, so the `|` delimiters and the padding around
-// them are not text.
+// The fixture is three pages whose counts are worked out here by hand. Spec §1
+// excludes the separator row and the `|` delimiters from a table line and
+// nothing else, so padding and indentation are characters: a table line counts
+// its length less its delimiters, and a prose line counts its length. An escaped
+// `\|` is text, not a delimiter.
 //
 //   a-table.md                 every line is a table line
-//       | Name  | Value |      "Name"4 + "Value"5            = 9
+//       | Name  | Value |      17 - 3 delimiters             = 14
 //       | ----- | ----- |      separator row                 = 0
-//       | alpha | 12345 |      "alpha"5 + "12345"5           = 10
-//       | be    | 7     |      "be"2 + "7"1                  = 3
-//     table 22, prose 0, share 1, placeholders 0
+//       | alpha | 12345 |      17 - 3                        = 14
+//       | be    | 7     |      17 - 3                        = 14
+//     table 42, prose 0, share 1, placeholders 0
 //
 //   b-fence.md                 a fenced block holding `|` characters
 //       "# Title"                                heading      = 0
 //       "Some prose here."                       prose        = 16
 //       fenced block, `| not | a table |` inside              = 0 (neither)
-//       "| a | b |"                              table        = 2
+//       "| a | b |"                              9 - 3        = 6
 //       "|:-:|--:|"                              separator    = 0
-//       "| xx | yyy |"                           table        = 5
-//       "  | z | w |"   (indented)               table        = 2
+//       "| xx | yyy |"                           12 - 3       = 9
+//       "  | z | w |"   (indented)               11 - 3       = 8
+//       "| p\|q | r |"  (one escaped pipe)       12 - 3       = 9
 //       "Trailing prose line."                   prose        = 20
-//     table 9, prose 36, share 9/45 = 0.2, placeholders 0
+//       "  Indented prose."      (indented)      prose        = 17
+//     table 32, prose 53, share 32/85 = 0.3765, placeholders 0
 //
 //   subsystems/c-placeholders.md   two placeholder sentences
 //       "No purpose statement is recorded for this subsystem."   = 52
 //       "No structured runtime boundary map is recorded yet."    = 51
 //     table 0, prose 103, share 0, placeholders 2
 //
-//   totals: 3 pages, table 22 + 9 = 31, prose 0 + 36 + 103 = 139,
-//           share 31/170 = 0.1824, placeholders 2
+//   totals: 3 pages, table 42 + 32 = 74, prose 0 + 53 + 103 = 156,
+//           share 74/230 = 0.3217, placeholders 2
 //
 // What a reviewer should sabotage, and what must go red:
-//   count `|` delimiters or padding as table text        → table counts
+//   count `|` delimiters as table text                   → table counts
+//   trim padding or indentation from a line              → table and prose counts
+//   count an escaped `\|` as a delimiter                 → page B
 //   count fenced lines as table or prose                 → page B
 //   count the separator row                              → pages A, B
 //   count headings as prose                              → pages B, C
@@ -98,8 +103,10 @@ const FIXTURE = {
     "|:-:|--:|",
     "| xx | yyy |",
     "  | z | w |",
+    "| p\\|q | r |",
     "",
     "Trailing prose line.",
+    "  Indented prose.",
     "",
   ].join("\n"),
   "subsystems/c-placeholders.md": [
@@ -116,8 +123,8 @@ const FIXTURE = {
 
 const EXPECTED = {
   pages: [
-    { page: "a-table.md", table_chars: 22, prose_chars: 0, table_share: 1, placeholders: 0 },
-    { page: "b-fence.md", table_chars: 9, prose_chars: 36, table_share: 0.2, placeholders: 0 },
+    { page: "a-table.md", table_chars: 42, prose_chars: 0, table_share: 1, placeholders: 0 },
+    { page: "b-fence.md", table_chars: 32, prose_chars: 53, table_share: 0.3765, placeholders: 0 },
     {
       page: "subsystems/c-placeholders.md",
       table_chars: 0,
@@ -126,7 +133,7 @@ const EXPECTED = {
       placeholders: 2,
     },
   ],
-  totals: { pages: 3, table_chars: 31, prose_chars: 139, table_share: 0.1824, placeholders: 2 },
+  totals: { pages: 3, table_chars: 74, prose_chars: 156, table_share: 0.3217, placeholders: 2 },
 };
 
 const scratch = mkdtempSync(join(tmpdir(), "ex1-reader-measure-"));
