@@ -107,8 +107,8 @@
       "attempts": 1,
       "start_sha": "0bc4809fc26c0d5753be792e4a4c1ded2f4396d4",
       "red_sha": "2aad19ba0cb244393cf061ce0b90a6a0d55833a7",
-      "green_sha": "2811f71592fcaee34d867fcf2d0ac7130258c579",
-      "verified_by_launcher": false,
+      "green_sha": "54a22cb4cdb561ab055c2886f0b0ecff29514171",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Choices the spec left open: characters are trimmed line length, a table line sums trimmed cell lengths (padding is not text), placeholders are counted anywhere in a page including fenced blocks, and --record takes optional --file/--contract overrides for the gate. 'before' was recorded over docs/ (33 pages, table_share 0.723, 15 placeholders)."
     },
