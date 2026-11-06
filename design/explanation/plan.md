@@ -26,7 +26,7 @@
 | EX12 | Purpose on the master plan, hover text and architecture page; census rows | done (1 attempt) | EX11, EX6 | `materializer/test-explanation-orientation.py` | C33, C34, C35, C31, C44 |
 | EX13 | Measure what a default describe_locus call serves | done (2 attempts) | EX9 | `dev/test-locus-default-measure.mjs` | C36, C37 |
 
-## S3 · Explain this repository and publish (review: pending)
+## S3 · Explain this repository and publish (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

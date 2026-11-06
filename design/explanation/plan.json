@@ -47,10 +47,10 @@
         "EX14"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "15c1b82cc939110e6f5adb45be91f7f6676243d2",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "88c7b576bdafcb75cd7524dc3439121fe0af0b27",
+        "findings": 2
       }
     }
   ],
