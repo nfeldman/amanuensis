@@ -34,6 +34,8 @@ Turns red when:
     subsystem (a `deferred` one included) or for a declined slot, drops the
     vocabulary row of an ineligible subsystem, or the extended census gate is
     not green;
+  - the HTML architecture page drops the section, or the read-back misses the
+    project account removed from it;
   - the overview differs from the overview of the same store with no explanation
     rows, or the gate is not listed in CI.
 

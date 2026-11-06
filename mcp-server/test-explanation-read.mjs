@@ -37,6 +37,10 @@
 //   omit earlier_rows, model_calls, authored, checked or evidence_ids  → E2, E3
 //   leave reset_subsystem as it was                                    → R1, R2
 //   append a withdrawn row for every slot, or for another subsystem    → R3, C3, C2
+//   resolve a revision with no workspace bound                         → U1, U3
+//   withdraw only at the slot's newest revision when HEAD cannot resolve → U2
+//   read the project account without asking whether a subsystem is eligible → P1
+//   lift or move the evidence cap                                      → N1, N2
 //   delete the earlier rows at reset                                   → R1
 //   forget the gate in test.yml or the tool in the inventory           → L1, L2
 

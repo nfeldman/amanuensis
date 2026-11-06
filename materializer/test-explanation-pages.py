@@ -41,6 +41,10 @@ False green it cannot exclude: prose that passes the lint and misleads. This
 gate asserts where an explanation is, what is said about its age, and that the
 two readers agree, not that it is true.
 
+Also turns red when the HTML page drops Purpose, How it works or a declination,
+the read-back misses an explanation removed from the HTML page, or the ageing
+sentence misreads a change to a path git quotes, trims or reads as magic.
+
 Output protocol: exactly one status line, last, on stdout. Every subprocess is
 captured and never echoed, and every message is scrubbed, so a missing
 deliverable reports as an assertion failure and not as a crash.
