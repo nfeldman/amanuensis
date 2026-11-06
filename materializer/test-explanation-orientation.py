@@ -229,7 +229,12 @@ def seed(
         " VALUES ('default', 'main', ?, ?, '2026-11-06T12:00:00Z')",
         (shas["c1"], shas["c2"]),
     )
-    cur.execute("INSERT INTO sessions (session_id, intent) VALUES ('ex12', 'fixture')")
+    # The overview prints this to the minute, so a clock here made the byte-identity
+    # controls below red whenever two stores were seeded across a minute boundary.
+    cur.execute(
+        "INSERT INTO sessions (session_id, intent, started_at)"
+        " VALUES ('ex12', 'fixture', '2026-11-06 12:00:00')"
+    )
     for sid, name, status in subsystems:
         cur.execute(
             "INSERT INTO subsystems (id, name, status, layer, scope)"
