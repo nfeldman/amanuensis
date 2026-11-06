@@ -30,7 +30,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| EX14 | Explain pass over the self-conspectus and the final republish | ready (1 attempt) | EX10, EX11, EX12, EX13, EX15 | `dev/test-explanations-published.mjs` | C38, C16, C39, C45 |
+| EX14 | Explain pass over the self-conspectus and the final republish | done (1 attempt) | EX10, EX11, EX12, EX13, EX15 | `dev/test-explanations-published.mjs` | C38, C16, C39, C45 |
 
 ## Completion
 
