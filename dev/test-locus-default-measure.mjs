@@ -185,6 +185,33 @@ function digestTree(root) {
   return hash.digest("hex");
 }
 
+/**
+ * The text of an object member's value, sliced out of the line as written. The
+ * member order of a JSON-RPC response is the SDK's to choose, so the end of the
+ * value is found by balancing braces outside strings, not by the end of the line.
+ */
+function rawMember(line, key) {
+  const marker = `"${key}":`;
+  const at = line.indexOf(marker);
+  if (at < 0) return "";
+  const start = at + marker.length;
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < line.length; i += 1) {
+    const ch = line[i];
+    if (inString) {
+      if (ch === "\\") i += 1;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === "{" || ch === "[") depth += 1;
+    else if (ch === "}" || ch === "]") {
+      depth -= 1;
+      if (depth === 0) return line.slice(start, i + 1);
+    }
+  }
+  return "";
+}
+
 // ------------------------------------------------------- the built server, over stdio
 
 /**
@@ -279,11 +306,7 @@ function startServer(workspace) {
       } catch {
         payload = null;
       }
-      const marker = '"result":';
-      const at = line.indexOf(marker);
-      // The raw member, sliced out of the line the server wrote; the closing
-      // brace of the JSON-RPC object is the last character.
-      const rawResult = at >= 0 ? line.slice(at + marker.length, line.lastIndexOf("}")) : "";
+      const rawResult = rawMember(line, "result");
       return {
         payload,
         rawResult,
@@ -378,12 +401,19 @@ async function buildFixture() {
 }
 
 /** A second, independent copy of the fixture, bound to its own path. */
-function duplicate(fixture, label) {
+async function duplicate(fixture, label) {
   const dest = join(scratch("amanuensis-ex13-copy-"), label);
   cpSync(fixture.ws, dest, { recursive: true });
   const real = realpathSync(dest);
-  writeFileSync(join(dest, ".amanuensis", "project_identity"), `local:${real}\n`);
-  writeFileSync(join(dest, ".amanuensis", "workspace_path"), `${real}\n`);
+  const { resolveProjectKey } = await import(pathToUrl(join(repo, "mcp-server", "dist", "project.js")));
+  const store = join(dest, ".amanuensis");
+  writeFileSync(join(store, "project_identity"), `local:${real}\n`);
+  writeFileSync(join(store, "workspace_path"), `${real}\n`);
+  const marker = JSON.parse(readFileSync(join(store, "initialization.json"), "utf8"));
+  marker.projectIdentity = `local:${real}`;
+  marker.projectKey = resolveProjectKey(real);
+  marker.canonicalRoot = real;
+  writeFileSync(join(store, "initialization.json"), JSON.stringify(marker));
   return dest;
 }
 
@@ -545,7 +575,7 @@ async function main() {
   if (first.status !== 0 || !first.report || !Array.isArray(first.report.loci)) {
     failures.push({
       label: "M1",
-      detail: `${RED_EXPECT}: the script exited ${first.status} and printed no report — ${scrub(first.stderr.slice(-300) || first.stdout.slice(0, 200))}`,
+      detail: `${RED_EXPECT}: the script exited ${first.status} and printed no report — ${scrub(first.stderr.slice(0, 700) || first.stdout.slice(0, 200))}`,
     });
     return;
   }
@@ -553,11 +583,13 @@ async function main() {
 
   // The independent measurement: a second copy, a second server, the raw line.
   const reference = new Map();
-  const second = duplicate(fixture, "reference");
+  const second = await duplicate(fixture, "reference");
   const server = startServer(second);
   try {
     for (const locus of [HOT, QUIET]) {
-      reference.set(locus, await server.call("describe_locus", { locus, kind: "file" }));
+      const answer = await server.call("describe_locus", { locus, kind: "file" });
+      if (answer.isError) throw new Error(`the reference server refused ${locus}: ${answer.rawResult.slice(0, 200)}`);
+      reference.set(locus, answer);
     }
   } finally {
     await server.close();

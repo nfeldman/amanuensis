@@ -1,0 +1,902 @@
+{
+  "contract": "amanuensis-explanation/locus-default-measure/v1",
+  "produced_by": "dev/measure-locus-default.mjs",
+  "measured_at": "2026-11-06T07:29:30.900Z",
+  "workspace": "/Users/nfeldman/automation/claude/amanuensis-explanation",
+  "repository_sha": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+  "call": {
+    "tool": "describe_locus",
+    "sections": null
+  },
+  "copy_location": "/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-locus-default-Vhy0at/workspace",
+  "copy_removed": true,
+  "floor_basis": "the response with every item removed, re-serialized in the compact envelope; the census, the omission ledger as received and the trace are kept",
+  "loci": [
+    {
+      "locus": "mcp-server/src/index.ts",
+      "kind": "file",
+      "sections_requested": [],
+      "budget_bytes": 8192,
+      "wire_bytes": 9620,
+      "payload_bytes": 4540,
+      "floor_bytes": 9620,
+      "within_budget": false,
+      "envelope_reproduces_wire": true,
+      "items": {
+        "purpose": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "structure": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "defects": {
+          "census": 2,
+          "served": 0,
+          "omitted": 2,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 2
+        },
+        "reviews": {
+          "census": 3,
+          "served": 0,
+          "omitted": 3,
+          "omitted_by_policy": 3,
+          "omitted_by_budget": 0
+        },
+        "boundaries": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "terms": {
+          "census": 2,
+          "served": 0,
+          "omitted": 2,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 2
+        },
+        "leads": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 1,
+          "omitted_by_budget": 0
+        },
+        "history_pointer": {
+          "census": 8,
+          "served": 0,
+          "omitted": 8,
+          "omitted_by_policy": 8,
+          "omitted_by_budget": 0
+        },
+        "unknown": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        }
+      },
+      "census_total": 19,
+      "served_total": 0,
+      "omitted_total": 19,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "mcp-server/src/index.ts",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "mcp-server/src/index.ts",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-02",
+              "subsystem_name": "MCP core, persistence, and lifecycle",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "adversarial",
+              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "examined_at": "2026-11-06 05:31:03",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "adversarial",
+            "label": "Adversarial",
+            "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
+            "cannot_justify": "that the challenge pass has finished",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+            "checked_at": "2026-11-06 05:56:52",
+            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+              "last_checked_at": "2026-11-06 05:56:52"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 8,
+            "claims_recorded": 1
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "structure": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "defects": {
+            "census": 2,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "reviews": {
+            "census": 3,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "boundaries": {
+            "census": 0,
+            "recorded": false,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "terms": {
+            "census": 2,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "leads": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "history_pointer": {
+            "census": 8,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "counts": {
+              "finding_resolution_events": 4,
+              "sessions": 4
+            },
+            "session_attribution": "by-citation",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          }
+        },
+        "census": {
+          "total": 19,
+          "by_section": {
+            "purpose": 1,
+            "structure": 1,
+            "defects": 2,
+            "reviews": 3,
+            "boundaries": 0,
+            "terms": 2,
+            "leads": 1,
+            "history_pointer": 8,
+            "unknown": 1
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "purpose",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "structure",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "defects",
+            "reason": "budget",
+            "count": 2,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "reviews",
+            "reason": "policy",
+            "count": 3,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "terms",
+            "reason": "budget",
+            "count": 2,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "leads",
+            "reason": "policy",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "history_pointer",
+            "reason": "policy",
+            "count": 8,
+            "ids": [],
+            "ids_truncated": true
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 8192,
+          "payload_bytes": 4540,
+          "response_bytes": 9620,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": false,
+          "over_budget_reason": "This response is over its byte budget with every truncatable item already dropped: owners[], each section's census, and each omission count are never truncated."
+        },
+        "current": true,
+        "as_of_sha": null
+      }
+    },
+    {
+      "locus": "mcp-server/src/tools/findings.ts",
+      "kind": "file",
+      "sections_requested": [],
+      "budget_bytes": 8192,
+      "wire_bytes": 9476,
+      "payload_bytes": 4475,
+      "floor_bytes": 9476,
+      "within_budget": false,
+      "envelope_reproduces_wire": true,
+      "items": {
+        "purpose": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "structure": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "defects": {
+          "census": 3,
+          "served": 0,
+          "omitted": 3,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 3
+        },
+        "reviews": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "boundaries": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "terms": {
+          "census": 2,
+          "served": 0,
+          "omitted": 2,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 2
+        },
+        "leads": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 1,
+          "omitted_by_budget": 0
+        },
+        "history_pointer": {
+          "census": 6,
+          "served": 0,
+          "omitted": 6,
+          "omitted_by_policy": 6,
+          "omitted_by_budget": 0
+        },
+        "unknown": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        }
+      },
+      "census_total": 15,
+      "served_total": 0,
+      "omitted_total": 15,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "mcp-server/src/tools/findings.ts",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "mcp-server/src/tools/findings.ts",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-03",
+              "subsystem_name": "Knowledge tools and workflow API",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "adversarial",
+              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "examined_at": "2026-09-15 04:34:53",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "adversarial",
+            "label": "Adversarial",
+            "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
+            "cannot_justify": "that the challenge pass has finished",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+            "checked_at": "2026-11-06 05:56:52",
+            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+              "last_checked_at": "2026-11-06 05:56:52"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 4,
+            "claims_recorded": 1
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "structure": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "defects": {
+            "census": 3,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "reviews": {
+            "census": 0,
+            "recorded": false,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "boundaries": {
+            "census": 0,
+            "recorded": false,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "terms": {
+            "census": 2,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "leads": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "history_pointer": {
+            "census": 6,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "counts": {
+              "finding_resolution_events": 3,
+              "sessions": 3
+            },
+            "session_attribution": "by-citation",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          }
+        },
+        "census": {
+          "total": 15,
+          "by_section": {
+            "purpose": 1,
+            "structure": 1,
+            "defects": 3,
+            "reviews": 0,
+            "boundaries": 0,
+            "terms": 2,
+            "leads": 1,
+            "history_pointer": 6,
+            "unknown": 1
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "purpose",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "structure",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "defects",
+            "reason": "budget",
+            "count": 3,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "terms",
+            "reason": "budget",
+            "count": 2,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "leads",
+            "reason": "policy",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "history_pointer",
+            "reason": "policy",
+            "count": 6,
+            "ids": [],
+            "ids_truncated": true
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 8192,
+          "payload_bytes": 4475,
+          "response_bytes": 9476,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": false,
+          "over_budget_reason": "This response is over its byte budget with every truncatable item already dropped: owners[], each section's census, and each omission count are never truncated."
+        },
+        "current": true,
+        "as_of_sha": null
+      }
+    },
+    {
+      "locus": "materializer/amanuensis_materializer/core.py",
+      "kind": "file",
+      "sections_requested": [],
+      "budget_bytes": 8192,
+      "wire_bytes": 9468,
+      "payload_bytes": 4476,
+      "floor_bytes": 9468,
+      "within_budget": false,
+      "envelope_reproduces_wire": true,
+      "items": {
+        "purpose": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "structure": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "defects": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "reviews": {
+          "census": 11,
+          "served": 0,
+          "omitted": 11,
+          "omitted_by_policy": 11,
+          "omitted_by_budget": 0
+        },
+        "boundaries": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "terms": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        },
+        "leads": {
+          "census": 0,
+          "served": 0,
+          "omitted": 0,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 0
+        },
+        "history_pointer": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 1,
+          "omitted_by_budget": 0
+        },
+        "unknown": {
+          "census": 1,
+          "served": 0,
+          "omitted": 1,
+          "omitted_by_policy": 0,
+          "omitted_by_budget": 1
+        }
+      },
+      "census_total": 16,
+      "served_total": 0,
+      "omitted_total": 16,
+      "response": {
+        "contract_version": "1.0.0",
+        "locus": {
+          "value": "materializer/amanuensis_materializer/core.py",
+          "kind": "file",
+          "kind_inferred_by": "caller-supplied",
+          "split_at": null,
+          "path": "materializer/amanuensis_materializer/core.py",
+          "symbol": null,
+          "subsystem_id": null,
+          "term": null
+        },
+        "standing": {
+          "owners": [
+            {
+              "subsystem_id": "B-04",
+              "subsystem_name": "Diff-aware materializer",
+              "classification": "examined",
+              "standing_state": "examined",
+              "authority_ceiling": "adversarial",
+              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "examined_at": "2026-11-06 05:31:04",
+              "stale": 0,
+              "stale_reason": null,
+              "reachability_checked": true,
+              "authorization_downgraded": null,
+              "authorizes": "current claims whose evidence cites this file",
+              "cannot_justify": "claims about symbols no evidence cites; the absence of defects"
+            }
+          ],
+          "state": "examined",
+          "authority_ceiling": {
+            "value": "adversarial",
+            "label": "Adversarial",
+            "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
+            "cannot_justify": "that the challenge pass has finished",
+            "deferred_owners": [],
+            "deferred_note": "",
+            "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
+          },
+          "revision": {
+            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+            "checked_at": "2026-11-06 05:56:52",
+            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "origin_head": null,
+            "agrees": false,
+            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "measured": {
+            "ledger_rows": 1,
+            "ledger_reconciled": null,
+            "reconciliation_receipt": {
+              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+              "last_checked_at": "2026-11-06 05:56:52"
+            },
+            "staleness_measured": true,
+            "evidence_rows": 1,
+            "claims_recorded": 1
+          },
+          "unknown": [],
+          "authorizes": "current claims whose evidence cites this file",
+          "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
+          "reachability_checked": true,
+          "authorization_downgraded": null
+        },
+        "sections": {
+          "purpose": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "structure": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "defects": {
+            "census": 0,
+            "recorded": false,
+            "requested": true,
+            "as_of_supported": true,
+            "items": [],
+            "statement": "No open findings are recorded for this locus.",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "reviews": {
+            "census": 11,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "boundaries": {
+            "census": 0,
+            "recorded": false,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "terms": {
+            "census": 1,
+            "recorded": true,
+            "requested": true,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "leads": {
+            "census": 0,
+            "recorded": false,
+            "requested": false,
+            "as_of_supported": false,
+            "items": [],
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          },
+          "history_pointer": {
+            "census": 1,
+            "recorded": true,
+            "requested": false,
+            "as_of_supported": true,
+            "items": [],
+            "counts": {
+              "finding_resolution_events": 0,
+              "sessions": 1
+            },
+            "session_attribution": "by-citation",
+            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+          }
+        },
+        "census": {
+          "total": 16,
+          "by_section": {
+            "purpose": 1,
+            "structure": 1,
+            "defects": 0,
+            "reviews": 11,
+            "boundaries": 0,
+            "terms": 1,
+            "leads": 0,
+            "history_pointer": 1,
+            "unknown": 1
+          }
+        },
+        "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "purpose",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "structure",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "reviews",
+            "reason": "policy",
+            "count": 11,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "terms",
+            "reason": "budget",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "history_pointer",
+            "reason": "policy",
+            "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          }
+        ],
+        "trace": {
+          "model_calls": 0,
+          "selection": "registry-exact-v1",
+          "budget_bytes": 8192,
+          "payload_bytes": 4476,
+          "response_bytes": 9468,
+          "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
+          "truncated": true,
+          "within_budget": false,
+          "over_budget_reason": "This response is over its byte budget with every truncatable item already dropped: owners[], each section's census, and each omission count are never truncated."
+        },
+        "current": true,
+        "as_of_sha": null
+      }
+    }
+  ]
+}
