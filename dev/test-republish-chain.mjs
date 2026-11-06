@@ -669,6 +669,11 @@ await check("a red read-back or a lint refusal stops the run before promote", as
       s.readback.ok = false;
       s.readback.axes.state.ok = false;
     }),
+    // Every axis green and the read-back's own verdict red: the verdict alone has to
+    // stop the run (F15/claude, final).
+    "a red readback.ok under green axes": red((s) => {
+      s.readback.ok = false;
+    }),
     "a coverage axis red under a green ok": red((s) => {
       s.readback.axes.coverage.ok = false;
     }),

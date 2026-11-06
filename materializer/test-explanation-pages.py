@@ -45,6 +45,13 @@ Also turns red when the HTML page drops Purpose, How it works or a declination,
 the read-back misses an explanation removed from the HTML page, or the ageing
 sentence misreads a change to a path git quotes, trims or reads as magic.
 
+Also turns red when the ageing sentence names more than five paths or counts
+evidence rows as files, when the provenance line counts files as evidence rows,
+when a violation only the subsystem page prints leaves the publish green, when
+the read-back does not owe the refusal sentence on a lint-refused row, or when a
+moved head leaves a page's ageing line and source hash where they were (final
+review: F3, F8, F9, F11 and F12/claude).
+
 Also turns red when an explanation that names a status in a code span cannot
 pass the clean publish, when a wrong status word in that place passes the
 read-back, or when a workspace path git cannot answer in reads other than
@@ -148,6 +155,8 @@ WRITER = "src/writer.py"
 OTHER = "src/other.py"
 # Paths git quotes, trims or reads as pathspec magic unless it is asked not to.
 AWKWARD = (" lead.py", ":magic.py", "src/café.py")
+# One more than the ageing sentence names.
+SIX_FILES = tuple(f"src/six{n}.py" for n in range(6))
 
 PURPOSE_B01 = "PURPOSE-B-01 the read path hands each caller a committed snapshot of the rows."
 ACCOUNT_B01 = (
@@ -210,7 +219,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def build_repository(repo: Path) -> dict[str, str]:
-    """C1 has every file, C2 changes only `other`, C3 `reader`; C4 adds and C5 changes the awkward paths."""
+    """C1 has every file, C2 changes only `other`, C3 `reader`; C4 adds and C5 changes the awkward paths; C6 adds and C7 changes six more."""
 
     repo.mkdir(parents=True)
     git(repo, "init", "-q", "-b", "main")
@@ -236,7 +245,17 @@ def build_repository(repo: Path) -> dict[str, str]:
     git(repo, "add", "-A", "--", ".")
     git(repo, "commit", "-q", "-m", "c5")
     c5 = git(repo, "rev-parse", "HEAD")
-    return {"c1": c1, "c2": c2, "c3": c3, "c4": c4, "c5": c5}
+    for rel in SIX_FILES:
+        (repo / rel).write_text(f"# {rel}\nVERSION = 6\n")
+    git(repo, "add", "-A", "--", ".")
+    git(repo, "commit", "-q", "-m", "c6")
+    c6 = git(repo, "rev-parse", "HEAD")
+    for rel in SIX_FILES:
+        (repo / rel).write_text(f"# {rel}\nVERSION = 7\n")
+    git(repo, "add", "-A", "--", ".")
+    git(repo, "commit", "-q", "-m", "c7")
+    c7 = git(repo, "rev-parse", "HEAD")
+    return {"c1": c1, "c2": c2, "c3": c3, "c4": c4, "c5": c5, "c6": c6, "c7": c7}
 
 
 # ---------------------------------------------------------------------------
@@ -798,6 +817,37 @@ def main() -> int:
 
         check("the ageing sentence sees a change to a path git would quote", ageing_awkward_paths)
 
+        # "up to five paths", and rows are not files: one file through two evidence
+        # rows has to read as one file in the ageing sentence and two rows in the
+        # provenance line (F8, F9/claude, final).
+        def ageing_counts() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "six"
+            storage.mkdir()
+            seed(storage, shas, shas["c7"])
+            append_row(
+                storage,
+                "B-07",
+                "purpose",
+                "recorded",
+                "It cites six files through seven evidence rows.",
+                shas["c6"],
+                (*SIX_FILES, SIX_FILES[0]),
+            )
+            done = run_materializer(storage, "--output", str(storage / "docs"), workspace=repo)
+            if done.get("_returncode") != 0:
+                return f"the materializer failed — {done.get('_diagnostic')}"
+            named = ", ".join(f"`{rel}`" for rel in sorted(SIX_FILES)[:5])
+            sentence = f"6 of the 6 file(s) it cites changed since: {named}, and others."
+            want = provenance(shas["c6"], 7, sentence)
+            body = section(subsystem_page(storage / "docs", "B-07"), "Purpose")
+            if want not in body:
+                return f"the provenance line is not `{want}`; got {body.strip()!r}"
+            return None
+
+        check("the ageing sentence names five paths and counts files, the provenance rows", ageing_counts)
+
         # -- 6. the effective-row rule and its shared cases --------------------
         def effective_cases() -> str | None:
             readback = load_readback()
@@ -920,6 +970,129 @@ def main() -> int:
             return None
 
         check("lint violations print the refusal and turn the clean publish red", lint_refusal)
+
+        # The seed above also holds a purpose violation, which warns through the
+        # excerpt on other pages in the same form, so removing the subsystem page's
+        # own callback left that assertion green. These three print only there
+        # (F3/claude, final).
+        def lint_on_the_subsystem_page_alone() -> str | None:
+            if seed_error:
+                return seed_error
+            c1 = shas["c1"]
+            for sid, slot, disposition, bad in (
+                ("B-01", "account", "recorded", VIOLATING_ACCOUNT),
+                ("B-03", "account", "declined", VIOLATING_REASON_ACCOUNT),
+                ("B-03", "purpose", "declined", VIOLATING_REASON_PURPOSE),
+            ):
+                storage = root / f"alone-{sid}-{slot}"
+                storage.mkdir()
+                seed(storage, shas, shas["c2"])
+                docs = storage / "docs"
+                first = run_materializer(storage, "--clean-publish", workspace=repo)
+                if first.get("_returncode") != 0 or not first.get("published"):
+                    return f"the clean fixture did not publish — {first.get('_diagnostic')}"
+                before = tree_digest(docs)
+                append_row(storage, sid, slot, disposition, bad, c1, (READER,) if disposition == "recorded" else ())
+                refused = run_materializer(storage, "--clean-publish", workspace=repo)
+                label = f"a violation only {sid}'s page prints ({disposition} {slot})"
+                if refused.get("ok") or refused.get("published") or refused.get("_returncode") == 0:
+                    return f"{label} left the clean publish green"
+                warnings = " ".join(str(w) for w in refused.get("warnings") or [])
+                if sid not in warnings or slot not in warnings:
+                    return f"{label}: no warning names it: {scrub(warnings)[:200]!r}"
+                if tree_digest(docs) != before:
+                    return f"{label}: the previously published output was touched"
+            return None
+
+        check("a violation only the subsystem page prints turns the publish red", lint_on_the_subsystem_page_alone)
+
+        # A refused row owes the refusal sentence, not its body, on both views
+        # (F11/claude, final).
+        def readback_of_a_refused_row() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "refused-row"
+            storage.mkdir()
+            seed(storage, shas, shas["c2"])
+            add_violations(storage, shas["c1"])
+            docs = storage / "docs"
+            run_materializer(storage, "--output", str(docs), workspace=repo)
+            read_back = lambda: run_materializer(  # noqa: E731
+                storage, "--readback-only", "--output", str(docs), workspace=repo
+            )
+            named = lambda outcome, kind: [  # noqa: E731
+                m
+                for m in outcome.get("mismatches") or []
+                if m.get("object_type") == kind and m.get("object_id") == "B-01:purpose"
+            ]
+            control = read_back()
+            for kind in ("explanation", "explanation-html"):
+                if named(control, kind):
+                    return f"the read-back wants the refused body on a page that rightly prints the refusal ({kind})"
+            sentence = REFUSAL.format(slot="purpose")
+            for suffix, kind in (("md", "explanation"), ("html", "explanation-html")):
+                target = next(iter(sorted((docs / "subsystems").glob(f"b01-*.{suffix}"))), None)
+                if target is None:
+                    return f"the B-01 {suffix} page is absent"
+                original = target.read_text()
+                if sentence not in original:
+                    return f"the B-01 {suffix} page does not carry the refusal sentence"
+                target.write_text(original.replace(sentence, VIOLATING_PURPOSE))
+                try:
+                    printed = read_back()
+                finally:
+                    target.write_text(original)
+                if not named(printed, kind):
+                    return f"the read-back accepted the refused body in place of the refusal on the {suffix} page"
+            return None
+
+        check("the read-back owes the refusal on a refused row, in both directions", readback_of_a_refused_row)
+
+        # The head is one of the page's sources. A page is rebuilt on every run, so
+        # the ageing line is the reader's half and the source hash the record's
+        # (F12/claude, final).
+        def head_moves() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "head-moves"
+            storage.mkdir()
+            seed(storage, shas, shas["c2"])
+            docs = storage / "docs"
+
+            def reading() -> tuple[str, str | None]:
+                done = run_materializer(storage, "--output", str(docs), workspace=repo)
+                if done.get("_returncode") != 0:
+                    raise RuntimeError(f"the materializer failed — {done.get('_diagnostic')}")
+                pages = json.loads(read(docs / ".manifest.json")).get("pages", [])
+                sources = next(
+                    (
+                        p.get("sources") or {}
+                        for p in pages
+                        if str(p.get("path", "")).startswith("subsystems/b01-")
+                    ),
+                    {},
+                )
+                key = "db:subsystem:B-01:explanations"
+                return section(subsystem_page(docs, "B-01"), "Purpose"), sources.get(key)
+
+            page_before, hash_before = reading()
+            if hash_before is None:
+                return "the page lists no explanation source"
+            db = sqlite3.connect(storage / "memory.db")
+            db.execute("UPDATE git_state SET last_checked_sha = ?", (shas["c3"],))
+            db.commit()
+            db.close()
+            page_after, hash_after = reading()
+            if provenance(shas["c1"], 2, none_changed(2)) not in page_before:
+                return "the fixture's ageing line is not the unchanged one"
+            moved = f"1 of the 2 file(s) it cites changed since: `{READER}`."
+            if provenance(shas["c1"], 2, moved) not in page_after:
+                return f"the ageing line did not follow the head: {page_after.strip()!r}"
+            if hash_after == hash_before:
+                return "the page's explanation source hash did not move with the head"
+            return None
+
+        check("a moved head moves the page's ageing line and its source hash", head_moves)
 
         # -- 8b. a status in a code span --------------------------------------
         # The projection turns `mapped` into a chip reading "Mapped", and renames a

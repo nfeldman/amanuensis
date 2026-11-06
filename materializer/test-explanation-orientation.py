@@ -43,6 +43,10 @@ False green it cannot exclude: prose that passes the lint and misleads. This
 gate asserts where an explanation appears and that the pages, the census and
 the read-back agree, not that it is true.
 
+Also turns red when a violating purpose the master plan's own callback has to
+report leaves the publish green, or when a purpose holding a line break ends its
+list item on the architecture page (final review: F13, F14/claude).
+
 Output protocol: exactly one status line, last, on stdout. Every subprocess is
 captured and never echoed, and every message is scrubbed, so a missing
 deliverable reports as an assertion failure and not as a crash.
@@ -153,6 +157,7 @@ REASON_PROJECT = "REASON-PROJECT the system is too small for an account of its p
 VIOLATING_PROJECT = "The survey is up to date with the canonical branch."
 VIOLATING_REASON = "The conspectus is fully surveyed for the project."
 VIOLATING_PURPOSE_B03 = "B-03 is mapped and its ledger is complete."
+TWO_LINES = ("TWO-LINES the first line of a purpose", "and the second line of it.")
 
 SUBSYSTEMS = (
     # id, name, status
@@ -289,7 +294,9 @@ def seed(
     db.close()
 
 
-def add_violations(storage: Path, shas: dict[str, str], *, reason: bool) -> None:
+def add_violations(
+    storage: Path, shas: dict[str, str], *, reason: bool, project_row: bool = True
+) -> None:
     """Newer rows whose text carries survey-status vocabulary."""
 
     db = sqlite3.connect(storage / "memory.db")
@@ -297,7 +304,9 @@ def add_violations(storage: Path, shas: dict[str, str], *, reason: bool) -> None
     cur.execute("SELECT id FROM evidence WHERE file_path = ?", (READER,))
     evidence_id = cur.fetchone()[0]
     rows = [("subsystem", "B-03", "purpose", "recorded", VIOLATING_PURPOSE_B03)]
-    if reason:
+    if not project_row:
+        pass
+    elif reason:
         rows.append(("project", "project", "account", "declined", VIOLATING_REASON))
     else:
         rows.append(("project", "project", "account", "recorded", VIOLATING_PROJECT))
@@ -321,6 +330,39 @@ def run_materializer(storage: Path, *args: str, workspace: Path | None = None) -
     if workspace is not None:
         cmd += ["--workspace", str(workspace)]
     cmd += list(args)
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+    try:
+        summary = json.loads(lines[-1]) if lines else {}
+    except json.JSONDecodeError:
+        summary = {}
+    if not isinstance(summary, dict):
+        summary = {}
+    summary["_returncode"] = proc.returncode
+    summary["_diagnostic"] = scrub(proc.stderr)[-300:]
+    return summary
+
+
+# Runs materialize.py with the other pages that print a purpose denied their failure
+# callback, so what is left to fail the publish is the master plan's own.
+MASTER_PLAN_ALONE = """
+import runpy, sys
+sys.path.insert(0, sys.argv[1])
+from amanuensis_materializer import renderers
+architecture, subsystem = renderers.render_architecture, renderers.render_subsystem
+renderers.render_architecture = lambda conn, storage, warn=None: architecture(conn, storage)
+renderers.render_subsystem = lambda conn, storage, row, warn=None: subsystem(conn, storage, row)
+script = sys.argv[2]
+sys.argv = sys.argv[2:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
+def run_master_plan_alone(storage: Path, workspace: Path) -> dict[str, object]:
+    cmd = [
+        sys.executable, "-c", MASTER_PLAN_ALONE, str(ROOT), str(ROOT / "materialize.py"),
+        "--storage", str(storage), "--workspace", str(workspace), "--clean-publish",
+    ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
     try:
@@ -670,6 +712,60 @@ def main() -> int:
             return None
 
         check("lint violations print the refusal and turn the clean publish red", lint_refusal)
+
+        # The architecture page warns in the same form, so removing the master plan's
+        # own callback left the assertion above green. Every other page that prints a
+        # purpose is run without its callback here (F13/claude, final).
+        def master_plan_warns_alone() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "master-alone"
+            storage.mkdir()
+            seed(storage, shas)
+            control = run_master_plan_alone(storage, repo)
+            if control.get("_returncode") != 0 or not control.get("published"):
+                return f"the clean fixture did not publish — {control.get('_diagnostic')}"
+            add_violations(storage, shas, reason=False, project_row=False)
+            refused = run_master_plan_alone(storage, repo)
+            if refused.get("ok") or refused.get("published") or refused.get("_returncode") == 0:
+                return "a violating purpose only the master plan's callback can report left the publish green"
+            warnings = " ".join(str(w) for w in refused.get("warnings") or [])
+            if "B-03" not in warnings or "purpose" not in warnings:
+                return f"no warning names the purpose: {scrub(warnings)[:200]!r}"
+            return None
+
+        check("the master plan's own callback turns the publish red", master_plan_warns_alone)
+
+        # A purpose is one paragraph and may hold a line break, which would end its
+        # list item on the architecture page (F14/claude, final).
+        def excerpt_is_one_line() -> str | None:
+            if seed_error:
+                return seed_error
+            storage = root / "two-lines"
+            storage.mkdir()
+            seed(storage, shas)
+            db = sqlite3.connect(storage / "memory.db")
+            db.execute(
+                "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+                " ref_sha, session_id) VALUES ('subsystem', 'B-03', 'purpose', 'recorded', ?, ?, 'ex12')",
+                (f"{TWO_LINES[0]}\n{TWO_LINES[1]}", shas["c1"]),
+            )
+            db.commit()
+            db.close()
+            done = run_materializer(storage, "--output", str(storage / "docs"), workspace=repo)
+            if done.get("_returncode") != 0:
+                return f"the materializer failed — {done.get('_diagnostic')}"
+            arch = unlink(read(storage / "docs" / "architecture.md"))
+            line = next((ln for ln in arch.splitlines() if ln.startswith("- **B-03")), "")
+            if f"{TWO_LINES[0]} {TWO_LINES[1]}" not in line:
+                return f"the two-line purpose is not one list item: {line!r}"
+            page = read(storage / "docs" / "architecture.html")
+            items = [i for i in re.findall(r"(?is)<li\b.*?</li>", page) if TWO_LINES[0] in i]
+            if len(items) != 1 or TWO_LINES[1] not in items[0]:
+                return f"the HTML has {len(items)} list item(s) with the purpose's first line, not one holding both"
+            return None
+
+        check("a purpose excerpt stays one list item when the purpose holds a line break", excerpt_is_one_line)
 
         # -- 5. custody: sources and the read-back -----------------------------
         def custody_sources() -> str | None:
