@@ -2381,14 +2381,15 @@ async function main(mods) {
 
   // ------------------------------------------------------------ CI1: in CI
 
-  check("CI1 this gate and GATE CF2 run in CI (spec.md §8)", () => {
+  // GATE CF2 covers the Pecia resolver in dev/, which is not the product and left
+  // CI with the rest of the Pecia experiment.
+  check("CI1 this gate runs in CI (spec.md §8)", () => {
     const workflow = join(REPO, ".github", "workflows", "test.yml");
     if (!existsSync(workflow)) return ".github/workflows/test.yml is absent";
     const text = readFileSync(workflow, "utf8");
-    const missing = [
-      ["node test-carried-findings.mjs", "GATE CF1"],
-      ["dev/test-carried-finding-references.mjs", "GATE CF2"],
-    ].filter(([command]) => !text.includes(command));
+    const missing = [["node test-carried-findings.mjs", "GATE CF1"]].filter(
+      ([command]) => !text.includes(command),
+    );
     return missing.length === 0
       ? null
       : `the workflow does not run ${missing.map(([, id]) => id).join(" or ")}, so a break lands on a branch no run reports`;
