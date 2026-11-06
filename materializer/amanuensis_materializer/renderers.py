@@ -59,7 +59,7 @@ from .readback import (
     explanation_rows,
     finding_marker,
     finding_page,
-    git_answer,
+    git_paths,
     ledger_stale_anchor,
     ledger_stale_marker,
     reconciliation_standing,
@@ -741,14 +741,14 @@ def _ageing_sentence(
         and revision_resolves(workspace, head)
     ):
         return AGEING_NOT_MEASURED
-    # `git_answer`, not `_git_output`: an empty diff is the answer "nothing moved",
+    # `git_paths`, not `_git_output`: an empty diff is the answer "nothing moved",
     # which `_git_output` folds into "git could not answer".
-    changed = git_answer(
-        workspace, "diff", "--name-only", "--no-renames", ref_sha, head, "--", *files
+    changed = git_paths(
+        workspace, "diff", "--name-only", "-z", "--no-renames", ref_sha, head, "--", *files
     )
     if changed is None:
         return AGEING_NOT_MEASURED
-    moved = sorted(set(changed.splitlines()) & set(files))
+    moved = sorted(set(changed) & set(files))
     if not moved:
         return AGEING_UNCHANGED.format(n=len(files))
     shown = ", ".join(f"`{path}`" for path in moved[:AGEING_PATH_LIMIT])

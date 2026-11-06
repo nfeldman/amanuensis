@@ -341,6 +341,28 @@ def git_answer(workspace: Path, *args: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def git_paths(workspace: Path, *args: str) -> list[str] | None:
+    """The NUL-delimited paths a git command names, or None when git cannot answer.
+
+    Newline output quotes a non-ASCII path and `git_answer` trims the first one,
+    so neither compares equal to a stored path. Pathspecs are literal, since a
+    stored path is a file's name and not a pattern.
+    """
+
+    try:
+        result = subprocess.run(
+            ["git", "--literal-pathspecs", "-C", str(workspace), *args],
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return [path for path in result.stdout.decode("utf-8", "surrogateescape").split(NUL) if path]
+
+
 def revision_resolves(workspace: Path, revision: object) -> bool:
     """Whether the repository has a commit named `revision`."""
 
