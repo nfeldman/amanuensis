@@ -481,14 +481,23 @@ def _missing_html_line(owed: str, page_words: str) -> str | None:
 
     Compared by line and by word, since the projection turns Markdown marks
     into elements: a list marker or an ordered item's number becomes structure
-    and a fence line opens a block, and neither is a word on the page.
+    and a fence line opens a block, and neither is a word on the page. The words
+    expected are the ones the projection's own inline renderer gives, which can
+    differ from the record's: a status in a code span prints as its chip's label
+    and a few schema phrases print as the reader's. A fenced line is printed as
+    written.
     """
 
+    from .html_projection import _inline  # noqa: PLC0415 — it imports this module
+
+    fence = False
     for line in re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", owed).splitlines():
         if re.match(r"\s*(```|~~~)", line):
+            fence = not fence
             continue
-        words = re.findall(r"[^\W_]+", re.sub(r"^\s*(\d+[.)]|[-*+>])\s+", "", line))
-        if words and " " + " ".join(words) + " " not in page_words:
+        text = re.sub(r"^\s*(\d+[.)]|[-*+>])\s+", "", line)
+        words = _html_words(text if fence else _inline(text)).strip()
+        if words and f" {words} " not in page_words:
             return line
     return None
 
