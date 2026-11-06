@@ -1331,14 +1331,14 @@
         "pointer": ".subjects_done"
       },
       "progress_last": 0,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "15c1b82cc939110e6f5adb45be91f7f6676243d2",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782",
+      "green_sha": "b3ec4fe3a00870693a09775ac86feb2a8d24ffbf",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Six subsystems and the project recorded, none declined; census keeps only the subsystem-vocabulary rows for B-06, B-08 and B-09. A code span holding a status value turns the HTML read-back red (chip label vs case-sensitive words): B-01 and B-03 were reworded rather than the check relaxed, recorded as field note 11, unrepaired."
     }
   ],
   "completion": {
