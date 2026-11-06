@@ -75,9 +75,16 @@ type Tool = "record_explanation" | "decline_explanation";
 
 const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
 
+/**
+ * Every line break a page recognizes. The HTML projection splits on Python's
+ * `str.splitlines()`, so a heading behind any of these is a heading to the reader
+ * and the shape checks have to see the same lines.
+ */
+const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
+
 /** A paragraph carries no blank line and no heading, list or table line. */
 function isOneParagraph(text: string): boolean {
-  return text.split("\n").every((line) => {
+  return text.split(LINE_BREAK).every((line) => {
     const trimmed = line.trimStart();
     return trimmed !== "" && !/^[#\-*|]/.test(trimmed);
   });
@@ -85,7 +92,7 @@ function isOneParagraph(text: string): boolean {
 
 /** An account is prose and lists: blank lines and list lines pass, headings and tables do not. */
 function isProseAndLists(text: string): boolean {
-  return text.split("\n").every((line) => !/^[#|]/.test(line.trimStart()));
+  return text.split(LINE_BREAK).every((line) => !/^[#|]/.test(line.trimStart()));
 }
 
 interface Subject {
