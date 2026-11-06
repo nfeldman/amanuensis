@@ -322,8 +322,8 @@
       "attempts": 1,
       "start_sha": "7d252e83358ecde8f95da15d2a163fa47194e9b3",
       "red_sha": "e130aa37de576f8589ac27d512179d82ae132cfa",
-      "green_sha": "7506133c326da97a1058c5885520f5ea4acb31c1",
-      "verified_by_launcher": false,
+      "green_sha": "c5026a31be604cefe8b8dae2cd5beb5a95cdf574",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "Helper is renderers.narrative_placement(has_account, has_claims, has_artifact) returning none/inventory-fallback/structure-narrative/survey-record; subsystem_page calls it with has_account=False for EX11 to supply. Row-1 and no-artifact pages are unchanged; the gate pins the narrative_placement name."
     },
