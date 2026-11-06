@@ -20,6 +20,8 @@ import { EXPLANATION_SLOTS, EXPLANATION_SUBJECTS } from "../vocabulary.js";
 /** Caps in UTF-8 bytes (design/explanation/spec.md §3.3). 4096 is the optional-section budget of the reader-lenses wire. */
 const BODY_CAPS = { purpose: 400, account: 4096 } as const;
 const REASON_CAP = 400;
+/** A read serves every cited id, so the response is bounded only if the count is. */
+const EVIDENCE_CAP = 64;
 
 /** Evidence kinds that rest on a name or a pattern and so cannot carry an explanation alone. */
 const NAME_AND_PATTERN_KINDS: readonly string[] = ["name-inferred", "pattern-matched"];
@@ -40,6 +42,8 @@ const RECORD_REFUSALS = {
     "record_explanation refuses: the project's purpose is the thesis in entry-point.md. Record the project's account, or write the thesis under '## What is this codebase?'.",
   citesEvidence: () =>
     "record_explanation refuses: an explanation cites the evidence it was written from. Pass evidence_ids naming evidence rows that exist; add_evidence records one.",
+  tooManyEvidence: () =>
+    `record_explanation refuses: an explanation cites at most ${EVIDENCE_CAP} evidence rows. Cite the rows the text rests on; the rest can be reached from those.`,
   namesAndPatterns: () =>
     "record_explanation refuses: an explanation resting only on names and patterns. Cite at least one row whose kind is not name-inferred or pattern-matched.",
   notInLedger: (id: string) =>
@@ -179,7 +183,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "record_explanation",
     description:
-      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough. Refused for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
+      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
     inputSchema: {
       type: "object",
       properties: {
@@ -211,6 +215,7 @@ export const explanationTools: ToolDefinition[] = [
       }
       const ids = [...new Set(supplied as number[])];
       if (ids.length === 0) throw new ToolError(RECORD_REFUSALS.citesEvidence());
+      if (ids.length > EVIDENCE_CAP) throw new ToolError(RECORD_REFUSALS.tooManyEvidence());
       const cited = ctx.db
         .prepare(
           `SELECT id, file_path, kind FROM evidence WHERE id IN (${ids.map(() => "?").join(", ")})`,

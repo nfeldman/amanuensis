@@ -82,6 +82,7 @@ It refuses, each time with the sentence to repair:
 - `record_explanation refuses: no subsystem has been read to 'structural'` — a project account needs at least one subsystem that has.
 - `record_explanation refuses: the project's purpose is the thesis in entry-point.md` — a project subject takes only the account slot.
 - `record_explanation refuses: an explanation cites the evidence it was written from` — `evidence_ids` is empty or names a row that does not exist.
+- `record_explanation refuses: an explanation cites at most 64 evidence rows` — cite the rows the text rests on. A read serves every cited id, so its response is bounded only if the count is.
 - `record_explanation refuses: an explanation resting only on names and patterns` — every cited row's kind is `name-inferred` or `pattern-matched`.
 - `record_explanation refuses: none of the cited evidence is in <id>'s ledger` — no cited row's file is in the subsystem's ledger. A set that mixes ledger files with outside files is accepted.
 - `record_explanation refuses: <slot> is limited to <n> bytes` — a purpose is over 400 bytes, or an account over 4096. The cap counts UTF-8 bytes.
@@ -123,7 +124,9 @@ subsystem that has not been read to `structural` reads `not-recorded` whatever
 rows exist, the project's account reads the same while no subsystem has been, and
 `checked` is false when no workspace was bound to resolve
 revisions against. The body is served whole, so a response carries at most the
-400-byte purpose and the 4096-byte account with their fields. An unknown
+400-byte purpose and the 4096-byte account with their fields and 64 evidence ids
+each. The whole envelope stays under 70,000 bytes in the worst case, a body of
+control characters at every cap; prose at every cap measures about 17,000. An unknown
 subsystem, or a subsystem call without `subject_id`, is refused.
 
 ### A reset withdraws

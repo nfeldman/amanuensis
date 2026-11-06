@@ -292,6 +292,16 @@
       ]
     },
     {
+      "id": "explanation-record-too-many-evidence",
+      "note": "New, spec.md §3.3 R9, added by the slice-S2 review (F6): a read serves every cited id, so the response is bounded only if the count is.",
+      "refuses": ["record_explanation"],
+      "instructs": [],
+      "server": { "file": "src/tools/explanations.ts", "phrase": "an explanation cites at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
       "id": "explanation-record-names-and-patterns",
       "note": "New, spec.md §3.3 R6.",
       "refuses": ["record_explanation"],

@@ -449,13 +449,15 @@ new tool; `describe_locus` is not changed (§3.8).
 | R6 | every cited row's kind is `name-inferred` or `pattern-matched` | `record_explanation refuses: an explanation resting only on names and patterns` |
 | R7 | subject is a subsystem and no cited row's file is in that subsystem's ledger (a set that mixes ledger files with others is accepted) | `record_explanation refuses: none of the cited evidence is in <id>'s ledger` |
 | R8 | `body` exceeds its cap, or a `purpose` is not one paragraph | `record_explanation refuses: <slot> is limited to <n> bytes` / `a purpose is one paragraph` |
+| R9 | `evidence_ids` names more than 64 rows (added by the slice-S2 review, F6: a read serves every cited id, so the response is bounded only if the count is) | `record_explanation refuses: an explanation cites at most 64 evidence rows` |
 
 Caps, in UTF-8 bytes: `purpose` 400, `account` 4096. 4096 is the optional-section budget of
 `design/reader-lenses/spec.md` §4.1, so a later decision to serve an account on the wire does
 not require truncating one. A purpose is one paragraph: no blank line and no line starting with
 `#`, `-`, `*` or `|`. An account is prose and lists: no line starting with `#` or `|`.
 
-There is no minimum length and no required count of evidence rows beyond one.
+There is no minimum length and no required count of evidence rows beyond one. The whole
+`get_explanations` envelope stays under 70,000 bytes at every cap, measured by EX15's gate.
 
 `decline_explanation` records `disposition = 'declined'` with the reason as `body`. It applies
 the conditions of R1–R4 with its own message stems, each beginning `decline_explanation
