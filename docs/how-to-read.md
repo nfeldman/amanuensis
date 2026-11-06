@@ -163,6 +163,44 @@ Every value below is generated from the vocabulary contract, version `1.0.0` —
 | `declined` | Declared none | A reader examined the subsystem and declared, at a recorded revision and in an attributed session, that it carries no domain vocabulary of its own. | that the judgement is true; the substrate can require that it be made, attributed and dated, and cannot check whether the subsystem really coins nothing |
 | `not-recorded` | Not recorded | Neither a term nor a declination has been recorded for this subsystem, so nobody has answered the question either way. | that the subsystem has no domain vocabulary; nothing was asked and nothing was answered, which is not the same as 'none' |
 
+### Explanation subject
+
+`explanation_subject` · explanation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `subsystem` | Subsystem | The explanation is about one subsystem, named by its id. | that the subsystem still has the status it had when the row was written; eligibility is read from the status at the time of each reading |
+| `project` | Project | The explanation is about the codebase as a whole, and its subject id is the literal 'project'. | a purpose for the project; the project's purpose is the thesis in entry-point.md, and only an account is recorded here |
+
+### Explanation slot
+
+`explanation_slot` · explanation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `purpose` | Purpose | One paragraph on what this part is for, in terms of what the rest of the system or its users get from it. | that the paragraph is a restatement of scope or a list of files; a purpose is a judgement and the record cannot check it |
+| `account` | Account | A short prose account of how the subject works: its moving parts, the rules it enforces and where, what it depends on, what a newcomer gets wrong, and where to start reading. | that the account is complete or current; it is bound to the revision it was written at |
+
+### Explanation disposition
+
+`explanation_disposition` · explanation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `recorded` | Recorded | A survey session wrote the explanation, at a revision and over cited evidence. | that the explanation is true; the record establishes who wrote it, at which revision and over which evidence |
+| `declined` | Declined | A survey session read the subject and declined to write the explanation, with the reason. | that nothing true can be said about the subject; it says only that the session could not say something true and specific |
+| `withdrawn` | Withdrawn | An earlier explanation was withdrawn, with the reason, and the subject owes a new one. | that the earlier explanation was wrong; it says only that it no longer stands for this subject |
+
+### Explanation discharge
+
+`explanation_discharge` · explanation axis
+
+| Value | Label | What it means | What it cannot justify |
+|---|---|---|---|
+| `recorded` | Recorded | The effective row for this slot is an explanation a survey session recorded, at a revision the workspace can resolve and over cited evidence. | that the explanation is true; the record establishes who wrote it, at which revision and over which evidence, and not that it is true |
+| `declined` | Declined | The effective row for this slot is a declination: a survey session read the subject and gave the reason it wrote none. | that nothing can be said about the subject; the reason is a judgement the record keeps and cannot check |
+| `not-recorded` | Not recorded | There is no effective row for this slot: none was written, the newest one was withdrawn, none resolves at a reachable revision, or the subject is not explanation-eligible. | that the subject has no purpose or account worth writing; nothing was asked or nothing stands, which is not the same as declined |
+
 ### Evidence kind
 
 `evidence_kind` · evidence axis

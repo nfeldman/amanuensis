@@ -3,9 +3,13 @@
 **Status**: 🟡 adversarial  
 **Layer**: Coordination
 
-## Scope
+## Purpose
 
-No purpose statement is recorded for this subsystem; the scope below states what it covers.
+Gives an agent the procedure for reading a codebase and writing what it learned into the store: which phase comes next, what each phase owes, and what the server will refuse. The ADRs beside it say why each rule exists, so a later change cannot pass a gate by redefining a word in it.
+
+*Written by a survey session at `1015b8e2` from 4 evidence row(s). None of the 4 file(s) it cites has changed since.*
+
+## Scope
 
 .claude/skills/amanuensis/** and dev/adr/** — the method the coordinator executes and the decisions it is written against
 
@@ -19,6 +23,20 @@ The method is a deliverable here, not documentation: a refusal the server enforc
 
 SKILL.md; references/subsystem-survey.md; references/phase-3-concerns.md; dev/adr/ADR-0001
 
+## How it works
+
+`SKILL.md` is what an agent loads. It routes a request to one file under `references/`: `onboarding.md` for the first pass over a repository, `subsystem-survey.md` and the five `phase-*.md` files for one subsystem, `refresh.md` for bringing a store up to date, `notes.md` and `memory-audit.md` for reading without surveying. The coordinator works a phase inline or hands it to a subagent with that reference, and every result reaches the store through a server tool. None of this runs: it is prose an agent reads at the moment it acts. The ADRs in `dev/adr/` fix the meaning of a term or a trust boundary that the server's checks then implement.
+
+A status is a claim about work that happened. The status ladder runs unmapped, scoping, structural, concerns, adversarial, mapped; each rung's prerequisite is enforced by `enforcePhasePrerequisites` in `mcp-server/src/invariants.ts`, and `onboarding.md` Phase 5 quotes every refusal in the words the server returns, which is refusal parity. No obligation is a count: one anchored term or a reasoned declination discharges vocabulary (`phase-2-structural.md`), and a `survived` outcome on every claim is a legitimate result (`phase-4-adversarial.md`). One rule has no server half: `clear_staleness` asserts that the file was re-read, and `refresh.md` can only state that. The hard constraints in `SKILL.md`, such as never modifying source and never classifying an unread file, are prose too.
+
+It depends on the tools and refusals of [B-02](b02-mcp-core-persistence-and-lifecycle.md) and [B-03](b03-knowledge-tools-and-workflow-api.md). `mcp-server/scripts/check-refusal-parity.mjs` compares registered refusals on both sides by string identity, so it catches a reference edited out of agreement and cannot tell whether either side is right. `reporting-style.md` specifies the pages the materializer implements, and no check compares those two. `prepack-bundle-assets.mjs` copies this directory into the npm package as its skill.
+
+A newcomer is likely to treat a reference as authoritative over the server. `phase-4-adversarial.md` shows the gap: it offers `overturned` for a claim wrong at the current revision, and `record_claim_challenge` refuses that outcome while the claim is still current; it records `survived` as a field note, and the advance to mapped needs a challenge outcome the note does not write. When the two disagree, the server's refusal is what happens.
+
+Start with `SKILL.md`, then Phase 5 of `onboarding.md` for the ladder, then `phase-2-structural.md` and `refresh.md`. `dev/adr/0001-living-conspectus-terms.md` defines the words the gates use.
+
+*Written by a survey session at `e63981bf` from 15 evidence row(s). None of the 10 file(s) it cites has changed since.*
+
 ## Structure
 
 What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.
@@ -27,66 +45,6 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 - Every obligation the references instruct has a matching refusal in the server, and the references quote that refusal in the words it returns rather than paraphrasing it. onboarding.md Phase 5 carries the whole ladder in one place — empty ledger, missing claim_key, undischarged vocabulary, missing survey artifact, no dispositions, unattached or unreachable evidence, unchallenged claims, unreconciled store, undecided carried findings — and each phase reference repeats the one that ends it. The exception, stated as a rule rather than left implicit, is refresh.md's cardinal rule: the server cannot distinguish a file that was read from one that was merely cleared.
     - `B-01/method/every-obligation-has-a-substrate-half` · subject `B-01` · Observation · asserted at `c0734040022f` · evidence: `.claude/skills/amanuensis/references/onboarding.md:213-250`, `.claude/skills/amanuensis/references/refresh.md:345-357`
-
-### Survey narrative
-
-*Narrative from the survey artifact; not individually bound to a revision.* Its source is `subsystems/B-01-structural.md` at content hash `9ae7ec0f7847`, recorded at `c0734040022f`.
-
-#### **B-01** — Survey methodology and agent contracts
-
-Structural account, read at `c073404`. Scope: `.claude/skills/amanuensis/**` (16 files)
-and `dev/adr/**` (21 ADRs). The method is the deliverable here, not documentation about
-one.
-
-##### Observed
-
-**Two halves of one contract.** `SKILL.md` routes; the phase references carry the work;
-the ADRs carry the decisions the server's refusals implement. The references quote the
-server's refusal strings verbatim — `onboarding.md` Phase 5 carries the whole status
-ladder in one place — which is what makes `check-refusal-parity.mjs` able to compare them
-mechanically rather than by reading.
-
-**The ladder.** `unmapped → scoping → structural → concerns → adversarial → mapped`, with
-one prerequisite per rung: a populated ledger, a `<sid>/` claim and a discharged-or-declined
-vocabulary, a registered `subsystem-survey` artifact, at least one disposition, every
-current claim challenged, and a reconciled store. Two more bind outside it: an active
-session on every durable write, and every carried finding decided before the store is
-fully surveyed.
-
-**Discharge or decline, never a floor.** No obligation in the method is a count. One
-anchored term or a reasoned declination; every concern terminal with no minimum; a
-`survived` outcome on every claim is a legitimate result and inventing an overturn to look
-rigorous is named as corrupting the record.
-
-**The one unenforceable rule.** `refresh.md`'s cardinal rule — `clear_staleness` asserts a
-re-examination — is the single obligation the substrate cannot check, and it is written as
-a rule with its failure named rather than left implicit.
-
-**The ADRs are a claim-adjudication history.** ADR-0020's table is the shape: prior claims
-listed with `withdrawn`, `survives as …`, or `rejected`, and two verification obligations
-left unchecked rather than quietly dropped. ADR-0001 clause 7 — every carried finding
-terminal — was added by this lane.
-
-##### No state containers
-
-This subsystem holds none: it is prose consumed by an agent at read time. Claimed as an
-explicit negative rather than omitted.
-
-##### Seam contracts from this side
-
-- **the server's refusal strings** — quoted here, thrown in `mcp-server/src/invariants.ts`
-  ([B-02](b02-mcp-core-persistence-and-lifecycle.md)); compared by `scripts/check-refusal-parity.mjs` ([B-05](b05-packaging-installer-validation-and-product-docs.md)) against
-  `contracts/refusal-parity.json`.
-- **`concern-territories.md` → `contracts/concern-checklist.json`** — the catalog is
-  calibrated once per repository into the checklist a survey actually works from.
-- **`reporting-style.md` → `materializer/`** ([B-04](b04-diff-aware-materializer.md)) — the typed HTML projections and the
-  colour-per-enum rule are specified here and implemented there.
-
-##### Open
-
-`reporting-style.md` specifies typed projections in considerable detail; nothing compares
-its specification against the renderer that implements it, so the two can drift silently.
-Recorded under [SC-1](../concerns.md#sc-1).
 
 ## Vocabulary
 
@@ -105,10 +63,10 @@ Recorded under [SC-1](../concerns.md#sc-1).
 
 | Metric | Value |
 |---|---|
-| Files read | 37 of 37 ledger rows |
-| Files in scope, not yet read | 0 of 37 |
-| Files excluded from the survey obligation | 0 of 37 |
-| Ledger rows the repository has changed under | 3 of 37 |
+| Files read | 38 of 38 ledger rows |
+| Files in scope, not yet read | 0 of 38 |
+| Files excluded from the survey obligation | 0 of 38 |
+| Ledger rows the repository has changed under | 7 of 38 |
 | Active concerns with a disposition recorded here | 12 of 12 — 8 confirmed-acceptable, 4 out-of-scope |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -123,6 +81,8 @@ Recorded under [SC-1](../concerns.md#sc-1).
     - <a id="le-592927548e"></a>`.claude/skills/amanuensis/references/artifact-templates.md`
 - **The eleven-territory catalog onboarding Phase 4 calibrates against, and the diagnosticity protocol.** — examined, 1 file, examined at `c0734040`
     - <a id="le-18b6f1fc80"></a>`.claude/skills/amanuensis/references/concern-territories.md`
+- **The content brief and tool reference for purposes and accounts. Read in full by EX14.** — examined, 1 file, examined at `e63981bf`
+    - <a id="le-844b050664"></a>`.claude/skills/amanuensis/references/explanations.md`
 - **The hygiene sweep that lists drift without working it — the route refresh.md is defined against.** — examined, 1 file, examined at `c0734040`
     - <a id="le-87251d5427"></a>`.claude/skills/amanuensis/references/memory-audit.md`
 - **Conversational observer mode and the describe_locus answer shape: standing first, then the account, then what is not known.** — examined, 1 file, examined at `c0734040`
@@ -211,4 +171,58 @@ Recorded under [SC-1](../concerns.md#sc-1).
 
 ### Survey artifact
 
-The survey artifact is rendered above, under Structure. Its source is `subsystems/B-01-structural.md` at content hash `9ae7ec0f7847`, recorded at `c0734040022f`.
+#### **B-01** — Survey methodology and agent contracts
+
+Structural account, read at `c073404`. Scope: `.claude/skills/amanuensis/**` (16 files)
+and `dev/adr/**` (21 ADRs). The method is the deliverable here, not documentation about
+one.
+
+##### Observed
+
+**Two halves of one contract.** `SKILL.md` routes; the phase references carry the work;
+the ADRs carry the decisions the server's refusals implement. The references quote the
+server's refusal strings verbatim — `onboarding.md` Phase 5 carries the whole status
+ladder in one place — which is what makes `check-refusal-parity.mjs` able to compare them
+mechanically rather than by reading.
+
+**The ladder.** `unmapped → scoping → structural → concerns → adversarial → mapped`, with
+one prerequisite per rung: a populated ledger, a `<sid>/` claim and a discharged-or-declined
+vocabulary, a registered `subsystem-survey` artifact, at least one disposition, every
+current claim challenged, and a reconciled store. Two more bind outside it: an active
+session on every durable write, and every carried finding decided before the store is
+fully surveyed.
+
+**Discharge or decline, never a floor.** No obligation in the method is a count. One
+anchored term or a reasoned declination; every concern terminal with no minimum; a
+`survived` outcome on every claim is a legitimate result and inventing an overturn to look
+rigorous is named as corrupting the record.
+
+**The one unenforceable rule.** `refresh.md`'s cardinal rule — `clear_staleness` asserts a
+re-examination — is the single obligation the substrate cannot check, and it is written as
+a rule with its failure named rather than left implicit.
+
+**The ADRs are a claim-adjudication history.** ADR-0020's table is the shape: prior claims
+listed with `withdrawn`, `survives as …`, or `rejected`, and two verification obligations
+left unchecked rather than quietly dropped. ADR-0001 clause 7 — every carried finding
+terminal — was added by this lane.
+
+##### No state containers
+
+This subsystem holds none: it is prose consumed by an agent at read time. Claimed as an
+explicit negative rather than omitted.
+
+##### Seam contracts from this side
+
+- **the server's refusal strings** — quoted here, thrown in `mcp-server/src/invariants.ts`
+  ([B-02](b02-mcp-core-persistence-and-lifecycle.md)); compared by `scripts/check-refusal-parity.mjs` ([B-05](b05-packaging-installer-validation-and-product-docs.md)) against
+  `contracts/refusal-parity.json`.
+- **`concern-territories.md` → `contracts/concern-checklist.json`** — the catalog is
+  calibrated once per repository into the checklist a survey actually works from.
+- **`reporting-style.md` → `materializer/`** ([B-04](b04-diff-aware-materializer.md)) — the typed HTML projections and the
+  colour-per-enum rule are specified here and implemented there.
+
+##### Open
+
+`reporting-style.md` specifies typed projections in considerable detail; nothing compares
+its specification against the renderer that implements it, so the two can drift silently.
+Recorded under [SC-1](../concerns.md#sc-1).

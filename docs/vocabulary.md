@@ -1,5 +1,63 @@
 # Glossary
 
+## Codebase-wide
+
+### carried finding
+
+_A finding inherited from a discarded store, held as an obligation until this store decides it._
+
+A rebuild discards a conspectus and not what it had found. `carry_finding` records each finding with the store it came from, and `record_carried_outcome` closes it one of three ways: a successor finding filed here, ruled out with evidence collected here, or repaired at a commit that resolves. A carried finding is a question and not an answer, so its text is not evidence about the current code.
+
+First seen: `mcp-server/src/tools/carried.ts:carry_finding@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### conspectus
+
+_The durable record of a survey: the SQLite store, the prose artifacts beside it, and the pages generated from them._
+
+It outlives the session that wrote it, which is the point: a later session or a person reads it instead of reconstructing what was already read. The store is the agent's source of truth and is written only through the server's tools; the pages are a projection and are never edited by hand. A conspectus records what a session read and concluded at a revision. It does not establish that a conclusion is true, and each kind of record says what it can and cannot justify.
+
+First seen: `.claude/skills/amanuensis/SKILL.md:Amanuensis@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### evidence row
+
+_One recorded citation: a file, an optional symbol and line range, a resolved revision, and a kind saying how solid the observation is._
+
+Evidence is recorded first and cited by id from dispositions, findings and explanations. The kind is a ladder from `code-verified` down to `pattern-matched`, and overstating it is the most common way the method fails. `add_evidence` resolves the revision in the workspace and refuses a path outside it or inside `.amanuensis`. It stores the line range as given, so a range is a claim and may not open where it says.
+
+First seen: `mcp-server/src/tools/evidence.ts:add_evidence@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### file ledger
+
+_The table assigning each tracked path to a subsystem with a classification, the revision it was examined at, and whether it has drifted since._
+
+`detect_changes` reconciles the ledger against the tree at a revision: a tracked path with no row is unledgered, a row whose file is gone is absent, and a row whose file differs from the revision it names is marked stale. `generated-ignore`, `vendor-ignore` and `irrelevant` rows carry no obligation to be read. A row classified `candidate` is in scope and has not been read, so a populated ledger says what has to be read and only `examined` rows say what was.
+
+First seen: `mcp-server/src/schema.sql:file_ledger@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### read-back
+
+_The independent check that reads the store and the finished pages after a render, on state, coverage and content axes, and clears the run's ok when they differ._
+
+A renderer cannot vouch for itself, so `ProjectionVerifier` reads the durable database and the output files separately. State: each authoritative record has its one marker on the page that owes it. Coverage: every planned page and local cross-link exists. Content: the finished bytes match a receipt taken after cross-references are resolved. Markdown and HTML are checked separately. A green read-back says records reached pages and does not judge the prose.
+
+First seen: `materializer/amanuensis_materializer/readback.py:ProjectionVerifier@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### standing
+
+_What the record authorizes about one file, symbol, subsystem or term and what it cannot justify, computed from stored rows and a git ancestry check with no model involved._
+
+`describe_locus` leads with standing because a reader needs to know how far to trust an account before reading it. The per-owner predicate is the `file_standing` view in the schema; `standing.ts` decides what SQL cannot: whether a path has an owner, whether its owners agree, and whether an examination revision is still reachable from `HEAD`. The same store against the same `HEAD` gives the same answer, so a tool can quote a standing block as evidence.
+
+First seen: `mcp-server/src/standing.ts:describeLocusStanding@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
+### status ladder
+
+_The ordered survey statuses a subsystem climbs, unmapped, scoping, structural, concerns, adversarial and mapped, each refused until the previous phase's work is on record._
+
+A status is a claim about work that happened, so `enforceForwardPrerequisites` checks every rung between the current status and the target, and both status writers call it: a populated ledger, a claim and discharged vocabulary to reach `structural`, a registered survey artifact for `concerns`, dispositions for `adversarial`, and challenged claims, discharged explanations and a reconciled store for `mapped`. `deferred` is orthogonal and can be set from any rung. A rung says which passes ran and does not say how much of the subsystem's ledger was read.
+
+First seen: `mcp-server/src/invariants.ts:STATUS_ORDER@1015b8e29bd6a54ddbc7412b9f78a4dcc3ff5782`
+
 ## Scoped to **[B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)**
 
 ### discharge or decline

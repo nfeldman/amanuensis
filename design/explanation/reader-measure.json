@@ -25,6 +25,19 @@
         "table_share": 0.5181,
         "placeholders": 13
       }
+    },
+    {
+      "label": "explained",
+      "commit": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+      "contract_sha256": "1abe671ec9f24b8d3bbda8eb83bcac7f97fa8635fa8e469a8aba06f27e5ad29f",
+      "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
+      "totals": {
+        "pages": 33,
+        "table_chars": 295859,
+        "prose_chars": 293203,
+        "table_share": 0.5023,
+        "placeholders": 7
+      }
     }
   ]
 }

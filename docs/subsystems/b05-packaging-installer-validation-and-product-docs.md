@@ -3,9 +3,13 @@
 **Status**: 🟡 concerns  
 **Layer**: Delivery
 
-## Scope
+## Purpose
 
-No purpose statement is recorded for this subsystem; the scope below states what it covers.
+Makes the tool installable and keeps what is said about it from drifting. It packages the server with its skill and materializer, publishes on a tag, and holds the generators and CI checks that fail when a fact published in two places disagrees. An operator gets something to install; a contributor gets the checks that say a duplicated fact has moved.
+
+*Written by a survey session at `1015b8e2` from 4 evidence row(s). None of the 4 file(s) it cites has changed since.*
+
+## Scope
 
 mcp-server packaging, checkers, fixtures and test suite; .github/**; .pecia/**; the dev/ harness that is not a lane's; root product artifacts
 
@@ -19,6 +23,20 @@ Carries archived findings B05-1 and B05-2.
 
 mcp-server/src/cli.ts; .github/workflows/test.yml; CONTRIBUTING.md; mcp-server/scripts/
 
+## How it works
+
+`mcp-server/package.json` declares three binaries (`amanuensis-memory`, `amanuensis`, `amanuensis-evaluate-history`) and the files that ship. At pack time `scripts/prepack-bundle-assets.mjs` copies the skill and the materializer into the package from their sources at the repository root, and git ignores the copies. A `v*` tag runs `publish.yml`, which requires the tag to match the package version. `INSTALLATION.md` documents the `amanuensis` command for operators. `test.yml` has five jobs whose steps are mostly one gate script or test file each. `.pecia/` holds the defect ledger, which refers to Amanuensis findings through `dev/pecia-resolve-finding.mjs`, and `dev/hooks/pre-commit` runs its checker when enabled in a clone.
+
+The organizing rule is generated copy, asserted schema: a fact published twice is generated from one source or asserted against it. `gen-vocabulary.mjs` writes `src/vocabulary.ts` and the materializer's `vocabulary.py` from `contracts/conspectus-vocabulary.json`, and compares the schema's CHECK literals without rewriting them, because `schema.sql` is applied to live stores on every open. `gen-tool-inventory.mjs` writes the tool block in `DEVELOPMENT.md` from a running server, and `--check` fails on a difference. `check-refusal-parity.mjs` compares a hand-kept register with the refusals the server's source throws and the words the references quote.
+
+It reads every other part in order to check it. At run time the other parts need only what it generates: the server and the materializer import the vocabulary modules.
+
+A newcomer is likely to look for the installer here: `src/cli.ts` is in [B-02](b02-mcp-core-persistence-and-lifecycle.md)'s ledger. `SERVER_VERSION` in `index.ts` is a literal with no generator and no assertion, and `mcp-server/README.md` names an older version than `package.json`. A gate under `dev/` is not necessarily in CI: no step in `test.yml` runs `dev/test-activation-evidence.mjs`, so a green workflow says only what it ran.
+
+Start with `scripts/gen-vocabulary.mjs`, then the `mcp-server` job in `.github/workflows/test.yml`, then `package.json`.
+
+*Written by a survey session at `1015b8e2` from 14 evidence row(s). None of the 13 file(s) it cites has changed since.*
+
 ## Structure
 
 What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.
@@ -27,53 +45,6 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 - The checker set in mcp-server/scripts/ is organized around one rule: a fact published twice is either generated from one source or asserted against it. gen-vocabulary.mjs generates two enum modules and asserts the schema's CHECKs; gen-tool-inventory.mjs generates DEVELOPMENT.md's block and --check refuses a divergence; check-refusal-parity.mjs cannot generate prose so it generates the candidate refusal set and compares that against a register; check-concern-checklist.mjs holds the calibrated checklist to its contract. Where a duplicated fact has neither a generator nor an assertion, it drifts — which is what B05-2 is.
     - `B-05/contracts/generate-or-assert-every-duplicated-fact` · subject `B-05` · Inference · asserted at `c0734040022f` · evidence: `mcp-server/src/index.ts:28`, `mcp-server/scripts/gen-vocabulary.mjs:1-40`
-
-### Survey narrative
-
-*Narrative from the survey artifact; not individually bound to a revision.* Its source is `subsystems/B-05-structural.md` at content hash `d8bd9abb8b15`, recorded at `c0734040022f`.
-
-#### **B-05** — Packaging, installer, validation, and product docs
-
-Scoping-and-carried-adjudication pass, read at `c073404`. Scope: the mcp-server package,
-its checkers, contracts and fixtures, the CI workflows, `.pecia/`, the non-lane `dev/`
-harness, and the root product artifacts.
-
-**This pass is partial and says so.** Six of 154 scoped files were read: the two
-generator/checker scripts that carry the subsystem's organizing rule, the two CI
-workflows that bear on it, and the two contracts they read. The remaining 148 — chiefly
-the ~100 `mcp-server/test-*.mjs` suites and the fixture corpora — are scoped and unread,
-and the ledger says `candidate` for each. The claim and the concern work below are stated
-over what was read.
-
-##### Observed
-
-**One rule, four checkers.** A fact published in more than one place is generated from a
-single source or asserted against it: `gen-vocabulary.mjs` writes the TypeScript and
-Python enum modules and compares the schema's `CHECK` literals without rewriting them,
-because `schema.sql` is applied to live databases on every open;
-`gen-tool-inventory.mjs` writes `DEVELOPMENT.md`'s block and `--check` refuses a
-divergence; `check-refusal-parity.mjs` cannot generate prose, so it generates the
-*candidate refusal set* from the server's own thrown messages and compares that against a
-hand-kept register, stating the three sentence forms it can see as its own scope limit.
-
-**Where the rule is not applied, the fact drifts.** `SERVER_VERSION` in `index.ts` is a
-literal with no generator and no assertion. At `c073404` it reads `0.2.0-beta.1` while
-`package.json` reads `0.2.0-beta.2`, and it is the only source for both the version
-advertised at `initialize` and the `serverVersion` frozen into the binding receipt.
-Recorded as B05-R1.
-
-##### Seam contracts from this side
-
-- **`contracts/conspectus-vocabulary.json` → `src/vocabulary.ts`, `vocabulary.py`,
-  `schema.sql`** — generated, generated, asserted.
-- **`tools/list` → `DEVELOPMENT.md`** — generated and `--check`ed.
-- **server refusals → the skill references** ([B-01](b01-survey-methodology-and-agent-contracts.md)) — register plus generated candidate
-  set.
-- **`package.json` → `SERVER_VERSION`** — neither. The open seam.
-
-##### Open
-
-148 of 154 scoped files unread at this pass.
 
 ## Vocabulary
 
@@ -91,10 +62,10 @@ Recorded as B05-R1.
 
 | Metric | Value |
 |---|---|
-| Files read | 91 of 158 ledger rows |
-| Files in scope, not yet read | 66 of 158 |
-| Files excluded from the survey obligation | 1 of 158 |
-| Ledger rows the repository has changed under | 8 of 158 |
+| Files read | 92 of 163 ledger rows |
+| Files in scope, not yet read | 70 of 163 |
+| Files excluded from the survey obligation | 1 of 163 |
+| Ledger rows the repository has changed under | 16 of 163 |
 | Active concerns with a disposition recorded here | 1 of 12 — 1 confirmed-bug |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -105,6 +76,8 @@ Recorded as B05-R1.
 
 - **Published beta.4 release notes, beside the beta.3 notes. Assigned by convention; not read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-f2a24423c0"></a>`dev/release-notes-v0.2.0-beta.4.md`
+- **The case file both readers of the effective explanation run. Assigned by convention; only its case names and expected states were read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-2130be4f39"></a>`mcp-server/contracts/explanation-effective-cases.json`
 - **Packaging, configuration, fixtures, checkers and the server's own test suite.** — candidate, 65 files, recorded at 3 revisions
     - <a id="le-64a8983657"></a>`mcp-server/test-activation-contract.mjs` (`a7f9384d`)
     - <a id="le-19aa5d891a"></a>`mcp-server/test-activation-doctor.mjs` (`a7f9384d`)
@@ -171,6 +144,12 @@ Recorded as B05-R1.
     - <a id="le-80b9cab913"></a>`mcp-server/test-vocabulary-source.mjs` (`a7f9384d`)
     - <a id="le-ebdfbb3cfc"></a>`mcp-server/test-workspace-binding.mjs` (`ec5824bc`)
     - <a id="le-9c91991914"></a>`mcp-server/tsconfig.json` (`a7f9384d`)
+- **The server's own test suite: GATE EX10. Assigned by convention; not read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-aa3ed86392"></a>`mcp-server/test-explanation-gate.mjs`
+- **The server's own test suite: GATE EX15. Assigned by convention; not read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-77d7424e1b"></a>`mcp-server/test-explanation-read.mjs`
+- **The server's own test suite: GATE EX9. Assigned by convention; not read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-c6218e314b"></a>`mcp-server/test-explanations.mjs`
 - **Packaging, installer, validation harnesses, contracts, fixtures and product documentation.** — examined, 82 files, examined at 2 revisions
     - <a id="le-f55c3d9a96"></a>`.github/FUNDING.yml` (`410d769b`)
     - <a id="le-93f283a230"></a>`.github/workflows/pages.yml` (`410d769b`)
@@ -266,6 +245,8 @@ Recorded as B05-R1.
     - <a id="le-f73b924c8d"></a>`mcp-server/contracts/concern-checklist.json`
 - **The enum source every generated copy and every SQL CHECK is derived from, including the obligation_bearing flag D2's exempt set comes from.** — examined, 1 file, examined at `c0734040`
     - <a id="le-79b8cf1dc5"></a>`mcp-server/contracts/conspectus-vocabulary.json`
+- **The shared test helper that declines both explanation slots before a fixture advances. Read in full by EX14.** — examined, 1 file, examined at `e63981bf`
+    - <a id="le-c1f9564f64"></a>`mcp-server/fixtures/explanation-discharge.mjs`
 - **The skill/server refusal register, and the generated candidate set that narrows what an unregistered refusal can hide — with the three sentence forms it can see stated as its own scope limit.** — examined, 1 file, examined at `c0734040`
     - <a id="le-865f114b66"></a>`mcp-server/scripts/check-refusal-parity.mjs`
 - **The single-source generator: it writes the TypeScript and Python enum modules and asserts the schema's CHECK literals against the contract, and states why the schema is checked rather than rewritten.** — examined, 1 file, examined at `c0734040`
@@ -283,4 +264,45 @@ Recorded as B05-R1.
 
 ### Survey artifact
 
-The survey artifact is rendered above, under Structure. Its source is `subsystems/B-05-structural.md` at content hash `d8bd9abb8b15`, recorded at `c0734040022f`.
+#### **B-05** — Packaging, installer, validation, and product docs
+
+Scoping-and-carried-adjudication pass, read at `c073404`. Scope: the mcp-server package,
+its checkers, contracts and fixtures, the CI workflows, `.pecia/`, the non-lane `dev/`
+harness, and the root product artifacts.
+
+**This pass is partial and says so.** Six of 154 scoped files were read: the two
+generator/checker scripts that carry the subsystem's organizing rule, the two CI
+workflows that bear on it, and the two contracts they read. The remaining 148 — chiefly
+the ~100 `mcp-server/test-*.mjs` suites and the fixture corpora — are scoped and unread,
+and the ledger says `candidate` for each. The claim and the concern work below are stated
+over what was read.
+
+##### Observed
+
+**One rule, four checkers.** A fact published in more than one place is generated from a
+single source or asserted against it: `gen-vocabulary.mjs` writes the TypeScript and
+Python enum modules and compares the schema's `CHECK` literals without rewriting them,
+because `schema.sql` is applied to live databases on every open;
+`gen-tool-inventory.mjs` writes `DEVELOPMENT.md`'s block and `--check` refuses a
+divergence; `check-refusal-parity.mjs` cannot generate prose, so it generates the
+*candidate refusal set* from the server's own thrown messages and compares that against a
+hand-kept register, stating the three sentence forms it can see as its own scope limit.
+
+**Where the rule is not applied, the fact drifts.** `SERVER_VERSION` in `index.ts` is a
+literal with no generator and no assertion. At `c073404` it reads `0.2.0-beta.1` while
+`package.json` reads `0.2.0-beta.2`, and it is the only source for both the version
+advertised at `initialize` and the `serverVersion` frozen into the binding receipt.
+Recorded as B05-R1.
+
+##### Seam contracts from this side
+
+- **`contracts/conspectus-vocabulary.json` → `src/vocabulary.ts`, `vocabulary.py`,
+  `schema.sql`** — generated, generated, asserted.
+- **`tools/list` → `DEVELOPMENT.md`** — generated and `--check`ed.
+- **server refusals → the skill references** ([B-01](b01-survey-methodology-and-agent-contracts.md)) — register plus generated candidate
+  set.
+- **`package.json` → `SERVER_VERSION`** — neither. The open seam.
+
+##### Open
+
+148 of 154 scoped files unread at this pass.

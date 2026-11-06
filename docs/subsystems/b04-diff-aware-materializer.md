@@ -3,9 +3,13 @@
 **Status**: 🟡 adversarial  
 **Layer**: Projection
 
-## Scope
+## Purpose
 
-No purpose statement is recorded for this subsystem; the scope below states what it covers.
+Turns the store into the pages a person reads: Markdown and self-contained HTML, generated from the record and then read back against it. A clean publish that fails a render or its read-back leaves the previous pages in place, so what it publishes has passed its checks.
+
+*Written by a survey session at `1015b8e2` from 3 evidence row(s). None of the 3 file(s) it cites has changed since.*
+
+## Scope
 
 materializer/** and the promoted docs/ it renders
 
@@ -19,6 +23,20 @@ The only Python in the product and the only reader-facing surface. docs/ is its 
 
 amanuensis_materializer/core.py; renderers.py; readback.py
 
+## How it works
+
+`materialize.py` is the command, spawned by `materialize_docs` with the storage, workspace and output paths. `Materializer.materialize` in `core.py` opens the store `mode=ro`, refuses when a required view is absent, and builds its page plan in `_plan`. For each `PagePlan` a function in `renderers.py` returns the text and the sources it read, and the file is rewritten only when its sources, its bytes, its presence or `MATERIALIZER_VERSION` changed. `resolve_all` then rewrites cross-references across every page, retired pages are pruned, `render_html_projection` derives each HTML page from the finished Markdown, and `ProjectionVerifier` reads the store and the files back.
+
+A renderer exception, an unknown navigation group, an absent view or a red read-back clears `ok`. An ordinary run writes pages in place before its read-back. Only `--clean-publish` isolates them: it refuses an output directory holding unmanaged files, renders everything into a staging directory, and swaps it in only when the summary is ok. The read-back checks state, coverage and content, and each format separately, so healthy Markdown cannot mask damaged HTML; its receipt hashes the bytes after cross-references are resolved. Recorded explanations pass through `orientation_violations` in `lint.py`: a body with survey-status vocabulary or a count fraction is replaced by a refusal sentence and the publish fails. Enums, labels and the obligation predicate come from the generated `vocabulary.py`.
+
+It depends on the store, the prose artifacts beside it and the generated vocabulary, and writes only to its output directory. `materialize_docs` refuses to run without a standing reconciliation at `HEAD`, and it cannot write outside storage, so `dev/promote-docs.mjs` copies a green publish to the tracked `docs/` as a second step. Readers depend on those pages, and the receipt gates in `dev/` bind to them.
+
+A newcomer is likely to edit a generated page or to look for a defect in one. `docs/` and `.amanuensis/docs` are outputs, and they are different directories. The manifest saves writes and not work: every renderer runs on every call, although the opening comment of `manifest.py` describes re-rendering only what changed. A green read-back says that records reached their pages, and says nothing about whether the prose is true.
+
+Start with `_plan` in `core.py`, then `render_subsystem` in `renderers.py`, then `ProjectionVerifier.verify` in `readback.py`. `lint.py` is short and states the rule for prose.
+
+*Written by a survey session at `e63981bf` from 15 evidence row(s). None of the 10 file(s) it cites has changed since.*
+
 ## Structure
 
 What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.
@@ -27,60 +45,6 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 - Every way this renderer can fail leaves the published projection as it was. A missing required view refuses before the plan is built; an unknown nav group refuses before a byte is written; a renderer exception records the traceback and clears ok; a read-back mismatch clears ok; and clean publication renders into a staging directory, promotes only on a green summary, and removes the stage otherwise. The one destructive step — replacing the output directory — is additionally refused while the output holds a file no prior manifest claims.
     - `B-04/projection/a-refusal-leaves-the-previous-output-untouched` · subject `B-04` · Observation · asserted at `c0734040022f` · evidence: `materializer/amanuensis_materializer/renderers.py:407-430`, `materializer/amanuensis_materializer/core.py:259-276`
-
-### Survey narrative
-
-*Narrative from the survey artifact; not individually bound to a revision.* Its source is `subsystems/B-04-structural.md` at content hash `a5a73c29df74`, recorded at `c0734040022f`.
-
-#### **B-04** — Diff-aware materializer
-
-Structural account, read at `c073404`. Scope: `materializer/**` — the only Python in the
-product and the only reader-facing surface. `docs/` is its output and is
-`generated-ignore`.
-
-##### Observed
-
-**One plan, four consumers.** `core.py:_plan` computes the page list from the store;
-rendering, the HTML shell's navigation, the reader's-guide route table and the read-back's
-expected-path set all read it. A page cannot exist in one and not the others.
-
-**Diff-aware by source hash.** `.manifest.json` records per page the identifiers it was
-rendered from (`db:`, `prose:`, `synthetic:`) and their hashes; a page is rewritten when a
-source hash changes, when its own content hash changes, when the file is missing, or when
-`MATERIALIZER_VERSION` moves. Pages whose generator disappeared are retired — file and
-manifest entry both.
-
-**Two formats, one source, read back independently.** HTML is derived from the finished
-post-xref Markdown, and `ProjectionVerifier` checks state, coverage and content on each
-format separately, so a healthy Markdown cannot mask damaged HTML.
-
-**Refusal preserves the prior output.** Absent required view, unknown nav group, renderer
-exception, red read-back, unmanaged file in the output directory — each leaves `docs/` as
-it was. Clean publication stages, verifies, then promotes.
-
-**Derived predicates are generated, not restated.** `OBLIGATION_BEARING_SQL` and the
-evidence-quality ladder come from the generated `vocabulary` module, so the renderer, the
-server and the lint cannot disagree about what carries an obligation or which rung is
-strongest.
-
-##### State containers
-
-None held across calls. `Manifest` and `Summary` are per-run dataclasses; the SQLite
-connection is opened `mode=ro` and closed in a `finally`. Claimed as an explicit negative.
-
-##### Seam contracts from this side
-
-- **`memory.db`** — read `mode=ro`, never written. This side depends on the two views
-  `REQUIRED_VIEWS` names and refuses by name when they are absent.
-- **`<storage>/docs/`** — written here, promoted by `dev/promote-docs.mjs` ([B-09](b09-conspectus-design-lanes-their-drivers-and-receipts.md)) to the
-  repository's checked-in `docs/`.
-- **`reporting-style.md`** ([B-01](b01-survey-methodology-and-agent-contracts.md)) — specifies the typed projections this implements;
-  nothing compares the two.
-
-##### Open
-
-`readback.py:687` and `renderers.py:696` still read `entries`, a table no code path
-writes. Recorded as B04-R1.
 
 ## Vocabulary
 
@@ -103,10 +67,10 @@ writes. Recorded as B04-R1.
 
 | Metric | Value |
 |---|---|
-| Files read | 24 of 99 ledger rows |
-| Files in scope, not yet read | 5 of 99 |
-| Files excluded from the survey obligation | 70 of 99 |
-| Ledger rows the repository has changed under | 75 of 99 |
+| Files read | 24 of 101 ledger rows |
+| Files in scope, not yet read | 7 of 101 |
+| Files excluded from the survey obligation | 70 of 101 |
+| Ledger rows the repository has changed under | 80 of 101 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 8 confirmed-acceptable, 1 ruled-out, 2 out-of-scope |
 | Findings by resolution state | 6 open |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -117,6 +81,10 @@ writes. Recorded as B04-R1.
 
 - **The diff-aware materializer's test suite: GATE EX3. Assigned by convention; not read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-fe5e48a8c3"></a>`materializer/test-claim-register.py`
+- **The diff-aware materializer's test suite: GATE EX12. Assigned by convention; not read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-4a68141e48"></a>`materializer/test-explanation-orientation.py`
+- **The diff-aware materializer's test suite: GATE EX11. Assigned by convention; not read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-dae362eff3"></a>`materializer/test-explanation-pages.py`
 - **The diff-aware materializer's test suite: GATE EX5. Assigned by convention; not read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-fcfaf8cd3f"></a>`materializer/test-ledger-grouping.py`
 - **The diff-aware materializer's test suite: GATE EX4. Assigned by convention; not read.** — candidate, 1 file, recorded at `2ceb0d2d`
@@ -131,7 +99,7 @@ writes. Recorded as B04-R1.
     - <a id="le-57bb25eb0e"></a>`materializer/README.md`
 - **The package surface: one exported class.** — examined, 1 file, examined at `c0734040`
     - <a id="le-023291b933"></a>`materializer/amanuensis_materializer/__init__.py`
-- **The orchestrator: the page plan, the diff-aware render decision, the global xref pass, the HTML projection, the retirement of orphaned pages, and the post-xref read-back.** — examined, 1 file, examined at `2ceb0d2d`
+- **The orchestrator: the page plan, the diff-aware render decision, the global xref pass, the HTML projection, the retirement of orphaned pages, and the post-xref read-back.** — examined, 1 file, examined at `e63981bf`
     - <a id="le-018dc6529d"></a>`materializer/amanuensis_materializer/core.py`
 - **The read-only open and the REQUIRED_VIEWS probe with the one fix it names — the reason an older store is refused rather than rendered short.** — examined, 1 file, examined at `c0734040`
     - <a id="le-a209ebc791"></a>`materializer/amanuensis_materializer/db.py`
@@ -255,4 +223,52 @@ writes. Recorded as B04-R1.
 
 ### Survey artifact
 
-The survey artifact is rendered above, under Structure. Its source is `subsystems/B-04-structural.md` at content hash `a5a73c29df74`, recorded at `c0734040022f`.
+#### **B-04** — Diff-aware materializer
+
+Structural account, read at `c073404`. Scope: `materializer/**` — the only Python in the
+product and the only reader-facing surface. `docs/` is its output and is
+`generated-ignore`.
+
+##### Observed
+
+**One plan, four consumers.** `core.py:_plan` computes the page list from the store;
+rendering, the HTML shell's navigation, the reader's-guide route table and the read-back's
+expected-path set all read it. A page cannot exist in one and not the others.
+
+**Diff-aware by source hash.** `.manifest.json` records per page the identifiers it was
+rendered from (`db:`, `prose:`, `synthetic:`) and their hashes; a page is rewritten when a
+source hash changes, when its own content hash changes, when the file is missing, or when
+`MATERIALIZER_VERSION` moves. Pages whose generator disappeared are retired — file and
+manifest entry both.
+
+**Two formats, one source, read back independently.** HTML is derived from the finished
+post-xref Markdown, and `ProjectionVerifier` checks state, coverage and content on each
+format separately, so a healthy Markdown cannot mask damaged HTML.
+
+**Refusal preserves the prior output.** Absent required view, unknown nav group, renderer
+exception, red read-back, unmanaged file in the output directory — each leaves `docs/` as
+it was. Clean publication stages, verifies, then promotes.
+
+**Derived predicates are generated, not restated.** `OBLIGATION_BEARING_SQL` and the
+evidence-quality ladder come from the generated `vocabulary` module, so the renderer, the
+server and the lint cannot disagree about what carries an obligation or which rung is
+strongest.
+
+##### State containers
+
+None held across calls. `Manifest` and `Summary` are per-run dataclasses; the SQLite
+connection is opened `mode=ro` and closed in a `finally`. Claimed as an explicit negative.
+
+##### Seam contracts from this side
+
+- **`memory.db`** — read `mode=ro`, never written. This side depends on the two views
+  `REQUIRED_VIEWS` names and refuses by name when they are absent.
+- **`<storage>/docs/`** — written here, promoted by `dev/promote-docs.mjs` ([B-09](b09-conspectus-design-lanes-their-drivers-and-receipts.md)) to the
+  repository's checked-in `docs/`.
+- **`reporting-style.md`** ([B-01](b01-survey-methodology-and-agent-contracts.md)) — specifies the typed projections this implements;
+  nothing compares the two.
+
+##### Open
+
+`readback.py:687` and `renderers.py:696` still read `entries`, a table no code path
+writes. Recorded as B04-R1.

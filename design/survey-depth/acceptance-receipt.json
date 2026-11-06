@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+  "repository_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
   "recorded_at": "2026-11-06",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+    "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-        "tree_digest": "49cd931f695a47552d5dc487ab9a53266cd167f99225f646aed7bae575aa870e",
-        "ledger_digest": "43d962b1b20a8574ff8d3feb82391401f605d7771aa105df6abec6244bbfd8fc",
+        "detected_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+        "tree_digest": "df0e74ae565b4e5a63d73be4ceb26cd0ad01755f770284166f0775ca9a641e89",
+        "ledger_digest": "d3ed1de3b26c606b80793323440211d1c4b13439b1e1e18f9457a645ae0047fa",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -35,6 +35,10 @@
           },
           {
             "file_path": ".claude/skills/amanuensis/references/concern-territories.md",
+            "classification": "examined"
+          },
+          {
+            "file_path": ".claude/skills/amanuensis/references/explanations.md",
             "classification": "examined"
           },
           {
@@ -267,6 +271,14 @@
           },
           {
             "file_path": "design/explanation/decisions.md",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/explain-progress.json",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/locus-default-measure.json",
             "classification": "examined"
           },
           {
@@ -990,6 +1002,10 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/measure-locus-default.mjs",
+            "classification": "candidate"
+          },
+          {
             "file_path": "dev/measure-reader-prose.mjs",
             "classification": "candidate"
           },
@@ -1130,12 +1146,20 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/test-explanations-published.mjs",
+            "classification": "examined"
+          },
+          {
             "file_path": "dev/test-friction-free-release-readiness-red-gates.mjs",
             "classification": "examined"
           },
           {
             "file_path": "dev/test-living-conspectus.mjs",
             "classification": "examined"
+          },
+          {
+            "file_path": "dev/test-locus-default-measure.mjs",
+            "classification": "candidate"
           },
           {
             "file_path": "dev/test-package-activation-parity-red-gates.mjs",
@@ -1546,6 +1570,14 @@
             "classification": "candidate"
           },
           {
+            "file_path": "materializer/test-explanation-orientation.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-explanation-pages.py",
+            "classification": "candidate"
+          },
+          {
             "file_path": "materializer/test-history-and-disagreements.py",
             "classification": "examined"
           },
@@ -1662,6 +1694,10 @@
             "classification": "examined"
           },
           {
+            "file_path": "mcp-server/contracts/explanation-effective-cases.json",
+            "classification": "candidate"
+          },
+          {
             "file_path": "mcp-server/contracts/historical-evaluation-corpus.schema.json",
             "classification": "examined"
           },
@@ -1755,6 +1791,10 @@
           },
           {
             "file_path": "mcp-server/fixtures/evaluation/program.json",
+            "classification": "examined"
+          },
+          {
+            "file_path": "mcp-server/fixtures/explanation-discharge.mjs",
             "classification": "examined"
           },
           {
@@ -1947,6 +1987,10 @@
           },
           {
             "file_path": "mcp-server/src/tools/evidence.ts",
+            "classification": "examined"
+          },
+          {
+            "file_path": "mcp-server/src/tools/explanations.ts",
             "classification": "examined"
           },
           {
@@ -2151,6 +2195,18 @@
           },
           {
             "file_path": "mcp-server/test-existing-store-migration.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-explanation-gate.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-explanation-read.mjs",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-explanations.mjs",
             "classification": "candidate"
           },
           {
@@ -2730,19 +2786,19 @@
             "classification": "candidate"
           }
         ],
-        "tracked_paths": 676,
-        "ledger_rows": 676,
+        "tracked_paths": 690,
+        "ledger_rows": 690,
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": "mw4kaxop-dbxkan1k"
+        "session_id": "mw4qntg4-bj7sizxr"
       }
     },
     "B2": {
       "verdict": "green",
-      "examined": 366,
-      "obligation_bearing": 520,
-      "fraction": 0.7038461538461539,
+      "examined": 372,
+      "obligation_bearing": 534,
+      "fraction": 0.6966292134831461,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -4159,47 +4215,47 @@
     }
   },
   "reported": {
-    "ledger_rows": 676,
-    "evidence": 74,
+    "ledger_rows": 690,
+    "evidence": 145,
     "dispositions": 50,
-    "evidence_per_disposition": 1.48,
+    "evidence_per_disposition": 2.9,
     "attached_dispositions": 50,
     "attached_coverage": 1,
     "unattached_dispositions": 0,
     "disposition_evidence_rows": 65,
-    "field_notes": 10,
+    "field_notes": 11,
     "open_questions_all": 6,
     "open_questions_open": 6,
-    "anchored_terms": 8,
-    "anchored_terms_in_citation_form": 8,
+    "anchored_terms": 15,
+    "anchored_terms_in_citation_form": 15,
     "open_findings": 20,
     "scope_gaps_unledgered": 0,
     "subsystems": 9,
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 28,
+    "sessions": 33,
     "finding_status_histogram": {
       "confirmed-bug": 20,
       "fixed": 1
     },
     "classification_histogram": {
-      "candidate": 154,
-      "examined": 366,
+      "candidate": 162,
+      "examined": 372,
       "generated-ignore": 152,
       "vendor-ignore": 4
     }
   },
   "reported_deltas": {
     "ledger_rows": {
-      "candidate": 676,
+      "candidate": 690,
       "baseline": 503,
-      "delta": 173
+      "delta": 187
     },
     "evidence": {
-      "candidate": 74,
+      "candidate": 145,
       "baseline": 133,
-      "delta": -59
+      "delta": 12
     },
     "dispositions": {
       "candidate": 50,
@@ -4207,9 +4263,9 @@
       "delta": -78
     },
     "evidence_per_disposition": {
-      "candidate": 1.48,
+      "candidate": 2.9,
       "baseline": 1.0391,
-      "delta": 0.44090000000000007
+      "delta": 1.8609
     },
     "attached_dispositions": {
       "candidate": 50,
@@ -4232,9 +4288,9 @@
       "delta": -116
     },
     "field_notes": {
-      "candidate": 10,
+      "candidate": 11,
       "baseline": 36,
-      "delta": -26
+      "delta": -25
     },
     "open_questions_all": {
       "candidate": 6,
@@ -4247,14 +4303,14 @@
       "delta": -6
     },
     "anchored_terms": {
-      "candidate": 8,
+      "candidate": 15,
       "baseline": 4,
-      "delta": 4
+      "delta": 11
     },
     "anchored_terms_in_citation_form": {
-      "candidate": 8,
+      "candidate": 15,
       "baseline": 0,
-      "delta": 8
+      "delta": 15
     },
     "open_findings": {
       "candidate": 20,
@@ -4287,17 +4343,17 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 28,
+      "candidate": 33,
       "baseline": 35,
-      "delta": -7
+      "delta": -2
     },
     "finding_status_histogram": {
       "confirmed-bug": 7,
       "fixed": -8
     },
     "classification_histogram": {
-      "candidate": 4,
-      "examined": 145,
+      "candidate": 12,
+      "examined": 151,
       "generated-ignore": 28,
       "irrelevant": -2,
       "vendor-ignore": -2

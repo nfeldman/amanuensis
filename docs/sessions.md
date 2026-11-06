@@ -6,6 +6,11 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
+| `mw4qntg4-bj7sizxr` | `republish docs` | 2026-11-06 08:54 UTC | not closed | not recorded |
+| `mw4qm5c9-m5mjihsg` | `republish docs` | 2026-11-06 08:53 UTC | not closed | not recorded |
+| `mw4qkqek-89c2xy8i` | `republish docs` | 2026-11-06 08:52 UTC | not closed | not recorded |
+| `mw4qjw65-rby8lqjb` | `republish docs` | 2026-11-06 08:51 UTC | not closed | not recorded |
+| `mw4q7ym7-m7iw55fr` | `EX14 explain pass over the self-conspectus` | 2026-11-06 08:42 UTC | not closed | not recorded |
 | `mw4kaxop-dbxkan1k` | `republish docs` | 2026-11-06 05:56 UTC | not closed | not recorded |
 | `mw4jdyvn-7z1z4g1n` | `republish docs` | 2026-11-06 05:31 UTC | not closed | not recorded |
 | `mw4jdh8i-8jhdzx3d` | `republish docs` | 2026-11-06 05:30 UTC | not closed | not recorded |
@@ -43,6 +48,8 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `projection-7b24de98-61d3-441a-9ae4-e6f5bff4da19` | `clean-publish` | red | green | green | 2026-11-06 08:53 UTC |
+| `projection-97229899-cb63-42f3-9bb0-8fb94868fb16` | `clean-publish` | green | green | green | 2026-11-06 05:56 UTC |
 | `projection-c4844410-66fc-4bac-a32b-ed9ea156ae50` | `clean-publish` | green | green | green | 2026-11-06 05:31 UTC |
 | `self-refresh-ec5824b-bound-final` | `clean-publish` | green | green | green | 2026-10-07 22:55 UTC |
 | `self-refresh-ec5824b-bound-1` | `clean-publish` | green | green | green | 2026-10-07 22:55 UTC |

@@ -1,14 +1,14 @@
 {
   "contract": "amanuensis-explanation/locus-default-measure/v1",
   "produced_by": "dev/measure-locus-default.mjs",
-  "measured_at": "2026-11-06T07:29:30.900Z",
+  "measured_at": "2026-11-06T08:55:17.579Z",
   "workspace": "/Users/nfeldman/automation/claude/amanuensis-explanation",
-  "repository_sha": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+  "repository_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
   "call": {
     "tool": "describe_locus",
     "sections": null
   },
-  "copy_location": "/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-locus-default-Vhy0at/workspace",
+  "copy_location": "/var/folders/t7/zfy71xs13dz5dssl53wh4q4c0000gn/T/amanuensis-locus-default-ARywsF/workspace",
   "copy_removed": true,
   "floor_basis": "the response with every item removed, re-serialized in the compact envelope; the census, the omission ledger as received and the trace are kept",
   "loci": [
@@ -17,9 +17,9 @@
       "kind": "file",
       "sections_requested": [],
       "budget_bytes": 8192,
-      "wire_bytes": 9620,
-      "payload_bytes": 4540,
-      "floor_bytes": 9620,
+      "wire_bytes": 8694,
+      "payload_bytes": 4094,
+      "floor_bytes": 8694,
       "within_budget": false,
       "envelope_reproduces_wire": true,
       "items": {
@@ -73,10 +73,10 @@
           "omitted_by_budget": 0
         },
         "history_pointer": {
-          "census": 8,
+          "census": 9,
           "served": 0,
-          "omitted": 8,
-          "omitted_by_policy": 8,
+          "omitted": 9,
+          "omitted_by_policy": 9,
           "omitted_by_budget": 0
         },
         "unknown": {
@@ -87,9 +87,9 @@
           "omitted_by_budget": 1
         }
       },
-      "census_total": 19,
+      "census_total": 20,
       "served_total": 0,
-      "omitted_total": 19,
+      "omitted_total": 20,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -110,8 +110,8 @@
               "classification": "examined",
               "standing_state": "examined",
               "authority_ceiling": "adversarial",
-              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
-              "examined_at": "2026-11-06 05:31:03",
+              "ref_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+              "examined_at": "2026-11-06 08:53:01",
               "stale": 0,
               "stale_reason": null,
               "reachability_checked": true,
@@ -131,22 +131,22 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-            "checked_at": "2026-11-06 05:56:52",
-            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_at": "2026-11-06 08:54:51",
+            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
             "origin_head": null,
-            "agrees": false,
-            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "agrees": true,
+            "unchecked_since": null
           },
           "measured": {
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-              "last_checked_at": "2026-11-06 05:56:52"
+              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+              "last_checked_at": "2026-11-06 08:54:51"
             },
             "staleness_measured": true,
-            "evidence_rows": 8,
+            "evidence_rows": 11,
             "claims_recorded": 1
           },
           "unknown": [],
@@ -162,73 +162,65 @@
             "requested": true,
             "as_of_supported": false,
             "items": [],
-            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers."
           },
           "structure": {
             "census": 1,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "defects": {
             "census": 2,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "reviews": {
             "census": 3,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "boundaries": {
             "census": 0,
             "recorded": false,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "terms": {
             "census": 2,
             "recorded": true,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "leads": {
             "census": 1,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "history_pointer": {
-            "census": 8,
+            "census": 9,
             "recorded": true,
             "requested": false,
             "as_of_supported": true,
             "items": [],
             "counts": {
               "finding_resolution_events": 4,
-              "sessions": 4
+              "sessions": 5
             },
-            "session_attribution": "by-citation",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "session_attribution": "by-citation"
           }
         },
         "census": {
-          "total": 19,
+          "total": 20,
           "by_section": {
             "purpose": 1,
             "structure": 1,
@@ -237,7 +229,7 @@
             "boundaries": 0,
             "terms": 2,
             "leads": 1,
-            "history_pointer": 8,
+            "history_pointer": 9,
             "unknown": 1
           }
         },
@@ -294,7 +286,7 @@
           {
             "section": "history_pointer",
             "reason": "policy",
-            "count": 8,
+            "count": 9,
             "ids": [],
             "ids_truncated": true
           }
@@ -303,8 +295,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 8192,
-          "payload_bytes": 4540,
-          "response_bytes": 9620,
+          "payload_bytes": 4094,
+          "response_bytes": 8694,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": false,
@@ -319,9 +311,9 @@
       "kind": "file",
       "sections_requested": [],
       "budget_bytes": 8192,
-      "wire_bytes": 9476,
-      "payload_bytes": 4475,
-      "floor_bytes": 9476,
+      "wire_bytes": 8548,
+      "payload_bytes": 4028,
+      "floor_bytes": 8548,
       "within_budget": false,
       "envelope_reproduces_wire": true,
       "items": {
@@ -433,19 +425,19 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-            "checked_at": "2026-11-06 05:56:52",
-            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_at": "2026-11-06 08:54:51",
+            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
             "origin_head": null,
-            "agrees": false,
-            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "agrees": true,
+            "unchecked_since": null
           },
           "measured": {
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-              "last_checked_at": "2026-11-06 05:56:52"
+              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+              "last_checked_at": "2026-11-06 08:54:51"
             },
             "staleness_measured": true,
             "evidence_rows": 4,
@@ -464,56 +456,49 @@
             "requested": true,
             "as_of_supported": false,
             "items": [],
-            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers."
           },
           "structure": {
             "census": 1,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "defects": {
             "census": 3,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "reviews": {
             "census": 0,
             "recorded": false,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "boundaries": {
             "census": 0,
             "recorded": false,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "terms": {
             "census": 2,
             "recorded": true,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "leads": {
             "census": 1,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "history_pointer": {
             "census": 6,
@@ -525,8 +510,7 @@
               "finding_resolution_events": 3,
               "sessions": 3
             },
-            "session_attribution": "by-citation",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "session_attribution": "by-citation"
           }
         },
         "census": {
@@ -598,8 +582,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 8192,
-          "payload_bytes": 4475,
-          "response_bytes": 9476,
+          "payload_bytes": 4028,
+          "response_bytes": 8548,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": false,
@@ -614,9 +598,9 @@
       "kind": "file",
       "sections_requested": [],
       "budget_bytes": 8192,
-      "wire_bytes": 9468,
-      "payload_bytes": 4476,
-      "floor_bytes": 9468,
+      "wire_bytes": 8708,
+      "payload_bytes": 4106,
+      "floor_bytes": 8708,
       "within_budget": false,
       "envelope_reproduces_wire": true,
       "items": {
@@ -663,30 +647,30 @@
           "omitted_by_budget": 1
         },
         "leads": {
-          "census": 0,
-          "served": 0,
-          "omitted": 0,
-          "omitted_by_policy": 0,
-          "omitted_by_budget": 0
-        },
-        "history_pointer": {
           "census": 1,
           "served": 0,
           "omitted": 1,
           "omitted_by_policy": 1,
           "omitted_by_budget": 0
         },
-        "unknown": {
-          "census": 1,
+        "history_pointer": {
+          "census": 2,
           "served": 0,
-          "omitted": 1,
+          "omitted": 2,
+          "omitted_by_policy": 2,
+          "omitted_by_budget": 0
+        },
+        "unknown": {
+          "census": 2,
+          "served": 0,
+          "omitted": 2,
           "omitted_by_policy": 0,
-          "omitted_by_budget": 1
+          "omitted_by_budget": 2
         }
       },
-      "census_total": 16,
+      "census_total": 19,
       "served_total": 0,
-      "omitted_total": 16,
+      "omitted_total": 19,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -707,8 +691,8 @@
               "classification": "examined",
               "standing_state": "examined",
               "authority_ceiling": "adversarial",
-              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
-              "examined_at": "2026-11-06 05:31:04",
+              "ref_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+              "examined_at": "2026-11-06 08:53:03",
               "stale": 0,
               "stale_reason": null,
               "reachability_checked": true,
@@ -728,22 +712,22 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-            "checked_at": "2026-11-06 05:56:52",
-            "repository_head": "bfafcd5f1bcaf97705539a6d50a588a371475a00",
+            "checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+            "checked_at": "2026-11-06 08:54:51",
+            "repository_head": "e63981bf15c4cf4dae43b760700bb8f601c88154",
             "origin_head": null,
-            "agrees": false,
-            "unchecked_since": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "agrees": true,
+            "unchecked_since": null
           },
           "measured": {
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-              "last_checked_at": "2026-11-06 05:56:52"
+              "last_checked_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+              "last_checked_at": "2026-11-06 08:54:51"
             },
             "staleness_measured": true,
-            "evidence_rows": 1,
+            "evidence_rows": 4,
             "claims_recorded": 1
           },
           "unknown": [],
@@ -759,16 +743,14 @@
             "requested": true,
             "as_of_supported": false,
             "items": [],
-            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers.",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "statement": "No purpose statement is recorded for this subsystem; scope states what it covers."
           },
           "structure": {
             "census": 1,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "defects": {
             "census": 0,
@@ -776,57 +758,51 @@
             "requested": true,
             "as_of_supported": true,
             "items": [],
-            "statement": "No open findings are recorded for this locus.",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "statement": "No open findings are recorded for this locus."
           },
           "reviews": {
             "census": 11,
             "recorded": true,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "boundaries": {
             "census": 0,
             "recorded": false,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "terms": {
             "census": 1,
             "recorded": true,
             "requested": true,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "leads": {
-            "census": 0,
-            "recorded": false,
+            "census": 1,
+            "recorded": true,
             "requested": false,
             "as_of_supported": false,
-            "items": [],
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "items": []
           },
           "history_pointer": {
-            "census": 1,
+            "census": 2,
             "recorded": true,
             "requested": false,
             "as_of_supported": true,
             "items": [],
             "counts": {
               "finding_resolution_events": 0,
-              "sessions": 1
+              "sessions": 2
             },
-            "session_attribution": "by-citation",
-            "as_of": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+            "session_attribution": "by-citation"
           }
         },
         "census": {
-          "total": 16,
+          "total": 19,
           "by_section": {
             "purpose": 1,
             "structure": 1,
@@ -834,16 +810,16 @@
             "reviews": 11,
             "boundaries": 0,
             "terms": 1,
-            "leads": 0,
-            "history_pointer": 1,
-            "unknown": 1
+            "leads": 1,
+            "history_pointer": 2,
+            "unknown": 2
           }
         },
         "omitted": [
           {
             "section": "unknown",
             "reason": "budget",
-            "count": 1,
+            "count": 2,
             "ids": [],
             "ids_truncated": true
           },
@@ -876,9 +852,16 @@
             "ids_truncated": true
           },
           {
-            "section": "history_pointer",
+            "section": "leads",
             "reason": "policy",
             "count": 1,
+            "ids": [],
+            "ids_truncated": true
+          },
+          {
+            "section": "history_pointer",
+            "reason": "policy",
+            "count": 2,
             "ids": [],
             "ids_truncated": true
           }
@@ -887,8 +870,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 8192,
-          "payload_bytes": 4476,
-          "response_bytes": 9468,
+          "payload_bytes": 4106,
+          "response_bytes": 8708,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": false,

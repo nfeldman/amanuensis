@@ -39,10 +39,10 @@ No defect here is open or awaiting verification.
 
 | Metric | Value |
 |---|---|
-| Files read | 96 of 105 ledger rows |
-| Files in scope, not yet read | 9 of 105 |
-| Files excluded from the survey obligation | 0 of 105 |
-| Ledger rows the repository has changed under | 11 of 105 |
+| Files read | 99 of 110 ledger rows |
+| Files in scope, not yet read | 11 of 110 |
+| Files excluded from the survey obligation | 0 of 110 |
+| Ledger rows the repository has changed under | 13 of 110 |
 | Active concerns with a disposition recorded here | 0 of 12 |
 | Findings by resolution state | none recorded |
 | Seams assessable from both sides | no seam names this subsystem |
@@ -63,14 +63,22 @@ No defect here is open or awaiting verification.
     - <a id="le-17f06e9831"></a>`design/explanation/rationale.md`
 - **The explanation design lane: its specification. Assigned by convention; only §0, §1, §2.5 and §4 were read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-c01279b2e5"></a>`design/explanation/spec.md`
+- **The explanation design lane: the default describe_locus measure. Assigned by convention; only its header was read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-0ddd9f060a"></a>`dev/measure-locus-default.mjs`
 - **The explanation design lane: the reader-prose measure. Assigned by convention; not read in full.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-fc70d18aa7"></a>`dev/measure-reader-prose.mjs`
+- **The explanation design lane: GATE EX13. Assigned by convention; only its header was read.** — candidate, 1 file, recorded at `e63981bf`
+    - <a id="le-730fc0f001"></a>`dev/test-locus-default-measure.mjs`
 - **The explanation design lane: GATE EX1. Assigned by convention; not read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-da2e4fc91d"></a>`dev/test-reader-measure.mjs`
 - **The explanation design lane: GATE EX7. Assigned by convention; only its header was read.** — candidate, 1 file, recorded at `2ceb0d2d`
     - <a id="le-8483b626be"></a>`dev/test-republish-chain.mjs`
 - **The explanation design lane: the owner decisions binding its specification. Read in full by EX8.** — examined, 1 file, examined at `2ceb0d2d`
     - <a id="le-4e216ccb8a"></a>`design/explanation/decisions.md`
+- **The explanation design lane: EX14's record of its subjects. Written by EX14.** — examined, 1 file, examined at `e63981bf`
+    - <a id="le-6b5d4f39b8"></a>`design/explanation/explain-progress.json`
+- **The explanation design lane: the default describe_locus measure. Its figures per locus were read by EX14.** — examined, 1 file, examined at `e63981bf`
+    - <a id="le-ac67c751c2"></a>`design/explanation/locus-default-measure.json`
 - **The explanation design lane: the reader-prose measure the republish chain records. Read in full by EX8.** — examined, 1 file, examined at `2ceb0d2d`
     - <a id="le-1983f2c503"></a>`design/explanation/reader-measure.json`
 - **The explanation design lane: EX8's record of its carried decisions. Written by EX8.** — examined, 1 file, examined at `2ceb0d2d`
@@ -175,6 +183,8 @@ No defect here is open or awaiting verification.
     - <a id="le-ca0bbfc242"></a>`dev/record-survey-depth.mjs`
 - **The explanation design lane: the republish chain as one command. Read in full by EX8.** — examined, 1 file, examined at `2ceb0d2d`
     - <a id="le-4e40681559"></a>`dev/republish-docs.mjs`
+- **The explanation design lane: GATE EX14. Written by EX14.** — examined, 1 file, examined at `e63981bf`
+    - <a id="le-952fd4d43d"></a>`dev/test-explanations-published.mjs`
 - **The explanation design lane: GATE EX8. Written by EX8.** — examined, 1 file, examined at `2ceb0d2d`
     - <a id="le-221135d5c6"></a>`dev/test-receipt-gates-restored.mjs`
 - **GATE A1 of the survey-depth lane (spec.md §8.8): it recomputes every blocking predicate of the acceptance receipt from the row-level witnesses §7.5 requires, and carries §8.8's control — the committed receipt validates, two seeded forged-green copies of it do not. A lane gate and its receipt-recomputation belong with the other lane drivers and receipts this subsystem owns.** — examined, 1 file, examined at `a521e28`

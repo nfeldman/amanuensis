@@ -3,9 +3,13 @@
 **Status**: 🟡 concerns  
 **Layer**: Research evidence
 
-## Scope
+## Purpose
 
-No purpose statement is recorded for this subsystem; the scope below states what it covers.
+Holds the research behind decisions about how Amanuensis presents a report: three research surveys and the trial corpus one of them produced. A designer reads them to see what was established and what was rejected, with the sources. No server or materializer code reads them at run time.
+
+*Written by a survey session at `1015b8e2` from 4 evidence row(s). None of the 4 file(s) it cites has changed since.*
+
+## Scope
 
 scholiast/**
 
@@ -19,6 +23,20 @@ scholiast/**
 
 ai-primary-web-platform-landscape/README.md; report-record-presentation/conspectus.md
 
+## How it works
+
+`scholiast/` holds three surveys: `ai-primary-web-platform-landscape`, `report-record-presentation` and `task-workspace-reorientation-indexes`. Each has a `conspectus.md` with its charter, a `claims.md`, a `sources.md` and a `notes.md`. The landscape survey adds a `README.md` with its decision snapshot and a reading order, capture and inspection scripts that write JSON records beside them, and `trials/` with its executed framework trials.
+
+The rules here are the survey method's and the server enforces none of them. The landscape survey keeps a seven-field claim inventory and an append-only source ledger, and the reorientation survey's charter forbids promoting a snippet or abstract to held evidence. What runs is narrow: `verify-trial-snapshot.py` reruns a detector and asserts that its output equals the recorded JSON.
+
+Nothing in `mcp-server/` or `materializer/` reads these files. `research.ts` requires a research dispatch's workspace to be a `scholiast/<slug>` directory, which is a rule about a path's shape. The scripts depend on GitHub, npm and the shadcn CLI. The influence runs through people: the landscape README recommends keeping the Python model, deterministic projection and independent read-back that [B-04](b04-diff-aware-materializer.md) implements.
+
+A newcomer is likely to read a survey's result as current. The landscape README states its decision snapshot as 2026-08-22, and its captured health and registry figures do not move after that. The capture scripts carry no wall-clock bound: `capture-component-landscape.mjs` awaits `fetch` with no signal and `verify-trial-snapshot.py` runs its child with no timeout, so a stalled endpoint hangs the terminal. Parts of `trials/` are third-party scaffolding and build output, not authored work.
+
+Start with the landscape `README.md`, which gives a reading order, then the `conspectus.md` of the survey closest to the question.
+
+*Written by a survey session at `1015b8e2` from 6 evidence row(s). None of the 6 file(s) it cites has changed since.*
+
 ## Structure
 
 What the survey recorded as claims about this subsystem, grouped by what each one states. Every claim is bound to the revision it was asserted at and to the evidence attached to it; a superseded claim is not shown here.
@@ -27,51 +45,6 @@ What the survey recorded as claims about this subsystem, grouped by what each on
 
 - Every capture and verification script in this corpus reaches the network or a child process with no wall-clock bound: the GitHub and npm fetches in capture-component-landscape.mjs carry no AbortSignal, the shadcn registry capture spawns the CLI with no timeout, and verify-trial-snapshot.py runs a child detector through subprocess.check_output with none. The scripts are operator-run rather than server-hosted, so the cost is a hung terminal rather than a hung service — which is why this is LOW and why the same pattern in [B-02](b02-mcp-core-persistence-and-lifecycle.md) is not.
     - `B-07/corpus/captures-are-unbounded-network-calls` · subject `B-07` · Observation · asserted at `c0734040022f` · evidence: `scholiast/ai-primary-web-platform-landscape/capture-component-landscape.mjs:39-70`
-
-### Survey narrative
-
-*Narrative from the survey artifact; not individually bound to a revision.* Its source is `subsystems/B-07-structural.md` at content hash `53cead8e1087`, recorded at `c0734040022f`.
-
-#### **B-07** — Embedded research surveys and platform trials
-
-Scoping-and-carried-adjudication pass, read at `c073404`. Scope: `scholiast/**` — three
-completed research surveys and the captured trial corpus one of them produced.
-
-**This pass is partial and says so.** Three of 103 scoped files were read: the three
-capture and verification scripts carried finding B07-1 names. The remaining 100 — the
-surveys' own prose (`conspectus.md`, `claims.md`, `sources.md`, `vocabulary.md` per
-survey), their captured JSON, and the 58-file `trials/` corpus — are scoped and unread.
-
-##### Observed
-
-Every capture script reaches the network or a child process with no wall-clock bound.
-`capture-component-landscape.mjs:39` awaits `fetch` with no `AbortSignal`;
-`trials/shadcn-copy/scripts/capture-registry.mjs:7` spawns the shadcn CLI with no
-`timeout`; `verify-trial-snapshot.py:13` runs `trial-inspection.py` through
-`subprocess.check_output` with none. A grep for `timeout`, `AbortSignal` and `signal:`
-across the three returns nothing.
-
-These are operator-run scripts, not server-hosted paths, so an unresponsive endpoint
-costs a hung terminal rather than a hung service. That is why B07-1 is LOW where the same
-pattern in [B-02](b02-mcp-core-persistence-and-lifecycle.md) is MEDIUM.
-
-##### Domain vocabulary
-
-Declined. The vocabulary here belongs to the domains the surveys studied, and each survey
-defines its own terms in its own `vocabulary.md`.
-
-##### Seam contracts from this side
-
-None recorded. This corpus is read by people and by the Scholiast method, not by the
-product: no file under `mcp-server/` or `materializer/` imports or reads anything under
-`scholiast/`.
-
-##### Open
-
-100 of 103 scoped files unread at this pass. Parts of `trials/` are third-party
-scaffolding and build output rather than authored survey material; the ledger records
-those as `vendor-ignore` and `generated-ignore` respectively, with the authored trial
-sources left obligation-bearing.
 
 ## Vocabulary
 
@@ -224,4 +197,43 @@ sources left obligation-bearing.
 
 ### Survey artifact
 
-The survey artifact is rendered above, under Structure. Its source is `subsystems/B-07-structural.md` at content hash `53cead8e1087`, recorded at `c0734040022f`.
+#### **B-07** — Embedded research surveys and platform trials
+
+Scoping-and-carried-adjudication pass, read at `c073404`. Scope: `scholiast/**` — three
+completed research surveys and the captured trial corpus one of them produced.
+
+**This pass is partial and says so.** Three of 103 scoped files were read: the three
+capture and verification scripts carried finding B07-1 names. The remaining 100 — the
+surveys' own prose (`conspectus.md`, `claims.md`, `sources.md`, `vocabulary.md` per
+survey), their captured JSON, and the 58-file `trials/` corpus — are scoped and unread.
+
+##### Observed
+
+Every capture script reaches the network or a child process with no wall-clock bound.
+`capture-component-landscape.mjs:39` awaits `fetch` with no `AbortSignal`;
+`trials/shadcn-copy/scripts/capture-registry.mjs:7` spawns the shadcn CLI with no
+`timeout`; `verify-trial-snapshot.py:13` runs `trial-inspection.py` through
+`subprocess.check_output` with none. A grep for `timeout`, `AbortSignal` and `signal:`
+across the three returns nothing.
+
+These are operator-run scripts, not server-hosted paths, so an unresponsive endpoint
+costs a hung terminal rather than a hung service. That is why B07-1 is LOW where the same
+pattern in [B-02](b02-mcp-core-persistence-and-lifecycle.md) is MEDIUM.
+
+##### Domain vocabulary
+
+Declined. The vocabulary here belongs to the domains the surveys studied, and each survey
+defines its own terms in its own `vocabulary.md`.
+
+##### Seam contracts from this side
+
+None recorded. This corpus is read by people and by the Scholiast method, not by the
+product: no file under `mcp-server/` or `materializer/` imports or reads anything under
+`scholiast/`.
+
+##### Open
+
+100 of 103 scoped files unread at this pass. Parts of `trials/` are third-party
+scaffolding and build output rather than authored survey material; the ledger records
+those as `vendor-ignore` and `generated-ignore` respectively, with the authored trial
+sources left obligation-bearing.

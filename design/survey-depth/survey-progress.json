@@ -171,10 +171,10 @@
     "note": "All 22 reach a terminal outcome, which is what B5 and B6 require. Ten are re-found and filed as this store's own findings under the B0n-Rk convention; five are repaired at a commit that resolves with a post-repair reading attached; eight were pre-recorded archived-terminal by the carry."
   },
   "end": {
-    "at_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
-    "obligation_bearing": 520,
-    "examined": 366,
-    "fraction": 0.7038,
+    "at_sha": "e63981bf15c4cf4dae43b760700bb8f601c88154",
+    "obligation_bearing": 534,
+    "examined": 372,
+    "fraction": 0.6966,
     "examined_needed_for_b2": 294,
     "shortfall": 0,
     "why": "B2 is met with room. The packet's own notes sized this work from the baseline's measured cost (221 examined paths over 35 sessions spanning a month); this continuation reached the threshold by carrying the store P8 initialized forward across three implement sessions rather than resurveying. B1, B3, B4, B5 and B6 held throughout; B2 was the sole red predicate and D3% now stands at 0.7198 over the tracked denominator at HEAD, against the frozen baseline's 0.5957. The margin is deliberate: against the 357 examined here, D2 would have to reach 600 obligation-bearing tracked paths — 104 more than this revision carries — before B2 could turn red again, so later packets and the slice reviews can add their own deliverables without reopening it.",
@@ -182,5 +182,5 @@
     "gate": "node dev/test-survey-depth.mjs prints GATE P10 GREEN — GATE D0 GREEN; both arms hold B1-B6 and agree.",
     "not_claimed": "139 tracked paths remain classified 'candidate' — scoped and unread, not exempt, and the ledger reports them as such. They are B-05's mcp-server test suite (65) and B-07's research corpus (74). No subsystem status was advanced in this packet, so nothing in the store claims a survey depth this reading did not reach. The acceptance predicate is a threshold on D3%, not full coverage."
   },
-  "derived_fields_rewritten_at": "886e93dfa6fd0e542db6269e93fad9abf942d860"
+  "derived_fields_rewritten_at": "e63981bf15c4cf4dae43b760700bb8f601c88154"
 }
