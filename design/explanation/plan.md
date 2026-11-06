@@ -87,5 +87,6 @@
 - `cd materializer && python3 test-explanation-orientation.py`
 - `node dev/test-locus-default-measure.mjs`
 - `node dev/test-explanations-published.mjs`
+- `cd mcp-server && node test-residual-hardening.mjs`
 
-Final review: pending
+Final review: reviewed
