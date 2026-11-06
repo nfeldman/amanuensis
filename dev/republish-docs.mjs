@@ -570,7 +570,7 @@ function serverClient(repo) {
   child.on("exit", () => {
     for (const [id, waiter] of pending) {
       pending.delete(id);
-      waiter.reject(new Error(`the server exited; stderr=${stderr.slice(-400)}`));
+      waiter.reject(new Error(`the server exited; stderr=${stderr.slice(0, 400)}`));
     }
   });
   child.stdout.on("data", (chunk) => {

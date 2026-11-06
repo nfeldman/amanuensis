@@ -444,8 +444,11 @@ await check("a detect_changes that reports no path list stops the run and does n
     const w = await run({ detect });
     const stopped = stoppedBeforePublish(w, []);
     if (stopped) return `${JSON.stringify(detect)}: ${stopped}`;
+    // A crash on the missing list also stops the run, and tells the session nothing.
+    if (!said(w).includes("stopped at reconcile")) return `${JSON.stringify(detect)} did not stop by name`;
   }
-  return null;
+  const refused = await run({ detect: { ok: false, error: "fixture refusal" } });
+  return said(refused).includes("fixture refusal") ? null : "the stop does not print the refusal";
 });
 
 await check("a ledger row the tree no longer carries stops the run and names the path", async () => {
@@ -772,6 +775,7 @@ await check("the dogfood recorder is never reached without a publish summary", a
   if (noSummary.exit === 0) return "--from promote with no summary exits 0";
   if (ran(noSummary, PROMOTE)) return "promote ran with no summary";
   if (ran(noSummary, DOGFOOD)) return "the recorder ran with no summary";
+  if (!said(noSummary).includes("stopped at promote")) return "--from promote with no summary did not stop by name";
 
   // Resumed at the recorder, with no promotion on record.
   const noReceipt = await run({ unfilledCommit: HEAD }, ["--from", "dogfood-receipt"]);
