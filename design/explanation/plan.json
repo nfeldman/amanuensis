@@ -938,14 +938,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "39d9d58dc71f73782d1dab5433820fb81520aa13",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "f1a8082d36d688653fc7c1c6e22d9368dcb5b08d",
+      "green_sha": "f2e7ac272065bc9c4ca52c016b4ee2845006b781",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "readExplanation gained an atStatus argument because a parked subsystem is deferred and so ineligible, and the gate reads at its target; the helper is mcp-server/fixtures/explanation-discharge.mjs, and dev/test-rebuild-regeneration.mjs took it too. Phase 5's explanation step is an unnumbered section before step 5 because test-placeholder-census.py and subsystem-survey.md pin the step numbers; confirming an account whose cited files changed is defined as re-recording the same body, a gap the spec left open."
     },
     {
       "id": "EX11",
