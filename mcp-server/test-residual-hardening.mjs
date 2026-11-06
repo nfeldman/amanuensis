@@ -162,7 +162,7 @@ const built = ensureBuilt();
 let mods = null;
 let loadError = null;
 try {
-  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried] =
+  const [db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations] =
     await Promise.all([
       import("./dist/db.js"),
       import("./dist/project.js"),
@@ -181,8 +181,9 @@ try {
       import("./dist/tools/contradictions.js"),
       import("./dist/tools/diagnosticity.js"),
       import("./dist/tools/carried.js"),
+      import("./dist/tools/explanations.js"),
     ]);
-  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried };
+  mods = { db, project, evidence, findings, dispositions, files, fieldNotes, claims, xrefs, git, dashboard, subsystems, locus, openQuestions, contradictions, diagnosticity, carried, explanations };
 } catch (e) {
   loadError = e && e.message ? e.message : String(e);
 }
@@ -203,6 +204,7 @@ const TOOL_SETS = () => [
   mods?.contradictions?.contradictionTools,
   mods?.diagnosticity?.diagnosticityTools,
   mods?.carried?.carriedTools,
+  mods?.explanations?.explanationTools,
 ];
 
 function tool(name) {
@@ -1056,6 +1058,27 @@ function validatorProbes() {
       },
       enumName: "carried_finding_outcome",
     },
+    // The explanation lane's two caller-supplied enums, by the writer and the
+    // reader that take them. `get_explanations` needs no session and reaches the
+    // validator first; `record_explanation` is otherwise valid on the fixture.
+    {
+      label: "get_explanations.subject_type",
+      tool: "get_explanations",
+      args: { subject_type: OUT_OF_SOURCE },
+      enumName: "explanation_subject",
+    },
+    {
+      label: "record_explanation.slot",
+      tool: "record_explanation",
+      args: {
+        subject_type: "project",
+        slot: OUT_OF_SOURCE,
+        body: "an explanation of a slot the vocabulary does not carry",
+        evidence_ids: [1],
+        ref_sha: head,
+      },
+      enumName: "explanation_slot",
+    },
   ];
 }
 
@@ -1158,6 +1181,10 @@ const NOT_A_TOOL_INPUT = {
   attention_label: "computed by get_attention from durable rows, never accepted from a caller",
   vocabulary_discharge:
     "derived per subsystem from the vocabulary and declination rows at the advance to 'structural', never accepted from a caller; the discharge gate drives that surface",
+  explanation_disposition:
+    "set by the two writers and the reset rule from which of them ran, never accepted from a caller; EX9's and EX15's gates drive those surfaces",
+  explanation_discharge:
+    "computed by readExplanation from the rows at every read and never stored or accepted from a caller; the shared effective-row cases drive it",
 };
 
 check("every vocabulary the source carries is probed or declared not to be an input", () => {

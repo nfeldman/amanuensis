@@ -746,7 +746,8 @@
         "cd materializer && python3 test-narrative-placement.py",
         "cd materializer && python3 test-ledger-grouping.py",
         "cd materializer && python3 test-placeholder-census.py",
-        "node dev/test-republish-chain.mjs"
+        "node dev/test-republish-chain.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs"
       ],
       "acceptance": [
         "spec.md §3.1–§3.3, the two writers only (get_explanations and the reset rule are EX15). Copy the vocabulary declination pattern end to end: mcp-server/src/schema.sql (vocabulary_declinations and its two triggers), contracts/append-only-tables.txt, src/tools/vocabulary.ts (decline_domain_vocabulary), src/invariants.ts (readVocabularyDischarge), the ADDITIVE_TOOLS entry in src/index.ts, and mcp-server/test-vocabulary-discharge.mjs for the gate's shape.",
@@ -830,7 +831,8 @@
         "cd mcp-server && node test-locus-standing.mjs",
         "cd mcp-server && node test-locus-compactness.mjs",
         "cd mcp-server && node test-existing-store-migration.mjs",
-        "cd mcp-server && node test-explanations.mjs"
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs"
       ],
       "acceptance": [
         "spec.md §3.3. get_explanations {subject_type, subject_id?} returns, per slot of the subject, {slot, state, checked, authored: 'model', row: {id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids} | null, earlier_rows: <count>} and model_calls: 0, through readExplanation. It is a read tool: no session is required and nothing is written (the gate digests the store before and after).",
@@ -1395,7 +1397,8 @@
       "cd materializer && python3 test-explanation-pages.py",
       "cd materializer && python3 test-explanation-orientation.py",
       "node dev/test-locus-default-measure.mjs",
-      "node dev/test-explanations-published.mjs"
+      "node dev/test-explanations-published.mjs",
+      "cd mcp-server && node test-residual-hardening.mjs"
     ]
   },
   "final_review": {

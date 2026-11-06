@@ -151,7 +151,7 @@ const SUBJECT_PROPERTIES = {
 
 /** The slots a subject holds: a subsystem has both, the project only its account. */
 const SLOTS_OF = {
-  subsystem: ["purpose", "account"],
+  subsystem: EXPLANATION_SLOTS,
   project: ["account"],
 } as const;
 
