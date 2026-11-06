@@ -808,6 +808,20 @@ async function main(mods) {
       return wrong.length === 0 ? null : wrong.join("; ");
     });
 
+    // Python read the project's eligibility from its subsystems and this reader
+    // did not, so one store answered two ways (slice-S2, F5/codex).
+    check("S6 the shared subject-eligibility cases hold", () => {
+      if (typeof mods.isSubjectExplanationEligible !== "function") {
+        return "dist/invariants.js exports no isSubjectExplanationEligible";
+      }
+      const eligibility = cases?.subject_eligibility;
+      if (!Array.isArray(eligibility) || eligibility.length < 5) return "the case file holds no subject_eligibility cases";
+      const wrong = eligibility
+        .filter((c) => mods.isSubjectExplanationEligible(c.subject_type, c.status, c.all_statuses) !== c.eligible)
+        .map((c) => c.id);
+      return wrong.length === 0 ? null : `wrong for ${wrong.join(", ")}`;
+    });
+
     check("S3 readExplanation takes the newest row whose ref_sha resolves, and a same-commit correction wins", () => {
       if (typeof mods.readExplanation !== "function") return "dist/invariants.js exports no readExplanation";
       const missing = absent(RECORD);
@@ -1158,6 +1172,7 @@ try {
       const invariants = await import("./dist/invariants.js");
       mods.readExplanation = invariants.readExplanation;
       mods.selectExplanation = invariants.selectExplanation;
+      mods.isSubjectExplanationEligible = invariants.isSubjectExplanationEligible;
     } catch {
       /* the reader is absent; S2 and S3 say so */
     }

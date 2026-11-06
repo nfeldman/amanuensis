@@ -808,6 +808,33 @@ async function main(mods) {
     });
   }
 
+  // ------------------------------------- P: the project account follows its subsystems
+
+  // The materializer printed "No account of how the parts fit together is recorded"
+  // while this tool served the account as recorded (slice-S2, F5/codex).
+  {
+    const ctx = world("project-parked");
+    seedSubsystem(ctx, "S-01", "structural");
+    const body = "The parts pass one record from the reader to the writer.";
+    const id = record(ctx, "project", "account", body, [evidence(ctx)]).id;
+
+    await check("P1 parking the sole eligible subsystem reads the project account as not-recorded", async () => {
+      const parked = call("update_subsystem_status", { id: "S-01", status: "deferred", defer_reason: "parked for the fixture" }, ctx);
+      if (parked?.ok === false) return `the fixture could not park S-01: ${parked.error}`;
+      const { payload, failed } = await read(ctx, { subject_type: "project" });
+      if (failed) return failed;
+      return slotDiff(slotOf(payload, "account"), { state: "not-recorded", earlier_rows: 1, row: null }, "parked project");
+    });
+
+    await check("P2 the account stands again once a subsystem is eligible", async () => {
+      ctx.db.prepare("UPDATE subsystems SET status = 'structural' WHERE id = 'S-01'").run();
+      const { payload, failed } = await read(ctx, { subject_type: "project" });
+      if (failed) return failed;
+      const account = slotOf(payload, "account");
+      return account?.state === "recorded" && account.row?.id === id ? null : `the account reads ${account?.state}`;
+    });
+  }
+
   // ---------------------------------------------------- L: the gate is wired in
 
   await check("L2 the gate is listed in the workflow beside its neighbours", async () => {

@@ -775,6 +775,18 @@ def main() -> int:
                     return f"{case['id']}: row {got_id!r}, not {want['row_id']!r}"
                 if bool(getattr(got, "checked", None)) != bool(want["checked"]):
                     return f"{case['id']}: checked {getattr(got, 'checked', None)!r}"
+            # Python read the project's eligibility from its subsystems and the
+            # server did not, so one store answered two ways (slice-S2, F5/codex).
+            eligible = getattr(readback, "subject_explanation_eligible", None)
+            if not callable(eligible):
+                return "readback.subject_explanation_eligible is absent"
+            shared = doc.get("subject_eligibility") or []
+            if len(shared) < 5:
+                return "the shared case file holds no subject_eligibility cases"
+            for case in shared:
+                got = eligible(case["subject_type"], case["status"], case["all_statuses"])
+                if got is not case["eligible"]:
+                    return f"{case['id']}: eligible {got!r}, not {case['eligible']!r}"
             if len(kinds) < 6:
                 return f"the case file covers only the kinds {sorted(k for k in kinds if k)}"
             return None

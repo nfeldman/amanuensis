@@ -1,7 +1,7 @@
 {
   "contract": "explanation-effective-cases/1",
   "what": "The shared cases for design/explanation/spec.md \u00a73.2, the effective-explanation rule. The TypeScript selection function (mcp-server/src/invariants.ts selectExplanation, run by mcp-server/test-explanations.mjs) and the Python one in the materializer both run every case, so the Python gate needs no built server.",
-  "how_to_read": "rows is the set of stored rows for one (subject_type, subject_id, slot), in no guaranteed order. eligible is whether the subject is explanation-eligible. workspace is whether a workspace is bound; when it is, resolvable lists the ref_sha values it can resolve, and when it is not the field is absent and nothing can be resolved. expect gives the state (recorded, declined, not-recorded), the id of the effective row or null, and whether the reading is checked. kind groups the cases: superseded, declined, withdrawn, unreachable, no-workspace, ineligible, empty.",
+  "how_to_read": "rows is the set of stored rows for one (subject_type, subject_id, slot), in no guaranteed order. eligible is whether the subject is explanation-eligible. workspace is whether a workspace is bound; when it is, resolvable lists the ref_sha values it can resolve, and when it is not the field is absent and nothing can be resolved. expect gives the state (recorded, declined, not-recorded), the id of the effective row or null, and whether the reading is checked. kind groups the cases: superseded, declined, withdrawn, unreachable, no-workspace, ineligible, empty. subject_eligibility is the rule that supplies eligible: a subsystem by its own status, the project by whether any subsystem is eligible, which is the condition its account is written under. Both languages run those cases too.",
   "cases": [
     {
       "id": "superseded",
@@ -416,6 +416,53 @@
         "row_id": null,
         "checked": true
       }
+    }
+  ],
+  "subject_eligibility": [
+    {
+      "id": "subsystem-read",
+      "subject_type": "subsystem",
+      "status": "structural",
+      "all_statuses": [
+        "structural"
+      ],
+      "eligible": true
+    },
+    {
+      "id": "subsystem-parked",
+      "subject_type": "subsystem",
+      "status": "deferred",
+      "all_statuses": [
+        "deferred",
+        "mapped"
+      ],
+      "eligible": false
+    },
+    {
+      "id": "project-one-read",
+      "subject_type": "project",
+      "status": null,
+      "all_statuses": [
+        "deferred",
+        "mapped"
+      ],
+      "eligible": true
+    },
+    {
+      "id": "project-sole-subsystem-parked",
+      "subject_type": "project",
+      "status": null,
+      "all_statuses": [
+        "deferred"
+      ],
+      "eligible": false
+    },
+    {
+      "id": "project-no-subsystem",
+      "subject_type": "project",
+      "status": null,
+      "all_statuses": [],
+      "eligible": false
     }
   ]
 }
