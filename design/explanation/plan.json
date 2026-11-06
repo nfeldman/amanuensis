@@ -481,14 +481,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 150,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "5859a1eef04fe9ea0769d70ebd3de659e5059602",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "4cd1b82a7d9cff26c98379a91cda9f78e5238305",
+      "green_sha": "30c87d56249e2928f840929813a39dadd39825fb",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Census covers thesis, runtime-boundary-map and subsystem-vocabulary via thesis_state, runtime_boundary_state and _vocabulary_state, which the pages also call; PLACEHOLDER_SENTENCES is defined in renderers.py and re-exported from the package __init__.py (not a listed deliverable). The _refused summary omits unfilled_slots because nothing rendered; the gate's no-gate/guard sentence check is sentence-level so onboarding.md's unrelated 'acceptance gate' for entry-point.md is not flagged."
     },
     {
       "id": "EX7",
