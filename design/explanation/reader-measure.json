@@ -15,14 +15,14 @@
     },
     {
       "label": "recovered",
-      "commit": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
-      "contract_sha256": "c2e752b94f587a6da9ee17034a2e87ad1f9f4fd426e41cfd553f159c0186c73c",
+      "commit": "886e93dfa6fd0e542db6269e93fad9abf942d860",
+      "contract_sha256": "50dedb2b5b2545d91e0a3391830c095ddeb992219e165211cd519bab54e06f10",
       "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
       "totals": {
         "pages": 33,
-        "table_chars": 274522,
-        "prose_chars": 258358,
-        "table_share": 0.5152,
+        "table_chars": 279111,
+        "prose_chars": 259623,
+        "table_share": 0.5181,
         "placeholders": 13
       }
     }

@@ -108,7 +108,7 @@ Recorded under [SC-1](../concerns.md#sc-1).
 | Files read | 37 of 37 ledger rows |
 | Files in scope, not yet read | 0 of 37 |
 | Files excluded from the survey obligation | 0 of 37 |
-| Ledger rows the repository has changed under | 2 of 37 |
+| Ledger rows the repository has changed under | 3 of 37 |
 | Active concerns with a disposition recorded here | 12 of 12 — 8 confirmed-acceptable, 4 out-of-scope |
 | Findings by resolution state | 1 open |
 | Seams assessable from both sides | no seam names this subsystem |

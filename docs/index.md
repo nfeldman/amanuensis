@@ -17,11 +17,11 @@ not the session.
 
 | Metric | Value |
 |---|---|
-| Checked at | `2ceb0d2d2cd9` on `main`, 2026-11-06 05:31 UTC |
-| Repository head | `2ceb0d2d2cd9` — the same revision the survey checked |
+| Checked at | `886e93dfa6fd` on `main`, 2026-11-06 05:56 UTC |
+| Repository head | `886e93dfa6fd` — the same revision the survey checked |
 | Upstream head | `ee12bedf6ff7` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 16 of 520 |
-| Scoped files exempt from that obligation, marked stale | 66 of 156 |
+| Files carrying a survey obligation marked stale | 29 of 520 |
+| Scoped files exempt from that obligation, marked stale | 69 of 156 |
 
 ### Survey coverage
 
@@ -48,7 +48,7 @@ not the session.
 | State axis | green |
 | Coverage axis | green |
 | Content axis | green |
-| Verified at | 2026-10-07 22:55 UTC |
+| Verified at | 2026-11-06 05:31 UTC |
 
 ## Findings by resolution state
 
@@ -69,5 +69,5 @@ not the session.
 
 ## Latest session
 
-`republish docs` — started 2026-11-06 05:31 UTC · **active**
+`republish docs` — started 2026-11-06 05:56 UTC · **active**
 

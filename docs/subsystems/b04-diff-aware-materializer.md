@@ -106,7 +106,7 @@ writes. Recorded as B04-R1.
 | Files read | 24 of 99 ledger rows |
 | Files in scope, not yet read | 5 of 99 |
 | Files excluded from the survey obligation | 70 of 99 |
-| Ledger rows the repository has changed under | 70 of 99 |
+| Ledger rows the repository has changed under | 75 of 99 |
 | Active concerns with a disposition recorded here | 12 of 12 — 1 confirmed-bug, 8 confirmed-acceptable, 1 ruled-out, 2 out-of-scope |
 | Findings by resolution state | 6 open |
 | Seams assessable from both sides | no seam names this subsystem |

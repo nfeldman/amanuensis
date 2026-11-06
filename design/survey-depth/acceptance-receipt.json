@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+  "repository_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
   "recorded_at": "2026-11-06",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+    "checked_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,7 +21,7 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+        "detected_sha": "886e93dfa6fd0e542db6269e93fad9abf942d860",
         "tree_digest": "49cd931f695a47552d5dc487ab9a53266cd167f99225f646aed7bae575aa870e",
         "ledger_digest": "43d962b1b20a8574ff8d3feb82391401f605d7771aa105df6abec6244bbfd8fc",
         "ledger": [
@@ -2735,7 +2735,7 @@
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": "mw4jdyvn-7z1z4g1n"
+        "session_id": "mw4kaxop-dbxkan1k"
       }
     },
     "B2": {
@@ -4178,7 +4178,7 @@
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 27,
+    "sessions": 28,
     "finding_status_histogram": {
       "confirmed-bug": 20,
       "fixed": 1
@@ -4287,9 +4287,9 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 27,
+      "candidate": 28,
       "baseline": 35,
-      "delta": -8
+      "delta": -7
     },
     "finding_status_histogram": {
       "confirmed-bug": 7,

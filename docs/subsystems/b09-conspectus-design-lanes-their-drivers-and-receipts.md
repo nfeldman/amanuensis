@@ -42,7 +42,7 @@ No defect here is open or awaiting verification.
 | Files read | 96 of 105 ledger rows |
 | Files in scope, not yet read | 9 of 105 |
 | Files excluded from the survey obligation | 0 of 105 |
-| Ledger rows the repository has changed under | 1 of 105 |
+| Ledger rows the repository has changed under | 11 of 105 |
 | Active concerns with a disposition recorded here | 0 of 12 |
 | Findings by resolution state | none recorded |
 | Seams assessable from both sides | no seam names this subsystem |
