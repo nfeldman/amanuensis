@@ -1,1 +1,9 @@
-{"carried_decided": 0, "records": []}
+{
+  "carried_decided": 1,
+  "records": [
+    {
+      "id": "B01-R1",
+      "outcome": "successor-finding"
+    }
+  ]
+}
