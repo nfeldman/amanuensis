@@ -19,6 +19,8 @@ Turns red when:
     in a record whose value is empty;
   - either page's HTML record does not put **Why it matters** after the symptom
     and before the root cause;
+  - a field holding two paragraphs splits a table row or leaves its record, on
+    any page;
   - a scoped vocabulary term prints its gloss and not its expansion;
   - `subsystems.notes` is not under `## Scope` as `### Survey note` with the
     fixed label sentence, whether or not the subsystem has claims or an
@@ -170,6 +172,29 @@ SUBSYSTEMS = (
 ARTIFACT_NAME = "B-01-read-path.md"
 
 NO_CONTEXT_FINDING = "B01-2"
+
+# Two-paragraph values. A line break in a table cell ends the row, and what follows
+# prints outside the record it belongs to.
+TAIL = "Tail paragraph 7q3x."
+MULTILINE_TABLE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("subsystems", "scope"),
+    ("subsystems", "jump_in_reading"),
+    ("dispositions", "rationale"),
+    ("finding_resolution_events", "rationale"),
+    ("field_notes", "observation"),
+    ("open_questions", "question"),
+    ("open_questions", "what_assumed"),
+    ("open_questions", "answer"),
+    ("vocabulary", "gloss"),
+    ("vocabulary", "expansion"),
+    ("seams", "shared_object"),
+    ("seams", "notes"),
+)
+
+
+def multiline(column: str) -> tuple[str, str]:
+    name = column.replace("_", " ")
+    return (f"First paragraph of {name}.", f"Second paragraph of {name}.")
 
 
 def seed(storage: Path) -> None:
@@ -521,7 +546,7 @@ def main() -> int:
                 for name, at in positions:
                     if at < 0:
                         return f"{where}'s record for {fid} has no {name}"
-                for (before, a), (after, b) in zip(positions, positions[1:]):
+                for (before, a), (after, b) in zip(positions, positions[1:], strict=False):
                     if a >= b:
                         return f"{where}'s record for {fid} puts {after} before {before}"
                 return None
@@ -567,6 +592,103 @@ def main() -> int:
             )
 
         check("each HTML record orders symptom, Why it matters, root cause", html_field_order)
+
+        def multiline_store() -> Path | str:
+            """A store whose authored fields each hold two paragraphs."""
+
+            alt = root / "store-multiline"
+            alt.mkdir()
+            seed(alt)
+            db = sqlite3.connect(alt / "memory.db")
+            for column in ("symptom", "business_context", "root_cause"):
+                db.execute(
+                    f"UPDATE findings SET {column} = ? WHERE finding_id IN ('B01-1', 'B01-3')",
+                    (f"{multiline(column)[0]}\n\n{multiline(column)[1]}",),
+                )
+            for table, column in MULTILINE_TABLE_FIELDS:
+                db.execute(f"UPDATE {table} SET {column} = {column} || ?", (f"\n\n{TAIL}",))
+            db.commit()
+            db.close()
+            result = publish(alt)
+            if result.get("returncode") != 0:
+                return f"the multi-paragraph store did not publish — {result.get('diagnostic')}"
+            return alt / "docs"
+
+        multiline_docs = multiline_store()
+
+        def open_multiline() -> str | None:
+            if isinstance(multiline_docs, str):
+                return multiline_docs
+            rows = [
+                line
+                for line in read(multiline_docs / "findings.md").splitlines()
+                if line.startswith('| <a id="b01-1"></a>')
+            ]
+            if len(rows) != 1:
+                return f"findings.md has {len(rows)} rows for B01-1"
+            cells = [c.strip() for c in rows[0].strip().strip("|").split("|")]
+            if not rows[0].rstrip().endswith("|") or len(cells) != 6:
+                return (
+                    "a two-paragraph field split the row for B01-1:"
+                    f" {len(cells)} cells on its first line"
+                )
+            for at, column in ((2, "symptom"), (3, "business_context"), (4, "root_cause")):
+                first, second = multiline(column)
+                if first not in cells[at] or second not in cells[at]:
+                    return f"the {column} cell of B01-1 does not carry both paragraphs"
+            html = read(multiline_docs / "findings.html")
+            match = re.search(
+                r'<article class="record record-finding"[^>]*data-record-label="finding B01-1".*?</article>',
+                html,
+                re.S,
+            )
+            if not match:
+                return "findings.html has no record for B01-1"
+            record = match.group(0)
+            outside = re.sub(r"<[^>]+>", " ", html.replace(record, ""))
+            for column in ("symptom", "business_context", "root_cause"):
+                for paragraph in multiline(column):
+                    if paragraph not in record:
+                        return f"the HTML record of B01-1 does not carry {column}: {paragraph}"
+                    if paragraph in outside:
+                        return f"findings.html prints {paragraph} outside its record"
+            if SHA[:8] not in record:
+                return "the HTML record of B01-1 does not carry its revision"
+            return None
+
+        check("a two-paragraph field stays inside its open-finding record", open_multiline)
+
+        def resolved_multiline() -> str | None:
+            if isinstance(multiline_docs, str):
+                return multiline_docs
+            record = section(
+                read(multiline_docs / "resolved-findings.md"), "**B01-3** · `MEDIUM`", level=4
+            )
+            if not record:
+                return "resolved-findings.md has no record for B01-3"
+            lines = record.splitlines()
+            for label, column in (("Why it matters", "business_context"), ("Root cause", "root_cause")):
+                item = next((ln for ln in lines if ln.startswith(f"- **{label}** — ")), "")
+                first, second = multiline(column)
+                if first not in item or second not in item:
+                    return f"a two-paragraph {column} left the {label} item of B01-3"
+            return None
+
+        check("a two-paragraph field stays inside its resolved-finding item", resolved_multiline)
+
+        def tables_hold_rows() -> str | None:
+            if isinstance(multiline_docs, str):
+                return multiline_docs
+            for path in sorted(multiline_docs.rglob("*.md")):
+                fence = False
+                for line in read(path).splitlines():
+                    if line.lstrip().startswith("```"):
+                        fence = not fence
+                    if not fence and line.startswith("|") and not line.rstrip().endswith("|"):
+                        return f"{path.name} has a table row a line break split: {line[:60]}"
+            return None
+
+        check("a two-paragraph field splits no table row on any page", tables_hold_rows)
 
         # -- 4. the vocabulary page renders a scoped expansion ----------------
         def scoped_expansion() -> str | None:
