@@ -1,11 +1,11 @@
 {
   "contract": "amanuensis-survey-depth/acceptance-receipt/v1",
-  "repository_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-  "recorded_at": "2026-09-18",
+  "repository_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+  "recorded_at": "2026-11-06",
   "store": {
     "store_id": "59913eaff3daad8d1c47ea093ada90dc",
     "repo_id": "default",
-    "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+    "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
   "baseline": {
@@ -21,9 +21,9 @@
         "absent": 0
       },
       "witness": {
-        "detected_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-        "tree_digest": "cf73b9cc7ffe241069507c5a1031a7a31504bfd063b570ef8ccfc07248d137ce",
-        "ledger_digest": "4766ad906b3e990557b39fe2ba7499797ca5061f64a30bcab2cbdf9145cf0a21",
+        "detected_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+        "tree_digest": "49cd931f695a47552d5dc487ab9a53266cd167f99225f646aed7bae575aa870e",
+        "ledger_digest": "43d962b1b20a8574ff8d3feb82391401f605d7771aa105df6abec6244bbfd8fc",
         "ledger": [
           {
             "file_path": ".claude/skills/amanuensis/SKILL.md",
@@ -255,6 +255,46 @@
           },
           {
             "file_path": "design/delightful-output-panel/validation/validate-prototype.mjs",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/README.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/claims.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/decisions.md",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/plan.json",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/plan.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/rationale.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/reader-measure.json",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/restore-progress.json",
+            "classification": "examined"
+          },
+          {
+            "file_path": "design/explanation/spec.md",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "design/explanation/unfilled-slots.json",
             "classification": "examined"
           },
           {
@@ -914,6 +954,10 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/codex-app-workspace-repair.md",
+            "classification": "examined"
+          },
+          {
             "file_path": "dev/conspectus/README.md",
             "classification": "examined"
           },
@@ -944,6 +988,10 @@
           {
             "file_path": "dev/hooks/pre-commit",
             "classification": "examined"
+          },
+          {
+            "file_path": "dev/measure-reader-prose.mjs",
+            "classification": "candidate"
           },
           {
             "file_path": "dev/pecia-dogfood.md",
@@ -1006,11 +1054,23 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/release-notes-v0.2.0-beta.3.md",
+            "classification": "examined"
+          },
+          {
+            "file_path": "dev/release-notes-v0.2.0-beta.4.md",
+            "classification": "candidate"
+          },
+          {
             "file_path": "dev/render-friction-free-release-readiness.mjs",
             "classification": "examined"
           },
           {
             "file_path": "dev/render-roadmap.mjs",
+            "classification": "examined"
+          },
+          {
+            "file_path": "dev/republish-docs.mjs",
             "classification": "examined"
           },
           {
@@ -1098,6 +1158,10 @@
             "classification": "examined"
           },
           {
+            "file_path": "dev/test-reader-measure.mjs",
+            "classification": "candidate"
+          },
+          {
             "file_path": "dev/test-rebuild-coverage.mjs",
             "classification": "examined"
           },
@@ -1112,6 +1176,14 @@
           {
             "file_path": "dev/test-rebuild-regeneration.mjs",
             "classification": "examined"
+          },
+          {
+            "file_path": "dev/test-receipt-gates-restored.mjs",
+            "classification": "examined"
+          },
+          {
+            "file_path": "dev/test-republish-chain.mjs",
+            "classification": "candidate"
           },
           {
             "file_path": "dev/test-roadmap.mjs",
@@ -1470,12 +1542,20 @@
             "classification": "examined"
           },
           {
+            "file_path": "materializer/test-claim-register.py",
+            "classification": "candidate"
+          },
+          {
             "file_path": "materializer/test-history-and-disagreements.py",
             "classification": "examined"
           },
           {
             "file_path": "materializer/test-ledger-freshness.py",
             "classification": "examined"
+          },
+          {
+            "file_path": "materializer/test-ledger-grouping.py",
+            "classification": "candidate"
           },
           {
             "file_path": "materializer/test-lens-pages.py",
@@ -1486,8 +1566,20 @@
             "classification": "examined"
           },
           {
+            "file_path": "materializer/test-narrative-placement.py",
+            "classification": "candidate"
+          },
+          {
             "file_path": "materializer/test-overview-truthfulness.py",
             "classification": "examined"
+          },
+          {
+            "file_path": "materializer/test-placeholder-census.py",
+            "classification": "candidate"
+          },
+          {
+            "file_path": "materializer/test-prose-retention.py",
+            "classification": "candidate"
           },
           {
             "file_path": "materializer/test-readback.py",
@@ -2012,6 +2104,10 @@
           {
             "file_path": "mcp-server/test-codebase-brief.mjs",
             "classification": "candidate"
+          },
+          {
+            "file_path": "mcp-server/test-codex-app-workspace.mjs",
+            "classification": "examined"
           },
           {
             "file_path": "mcp-server/test-codex-parent-workspace.mjs",
@@ -2634,19 +2730,19 @@
             "classification": "candidate"
           }
         ],
-        "tracked_paths": 652,
-        "ledger_rows": 652,
+        "tracked_paths": 676,
+        "ledger_rows": 676,
         "unledgered": 0,
         "absent": 0,
         "exempt": 156,
-        "session_id": null
+        "session_id": "mw4jdyvn-7z1z4g1n"
       }
     },
     "B2": {
       "verdict": "green",
-      "examined": 357,
-      "obligation_bearing": 496,
-      "fraction": 0.719758064516129,
+      "examined": 366,
+      "obligation_bearing": 520,
+      "fraction": 0.7038461538461539,
       "baseline": {
         "examined": 221,
         "obligation_bearing": 371,
@@ -3577,6 +3673,7 @@
           "subsystem_id": "B-01",
           "archived_resolution": "open",
           "outcome": "repaired",
+          "successor_id": null,
           "repaired_sha": "1d6516aee47fd7be8cc87e94ee6bca93869916ea",
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3589,6 +3686,7 @@
           "subsystem_id": "B-02",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3599,6 +3697,7 @@
           "subsystem_id": "B-02",
           "archived_resolution": "fixed-pending-verification",
           "outcome": "repaired",
+          "successor_id": null,
           "repaired_sha": "56940800af7a4c99980a4e09a41559bb65891153",
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3611,6 +3710,7 @@
           "subsystem_id": "B-02",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B02-R2",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3623,6 +3723,7 @@
           "subsystem_id": "B-02",
           "archived_resolution": "open",
           "outcome": "repaired",
+          "successor_id": null,
           "repaired_sha": "34a8762d0c05a0fa7d2a8b39ad520b8440dcfd94",
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3635,6 +3736,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3645,6 +3747,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3655,6 +3758,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3665,6 +3769,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3675,6 +3780,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B03-R1",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3687,6 +3793,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B03-R2",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3699,6 +3806,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B03-R3",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3711,6 +3819,7 @@
           "subsystem_id": "B-03",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B03-R4",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3723,6 +3832,7 @@
           "subsystem_id": "B-04",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3733,6 +3843,7 @@
           "subsystem_id": "B-04",
           "archived_resolution": "open",
           "outcome": "repaired",
+          "successor_id": null,
           "repaired_sha": "3f8b7f39ee85a532ce607ea9bad033f416fe6279",
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3745,6 +3856,7 @@
           "subsystem_id": "B-04",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B04-R1",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3757,6 +3869,7 @@
           "subsystem_id": "B-04",
           "archived_resolution": "open",
           "outcome": "repaired",
+          "successor_id": null,
           "repaired_sha": "3f8b7f39ee85a532ce607ea9bad033f416fe6279",
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3769,6 +3882,7 @@
           "subsystem_id": "B-04",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B04-R2",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3781,6 +3895,7 @@
           "subsystem_id": "B-05",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
         },
@@ -3791,6 +3906,7 @@
           "subsystem_id": "B-05",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B05-R1",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3803,6 +3919,7 @@
           "subsystem_id": "B-07",
           "archived_resolution": "open",
           "outcome": "successor-finding",
+          "successor_id": "B07-R1",
           "repaired_sha": null,
           "evidence_revisions": [
             "c0734040022f0e1f1b9d8c480259f6142a875fca"
@@ -3815,8 +3932,224 @@
           "subsystem_id": "B-08",
           "archived_resolution": "verified-fixed",
           "outcome": "archived-terminal",
+          "successor_id": null,
           "repaired_sha": null,
           "evidence_revisions": []
+        },
+        {
+          "carried_id": 23,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B01-R1",
+          "subsystem_id": "B-01",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B01-R2",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 24,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B02-R1",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": "repaired",
+          "successor_id": null,
+          "repaired_sha": "dd674ef84876c2df4eadad125bc68d284c9324fc",
+          "evidence_revisions": [
+            "dd674ef84876c2df4eadad125bc68d284c9324fc",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 25,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B02-R2",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B02-R6",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 26,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B02-R3",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B02-R7",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 27,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B02-R4",
+          "subsystem_id": "B-02",
+          "archived_resolution": "open",
+          "outcome": "repaired",
+          "successor_id": null,
+          "repaired_sha": "dd674ef84876c2df4eadad125bc68d284c9324fc",
+          "evidence_revisions": [
+            "dd674ef84876c2df4eadad125bc68d284c9324fc",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 28,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B02-R5",
+          "subsystem_id": "B-02",
+          "archived_resolution": "verified-fixed",
+          "outcome": "archived-terminal",
+          "successor_id": null,
+          "repaired_sha": null,
+          "evidence_revisions": []
+        },
+        {
+          "carried_id": 29,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B03-R1",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B03-R6",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 30,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B03-R2",
+          "subsystem_id": "B-03",
+          "archived_resolution": "open",
+          "outcome": "repaired",
+          "successor_id": null,
+          "repaired_sha": "6ac8d8988c9b2773b83cb2373c7572e3cd93ae9d",
+          "evidence_revisions": [
+            "6ac8d8988c9b2773b83cb2373c7572e3cd93ae9d",
+            "6ac8d8988c9b2773b83cb2373c7572e3cd93ae9d",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 31,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B04-R1",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B04-R5",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 32,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B04-R2",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B04-R6",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 33,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B04-R3",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B04-R7",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 34,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B04-R4",
+          "subsystem_id": "B-04",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B04-R8",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 35,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B05-R1",
+          "subsystem_id": "B-05",
+          "archived_resolution": "open",
+          "outcome": "repaired",
+          "successor_id": null,
+          "repaired_sha": "30c87d56249e2928f840929813a39dadd39825fb",
+          "evidence_revisions": [
+            "30c87d56249e2928f840929813a39dadd39825fb",
+            "30c87d56249e2928f840929813a39dadd39825fb",
+            "30c87d56249e2928f840929813a39dadd39825fb"
+          ]
+        },
+        {
+          "carried_id": 36,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B07-R1",
+          "subsystem_id": "B-07",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B07-R3",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
+        },
+        {
+          "carried_id": 37,
+          "archived_store_id": "store-legacy-7e0595ffa9f84f2b",
+          "archived_finding_id": "B07-R2",
+          "subsystem_id": "B-07",
+          "archived_resolution": "open",
+          "outcome": "successor-finding",
+          "successor_id": "B07-R4",
+          "repaired_sha": null,
+          "evidence_revisions": [
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+            "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0"
+          ]
         }
       ]
     },
@@ -3826,46 +4159,47 @@
     }
   },
   "reported": {
-    "ledger_rows": 652,
-    "evidence": 37,
+    "ledger_rows": 676,
+    "evidence": 74,
     "dispositions": 50,
-    "evidence_per_disposition": 0.74,
+    "evidence_per_disposition": 1.48,
     "attached_dispositions": 50,
     "attached_coverage": 1,
     "unattached_dispositions": 0,
     "disposition_evidence_rows": 65,
-    "field_notes": 2,
-    "open_questions_all": 2,
-    "open_questions_open": 2,
+    "field_notes": 10,
+    "open_questions_all": 6,
+    "open_questions_open": 6,
     "anchored_terms": 8,
     "anchored_terms_in_citation_form": 8,
-    "open_findings": 11,
+    "open_findings": 20,
     "scope_gaps_unledgered": 0,
     "subsystems": 9,
     "seams": 0,
     "claims": 11,
     "xrefs": 0,
-    "sessions": 18,
+    "sessions": 27,
     "finding_status_histogram": {
-      "confirmed-bug": 11
+      "confirmed-bug": 20,
+      "fixed": 1
     },
     "classification_histogram": {
-      "candidate": 139,
-      "examined": 357,
+      "candidate": 154,
+      "examined": 366,
       "generated-ignore": 152,
       "vendor-ignore": 4
     }
   },
   "reported_deltas": {
     "ledger_rows": {
-      "candidate": 652,
+      "candidate": 676,
       "baseline": 503,
-      "delta": 149
+      "delta": 173
     },
     "evidence": {
-      "candidate": 37,
+      "candidate": 74,
       "baseline": 133,
-      "delta": -96
+      "delta": -59
     },
     "dispositions": {
       "candidate": 50,
@@ -3873,9 +4207,9 @@
       "delta": -78
     },
     "evidence_per_disposition": {
-      "candidate": 0.74,
+      "candidate": 1.48,
       "baseline": 1.0391,
-      "delta": -0.2990999999999999
+      "delta": 0.44090000000000007
     },
     "attached_dispositions": {
       "candidate": 50,
@@ -3898,19 +4232,19 @@
       "delta": -116
     },
     "field_notes": {
-      "candidate": 2,
+      "candidate": 10,
       "baseline": 36,
-      "delta": -34
+      "delta": -26
     },
     "open_questions_all": {
-      "candidate": 2,
+      "candidate": 6,
       "baseline": 16,
-      "delta": -14
+      "delta": -10
     },
     "open_questions_open": {
-      "candidate": 2,
+      "candidate": 6,
       "baseline": 12,
-      "delta": -10
+      "delta": -6
     },
     "anchored_terms": {
       "candidate": 8,
@@ -3923,9 +4257,9 @@
       "delta": 8
     },
     "open_findings": {
-      "candidate": 11,
+      "candidate": 20,
       "baseline": 13,
-      "delta": -2
+      "delta": 7
     },
     "scope_gaps_unledgered": {
       "candidate": 0,
@@ -3953,17 +4287,17 @@
       "delta": -1
     },
     "sessions": {
-      "candidate": 18,
+      "candidate": 27,
       "baseline": 35,
-      "delta": -17
+      "delta": -8
     },
     "finding_status_histogram": {
-      "confirmed-bug": -2,
-      "fixed": -9
+      "confirmed-bug": 7,
+      "fixed": -8
     },
     "classification_histogram": {
-      "candidate": -11,
-      "examined": 136,
+      "candidate": 4,
+      "examined": 145,
       "generated-ignore": 28,
       "irrelevant": -2,
       "vendor-ignore": -2

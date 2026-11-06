@@ -2,7 +2,15 @@
 
 ## Runtime boundary map
 
-_No structured runtime boundary map is recorded yet._
+_Projected from the recorded [onboarding runtime boundary table](onboarding-report.md#runtime-boundary-map); mechanisms and targets are preserved as surveyed._
+
+| Runtime / Process | Language | Communicates with | Mechanism | Notes |
+|---|---|---|---|---|
+| MCP server | TypeScript | Host | stdio | One process, spawned by the host |
+| MCP server | TypeScript | `git` | Subprocess | Revision resolution in the workspace |
+| MCP server | TypeScript | Storage git repository | Subprocess | Checkpoints of the store |
+| MCP server | TypeScript | Materializer | Spawned `python3` | Python; renders the store to Markdown and HTML |
+| MCP server | TypeScript | SQLite store | `better-sqlite3` | Workspace-local `.amanuensis/`; two worktrees hold two stores under one project key |
 
 ## Subsystem atlas
 
@@ -26,4 +34,12 @@ _No seams recorded yet._
 
 ## Staleness map
 
-_No stale files across 499 scoped files carrying a survey obligation, at the last reconciliation._
+```mermaid
+pie showData
+    title Stale entries by subsystem
+    "B-05" : 7
+    "B-04" : 5
+    "B-01" : 2
+    "B-09" : 1
+    "B-03" : 1
+```

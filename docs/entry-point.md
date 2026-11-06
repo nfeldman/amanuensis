@@ -1,6 +1,6 @@
 # Entry point
 
-## What this system does
+## What is this codebase?
 
 Amanuensis turns reading a codebase into a durable, evidence-backed record. An MCP server holds a
 SQLite store per workspace; a survey writes observations, evidence, claims, concern dispositions and

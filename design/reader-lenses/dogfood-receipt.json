@@ -1,13 +1,13 @@
 {
   "contract": "amanuensis-reader-lenses/dogfood-receipt/v1",
   "packet": "P18",
-  "recorded_at": "2026-09-18T22:06:02.508Z",
-  "repository_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth",
-  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis",
+  "recorded_at": "2026-11-06T05:31:27.751Z",
+  "repository_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+  "workspace_path": "/Users/nfeldman/automation/claude/amanuensis-explanation",
+  "storage_path": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis",
   "produced_by": "dev/record-dogfood-receipt.mjs",
   "store": {
-    "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+    "last_checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
     "canonical_branch": "main",
     "onboarding_sha": "a7f9384dee63bc1eb16e564b83ff98f8f7bb7079"
   },
@@ -21,7 +21,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 16584,
+      "wire_bytes": 20446,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -42,8 +42,8 @@
               "classification": "examined",
               "standing_state": "examined",
               "authority_ceiling": "adversarial",
-              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
-              "examined_at": "2026-09-15 04:25:20",
+              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "examined_at": "2026-11-06 05:31:03",
               "stale": 0,
               "stale_reason": null,
               "reachability_checked": true,
@@ -63,10 +63,10 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "checked_at": "2026-09-18 22:05:28",
-            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
+            "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "checked_at": "2026-11-06 05:31:14",
+            "repository_head": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
           },
@@ -74,11 +74,11 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-              "last_checked_at": "2026-09-18 22:05:28"
+              "last_checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "last_checked_at": "2026-11-06 05:31:14"
             },
             "staleness_measured": true,
-            "evidence_rows": 3,
+            "evidence_rows": 8,
             "claims_recorded": 1
           },
           "unknown": [],
@@ -118,7 +118,7 @@
             ]
           },
           "defects": {
-            "census": 1,
+            "census": 2,
             "recorded": true,
             "requested": false,
             "as_of_supported": true,
@@ -180,14 +180,26 @@
             "items": []
           },
           "leads": {
-            "census": 0,
-            "recorded": false,
+            "census": 1,
+            "recorded": true,
             "requested": true,
             "as_of_supported": false,
-            "items": []
+            "items": [
+              {
+                "kind": "lead",
+                "note_id": 3,
+                "category": "connection",
+                "observation": "Re-examination at a521e28: the skill probes deferred tools and verifies get_project_info(workspace) against the chat root. Runtime context now starts project=null for Codex app-server parents and filesystem-root launch; tool discovery remains reachable, state tools refuse unbound calls, nested handshake paths normalize to the Git root, and an existing binding cannot switch roots. project.ts rejects filesystem root and accepts store relocation only with verified logical repository identity. This supersedes the B-03 structural artifact's statement that ctx.project is frozen at startup: it is selected once at startup or the first handshake, then immutable. Existing subsystem statuses remain unchanged; no new full survey is claimed.",
+                "location": "B-01, B-02, B-03: .claude/skills/amanuensis/SKILL.md; mcp-server/src/index.ts; mcp-server/src/codex-host.ts; mcp-server/src/project.ts; mcp-server/src/tools/project.ts",
+                "location_match": "owner",
+                "ref_sha": "a521e28",
+                "revision_bound": true,
+                "authored": "model"
+              }
+            ]
           },
           "history_pointer": {
-            "census": 3,
+            "census": 8,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
@@ -203,48 +215,77 @@
                 "authored": "model"
               },
               {
-                "kind": "session",
-                "session_id": "mu2622ld-ioef6w30",
-                "intent": "survey B-02 — MCP core, persistence, and lifecycle (P10 batch 1)",
-                "started_at": "2026-09-15 04:23:06",
-                "ended_at": null,
-                "ref_sha": null,
-                "revision_bound": false,
-                "authored": "code"
+                "kind": "resolution-event",
+                "event_id": 12,
+                "finding_id": "B02-R2",
+                "resolution_state": "fixed-pending-verification",
+                "recorded_at": "2026-10-07 22:43:08",
+                "ref_sha": "dd674ef84876c2df4eadad125bc68d284c9324fc",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "kind": "resolution-event",
+                "event_id": 13,
+                "finding_id": "B02-R2",
+                "resolution_state": "verified-fixed",
+                "recorded_at": "2026-10-07 22:44:01",
+                "ref_sha": "a521e284e795e2a500862ce8c220dc191bb3e4f3",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
+                "kind": "resolution-event",
+                "event_id": 16,
+                "finding_id": "B02-R7",
+                "resolution_state": "open",
+                "recorded_at": "2026-11-06 05:26:46",
+                "ref_sha": "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+                "revision_bound": true,
+                "authored": "model"
               },
               {
                 "kind": "session",
-                "session_id": "mu274z8h-ylgc5fy0",
-                "intent": "survey B-05 and B-07 — carried adjudication and scoping (P10 batch 3)",
-                "started_at": "2026-09-15 04:53:22",
-                "ended_at": "2026-09-15 05:03:49",
+                "session_id": "mw4j4gfp-xy34rr2r",
+                "intent": "EX8: decide the 14 undecided carried findings from the code at HEAD, fix the thesis slots, ledger the tree and republish",
+                "started_at": "2026-11-06 05:23:50",
+                "ended_at": null,
                 "ref_sha": null,
                 "revision_bound": false,
                 "authored": "code"
               }
             ],
             "counts": {
-              "finding_resolution_events": 1,
-              "sessions": 2
+              "finding_resolution_events": 4,
+              "sessions": 4
             },
             "session_attribution": "by-citation"
           }
         },
         "census": {
-          "total": 11,
+          "total": 19,
           "by_section": {
             "purpose": 1,
             "structure": 1,
-            "defects": 1,
+            "defects": 2,
             "reviews": 3,
             "boundaries": 0,
             "terms": 2,
-            "leads": 0,
-            "history_pointer": 3,
-            "unknown": 0
+            "leads": 1,
+            "history_pointer": 8,
+            "unknown": 1
           }
         },
         "omitted": [
+          {
+            "section": "unknown",
+            "reason": "budget",
+            "count": 1,
+            "ids": [
+              "unknown:lead/3"
+            ],
+            "ids_truncated": false
+          },
           {
             "section": "purpose",
             "reason": "policy",
@@ -257,8 +298,9 @@
           {
             "section": "defects",
             "reason": "policy",
-            "count": 1,
+            "count": 2,
             "ids": [
+              "defects:B02-R7",
               "defects:B02-R2"
             ],
             "ids_truncated": false
@@ -272,16 +314,27 @@
               "terms:independent storage mode"
             ],
             "ids_truncated": false
+          },
+          {
+            "section": "history_pointer",
+            "reason": "budget",
+            "count": 3,
+            "ids": [
+              "history:session/muyozldb-ytkmpjjk",
+              "history:session/mu274z8h-ylgc5fy0",
+              "history:session/mu2622ld-ioef6w30"
+            ],
+            "ids_truncated": false
           }
         ],
         "trace": {
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 7958,
-          "response_bytes": 16584,
+          "payload_bytes": 9826,
+          "response_bytes": 20446,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
-          "truncated": false,
+          "truncated": true,
           "within_budget": true,
           "over_budget_reason": null
         },
@@ -304,7 +357,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 14958,
+      "wire_bytes": 16070,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -346,10 +399,10 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "checked_at": "2026-09-18 22:05:28",
-            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
+            "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "checked_at": "2026-11-06 05:31:14",
+            "repository_head": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
           },
@@ -357,11 +410,11 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-              "last_checked_at": "2026-09-18 22:05:28"
+              "last_checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "last_checked_at": "2026-11-06 05:31:14"
             },
             "staleness_measured": true,
-            "evidence_rows": 3,
+            "evidence_rows": 4,
             "claims_recorded": 1
           },
           "unknown": [
@@ -410,7 +463,7 @@
             ]
           },
           "defects": {
-            "census": 2,
+            "census": 3,
             "recorded": true,
             "requested": false,
             "as_of_supported": true,
@@ -457,7 +510,7 @@
             ]
           },
           "history_pointer": {
-            "census": 4,
+            "census": 6,
             "recorded": true,
             "requested": true,
             "as_of_supported": true,
@@ -483,6 +536,16 @@
                 "authored": "model"
               },
               {
+                "kind": "resolution-event",
+                "event_id": 17,
+                "finding_id": "B03-R6",
+                "resolution_state": "open",
+                "recorded_at": "2026-11-06 05:26:54",
+                "ref_sha": "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
+                "revision_bound": true,
+                "authored": "model"
+              },
+              {
                 "kind": "session",
                 "session_id": "mu26cxw3-7kc3845v",
                 "intent": "survey B-03 — knowledge tools and workflow API (P10 batch 1)",
@@ -501,26 +564,36 @@
                 "ref_sha": null,
                 "revision_bound": false,
                 "authored": "code"
+              },
+              {
+                "kind": "session",
+                "session_id": "mw4j4gfp-xy34rr2r",
+                "intent": "EX8: decide the 14 undecided carried findings from the code at HEAD, fix the thesis slots, ledger the tree and republish",
+                "started_at": "2026-11-06 05:23:50",
+                "ended_at": null,
+                "ref_sha": null,
+                "revision_bound": false,
+                "authored": "code"
               }
             ],
             "counts": {
-              "finding_resolution_events": 2,
-              "sessions": 2
+              "finding_resolution_events": 3,
+              "sessions": 3
             },
             "session_attribution": "by-citation"
           }
         },
         "census": {
-          "total": 12,
+          "total": 15,
           "by_section": {
             "purpose": 1,
             "structure": 1,
-            "defects": 2,
+            "defects": 3,
             "reviews": 0,
             "boundaries": 0,
             "terms": 2,
             "leads": 1,
-            "history_pointer": 4,
+            "history_pointer": 6,
             "unknown": 1
           }
         },
@@ -537,8 +610,9 @@
           {
             "section": "defects",
             "reason": "policy",
-            "count": 2,
+            "count": 3,
             "ids": [
+              "defects:B03-R6",
               "defects:B03-R2",
               "defects:B03-R4"
             ],
@@ -559,8 +633,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 7149,
-          "response_bytes": 14958,
+          "payload_bytes": 7677,
+          "response_bytes": 16070,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": false,
           "within_budget": true,
@@ -584,7 +658,7 @@
         "leads",
         "history_pointer"
       ],
-      "wire_bytes": 18252,
+      "wire_bytes": 18768,
       "response": {
         "contract_version": "1.0.0",
         "locus": {
@@ -605,8 +679,8 @@
               "classification": "examined",
               "standing_state": "examined",
               "authority_ceiling": "adversarial",
-              "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
-              "examined_at": "2026-09-15 04:48:28",
+              "ref_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "examined_at": "2026-11-06 05:31:04",
               "stale": 0,
               "stale_reason": null,
               "reachability_checked": true,
@@ -626,10 +700,10 @@
             "caveat": "mapped is a workflow completion mark and is not itself proof that every finding survived challenge."
           },
           "revision": {
-            "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "checked_at": "2026-09-18 22:05:28",
-            "repository_head": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-            "origin_head": "d2b1630bbdf4149f86fedb34c08d825a7a740808",
+            "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "checked_at": "2026-11-06 05:31:14",
+            "repository_head": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+            "origin_head": "ee12bedf6ff72390d4acff160d067d0d26b310ab",
             "agrees": true,
             "unchecked_since": null
           },
@@ -637,14 +711,26 @@
             "ledger_rows": 1,
             "ledger_reconciled": null,
             "reconciliation_receipt": {
-              "last_checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
-              "last_checked_at": "2026-09-18 22:05:28"
+              "last_checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+              "last_checked_at": "2026-11-06 05:31:14"
             },
             "staleness_measured": true,
             "evidence_rows": 1,
             "claims_recorded": 1
           },
-          "unknown": [],
+          "unknown": [
+            {
+              "kind": "candidate-sibling",
+              "count": 5,
+              "paths": [
+                "materializer/test-claim-register.py",
+                "materializer/test-ledger-grouping.py",
+                "materializer/test-narrative-placement.py",
+                "materializer/test-placeholder-census.py",
+                "materializer/test-prose-retention.py"
+              ]
+            }
+          ],
           "authorizes": "current claims whose evidence cites this file",
           "cannot_justify": "claims about symbols no evidence cites; the absence of defects",
           "reachability_checked": true,
@@ -797,7 +883,7 @@
           }
         },
         "census": {
-          "total": 15,
+          "total": 16,
           "by_section": {
             "purpose": 1,
             "structure": 1,
@@ -807,7 +893,7 @@
             "terms": 1,
             "leads": 0,
             "history_pointer": 1,
-            "unknown": 0
+            "unknown": 1
           }
         },
         "omitted": [
@@ -848,8 +934,8 @@
           "model_calls": 0,
           "selection": "registry-exact-v1",
           "budget_bytes": 20480,
-          "payload_bytes": 8780,
-          "response_bytes": 18252,
+          "payload_bytes": 9029,
+          "response_bytes": 18768,
           "truncation_order": "unknown-then-round-robin-sections-then-ledger-ids-v1",
           "truncated": true,
           "within_budget": true,
@@ -868,7 +954,7 @@
   ],
   "attention": {
     "arguments": {},
-    "wire_bytes": 12284,
+    "wire_bytes": 11802,
     "response": {
       "contract_version": "1.0.0",
       "scope": {
@@ -888,10 +974,10 @@
         "path_prefix": null,
         "resolved": true
       },
-      "checked_sha": "a00d6f2cc2abf911dedfe8b70c6ca1593c2c0097",
+      "checked_sha": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
       "sections": {
         "open": {
-          "census": 11,
+          "census": 20,
           "recorded": true,
           "requested": true,
           "items": [
@@ -901,6 +987,15 @@
               "severity": "HIGH",
               "subsystem_id": "B-03",
               "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
+              "revision_bound": true,
+              "authored": "code"
+            },
+            {
+              "finding_id": "B03-R6",
+              "label": "open",
+              "severity": "HIGH",
+              "subsystem_id": "B-03",
+              "ref_sha": "466f19304d37da7c56fb4c5cdf54ca0c162b1ac0",
               "revision_bound": true,
               "authored": "code"
             }
@@ -929,17 +1024,17 @@
           "ordering_basis": "contradictions-then-matrices-then-dispositions-each-by-id"
         },
         "decisions": {
-          "census": 2,
+          "census": 6,
           "recorded": true,
           "requested": true,
           "items": [
             {
-              "question_id": 2,
+              "question_id": 3,
               "label": "unknown",
-              "category": "contradiction",
-              "subsystem_id": "B-03",
-              "question": "B-03/SI-2 is dispositioned confirmed-acceptable on the rationale that \"every revision this surface accepts is resolved at the write and re-resolved at the read\", but SI-2's calibrated probe names the anchor as well as the ref_sha, and finding B03-R5 establishes that an anchor's symbol and line_range are never checked against the file at that revision — 13 of this store's 35 evidence rows point past the end of their own file. Does SI-2 on B-03 stay confirmed-acceptable with its scope narrowed to the revision half, or become confirmed-bug with B03-R5 as the finding that confirms it?",
-              "ref_sha": "23884334188e44e65ef4287d4d12fea9342f33f8",
+              "category": "ambiguous-evidence",
+              "subsystem_id": "B-05",
+              "question": "B05-R1's observed runtime/package version mismatch is absent at beta.3, but its root-cause claim also names the lack of a mechanical version-parity gate. Should this finding be narrowed to that surviving recurrence risk or closed for the concrete mismatch with a successor guard obligation?",
+              "ref_sha": "a521e28",
               "revision_bound": true,
               "authored": "model"
             }
@@ -947,28 +1042,30 @@
           "ordering_basis": "category-then-id"
         },
         "leads": {
-          "census": 2,
+          "census": 10,
           "recorded": true,
           "requested": true,
           "items": [],
           "statement": "Open leads of other categories are in the omission ledger under policy: unverified-suspicion is an open candidate-concern note, and no label here covers the rest.",
           "counts": {
             "unverified_suspicion": 0,
-            "pattern": 1,
-            "anomaly": 1
+            "pattern": 3,
+            "anomaly": 2,
+            "connection": 4,
+            "tension": 1
           },
           "ordering_basis": "id"
         },
         "stale": {
-          "census": 26,
+          "census": 16,
           "recorded": true,
           "requested": true,
           "items": [
             {
               "source": "ledger",
               "label": "stale-knowledge",
-              "subsystem_id": "B-03",
-              "file_path": "mcp-server/src/tools/carried.ts",
+              "subsystem_id": "B-01",
+              "file_path": ".claude/skills/amanuensis/references/onboarding.md",
               "classification": "examined",
               "stale_reason": "git-drift",
               "ref_sha": "c0734040022f0e1f1b9d8c480259f6142a875fca",
@@ -979,8 +1076,8 @@
           "statement": "The two sources are counted apart and never summed. Drifted rows nobody has read are in the ledger under policy: no reading of them has gone stale.",
           "counts": {
             "claim": 0,
-            "ledger": 24,
-            "drifted_unread": 2,
+            "ledger": 15,
+            "drifted_unread": 1,
             "drifted_deferred": 0
           },
           "ordering_basis": "claims-then-ledger-rows-by-subsystem-and-path"
@@ -991,17 +1088,17 @@
           "requested": true,
           "items": [
             {
-              "subsystem_id": "B-03",
-              "open_critical_high": 1,
+              "subsystem_id": "B-04",
+              "open_critical_high": 2,
               "open_medium_low": 4,
               "awaiting_verification": 0,
               "undiscriminated": 0,
               "weakest_confirmed_bug_evidence": "code-verified",
               "unread": {
-                "candidate": 0,
-                "obligation_bearing": 43
+                "candidate": 5,
+                "obligation_bearing": 29
               },
-              "stale_files": 2,
+              "stale_files": 5,
               "unassessed_seam_sides": {
                 "sides": 0,
                 "of": 0
@@ -1017,14 +1114,14 @@
         }
       },
       "census": {
-        "total": 50,
+        "total": 61,
         "by_section": {
-          "open": 11,
+          "open": 20,
           "awaiting_verification": 0,
           "undiscriminated": 0,
-          "decisions": 2,
-          "leads": 2,
-          "stale": 26,
+          "decisions": 6,
+          "leads": 10,
+          "stale": 16,
           "hot_spots": 9
         }
       },
@@ -1032,26 +1129,38 @@
         {
           "section": "open",
           "reason": "budget",
-          "count": 10,
+          "count": 18,
           "ids": [
+            "finding:B04-R5",
+            "finding:B04-R6",
+            "finding:B01-R2",
             "finding:B02-R1",
-            "finding:B02-R2",
+            "finding:B02-R6",
             "finding:B03-R2",
             "finding:B03-R3",
             "finding:B03-R4",
             "finding:B03-R5",
             "finding:B04-R1",
             "finding:B04-R2",
+            "finding:B04-R7",
+            "finding:B04-R8",
             "finding:B05-R1",
-            "finding:B07-R1"
+            "finding:B02-R7",
+            "finding:B07-R1",
+            "finding:B07-R3",
+            "finding:B07-R4"
           ],
           "ids_truncated": false
         },
         {
           "section": "decisions",
           "reason": "budget",
-          "count": 1,
+          "count": 5,
           "ids": [
+            "question:5",
+            "question:2",
+            "question:4",
+            "question:6",
             "question:1"
           ],
           "ids_truncated": false
@@ -1059,65 +1168,65 @@
         {
           "section": "leads",
           "reason": "policy",
-          "count": 2,
+          "count": 10,
           "ids": [
             "lead:1",
-            "lead:2"
+            "lead:2",
+            "lead:3",
+            "lead:4",
+            "lead:5",
+            "lead:6",
+            "lead:7",
+            "lead:8",
+            "lead:9",
+            "lead:10"
           ],
           "ids_truncated": false
         },
         {
           "section": "stale",
           "reason": "policy",
-          "count": 2,
+          "count": 1,
           "ids": [
-            "ledger:B-05/mcp-server/test-carried-findings.mjs",
-            "ledger:B-05/mcp-server/test-scope-reconciliation.mjs"
+            "ledger:B-05/mcp-server/test-package-artifact.mjs"
           ],
           "ids_truncated": false
         },
         {
           "section": "stale",
           "reason": "budget",
-          "count": 23,
+          "count": 14,
           "ids": [
-            "ledger:B-03/mcp-server/src/tools/git.ts",
+            "ledger:B-01/.claude/skills/amanuensis/references/phase-5-packaging.md",
+            "ledger:B-03/mcp-server/src/tools/materialize.ts",
+            "ledger:B-04/materializer/amanuensis_materializer/__init__.py",
+            "ledger:B-04/materializer/amanuensis_materializer/diagrams.py",
+            "ledger:B-04/materializer/amanuensis_materializer/html_projection.py",
             "ledger:B-04/materializer/amanuensis_materializer/renderers.py",
-            "ledger:B-04/materializer/test-unmeasured-coverage.py",
+            "ledger:B-04/materializer/test-materializer.py",
             "ledger:B-05/.github/workflows/test.yml",
-            "ledger:B-05/dev/test-amanuensis-pecia-defects.mjs",
-            "ledger:B-09/design/reader-lenses/dogfood-receipt.json",
-            "ledger:B-09/design/reader-lenses/rebuild-depth-receipt.json",
-            "ledger:B-09/design/survey-depth/acceptance-receipt.json",
-            "ledger:B-09/design/survey-depth/claims.md",
-            "ledger:B-09/design/survey-depth/plan.json",
-            "ledger:B-09/design/survey-depth/plan.md",
-            "ledger:B-09/design/survey-depth/reviews/slice-S4/dispositions.md",
-            "ledger:B-09/design/survey-depth/spec.md",
-            "ledger:B-09/design/survey-depth/survey-progress.json",
-            "ledger:B-09/dev/amanuensis-defects-to-pecia.mjs",
-            "ledger:B-09/dev/pecia-dogfood.md",
-            "ledger:B-09/dev/record-rebuild-depth.mjs",
-            "ledger:B-09/dev/record-survey-depth.mjs",
-            "ledger:B-09/dev/test-carry-receipt.mjs",
-            "ledger:B-09/dev/test-pecia-carry-audit.mjs",
-            "ledger:B-09/dev/test-rebuild-depth.mjs"
+            "ledger:B-05/HISTORY.md",
+            "ledger:B-05/README.md",
+            "ledger:B-05/ROADMAP.md",
+            "ledger:B-05/dev/roadmap.json",
+            "ledger:B-05/mcp-server/package.json",
+            "ledger:B-09/dev/record-survey-depth.mjs"
           ],
-          "ids_truncated": true
+          "ids_truncated": false
         },
         {
           "section": "hot_spots",
           "reason": "budget",
           "count": 8,
           "ids": [
-            "subsystem:B-02",
-            "subsystem:B-04",
+            "subsystem:B-03",
             "subsystem:B-07",
+            "subsystem:B-02",
             "subsystem:B-05",
             "subsystem:B-01",
+            "subsystem:B-09",
             "subsystem:B-06",
-            "subsystem:B-08",
-            "subsystem:B-09"
+            "subsystem:B-08"
           ],
           "ids_truncated": false
         }
@@ -1126,8 +1235,8 @@
         "model_calls": 0,
         "selection": "registry-exact-v1",
         "budget_bytes": 12288,
-        "payload_bytes": 5842,
-        "response_bytes": 12284,
+        "payload_bytes": 5576,
+        "response_bytes": 11802,
         "truncation_order": "round-robin-sections-then-ledger-ids-v1",
         "truncated": true,
         "within_budget": true,
@@ -1138,11 +1247,23 @@
   },
   "finding_state_current": [
     {
+      "finding_id": "B01-R2",
+      "resolution_state": "open"
+    },
+    {
       "finding_id": "B02-R1",
       "resolution_state": "open"
     },
     {
       "finding_id": "B02-R2",
+      "resolution_state": "verified-fixed"
+    },
+    {
+      "finding_id": "B02-R6",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B02-R7",
       "resolution_state": "open"
     },
     {
@@ -1166,11 +1287,31 @@
       "resolution_state": "open"
     },
     {
+      "finding_id": "B03-R6",
+      "resolution_state": "open"
+    },
+    {
       "finding_id": "B04-R1",
       "resolution_state": "open"
     },
     {
       "finding_id": "B04-R2",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-R5",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-R6",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-R7",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B04-R8",
       "resolution_state": "open"
     },
     {
@@ -1180,6 +1321,14 @@
     {
       "finding_id": "B07-R1",
       "resolution_state": "open"
+    },
+    {
+      "finding_id": "B07-R3",
+      "resolution_state": "open"
+    },
+    {
+      "finding_id": "B07-R4",
+      "resolution_state": "open"
     }
   ],
   "publication": {
@@ -1187,7 +1336,7 @@
       "mode": "clean-publish",
       "ok": true,
       "published": true,
-      "output_dir": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis/docs",
+      "output_dir": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis/docs",
       "axes": {
         "state": {
           "ok": true
@@ -1200,18 +1349,18 @@
         }
       },
       "mismatch_count": 0,
-      "projection_run_id": "projection-53714854-b72f-4f41-9a9a-c60a778c5382",
+      "projection_run_id": "projection-c4844410-66fc-4bac-a32b-ed9ea156ae50",
       "pages_rendered": 33,
       "html_pages_rendered": 33,
       "summary": {
         "ok": true,
-        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis/docs",
-        "html_entrypoint": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis/docs/index.html",
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis/docs",
+        "html_entrypoint": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis/docs/index.html",
         "pages_total": 33,
         "pages_rendered": 33,
         "pages_unchanged": 0,
         "pages_retired": [],
-        "xref_updates": 18,
+        "xref_updates": 20,
         "html_pages_total": 33,
         "html_pages_rendered": 33,
         "html_pages_unchanged": 0,
@@ -1233,20 +1382,43 @@
           "mismatch_count": 0,
           "mismatches": []
         },
+        "unfilled_slots": [
+          {
+            "slot": "subsystem-vocabulary",
+            "page": "subsystems/b06-report-interface-design-and-validation-studies.md",
+            "subject": "B-06",
+            "state": "not-recorded",
+            "discharge": "call define_term for a term scoped to B-06, or decline_domain_vocabulary for B-06 with the reason it has none"
+          },
+          {
+            "slot": "subsystem-vocabulary",
+            "page": "subsystems/b08-activation-evidence-and-release-readiness.md",
+            "subject": "B-08",
+            "state": "not-recorded",
+            "discharge": "call define_term for a term scoped to B-08, or decline_domain_vocabulary for B-08 with the reason it has none"
+          },
+          {
+            "slot": "subsystem-vocabulary",
+            "page": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
+            "subject": "B-09",
+            "state": "not-recorded",
+            "discharge": "call define_term for a term scoped to B-09, or decline_domain_vocabulary for B-09 with the reason it has none"
+          }
+        ],
         "mode": "clean-publish",
         "published": true,
         "exit_status": 0,
-        "projection_run_id": "projection-53714854-b72f-4f41-9a9a-c60a778c5382"
+        "projection_run_id": "projection-c4844410-66fc-4bac-a32b-ed9ea156ae50"
       }
     },
     "source_artifacts": {
-      "projection_contract_sha256": "71c4e6384b35fd2aaf8065d2d7cffe8d36ca5f919e86092331aa8c001ba37c38",
-      "manifest_sha256": "7aeacd08eecffbd3b5a5c4fa9f224c5c7498e85a40195975daa561a273295e37",
+      "projection_contract_sha256": "c2e752b94f587a6da9ee17034a2e87ad1f9f4fd426e41cfd553f159c0186c73c",
+      "manifest_sha256": "81c7307aafd4d5e2839d2bc24339678a324c3bd2c1903b5aa724f387184a4853",
       "page_count": 67,
       "contract_version": "2"
     },
     "promotion": {
-      "promoted_at": "2026-09-18T22:05:53.661Z",
+      "promoted_at": "2026-11-06T05:31:26.993Z",
       "source": ".amanuensis/docs",
       "destination": "docs",
       "storage": ".amanuensis",
@@ -1265,7 +1437,7 @@
           }
         },
         "mismatch_count": 0,
-        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/.amanuensis/docs",
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-explanation/.amanuensis/docs",
         "mode": "readback"
       },
       "readback": {
@@ -1282,7 +1454,7 @@
           }
         },
         "mismatch_count": 0,
-        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-survey-depth/docs",
+        "output_dir": "/Users/nfeldman/automation/claude/amanuensis-explanation/docs",
         "mode": "readback"
       }
     }

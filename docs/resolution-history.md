@@ -4,6 +4,16 @@ _Every state a finding or a contradiction was recorded in, newest first, with th
 
 | Recorded | Record | State | Session | Account |
 |---|---|---|---|---|
+| 2026-11-06 05:27 UTC | [B07-R4](findings.md#b07-r4) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:27 UTC | [B07-R3](findings.md#b07-r3) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:27 UTC | [B04-R8](findings.md#b04-r8) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:27 UTC | [B04-R7](findings.md#b04-r7) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:27 UTC | [B04-R6](findings.md#b04-r6) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:27 UTC | [B04-R5](findings.md#b04-r5) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:26 UTC | [B03-R6](findings.md#b03-r6) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:26 UTC | [B02-R7](findings.md#b02-r7) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:26 UTC | [B02-R6](findings.md#b02-r6) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
+| 2026-11-06 05:26 UTC | [B01-R2](findings.md#b01-r2) | `open` | `mw4j4gfp-xy34rr2r` | Finding recorded as confirmed-bug |
 | 2026-10-07 22:44 UTC | [B02-R2](resolved-findings.md#b02-r2) | `verified-fixed` | `muyozldb-ytkmpjjk` | Repair at `mcp-server/src/index.ts:gitRoot`, `dd674ef84876`. At a521e28, index.ts:gitRoot passes timeout=STARTUP_PROBE_TIMEOUT_MS (5000ms) and killSignal=SIGKILL and catches failures as null. dd674ef introduces these options at the exact call named by B02-R2. Code-based verification of that missing-bound defect; no claim of a fault-injected filesystem observation, and B02-R1 remains open. |
 | 2026-10-07 22:43 UTC | [B02-R2](resolved-findings.md#b02-r2) | `fixed-pending-verification` | `muyozldb-ytkmpjjk` | Repair at `mcp-server/src/index.ts:gitRoot`, `dd674ef84876`. gitRoot now uses the shared STARTUP_PROBE_TIMEOUT_MS with SIGKILL. Re-examined at a521e28; the separate durable-write timeout finding B02-R1 remains open. |
 | 2026-09-18 02:14 UTC | [B03-R5](findings.md#b03-r5) | `open` | `mu6bmjry-fuziol9u` | Finding recorded as confirmed-bug |

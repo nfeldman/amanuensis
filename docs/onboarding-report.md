@@ -24,6 +24,16 @@ resolution and to the storage git repository for checkpoints, and spawns `python
 materializer. Storage is workspace-local — `.amanuensis/` beside the checkout — which is why two
 worktrees of this repository hold two stores under one project key.
 
+## Runtime boundary map
+
+| Runtime / Process | Language | Communicates with | Mechanism | Notes |
+|---|---|---|---|---|
+| MCP server | TypeScript | Host | stdio | One process, spawned by the host |
+| MCP server | TypeScript | `git` | Subprocess | Revision resolution in the workspace |
+| MCP server | TypeScript | Storage git repository | Subprocess | Checkpoints of the store |
+| MCP server | TypeScript | Materializer | Spawned `python3` | Python; renders the store to Markdown and HTML |
+| MCP server | TypeScript | SQLite store | `better-sqlite3` | Workspace-local `.amanuensis/`; two worktrees hold two stores under one project key |
+
 ## Stateful entities
 
 The SQLite store under WAL; the storage git repository that checkpoints it; the materializer lock;

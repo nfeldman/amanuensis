@@ -4,7 +4,12 @@ An architecture survey of amanuensis, recorded by Amanuensis.
 
 ## What is this codebase?
 
-No thesis section is recorded; add a 'What is this codebase?' section to `entry-point.md`.
+Amanuensis turns reading a codebase into a durable, evidence-backed record. An MCP server holds a
+SQLite store per workspace; a survey writes observations, evidence, claims, concern dispositions and
+findings into it through tools that refuse a write the record does not support; a Python
+materializer projects the store into Markdown and self-contained HTML a person reads. The record
+survives across sessions and agent boundaries, which is the point: the survey is the deliverable,
+not the session.
 
 ## Where the record stands
 
@@ -12,26 +17,26 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| Checked at | `ec5824bceb9c` on `main`, 2026-10-07 22:54 UTC |
-| Repository head | `ec5824bceb9c` — the same revision the survey checked |
-| Upstream head | `1f1c00c95b5c` — a different revision from the one the survey checked (`origin/main`) |
-| Files carrying a survey obligation marked stale | 0 of 499 |
-| Scoped files exempt from that obligation, marked stale | 65 of 156 |
+| Checked at | `2ceb0d2d2cd9` on `main`, 2026-11-06 05:31 UTC |
+| Repository head | `2ceb0d2d2cd9` — the same revision the survey checked |
+| Upstream head | `ee12bedf6ff7` — a different revision from the one the survey checked (`origin/main`) |
+| Files carrying a survey obligation marked stale | 16 of 520 |
+| Scoped files exempt from that obligation, marked stale | 66 of 156 |
 
 ### Survey coverage
 
 | Metric | Value |
 |---|---|
 | Subsystems by survey depth | 3 unmapped, 2 concerns, 4 adversarial |
-| Files read, of those carrying an obligation | 360 of 499 |
+| Files read, of those carrying an obligation | 366 of 520 |
 | Paths in scope with no ledger row | 0 |
 
 ### Open engineering work
 
 | Metric | Value |
 |---|---|
-| Findings open | 10 |
-| Carried defects undecided | 14 |
+| Findings open | 20 |
+| Carried defects undecided | 0 |
 | Repairs awaiting verification | 0 |
 | Contradictions unresolved | 0 |
 | Decisions open | 6 |
@@ -49,7 +54,7 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 | Metric | Value |
 |---|---|
-| [Open](findings.md) | 10 |
+| [Open](findings.md) | 20 |
 | [Accepted](resolved-findings.md) | 0 |
 | [Ruled out](resolved-findings.md) | 0 |
 | [Unverified fix](findings.md) | 0 |
@@ -64,5 +69,5 @@ No thesis section is recorded; add a 'What is this codebase?' section to `entry-
 
 ## Latest session
 
-`Publish the refreshed self-conspectus from the bound repository, verifying the relocated workspace handoff at ec5824b.` — started 2026-10-07 22:55 UTC · ended 2026-10-07 22:55 UTC
+`republish docs` — started 2026-11-06 05:31 UTC · **active**
 

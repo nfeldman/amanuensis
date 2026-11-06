@@ -14,6 +14,7 @@ _1 record with verification evidence attached to the repair._
 
 A stalled git subprocess during server startup hangs the MCP server indefinitely, with no timeout and no diagnosis, on every start that selects its workspace from an argument or the environment — which is the registration Claude Code writes.
 
+- **Why it matters** — The B02-2 repair bounded two modules on the startup path and left a third. That is the same shape as B02-R1, which finds the write path unbounded: the rule "a blocking subprocess on the server's only thread needs a wall-clock bound" is stated in codex-host.ts and applied at three of the five sites that need it.
 - **Root cause** — index.ts's gitRoot helper (index.ts:122-133) calls execFileSync("git", ["rev-parse", "--show-toplevel"]) with cwd, encoding and stdio and no timeout or killSignal. index.ts imports execFileSync directly from node:child_process and never imports STARTUP_PROBE_TIMEOUT_MS, the bound codex-host.ts declares and project.ts applies to all six of its git invocations. gitRoot runs up to four times before the transport connects: twice inside assertWorkspaceMatchesLaunch and twice inside parseArgs, which is the first statement of main(). This is carried finding B02-3 re-found at c073404, unchanged in mechanism and in location from its archived reading at 61bc6b5.
 - **Resolution** — `verified-fixed`, recorded 2026-10-07 22:44 UTC.
 - **Repair** — `dd674ef84876` at `mcp-server/src/index.ts:gitRoot`.
@@ -21,7 +22,7 @@ A stalled git subprocess during server startup hangs the MCP server indefinitely
 
 ## Carried obligations
 
-_23 inherited obligations carried forward from an earlier store and decided here. The archived record is what the predecessor held; the outcome is what this store did about it._
+_37 inherited obligations carried forward from an earlier store and decided here. The archived record is what the predecessor held; the outcome is what this store did about it._
 
 ### B02-1 · 🟠 HIGH · Closed in the archive
 
@@ -126,6 +127,71 @@ The projection read-back gate can never turn red on a stale-marker fault for any
 The roadmap and the A26 receipt both assert v0.2.0-beta.1 is an unpublished candidate, while the package is published on npm holding the latest dist-tag. The publication gate cannot detect the discrepancy because nothing checks the registry or the tag.
 
 **Root cause, as archived.** render-roadmap.mjs validates delivery.release only for internal consistency — field shapes, and agreement between roadmap.json and the A26 receipt. It never queries the registry, the git tag, or the publish workflow run. A release that has actually been published therefore satisfies every candidate assertion, including publicationStatus 'not-published', indefinitely.
+
+### B02-R1 · 🟠 HIGH · Repaired here
+
+<!-- amanuensis:carried:3c449cac1c75686a0a6dcb15d85833a286fd357ad391431c845514c0e09fd1bc --><a id="cf-3c449cac1c"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+- **Outcome** `repaired` — repaired at `dd674ef84876`
+- **Recorded because** B02-R1 said index.ts:gitRoot called execFileSync with no timeout or killSignal on the startup path. At dd674ef gitRoot passes STARTUP_PROBE_TIMEOUT_MS and SIGKILL and returns null on failure, and it is the only subprocess call in index.ts, so all four callers are bounded through it. The bound is still in place at 466f193. No test holds it; that is carried B02-R2's successor, B02-R6.
+
+A git invocation on the server's startup path can block forever. If `git rev-parse --show-toplevel` hangs — a slow network filesystem, an unresponsive credential helper, a very large repository, a stale lock — the server never reaches a usable state and gives no diagnosis, because execFileSync blocks the Node event loop for the whole call.
+
+**Root cause, as archived.** index.ts:108 `gitRoot` calls `execFileSync("git", ["rev-parse","--show-toplevel"], { cwd, encoding, stdio })` with no `timeout` and no `killSignal`. It is reached four times before the store is bound: twice from `assertWorkspaceMatchesLaunch` (index.ts:128, :129), once for a Codex parent workspace (:174), and once at :180 as the default workspace selection — taken whenever there is no `--workspace` argument and no `AMANUENSIS_WORKSPACE` or `CLAUDE_PROJECT_DIR`, which is the documented Codex and Claude activation shape. The repair that bounded this class covered project.ts, where all six subprocess sites carry `STARTUP_PROBE_TIMEOUT_MS` and `killSignal: "SIGKILL"`, and codex-host.ts, which defines the constant. index.ts imports neither and was left unbounded. This is the repository's recorded recurrence of a repair scoped to the symbols a finding named rather than to the defect class.
+
+### B02-R4 · 🟠 HIGH · Repaired here
+
+<!-- amanuensis:carried:321dcecd3c9f1b234cf311b469d37ae03a461dc4326567f37cf2802df76f43d7 --><a id="cf-321dcecd3c"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+- **Outcome** `repaired` — repaired at `dd674ef84876`
+- **Recorded because** B02-R4 said Codex Desktop's launch at / bound the filesystem root as the project. At dd674ef an app-server launch, the Codex activation contract and a cwd at the filesystem root each wait for a workspace handshake instead, and get_project_info names the workspace. test-codex-app-workspace.mjs passes on a build of this tree, and CI runs it. The fix is a handshake and not MCP roots, which the finding had named as the unused channel; the symptom it reported no longer occurs either way.
+
+Under Codex Desktop, the user-scoped registration launches the server with a process cwd of /. With no --workspace argument, no environment pin, and no --cd on the parent command, workspace resolution falls through to process-cwd-non-git and binds the filesystem root as project local:/ with storage path /.amanuensis. The skill's workspace-mismatch rule then stops the session, so every Codex Desktop session is unusable with the registration the installer writes by default, and a first write would attempt to create a store at the filesystem root. Observed 2026-09-13 23:36 in a Desktop session started in /Users/nfeldman/research and reproduced by direct launch; the pre-merge server binds identically.
+
+**Root cause, as archived.** parseArgs treats any directory that is not inside a Git repository, including /, as a legitimate non-Git workspace and never fails closed. The Codex activation contract adds a parent-process --cd recovery that only Codex CLI provides; Codex Desktop launches the server from an app-server process at / without --cd, so the recovery returns null. The server never requests MCP roots from the client, although the Codex binary implements the roots protocol, so the one channel through which Desktop could name the task repository is unused. The A22 real-host harness and the A25 evidence cover the CLI surface only; ADR-0021 recorded the Desktop case as an unverified counterpoint.
+
+### B03-R1 · 🟠 HIGH · Re-found here
+
+<!-- amanuensis:carried:cca0ea82fda01c87d682f1cba26bb831a50ce092958284c86066e00a5087d2dd --><a id="cf-cca0ea82fd"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)
+- **Outcome** `successor-finding` — [B03-R6](findings.md#b03-r6)
+- **Recorded because** Re-found at 466f193, and now observed in this store rather than only possible. Eight ids name both a live finding and a carried record with a different meaning. Resolving `B02-R2` exits 0 on the live verified-fixed finding, while the Pecia record holding that reference describes the archived gate defect. add_finding still reads no carried record, and the -R namespace is still a convention.
+
+A finding id can be re-minted by a rebuilt store and silently satisfy an external reference that was made against a different finding. Discarding a store makes every `amanuensis:&lt;finding_id&gt;` reference fail, which is loud and correct; re-minting one of those ids makes a closed defect resolve again, with nothing anywhere reporting that the referent changed.
+
+**Root cause, as archived.** `finding_id` is caller-supplied (findings.ts:103, `requireString`), its only uniqueness constraint is the primary key within one store, and it carries no store generation, no binding id and no creation revision that a reader could compare. `dev/pecia-resolve-finding.mjs` answers a reference by opening whatever database is at `.amanuensis/memory.db` at the moment it runs and asking for the finding's current resolution state; it has no way to ask "is this the store that id was minted in". The Pecia ledger currently holds 22 records carrying such references, eight of them on closed defects. This rebuild avoided the collision by choosing a distinct id namespace (`&lt;SID&gt;-R&lt;n&gt;`), which is a convention a person followed, not a property the system has — the same rebuild run with the conventional ids would have re-created `B02-1` and `B03-1` with different meanings.
+
+### B04-R1 · 🟠 HIGH · Re-found here
+
+<!-- amanuensis:carried:80471f083479cdd56b518eca87ff8d9537d2893e2fe3affc807bda8408d07cc0 --><a id="cf-80471f0834"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-04](subsystems/b04-diff-aware-materializer.md)
+- **Outcome** `successor-finding` — [B04-R5](findings.md#b04-r5)
+- **Recorded because** Re-found at 466f193 by calling the tool: a default describe_locus on an examined file served items [] in all eight sections, response_bytes 9248 against budget 8192, within_budget false, census total 5. The budget formula and the doubled envelope are unchanged. design/explanation/decisions.md §5 leaves the budgets alone in this lane, so this stays open.
+
+A default `describe_locus` call on a surveyed file returns standing, a census, and no account at all — `items: []` in every one of the eight sections — while declaring itself over budget. The tool the server instructions name first, and that the skill tells an agent to call before reading a file, answers "29 things are recorded here" and serves none of them.
+
+**Root cause, as archived.** The response budget is `WIRE_BUDGET + WIRE_BUDGET_PER_OPTIONAL_SECTION * optionalRequested` (locus.ts:1574) — 8192 bytes plus 4096 for each **optional** section the caller names — and it is measured by `responseBytes` against the whole emitted envelope, which carries the payload twice because `jsonResult` emits both a text block and a duplicate `structuredContent`. So the allowance grows only when a caller asks for *extra* sections, while the fixed cost does not shrink: measured on this store, the scaffolding for a locus with nothing recorded is already 6860 wire bytes (84% of 8192), and one examined owner plus its omission ledger adds about 2752 against 1332 of headroom. Naming `sections: ["structure"]` does not help, because `structure` is a default section and adds no allowance. The same call naming three optional sections is bounded at 20480, comes in at 20310, and serves the account in full — which is how the committed dogfood receipt passes §12.4 assertion 1: it records `budget_bytes: 20480` for all three of its loci.
+
+### B04-R2 · 🟠 HIGH · Re-found here
+
+<!-- amanuensis:carried:5e31d76b4dd7ae6ac6ae3f3b28e65e263e1cd8860cef0902ef774969ae4aada6 --><a id="cf-5e31d76b4d"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-04](subsystems/b04-diff-aware-materializer.md)
+- **Outcome** `successor-finding` — [B04-R6](findings.md#b04-r6)
+- **Recorded because** Re-found unchanged at 466f193. record_claim_challenge requires a closing event for a negative outcome, only invalidate_claim and supersede_claim write one, and both refuse a boundary equal to valid_from_sha. All 8 challenge outcomes in this store are survived.
+
+The adversarial pass cannot record a negative outcome when the survey is conducted at a single revision. `record_claim_challenge` accepts only `survived`; `overturned` and `superseded` are unreachable. A phase whose whole purpose is to overturn claims can, in the normal case, only ever agree with them — and the `mapped` prerequisite that requires an outcome on every claim is therefore a gate that cannot turn red.
+
+**Root cause, as archived.** Three checks compose into a closed loop. (1) `record_claim_challenge` refuses an `overturned` or `superseded` outcome without a `validity_event_id`, with the message "an overturning that closed no interval overturned nothing". (2) Such a row is written only by `invalidate_claim` (event_type `invalidated`) or `supersede_claim` (`superseded`), and the handler checks the event type matches the outcome. (3) Both of those call `requireStrictDescendant(at_sha, valid_from_sha)`, which throws when `boundary === validFrom`. A survey records each claim with `ref_sha` equal to the revision it is reading, so `valid_from_sha` is HEAD and no `at_sha` the survey can supply is a strict descendant of it. Reproduced three times during this survey while trying to correct a claim I had recorded myself; the only route that worked was `reset_subsystem`, which discards the entire phase. spec.md §12.1 mandates rebuilding at one revision, so this is the mandated case, not an unusual one.
 
 ### B02-2 · 🟡 MEDIUM · Repaired here
 
@@ -270,6 +336,45 @@ Release readiness depends on the byte state of the user's live ~/.codex/config.t
 
 **Root cause, as archived.** The A22 receipt records host.configSha256Before/After and configurationCustody.restoredConfigSha256 for the developer's own Codex configuration, and check-codex-host-evidence compares the live file against them. That file is user-level and mutable independently of this repository, so the pin is a snapshot of something the project does not own and cannot hold still. dev/refresh-a22-evidence.mjs rebaselines the fourteen source digests but not the config pin, leaving no cheap recovery.
 
+### B01-R1 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:3a43c29adab4e075722455c0525312a847dabc2288270903dfeb14056d3a4220 --><a id="cf-3a43c29ada"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-01](subsystems/b01-survey-methodology-and-agent-contracts.md)
+- **Outcome** `successor-finding` — [B01-R2](findings.md#b01-r2)
+- **Recorded because** Re-found at 466f193. phase-4-adversarial.md still offers `overturned` at the current revision and still records `survived` as a field note, and it never names record_claim_challenge. The mapped prerequisite reads claim_challenge_outcomes only, so the instruction leaves the advance refused. The gate over this prose checks that certain words occur, not what the tools accept.
+
+The phase references have drifted from the tools they describe, with nothing checking them. `phase-4-adversarial.md` instructs the coordinator to do one thing the server refuses and one thing the server has since replaced.
+
+**Root cause, as archived.** Two concrete drifts, both in the reference that specifies the adversarial pass. First, it lists `overturned` as an available outcome for a claim found "wrong at the current revision" — exactly the case `invalidate_claim` rejects, because closing a claim requires a strict descendant of its `valid_from_sha` and a survey records claims at the revision it reads (B04-R2). Second, it instructs recording a `survived` outcome as a field note, on the reasoning that "no claim row changes, so the outcome has to be recorded explicitly or it is indistinguishable from a claim nobody looked at" — true before `record_claim_challenge` and the `claim_challenge_outcomes` table existed, and the exact problem they were added to solve. The repository checks generated prose against its source in three places and even holds `SKILL.md`'s hand-written evidence ladder to the vocabulary contract; nothing holds the phase references to the tool surface they describe.
+
+### B02-R2 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:7cd83dca97a5c7cb54e0899229b602a973ea81b1505f2be8dd46fe0efa6818c7 --><a id="cf-7cd83dca97"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+- **Outcome** `successor-finding` — [B02-R6](findings.md#b02-r6)
+- **Recorded because** Re-found at 466f193 and narrowed. The index.ts probe it named is bounded, but test-startup-bounds.mjs still loads only codex-host and project, so removing that bound would leave it green. storage-git.ts:runGit is unbounded on the first-use path and outside its denominator, while CI still names the step "no unbounded probe on the activation path".
+
+The gate that certifies "activation-path probes are time-bounded" passes while an unbounded probe sits on the activation path. Its green is true of what it measured and is read as true of the path.
+
+**Root cause, as archived.** test-startup-bounds.mjs imports exactly two modules — `dist/codex-host.js` for discoverCodexParentWorkspace and `dist/project.js` for resolveProject — and drives them against a deliberately slow `git` placed ahead of the real one on PATH. Its denominator is therefore the set of subprocess calls reachable from those two entry points. `dist/index.js` is never loaded and `parseArgs` is never called, so index.ts:108's unbounded execFileSync (finding B02-R1) is outside anything the gate can fail on. Grepping the gate for `index.ts`, `index.js`, `gitRoot` and `parseArgs` returns nothing. This is the project's recorded zero-denominator class in its milder form: not an empty denominator, but one drawn so that it excludes the live defect.
+
+### B02-R3 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:3a4a754c27d6ef131917d004a17139c15500537bbd20a9f6e015e17c611ed123 --><a id="cf-3a4a754c27"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-02](subsystems/b02-mcp-core-persistence-and-lifecycle.md)
+- **Outcome** `successor-finding` — [B02-R7](findings.md#b02-r7)
+- **Recorded because** Re-found at 466f193 and narrowed. The literal and package.json both read 0.2.0-beta.4, so hosts are told the right version today. The literal is still hand-written with no drift check, since the doctor's serverVersion is the package version compared with itself. mcp-server/README.md still states and pins 0.2.0-beta.1, and HISTORY.md still has no beta.2 entry.
+
+The server tells every host it is 0.2.0-beta.1 while the package it is built from is 0.2.0-beta.2. A user cannot determine which version they are running, and a bug report naming the version names the wrong one.
+
+**Root cause, as archived.** `SERVER_VERSION` at mcp-server/src/index.ts:27 is a hand-written string literal, not read from package.json, and nothing checks the two against each other. At 7c1c1a9 the literal is "0.2.0-beta.1" and mcp-server/package.json declares "0.2.0-beta.2". The literal is not decorative: it is the version in the MCP handshake the host receives, it is passed to resolveProject, and it is stamped into every per-process repository binding receipt. This session's own live binding receipt reports serverVersion "0.2.0-beta.1" from this checkout. The same fact is stated in five places and three more of them agree with the literal rather than the package — README.md:78, mcp-server/README.md:18, and mcp-server/README.md:118, which pins an install to `@gruetech/amanuensis@0.2.0-beta.1` — while HISTORY.md has no 0.2.0-beta.2 entry at all. There is no single source and no drift check for any of them, unlike the vocabulary, the tool inventory and the roadmap, which all have one.
+
 ### B02-R5 · 🟡 MEDIUM · Closed in the archive
 
 <!-- amanuensis:carried:f6980585cef88c3f35336ccec9e3ae39635696d6c59e61d2103a9144817568b6 --><a id="cf-f6980585ce"></a>
@@ -282,6 +387,71 @@ Release readiness depends on the byte state of the user's live ~/.codex/config.t
 A conspectus cannot be read from any working copy other than the one it was created in. A colleague's clone, a CI checkout, a second worktree, or the same directory moved refuses to open with `Amanuensis storage completion marker does not match the immutable repository binding: <path>` — a fatal server error, not a degraded mode, whose message names neither the field that objected nor the fact that a path was what it objected to, so it reads as "this store belongs to another repository" when the repository is in fact identical. Reproduced 2026-09-19 against the d2b1630 build with two checkouts sharing one origin remote and an identical projectIdentity.
 
 **Root cause, as archived.** The storage completion marker records seven fields and `validateStorageMarker` (project.ts:701-723) requires all seven to match. Five are identity — contractVersion, projectIdentity, projectKey, storagePolicy, database. Two are location: canonicalRoot and workspaceInstanceId, written by `expectedStorageMarker` (667-678) from `project.workspacePath` and a digest of the same root. Enforcing location as if it were identity is what binds the store to a directory. One layer down, `assertStorageIdentity` (558-589) guards the same question and already accepts a moved working copy whenever the recorded project_identity matches — it consults workspace_path only when no identity was recorded. Two layers guarded one question, disagreed, and the stricter one silently decided the behavior. This is the project's recorded class of a gate whose denominator was drawn wider than the property it was defending, in its inverted form: a check narrower than the identity it claims to enforce.
+
+### B03-R2 · 🟡 MEDIUM · Repaired here
+
+<!-- amanuensis:carried:dc9a1e280398f4776be15f99c72f1fe6138c68d8a7417c97ed2e16bc7fcaf469 --><a id="cf-dc9a1e2803"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-03](subsystems/b03-knowledge-tools-and-workflow-api.md)
+- **Outcome** `repaired` — repaired at `6ac8d8988c9b`
+- **Recorded because** B03-R2 said a rebuild had no supported path to carry an unresolved finding forward and that nothing told referencing systems a referent was destroyed. 6523bee added the carry tools and made --carry-from a required argument of the rebuild script, and 6ac8d89 taught the resolver to answer a destroyed referent from carried_findings. Both parts exist from 6ac8d89, and this store's 37 carried records came through that path. Live ids shadowing carried ones is a separate defect, recorded as B03-R6.
+
+A clean-slate rebuild has no supported path for carrying an unresolved finding forward. Discarding a conspectus discards its open defects with it, and nothing tells the systems that referenced them that the referents were destroyed rather than resolved.
+
+**Root cause, as archived.** The destructive operation is supported and well built — the skill authorizes "reinit survey", `dev/rebuild-self-conspectus-store.mjs` performs it with a snapshot, a process boundary and a read-back — but it is a *discard*, and nothing in the product exports, migrates, or re-mints the findings that were open when it ran. There is no export tool for open findings, no import path into a fresh store, and no way to record in the new store that a finding is inherited from a discarded one. Observed concretely in this run: 13 `open` findings and one `fixed-pending-verification` were preserved only because this session wrote a JSON export to a directory outside the repository, by hand, before running the procedure. Nothing in the tooling asked for that or would have noticed its absence. The seam this leaves broken is S-10: 22 Pecia records still name ids the store no longer holds, and the honest disposition for each has to be reconstructed from an out-of-tree file.
+
+### B04-R3 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:62b74dbff8ed924a41591bc28ddabaf585588e0c45ef7678181c71bf1249180f --><a id="cf-62b74dbff8"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-04](subsystems/b04-diff-aware-materializer.md)
+- **Outcome** `successor-finding` — [B04-R7](findings.md#b04-r7)
+- **Recorded because** Re-found at 466f193. FILE_ANCHORED_CLAIM_KEY still matches only the subsystem and category prefix. requireFileAnchoredEvidence checks the evidence's file and kind, and the slug is compared with the subject only in test-rebuild-coverage.mjs:keyShapeFailure, after the record is durable.
+
+`add_claim` accepts a `claim_key` whose slug does not identify the subject, and the writer only learns the rule from a gate that runs long after the record is durable — at which point the record cannot be corrected without discarding the whole structural phase.
+
+**Root cause, as archived.** The stable-key rule lives on the wrong side of the seam. `FILE_ANCHORED_CLAIM_KEY` (claims.ts:52) matches only the category and its trailing slash, so the server validates that a key *is* a key-type, state-container or flow claim and never what it names. `dev/test-rebuild-coverage.mjs:keyShapeFailure` recomputes the stable key as the slug of the whole `path:symbol` pair and requires exact equality, with a comment recording that a slug built from the symbol alone once made two `Config` types collide and silently shortened a subsystem's inventory. Both were exercised here: the server accepted `B-02/state-container/openDatabase`, which the gate's rule refuses. Because `claim_key` carries a unique index and is what makes a later reading supersede rather than duplicate, an unstable key is not cosmetic — it is a silent collision across files. The correction path compounds it: `invalidate_claim` and `supersede_claim` both need a strictly later commit (B04-R2), and `supersede_claim` preserves the `claim_key` that is the wrong field anyway, so `reset_subsystem` — which discards every claim, disposition, edge and ledger row for the subsystem — is the only route.
+
+### B04-R4 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:1ade363d100b69f12e7c31a7710b31a728a89c0b6849376dbab9fde106fdaa23 --><a id="cf-1ade363d10"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-04](subsystems/b04-diff-aware-materializer.md)
+- **Outcome** `successor-finding` — [B04-R8](findings.md#b04-r8)
+- **Recorded because** Re-found at 466f193. The handler-path git calls in claims.ts, xrefs.ts, standing.ts and helpers.ts still use spawnSync with no timeout or killSignal, and only index.ts, codex-host.ts and project.ts mention a timeout. Live finding B02-R1 names only the helpers.ts write path, so it does not cover this record's scope.
+
+A hung `git` invocation inside a tool handler blocks that call indefinitely. Because the calls are synchronous and block the Node event loop, the whole server stops answering, not just the one request.
+
+**Root cause, as archived.** Revision resolution runs `git rev-parse` from the handler path with no `timeout` and no `killSignal`. In this subsystem that is two call sites in `tools/xrefs.ts`, three in `tools/claims.ts` and two in `standing.ts`. Across the whole of `mcp-server/src` there are about sixty subprocess call sites and only two modules mention a timeout at all — `project.ts` (six sites) and `codex-host.ts`, which are the startup-path modules the earlier repair covered. The exposure is broader than the startup case because `requireResolvedSha` deliberately resolves live on every durable write with no memoization, so every claim, evidence row, disposition and finding pays a subprocess.
+
+### B05-R1 · 🟡 MEDIUM · Repaired here
+
+<!-- amanuensis:carried:ab13df9ae2fcf96bc7b96df5012dae98ec9952e0635fdef0edb5f15a7c201ae0 --><a id="cf-ab13df9ae2"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)
+- **Outcome** `repaired` — repaired at `30c87d56249e`
+- **Recorded because** B05-R1 said the heading contract lived in two places that never met, so a variant heading reached readers as a placeholder with nothing reporting it. At 30c87d5 a gate requires the renderer's pattern to match the heading both skill files name, the publish result returns an unfilled_slots row naming the heading to add, and packaging must fill or report that row. One part still holds by decision: register_artifact and rehash_artifact validate no sections, and a green publish can still carry the placeholder, because spec.md §2.5 keeps the census from halting a publish. This repository's own heading is corrected in the same packet, and test-receipt-gates-restored.mjs holds it.
+
+A clean publish, its promotion to docs/, and the published site can all be green while the overview's thesis slot shows the placeholder "No thesis section is recorded; add a 'What is this codebase?' section to entry-point.md." The clean-slate rebuild of 2026-09-13 produced exactly this on the public site: the survey was complete and the thesis existed, but under the heading "What does this system do?", which the renderer does not recognize.
+
+**Root cause, as archived.** The heading contract exists in two places that never meet: the skill's artifact template prescribes "What is this codebase?" as prose, and read_thesis extracts by that exact heading, but register_artifact and rehash_artifact validate nothing about an entry-point artifact's sections, and the publish read-back axes compare projection against store without asserting the thesis slot is filled. A variant heading therefore passes every gate and reaches readers as a placeholder.
+
+### B07-R2 · 🟡 MEDIUM · Re-found here
+
+<!-- amanuensis:carried:58591592ff53994893634d82b2d36d3ec7d496781ce7872cf08a2c190305f72e --><a id="cf-58591592ff"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md)
+- **Outcome** `successor-finding` — [B07-R4](findings.md#b07-r4)
+- **Recorded because** Re-found at 466f193 and narrowed to its third instance. The two literals that bound a rebuild to the store it replaced moved to mcp-server/contracts/concern-checklist.json in e2382dc, and arms reading another store's sets report cannot run under survey-depth spec §8.10. The two recorders' BATCH_LABEL patterns remain disjoint, so one rebuild's checkpoint label still reaches only one recorder.
+
+`dev/test-rebuild-depth.mjs` cannot be satisfied by a genuine clean-slate rebuild. It requires the rebuilt conspectus to carry the *previous* survey's concern codes, and to mint finding ids in exactly the shape that lets a stale external reference silently re-resolve.
+
+**Root cause, as archived.** Two literals bind a future rebuild to the identities of the store it replaces. `CHECKLIST_CONCERNS = ["BV-1","CC-1","EV-1","GT-1","RC-1","ZD-1"]` (line 104) is the discarded survey's calibrated checklist, and the gate turns red when those codes are not active — so onboarding Phase 4, whose job is to derive concerns for *this* codebase, is refused for doing it. And the finding assertion `new RegExp("^" + id.replace("-","") + "-\\d+$")` (line 598) mandates `B02-1` and rejects any namespace that would stop a rebuilt store re-minting an id the Pecia ledger already references (B03-R1). That second constraint caught this session directly: minting `B07-1` to satisfy the gate collided with an archived finding of the same id that Pecia record pc-861e still names, and the claim had to be withdrawn by a third `reset_subsystem`. A milder third instance: `record-rebuild-depth.mjs` reads checkpoints labelled `Depth batch N` while `record-rebuild-coverage.mjs` reads `Rebuild batch N`, so one integrated rebuild — which is what the skill runs — records batches for one gate and none for the other.
 
 ### B01-1 · 🔵 LOW · Repaired here
 
@@ -321,4 +491,17 @@ A scoped file whose content is identical to what was examined can be reported st
 A research refresh or snapshot verification can hang indefinitely when GitHub, npm, the shadcn CLI, or a child detector stalls.
 
 **Root cause, as archived.** The affected fetch(), spawnSync(), and subprocess.check_output() calls provide no timeout, abort signal, or cancellation path.
+
+### B07-R1 · 🔵 LOW · Re-found here
+
+<!-- amanuensis:carried:5eab80a4fdabc7a96287f6c270bd9e1656232e1011fbd0a8cb154242b01763ae --><a id="cf-5eab80a4fd"></a>
+
+- **Carried from** `store-legacy-7e0595ffa9f84f2b` at `7c1c1a9f5689`, recorded there as `open`
+- **Subsystem there** [B-07](subsystems/b07-embedded-research-surveys-and-platform-trials.md)
+- **Outcome** `successor-finding` — [B07-R3](findings.md#b07-r3)
+- **Recorded because** Re-found at 466f193. dev/test-activation-evidence.mjs is still in no workflow and nothing records why. It is also red today (design/explanation/spec.md §4.1), which CI cannot show. Adding the step would turn CI red until the host evidence is recaptured, which §4.1 leaves to the owner, so this session records the gap and adds no step.
+
+`dev/test-activation-evidence.mjs` exists in the tree and never runs in CI, with nothing recording whether that is deliberate.
+
+**Root cause, as archived.** Enumerating all 106 gate files against `.github/workflows/test.yml` shows exactly four unreferenced. Three are performance suites whose exclusion from a correctness list is legible. The fourth is a correctness gate by name with no stated reason for being absent. The repository's own convention — several recent gates assert their own presence in the workflow as a red condition — exists precisely so this cannot happen silently, and this file predates that convention.
 

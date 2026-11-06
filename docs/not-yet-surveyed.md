@@ -1,17 +1,26 @@
 # Not yet surveyed
 
-Counted at `ec5824bceb9c` on `main`.
+Counted at `2ceb0d2d2cd9` on `main`.
 
 ## Paths with no ledger row
 
-**0 of 655** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
+**0 of 676** tracked paths are named by no `file_ledger` row in any subsystem. They participate in no subsystem's scope, so nothing here has been read, excluded, or deferred.
 
 ## Files in scope that no one has read
 
-**139 of 499** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
+**154 of 520** ledger rows that carry a survey obligation are classified `candidate`: the file participates in its subsystem and no one has read it.
 
-### Packaging, installer, validation, and product docs **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** — 65 unread of 156 rows carrying an obligation
+### Diff-aware materializer **[B-04](subsystems/b04-diff-aware-materializer.md)** — 5 unread of 29 rows carrying an obligation
 
+- `materializer/test-claim-register.py` — The diff-aware materializer's test suite: GATE EX3. Assigned by convention; not read.
+- `materializer/test-ledger-grouping.py` — The diff-aware materializer's test suite: GATE EX5. Assigned by convention; not read.
+- `materializer/test-narrative-placement.py` — The diff-aware materializer's test suite: GATE EX4. Assigned by convention; not read.
+- `materializer/test-placeholder-census.py` — The diff-aware materializer's test suite: GATE EX6. Assigned by convention; only its heading-parity check was read.
+- `materializer/test-prose-retention.py` — The diff-aware materializer's test suite: GATE EX2. Assigned by convention; not read.
+
+### Packaging, installer, validation, and product docs **[B-05](subsystems/b05-packaging-installer-validation-and-product-docs.md)** — 66 unread of 157 rows carrying an obligation
+
+- `dev/release-notes-v0.2.0-beta.4.md` — Published beta.4 release notes, beside the beta.3 notes. Assigned by convention; not read.
 - `mcp-server/test-activation-contract.mjs` — Packaging, configuration, fixtures, checkers and the server's own test suite.
 - `mcp-server/test-activation-doctor.mjs` — Packaging, configuration, fixtures, checkers and the server's own test suite.
 - `mcp-server/test-adversarial-correctness.mjs` — Packaging, configuration, fixtures, checkers and the server's own test suite.
@@ -154,6 +163,18 @@ Counted at `ec5824bceb9c` on `main`.
 - `scholiast/task-workspace-reorientation-indexes/conspectus.md` — Embedded research surveys and platform trials carried in this repository.
 - `scholiast/task-workspace-reorientation-indexes/notes.md` — Embedded research surveys and platform trials carried in this repository.
 - `scholiast/task-workspace-reorientation-indexes/sources.md` — Embedded research surveys and platform trials carried in this repository.
+
+### Conspectus design lanes, their drivers and receipts **[B-09](subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md)** — 9 unread of 105 rows carrying an obligation
+
+- `design/explanation/README.md` — The explanation design lane: its proposal. Assigned by convention; not read in full.
+- `design/explanation/claims.md` — The explanation design lane: its numbered claims. Assigned by convention; only EX8's claims were read.
+- `design/explanation/plan.json` — The explanation design lane: its packet plan. Assigned by convention; only EX8's packet was read.
+- `design/explanation/plan.md` — The explanation design lane: the plan's generated view. Assigned by convention; not read in full.
+- `design/explanation/rationale.md` — The explanation design lane: its rationale. Assigned by convention; not read.
+- `design/explanation/spec.md` — The explanation design lane: its specification. Assigned by convention; only §0, §1, §2.5 and §4 were read.
+- `dev/measure-reader-prose.mjs` — The explanation design lane: the reader-prose measure. Assigned by convention; not read in full.
+- `dev/test-reader-measure.mjs` — The explanation design lane: GATE EX1. Assigned by convention; not read.
+- `dev/test-republish-chain.mjs` — The explanation design lane: GATE EX7. Assigned by convention; only its header was read.
 
 ## Subsystems set aside
 

@@ -6,6 +6,11 @@ _What ran against this conspectus, and what each run produced. A session still w
 
 | Session | Intent | Started | Ended | Outcome |
 |---|---|---|---|---|
+| `mw4jdyvn-7z1z4g1n` | `republish docs` | 2026-11-06 05:31 UTC | not closed | not recorded |
+| `mw4jdh8i-8jhdzx3d` | `republish docs` | 2026-11-06 05:30 UTC | not closed | not recorded |
+| `mw4jccqa-mix33tqc` | `republish docs` | 2026-11-06 05:29 UTC | not closed | not recorded |
+| `mw4j4gfp-xy34rr2r` | `EX8: decide the 14 undecided carried findings from the code at HEAD, fix the thesis slots, ledger the tree and republish` | 2026-11-06 05:23 UTC | not closed | not recorded |
+| `muypki93-e2zmhzt3` | `Retain the final verified publication and live deployment evidence in storage Git.` | 2026-10-07 22:57 UTC | 2026-10-07 22:57 UTC | GitHub Pages run 37699345573 succeeded at eae1575; live index bytes exactly match the verified local projection. README and self-conspectus are committed and pushed. Remaining source refresh work is explicitly recorded as open questions, findings and undecided carries. |
 | `muyphq8l-j85i9md4` | `Publish the refreshed self-conspectus from the bound repository, verifying the relocated workspace handoff at ec5824b.` | 2026-10-07 22:55 UTC | 2026-10-07 22:55 UTC | Published refresh at ec5824b after a fresh compiled MCP connection launched from cwd=/ bound to this repository; both workspace regressions passed. Completed source refresh, preserving 14 undecided carries, 10 open findings, six questions and historical receipts. |
 | `muyp90tu-nxs1iwl2` | `Publish refreshed self-conspectus: verify 33-page HTML/Markdown projection at a521e28 and promote it to the tracked GitHub Pages report.` | 2026-10-07 22:49 UTC | 2026-10-07 22:54 UTC | Source refresh complete at ec5824b. Six additional files re-examined after repairing materializer checkout handoff; publish from a fresh compiled MCP connection with explicit workspace binding. Historical receipts retained; 14 inherited obligations remain undecided. |
 | `muyozldb-ytkmpjjk` | `Refresh self-conspectus at README beta.3 revision a521e28: re-examine the 47 stale source rows, classify three new delivery files, preserve unfinished survey authority, materialize and promote verified human projection.` | 2026-10-07 22:41 UTC | 2026-10-07 22:47 UTC | completed-refresh: 47 stale obligation rows re-examined at a521e28, 3 new delivery files scoped and examined, B02-R2 verified-fixed with code evidence 38; version-parity recurrence, cross-store reference and historical acceptance/progress prose discrepancies recorded as questions 3-6. Subsystem depth unchanged. |
@@ -37,6 +42,7 @@ No refresh run is recorded.
 
 | Run | Mode | State | Coverage | Content | Verified |
 |---|---|---|---|---|---|
+| `self-refresh-ec5824b-bound-final` | `clean-publish` | green | green | green | 2026-10-07 22:55 UTC |
 | `self-refresh-ec5824b-bound-1` | `clean-publish` | green | green | green | 2026-10-07 22:55 UTC |
 | `self-refresh-beta3-a521e28-final` | `clean-publish` | green | green | green | 2026-10-07 22:49 UTC |
 | `self-refresh-beta3-a521e28` | `clean-publish` | green | green | green | 2026-10-07 22:48 UTC |

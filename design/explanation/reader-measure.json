@@ -12,6 +12,19 @@
         "table_share": 0.723,
         "placeholders": 15
       }
+    },
+    {
+      "label": "recovered",
+      "commit": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+      "contract_sha256": "c2e752b94f587a6da9ee17034a2e87ad1f9f4fd426e41cfd553f159c0186c73c",
+      "placeholder_list_sha256": "39147504427621a97bd9ee212cf3fb08c96134c55a5aeb9a1cf05f2ece9898b2",
+      "totals": {
+        "pages": 33,
+        "table_chars": 263048,
+        "prose_chars": 255552,
+        "table_share": 0.5072,
+        "placeholders": 13
+      }
     }
   ]
 }

@@ -1,4 +1,26 @@
 {
-  "commit": null,
-  "unfilled_slots": []
+  "commit": "2ceb0d2d2cd93ea63dbf68592c9b1ea6d68d65cb",
+  "unfilled_slots": [
+    {
+      "slot": "subsystem-vocabulary",
+      "page": "subsystems/b06-report-interface-design-and-validation-studies.md",
+      "subject": "B-06",
+      "state": "not-recorded",
+      "discharge": "call define_term for a term scoped to B-06, or decline_domain_vocabulary for B-06 with the reason it has none"
+    },
+    {
+      "slot": "subsystem-vocabulary",
+      "page": "subsystems/b08-activation-evidence-and-release-readiness.md",
+      "subject": "B-08",
+      "state": "not-recorded",
+      "discharge": "call define_term for a term scoped to B-08, or decline_domain_vocabulary for B-08 with the reason it has none"
+    },
+    {
+      "slot": "subsystem-vocabulary",
+      "page": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
+      "subject": "B-09",
+      "state": "not-recorded",
+      "discharge": "call define_term for a term scoped to B-09, or decline_domain_vocabulary for B-09 with the reason it has none"
+    }
+  ]
 }

@@ -3,15 +3,15 @@
   "pages": [
     {
       "path": "architecture.html",
-      "content_hash": "6320e986a96bd98820fb81d34613869eb0307fe5126b909ebc58f2dd5032c73f"
+      "content_hash": "5269a9fab6e96e773314bbbc8084ba997595b180d4787ec8689d892b415a37d8"
     },
     {
       "path": "architecture.md",
-      "content_hash": "bb0cef3eeb06edac1344ceb7714bd8fcbb09a810a2c829431cc03f01870c4b18"
+      "content_hash": "eee93655c09885dd5545e3e86f0d5fd7b758114562b6be6672f44fe994b6ee1f"
     },
     {
       "path": "concern-checklist.html",
-      "content_hash": "01669837d458aa1bcbb7fd8d117632309a469e8df9efc47f9f02022660f5085c"
+      "content_hash": "48933f15a0fc1438606b56259d7ecc353638ea683b5cdbcb2c96ea04379c268e"
     },
     {
       "path": "concern-checklist.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "concerns.html",
-      "content_hash": "bac340104e446378a822d178e70ff506716466ecd086b49a3e1ff3d23c4ee986"
+      "content_hash": "33b3c588c259da97810e0af1ed484addf67a0bcd5626612e01ef49ce2dcca65c"
     },
     {
       "path": "concerns.md",
@@ -27,15 +27,15 @@
     },
     {
       "path": "contradictions.html",
-      "content_hash": "fa8929c014dfc5cb9e0a4985e4209413a7fe4df290f30fc6f54f1578e45b5dd7"
+      "content_hash": "6a3415e961359758806a0d3c96f5bc3c721e8c8ddde8e0a74630ffef0bdd4c8b"
     },
     {
       "path": "contradictions.md",
-      "content_hash": "e44dfa7dabcf66677d53a3e23393c507983c32855864333398275f93275bfba6"
+      "content_hash": "1dab743de9d67d6ef9e80220fb095927a3fadadd0211e1a5f60d65082f017754"
     },
     {
       "path": "diagnosticity.html",
-      "content_hash": "bdbb0d49211127594a9b4dbba1312f076ff2393012e82870efa0028400d10d61"
+      "content_hash": "cabb3b695b36a9d77110215532ebff5ede6baa37e85e4536ae53705dff0029b5"
     },
     {
       "path": "diagnosticity.md",
@@ -43,23 +43,23 @@
     },
     {
       "path": "disagreements.html",
-      "content_hash": "9abdc67ad414160609251da507d5a0d2fc07b4e550187acfd85c81a86520bd65"
+      "content_hash": "539ffa51578e761288133099138c4e06a5ac276008f3e8860ace8d38fde10747"
     },
     {
       "path": "disagreements.md",
-      "content_hash": "88caa225ea91e22dc6a2c639acd40d3dc848cd28e35d296daf866cd798eab622"
+      "content_hash": "9327b8c69b6ed3a0239f0a2d751b3ecb66911124f4813ea79dc30a125fdce299"
     },
     {
       "path": "entry-point.html",
-      "content_hash": "8d0ba2a11c7aed818912f3ac0444bd12ed6b475083e3ef2f4158cf80ca64ef21"
+      "content_hash": "3db3247bf648770db0bf7c85aeca87ddf17553fd5ccc0b1190f9d7f7662015bc"
     },
     {
       "path": "entry-point.md",
-      "content_hash": "50b116a70a06f120b25f76c479ed11c12e45ae4ad260ceb0fda91f56c77fd979"
+      "content_hash": "7f35fa68c33a1f85be910b3f1a7a5dc30658ad1e1e91833adae4c7df15ab74ac"
     },
     {
       "path": "field-notes.html",
-      "content_hash": "2f50eac0575a4386c6e691c61f422a766aa2db5ef7fc9c119f1b86cf364e3d35"
+      "content_hash": "a2ca81299dac5153edc2816fa48d5c96a61c0d41ce92dc26d525cb818b6af4b6"
     },
     {
       "path": "field-notes.md",
@@ -67,31 +67,31 @@
     },
     {
       "path": "files.html",
-      "content_hash": "63ead1bac4873f2337569d775c2f701f99e5f442a861dd4451eaca2565457f41"
+      "content_hash": "119b74e53d82bfb56474c76d9b48537cc0da6e3740b1f1adf2a8e14ce37348dd"
     },
     {
       "path": "files.md",
-      "content_hash": "937af46e35b65bc60f44aaae998a37dce342688d7932a83dd9d34569b6c58c62"
+      "content_hash": "3c9a279d04b20c1f73ce73bfb003ae546ddd96a6c35a582593708418dff5667a"
     },
     {
       "path": "findings.html",
-      "content_hash": "f1afd27256a9e99adeb645dd5a087246549b3c97e3248e3b7bd4c6978c65f914"
+      "content_hash": "bd2a272066acc6e049f2e6048e5a92ef412d2d192a0ee42db8aa3a8ab1707638"
     },
     {
       "path": "findings.md",
-      "content_hash": "67c76dbb4bf9322c8fb8327493c712922cb60951b39b82e43e96d12af99ca313"
+      "content_hash": "45bb540c6d3bbe5a09f72378a800ac690f18fd4d75d86126f739fb6982f8f681"
     },
     {
       "path": "hot-spots.html",
-      "content_hash": "07a52b8aeb79716669ed0634bac5da587156f45e210405eb58a92e67ce40737b"
+      "content_hash": "90ec6385125bdf9eee6f76b65a8adf5e6ee142243b1f0e621beb3a4bfe7a535c"
     },
     {
       "path": "hot-spots.md",
-      "content_hash": "a2997500d71b84ccedaaaaff5273151a85d9917938aa24b81d2d1f6ae2eed92f"
+      "content_hash": "116d4ff26e42be7361c1d1730b11eef7f417fb895f65c15c6282a4c3d2cf3dcb"
     },
     {
       "path": "how-to-read.html",
-      "content_hash": "47580a8bc4e0adbde2f14ec19a784ee7d914c78db6fe6bbc4edf85114cb73353"
+      "content_hash": "0ad6fa51ec2f56178efad3ff642011095d6d17bf5c336fd37c0b15c8a778cd99"
     },
     {
       "path": "how-to-read.md",
@@ -99,39 +99,39 @@
     },
     {
       "path": "index.html",
-      "content_hash": "30bd537324cf412736a6eb2db8931b2d0272c633a8ecfefe392cd8cf34057349"
+      "content_hash": "eda36c485fefd96e7edf896bd8e511608883f01b89857ac6b175f6a06feb708f"
     },
     {
       "path": "index.md",
-      "content_hash": "a419aacc009e820e1ff647063aac8ee3a34c60229a991de63afe6ad5e32f2b51"
+      "content_hash": "fd35ffc6ee6e2714cea72cc7bff347ff57cd4094df212b4f04cdd58eab4dd536"
     },
     {
       "path": "master-plan.html",
-      "content_hash": "8344ec98777c02b32761d45256d83dd48436a6d93045eb5884465d7605566dda"
+      "content_hash": "259914aaac65e17134aa03ae1a5be10b93ebb448452216d7a86fa5a8e891ca5b"
     },
     {
       "path": "master-plan.md",
-      "content_hash": "3a113478c1ad1091629fe7105d9897e60a8e666b03172fa792c656a22bb631e6"
+      "content_hash": "c8be4baa27bb5759ae4aeac29cc0db619cc1ec9786f2ac33f958521c9af6550c"
     },
     {
       "path": "not-yet-surveyed.html",
-      "content_hash": "9f24cda8afa72617b2d207f3407bf898141a43022850b69a1b42addc63afdc18"
+      "content_hash": "ad2ec85926b68640320ecc28e4643bf152baab073f6b14410b6c6a1bc4cde119"
     },
     {
       "path": "not-yet-surveyed.md",
-      "content_hash": "e22ed5aedf6789f71a7ea1f07f72974f6720ade0b8058c9edbc0faa423017ae6"
+      "content_hash": "87988c7f06150fd77489c9f25f1571aeaa93b378cb47eb1324b5294d2cf0c5a1"
     },
     {
       "path": "onboarding-report.html",
-      "content_hash": "e5c78435c786532e8e3823d731ef516eefc003c65a59ef05a0b610fa098412e5"
+      "content_hash": "62fe3f2f1b0eba5ea397a726521f622341801e7469d7419eebceace023e97520"
     },
     {
       "path": "onboarding-report.md",
-      "content_hash": "0a50c3a775437d4748ce84956d086dce59526bfffc2627f931ed1531a509eec9"
+      "content_hash": "0a245aa332cc8fbda710aed0462abf2326e0bc91374cf003ae389ae1a553abe2"
     },
     {
       "path": "open-questions.html",
-      "content_hash": "95eecc949b8637d77f56e8034d1f1c9c053b0cd5f7c8eecc3423516c09cd0703"
+      "content_hash": "c8fdd5954246e691c4fc878c64885591c4856332ec3048848e6fbe782e5af162"
     },
     {
       "path": "open-questions.md",
@@ -139,31 +139,31 @@
     },
     {
       "path": "resolution-history.html",
-      "content_hash": "ad8df7aa5831113300939258d2a44cbba8d94d7f586864920c4a14f10000f8b4"
+      "content_hash": "1626d8f61a1676727e6a797522813ccc5e12097603fa35bc977466c05cbe6c8b"
     },
     {
       "path": "resolution-history.md",
-      "content_hash": "73ce99e8d5b6a9885c6752a635ee13aa3894c3ff5c9bee0dd12441044bfc4270"
+      "content_hash": "037f53acf6de2521c6417a861a66f66e33bdc83df2c1534b3bd23fb36f565345"
     },
     {
       "path": "resolved-findings.html",
-      "content_hash": "44bb994b4d1ee66adf51748161866b8cb1ecc27d0d848af07053cc2df7d72cc0"
+      "content_hash": "7a8d3a0c13240936643b6e18c2b02140ffa8e8ab62fedaef357a5eedfb40e79a"
     },
     {
       "path": "resolved-findings.md",
-      "content_hash": "f3b197723c364af47ed7afee8784fc1697c89c4ad601d91c15acf74807d14e57"
+      "content_hash": "42979c365447a3f3f8c8cf3b280c8bc2e1da60284f8cc0ee1ba35f6931cd3a71"
     },
     {
       "path": "resolved-leads.html",
-      "content_hash": "3ba44b6fe68428341dfe601c95ab98534fdec8ee0c366d36708b476ba8394576"
+      "content_hash": "463484a43b94a9485bfddcd8a2b628ed2a233f71b59d8d48ed2c5f347779d819"
     },
     {
       "path": "resolved-leads.md",
-      "content_hash": "47a1df79bb228d4cd4a1e3c5960f08afbd0420cc3425d2281e3281fc5031aa38"
+      "content_hash": "afbf9d1d3dd9cb408ea08bd1e21f8f4156a1da87b13e2bd5b999b918308344d3"
     },
     {
       "path": "seams.html",
-      "content_hash": "2915c7673bc271641700250a2ded5f64b1b4e2d43be5e2527c95b689dd5cba2c"
+      "content_hash": "42025f619dc2ba1415fb5da5290d9071c944fc59a2e1cfc26f8947ebcc156ea9"
     },
     {
       "path": "seams.md",
@@ -171,103 +171,103 @@
     },
     {
       "path": "search-index.js",
-      "content_hash": "aa4f3baedd506846c1a975640343e99162217420666387c847bc214b2959012b"
+      "content_hash": "b6923e3231b12f392aef95e9c2c6f8de8ccab2ff73c688c00632d8ef61d0289f"
     },
     {
       "path": "sessions.html",
-      "content_hash": "0ef1edbcbb834589c590bcaee165600bbbf56d2d1a16927cfc720ba2a72b5141"
+      "content_hash": "695c09d30f7c26a79803086b16fef5ccf7d27be18b75732518ff05056ef8509a"
     },
     {
       "path": "sessions.md",
-      "content_hash": "efe4f269533c043635623aed28d0c15425b4066031f0900ca21bbe5ace80ab1b"
+      "content_hash": "6671d1ffa47c71f25805e3d8d7909a246ced115e6635cbba3351e667495cb267"
     },
     {
       "path": "stale.html",
-      "content_hash": "d7bfd2e3d55602f16c78f64cd8ce35bd3ca40f32ff3ba50f5367fcc0870d6a47"
+      "content_hash": "fdd18d2a25a04e4500b89efb17b1a9c5ef2b0f88d584524a62133b3fae00a200"
     },
     {
       "path": "stale.md",
-      "content_hash": "ab8a86043a02359bb8d36851928672777d06e9bd72c2c1b3c319fc7227fe2f00"
+      "content_hash": "47cf10c0ff0c0220649b54789f3cc09a03de339fb138df7a2c20cd1c805ed5cd"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.html",
-      "content_hash": "a3d32eae167ffec26dd038a429aa3162b6b1e24a32777dcc8adca3a86589a0a9"
+      "content_hash": "5d9d230e9cd8c0bf1dd7bdda59bc47f0bfd65d76455d81faa69e6a47ed6e408c"
     },
     {
       "path": "subsystems/b01-survey-methodology-and-agent-contracts.md",
-      "content_hash": "5dbe0e56dd4ecb6eefac50ab9d45f11f288ccfeabcb0b59fb02af3b58946fb1c"
+      "content_hash": "833ee13bfbc1cf2b358dcc27f68b6c91f5f419f2b5e994e2c9ba7a3fd2b0cf20"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
-      "content_hash": "b5f63aa4b7ccb4ab6162736f06c06b5a39dd008bb834f9647d297b41af0fd9d4"
+      "content_hash": "6d603b8358268c636e318bd3e90f70dee9fbe4e66234c1e4762ac67ffb9b31ec"
     },
     {
       "path": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
-      "content_hash": "f0832de272c62f215ecfd5636eae59b0abba90c6ca1d9e63e6432d17e9e078a3"
+      "content_hash": "1626f4462b7eba009b255545fb383cd93d01d579e55944c7cb19b11d5f4f269a"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.html",
-      "content_hash": "e1a495605e149a5cbc49439b230c3adf86114af4b10ea101b52b61556f379579"
+      "content_hash": "dcac3cfd34a7aea93c022f06ce76dad5260c80d4267ea983dfecdb8ebe4a6200"
     },
     {
       "path": "subsystems/b03-knowledge-tools-and-workflow-api.md",
-      "content_hash": "fc48080ce6fc541d4fb14e286547569d7161d5474f2472dcac5ea12ca24c088f"
+      "content_hash": "db62a5c8e82e4b77a3050dc79d24e975e0af15a42330c86ae8e01ae9bafc4c8e"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.html",
-      "content_hash": "ef5fc8c2dcb94ef9abb1b3ba00383e9e69f2068bddfca68487c3f5675578b8c4"
+      "content_hash": "cd780df6cf4745afd388a50d95f2541f754afaa77ce631a6637a383f0046c2a8"
     },
     {
       "path": "subsystems/b04-diff-aware-materializer.md",
-      "content_hash": "62f43e0f849796a4a235a730bf41a8f59911a73a0a7bd78578b0dc5e01e3f0d2"
+      "content_hash": "8cf061d3a189f4714dc5342ca08ac0e8aea267b3a27a469fb3cfd47ae4aab278"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.html",
-      "content_hash": "81c87c25ed4bf0ce3e9d36d509f548f1aa7e3d0e6ebc96ca80d482488e7eb8ef"
+      "content_hash": "00b9932e03614ffac5de99de4bba25af1a3a09ffc8a6f5204ebc7f05f0407673"
     },
     {
       "path": "subsystems/b05-packaging-installer-validation-and-product-docs.md",
-      "content_hash": "338141269b02aa32b66cc9aa8e0e6ad7593bc1632665eb0b2c7d3b733ea8347d"
+      "content_hash": "7dee442b6888b6a003c499ae7e046d3c09c61e00cd288a4a25b94dd86b716f3f"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.html",
-      "content_hash": "ef6b5273e37e3bbe4c497c7b314878a73cd721c4123ef07e8423a0637dd7e90b"
+      "content_hash": "23320cb7e600074f4918be64fd2e31ce85dbce9762dd4df7703146eed44b4c52"
     },
     {
       "path": "subsystems/b06-report-interface-design-and-validation-studies.md",
-      "content_hash": "c7623be88a42baf2a459fdde52964330f0776eb399ba5311d7d27c0aa5dc2af1"
+      "content_hash": "ae18b8014915defe5a192376766eca89909b517955ff60fcb5d1af1d9e5f1225"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
-      "content_hash": "c633e899f466fc20579b1a3aa20332aa676331429ea815be52624fd7ca7be66a"
+      "content_hash": "2113051a175567dabede85dede092bdc2951a0fe873104199ac15017ab582c73"
     },
     {
       "path": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
-      "content_hash": "56c0b761b1005e4aa9783d97dbb8ec67e5c54132f02beaf0ce632ea50f833f75"
+      "content_hash": "761c60dc287813162999d8f41cc57294d03467a3c45f277eb88dc479d8bad7ca"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.html",
-      "content_hash": "5d64cb3c08d5f561a2732d0f16b0553ca468877b3c28c7aa20d3e5b96d873282"
+      "content_hash": "ed30ff1d6952616a646abb595d157208aa9c028ea6d98766e3a487ed25574230"
     },
     {
       "path": "subsystems/b08-activation-evidence-and-release-readiness.md",
-      "content_hash": "f48e9e1f5125005c263b4fa6e16cd2a14cc66f4f4b0755476be201b399851685"
+      "content_hash": "23de2a146fbb77eaef831d0a5969340362d8c9fb85f4fea2a395bd524d7d9f55"
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html",
-      "content_hash": "8ae717173b0e799f1e18938aeead9e47d3989a67c74c96b16cc37caabcff4680"
+      "content_hash": "7e458fd5c6387b0e354f7732cfc95e64b52153dbd7b19d1858a7767c9aa3bfea"
     },
     {
       "path": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md",
-      "content_hash": "0c50bb1cd735fa00797364186e65a060af33f9a9d2e9b43639881acb51fdad62"
+      "content_hash": "7a562c3405cbb3baf18605630f83c08eac40818b8cf9c1445392a64438b19a81"
     },
     {
       "path": "vocabulary.html",
-      "content_hash": "8138f4f8c5093c448e1e432fea0ed0396651d28520c87e0cf87f2b140bc9cc89"
+      "content_hash": "39dbb9dec18baac0b4a7f55f6a4d980241591b0d989700c5397140953b23b7d4"
     },
     {
       "path": "vocabulary.md",
-      "content_hash": "e69cb1ce38b02c353e91b8f7f442b7c64f013bf9543ef561014433cd64a50f22"
+      "content_hash": "d4e0b66458fdf1f85d3505d06a1e3f506bc1f161a951692a231ecc65e70d3cd8"
     }
   ],
   "local_links": [
@@ -346,6 +346,10 @@
     {
       "source": "architecture.html",
       "target": "onboarding-report.html"
+    },
+    {
+      "source": "architecture.html",
+      "target": "onboarding-report.html#runtime-boundary-map"
     },
     {
       "source": "architecture.html",
@@ -450,6 +454,10 @@
     {
       "source": "architecture.html",
       "target": "vocabulary.html"
+    },
+    {
+      "source": "architecture.md",
+      "target": "onboarding-report.md#runtime-boundary-map"
     },
     {
       "source": "architecture.md",
@@ -2717,6 +2725,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-31ff311bf8"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-32cbcd6c0d"
     },
     {
@@ -2742,6 +2754,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-44afe236ae"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-47ed434b98"
     },
     {
       "source": "files.html",
@@ -2981,6 +2997,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-e2d66af2d0"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-e43cdcafa2"
     },
     {
@@ -3013,7 +3033,15 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-fcfaf8cd3f"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b04-diff-aware-materializer.html#le-fe02a0e84e"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b04-diff-aware-materializer.html#le-fe5e48a8c3"
     },
     {
       "source": "files.html",
@@ -3618,6 +3646,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html#le-f03a3ce504"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html#le-f2a24423c0"
     },
     {
       "source": "files.html",
@@ -4561,7 +4593,15 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-17f06e9831"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-192228c4a7"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-1983f2c503"
     },
     {
       "source": "files.html",
@@ -4570,6 +4610,14 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-21ea97679c"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-221135d5c6"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-240f2f6ee3"
     },
     {
       "source": "files.html",
@@ -4582,6 +4630,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-2a2a8e0044"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-30d525190a"
     },
     {
       "source": "files.html",
@@ -4605,6 +4657,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-3a68f82efd"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-3b63b6976b"
     },
     {
@@ -4621,6 +4677,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-48cad7d0c0"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-4a9c0cf082"
     },
     {
@@ -4630,6 +4690,14 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-4cd0b838e1"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-4e216ccb8a"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-4e40681559"
     },
     {
       "source": "files.html",
@@ -4665,6 +4733,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-6fab54381b"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-72e7b4c603"
     },
     {
@@ -4686,6 +4758,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-840ade95fb"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-8483b626be"
     },
     {
       "source": "files.html",
@@ -4805,6 +4881,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-c01279b2e5"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-c925375dc4"
     },
     {
@@ -4830,6 +4910,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-d7fe5ee61a"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-da2e4fc91d"
     },
     {
       "source": "files.html",
@@ -4877,6 +4961,10 @@
     },
     {
       "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-eba87f941c"
+    },
+    {
+      "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-ebc7ff85f8"
     },
     {
@@ -4902,6 +4990,10 @@
     {
       "source": "files.html",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-fb33b7c53a"
+    },
+    {
+      "source": "files.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html#le-fc70d18aa7"
     },
     {
       "source": "files.html",
@@ -5361,6 +5453,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-31ff311bf8"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-32cbcd6c0d"
     },
     {
@@ -5386,6 +5482,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-44afe236ae"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-47ed434b98"
     },
     {
       "source": "files.md",
@@ -5625,6 +5725,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-e2d66af2d0"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-e43cdcafa2"
     },
     {
@@ -5657,7 +5761,15 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-fcfaf8cd3f"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b04-diff-aware-materializer.md#le-fe02a0e84e"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b04-diff-aware-materializer.md#le-fe5e48a8c3"
     },
     {
       "source": "files.md",
@@ -6258,6 +6370,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md#le-f03a3ce504"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md#le-f2a24423c0"
     },
     {
       "source": "files.md",
@@ -7185,7 +7301,15 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-17f06e9831"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-192228c4a7"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-1983f2c503"
     },
     {
       "source": "files.md",
@@ -7194,6 +7318,14 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-21ea97679c"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-221135d5c6"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-240f2f6ee3"
     },
     {
       "source": "files.md",
@@ -7206,6 +7338,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-2a2a8e0044"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-30d525190a"
     },
     {
       "source": "files.md",
@@ -7229,6 +7365,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-3a68f82efd"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-3b63b6976b"
     },
     {
@@ -7245,6 +7385,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-48cad7d0c0"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4a9c0cf082"
     },
     {
@@ -7254,6 +7398,14 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4cd0b838e1"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4e216ccb8a"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-4e40681559"
     },
     {
       "source": "files.md",
@@ -7289,6 +7441,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-6fab54381b"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-72e7b4c603"
     },
     {
@@ -7310,6 +7466,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-840ade95fb"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-8483b626be"
     },
     {
       "source": "files.md",
@@ -7429,6 +7589,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-c01279b2e5"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-c925375dc4"
     },
     {
@@ -7454,6 +7618,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-d7fe5ee61a"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-da2e4fc91d"
     },
     {
       "source": "files.md",
@@ -7501,6 +7669,10 @@
     },
     {
       "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-eba87f941c"
+    },
+    {
+      "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-ebc7ff85f8"
     },
     {
@@ -7526,6 +7698,10 @@
     {
       "source": "files.md",
       "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-fb33b7c53a"
+    },
+    {
+      "source": "files.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md#le-fc70d18aa7"
     },
     {
       "source": "files.md",
@@ -7657,18 +7833,6 @@
     },
     {
       "source": "findings.html",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
-    },
-    {
-      "source": "findings.html",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
     },
     {
@@ -7685,10 +7849,6 @@
     },
     {
       "source": "findings.html",
-      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
-    },
-    {
-      "source": "findings.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
     },
     {
@@ -7698,22 +7858,6 @@
     {
       "source": "findings.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b04-diff-aware-materializer.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b04-diff-aware-materializer.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b04-diff-aware-materializer.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
       "source": "findings.html",
@@ -7726,14 +7870,6 @@
     {
       "source": "findings.html",
       "target": "subsystems/b06-report-interface-design-and-validation-studies.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
-    },
-    {
-      "source": "findings.html",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
     },
     {
       "source": "findings.html",
@@ -7769,18 +7905,6 @@
     },
     {
       "source": "findings.md",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
-    },
-    {
-      "source": "findings.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
     },
     {
@@ -7790,22 +7914,6 @@
     {
       "source": "findings.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b04-diff-aware-materializer.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b04-diff-aware-materializer.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b04-diff-aware-materializer.md"
     },
     {
       "source": "findings.md",
@@ -7818,18 +7926,6 @@
     {
       "source": "findings.md",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
-    },
-    {
-      "source": "findings.md",
-      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
       "source": "findings.md",
@@ -9353,6 +9449,10 @@
     },
     {
       "source": "not-yet-surveyed.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "not-yet-surveyed.html",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
@@ -9406,6 +9506,10 @@
     {
       "source": "not-yet-surveyed.html",
       "target": "subsystems/b08-activation-evidence-and-release-readiness.html"
+    },
+    {
+      "source": "not-yet-surveyed.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html"
     },
     {
       "source": "not-yet-surveyed.html",
@@ -9657,6 +9761,10 @@
     },
     {
       "source": "not-yet-surveyed.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "not-yet-surveyed.md",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
     },
     {
@@ -9694,6 +9802,10 @@
     {
       "source": "not-yet-surveyed.md",
       "target": "subsystems/b08-activation-evidence-and-release-readiness.md"
+    },
+    {
+      "source": "not-yet-surveyed.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md"
     },
     {
       "source": "not-yet-surveyed.md",
@@ -10177,7 +10289,19 @@
     },
     {
       "source": "resolution-history.html",
+      "target": "findings.html#b01-r2"
+    },
+    {
+      "source": "resolution-history.html",
       "target": "findings.html#b02-r1"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b02-r6"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b02-r7"
     },
     {
       "source": "resolution-history.html",
@@ -10201,6 +10325,10 @@
     },
     {
       "source": "resolution-history.html",
+      "target": "findings.html#b03-r6"
+    },
+    {
+      "source": "resolution-history.html",
       "target": "findings.html#b04-r1"
     },
     {
@@ -10209,11 +10337,35 @@
     },
     {
       "source": "resolution-history.html",
+      "target": "findings.html#b04-r5"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b04-r6"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b04-r7"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b04-r8"
+    },
+    {
+      "source": "resolution-history.html",
       "target": "findings.html#b05-r1"
     },
     {
       "source": "resolution-history.html",
       "target": "findings.html#b07-r1"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b07-r3"
+    },
+    {
+      "source": "resolution-history.html",
+      "target": "findings.html#b07-r4"
     },
     {
       "source": "resolution-history.html",
@@ -10333,7 +10485,19 @@
     },
     {
       "source": "resolution-history.md",
+      "target": "findings.md#b01-r2"
+    },
+    {
+      "source": "resolution-history.md",
       "target": "findings.md#b02-r1"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b02-r6"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b02-r7"
     },
     {
       "source": "resolution-history.md",
@@ -10357,6 +10521,10 @@
     },
     {
       "source": "resolution-history.md",
+      "target": "findings.md#b03-r6"
+    },
+    {
+      "source": "resolution-history.md",
       "target": "findings.md#b04-r1"
     },
     {
@@ -10365,11 +10533,35 @@
     },
     {
       "source": "resolution-history.md",
+      "target": "findings.md#b04-r5"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b04-r6"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b04-r7"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b04-r8"
+    },
+    {
+      "source": "resolution-history.md",
       "target": "findings.md#b05-r1"
     },
     {
       "source": "resolution-history.md",
       "target": "findings.md#b07-r1"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b07-r3"
+    },
+    {
+      "source": "resolution-history.md",
+      "target": "findings.md#b07-r4"
     },
     {
       "source": "resolution-history.md",
@@ -10429,6 +10621,18 @@
     },
     {
       "source": "resolved-findings.html",
+      "target": "findings.html#b01-r2"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b02-r6"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b02-r7"
+    },
+    {
+      "source": "resolved-findings.html",
       "target": "findings.html#b03-r1"
     },
     {
@@ -10445,6 +10649,10 @@
     },
     {
       "source": "resolved-findings.html",
+      "target": "findings.html#b03-r6"
+    },
+    {
+      "source": "resolved-findings.html",
       "target": "findings.html#b04-r1"
     },
     {
@@ -10453,11 +10661,35 @@
     },
     {
       "source": "resolved-findings.html",
+      "target": "findings.html#b04-r5"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b04-r6"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b04-r7"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b04-r8"
+    },
+    {
+      "source": "resolved-findings.html",
       "target": "findings.html#b05-r1"
     },
     {
       "source": "resolved-findings.html",
       "target": "findings.html#b07-r1"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b07-r3"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "findings.html#b07-r4"
     },
     {
       "source": "resolved-findings.html",
@@ -10545,7 +10777,7 @@
     },
     {
       "source": "resolved-findings.html",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
     },
     {
       "source": "resolved-findings.html",
@@ -10570,6 +10802,34 @@
     {
       "source": "resolved-findings.html",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
     },
     {
       "source": "resolved-findings.html",
@@ -10630,6 +10890,26 @@
     {
       "source": "resolved-findings.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
       "source": "resolved-findings.html",
@@ -10646,6 +10926,14 @@
     {
       "source": "resolved-findings.html",
       "target": "subsystems/b06-report-interface-design-and-validation-studies.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
+    },
+    {
+      "source": "resolved-findings.html",
+      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.html"
     },
     {
       "source": "resolved-findings.html",
@@ -10677,6 +10965,18 @@
     },
     {
       "source": "resolved-findings.md",
+      "target": "findings.md#b01-r2"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b02-r6"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b02-r7"
+    },
+    {
+      "source": "resolved-findings.md",
       "target": "findings.md#b03-r1"
     },
     {
@@ -10693,6 +10993,10 @@
     },
     {
       "source": "resolved-findings.md",
+      "target": "findings.md#b03-r6"
+    },
+    {
+      "source": "resolved-findings.md",
       "target": "findings.md#b04-r1"
     },
     {
@@ -10701,11 +11005,35 @@
     },
     {
       "source": "resolved-findings.md",
+      "target": "findings.md#b04-r5"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b04-r6"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b04-r7"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b04-r8"
+    },
+    {
+      "source": "resolved-findings.md",
       "target": "findings.md#b05-r1"
     },
     {
       "source": "resolved-findings.md",
       "target": "findings.md#b07-r1"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b07-r3"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "findings.md#b07-r4"
     },
     {
       "source": "resolved-findings.md",
@@ -10725,7 +11053,7 @@
     },
     {
       "source": "resolved-findings.md",
-      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
     },
     {
       "source": "resolved-findings.md",
@@ -10749,7 +11077,23 @@
     },
     {
       "source": "resolved-findings.md",
-      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.md"
     },
     {
       "source": "resolved-findings.md",
@@ -10778,6 +11122,34 @@
     {
       "source": "resolved-findings.md",
       "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
     },
     {
       "source": "resolved-findings.md",
@@ -10806,6 +11178,18 @@
     {
       "source": "resolved-findings.md",
       "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
+    },
+    {
+      "source": "resolved-findings.md",
+      "target": "subsystems/b07-embedded-research-surveys-and-platform-trials.md"
     },
     {
       "source": "resolved-findings.md",
@@ -11361,6 +11745,14 @@
     },
     {
       "source": "stale.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.html"
+    },
+    {
+      "source": "stale.html",
       "target": "subsystems/b02-mcp-core-persistence-and-lifecycle.html"
     },
     {
@@ -11369,7 +11761,59 @@
     },
     {
       "source": "stale.html",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.html"
+    },
+    {
+      "source": "stale.html",
       "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b04-diff-aware-materializer.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
+    },
+    {
+      "source": "stale.html",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.html"
     },
     {
       "source": "stale.html",
@@ -11393,11 +11837,79 @@
     },
     {
       "source": "stale.html",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.html"
+    },
+    {
+      "source": "stale.html",
       "target": "vocabulary.html"
     },
     {
       "source": "stale.md",
       "target": "index.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b01-survey-methodology-and-agent-contracts.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b03-knowledge-tools-and-workflow-api.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b04-diff-aware-materializer.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b05-packaging-installer-validation-and-product-docs.md"
+    },
+    {
+      "source": "stale.md",
+      "target": "subsystems/b09-conspectus-design-lanes-their-drivers-and-receipts.md"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
@@ -11494,6 +12006,14 @@
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
       "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "../findings.html"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
+      "target": "../findings.html#b01-r2"
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.html",
@@ -11705,6 +12225,14 @@
     },
     {
       "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
+      "target": "../findings.md"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
+      "target": "../findings.md#b01-r2"
+    },
+    {
+      "source": "subsystems/b01-survey-methodology-and-agent-contracts.md",
       "target": "b02-mcp-core-persistence-and-lifecycle.md"
     },
     {
@@ -11850,6 +12378,14 @@
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
       "target": "../findings.html#b02-r1"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../findings.html#b02-r6"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
+      "target": "../findings.html#b02-r7"
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.html",
@@ -12037,6 +12573,14 @@
     },
     {
       "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../findings.md#b02-r6"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
+      "target": "../findings.md#b02-r7"
+    },
+    {
+      "source": "subsystems/b02-mcp-core-persistence-and-lifecycle.md",
       "target": "../resolved-findings.md"
     },
     {
@@ -12174,6 +12718,10 @@
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
       "target": "../findings.html#b03-r5"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
+      "target": "../findings.html#b03-r6"
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.html",
@@ -12397,6 +12945,10 @@
     },
     {
       "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
+      "target": "../findings.md#b03-r6"
+    },
+    {
+      "source": "subsystems/b03-knowledge-tools-and-workflow-api.md",
       "target": "b01-survey-methodology-and-agent-contracts.md"
     },
     {
@@ -12530,6 +13082,22 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
       "target": "../findings.html#b04-r2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-r5"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-r6"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-r7"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.html",
+      "target": "../findings.html#b04-r8"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.html",
@@ -12710,6 +13278,22 @@
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
       "target": "../findings.md#b04-r2"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-r5"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-r6"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-r7"
+    },
+    {
+      "source": "subsystems/b04-diff-aware-materializer.md",
+      "target": "../findings.md#b04-r8"
     },
     {
       "source": "subsystems/b04-diff-aware-materializer.md",
@@ -13101,6 +13685,14 @@
     },
     {
       "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
+      "target": "../findings.html#b07-r3"
+    },
+    {
+      "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
+      "target": "../findings.html#b07-r4"
+    },
+    {
+      "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.html",
       "target": "../hot-spots.html"
     },
     {
@@ -13222,6 +13814,14 @@
     {
       "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
       "target": "../findings.md#b07-r1"
+    },
+    {
+      "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
+      "target": "../findings.md#b07-r3"
+    },
+    {
+      "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
+      "target": "../findings.md#b07-r4"
     },
     {
       "source": "subsystems/b07-embedded-research-surveys-and-platform-trials.md",
