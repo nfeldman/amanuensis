@@ -801,6 +801,15 @@ def main() -> int:
 
         check("a survey note cannot open a section on the page", note_cannot_open_a_section)
 
+        # §0.4: what the materializer emits follows this file (F20/claude, final).
+        def style_names_the_field() -> str | None:
+            style = read(ROOT.parent / ".claude" / "skills" / "amanuensis" / "references" / "reporting-style.md")
+            if "**Why it matters**" not in style:
+                return "reporting-style.md does not place Why it matters in the finding record"
+            return None
+
+        check("the reporting style places Why it matters in the finding record", style_names_the_field)
+
         def fallback_removed() -> str | None:
             page = subsystem_page(docs, "B-02")
             structure = section(page, "Structure")

@@ -794,9 +794,14 @@ def main() -> int:
                 return f"the empty fixture's census holds {sorted(emitted)}, not the six slots"
             step = re.search(r"^### 5\.[^\n]*\n(.*?)(?=^### 6\.)", read(PACKAGING), re.S | re.M)
             onboarding = next(
-                (part for part in read(ONBOARDING).split("\n\n") if "`unfilled_slots`" in part),
+                (part for part in read(ONBOARDING).split("\n") if "returns `unfilled_slots`" in part),
                 "",
             )
+            if onboarding:
+                # The bullet that says what the result holds, to its next bullet.
+                text = read(ONBOARDING)
+                start = text.index(onboarding)
+                onboarding = text[start:text.index("\n- ", start)]
             for name, text in (
                 ("phase-5-packaging.md step 5", step.group(1) if step else ""),
                 ("onboarding.md", onboarding),

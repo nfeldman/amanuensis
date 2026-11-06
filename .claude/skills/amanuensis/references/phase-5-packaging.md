@@ -108,9 +108,14 @@ Markdown views and reads both back. Treat the returned `html_entrypoint` as
 the primary human handoff; Markdown remains the portable audit companion.
 
 The result also carries `unfilled_slots`, a list of rows
-`{slot, page, subject, state, discharge}`, one for each slot a page prints as
-unrecorded: the project thesis, the runtime boundary map, and a subsystem's
-vocabulary. Read it before the session summary. For each row, either fill the
+`{slot, page, subject, state, discharge}`, one for each slot that applies and
+that nobody has recorded or declined. There are six: `thesis`,
+`runtime-boundary-map`, `subsystem-vocabulary`, `subsystem-purpose`,
+`subsystem-account` and `project-account`. Five print a sentence on the page
+saying so. `subsystem-account` prints none: the page simply has no
+`## How it works` section, so the row is the one place that says it is owed. The
+three explanation slots apply once a subsystem is at `structural` or later. Read
+the list before the session summary. For each row, either fill the
 slot now, by making the edit or the tool call its `discharge` names and then
 running `materialize_docs()` again, or report the row in the session summary
 with its slot, subject and `discharge`. An empty list means every slot is

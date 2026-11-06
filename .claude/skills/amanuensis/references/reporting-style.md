@@ -103,8 +103,8 @@ field as an equally prominent column.
 Current typed projections:
 
 - Findings are one anchored article each: a compact full-width identity header,
-  consequence-led observed behavior, then root cause in sequence. Do not use a
-  metadata rail: it makes subordinate facts consume a peer reading column.
+  consequence-led observed behavior, then **Why it matters** where the survey
+  recorded it, then root cause in sequence. Do not use a metadata rail: it makes subordinate facts consume a peer reading column.
   The consequence lede and the explanatory fields share the same reading
   measure; emphasis comes from type, not an arbitrarily narrower column. Within
   each severity group, group records under the subsystem's linked human name;
@@ -121,8 +121,9 @@ Current typed projections:
   The written label remains authoritative; color is a redundant signal. Render
   the severity group as one heading with a small color mark, never as a compact
   status tag attached to a separate display word.
-- File ledgers are ruled registers: filename and full path with review and
-  revision facts, beside the dominant `Why in scope` account.
+- File ledgers are lists of groups: the shared `Why in scope` account leads each
+  group with its classification, count and revision, and every path is its own
+  nested item, anchored once. A row with a reason of its own is a group of one.
 - The calibrated concern checklist is a grouped reading register. Carry
   category and territory once in a plain-language family heading, then give
   each concern a compact identity bar containing its code and primary

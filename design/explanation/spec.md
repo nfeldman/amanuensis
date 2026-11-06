@@ -703,9 +703,13 @@ packet mistakes them for its own regression, and no packet may make one worse:
 | P9 `dev/test-pecia-carry-audit.mjs` | red: `dev/pecia-dogfood.md` does not account for one Pecia record |
 | `dev/test-amanuensis-pecia-defects.mjs` | red: `--apply` fails |
 | `dev/test-activation-evidence.mjs` | red: the captured host evidence predates a change to `mcp-server/src/project.ts` |
+| P15 `mcp-server/test-consumer-route.mjs` | red: `WORKSPACE_INSTRUCTIONS` opens the server instructions with the `get_project_info` handshake, so `describe_locus` is no longer named first |
+| A25 `dev/check-activation-operating-envelope.mjs --receipt dev/activation-evidence/a25-activation-operating-envelope.json` | red: the receipt pins source digests that have since moved |
+| A26 `dev/check-friction-free-release-readiness.mjs --report dev/activation-evidence/a26-release-readiness.json` | red: the report pins source digests that have since moved |
 
-Restoring these needs the self-conspectus surveyed to `mapped`, a Pecia reconciliation and a
-host-evidence recapture. Those are separate decisions for the owner. The rebuild receipts under
+The last three were added by the final review (F7/claude) and confirmed red at `ee12bed`: the first
+measurement ran `dev/test-*.mjs`, and these three are outside that pattern. Restoring these needs the self-conspectus
+surveyed to `mapped`, a Pecia reconciliation and a host-evidence recapture. Those are separate decisions for the owner. The rebuild receipts under
 `design/reader-lenses/` are historical and this lane does not re-record them.
 
 ### 4.2 The republish chain is one command (EX7)

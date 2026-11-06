@@ -128,6 +128,9 @@ comes back in.
   has not been reconciled against the repository at"* the revision being
   claimed is the sentence; run `detect_changes(current_sha=<HEAD>)` and
   assign or exempt every unledgered path it reports.
+- To `mapped`, the purpose and the account must each be recorded or declined:
+  *"no purpose is recorded or declined"*, and *"no account is recorded or
+  declined"*. `references/explanations.md` describes both ways to answer.
 
 Two more bind outside the ladder. Every durable write *"requires an active
 session. Call start_session first."* — Phase 0 opened one. And a store that
@@ -201,9 +204,11 @@ will see the queue at the Phase 7 checkpoint.
 - Call `materialize_docs()` to render the navigable human docs. It returns an
   `html_entrypoint`; this self-contained HTML index is the primary human
   surface, with synchronized Markdown companions alongside it. It also
-  returns `unfilled_slots`: one row for each thesis, runtime boundary map or
-  subsystem vocabulary that nobody has recorded, with the file edit or tool
-  call that fills it. Fill the rows you can and report the others in the
+  returns `unfilled_slots`: one row for each slot that nobody has recorded,
+  with the file edit or tool call that fills it. The slots are `thesis`,
+  `runtime-boundary-map` and `subsystem-vocabulary` and, once a subsystem
+  reaches `structural`, `subsystem-purpose`, `subsystem-account` and
+  `project-account`. Fill the rows you can and report the others in the
   Phase 7 checkpoint summary; the render is published either way.
 - Call `end_session(outcome="completed")`.
 

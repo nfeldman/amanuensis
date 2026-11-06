@@ -423,6 +423,16 @@ def main() -> int:
 
         check("a row with no revision is not counted as a revision", missing_beside_a_revision)
 
+        # §0.4: what the materializer emits follows this file, so it has to say what is
+        # emitted (F20/claude, final).
+        def style_describes_the_ledger() -> str | None:
+            style = read(ROOT.parent / ".claude" / "skills" / "amanuensis" / "references" / "reporting-style.md")
+            if "File ledgers are lists of groups" not in style:
+                return "reporting-style.md does not describe the file ledger as a list of groups"
+            return None
+
+        check("the reporting style describes the ledger as it is emitted", style_describes_the_ledger)
+
         # -- 6. HTML: one li per path in a nested ul ----------------------------
         def html_nesting() -> str | None:
             if (why := published()):
