@@ -1127,14 +1127,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 180,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "eddb4e5546eee5d34b359fb708b0e978462d9f00",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "349410ad0435dcf5f7877da5eb2a60fefba057d7",
+      "green_sha": "68d20c3325a6205bd19138f95057673454127c16",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Purpose column sits after Status in the master plan; hover uses recorded_purposes (lint-clean only) and a lint-refused purpose prints the refusal sentence in the table and architecture lines. readback._flat now reads links as labels (a project account naming B-01 failed the read-back). EX6's census gate got explanation_* fixtures by addition; its older fixtures seed every explanation slot declined, and 'empty' records none and expects the extra rows."
     },
     {
       "id": "EX13",
