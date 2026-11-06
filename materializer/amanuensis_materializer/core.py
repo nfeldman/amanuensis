@@ -498,8 +498,8 @@ class Materializer:
             page
             for page in [
                 PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="", group="Overview", kind="overview"),
-                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
-                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
+                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
+                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
                 PagePlan("files.md", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", group="Codebase", kind="files"),
                 PagePlan("not-yet-surveyed.md", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", hint="The recorded edge of the map, each gap counted over the unit it occupies.", group="Codebase", kind="gaps"),
                 PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", group="Codebase", kind="seams"),
@@ -579,11 +579,16 @@ class Materializer:
         entries: dict[str, tuple[str, str, str]] = {}
 
         # Subsystems.
+        # A recorded purpose adds its first sentence to the name (§3.7), compacted
+        # as every other identifier is; without one the definition is the name.
+        purposes = renderers.recorded_purposes(conn, self.storage)
         for s in rows(conn, "SELECT id, name FROM subsystems"):
             entries[s["id"]] = (
                 s["id"],
                 subsystem_page(s["id"], s["name"]),
-                s["name"],
+                _compact_definition(s["name"], purposes.get(s["id"]))
+                if s["id"] in purposes
+                else s["name"],
             )
 
         subsystem_names = {

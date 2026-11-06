@@ -39,6 +39,7 @@ from .readback import (
     COVERAGE_ROW_CARRIED,
     COVERAGE_ROW_FILES_READ,
     COVERAGE_ROW_UNLEDGERED,
+    EXPLANATION_ELIGIBLE_STATUSES,
     FINDING_LENS_PAGES,
     LEDGER_STALE_SECTIONS,
     UNMEASURED,
@@ -176,6 +177,13 @@ PURPOSE_DECLINED = (
 )
 ACCOUNT_DECLINED = (
     f"A survey session {_DECLINED} to write an account of how this subsystem works"
+    " at `{sha}`. {reason}"
+)
+# §3.7: the project account sits on the architecture page, opening a section of its own.
+ARCHITECTURE_FIT_HEADING = "How the parts fit together"
+PROJECT_ACCOUNT_ABSENT = "No account of how the parts fit together is recorded."
+PROJECT_ACCOUNT_DECLINED = (
+    f"A survey session {_DECLINED} to write an account of how the parts fit together"
     " at `{sha}`. {reason}"
 )
 PROVENANCE_LINE = "*Written by a survey session at `{sha}` from {n} evidence row(s). {ageing}*"
@@ -782,6 +790,73 @@ def _db_source(name: str, data: Any) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Where an explanation is read beside the page that owns it (§3.7)
+# ---------------------------------------------------------------------------
+
+_UNRECORDED = ExplanationReading("not-recorded", None, False)
+
+
+def _reading(
+    readings: Mapping[tuple[str, str, str], ExplanationReading],
+    subject_type: str,
+    subject_id: str,
+    slot: str,
+) -> ExplanationReading:
+    """One slot's reading. The pages and the census both ask it, so they cannot disagree.
+
+    A subject with no row is absent from the mapping and reads `not-recorded`;
+    an ineligible subsystem already reads that way whatever rows it holds
+    (`effective_explanations`).
+    """
+
+    return readings.get((subject_type, subject_id, slot), _UNRECORDED)
+
+
+def _excerpt(
+    sid: str, reading: ExplanationReading, warn: Callable[[str], None] | None
+) -> str:
+    """A subsystem's purpose as one line, or the state's label (§3.7).
+
+    An excerpt carries no provenance line: the subsystem page whose `## Purpose`
+    section does is linked by the id beside it. A purpose the orientation lint
+    refuses is replaced by the refusal sentence, as on that page.
+    """
+
+    if reading.state == "recorded" and reading.row is not None:
+        text, _is_body = _published_explanation(sid, "purpose", str(reading.row["body"]), warn)
+        return _one_line(text)
+    return _DISCHARGE_LABELS.get(reading.state, reading.state)
+
+
+def recorded_purposes(conn: sqlite3.Connection, storage: Path) -> dict[str, str]:
+    """Each subsystem's recorded, lint-clean purpose, for a hover definition (§3.7).
+
+    A purpose the lint refuses is left out, so hover text falls back to the name
+    alone; the subsystem page reports the refusal.
+    """
+
+    out: dict[str, str] = {}
+    for (subject_type, sid, slot), reading in effective_explanations(conn, storage).items():
+        if subject_type != "subsystem" or slot != "purpose":
+            continue
+        if reading.state != "recorded" or reading.row is None:
+            continue
+        body = str(reading.row["body"])
+        if not orientation_violations(body):
+            out[sid] = body
+    return out
+
+
+def _checked_head(conn: sqlite3.Connection) -> str:
+    return str(
+        (row(conn, "SELECT last_checked_sha FROM git_state WHERE repo_id='default'") or {}).get(
+            "last_checked_sha"
+        )
+        or ""
+    )
+
+
+# ---------------------------------------------------------------------------
 # The honest empty state, and where a record that is not a finding lives
 # ---------------------------------------------------------------------------
 
@@ -1151,7 +1226,11 @@ def render_index(
     return text, sources
 
 
-def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+def render_architecture(
+    conn: sqlite3.Connection,
+    storage: Path,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult:
     xrefs = rows(conn, "SELECT * FROM xrefs ORDER BY from_id")
     subs = rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id")
     seams = rows(conn, "SELECT id, shared_object, party_a, party_b FROM seams ORDER BY id")
@@ -1160,9 +1239,43 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
     # dependency graph" — a page asserting edges no row records (§9.2). The
     # `xrefs` rows above stay for the manifest source hash only.
     dependency_heading, dependency_body = subsystem_dependency_view(conn)
+
+    # §3.7: the project account and a line per subsystem open the page. Read by
+    # the function the subsystem pages and the read-back read.
+    readings = effective_explanations(conn, storage)
+    account = _reading(readings, "project", "project", "account")
+    head = _checked_head(conn)
+    workspace = resolve_workspace(storage)
+    bound = workspace_is_bound(workspace)
+    fit = ["## " + ARCHITECTURE_FIT_HEADING, ""]
+    if account.state == "recorded" and account.row is not None:
+        text, is_body = _published_explanation(
+            "project", "account", str(account.row["body"]), warn
+        )
+        fit += [_nest_prose(text.strip(), 2), ""]
+        if is_body:
+            fit += [_provenance_line(workspace, bound, account.row, head), ""]
+    elif account.state == "declined" and account.row is not None:
+        text, _is_body = _published_explanation(
+            "project", "account", str(account.row["body"]), warn
+        )
+        fit += [
+            PROJECT_ACCOUNT_DECLINED.format(sha=str(account.row["ref_sha"])[:8], reason=text.strip()),
+            "",
+        ]
+    else:
+        fit += [PROJECT_ACCOUNT_ABSENT, ""]
+    for s in subs:
+        sid = str(s["id"])
+        excerpt = _excerpt(sid, _reading(readings, "subsystem", sid, "purpose"), warn)
+        fit.append(f"- **{sid} — {_one_line(s['name'])}**: {excerpt}")
+    fit.append("")
+    explanations = explanation_rows(conn)
+
     out = [
         "# Architecture",
         "",
+        *fit,
         "## Runtime boundary map",
         "",
         runtime_boundary_map(storage),
@@ -1183,6 +1296,7 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
         **_db_source("arch:xrefs", xrefs),
         **_db_source("arch:subs", subs),
         **_db_source("arch:seams", seams),
+        **_db_source("arch:explanations", {"head": head, "rows": explanations}),
         **_prose_source(storage, "onboarding-report.md"),
     }
     return "\n".join(out) + "\n", sources
@@ -1193,7 +1307,11 @@ def render_architecture(conn: sqlite3.Connection, storage: Path) -> RenderResult
 # ---------------------------------------------------------------------------
 
 
-def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
+def render_master_plan(
+    conn: sqlite3.Connection,
+    storage: Path,
+    warn: Callable[[str], None] | None = None,
+) -> RenderResult:
     # Attempt a priority-aware query; fall back to the legacy shape on a
     # pre-migration DB where the column doesn't exist yet.
     try:
@@ -1223,6 +1341,7 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         " FROM finding_state_current GROUP BY subsystem_id",
     )
     finds_by_ss = {f["subsystem_id"]: f for f in finds}
+    readings = effective_explanations(conn, storage)
 
     if not subs:
         body = ["_No subsystems registered yet. Run the Amanuensis coordinator to onboard._"]
@@ -1235,20 +1354,26 @@ def render_master_plan(conn: sqlite3.Connection, storage: Path) -> RenderResult:
         for layer, items in layers.items():
             body.append(f"## {layer}")
             body.append("")
-            body.append("| Priority | ID | Name | Status | Scope | Jump-in | Findings |")
-            body.append("|---|---|---|---|---|---|---|")
+            body.append("| Priority | ID | Name | Status | Purpose | Scope | Jump-in | Findings |")
+            body.append("|---|---|---|---|---|---|---|---|")
             for s in items:
                 f = finds_by_ss.get(s["id"], {"n": 0, "open_bugs": 0})
                 priority = "—" if s.get("priority") is None else str(s["priority"])
                 body.append(
                     f"| {priority} | **{s['id']}** | {s['name']} | {_badge(s['status'])} | "
+                    f"{_table_cell(_excerpt(str(s['id']), _reading(readings, 'subsystem', str(s['id']), 'purpose'), warn))} | "
                     f"{_table_cell(s['scope'] or '—')} | "
                     f"{_table_cell(s['jump_in_reading'] or '—')} | "
                     f"{f['n']} ({f.get('open_bugs', 0)} open) |"
                 )
             body.append("")
     text = "# Master plan\n\n" + "\n".join(body) + "\n"
-    return text, _db_source("master-plan:subs", subs) | _db_source("master-plan:finds", finds)
+    return (
+        text,
+        _db_source("master-plan:subs", subs)
+        | _db_source("master-plan:finds", finds)
+        | _db_source("master-plan:explanations", explanation_rows(conn)),
+    )
 
 
 def render_subsystem(
@@ -2666,6 +2791,7 @@ PLACEHOLDER_SENTENCES: tuple[str, ...] = (
     VOCABULARY_NOT_RECORDED,
     NO_PURPOSE_WITH_SCOPE,
     NO_PURPOSE_ALONE,
+    PROJECT_ACCOUNT_ABSENT,
 )
 
 _THESIS_HEADING = "## What is this codebase?"
@@ -2724,8 +2850,38 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
     declined = _declinations(conn)
     scoped_terms = _vocabulary_terms(conn)
     workspace = resolve_workspace(storage)
-    for sub in rows(conn, "SELECT id, name FROM subsystems ORDER BY id"):
+    readings = effective_explanations(conn, storage)
+    eligible_subsystems = 0
+    for sub in rows(conn, "SELECT id, name, status FROM subsystems ORDER BY id"):
         sid = str(sub["id"])
+        # The three explanation slots apply to a subsystem that can have one
+        # (§3.1); nothing may be recorded for the others, so nothing is unfilled.
+        # Their vocabulary row below is unaffected.
+        if str(sub["status"]) in EXPLANATION_ELIGIBLE_STATUSES:
+            eligible_subsystems += 1
+            for slot, discharge in (
+                (
+                    "purpose",
+                    f"call record_explanation for {sid} with slot purpose, or"
+                    f" decline_explanation for {sid} with the reason it has none",
+                ),
+                (
+                    "account",
+                    f"call record_explanation for {sid} with slot account, or"
+                    f" decline_explanation for {sid} with the reason it has none",
+                ),
+            ):
+                state = _reading(readings, "subsystem", sid, slot).state
+                if state == "not-recorded":
+                    census.append(
+                        {
+                            "slot": f"subsystem-{slot}",
+                            "page": subsystem_page(sid, str(sub["name"])),
+                            "subject": sid,
+                            "state": state,
+                            "discharge": discharge,
+                        }
+                    )
         vocabulary = _vocabulary_state(scoped_terms.get(sid, []), declined.get(sid, []), workspace)
         if vocabulary == "not-recorded":
             census.append(
@@ -2740,6 +2896,23 @@ def unfilled_slots(conn: sqlite3.Connection, storage: Path) -> list[dict[str, st
                     ),
                 }
             )
+    # The project account applies only when a subsystem can have an explanation.
+    if (
+        eligible_subsystems
+        and _reading(readings, "project", "project", "account").state == "not-recorded"
+    ):
+        census.append(
+            {
+                "slot": "project-account",
+                "page": "architecture.md",
+                "subject": "project",
+                "state": "not-recorded",
+                "discharge": (
+                    "call record_explanation with subject_type project and slot account, or"
+                    " decline_explanation with the reason there is none"
+                ),
+            }
+        )
     return census
 
 

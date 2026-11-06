@@ -421,10 +421,13 @@ def _flat(text: str) -> str:
     """Whitespace-collapsed text with heading marks removed, for presence checks.
 
     An account is nested beneath the page's own headings, so its `#` marks move
-    while its words do not; presence is a question about the words.
+    while its words do not; presence is a question about the words. The
+    publication also links every subsystem id an account names, so a link is
+    read as its label on both sides of the comparison.
     """
 
-    return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", text).split())
+    unlinked = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
 
 
 def set_digest(parts: list[str]) -> str:
@@ -1506,17 +1509,20 @@ class ProjectionVerifier:
         renderer reads, and the body is searched for on the subsystem's own page
         in the Markdown projection. A body the orientation lint refuses is not
         printed by design, so the page owes the refusal sentence in its place.
-        A project account is owed by the overview or the architecture page, which
-        a later packet adds to this census.
+        The project account is owed by the architecture page.
         """
 
         mismatches: list[dict[str, str]] = []
         names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
         readings = effective_explanations(conn, self.storage)
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
-            if subject_type != "subsystem" or reading.state != "recorded" or reading.row is None:
+            if reading.state != "recorded" or reading.row is None:
                 continue
-            page = subsystem_page(subject_id, names.get(subject_id, subject_id))
+            if subject_type == "subsystem":
+                page = subsystem_page(subject_id, names.get(subject_id, subject_id))
+            else:
+                # The project account is owed by the architecture page (§3.7).
+                page = "architecture.md"
             body = str(reading.row["body"])
             owed = explanation_refusal(slot) if orientation_violations(body) else body
             if _flat(owed) not in _flat(projection.get(page, "")):

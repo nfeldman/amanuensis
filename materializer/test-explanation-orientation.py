@@ -143,7 +143,8 @@ PURPOSE_B01 = f"{FIRST_SENTENCE_B01} SECOND-B-01 names the rows it never reads."
 ACCOUNT_B01 = "ACCOUNT-B-01 a read begins at the snapshot registry and walks the page index."
 REASON_B02 = "REASON-PURPOSE-B-02 the write path has no purpose beyond its caller."
 PURPOSE_B04 = "PURPOSE-B-04 the console prints status."
-ACCOUNT_PROJECT = "ACCOUNT-PROJECT the read path feeds the write path through one queue."
+ACCOUNT_PROJECT = "ACCOUNT-PROJECT B-01 feeds B-02 through one queue."
+ACCOUNT_TOKEN = "ACCOUNT-PROJECT"
 REASON_PROJECT = "REASON-PROJECT the system is too small for an account of its parts."
 
 # Each carries survey-status vocabulary the orientation lint refuses.
@@ -333,6 +334,12 @@ def read(path: Path) -> str:
         return ""
 
 
+def unlink(text: str) -> str:
+    """Markdown links resolved to their labels: the publication links every subsystem id."""
+
+    return re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+
+
 def section(text: str, heading: str, level: int = 2) -> str:
     """The body of one Markdown section, up to the next heading of its level or higher."""
 
@@ -427,7 +434,7 @@ def main() -> int:
             return stores[name][0] / "docs"
 
         def page(name: str, rel: str) -> str:
-            return read(docs_of(name) / rel)
+            return unlink(read(docs_of(name) / rel))
 
         def published(name: str = "good") -> str | None:
             if seed_error:
@@ -525,7 +532,7 @@ def main() -> int:
                 return "the project account is printed more than once"
             if NO_ACCOUNT in body:
                 return "the no-account sentence is printed beside a recorded account"
-            lines = [ln.lstrip("-* ").strip() for ln in body.splitlines()]
+            lines = [ln.strip().removeprefix("- ") for ln in body.splitlines()]
             for sid, name, rest in (
                 ("B-01", "Read path", PURPOSE_B01),
                 ("B-02", "Write path", LABEL_DECLINED),
@@ -548,7 +555,7 @@ def main() -> int:
         def architecture_states() -> str | None:
             if (why := published("declined")) or (why := published("none")) or (why := published("ineligible")):
                 return why
-            lines = lambda text: [ln.lstrip("-* ").strip() for ln in section(text, ARCH_HEADING).splitlines()]  # noqa: E731
+            lines = lambda text: [ln.strip().removeprefix("- ") for ln in section(text, ARCH_HEADING).splitlines()]  # noqa: E731
             declined = page("declined", "architecture.md")
             body = section(declined, ARCH_HEADING)
             declination = f"{ACCOUNT_DECLINED_STEM} `{shas['c1'][:8]}`. {REASON_PROJECT}"
@@ -601,12 +608,12 @@ def main() -> int:
                 )
                 if inplace.get("ok"):
                     return f"an in-place render with a violating {variant} stayed green"
-                arch = read(storage / "docs-inplace" / "architecture.md")
+                arch = unlink(read(storage / "docs-inplace" / "architecture.md"))
                 if REFUSAL.format(slot="account") not in section(arch, ARCH_HEADING):
                     return f"the architecture page does not carry the refusal sentence for the {variant}"
                 if bad in arch:
                     return f"the violating {variant} {bad!r} was printed"
-                master = read(storage / "docs-inplace" / "master-plan.md")
+                master = unlink(read(storage / "docs-inplace" / "master-plan.md"))
                 header, by_id = master_table(master)
                 if "Purpose" not in header:
                     return f"{RED_EXPECT}: the lint fixture's master plan has no Purpose column"
@@ -651,9 +658,9 @@ def main() -> int:
                 return f"the read-back is red on the unmodified publication — {control.get('mismatches')}"
             target = docs / "architecture.md"
             original = target.read_text()
-            if ACCOUNT_PROJECT not in original:
+            if ACCOUNT_TOKEN not in original:
                 return "the publication carries no project account to remove"
-            target.write_text(original.replace(ACCOUNT_PROJECT, ""))
+            target.write_text(original.replace(ACCOUNT_TOKEN, ""))
             try:
                 red = run_materializer(storage, "--readback-only", "--output", str(docs), workspace=repo)
             finally:

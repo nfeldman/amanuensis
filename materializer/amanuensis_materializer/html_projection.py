@@ -1580,11 +1580,11 @@ _RECORD_PROJECTIONS: dict[tuple[str, ...], RecordProjection] = {
     ("symbol", "role", "source"): RecordProjection(
         "structural-inventory", "symbol", ("source",), ("role",)
     ),
-    ("priority", "id", "name", "status", "scope", "jump-in", "findings"): RecordProjection(
+    ("priority", "id", "name", "status", "purpose", "scope", "jump-in", "findings"): RecordProjection(
         "subsystem",
         "name",
         ("id", "status", "findings", "priority"),
-        ("scope", "jump-in"),
+        ("purpose", "scope", "jump-in"),
     ),
     ("code", "category", "origin", "discovered in", "notes"): RecordProjection(
         "concern", "code", ("category", "origin", "discovered in"), ("notes",)

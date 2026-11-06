@@ -668,6 +668,9 @@ jobs:
       - name: Subsystem page leads with Purpose and How it works
         working-directory: materializer
         run: python3 test-explanation-pages.py
+      - name: Purposes and the project account elsewhere on the pages
+        working-directory: materializer
+        run: python3 test-explanation-orientation.py
       - name: File ledger groups rows that share a reason
         working-directory: materializer
         run: python3 test-ledger-grouping.py
