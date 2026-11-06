@@ -80,6 +80,7 @@ const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
  * `str.splitlines()`, so a heading behind any of these is a heading to the reader
  * and the shape checks have to see the same lines.
  */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: these separators are what the check is for
 const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
 
 /** A paragraph carries no blank line and no heading, list or table line. */
