@@ -1043,14 +1043,14 @@
       ],
       "needs_mcp": false,
       "budget_minutes": 210,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "e22270f0e9c995dfe940615d3b01c942350b7b66",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "801076e74d3166ccb7d52376443a097c75c5a77c",
+      "green_sha": "e6e1a106cf21cd9b48c0d0320e6b6e183f4c0596",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": ""
+      "notes": "Python selection function select_explanation and the shared reader effective_explanations live in readback.py (renderers and the state-axis census both call them); bound workspace = a git work tree, otherwise rows are unchecked and ageing is 'not measured'. Edited mcp-server/test-explanations.mjs T3 (EX9's gate) to be state-conditional because EX11 removes the allowlist entry it required; the node build/server code is untouched. The read-back census covers subsystem pages in Markdown only; the project account is owed by EX12."
     },
     {
       "id": "EX12",
