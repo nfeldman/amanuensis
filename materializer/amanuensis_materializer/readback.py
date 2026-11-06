@@ -422,12 +422,42 @@ def _flat(text: str) -> str:
 
     An account is nested beneath the page's own headings, so its `#` marks move
     while its words do not; presence is a question about the words. The
-    publication also links every subsystem id an account names, so a link is
-    read as its label on both sides of the comparison.
+    publication also links every subsystem id an account names and bolds the
+    page's own id, so a link is read as its label and bold marks are dropped on
+    both sides of the comparison.
     """
 
-    unlinked = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    unlinked = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text).replace("**", "")
     return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
+
+
+def _html_words(text: str) -> str:
+    """A generated HTML page's visible words, space-delimited, for presence checks.
+
+    Scripts and styles are not read, and a tag's attributes (a hover definition,
+    a link target) are not on the page in the sense a reader means.
+    """
+
+    visible = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
+    plain = unescape(re.sub(r"<[^>]+>", " ", visible))
+    return " " + " ".join(re.findall(r"[^\W_]+", plain)) + " "
+
+
+def _missing_html_line(owed: str, page_words: str) -> str | None:
+    """The first line of an explanation the HTML page does not carry, or None.
+
+    Compared by line and by word, since the projection turns Markdown marks
+    into elements: a list marker or an ordered item's number becomes structure
+    and a fence line opens a block, and neither is a word on the page.
+    """
+
+    for line in re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", owed).splitlines():
+        if re.match(r"\s*(```|~~~)", line):
+            continue
+        words = re.findall(r"[^\W_]+", re.sub(r"^\s*(\d+[.)]|[-*+>])\s+", "", line))
+        if words and " " + " ".join(words) + " " not in page_words:
+            return line
+    return None
 
 
 def set_digest(parts: list[str]) -> str:
@@ -1503,20 +1533,21 @@ class ProjectionVerifier:
     def _explanation_census(
         self, conn: Any, projection: dict[str, str]
     ) -> list[dict[str, str]]:
-        """Every effective recorded explanation is on the page that owes it (§3.6).
+        """Every effective explanation is on the page that owes it, in both views (§3.6).
 
         The effective row comes from `effective_explanations`, the function the
-        renderer reads, and the body is searched for on the subsystem's own page
-        in the Markdown projection. A body the orientation lint refuses is not
-        printed by design, so the page owes the refusal sentence in its place.
-        The project account is owed by the architecture page.
+        renderer reads, and the body or declination reason is searched for on the
+        subsystem's own page. A text the orientation lint refuses is not printed
+        by design, so the page owes the refusal sentence in its place. The project
+        account is owed by the architecture page. The Markdown and HTML views are
+        each checked: one healthy format cannot mask drift in its companion.
         """
 
         mismatches: list[dict[str, str]] = []
         names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
         readings = effective_explanations(conn, self.storage)
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
-            if reading.state != "recorded" or reading.row is None:
+            if reading.state not in {"recorded", "declined"} or reading.row is None:
                 continue
             if subject_type == "subsystem":
                 page = subsystem_page(subject_id, names.get(subject_id, subject_id))
@@ -1532,7 +1563,21 @@ class ProjectionVerifier:
                         "object_type": "explanation",
                         "object_id": f"{subject_id}:{slot}",
                         "detail": (
-                            f"the effective recorded {slot} (row {reading.row['id']}) is not on {page}"
+                            f"the effective {reading.state} {slot} (row {reading.row['id']}) is not on {page}"
+                        ),
+                    }
+                )
+            html_page = str(Path(page).with_suffix(".html"))
+            absent = _missing_html_line(owed, _html_words(projection.get(html_page, "")))
+            if absent is not None:
+                mismatches.append(
+                    {
+                        "axis": "state",
+                        "object_type": "explanation-html",
+                        "object_id": f"{subject_id}:{slot}",
+                        "detail": (
+                            f"the effective {reading.state} {slot} (row {reading.row['id']}) is not on"
+                            f" {html_page}: {absent.strip()[:80]!r}"
                         ),
                     }
                 )

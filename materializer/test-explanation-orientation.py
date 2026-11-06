@@ -357,6 +357,16 @@ def section(text: str, heading: str, level: int = 2) -> str:
     return "\n".join(body)
 
 
+def html_sections(text: str) -> dict[str, str]:
+    """An HTML page's H2 sections in the article, heading to collapsed visible text."""
+
+    visible = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
+    visible = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', " ", visible)
+    parts = re.split(r'(?is)<h2\b(?![^>]*nav-group-title)[^>]*>(.*?)</h2>', visible)
+    plain = lambda fragment: " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())  # noqa: E731
+    return {plain(parts[i]): plain(parts[i + 1]) for i in range(1, len(parts) - 1, 2)}
+
+
 def h2s(text: str) -> list[str]:
     return [ln[3:].strip() for ln in text.splitlines() if ln.startswith("## ")]
 
@@ -577,6 +587,31 @@ def main() -> int:
 
         check("a declined, absent or ineligible project account prints its sentence", architecture_states)
 
+        # The HTML view is what a reader opens, and the Markdown assertions cannot
+        # see it: stripping this section from the projection left this gate green
+        # (slice-S2, F2/codex).
+        def architecture_html() -> str | None:
+            if (why := published()) or (why := published("declined")) or (why := published("none")):
+                return why
+            good = html_sections(read(docs_of("good") / "architecture.html"))
+            if next(iter(good), None) != ARCH_HEADING:
+                return f"the HTML architecture page opens with {next(iter(good), None)!r}"
+            if ACCOUNT_PROJECT not in good[ARCH_HEADING]:
+                return "the project account is not under its heading on the HTML page"
+            if "Written by a survey session at" not in good[ARCH_HEADING]:
+                return "the project account carries no provenance line on the HTML page"
+            if "B-01 — Read path" not in good[ARCH_HEADING]:
+                return "the per-subsystem lines are not on the HTML page"
+            declined = html_sections(read(docs_of("declined") / "architecture.html"))
+            if REASON_PROJECT not in declined.get(ARCH_HEADING, ""):
+                return "a declined project account does not print its reason on the HTML page"
+            absent = html_sections(read(docs_of("none") / "architecture.html"))
+            if NO_ACCOUNT not in absent.get(ARCH_HEADING, ""):
+                return "an unrecorded project account does not print the no-account sentence on the HTML page"
+            return None
+
+        check("the HTML architecture page opens with the project account", architecture_html)
+
         # -- 4. the lint, the refusal sentence, and the clean publish ----------
         def lint_refusal() -> str | None:
             if seed_error:
@@ -682,6 +717,33 @@ def main() -> int:
             return None
 
         check("the read-back state axis fails when the project account is off its page", readback_red_case)
+
+        def readback_html_red_case() -> str | None:
+            if (why := published()):
+                return why
+            storage = stores["good"][0]
+            docs = docs_of("good")
+            target = docs / "architecture.html"
+            original = target.read_text()
+            if ACCOUNT_TOKEN not in original:
+                return "the HTML publication carries no project account to remove"
+            target.write_text(original.replace(ACCOUNT_TOKEN, ""))
+            try:
+                red = run_materializer(storage, "--readback-only", "--output", str(docs), workspace=repo)
+            finally:
+                target.write_text(original)
+            hits = [
+                m
+                for m in red.get("mismatches") or []
+                if m.get("axis") == "state"
+                and m.get("object_type") == "explanation-html"
+                and "project" in str(m.get("object_id"))
+            ]
+            if red.get("ok") or not hits:
+                return "the read-back did not name the project account missing from the HTML page"
+            return None
+
+        check("the read-back state axis fails when the project account is off its HTML page", readback_html_red_case)
 
         # -- 6. the census -----------------------------------------------------
         def census_rows(name: str) -> list[dict[str, object]] | str:

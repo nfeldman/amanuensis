@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import html
 import json
 import re
 import shutil
@@ -389,6 +390,16 @@ def section(text: str, heading: str, level: int = 2) -> str:
     return "\n".join(body)
 
 
+def html_sections(text: str) -> dict[str, str]:
+    """An HTML page's H2 sections in the article, heading to collapsed visible text."""
+
+    visible = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
+    visible = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', " ", visible)
+    parts = re.split(r'(?is)<h2\b(?![^>]*nav-group-title)[^>]*>(.*?)</h2>', visible)
+    plain = lambda fragment: " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())  # noqa: E731
+    return {plain(parts[i]): plain(parts[i + 1]) for i in range(1, len(parts) - 1, 2)}
+
+
 def h2s(text: str) -> list[str]:
     return [ln[3:].strip() for ln in text.splitlines() if ln.startswith("## ")]
 
@@ -525,6 +536,40 @@ def main() -> int:
             return None
 
         check("a recorded purpose leads the page, with its provenance", purpose_leads)
+
+        # The HTML view is what a reader opens, and the Markdown assertions cannot
+        # see it: stripping these sections from the projection left this gate green
+        # (slice-S2, F2/codex).
+        def html_view(sid: str) -> str:
+            found = sorted((docs_of("good") / "subsystems").glob(f"{sid.replace('-', '').lower()}-*.html"))
+            return read(found[0]) if found else ""
+
+        def html_page_leads() -> str | None:
+            if (why := published()):
+                return why
+            sections = html_sections(html_view("B-01"))
+            order = [h for h in sections if h in SECTION_ORDER]
+            if tuple(order) != SECTION_ORDER:
+                return f"the HTML page's sections run {order}, not {list(SECTION_ORDER)}"
+            if next(iter(sections)) != "Purpose":
+                return f"the HTML page's first section is {next(iter(sections))!r}"
+            if PURPOSE_B01 not in sections["Purpose"]:
+                return "the recorded purpose is not under Purpose on the HTML page"
+            for line in ACCOUNT_B01.splitlines():
+                words = line.removeprefix("- ").strip()
+                if words and words not in sections["How it works"]:
+                    return f"the account line {words!r} is not under How it works on the HTML page"
+            for heading in ("Purpose", "How it works"):
+                if "Written by a survey session at" not in sections[heading]:
+                    return f"{heading} carries no provenance line on the HTML page"
+            declined = html_sections(html_view("B-03"))
+            if REASON_PURPOSE_B03 not in declined.get("Purpose", ""):
+                return "a declined purpose does not print its reason on the HTML page"
+            if REASON_ACCOUNT_B03 not in " ".join(declined.values()):
+                return "a declined account does not print its reason on the HTML page"
+            return None
+
+        check("the HTML page leads with Purpose and How it works", html_page_leads)
 
         # -- 2. How it works ---------------------------------------------------
         def how_it_works() -> str | None:
@@ -808,6 +853,40 @@ def main() -> int:
             return None
 
         check("the read-back state axis fails when a recorded body is off its page", readback_red_case)
+
+        def readback_html_red_case() -> str | None:
+            if (why := published()):
+                return why
+            storage = stores["good"][0]
+            docs = docs_of("good")
+            for sid, stem, removed in (
+                ("B-01", "b01", PURPOSE_B01),
+                ("B-01", "b01", "the registry never blocks a writer"),
+                ("B-03", "b03", REASON_PURPOSE_B03),
+            ):
+                target = next(iter(sorted((docs / "subsystems").glob(f"{stem}-*.html"))), None)
+                if target is None:
+                    return f"the {sid} HTML page is absent"
+                original = target.read_text()
+                if removed not in original:
+                    return f"the {sid} HTML page does not carry {removed!r} to remove"
+                target.write_text(original.replace(removed, ""))
+                try:
+                    red = run_materializer(
+                        storage, "--readback-only", "--output", str(docs), workspace=repo
+                    )
+                finally:
+                    target.write_text(original)
+                hits = [
+                    m
+                    for m in red.get("mismatches") or []
+                    if m.get("axis") == "state" and m.get("object_type") == "explanation-html"
+                ]
+                if red.get("ok") or not hits:
+                    return f"the read-back did not name {removed!r} missing from the {sid} HTML page"
+            return None
+
+        check("the read-back state axis fails when an explanation is off its HTML page", readback_html_red_case)
 
         # -- 10. labels come from the contract ---------------------------------
         def labels_from_contract() -> str | None:
