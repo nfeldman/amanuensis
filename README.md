@@ -50,11 +50,17 @@ Those rules are enforced when records are written. A claim cannot outrun its evi
 partial work cannot masquerade as completion, and “fixed” cannot silently become
 “verified-fixed.”
 
+Explanations are held to a different standard. What a part is for and how it works is
+written by the model that read the code, bound to that revision and its evidence, and
+marked as ageing when the cited files change. No gate checks that an explanation is
+true: it orients a reader, while claims remain the home of individually checkable rules.
+
 ## See it work
 
 [Browse the conspectus Amanuensis built for itself](https://nfeldman.github.io/amanuensis/):
-a human-readable map of the architecture, evidence, findings, seams, contradictions, and
-open questions behind this repository.
+a human-readable map that opens each part of the architecture with what it is for and how
+it works, followed by the evidence, findings, seams, contradictions, and open questions
+behind this repository.
 
 ## Try the beta
 
@@ -81,6 +87,9 @@ see [Installation and operations](INSTALLATION.md).
 
 Once a conspectus exists, ask your agent:
 
+- **“What is this part for, and how does it work?”** Read the recorded purpose and
+  account of a subsystem or of the whole project, with the revision and evidence they
+  were written from.
 - **“What do we know about this file?”** Get the recorded account, its evidence and
   revision, and the limits of what has actually been surveyed.
 - **“What needs attention?”** Find unresolved work and stale knowledge; **“What was
@@ -88,8 +97,8 @@ Once a conspectus exists, ask your agent:
 - **“Refresh the conspectus.”** Reconcile it with the current repository, re-examine
   changed files, record affected claims, and republish the human-readable map.
 
-The MCP readers `describe_locus`, `get_attention`, and `get_history` expose these
-accounts without asking a model to invent a new interpretation. A refresh updates the
+The MCP readers `get_explanations`, `describe_locus`, `get_attention`, and `get_history`
+expose these accounts without asking a model to invent a new interpretation. A refresh updates the
 record through source examination; it does not make every subsystem fully surveyed.
 
 ## Beta means beta
