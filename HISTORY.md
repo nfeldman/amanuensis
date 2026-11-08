@@ -3,6 +3,16 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## [0.2.0-beta.5] - 2026-11-07
+
+- Record a purpose and an account for each subsystem and the project with
+  `record_explanation` and `decline_explanation`, read them with `get_explanations`,
+  and require both before a subsystem advances to `mapped`.
+- Lead subsystem pages with Purpose and How it works, render findings' business
+  context and subsystem notes, present claims as a register and group ledger rows.
+- Report unfilled explanation slots from `materialize_docs`.
+- Republish the self-conspectus with recorded explanations.
+
 ## [0.2.0-beta.4] - 2026-10-07
 
 - Pass the bound checkout to materialization and independent read-back, so a
