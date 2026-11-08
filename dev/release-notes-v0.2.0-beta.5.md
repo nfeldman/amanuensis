@@ -32,10 +32,13 @@ B-01 to B-05, B-07 and the project.
 
 ### Validation scope
 
-The repository's `tests` workflow passed at the release commit's parent. It now covers the product
+The repository's [`tests` workflow passed](https://github.com/nfeldman/amanuensis/actions/runs/42445717660) at the release commit. It now covers the product
 and its packaging only. Development receipt gates under `dev/` are outside it, and
 several are known red after that narrowing. The publish workflow verifies the packed
 artifact before it publishes.
+
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/42445718834), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/42446024424) against the registry version.
 
 Whether the recorded explanations are true and useful is not checked by any gate;
 they had one blind review each and the owner's reading. Product efficacy remains
