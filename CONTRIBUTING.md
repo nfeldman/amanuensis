@@ -50,8 +50,6 @@ node dev/render-roadmap.mjs --check     # roadmap structure and generated projec
 node dev/test-roadmap.mjs               # prove roadmap gates fail under sabotage
 node dev/check-living-conspectus.mjs    # verify the pinned self-survey and derived report
 node dev/test-living-conspectus.mjs     # prove every A0 gate red + clean-export read-back
-node dev/test-amanuensis-pecia-defects.mjs  # Amanuensis→Pecia defect projection red gates
-                                            # (needs the pecia CLI; see below)
 
 cd mcp-server
 
@@ -201,46 +199,23 @@ report identity. Retargeting the baseline requires a new fixture ID,
 revision/tree inventory, and report; do not edit the existing fixture to follow
 HEAD.
 
-## Confirmed defects reach the Pecia ledger
+## Recording follow-on work
 
-Amanuensis decides what is a defect and whether a repair is proven; Pecia
-schedules the work. [`dev/amanuensis-defects-to-pecia.mjs`](dev/amanuensis-defects-to-pecia.mjs)
-carries the first into the second without creating a second authority for one
-fact: a finding becomes a Pecia `defect` whose evidence is the foreign reference
-`amanuensis:<finding_id>`, resolved by
-[`dev/pecia-resolve-finding.mjs`](dev/pecia-resolve-finding.mjs) and declared in
-`.pecia/config.yaml`. The symptom and root cause travel as body prose so the
-record is schedulable; everything else — evidence rows, dispositions,
-contradictions, the resolution chain — stays in the conspectus and is declared
-absent in the record.
+Work that is agreed or proposed but not scheduled goes in
+[`BACKLOG.md`](BACKLOG.md): what to change, why, and how to tell it is done.
+Initiatives live in [`dev/roadmap.json`](dev/roadmap.json); a lane's own
+deferrals are recorded in its `design/<name>/decisions.md` and summarized in
+the backlog. A confirmed defect in the self-conspectus is recorded there as a
+finding; add a backlog line when it needs scheduling.
 
-```bash
-node dev/amanuensis-defects-to-pecia.mjs           # plan; writes nothing
-node dev/amanuensis-defects-to-pecia.mjs --apply   # reconcile through the pecia CLI
-```
-
-It is a reconciler, not an importer: re-running writes nothing, and a finding
-whose state moved appends one revision. Two mappings are load-bearing.
-`fixed-pending-verification` becomes `in-progress`, never `done` — both systems
-refuse to let "fixed" mean "verified", and the resolver licenses a closure only
-for `verified-fixed` or `ruled-out`. And because Pecia treats closure as final,
-a finding that returns after its defect closed gets a successor carrying
-`discovered_from` (E005), so a label resolves to its chain's tail exactly as
-[`dev/pecia-dogfood.md`](dev/pecia-dogfood.md) describes for the roadmap.
-
-The payoff is that `pecia audit` runs the resolver: reopen a finding in the
-conspectus and its closed defect is reported as an unresolvable reference. Run
-`pecia check` and `pecia audit` after applying. Freshly projected defects draw
-`untriaged` findings until they are triaged or declared — that pressure is
-intended.
-
-`dev/test-amanuensis-pecia-defects.mjs` proves the seven controls on a synthetic
-fixture. It drives the real `pecia` CLI and **exits 2 rather than passing** when
-that CLI is absent, because a gate that quietly goes green without its subject is
-the failure mode this repository keeps finding. Pecia is a `uv` PEP-723 script in
-a separate private repository, so this gate is local-only until CI is given a way
-to obtain it — see the commented job in
-[`.github/workflows/test.yml`](.github/workflows/test.yml).
+From 3 to 22 September 2026 confirmed findings were also projected into a Pecia
+ledger (`.pecia/`) by `dev/amanuensis-defects-to-pecia.mjs`, resolved back by
+`dev/pecia-resolve-finding.mjs`. That was an experiment and has stopped: nothing
+has been written to the ledger since, its CI job was removed on 2026-11-06, and
+the current Pecia CLI rejects the ledger's pre-hash-chain log (`E013`). Its open
+defects are copied into the backlog. The scripts and
+`dev/test-amanuensis-pecia-defects.mjs` remain for the record; do not add to the
+ledger.
 
 ## Auto-generated tool inventory
 
@@ -405,6 +380,80 @@ in agent prose:
   source. Extend
   `test-historical-evaluation.mjs` whenever manifest custody, export, leakage,
   witness, scoring, timeout, or receipt behavior changes.
+
+## How larger changes are made
+
+A change that reaches across tools, schema and pages is designed in this
+repository and built by a *lane*: an unattended loop of top-level `claude -p`
+and `codex exec` sessions, driven by a launcher that checks every packet's
+gate itself. reader-lenses (September 2026), survey-depth and explanation
+(November) were built this way. The launcher is host-side, outside this
+repository; each lane's was cloned from the one before, so start a new lane by
+copying the last one, not from scratch.
+
+**1. Design folder.** `design/<name>/` holds the design and its record.
+[`design/explanation/`](design/explanation/) is a complete example.
+
+- `README.md`: the problem, what was measured, and the proposal.
+- `spec.md`: the normative rules, with a table of any earlier spec sections it
+  supersedes.
+- `claims.md`: numbered claims the design rests on, each with its evidence, so
+  a reviewer can qualify or overturn one.
+- `rationale.md` and `decisions.md`: why, and the owner's rulings, numbered,
+  including what was deferred.
+- `plan.json`: the packets and slices, rendered to `plan.md`.
+- Receipts and measurements the gates assert over (`*-receipt.json`,
+  `*-measure.json`).
+- `reviews/`: blind review outputs. Keep them untracked while the lane runs;
+  a tracked review document turns the acceptance-receipt gate red after every
+  review. Copy them out at completion.
+
+**2. Packets with one gate each.** A packet in `plan.json` names one gate
+command. At a commit whose subject starts `red(<id>)` the gate must fail by
+printing `GATE <id> RED: <reason>`; at the packet's last commit it must pass.
+
+- `gate.red_expect`: a regex the red output must match.
+- `gate.red_rejects`: strings that mean the gate crashed instead of failing on
+  its assertion, such as `MODULE_NOT_FOUND` or `TypeError`.
+- `regression`: commands that must still pass at HEAD.
+- `depends_on`, `slice`, `budget_minutes`, and `needs_mcp` for a packet that
+  writes a store.
+- `model`: the implementer. The cheaper model (Sonnet) is the default;
+  packets with judgement in them or a wide fixture blast radius name `opus`.
+
+**3. Design review before any code.** Two reviewers from different labs (Codex
+and Claude) read the claims and plan blind, each on a snapshot without the
+other's output or the repository history. Check every finding against the code
+before applying it, and record what changed in `decisions.md`.
+
+**4. Implementation.** One session per packet, in a worktree on the lane's
+branch. When the session marks a packet done, the launcher checks the red
+commit itself: it descends from the packet's start and is on HEAD, the gate
+fails there with the marker and matches `red_expect` but none of `red_rejects`,
+the gate passes at HEAD, and every regression passes. A packet that fails
+verification goes back to ready with the reason, and its second attempt runs on
+the stronger model.
+
+**5. Review per slice, then of the whole branch.** When every packet in a slice
+is verified, Codex reviews the slice's diff blind and a fix session applies the
+findings, each with its own `red(fix-…)` commit. Both reviewers read the whole
+branch before completion.
+
+**6. Completion and merge.** The launcher reruns the completion list from
+`plan.json`. A lane never pushes or merges, and its guard hook refuses the
+commands that would; the primary checkout stays on `main` and is only read. The
+owner merges; if the lane wrote to its own copy of the store, that copy then
+replaces the primary's.
+
+What a gate cannot check is whether recorded prose is true. A lane that writes
+explanations relies on its slice reviews for that, and one blind read misses a
+large share of false sentences; the backlog proposes a cross-lab blind read
+after every explanation pass and after each correction.
+
+One-off operational work, such as refreshing a downstream repository's
+conspectus, does not need a lane. It runs as plain top-level sessions from a
+written plan, and its results are checked against the store and by blind reads
+rather than by gates.
 
 ## Commits
 
