@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import signal
 import sys
 import tempfile
 import uuid
@@ -56,7 +57,20 @@ def unmanaged_output_files(output: Path) -> list[str]:
     )
 
 
+class Terminated(Exception):
+    """SIGTERM, raised where the render is, so the clean publish's handler runs."""
+
+
+def _raise_terminated(signum: int, frame: object) -> None:
+    raise Terminated(f"terminated by signal {signum}")
+
+
 def main() -> int:
+    # The server stops an overrunning render with SIGTERM. Python's default
+    # action would exit at once, and a clean publish stopped between renaming the
+    # old output away and the new one in would leave no published directory.
+    # As an exception it reaches the handler below, which puts the old one back.
+    signal.signal(signal.SIGTERM, _raise_terminated)
     parser = argparse.ArgumentParser(description="Render Amanuensis docs from memory.db + prose.")
     parser.add_argument(
         "--storage",

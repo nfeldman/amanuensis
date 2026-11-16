@@ -67,6 +67,12 @@ function runGit(cwd: string, args: string[], input?: string): SpawnSyncReturns<s
     },
     // Don't let git do anything interactive; fail fast.
     stdio: ["pipe", "pipe", "pipe"],
+    // These calls write the store's index. SIGTERM, not the wrapper's SIGKILL,
+    // because git removes its index.lock on SIGTERM; a killed `git add` would
+    // leave the lock and refuse every later storage commit. The bound is longer
+    // than the default, since a large store's add is slow but not hung.
+    timeout: 600_000,
+    killSignal: "SIGTERM",
   });
 }
 

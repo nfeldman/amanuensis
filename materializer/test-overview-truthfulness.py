@@ -778,9 +778,17 @@ def main() -> int:
             "The command exits with codes 0/1/3 for clean, failed and refused runs.",
             "Rows are paged at `20/40` per request.",
             "The width doubles each time, a 2/1 growth ratio.",
+            "The command exits with codes 0/  1/3, spaced as the usage text has them.",
         ):
             if flagged(text):
                 return f"a slash between values that are not a count was flagged: {text!r}"
+        # Past 4300 digits Python refuses int(); the lint must report, not crash.
+        try:
+            huge = flagged("1/" + "9" * 4301) or []
+        except ValueError as exc:
+            return f"a very long fraction crashed the lint: {exc}"
+        if not huge:
+            return "a very long count fraction passed the lint"
         return None
 
     check("orientation lint rejects count fractions", fraction_arm)

@@ -76,7 +76,9 @@ Substrate, smallest first:
    clear appends a row to `staleness_clears` (append-only) with an evidence row citing the file
    or a one-line reason, what it discharged, and the commit, now resolved: the old handler
    stored `ref_sha: "HEAD"` literally in the ledger. No tool reads the table yet; it is
-   queryable in the store.
+   queryable in the store. Not covered (found by review): `update_file_classification` or
+   `add_files_to_scope` with a newer `ref_sha`, followed by `detect_changes`, also clears a stale
+   row without a `staleness_clears` row, and so does a genuine content revert.
 7. **Other prose ages too.** Subsystem scope, start-here and survey notes are unbound text that
    never shows as ageing; a scope field carried a file's line count three months after the file
    tripled. Bind them to the revision written at and mark them ageing like explanations, and lint

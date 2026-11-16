@@ -49,7 +49,20 @@ _COPULA = r"(?:is|are|was|were|remains?)"
 # lookarounds keep it to exactly two numbers, so `0/1/3` is not read as `0/1`;
 # `orientation_violations` then requires the part to be no larger than the
 # whole.
-_FRACTION = re.compile(r"(?<![\w/])(?<!/\s)(\d+)\s*/\s*(\d+)(?!\s*/|\w)")
+_FRACTION = re.compile(r"(?<![\w/])(\d+)\s*/\s*(\d+)(?!\s*/|\w)")
+# A slash before the numerator, across any whitespace, makes it the tail of a
+# chain; the lookbehind above cannot span variable whitespace, so this checks it.
+_CHAIN_BEFORE = re.compile(r"/\s*$")
+
+
+def _not_larger(part: str, whole: str) -> bool:
+    """Whether the count `part` is at most `whole`, compared as digit strings.
+
+    Not int(): Python refuses to convert a digit string past 4300 characters,
+    and a lint must report, not crash, on whatever a thesis holds.
+    """
+    part, whole = part.lstrip("0") or "0", whole.lstrip("0") or "0"
+    return (len(part), part) <= (len(whole), whole)
 
 # Fenced blocks first, then code spans: quoting a forbidden term is how the
 # reader's guide and the enum tables talk about it at all.
@@ -158,7 +171,9 @@ def orientation_violations(text: str | None) -> list[str]:
                 )
             )
     for match in _FRACTION.finditer(masked):
-        if int(match.group(1)) > int(match.group(2)):
+        if _CHAIN_BEFORE.search(masked, 0, match.start()) or not _not_larger(
+            match.group(1), match.group(2)
+        ):
             continue
         found.append(
             (

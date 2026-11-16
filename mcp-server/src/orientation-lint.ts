@@ -35,13 +35,21 @@ export function orientationViolations(text: string): string[] | null {
       ].join("\n"),
       dirname(script),
     ],
-    { input: text, encoding: "utf8", timeout: 30_000 },
+    // SIGKILL: the lint holds no state, and an interpreter that ignored SIGTERM
+    // would keep the server blocked past the bound.
+    { input: text, encoding: "utf8", timeout: 30_000, killSignal: "SIGKILL" },
   );
   if (result.error || result.status !== 0) {
     const why = result.error?.message ?? (result.stderr.trim() || `exit ${result.status}`);
     console.error(`orientation lint not run at write time: ${why}`);
     return null;
   }
-  const parsed = JSON.parse(result.stdout) as unknown;
-  return Array.isArray(parsed) ? parsed.map(String) : null;
+  try {
+    const parsed = JSON.parse(result.stdout) as unknown;
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch {
+    /* reported below */
+  }
+  console.error("orientation lint not run at write time: its output was not a JSON list");
+  return null;
 }

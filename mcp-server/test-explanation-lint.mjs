@@ -13,12 +13,13 @@
 //   L4  a declination reason is linted too
 //   L5  refused writes leave no row
 //   L6  with no Python the write goes through; render still withholds the text
+//   L7  so does a lint whose output is not a JSON list
 //
 //   exit 0  `EXPLANATION LINT GREEN`
 //   exit 1  `EXPLANATION LINT RED: <first failure>`
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -149,6 +150,20 @@ check("L4 a declination reason is linted", () => {
 check("L5 refused writes left no row", () => {
   const n = rows();
   return n === 1 ? null : `expected the 1 accepted row, found ${n}`;
+});
+check("L7 a lint that prints something other than a JSON list lets the write through", () => {
+  const fake = join(ws, "garbled-python");
+  writeFileSync(fake, "#!/bin/sh\ncat >/dev/null\necho not-json\n");
+  chmodSync(fake, 0o755);
+  const saved = process.env.AMANUENSIS_PYTHON;
+  process.env.AMANUENSIS_PYTHON = fake;
+  try {
+    const said = refusal(() => record("purpose", "The parser reads one record at a time."));
+    return said && `refused: ${said}`;
+  } finally {
+    if (saved === undefined) delete process.env.AMANUENSIS_PYTHON;
+    else process.env.AMANUENSIS_PYTHON = saved;
+  }
 });
 check("L6 with no Python the write goes through", () => {
   const saved = process.env.AMANUENSIS_PYTHON;

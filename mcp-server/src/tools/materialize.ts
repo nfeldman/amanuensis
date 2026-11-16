@@ -242,7 +242,9 @@ function execute(
     ],
     // A render of a large store runs longer than a git call, so it gets its own
     // bound rather than the default; it still cannot hang the server for good.
-    { encoding: "utf8", timeout: 900_000, killSignal: "SIGKILL" },
+    // SIGTERM, not SIGKILL: materialize.py turns it into an exception, so a
+    // clean publish stopped between its two renames restores the prior output.
+    { encoding: "utf8", timeout: 900_000, killSignal: "SIGTERM" },
   );
   if (result.error)
     return { ok: false, error: `materializer failed to start: ${result.error.message}` };
