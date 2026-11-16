@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   ok,
   optBool,
@@ -12,6 +11,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import {
   CLAIM_EPISTEMIC_KINDS,
   CLAIM_SUBJECT_TYPES,

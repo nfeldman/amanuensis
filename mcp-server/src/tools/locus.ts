@@ -22,7 +22,7 @@
  *    are mutable rows with no validity interval and no event table, so they
  *    are served at their current value and say so (§3.3).
  */
-import { spawnSync } from "node:child_process";
+
 import type { DB } from "../db.js";
 import {
   citationTokensIn,
@@ -47,6 +47,7 @@ import {
   type SymbolStandingBlock,
   type UnknownEntry,
 } from "../standing.js";
+import { spawnSync } from "../subprocess.js";
 import { ATTENTION_LABELS, EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
 
 /** §5.1: the output contract shipped at contracts/locus-account.schema.json. */

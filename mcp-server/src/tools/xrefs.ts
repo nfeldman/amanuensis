@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   CITATION_TOKEN_SOURCE,
   extractWorkspaceCitations,
@@ -8,6 +7,7 @@ import {
   type ServerContext,
   type ToolDefinition,
 } from "../helpers.js";
+import { spawnSync } from "../subprocess.js";
 import { XREF_RELATIONSHIPS, XREF_STRENGTHS } from "../vocabulary.js";
 
 /**

@@ -1,7 +1,6 @@
-import { spawnSync } from "node:child_process";
-
 import type { DB } from "./db.js";
 import type { ProjectContext } from "./project.js";
+import { spawnSync } from "./subprocess.js";
 
 // The obligation split and the SQL that expresses it are generated from the
 // `obligation_bearing` flag on each file_classification value in

@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { SqliteError } from "better-sqlite3";
 import {
   ok,
@@ -19,6 +18,7 @@ import {
   requireOverturnEvidence,
   requireSubsystemStatus,
 } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import {
   FINDING_RESOLUTION_STATES,
   FINDING_STATUSES,

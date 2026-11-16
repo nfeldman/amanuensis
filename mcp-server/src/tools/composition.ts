@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   optString,
@@ -10,6 +9,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 
 const ITEM_KINDS = ["artifact", "commit", "test", "review-result"] as const;
 const SCOPES = ["unit", "integral-head"] as const;

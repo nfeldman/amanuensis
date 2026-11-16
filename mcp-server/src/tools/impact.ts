@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   ok,
@@ -14,6 +13,7 @@ import {
   workspaceTreeHasPath,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 
 const DISCOVERY_MODES = ["explicit-only", "request-if-gap"] as const;
 type DiscoveryMode = (typeof DISCOVERY_MODES)[number];

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   requireEnum,
@@ -9,6 +8,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { execFileSync } from "../subprocess.js";
 import { artifactTools } from "./artifacts.js";
 import { claimTools } from "./claims.js";
 import { codebaseBriefTools } from "./codebase-brief.js";

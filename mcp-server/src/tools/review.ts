@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   optString,
@@ -11,6 +10,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 
 const CONTEXT_PROFILES = ["diff-scoped", "control-wide", "integral-head"] as const;
 const VALIDATION_ABLATIONS = ["task-constraints", "impacted-seams", "stale-claims"] as const;

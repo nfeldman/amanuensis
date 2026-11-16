@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import type { ServerContext, ToolDefinition } from "../helpers.js";
+import { spawnSync } from "../subprocess.js";
 
 interface Violation {
   domain: "finding" | "claim" | "contradiction" | "obligation";

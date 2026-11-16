@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   optString,
@@ -13,6 +12,7 @@ import {
   ToolError,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
+import { spawnSync } from "../subprocess.js";
 import { EVIDENCE_KINDS, SEVERITIES } from "../vocabulary.js";
 
 const ROLES = ["generator", "refuter", "verifier"] as const;

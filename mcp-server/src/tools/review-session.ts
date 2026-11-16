@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -14,6 +13,7 @@ import {
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 import { resolveStorageOutputPath } from "../project.js";
+import { spawnSync } from "../subprocess.js";
 
 const SECTIONS = [
   "situation",

@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +11,7 @@ import {
 } from "../helpers.js";
 import { requireCompleteReconciliation } from "../invariants.js";
 import { resolveStorageOutputPath } from "../project.js";
+import { spawnSync } from "../subprocess.js";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 
@@ -240,7 +240,9 @@ function execute(
       outputDir,
       ...extraArgs,
     ],
-    { encoding: "utf8" },
+    // A render of a large store runs longer than a git call, so it gets its own
+    // bound rather than the default; it still cannot hang the server for good.
+    { encoding: "utf8", timeout: 900_000, killSignal: "SIGKILL" },
   );
   if (result.error)
     return { ok: false, error: `materializer failed to start: ${result.error.message}` };

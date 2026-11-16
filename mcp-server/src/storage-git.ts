@@ -10,9 +10,10 @@
 // these operations degrade silently: init becomes a no-op, commit returns
 // { ok: false, reason }. Callers should surface that to the caller but
 // never crash the server.
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import type { SpawnSyncReturns } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { spawnSync } from "./subprocess.js";
 
 export interface GitResult {
   ok: boolean;

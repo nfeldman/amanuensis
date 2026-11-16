@@ -157,7 +157,7 @@ are the self-conspectus findings they came from.
 | Finding | Defect |
 |---|---|
 | B04-R1 | A default `describe_locus` call returns no items (see the first decision above) |
-| B02-R1, B02-2, B02-3, B04-R4 | A stalled `git` or `ps` subprocess can hang server startup or a tool call indefinitely |
+| ~~B02-R1, B02-2, B02-3, B04-R4~~ | ~~A stalled `git` or `ps` subprocess can hang server startup or a tool call indefinitely~~ Fixed on branch `server-fixes`, 2026-11-16: startup probes were already bounded; the 28 tool-time sites now go through `src/subprocess.ts` (120 s default, `AMANUENSIS_SUBPROCESS_TIMEOUT_MS`). Reproduced first: each tool waited out a stalled `git` |
 | B02-R2 | The gate certifying time-bounded activation probes passes with an unbounded probe |
 | B02-R4 | Under Codex Desktop the user-scoped registration starts the server with cwd `/` |
 | B02-R3, B05-2 | The server reported an older version than its package; at beta.5 `SERVER_VERSION` matches, so likely fixed |
@@ -177,7 +177,7 @@ are the self-conspectus findings they came from.
 | B05-R1 | A clean publish and the live site can be green while the overview shows a placeholder thesis |
 | B01-1 | A subsystem surveyed as documented reports zero claims |
 | B01-R1 | The phase references drift from the tools they describe, unchecked |
-| B07-1 | A research refresh can hang on a network fetch |
+| B07-1 | A research refresh can hang on a network fetch. Operator-run scripts under `scholiast/` (fetch, the shadcn CLI, a Python child), not the server; a stall hangs a terminal. Left as LOW, 2026-11-16 |
 | B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI |
 | B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild |
 | — | The regeneration gate asserts over a store the acceptance rebuild deleted; two of its failures may be genuine |

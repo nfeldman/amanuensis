@@ -14,10 +14,11 @@
  * here: whether a path has any owner at all, whether the owners agree, and
  * whether an examination revision is still reachable from HEAD.
  */
-import { spawnSync } from "node:child_process";
+
 import type { DB } from "./db.js";
 import { requireWorkspaceSourcePath, type ServerContext, ToolError } from "./helpers.js";
 import { STATUS_ORDER, statusRank } from "./invariants.js";
+import { spawnSync } from "./subprocess.js";
 import { type StaleReason, VOCABULARY } from "./vocabulary.js";
 
 export type LocusKind = "file" | "symbol" | "subsystem" | "term";

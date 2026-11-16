@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import type { ServerContext } from "../helpers.js";
 import {
   nowIso,
@@ -16,6 +15,7 @@ import {
 // disagree the first time either was edited, and the disagreement would present
 // as a store that reconciles and is never reconciled.
 import { ledgerDigest, listTrackedPaths, trackedPathDigest } from "../invariants.js";
+import { execFileSync } from "../subprocess.js";
 // The reconciliation's three outcomes are named by the enum source, not by a
 // literal beside each `markStale` call. Typing the writer's argument is what
 // makes the compiler refuse a value the source does not carry: `git-driftt`

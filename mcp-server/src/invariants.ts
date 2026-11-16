@@ -7,7 +7,7 @@
 // status determines what claims the agents are authorized to make about
 // it. Claims exceeding the authorized level must be rejected at the
 // write path.
-import { spawnSync } from "node:child_process";
+
 import { createHash } from "node:crypto";
 import { resolve as resolvePath } from "node:path";
 import SqliteDatabase from "better-sqlite3";
@@ -20,6 +20,7 @@ import {
   ToolError,
   workspaceIsBound,
 } from "./helpers.js";
+import { spawnSync } from "./subprocess.js";
 import {
   EXPLANATION_SLOTS,
   type ExplanationDischarge,

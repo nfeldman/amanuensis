@@ -203,6 +203,11 @@ jobs:
       - name: Derived staleness — ledger drift and scope reconciliation
         working-directory: mcp-server
         run: node test-derived-staleness.mjs
+      # A git that never returns must not hang a tool call: every tool-time
+      # subprocess runs through src/subprocess.ts with a time limit.
+      - name: Subprocess timeouts — a stalled git does not hang a tool call
+        working-directory: mcp-server
+        run: node test-subprocess-timeouts.mjs
       - name: Write-path fixes — evidence coordinates, upsert status, non-ASCII paths
         working-directory: mcp-server
         run: node test-write-path-fixes.mjs

@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   optBool,
@@ -16,6 +15,7 @@ import {
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 import { resolveStorageOutputPath } from "../project.js";
+import { spawnSync } from "../subprocess.js";
 import { impactTools } from "./impact.js";
 import { materializeTools } from "./materialize.js";
 import { resolutionTools } from "./resolution.js";
