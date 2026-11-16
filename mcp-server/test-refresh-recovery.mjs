@@ -33,19 +33,24 @@ function assertThrows(fn, text) {
   throw new Error(`expected throw containing ${JSON.stringify(text)}`);
 }
 
-function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
+function fixture(
+  label,
+  determinismMode = "seeded",
+  changeTrackedFile = true,
+  corePath = "src/core.ts",
+) {
   const root = mkdtempSync(join(tmpdir(), `amanuensis-refresh-${label}-`));
   const workspace = join(root, "workspace");
   mkdirSync(workspace);
   mkdirSync(join(workspace, "src"));
   execFileSync("git", ["init", "-q"], { cwd: workspace });
+  // Pinned: with quotePath on, git prints a non-ASCII path quoted unless -z is given.
+  execFileSync("git", ["config", "core.quotePath", "true"], { cwd: workspace });
   function commit(value, filePath) {
     const absolute = join(workspace, filePath);
     mkdirSync(dirname(absolute), { recursive: true });
     const content =
-      filePath === "src/core.ts"
-        ? `export const value = ${JSON.stringify(value)};\n`
-        : `${value}\n`;
+      filePath === corePath ? `export const value = ${JSON.stringify(value)};\n` : `${value}\n`;
     writeFileSync(absolute, content);
     execFileSync("git", ["add", filePath], { cwd: workspace });
     execFileSync(
@@ -88,7 +93,7 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
     );
     return execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspace, encoding: "utf8" }).trim();
   }
-  const coreSha = commit("before", "src/core.ts");
+  const coreSha = commit("before", corePath);
   // When the head commit must move something the ledger does not record, it
   // *removes* a path the ledger never mentioned rather than adding one. §3.3a
   // refuses to publish coverage over a tree carrying a path nobody assigned or
@@ -97,7 +102,7 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   // non-empty, leaves the A3 unowned-drift probe with nothing in the ledger to
   // find, and leaves HEAD's tree exactly the set the ledger covers.
   const baseSha = changeTrackedFile ? coreSha : commit("note", "docs/note.md");
-  const headSha = changeTrackedFile ? commit("after", "src/core.ts") : remove("docs/note.md");
+  const headSha = changeTrackedFile ? commit("after", corePath) : remove("docs/note.md");
   const project = resolveProject(workspace, {
     selectionSource: `test-refresh-${label}`,
     serverVersion: "test",
@@ -126,10 +131,10 @@ function fixture(label, determinismMode = "seeded", changeTrackedFile = true) {
   db.prepare(
     `INSERT INTO file_ledger
        (subsystem_id, file_path, why_in_scope, classification, ref_sha)
-     VALUES ('B-01', 'src/core.ts', 'fixture', 'examined', ?)`,
-  ).run(baseSha);
+     VALUES ('B-01', ?, 'fixture', 'examined', ?)`,
+  ).run(corePath, baseSha);
   const initialEvidence = call("add_evidence", {
-    file_path: "src/core.ts",
+    file_path: corePath,
     symbol: "value",
     line_range: "1-1",
     ref_sha: baseSha,
@@ -673,6 +678,29 @@ test("drift over scoped files with zero obligations halts instead of completing"
     assert(
       detail.scoped_files_drifted === 1 && detail.applied_invalidations === 0,
       `blocked stage did not record the denominators: ${stage.detail_json}`,
+    );
+  } finally {
+    fx.cleanup();
+  }
+});
+
+// The same halt for a file whose name is not ASCII. Read without -z, git
+// printed the name quoted ("src/c\305\223ur.ts"), it matched no ledger row, and
+// the refresh completed over drift it never owned.
+test("drift over a non-ASCII scoped file with zero obligations halts", () => {
+  const corePath = "src/cœur.ts";
+  const fx = fixture("a3-unowned-non-ascii", "seeded", true, corePath);
+  try {
+    fx.db.prepare("UPDATE subsystems SET status='mapped' WHERE id='B-01'").run();
+    fx.db.prepare("DELETE FROM claim_evidence").run();
+    fx.db.prepare("DELETE FROM claims").run();
+
+    fx.call("plan_refresh_run", fx.planArgs);
+    const result = fx.call("execute_refresh_run", { run_id: fx.runId });
+    assert(result.status === "blocked", `expected blocked, got ${result.status}`);
+    assert(
+      String(result.error).includes(corePath),
+      `halt did not name the unowned drifted file: ${result.error}`,
     );
   } finally {
     fx.cleanup();

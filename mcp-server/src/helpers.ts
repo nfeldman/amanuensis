@@ -422,11 +422,13 @@ const LINE_RANGE = /^\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*$/;
  *   accepted, since a row may cite a directory.
  * - Every span must satisfy `1 <= start <= end <= lines in the file`.
  * - An excerpt is compared with all whitespace removed, because writers reflow
- *   code onto one line. `...` or `…` marks an elision: each fragment between
- *   them must appear in the cited lines (in the whole file when no range is
- *   given). Nothing else is forgiven. HTML-escaped text (`&lt;`) or a
- *   paraphrase is refused, because a reader checking the row against the
- *   source would not find it.
+ *   code onto one line. It is accepted if it appears verbatim, so a spread
+ *   (`...args`) or a stub body (`...`) quotes itself. Otherwise `...` or `…`
+ *   marks an elision: the fragments between them must appear in order within
+ *   the cited lines (the whole file when no range is given). A match never
+ *   runs across the gap between two spans of a list like `3,5`. HTML-escaped
+ *   text (`&lt;`) or a paraphrase is refused, because a reader checking the
+ *   row against the source would not find it.
  *
  * The check runs on new writes only. Rows already in a store are not
  * re-validated here.
@@ -484,7 +486,7 @@ export function requireEvidenceCitation(
     );
   }
   const text = String(blob.stdout ?? "");
-  const lines = text.split("\n");
+  const lines = text === "" ? [] : text.split("\n");
   if (text.endsWith("\n")) lines.pop();
 
   if (spans !== null) {
@@ -500,16 +502,27 @@ export function requireEvidenceCitation(
 
   if (excerpt !== null) {
     const squash = (value: string) => value.replace(/\s+/g, "");
-    const fragments = excerpt.split(/\.\.\.|…/).filter((fragment) => squash(fragment).length > 0);
-    if (fragments.length === 0) {
+    if (squash(excerpt).length === 0) {
       throw new ToolError("excerpt quotes nothing; give source text or omit excerpt");
     }
-    const cited =
-      spans === null
-        ? text
-        : spans.map(([start, end]) => lines.slice(start - 1, end).join("\n")).join("\n");
-    const haystack = squash(cited);
-    const missing = fragments.find((fragment) => !haystack.includes(squash(fragment)));
+    // Spans are joined with NUL, which squash keeps, so no match crosses a gap.
+    const segments =
+      spans === null ? [text] : spans.map(([start, end]) => lines.slice(start - 1, end).join("\n"));
+    const haystack = segments.map(squash).join("\0");
+    let missing: string | undefined;
+    if (!haystack.includes(squash(excerpt))) {
+      const fragments = excerpt.split(/\.\.\.|…/).filter((fragment) => squash(fragment).length > 0);
+      if (fragments.length === 0) missing = excerpt;
+      let from = 0;
+      for (const fragment of fragments) {
+        const found = haystack.indexOf(squash(fragment), from);
+        if (found < 0) {
+          missing = fragment;
+          break;
+        }
+        from = found + squash(fragment).length;
+      }
+    }
     if (missing !== undefined) {
       const where = spans === null ? at : `lines ${lineRange} of ${at}`;
       const shown = missing.trim().replace(/\s+/g, " ");
@@ -517,7 +530,7 @@ export function requireEvidenceCitation(
         `excerpt does not appear in ${where}: ${JSON.stringify(
           shown.length > 80 ? `${shown.slice(0, 80)}…` : shown,
         )}. Quote the source as it is at that revision; whitespace is ignored and ` +
-          `"..." marks an elision`,
+          `"..." marks an elision, with fragments in source order`,
       );
     }
   }

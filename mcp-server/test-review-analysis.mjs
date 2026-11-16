@@ -618,6 +618,42 @@ test("independent passes stay blind and a false positive needs new verified disp
       }),
     "evidence source does not exist at ref_sha",
   );
+  // The land path checks a new row's citation as add_evidence does: the file
+  // exists, but the quoted text is not in it.
+  assertThrows(
+    () =>
+      call(fixture, "land_review_pass", {
+        run_id: runId,
+        pass_id: refuters[0].pass_id,
+        judgments: [
+          {
+            hypothesis_id: falseHypothesis.hypothesis_id,
+            verdict: "overturned",
+            rationale: "A misquoted source cannot disprove the claim.",
+            new_evidence_keys: ["misquoted-disproof"],
+          },
+          {
+            hypothesis_id: realHypothesis.hypothesis_id,
+            verdict: "upheld",
+            rationale: "The defect remains.",
+            evidence_ids: [fixture.serviceEvidence],
+          },
+        ],
+        new_evidence: [
+          {
+            local_key: "misquoted-disproof",
+            file_path: "src/consumer.ts",
+            ref_sha: fixture.head,
+            kind: "code-verified",
+            excerpt: "accepted = [2]",
+            note: "misquoted fixture evidence",
+          },
+        ],
+        actual_tokens: 1,
+        actual_cost_microusd: 0,
+      }),
+    "excerpt does not appear",
+  );
   call(fixture, "land_review_pass", {
     run_id: runId,
     pass_id: refuters[0].pass_id,

@@ -48,9 +48,12 @@ function git(cwd, ...args) {
   const result = spawnSync(
     "git",
     [
-      "-c", "user.email=fixes@localhost",
-      "-c", "user.name=write-path-fixes",
-      "-c", "commit.gpgsign=false",
+      "-c",
+      "user.email=fixes@localhost",
+      "-c",
+      "user.name=write-path-fixes",
+      "-c",
+      "commit.gpgsign=false",
       ...args,
     ],
     { cwd, encoding: "utf8" },
@@ -94,8 +97,12 @@ function world(label) {
       "",
       "export const answer = add(40, 2);",
       "",
+      "export const less = 1 < 2;",
+      "export const rest = (...args: number[]) => args;",
+      "",
     ].join("\n"),
   );
+  writeFileSync(join(ws, "empty.ts"), "");
   writeFileSync(join(ws, "café.ts"), "export const brew = 1;\n");
   writeFileSync(join(ws, "plain.ts"), "export const plain = 1;\n");
   writeFileSync(join(ws, "old-näme.ts"), "export const moved = 1;\nexport const kept = 2;\n");
@@ -118,7 +125,11 @@ function world(label) {
 {
   const { ctx, head } = world("evidence");
   const add = (extra) =>
-    call("add_evidence", { file_path: "unit.ts", ref_sha: head, kind: "code-verified", ...extra }, ctx);
+    call(
+      "add_evidence",
+      { file_path: "unit.ts", ref_sha: head, kind: "code-verified", ...extra },
+      ctx,
+    );
   const stored = (id) =>
     ctx.db.prepare("SELECT line_range, excerpt FROM evidence WHERE id = ?").get(id);
 
@@ -130,7 +141,8 @@ function world(label) {
     const said = refusal(() =>
       add({
         line_range: "1-2, 6",
-        excerpt: "export function add(a: number, b: number): number { ... export const answer = add(40, 2);",
+        excerpt:
+          "export function add(a: number, b: number): number { ... export const answer = add(40, 2);",
       }),
     );
     return said && `refused: ${said}`;
@@ -158,9 +170,12 @@ function world(label) {
     const said = refusal(() => add({ line_range: "1-3", excerpt: "export const answer" }));
     return said?.includes("excerpt does not appear") ? null : `got ${JSON.stringify(said)}`;
   });
-  check("C8 an HTML-escaped excerpt is refused", () => {
-    const said = refusal(() => add({ line_range: "1", excerpt: "add(a: number, b: number): number &lt;" }));
-    return said?.includes("excerpt does not appear") ? null : `got ${JSON.stringify(said)}`;
+  check("C8 an HTML-escaped excerpt is refused where the source has the character", () => {
+    // Line 8 really holds `1 < 2`, so this fails only if `&lt;` is not decoded.
+    const escaped = refusal(() => add({ line_range: "8", excerpt: "1 &lt; 2" }));
+    if (!escaped?.includes("excerpt does not appear")) return `escaped: ${JSON.stringify(escaped)}`;
+    const plain = refusal(() => add({ line_range: "8", excerpt: "1 < 2" }));
+    return plain && `the unescaped control was refused: ${plain}`;
   });
   check("C9 a range that is not a range is refused", () => {
     const said = refusal(() => add({ line_range: "n/a" }));
@@ -179,13 +194,43 @@ function world(label) {
     );
     return said?.includes("does not exist") ? null : `got ${JSON.stringify(said)}`;
   });
-  check("C12 an excerpt of only an elision is refused", () => {
-    const said = refusal(() => add({ line_range: "1", excerpt: " ... " }));
-    return said?.includes("quotes nothing") ? null : `got ${JSON.stringify(said)}`;
+  check("C12 a blank excerpt, or a bare elision the lines lack, is refused", () => {
+    const blank = refusal(() => add({ line_range: "1", excerpt: "  \n " }));
+    if (!blank?.includes("quotes nothing")) return `blank: ${JSON.stringify(blank)}`;
+    const bare = refusal(() => add({ line_range: "1", excerpt: " ... " }));
+    return bare?.includes("excerpt does not appear") ? null : `bare: ${JSON.stringify(bare)}`;
   });
-  check("C13 refused calls wrote no row", () => {
+  check("C14 elided fragments out of source order are refused", () => {
+    const said = refusal(() =>
+      add({ line_range: "1-3", excerpt: "return sum; ... const sum = a + b;" }),
+    );
+    return said?.includes("excerpt does not appear") ? null : `got ${JSON.stringify(said)}`;
+  });
+  check("C15 a match across the gap between two spans is refused", () => {
+    // Lines 2 and 6 joined would read `...a + b;export const answer...`; lines
+    // 3-5 sit between them, so no source text says that.
+    const said = refusal(() => add({ line_range: "2,6", excerpt: "a + b; export const answer" }));
+    return said?.includes("excerpt does not appear") ? null : `got ${JSON.stringify(said)}`;
+  });
+  check("C16 an excerpt quoting a literal ... is accepted", () => {
+    const stub = refusal(() => add({ line_range: "9", excerpt: "..." }));
+    if (stub) return `bare spread refused: ${stub}`;
+    const spread = refusal(() => add({ line_range: "9", excerpt: "(...args: number[]) => args" }));
+    return spread && `spread refused: ${spread}`;
+  });
+  check("C17 a range into an empty file is refused", () => {
+    const said = refusal(() =>
+      call(
+        "add_evidence",
+        { file_path: "empty.ts", ref_sha: head, kind: "code-verified", line_range: "1" },
+        ctx,
+      ),
+    );
+    return said?.includes("which has 0 line(s)") ? null : `got ${JSON.stringify(said)}`;
+  });
+  check("C18 refused calls wrote no row", () => {
     const { n } = ctx.db.prepare("SELECT COUNT(*) AS n FROM evidence").get();
-    return n === 4 ? null : `expected the 4 accepted rows, found ${n}`;
+    return n === 7 ? null : `expected the 7 accepted rows, found ${n}`;
   });
 }
 
@@ -199,7 +244,9 @@ function world(label) {
   ctx.db.prepare("UPDATE subsystems SET status = 'structural' WHERE id = 'S1'").run();
 
   check("U1 an update without status keeps the current status", () => {
-    const said = refusal(() => call("upsert_subsystem", { id: "S1", name: "One", scope: "second" }, ctx));
+    const said = refusal(() =>
+      call("upsert_subsystem", { id: "S1", name: "One", scope: "second" }, ctx),
+    );
     if (said) return `refused: ${said}`;
     const row = ctx.db.prepare("SELECT status, scope FROM subsystems WHERE id = 'S1'").get();
     if (row.status !== "structural") return `status became ${row.status}`;
@@ -249,7 +296,9 @@ function world(label) {
     named.has("café.ts") ? null : `changed files: ${JSON.stringify([...named])}`,
   );
   check("P2 detect_changes marks the non-ASCII rows stale", () => {
-    // café.ts drifted and old-näme.ts is gone; plain.ts drifted too.
+    // café.ts and plain.ts drifted; old-näme.ts is gone. Only café.ts depends on
+    // the -z fix: a vanished path is found by listTrackedPaths, which already
+    // read git with -z.
     const rows = ctx.db
       .prepare("SELECT file_path FROM file_ledger WHERE stale = 1 ORDER BY file_path")
       .all()
@@ -264,7 +313,9 @@ function world(label) {
   const impact = call("predict_change_impact", { base_sha: base, head_sha: head }, ctx);
   check("P4 predict_change_impact reads a non-ASCII modification unquoted", () => {
     const hit = impact.changed_files.find((c) => c.path_after === "café.ts");
-    return hit?.change_type === "modified" ? null : `changes: ${JSON.stringify(impact.changed_files)}`;
+    return hit?.change_type === "modified"
+      ? null
+      : `changes: ${JSON.stringify(impact.changed_files)}`;
   });
   check("P5 predict_change_impact pairs a non-ASCII rename", () => {
     const hit = impact.changed_files.find((c) => c.change_type === "renamed");
@@ -292,7 +343,9 @@ rmSync(scratch, { recursive: true, force: true });
 console.log(`  ran  ${checked} assertion(s)`);
 if (failures.length) {
   for (const failure of failures) console.log(`  FAIL ${failure}`);
-  console.log(`WRITE-PATH FIXES RED: ${failures.length} of ${checked} failed; first: ${failures[0]}`);
+  console.log(
+    `WRITE-PATH FIXES RED: ${failures.length} of ${checked} failed; first: ${failures[0]}`,
+  );
   process.exit(1);
 }
 console.log("WRITE-PATH FIXES GREEN");
