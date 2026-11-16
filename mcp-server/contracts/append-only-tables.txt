@@ -15,7 +15,7 @@
 # now leaves this row behind and turns T0 red; adding an append-only table
 # without adding its row here turns T0 red from the other side.
 #
-# 85 tables.
+# 86 tables.
 carried_finding_evidence carried_finding_evidence_is_immutable carried_finding_evidence_cannot_be_deleted
 carried_finding_outcomes carried_outcome_is_immutable carried_outcome_cannot_be_deleted
 carried_findings carried_finding_is_immutable carried_finding_cannot_be_deleted
