@@ -128,6 +128,11 @@ Workflow:
   was never marked stale, and change impact recorded `"caf\303\251.ts"`. `detect_changes`,
   the refresh drift check and `predict_change_impact` (a fourth site, not in the original
   report) now read `-z` output.
+- **`dev/check-living-conspectus.mjs` lists the fixture tree without `-z`.** Found by review,
+  2026-11-16. A non-ASCII manifest path would read as missing from the tree. The A0 fixture is
+  all ASCII, so nothing is wrong today. The fix is one flag, but the checker hashes its own
+  source: any edit needs a detector version bump and an explicit rebaseline of a frozen
+  measurement, which is the owner's call.
 - ~~**`upsert_subsystem` defaults `status` to `unmapped`.**~~ Fixed on branch `server-fixes`,
   2026-11-16: an omitted status keeps the current one on update.
 

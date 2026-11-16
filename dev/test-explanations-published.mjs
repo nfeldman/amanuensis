@@ -105,12 +105,14 @@ function committedJson(path) {
 }
 
 function committedPaths(directory) {
-  const run = spawnSync("git", ["ls-tree", "-r", "--name-only", "HEAD", "--", directory], {
+  // -z: without it git quotes a non-ASCII name, and a quoted `café.md"` fails
+  // the .md filter, so its page escaped the check.
+  const run = spawnSync("git", ["ls-tree", "-r", "--name-only", "-z", "HEAD", "--", directory], {
     cwd: REPO,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-  return run.status === 0 ? run.stdout.split("\n").filter(Boolean) : [];
+  return run.status === 0 ? run.stdout.split("\0").filter(Boolean) : [];
 }
 
 /** The status vocabulary and the declined word, from their one source. */
