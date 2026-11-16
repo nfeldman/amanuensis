@@ -15,6 +15,7 @@ import {
   readSubsystemStatus,
   requireActiveSession,
 } from "../invariants.js";
+import { orientationViolations } from "../orientation-lint.js";
 import { EXPLANATION_SLOTS, EXPLANATION_SUBJECTS } from "../vocabulary.js";
 
 /** Caps in UTF-8 bytes (design/explanation/spec.md §3.3). 4096 is the optional-section budget of the reader-lenses wire. */
@@ -56,6 +57,8 @@ const RECORD_REFUSALS = {
     "record_explanation refuses: a purpose is one paragraph, with no blank line and no line starting with '#', '-', '*' or '|'.",
   accountShape: () =>
     "record_explanation refuses: an account is prose and lists, with no line starting with '#' or '|'. A heading or a table would sit above the page's own structure.",
+  orientation: (slot: string, violations: string[]) =>
+    `record_explanation refuses: the ${slot} carries survey-status language or a count fraction, which the pages withhold: ${violations.join("; ")}. Say what the code does instead; the same lint runs again when the pages are rendered.`,
 } as const;
 
 const DECLINE_REFUSALS = {
@@ -71,6 +74,8 @@ const DECLINE_REFUSALS = {
     `decline_explanation refuses: a reason is limited to ${REASON_CAP} bytes. Say the reason in fewer; the cap counts UTF-8 bytes.`,
   reasonOneParagraph: () =>
     "decline_explanation refuses: a reason is one paragraph, with no blank line and no line starting with '#', '-', '*' or '|'.",
+  orientation: (violations: string[]) =>
+    `decline_explanation refuses: the reason carries survey-status language or a count fraction, which the pages withhold: ${violations.join("; ")}. Say why no explanation is written without them; the same lint runs again when the pages are rendered.`,
 } as const;
 
 type Tool = "record_explanation" | "decline_explanation";
@@ -198,7 +203,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "record_explanation",
     description:
-      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
+      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
     inputSchema: {
       type: "object",
       properties: {
@@ -223,6 +228,9 @@ export const explanationTools: ToolDefinition[] = [
       if (subject.slot === "account" && !isProseAndLists(body)) {
         throw new ToolError(RECORD_REFUSALS.accountShape());
       }
+      const violations = orientationViolations(body);
+      if (violations?.length)
+        throw new ToolError(RECORD_REFUSALS.orientation(subject.slot, violations));
 
       const supplied = args.evidence_ids;
       if (!Array.isArray(supplied) || !supplied.every((v) => Number.isInteger(v))) {
@@ -271,7 +279,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "decline_explanation",
     description:
-      "Declare that no explanation is written for a subsystem or project slot, with the reason: the other way to answer the obligation record_explanation carries. The reason is one paragraph of at most 400 UTF-8 bytes, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject conditions as record_explanation. It is accepted whether or not an explanation is already recorded: the newest row is the effective one. The record is append-only. Returns a receipt and does not echo the reason.",
+      "Declare that no explanation is written for a subsystem or project slot, with the reason: the other way to answer the obligation record_explanation carries. The reason is one paragraph of at most 400 UTF-8 bytes, refused if the pages' orientation lint would withhold it, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject conditions as record_explanation. It is accepted whether or not an explanation is already recorded: the newest row is the effective one. The record is append-only. Returns a receipt and does not echo the reason.",
     inputSchema: {
       type: "object",
       properties: {
@@ -289,6 +297,8 @@ export const explanationTools: ToolDefinition[] = [
       if (reason.trim() === "") throw new ToolError("missing required string: reason");
       if (byteLength(reason) > REASON_CAP) throw new ToolError(DECLINE_REFUSALS.reasonTooLong());
       if (!isOneParagraph(reason)) throw new ToolError(DECLINE_REFUSALS.reasonOneParagraph());
+      const violations = orientationViolations(reason);
+      if (violations?.length) throw new ToolError(DECLINE_REFUSALS.orientation(violations));
 
       const refSha = resolve();
       const result = ctx.db

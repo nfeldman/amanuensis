@@ -19,8 +19,10 @@ rule is about survey-status assertions, so the match is shaped like one:
    subject is the project, the codebase, the conspectus, the survey, the
    documentation, or a subsystem id — which catches *the conspectus is fully
    surveyed* while leaving *a stale cache* alone;
-3. a count fraction is a violation unconditionally: a fraction in orientation
-   prose is always a number that will go out of date.
+3. a count fraction is a violation wherever it stands outside a code span: a
+   part over its whole will go out of date. A slash between values that are not
+   a part and its whole is not one: a chain such as *exit codes 0/1/3* lists
+   alternatives, and *a 2/1 ratio* has a numerator larger than its denominator.
 
 The terms come from `conspectus-vocabulary.json` through the generated
 `vocabulary` module, so the lint and the reader's guide cannot disagree about
@@ -43,8 +45,11 @@ _SUBJECT = (
 )
 _COPULA = r"(?:is|are|was|were|remains?)"
 
-# A fraction is two counts with a slash between them; both will move.
-_FRACTION = re.compile(r"\b\d+\s*/\s*\d+\b")
+# A fraction is two counts with a slash between them; both will move. The
+# lookarounds keep it to exactly two numbers, so `0/1/3` is not read as `0/1`;
+# `orientation_violations` then requires the part to be no larger than the
+# whole.
+_FRACTION = re.compile(r"(?<![\w/])(?<!/\s)(\d+)\s*/\s*(\d+)(?!\s*/|\w)")
 
 # Fenced blocks first, then code spans: quoting a forbidden term is how the
 # reader's guide and the enum tables talk about it at all.
@@ -152,7 +157,9 @@ def orientation_violations(text: str | None) -> list[str]:
                     f'{_excerpt(text, match.start(), match.end())}"',
                 )
             )
-    for match in _FRACTION.finditer(text):
+    for match in _FRACTION.finditer(masked):
+        if int(match.group(1)) > int(match.group(2)):
+            continue
         found.append(
             (
                 match.start(),

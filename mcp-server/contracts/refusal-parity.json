@@ -352,6 +352,16 @@
       ]
     },
     {
+      "id": "explanation-record-orientation",
+      "note": "New 2026-11-16 (BACKLOG explanation quality item 2): the materializer's orientation lint, run at write time. The same phrase stands in decline_explanation's refusal, registered below.",
+      "refuses": ["record_explanation"],
+      "instructs": [],
+      "server": { "file": "src/tools/explanations.ts", "phrase": "carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
       "id": "explanation-decline-no-subsystem",
       "note": "New, spec.md §3.3: the conditions of R1-R4 with their own stems.",
       "refuses": ["decline_explanation"],
@@ -407,6 +417,16 @@
       "refuses": ["decline_explanation"],
       "instructs": [],
       "server": { "file": "src/tools/explanations.ts", "phrase": "decline_explanation refuses: a reason is one paragraph" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "explanation-decline-orientation",
+      "note": "New 2026-11-16: the orientation lint on a declination reason.",
+      "refuses": ["decline_explanation"],
+      "instructs": [],
+      "server": { "file": "src/tools/explanations.ts", "phrase": "carries survey-status language or a count fraction" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]

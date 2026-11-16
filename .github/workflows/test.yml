@@ -173,6 +173,12 @@ jobs:
       - name: Explanation record — the two writers, the effective row, the byte caps
         working-directory: mcp-server
         run: node test-explanations.mjs
+      # The orientation lint at write time (BACKLOG explanation quality item 2):
+      # both writers refuse text the pages would withhold. Needs python3 and the
+      # materializer, as the projection gates do.
+      - name: Explanation lint — the orientation lint runs when an explanation is recorded
+        working-directory: mcp-server
+        run: node test-explanation-lint.mjs
       # GATE EX15 (design/explanation/spec.md §3.1 Reset, §3.3). Seeds fixtures
       # through the built handlers and reads them back through the built server
       # over stdio; it digests the store around the reads.

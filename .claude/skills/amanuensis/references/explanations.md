@@ -88,6 +88,7 @@ It refuses, each time with the sentence to repair:
 - `record_explanation refuses: <slot> is limited to <n> bytes` — a purpose is over 400 bytes, or an account over 4096. The cap counts UTF-8 bytes.
 - `record_explanation refuses: a purpose is one paragraph` — the purpose has a blank line or a line starting with `#`, `-`, `*` or `|`.
 - `record_explanation refuses: an account is prose and lists` — the account has a line starting with `#` or `|`.
+- `record_explanation refuses: the <slot> carries survey-status language or a count fraction` — the pages' orientation lint would withhold it: a sentence saying the conspectus, the survey or a subsystem is surveyed, mapped, current and the like, or a part over its whole such as `12/35`. A slash list such as exit codes `0/1/3` is not a count. The lint runs again at render. If the server cannot start Python, the write goes through and only the render checks.
 
 ### `decline_explanation`
 
@@ -104,6 +105,7 @@ It applies the subject conditions of `record_explanation` with its own sentences
 - `decline_explanation refuses: the project's purpose is the thesis in entry-point.md` — only the account is declined for the project.
 - `decline_explanation refuses: a reason is limited to 400 bytes` — the reason is too long.
 - `decline_explanation refuses: a reason is one paragraph` — the reason has a blank line or a line starting with `#`, `-`, `*` or `|`.
+- `decline_explanation refuses: the reason carries survey-status language or a count fraction` — the same lint as for a recorded explanation.
 
 ### `get_explanations`
 

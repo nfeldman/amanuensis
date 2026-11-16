@@ -53,11 +53,12 @@ Substrate, smallest first:
    self-conspectus still did not appear at their cited lines. Some are coordinate errors (one is
    off by a line), some HTML-escaped (`&lt;`), some paraphrase. A store audit for the existing rows
    is not scheduled.
-2. **Run the orientation lint when an explanation is recorded,** not only at render, and narrow
-   the count-fraction rule (`lint.py`, `_FRACTION`), which flags any `\d+/\d+`. It withheld an
-   account for "exit codes 0/1/3", and the author learned of it only when publishing failed. Done
-   when that sentence is accepted and "12/35 subsystems are mapped" is refused at write time and
-   at render.
+2. ~~**Run the orientation lint when an explanation is recorded.**~~ Done on branch
+   `server-fixes`, 2026-11-16. `record_explanation` and `decline_explanation` call the
+   materializer's own lint (one copy of the rules), and refuse what the pages would withhold.
+   With no Python the write goes through and only render checks. `_FRACTION` now skips code
+   spans, slash chains (`0/1/3`) and a numerator larger than its denominator; "12/35 subsystems
+   are mapped" is still refused, and so is a date such as `11/16`.
 3. **Universal and absence claims cite a recorded search.** A new evidence kind records the
    query (an `rg` or `ast-grep` pattern and path globs), the revision, the result count and a
    hash of the result set. Read-back re-runs it. `record_explanation` refuses a sweeping sentence

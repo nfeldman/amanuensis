@@ -15,7 +15,7 @@ import { resolveStorageOutputPath } from "../project.js";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 
-function findMaterializer(): string | null {
+export function findMaterializer(): string | null {
   const envOverride = process.env.AMANUENSIS_MATERIALIZER;
   if (envOverride && existsSync(envOverride)) return envOverride;
   const candidates = [

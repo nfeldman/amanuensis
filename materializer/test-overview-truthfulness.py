@@ -770,6 +770,17 @@ def main() -> int:
                 return f"a count fraction passed the lint: {text!r}"
         if flagged("The read path holds a single reference to each segment."):
             return "a sentence with no fraction and no status term was flagged"
+        if not (flagged("12/35 subsystems are mapped.") or []):
+            return "a survey count fraction passed the lint"
+        # A slash between values that are not a part and its whole is not a
+        # count. The first sentence withheld a real account (BACKLOG item 2).
+        for text in (
+            "The command exits with codes 0/1/3 for clean, failed and refused runs.",
+            "Rows are paged at `20/40` per request.",
+            "The width doubles each time, a 2/1 growth ratio.",
+        ):
+            if flagged(text):
+                return f"a slash between values that are not a count was flagged: {text!r}"
         return None
 
     check("orientation lint rejects count fractions", fraction_arm)
