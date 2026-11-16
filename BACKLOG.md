@@ -72,8 +72,11 @@ Substrate, smallest first:
    `materialize_docs` census show "reviewed at `<sha>` by `<lineage>`, n findings" or "not
    independently reviewed". Consider printing a residual-error estimate from two independent
    reads instead of a bare "reviewed".
-6. **`clear_staleness` records its basis:** an evidence id or a one-line reason. Today a clear
-   can be audited only from session transcripts.
+6. ~~**`clear_staleness` records its basis.**~~ Done on branch `server-fixes`, 2026-11-16: each
+   clear appends a row to `staleness_clears` (append-only) with an evidence row citing the file
+   or a one-line reason, what it discharged, and the commit, now resolved: the old handler
+   stored `ref_sha: "HEAD"` literally in the ledger. No tool reads the table yet; it is
+   queryable in the store.
 7. **Other prose ages too.** Subsystem scope, start-here and survey notes are unbound text that
    never shows as ageing; a scope field carried a file's line count three months after the file
    tripled. Bind them to the revision written at and mark them ageing like explanations, and lint

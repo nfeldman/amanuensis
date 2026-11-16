@@ -7,6 +7,8 @@
 //      appears in the cited lines (whitespace ignored, "..." an elision).
 //   U  upsert_subsystem with no status keeps the row's current status, so an
 //      update to scope alone is not refused as a downgrade.
+//   S  clear_staleness records its basis (an evidence row citing the file, or
+//      a one-line reason) in staleness_clears, at a resolved commit.
 //   P  detect_changes and predict_change_impact see a changed file whose name
 //      is not ASCII. Without -z, git quotes such a name and it matched no
 //      ledger row.
@@ -72,6 +74,7 @@ const toolArrays = await Promise.all(
     ["./dist/tools/files.js", "fileTools"],
     ["./dist/tools/git.js", "gitTools"],
     ["./dist/tools/impact.js", "impactTools"],
+    ["./dist/tools/stale.js", "staleTools"],
   ].map(async ([path, name]) => (await import(path))[name]),
 );
 const tools = new Map(toolArrays.flat().map((td) => [td.name, td]));
@@ -343,6 +346,95 @@ function world(label) {
     // rather than as the subsystem that owns the file.
     const quoted = JSON.stringify(impact).match(/\\\\[0-7]{3}/);
     return quoted ? `found ${quoted[0]} in the impact artifact` : null;
+  });
+}
+
+// ------------------------------------------------- S: clear_staleness basis
+
+{
+  const { ctx, ws, head: base } = world("clears");
+  call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+  call("upsert_subsystem", { id: "S1", name: "One" }, ctx);
+  call(
+    "add_files_to_scope",
+    {
+      subsystem_id: "S1",
+      ref_sha: base,
+      files: ["unit.ts", "plain.ts"].map((file_path) => ({ file_path, why_in_scope: "fixture" })),
+    },
+    ctx,
+  );
+  writeFileSync(join(ws, "plain.ts"), "export const plain = 3;\n");
+  git(ws, "commit", "-q", "--no-verify", "-am", "drift");
+  const head = git(ws, "rev-parse", "HEAD");
+  call("detect_changes", { current_sha: head }, ctx);
+  const ledger = () =>
+    ctx.db
+      .prepare(
+        "SELECT stale, ref_sha FROM file_ledger WHERE subsystem_id = 'S1' AND file_path = 'plain.ts'",
+      )
+      .get();
+  const clears = () => ctx.db.prepare("SELECT * FROM staleness_clears ORDER BY id").all();
+  const clear = (extra) =>
+    call(
+      "clear_staleness",
+      { subsystem_id: "S1", file_path: "plain.ts", ref_sha: "HEAD", ...extra },
+      ctx,
+    );
+
+  check("S1 a clear with no basis is refused and leaves the row stale", () => {
+    if (ledger().stale !== 1) return "precondition: plain.ts is not stale";
+    const said = refusal(() => clear({}));
+    if (!said?.includes("a clear records its basis")) return `got ${JSON.stringify(said)}`;
+    return ledger().stale === 1 ? null : "the refused clear cleared the row";
+  });
+  check("S2 evidence citing another file is not a basis", () => {
+    const other = call(
+      "add_evidence",
+      { file_path: "unit.ts", ref_sha: head, kind: "code-verified" },
+      ctx,
+    ).id;
+    const said = refusal(() => clear({ evidence_id: other }));
+    return said?.includes("cites unit.ts") ? null : `got ${JSON.stringify(said)}`;
+  });
+  check("S3 a reason is one line", () => {
+    const said = refusal(() => clear({ reason: "first line\nsecond line" }));
+    return said?.includes("one line") ? null : `got ${JSON.stringify(said)}`;
+  });
+  check("S4 a reasoned clear is recorded with what it discharged, at a resolved commit", () => {
+    const said = refusal(() =>
+      clear({ reason: "re-read; the constant changed and nothing depends on it" }),
+    );
+    if (said) return `refused: ${said}`;
+    const row = ledger();
+    if (row.stale !== 0 || row.ref_sha !== head) return `ledger is ${JSON.stringify(row)}`;
+    const [first] = clears();
+    if (!first) return "no staleness_clears row";
+    if (first.ref_sha !== head) return `the clear stored ref_sha ${first.ref_sha}`;
+    if (first.prior_stale_reason !== "git-drift" || first.prior_ref_sha !== base) {
+      return `the clear recorded prior ${first.prior_stale_reason} at ${first.prior_ref_sha}`;
+    }
+    return null;
+  });
+  check("S5 an evidence row citing the file is a basis", () => {
+    const own = call(
+      "add_evidence",
+      { file_path: "plain.ts", ref_sha: head, kind: "code-verified" },
+      ctx,
+    ).id;
+    const said = refusal(() => clear({ evidence_id: own }));
+    if (said) return `refused: ${said}`;
+    const rows = clears();
+    return rows.length === 2 && rows[1].evidence_id === own && rows[1].prior_stale_reason === null
+      ? null
+      : `clears are ${JSON.stringify(rows)}`;
+  });
+  check("S6 a recorded clear cannot be edited or deleted", () => {
+    const edited = refusal(() => ctx.db.prepare("UPDATE staleness_clears SET reason = 'x'").run());
+    const deleted = refusal(() => ctx.db.prepare("DELETE FROM staleness_clears").run());
+    return edited?.includes("immutable") && deleted?.includes("cannot be deleted")
+      ? null
+      : `update: ${edited}; delete: ${deleted}`;
   });
 }
 

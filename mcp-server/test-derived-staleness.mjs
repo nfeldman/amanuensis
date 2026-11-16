@@ -159,7 +159,12 @@ t("A1: clearing staleness after re-examination returns the file to fresh", () =>
 
     call(
       "clear_staleness",
-      { subsystem_id: "B-01", file_path: "src/core.ts", ref_sha: head },
+      {
+        subsystem_id: "B-01",
+        file_path: "src/core.ts",
+        ref_sha: head,
+        reason: "re-read at head; the change is formatting only",
+      },
       ctx,
     );
     const dash = call("get_dashboard", {}, ctx);

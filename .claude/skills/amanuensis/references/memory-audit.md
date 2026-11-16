@@ -88,9 +88,11 @@ Read all of what it returns, not just the stale subsystems:
 `get_stale_backlog` then ranks stale files by their subsystem's access
 heat. High-heat stale files are the ones people keep reading despite the
 drift, so they get refresh priority. Re-examine the file, then call
-`clear_staleness(subsystem_id, file_path, ref_sha)` — clearing is per
-file, so re-reading one file never vouches for the rest of its
-subsystem.
+`clear_staleness(subsystem_id, file_path, ref_sha, evidence_id | reason)` —
+clearing is per file, so re-reading one file never vouches for the rest of its
+subsystem. The clear is recorded in `staleness_clears` with its basis; with
+neither an evidence row citing the file nor a one-line reason, the server
+answers `clear_staleness refuses: a clear records its basis`.
 
 This is the reconciliation the rest of the system reads. A subsystem
 cannot reach `mapped`, and the projection cannot be published, while

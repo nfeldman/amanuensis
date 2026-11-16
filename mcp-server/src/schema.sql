@@ -179,6 +179,32 @@ CREATE TABLE IF NOT EXISTS file_ledger (
 CREATE INDEX IF NOT EXISTS idx_file_ledger_path ON file_ledger(file_path);
 CREATE INDEX IF NOT EXISTS idx_file_ledger_stale ON file_ledger(stale) WHERE stale = 1;
 
+-- One row per clear_staleness call: the basis on which a ledger row was declared
+-- re-examined. clear_staleness overwrites the ledger row's stale fields, so
+-- before this table a clear could be audited only from session transcripts.
+-- A clear rests on an evidence row citing the file, or on a one-line reason.
+-- Append-only, like the other records of a judgment.
+CREATE TABLE IF NOT EXISTS staleness_clears (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    subsystem_id       TEXT    NOT NULL,
+    file_path          TEXT    NOT NULL,
+    ref_sha            TEXT    NOT NULL,  -- the commit the file was re-examined at
+    prior_ref_sha      TEXT,              -- the ledger row's ref_sha before the clear
+    prior_stale_reason TEXT,              -- what the clear discharged; NULL if the row was fresh
+    evidence_id        INTEGER,           -- an evidence row citing file_path, checked at write
+    reason             TEXT,
+    session_id         TEXT,
+    cleared_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (evidence_id IS NOT NULL OR length(trim(COALESCE(reason, ''))) > 0)
+);
+CREATE INDEX IF NOT EXISTS idx_staleness_clears_file ON staleness_clears(subsystem_id, file_path);
+CREATE TRIGGER IF NOT EXISTS staleness_clear_is_immutable
+BEFORE UPDATE ON staleness_clears FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'staleness clear is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS staleness_clear_cannot_be_deleted
+BEFORE DELETE ON staleness_clears FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'staleness clear cannot be deleted'); END;
+
 -- Paths the repository tracks that no subsystem has classified. Recorded so the
 -- gap is durable and countable rather than visible only to whoever last ran a
 -- reconciliation by hand (finding B03-1). Assignment to a subsystem stays a

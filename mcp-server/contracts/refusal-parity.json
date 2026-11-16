@@ -430,6 +430,17 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]
+    },
+    {
+      "id": "clear-staleness-basis",
+      "note": "New 2026-11-16 (BACKLOG explanation quality item 6): a clear records an evidence row or a reason.",
+      "refuses": ["clear_staleness"],
+      "instructs": [],
+      "server": { "file": "src/tools/stale.ts", "phrase": "clear_staleness refuses: a clear records its basis" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/memory-audit.md" },
+        { "file": "../.claude/skills/amanuensis/references/refresh.md" }
+      ]
     }
   ]
 }

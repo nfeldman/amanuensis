@@ -597,7 +597,7 @@ _212 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | Tool | Description |
 |---|---|
 | `get_stale_backlog` | Return stale scoped files prioritized by their subsystem's access heat (hottest first). limit defaults to 10. Each row names the subsystem, the file, the commit it was examined at, and why it is stale ('git-drift' or 'absent'). |
-| `clear_staleness` | Mark a scoped file fresh after re-examination, setting its ref_sha to the commit it was reverified at. Clearing is per file so re-reading one file does not silently vouch for the rest of its subsystem. |
+| `clear_staleness` | Mark a scoped file fresh after re-examination, setting its ref_sha to the commit it was reverified at (a name such as HEAD is resolved to its commit). Clearing is per file so re-reading one file does not silently vouch for the rest of its subsystem. Every clear records its basis in staleness_clears: evidence_id, an evidence row citing this file, or reason, one line of at most 400 bytes saying what the re-examination found; at least one is required. Returns the clear's id. |
 | `retire_ledger_file` | Remove a file ledger row whose file no longer exists in the repository, without discarding the subsystem's dispositions, findings, artifacts, or cross-references. Refuses while the file is still tracked, so this cannot be used to quietly narrow a subsystem's scope. |
 
 ### `storage-history` (2)

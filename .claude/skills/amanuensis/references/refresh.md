@@ -78,7 +78,10 @@ clear:
 
 **Substantively unchanged** — formatting, comments, moved code, no
 behavioral difference. Re-examination is complete.
-`clear_staleness(subsystem_id, file_path, ref_sha=<HEAD>)`.
+`clear_staleness(subsystem_id, file_path, ref_sha=<HEAD>, reason="<what you
+found, one line>")`, or `evidence_id=` an evidence row you recorded for the file.
+Without one the server answers `clear_staleness refuses: a clear records its
+basis`; the basis is kept in `staleness_clears`, so the clear can be audited.
 
 **Changed, and the recorded claims still hold** — the file evolved but
 the dispositions, findings, and seam contracts written against it remain
