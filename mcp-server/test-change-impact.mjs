@@ -40,7 +40,9 @@ function assert(condition, message) {
 
 function assertEqual(actual, expected, message) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    throw new Error(
+      `${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
   }
 }
 
@@ -85,10 +87,11 @@ function loadExpectedAfterPrediction(ctx, runId) {
   const durable = ctx.db
     .prepare("SELECT artifact_json FROM change_impact_runs WHERE run_id = ?")
     .get(runId);
-  assert(durable?.artifact_json, "prediction was compared before its artifact was durably recorded");
-  return JSON.parse(
-    readFileSync(join(ROOT, "fixtures/change-impact/manifest.json"), "utf8"),
+  assert(
+    durable?.artifact_json,
+    "prediction was compared before its artifact was durably recorded",
   );
+  return JSON.parse(readFileSync(join(ROOT, "fixtures/change-impact/manifest.json"), "utf8"));
 }
 
 function freshContext() {
@@ -232,7 +235,11 @@ test("predicted artifact is durable before expected comparison and matches known
     const manifest = loadExpectedAfterPrediction(ctx, prediction.run_id);
     const expected = manifest.knownInvalidation;
     assertEqual(predictionClaims(prediction), sorted(expected.invalidatedClaims), "claim recall");
-    assertEqual(controlClaims(prediction), sorted(expected.unaffectedClaims), "unaffected controls");
+    assertEqual(
+      controlClaims(prediction),
+      sorted(expected.unaffectedClaims),
+      "unaffected controls",
+    );
     const objectIds = new Set(
       prediction.mapped_objects.map((object) => `${object.object_type}:${object.object_id}`),
     );
@@ -326,10 +333,12 @@ test("xref and seam relation classes pass two-sided add/remove sensitivity", () 
     );
     assertEqual(predictionClaims(seamOnly), sorted(arms.seamOnly), "xref removal arm");
 
-    ctx.db.prepare(
-      `INSERT INTO xrefs (from_id, to_id, relationship, strength)
+    ctx.db
+      .prepare(
+        `INSERT INTO xrefs (from_id, to_id, relationship, strength)
        VALUES ('A', 'B', 'dependency', 'structural')`,
-    ).run();
+      )
+      .run();
     ctx.db.prepare("DELETE FROM seams").run();
     const xrefOnly = call(
       "predict_change_impact",
@@ -346,14 +355,18 @@ test("xref and seam relation classes pass two-sided add/remove sensitivity", () 
     );
     assertEqual(predictionClaims(none), sorted(arms.none), "explicit relation ablation");
 
-    ctx.db.prepare(
-      `INSERT INTO xrefs (from_id, to_id, relationship, strength)
+    ctx.db
+      .prepare(
+        `INSERT INTO xrefs (from_id, to_id, relationship, strength)
        VALUES ('A', 'B', 'dependency', 'structural')`,
-    ).run();
-    ctx.db.prepare(
-      `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b)
+      )
+      .run();
+    ctx.db
+      .prepare(
+        `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b)
        VALUES ('S-BC', 'events', 'event-bus', 'B', 'C')`,
-    ).run();
+      )
+      .run();
     const restored = call(
       "predict_change_impact",
       { base_sha: rename, head_sha: head, run_id: "relations-restored" },
@@ -379,18 +392,22 @@ test("bounded exhaustive relation subsets agree with reachability model", () => 
         ctx.db.prepare("DELETE FROM xrefs").run();
         ctx.db.prepare("DELETE FROM seams").run();
         if (xref) {
-          ctx.db.prepare(
-            `INSERT INTO xrefs (from_id, to_id, relationship, strength)
+          ctx.db
+            .prepare(
+              `INSERT INTO xrefs (from_id, to_id, relationship, strength)
              VALUES ('A', 'B', 'dependency', 'structural')`,
-          ).run();
+            )
+            .run();
         }
         if (seam) {
-          ctx.db.prepare(
-            `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b)
+          ctx.db
+            .prepare(
+              `INSERT INTO seams (id, shared_object, shared_object_kind, party_a, party_b)
              VALUES ('S-BC', 'events', 'event-bus', 'B', 'C')`,
-          ).run();
+            )
+            .run();
         }
-        const key = xref ? (seam ? "xrefAndSeam" : "xrefOnly") : (seam ? "seamOnly" : "none");
+        const key = xref ? (seam ? "xrefAndSeam" : "xrefOnly") : seam ? "seamOnly" : "none";
         const prediction = call(
           "predict_change_impact",
           { base_sha: rename, head_sha: head, run_id: `subset-${Number(xref)}-${Number(seam)}` },
@@ -407,11 +424,7 @@ test("bounded exhaustive relation subsets agree with reachability model", () => 
 test("explanation API returns the exact traversable reason path", () => {
   const { ctx, rename, head, cleanup } = freshContext();
   try {
-    call(
-      "predict_change_impact",
-      { base_sha: rename, head_sha: head, run_id: "explanation" },
-      ctx,
-    );
+    call("predict_change_impact", { base_sha: rename, head_sha: head, run_id: "explanation" }, ctx);
     const explanation = call(
       "get_change_impact",
       { run_id: "explanation", object_type: "claim", object_id: "claim-c" },
@@ -448,7 +461,9 @@ test("application is atomic and writes durable claim validity events", () => {
       .map((row) => row.claim_id);
     assertEqual(closed, ["claim-a", "claim-b", "claim-c"], "closed claims");
     assertEqual(
-      ctx.db.prepare("SELECT COUNT(*) AS n FROM claim_validity_events WHERE event_type='invalidated'").get().n,
+      ctx.db
+        .prepare("SELECT COUNT(*) AS n FROM claim_validity_events WHERE event_type='invalidated'")
+        .get().n,
       3,
       "durable validity events",
     );
@@ -485,16 +500,51 @@ test("post-prediction claim drift prevents every application write", () => {
       "changed after prediction",
     );
     assertEqual(
-      ctx.db
-        .prepare("SELECT COUNT(*) AS n FROM evidence WHERE note LIKE '%Git range%'")
-        .get().n,
+      ctx.db.prepare("SELECT COUNT(*) AS n FROM evidence WHERE note LIKE '%Git range%'").get().n,
       0,
       "failed application leaked evidence",
     );
     assertEqual(
-      ctx.db.prepare("SELECT valid_until_sha FROM claims WHERE claim_id='claim-a'").get().valid_until_sha,
+      ctx.db.prepare("SELECT valid_until_sha FROM claims WHERE claim_id='claim-a'").get()
+        .valid_until_sha,
       null,
       "failed application partially closed another claim",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+// A run predicted before the server read git with -z stored a non-ASCII name
+// in git's quoted form, which names no file. Applying it must not write an
+// evidence row citing that path; the caller is told to recompute impact.
+test("application refuses a change path the revision does not contain", () => {
+  const { ctx, rename, head, cleanup } = freshContext();
+  try {
+    call(
+      "predict_change_impact",
+      { base_sha: rename, head_sha: head, run_id: "legacy-quoted" },
+      ctx,
+    );
+    const quoted = JSON.stringify('"src/caf\\303\\251.ts"').slice(1, -1);
+    ctx.db
+      .prepare(
+        "UPDATE change_impact_runs SET artifact_json = replace(artifact_json, 'src/a.ts', ?) WHERE run_id = 'legacy-quoted'",
+      )
+      .run(quoted);
+    ctx.db
+      .prepare(
+        "UPDATE change_impact_invalidations SET reason_path = replace(reason_path, 'src/a.ts', ?) WHERE run_id = 'legacy-quoted'",
+      )
+      .run(quoted);
+    assertThrows(
+      () => call("apply_change_impact", { run_id: "legacy-quoted", reason: "legacy run" }, ctx),
+      "which does not exist at",
+    );
+    assertEqual(
+      ctx.db.prepare("SELECT COUNT(*) AS n FROM evidence WHERE note LIKE '%Git range%'").get().n,
+      0,
+      "refused application wrote evidence",
     );
   } finally {
     cleanup();

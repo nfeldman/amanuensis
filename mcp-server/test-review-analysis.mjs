@@ -675,7 +675,8 @@ test("independent passes stay blind and a false positive needs new verified disp
       {
         local_key: "disproof",
         file_path: "src/consumer.ts",
-        ref_sha: fixture.head,
+        // A name, not a commit: the row must store the commit it resolved to.
+        ref_sha: "HEAD",
         kind: "code-verified",
         excerpt: "accepted = [1]",
         note: "new refuter evidence",
@@ -704,9 +705,11 @@ test("independent passes stay blind and a false positive needs new verified disp
     actual_tokens: 1,
     actual_cost_microusd: 0,
   });
-  const disproofId = fixture.db
-    .prepare("SELECT id FROM evidence WHERE note='new refuter evidence'")
-    .get().id;
+  const disproof = fixture.db
+    .prepare("SELECT id, ref_sha FROM evidence WHERE note='new refuter evidence'")
+    .get();
+  assertEqual(disproof.ref_sha, fixture.head, "landed evidence kept a ref name, not its commit");
+  const disproofId = disproof.id;
 
   const verifiers = passSpecs(runId, "same-context").filter((pass) => pass.role === "verifier");
   const verifierPackets = verifiers.map((pass) =>

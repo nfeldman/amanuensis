@@ -123,7 +123,7 @@ function world(label) {
 // ---------------------------------------------------------------- C: evidence
 
 {
-  const { ctx, head } = world("evidence");
+  const { ctx, ws, head } = world("evidence");
   const add = (extra) =>
     call(
       "add_evidence",
@@ -228,9 +228,24 @@ function world(label) {
     );
     return said?.includes("which has 0 line(s)") ? null : `got ${JSON.stringify(said)}`;
   });
+  check("C19 a submodule whose commit is not in the object store can be cited by path", () => {
+    // A gitlink names a commit in another repository; the superproject rarely
+    // holds it. The tree entry exists all the same.
+    git(ws, "update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},vendor/lib`);
+    git(ws, "commit", "-q", "--no-verify", "-m", "gitlink");
+    const withLink = git(ws, "rev-parse", "HEAD");
+    const said = refusal(() =>
+      call(
+        "add_evidence",
+        { file_path: "vendor/lib", ref_sha: withLink, kind: "code-verified" },
+        ctx,
+      ),
+    );
+    return said && `refused: ${said}`;
+  });
   check("C18 refused calls wrote no row", () => {
     const { n } = ctx.db.prepare("SELECT COUNT(*) AS n FROM evidence").get();
-    return n === 7 ? null : `expected the 7 accepted rows, found ${n}`;
+    return n === 8 ? null : `expected the 8 accepted rows, found ${n}`;
   });
 }
 

@@ -383,12 +383,17 @@ export function workspaceTreeHasPath(
   revision: string,
   path: string,
 ): boolean {
-  const result = spawnSync("git", ["cat-file", "-e", `${revision}:${path}`], {
+  // ls-tree reads the tree entry. `cat-file -e rev:path` also needs the object
+  // the entry points at, which a submodule's gitlink usually lacks.
+  const result = spawnSync("git", ["--literal-pathspecs", "ls-tree", "-z", revision, "--", path], {
     cwd: workspacePath,
     encoding: "utf8",
-    stdio: ["ignore", "ignore", "ignore"],
+    stdio: ["ignore", "pipe", "ignore"],
   });
-  return result.status === 0;
+  if (result.status !== 0) return false;
+  return splitGitPaths(String(result.stdout)).some(
+    (entry) => entry.slice(entry.indexOf("\t") + 1) === path,
+  );
 }
 
 /**
@@ -429,6 +434,10 @@ const LINE_RANGE = /^\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*$/;
  *   runs across the gap between two spans of a list like `3,5`. HTML-escaped
  *   text (`&lt;`) or a paraphrase is refused, because a reader checking the
  *   row against the source would not find it.
+ *
+ * Lines are counted as git counts them, by `\n`, and the blob is read as UTF-8.
+ * A UTF-16 or CR-only file therefore cannot carry an excerpt or a range past
+ * its first line; cite it by path alone.
  *
  * The check runs on new writes only. Rows already in a store are not
  * re-validated here.
@@ -479,6 +488,12 @@ export function requireEvidenceCitation(
     maxBuffer: 256 * 1024 * 1024,
     stdio: ["ignore", "pipe", "ignore"],
   });
+  if ((blob.error as NodeJS.ErrnoException | undefined)?.code === "ENOBUFS") {
+    throw new ToolError(
+      `${path} at ${revision.slice(0, 12)} is too large to check a line_range or excerpt ` +
+        "against (over 256 MiB); cite it without them",
+    );
+  }
   if (blob.error || blob.status !== 0) {
     throw new ToolError(
       `${path} is not a file at ${revision.slice(0, 12)}; a line_range or excerpt needs a ` +

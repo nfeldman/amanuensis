@@ -907,8 +907,10 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
     newEvidence.map((row) => ({ ...row, id: row.local_key })),
   );
   // Catalog rows were checked when they were written; new rows are checked here,
-  // as add_evidence checks them.
+  // as add_evidence checks them. A ref_sha given as a name (HEAD, a branch) is
+  // stored as the commit it named, or the citation would move with the name.
   for (const row of newEvidence) {
+    row.ref_sha = resolveCommit(ctx, row.ref_sha);
     row.line_range = requireEvidenceCitation(
       ctx.project.workspacePath as string,
       row.ref_sha,

@@ -11,6 +11,7 @@ import {
   type ServerContext,
   type ToolDefinition,
   ToolError,
+  workspaceTreeHasPath,
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 
@@ -808,6 +809,17 @@ export const impactTools: ToolDefinition[] = [
             }
             const sourcePath = requireWorkspaceSourcePath(evidencePath);
             const evidenceSha = change.path_after ? run.head_sha : run.base_sha;
+            // A run predicted before the server read git with -z holds quoted
+            // names ("caf\303\251.ts"), and normalization can rewrite a legal
+            // name (a backslash). Neither names a file, so neither is cited.
+            if (
+              !workspaceTreeHasPath(ctx.project.workspacePath as string, evidenceSha, sourcePath)
+            ) {
+              throw new ToolError(
+                `change ${changeStep.id} names ${sourcePath}, which does not exist at ` +
+                  `${evidenceSha.slice(0, 12)}; recompute impact with predict_change_impact`,
+              );
+            }
             const evidence = ctx.db
               .prepare(
                 `INSERT INTO evidence
