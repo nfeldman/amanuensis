@@ -117,7 +117,7 @@ function isAncestor(ctx: ServerContext, ancestor: string, descendant: string): b
 }
 
 function parseChangedFiles(ctx: ServerContext, baseSha: string, headSha: string): ChangedFile[] {
-  const result = git(ctx, ["diff", "--name-status", "-M", "-C", `${baseSha}..${headSha}`]);
+  const result = git(ctx, ["diff", "--name-status", "-z", "-M", "-C", `${baseSha}..${headSha}`]);
   if (result.status !== 0) {
     throw new ToolError(
       `git diff failed: ${result.stderr?.toString().trim() ?? "unknown git error"}`,
@@ -133,25 +133,32 @@ function parseChangedFiles(ctx: ServerContext, baseSha: string, headSha: string)
     U: "unmerged",
     X: "unknown",
   };
-  return (result.stdout?.toString() ?? "")
-    .split("\n")
-    .filter(Boolean)
-    .map((line, ordinal) => {
-      const [rawStatus, first, second] = line.split("\t");
-      const code = rawStatus?.slice(0, 1) ?? "X";
-      const similarityRaw = rawStatus?.slice(1) ?? "";
-      const similarity = similarityRaw ? Number.parseInt(similarityRaw, 10) : null;
-      const changeType = typeByCode[code] ?? "unknown";
-      const paired = changeType === "renamed" || changeType === "copied";
-      return {
-        ordinal,
-        change_type: changeType,
-        path_before: changeType === "added" ? null : (first ?? null),
-        path_after: changeType === "deleted" ? null : paired ? (second ?? null) : (first ?? null),
-        similarity: Number.isFinite(similarity) ? similarity : null,
-        content_changed: !(changeType === "renamed" && similarity === 100),
-      };
-    });
+  // With -z each record is `STATUS\0path\0`, or `STATUS\0old\0new\0` for a
+  // rename or copy, and paths are never quoted.
+  const tokens = (result.stdout?.toString() ?? "").split("\0");
+  if (tokens.at(-1) === "") tokens.pop();
+  const records: Array<[string, string | undefined, string | undefined]> = [];
+  for (let i = 0; i < tokens.length; ) {
+    const rawStatus = tokens[i] as string;
+    const pairedRecord = rawStatus.startsWith("R") || rawStatus.startsWith("C");
+    records.push([rawStatus, tokens[i + 1], pairedRecord ? tokens[i + 2] : undefined]);
+    i += pairedRecord ? 3 : 2;
+  }
+  return records.map(([rawStatus, first, second], ordinal) => {
+    const code = rawStatus?.slice(0, 1) ?? "X";
+    const similarityRaw = rawStatus?.slice(1) ?? "";
+    const similarity = similarityRaw ? Number.parseInt(similarityRaw, 10) : null;
+    const changeType = typeByCode[code] ?? "unknown";
+    const paired = changeType === "renamed" || changeType === "copied";
+    return {
+      ordinal,
+      change_type: changeType,
+      path_before: changeType === "added" ? null : (first ?? null),
+      path_after: changeType === "deleted" ? null : paired ? (second ?? null) : (first ?? null),
+      similarity: Number.isFinite(similarity) ? similarity : null,
+      content_changed: !(changeType === "renamed" && similarity === 100),
+    };
+  });
 }
 
 function pathsOf(change: ChangedFile): string[] {

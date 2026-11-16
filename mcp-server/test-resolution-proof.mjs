@@ -39,7 +39,9 @@ mkdirSync(storage);
 execFileSync("git", ["init", "-q"], { cwd: workspace });
 function commit(value) {
   writeFileSync(join(workspace, "fixture.ts"), `export const value = ${JSON.stringify(value)};\n`);
-  execFileSync("git", ["add", "fixture.ts"], { cwd: workspace });
+  // Cited below as current but unrelated evidence, so it has to exist.
+  writeFileSync(join(workspace, "unrelated.ts"), "export const unrelated = true;\n");
+  execFileSync("git", ["add", "fixture.ts", "unrelated.ts"], { cwd: workspace });
   execFileSync(
     "git",
     [

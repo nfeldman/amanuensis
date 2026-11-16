@@ -392,6 +392,142 @@ export function workspaceTreeHasPath(
 }
 
 /**
+ * Split the output of a git command run with `-z` into paths.
+ *
+ * Without `-z`, git quotes any path holding a byte outside printable ASCII
+ * (`"caf\303\251.ts"`) and ends each entry with a newline. The quoted form
+ * matches no ledger row, so a changed non-ASCII file never showed as changed.
+ * With `-z`, paths come verbatim and NUL-terminated. The materializer's
+ * read-back reads them the same way.
+ */
+export function splitGitPaths(output: string): string[] {
+  return output.split("\0").filter((path) => path.length > 0);
+}
+
+/** `N`, `N-M`, or a comma-separated list of them; whitespace around separators is allowed. */
+const LINE_RANGE = /^\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*$/;
+
+/**
+ * Check that an evidence row's coordinates can be opened, and return its
+ * `line_range` in normal form (`12-40,88`), or null when none was given.
+ *
+ * `resolveWorkspaceCommit` makes the revision real; this makes the rest of the
+ * citation real at that revision. Before it, `add_evidence` stored `line_range`
+ * and `excerpt` as unchecked prose: an audit of an acceptance rebuild found 13
+ * of 35 ranged rows pointing past the end of their file, and the AxiomDB
+ * catch-up kept its rows inside their files only because its prompts told the
+ * sessions to check. Refusing at ingress costs one `git cat-file`.
+ *
+ * - The path must exist at `revision`. With no range and no excerpt a tree is
+ *   accepted, since a row may cite a directory.
+ * - Every span must satisfy `1 <= start <= end <= lines in the file`.
+ * - An excerpt is compared with all whitespace removed, because writers reflow
+ *   code onto one line. `...` or `…` marks an elision: each fragment between
+ *   them must appear in the cited lines (in the whole file when no range is
+ *   given). Nothing else is forgiven. HTML-escaped text (`&lt;`) or a
+ *   paraphrase is refused, because a reader checking the row against the
+ *   source would not find it.
+ *
+ * The check runs on new writes only. Rows already in a store are not
+ * re-validated here.
+ */
+export function requireEvidenceCitation(
+  workspacePath: string,
+  revision: string,
+  path: string,
+  lineRange: string | null,
+  excerpt: string | null,
+): string | null {
+  const at = `${path} at ${revision.slice(0, 12)}`;
+  let spans: Array<[number, number]> | null = null;
+  if (lineRange !== null) {
+    const trimmed = lineRange.trim();
+    if (!LINE_RANGE.test(trimmed)) {
+      throw new ToolError(
+        `line_range ${JSON.stringify(lineRange)} is not a line range: give N, N-M or a ` +
+          "comma-separated list of them (e.g. 12-40,88), or omit line_range",
+      );
+    }
+    spans = trimmed.split(",").map((part) => {
+      const [start, end = start] = part.split("-").map((n) => Number.parseInt(n.trim(), 10));
+      return [start as number, end as number];
+    });
+    for (const [start, end] of spans) {
+      if (start < 1 || end < start) {
+        throw new ToolError(
+          `line_range ${JSON.stringify(lineRange)} has the span ${start}-${end}; lines start ` +
+            "at 1 and a span's end cannot precede its start",
+        );
+      }
+    }
+  }
+
+  if (spans === null && excerpt === null) {
+    if (!workspaceTreeHasPath(workspacePath, revision, path)) {
+      throw new ToolError(
+        `${path} does not exist at ${revision.slice(0, 12)}; cite a path the revision contains`,
+      );
+    }
+    return null;
+  }
+
+  const blob = spawnSync("git", ["cat-file", "blob", `${revision}:${path}`], {
+    cwd: workspacePath,
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (blob.error || blob.status !== 0) {
+    throw new ToolError(
+      `${path} is not a file at ${revision.slice(0, 12)}; a line_range or excerpt needs a ` +
+        "file the revision contains",
+    );
+  }
+  const text = String(blob.stdout ?? "");
+  const lines = text.split("\n");
+  if (text.endsWith("\n")) lines.pop();
+
+  if (spans !== null) {
+    for (const [, end] of spans) {
+      if (end > lines.length) {
+        throw new ToolError(
+          `line_range ${JSON.stringify(lineRange)} runs past the end of ${at}, which has ` +
+            `${lines.length} line(s); cite the lines as they are at that revision`,
+        );
+      }
+    }
+  }
+
+  if (excerpt !== null) {
+    const squash = (value: string) => value.replace(/\s+/g, "");
+    const fragments = excerpt.split(/\.\.\.|…/).filter((fragment) => squash(fragment).length > 0);
+    if (fragments.length === 0) {
+      throw new ToolError("excerpt quotes nothing; give source text or omit excerpt");
+    }
+    const cited =
+      spans === null
+        ? text
+        : spans.map(([start, end]) => lines.slice(start - 1, end).join("\n")).join("\n");
+    const haystack = squash(cited);
+    const missing = fragments.find((fragment) => !haystack.includes(squash(fragment)));
+    if (missing !== undefined) {
+      const where = spans === null ? at : `lines ${lineRange} of ${at}`;
+      const shown = missing.trim().replace(/\s+/g, " ");
+      throw new ToolError(
+        `excerpt does not appear in ${where}: ${JSON.stringify(
+          shown.length > 80 ? `${shown.slice(0, 80)}…` : shown,
+        )}. Quote the source as it is at that revision; whitespace is ignored and ` +
+          `"..." marks an elision`,
+      );
+    }
+  }
+
+  return spans === null
+    ? null
+    : spans.map(([start, end]) => (start === end ? `${start}` : `${start}-${end}`)).join(",");
+}
+
+/**
  * Which of these stored `file:symbol@sha` anchors still resolve, in **one**
  * subprocess.
  *

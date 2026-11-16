@@ -81,6 +81,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { citedSource } from "./fixtures/cited-source.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -280,7 +281,7 @@ function main(mods) {
    */
   function world(
     label,
-    files = { "a.ts": "export const a = 1;\n", "b.ts": "export const b = 2;\n" },
+    files = { "a.ts": citedSource("a"), "b.ts": citedSource("b") },
   ) {
     const ws = join(scratch, `ws-${label}`);
     mkdirSync(ws, { recursive: true });
@@ -925,7 +926,7 @@ function main(mods) {
   }
 
   {
-    const ctx = world("publish-unreconciled", { "a.ts": "export const a = 1;\n" });
+    const ctx = world("publish-unreconciled", { "a.ts": citedSource("a") });
     climbToAdversarial(ctx, "B-01", "a.ts");
     const docs = join(ctx.project.storagePath, "docs");
 
@@ -959,7 +960,7 @@ function main(mods) {
   {
     // A store entitled to publish, that then stops being entitled to. The first
     // publication is what gives A16 and A17 a previous output to protect.
-    const ctx = world("publish-standing", { "a.ts": "export const a = 1;\n" });
+    const ctx = world("publish-standing", { "a.ts": citedSource("a") });
     climbToAdversarial(ctx, "B-01", "a.ts");
     const docs = join(ctx.project.storagePath, "docs");
     let standing = null;
@@ -1053,7 +1054,7 @@ function main(mods) {
   {
     // Every tracked path is ledgered, so the standing reconciliation reports
     // zero unledgered and zero absent: §3.3a's clause-1 store.
-    const ctx = world("control", { "a.ts": "export const a = 1;\n" });
+    const ctx = world("control", { "a.ts": citedSource("a") });
     climbToAdversarial(ctx, "B-01", "a.ts");
 
     check("C1 a reconciled, complete store advances to mapped and publishes", () => {

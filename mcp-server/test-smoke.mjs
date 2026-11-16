@@ -52,6 +52,7 @@ import { resolutionTools } from "./dist/tools/resolution.js";
 import { diagnosticityTools } from "./dist/tools/diagnosticity.js";
 import { storageHistoryTools } from "./dist/tools/storage-history.js";
 import { ensureStorageRepo } from "./dist/storage-git.js";
+import { writeCitedSources } from "./fixtures/cited-source.mjs";
 
 const TMP = join(tmpdir(), `amanuensis-smoke-${process.pid}`);
 if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });
@@ -61,7 +62,10 @@ mkdirSync(TMP, { recursive: true });
 ensureStorageRepo(TMP);
 function fixtureCommit(value) {
   writeFileSync(join(TMP, "claim-fixture.txt"), `${value}\n`);
-  execFileSync("git", ["add", "claim-fixture.txt"], { cwd: TMP });
+  // The source the evidence below cites: add_evidence checks a citation
+  // against the file at its revision.
+  writeCitedSources(TMP, ["scheduler/main.ts"]);
+  execFileSync("git", ["add", "claim-fixture.txt", "scheduler/main.ts"], { cwd: TMP });
   execFileSync(
     "git",
     [

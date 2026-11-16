@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   optString,
   requireEnum,
+  requireEvidenceCitation,
   requireInt,
   requireString,
   requireStringArray,
@@ -905,6 +906,17 @@ function land(args: Record<string, unknown>, ctx: ServerContext): Record<string,
     run,
     newEvidence.map((row) => ({ ...row, id: row.local_key })),
   );
+  // Catalog rows were checked when they were written; new rows are checked here,
+  // as add_evidence checks them.
+  for (const row of newEvidence) {
+    row.line_range = requireEvidenceCitation(
+      ctx.project.workspacePath as string,
+      row.ref_sha,
+      row.file_path,
+      row.line_range,
+      row.excerpt,
+    );
+  }
   const localEvidence = new Map<string, number>();
   const dispatchedInput = parseJson<Record<string, unknown>>(pass.runtime_input_json, {});
   const allowedPacketEvidence = (hypothesisId: string | null): Set<number> => {

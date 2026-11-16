@@ -8,6 +8,7 @@ import {
   optStringArray,
   requireString,
   resolveWorkspaceCommits,
+  splitGitPaths,
   type ToolDefinition,
 } from "../helpers.js";
 // §3's reconciliation record shares one derivation with the predicate that
@@ -72,10 +73,20 @@ function carriesObligation(row: { classification: string | null }): boolean {
 }
 
 function runGit(cwd: string, args: string[]): string {
+  return runGitRaw(cwd, args).trim();
+}
+
+/**
+ * `runGit` without the trim, for `-z` output: a trim would strip whitespace a
+ * path really begins or ends with.
+ */
+function runGitRaw(cwd: string, args: string[]): string {
   try {
-    return execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
-      .toString()
-      .trim();
+    return execFileSync("git", args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 * 1024 * 1024,
+    }).toString();
   } catch (e) {
     // execFileSync stashes the captured streams on the thrown error.
     // Surface stderr so callers see "fatal: not a git repository"
@@ -200,12 +211,14 @@ export const gitTools: ToolDefinition[] = [
       const lastSha = g.last_checked_sha ?? g.onboarding_sha;
       let changedFiles: string[] = [];
       try {
-        const out = runGit(ctx.project.workspacePath, [
-          "diff",
-          "--name-only",
-          `${lastSha}..${currentSha}`,
-        ]);
-        changedFiles = out.split("\n").filter(Boolean);
+        changedFiles = splitGitPaths(
+          runGitRaw(ctx.project.workspacePath, [
+            "diff",
+            "--name-only",
+            "-z",
+            `${lastSha}..${currentSha}`,
+          ]),
+        );
       } catch (e) {
         return {
           ok: false,
@@ -328,9 +341,15 @@ export const gitTools: ToolDefinition[] = [
         let changedSinceExamination: Set<string>;
         try {
           changedSinceExamination = new Set(
-            runGit(ctx.project.workspacePath, ["diff", "--name-only", refSha, currentSha])
-              .split("\n")
-              .filter(Boolean),
+            splitGitPaths(
+              runGitRaw(ctx.project.workspacePath, [
+                "diff",
+                "--name-only",
+                "-z",
+                refSha,
+                currentSha,
+              ]),
+            ),
           );
         } catch {
           // An examination commit that is no longer reachable cannot be

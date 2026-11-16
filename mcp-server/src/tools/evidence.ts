@@ -3,6 +3,7 @@ import {
   optInt,
   optString,
   requireEnum,
+  requireEvidenceCitation,
   requireInt,
   requireString,
   requireWorkspaceSourcePath,
@@ -25,7 +26,7 @@ export const evidenceTools: ToolDefinition[] = [
   {
     name: "add_evidence",
     description:
-      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
+      "Record a structured code citation. file_path + symbol + line_range + ref_sha uniquely anchor a piece of observed behavior; kind captures how solid the observation is. ref_sha must resolve to a commit in the bound workspace and is stored resolved, because every reader reports a recorded citation as revision-bound. file_path must exist at ref_sha. line_range is N, N-M or a comma-separated list, inside the file at ref_sha. excerpt must appear in those lines (whitespace ignored; '...' marks an elision). Returns the evidence id to be attached to dispositions/findings/diagnosticity cells.",
     inputSchema: {
       type: "object",
       properties: {
@@ -51,8 +52,14 @@ export const evidenceTools: ToolDefinition[] = [
       const refSha = resolveWorkspaceCommit(ctx, requireString(args, "ref_sha"));
       const kind = requireEnum(args, "kind", EVIDENCE_KINDS);
       const symbol = optString(args, "symbol");
-      const lineRange = optString(args, "line_range");
       const excerpt = optString(args, "excerpt");
+      const lineRange = requireEvidenceCitation(
+        ctx.project.workspacePath as string,
+        refSha,
+        filePath,
+        optString(args, "line_range"),
+        excerpt,
+      );
       const note = optString(args, "note");
       const sessionId = optString(args, "session_id") ?? ctx.sessionId;
       const info = ctx.db

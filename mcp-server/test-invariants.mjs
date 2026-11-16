@@ -25,6 +25,7 @@ import { gitTools } from "./dist/tools/git.js";
 import { projectTools } from "./dist/tools/project.js";
 import { subsystemTools } from "./dist/tools/subsystems.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
+import { writeCitedSources } from "./fixtures/cited-source.mjs";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 
 let passed = 0,
@@ -86,7 +87,17 @@ function freshCtx() {
   // `add_claim` resolves every ref_sha in the bound workspace — `git init`
   // alone leaves a repo with no commit for it to resolve.
   writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
-  spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+  // Every path the fixtures cite: add_evidence checks a citation against the
+  // file at its revision.
+  writeCitedSources(ws, [
+    "fixture.ts",
+    "a.ts",
+    "src/B-01/index.ts",
+    "src/B-02/index.ts",
+    "src/B-07/index.ts",
+    "src/B-07/cache.ts",
+  ]);
+  spawnSync("git", ["add", "-A"], { cwd: ws });
   spawnSync(
     "git",
     [
@@ -1304,8 +1315,8 @@ t("overturn to ruled-out succeeds once disproving evidence is attached this sess
         line_range: "10-20",
         ref_sha: headSha(ctx),
         kind: "code-verified",
-        excerpt: "callers hold the region lock",
-        note: "compensating mechanism found in adversarial pass",
+        excerpt: "export const line12 = 12;",
+        note: "compensating mechanism found in adversarial pass: callers hold the region lock",
       },
       ctx,
     );

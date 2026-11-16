@@ -68,6 +68,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { writeCitedSources } from "./fixtures/cited-source.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -178,7 +179,8 @@ function main(mods) {
     mkdirSync(ws, { recursive: true });
     git(ws, "init", "-q");
     writeFileSync(join(ws, "seed.ts"), `export const seed = "${label}";\n`);
-    git(ws, "add", "seed.ts");
+    writeCitedSources(ws, ["src/B-01/index.ts", "src/B-02/index.ts"]);
+    git(ws, "add", "-A");
     gitCommit(ws, "seed");
     const project = resolveProject(ws, { selectionSource: "sd1-disposition-evidence" });
     ensureProjectStorage(project, (databasePath) => openDatabase(databasePath).close());

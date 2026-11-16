@@ -77,7 +77,8 @@ export const subsystemTools: ToolDefinition[] = [
   {
     name: "upsert_subsystem",
     description:
-      "Create or replace a subsystem entry. status defaults to 'unmapped'. " +
+      "Create or replace a subsystem entry. status defaults to 'unmapped' on create " +
+      "and to the current status on update. " +
       "`priority` (integer, 1 = survey first) is optional — set it during " +
       "onboarding Phase 5 so the master plan orders subsystems by survey " +
       "urgency. Omit priority to leave it unchanged on update. Use " +
@@ -105,7 +106,6 @@ export const subsystemTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const id = requireString(args, "id");
       const name = requireString(args, "name");
-      const status = (optString(args, "status") ?? "unmapped") as SubsystemStatus;
       const layer = optString(args, "layer");
       const scope = optString(args, "scope");
       const jumpIn = optString(args, "jump_in_reading");
@@ -119,6 +119,10 @@ export const subsystemTools: ToolDefinition[] = [
       // not a silent regression. Fresh inserts bypass the guard (there
       // is no prior status to compare against).
       const previousStatus = readSubsystemStatus(ctx.db, id);
+      // An omitted status keeps the row's own, like every other omitted field.
+      // Defaulting it to `unmapped` turned an update of scope or start-here
+      // into a refused downgrade unless the caller repeated the current status.
+      const status = (optString(args, "status") ?? previousStatus ?? "unmapped") as SubsystemStatus;
       enforceMonotonicTransition(id, previousStatus, status);
 
       // …and that it is not a silent *advance* either. This tool writes

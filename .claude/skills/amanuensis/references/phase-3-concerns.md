@@ -44,6 +44,13 @@ yet.
 Call
 `add_evidence(file_path, symbol, line_range, ref_sha, kind, excerpt?, note?)`.
 
+The citation is checked against the file at `ref_sha`, and a call that fails is
+refused. The path must exist at that revision, and `line_range` (`N`, `N-M` or
+a comma-separated list) must lie inside the file. `excerpt` must appear in those
+lines: quote the source as it is at that revision. Whitespace is ignored, so
+code can be reflowed onto one line, and `...` marks an elision. A paraphrase or
+HTML-escaped text is refused.
+
 `kind` ladder (use the strongest the evidence actually supports —
 overstating quality is the #1 way the methodology fails):
 

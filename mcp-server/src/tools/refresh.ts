@@ -10,6 +10,7 @@ import {
   requireString,
   requireStringArray,
   type ServerContext,
+  splitGitPaths,
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
@@ -413,9 +414,8 @@ function drive(
   // the refresh looked at real drift and claimed nothing. Halt and name the
   // files, so the gap is actionable rather than silent.
   if (invalidations.n === 0) {
-    const diff = git(ctx, ["diff", "--name-only", `${run.base_sha}..${run.head_sha}`]);
-    const rangeChanged =
-      diff.status === 0 ? String(diff.stdout).split("\n").filter(Boolean) : ([] as string[]);
+    const diff = git(ctx, ["diff", "--name-only", "-z", `${run.base_sha}..${run.head_sha}`]);
+    const rangeChanged = diff.status === 0 ? splitGitPaths(String(diff.stdout)) : ([] as string[]);
     if (rangeChanged.length) {
       const placeholders = rangeChanged.map(() => "?").join(",");
       const unowned = ctx.db

@@ -34,6 +34,7 @@ import { artifactTools } from "./dist/tools/artifacts.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
+import { writeCitedSources } from "./fixtures/cited-source.mjs";
 
 const allTools = new Map(
   [
@@ -100,7 +101,13 @@ spawnSync("git", ["init", "-q"], { cwd: ws });
 // every ref_sha in the bound workspace, and `git init` alone leaves a repo
 // with no commit for it to resolve.
 writeFileSync(join(ws, "seed.ts"), "export const seed = 1;\n");
-spawnSync("git", ["add", "seed.ts"], { cwd: ws });
+// The files the fixture cites: add_evidence checks a citation against the file
+// at its revision.
+writeCitedSources(
+  ws,
+  Array.from({ length: 20 }, (_, i) => `src/B-${String(i).padStart(2, "0")}/index.ts`),
+);
+spawnSync("git", ["add", "-A"], { cwd: ws });
 spawnSync("git", ["-c", "user.email=perf@localhost", "-c", "user.name=perf", "-c", "commit.gpgsign=false", "commit", "-q", "--no-verify", "-m", "seed"], { cwd: ws });
 const seedSha = String(
   spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" }).stdout ?? "",

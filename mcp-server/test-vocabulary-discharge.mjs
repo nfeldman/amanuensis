@@ -84,6 +84,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { citedSource } from "./fixtures/cited-source.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -317,7 +318,7 @@ async function main(mods) {
    * The workspace always has one real commit, so every revision the fixtures
    * name resolves and `src/a.ts` exists in its tree.
    */
-  function world(label, files = { "src/a.ts": "export const a = 1;\n", "src/b.ts": "export const b = 2;\n" }) {
+  function world(label, files = { "src/a.ts": citedSource("a"), "src/b.ts": citedSource("b") }) {
     const ws = join(scratch, `ws-${label}`);
     mkdirSync(ws, { recursive: true });
     git(ws, "init", "-q");

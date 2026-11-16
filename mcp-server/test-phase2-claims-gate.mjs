@@ -55,6 +55,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { citedSource, writeCitedSources } from "./fixtures/cited-source.mjs";
 import { ensureBuilt } from "./scripts/ensure-built.mjs";
 
 const MCP = dirname(fileURLToPath(import.meta.url));
@@ -229,11 +230,19 @@ function buildFixture() {
   git(workspace, "config", "user.email", "test@localhost");
   git(workspace, "config", "user.name", "Phase 2 Claims Gate");
   git(workspace, "config", "commit.gpgsign", "false");
-  writeFileSync(join(workspace, "src", "unit.ts"), "export const unit = 1;\n");
+  writeFileSync(join(workspace, "src", "unit.ts"), citedSource("unit at base"));
+  // Every path the gate cites, committed at base: add_evidence checks a
+  // citation against the file at its revision.
+  writeCitedSources(workspace, [
+    ...Array.from({ length: 31 }, (_, i) => `src/B-${String(i + 1).padStart(2, "0")}.ts`),
+    "src/B-30x.ts",
+    "src/http/config.ts",
+    "src/db/config.ts",
+  ]);
   git(workspace, "add", "src");
   git(workspace, "commit", "-q", "--no-verify", "-m", "base");
   const base = git(workspace, "rev-parse", "HEAD");
-  writeFileSync(join(workspace, "src", "unit.ts"), "export const unit = 2;\n");
+  writeFileSync(join(workspace, "src", "unit.ts"), citedSource("unit at head"));
   git(workspace, "add", "src");
   git(workspace, "commit", "-q", "--no-verify", "-m", "head");
   const head = git(workspace, "rev-parse", "HEAD");

@@ -197,6 +197,9 @@ jobs:
       - name: Derived staleness — ledger drift and scope reconciliation
         working-directory: mcp-server
         run: node test-derived-staleness.mjs
+      - name: Write-path fixes — evidence coordinates, upsert status, non-ASCII paths
+        working-directory: mcp-server
+        run: node test-write-path-fixes.mjs
       - name: Startup bounds — no unbounded probe on the activation path
         working-directory: mcp-server
         run: node test-startup-bounds.mjs

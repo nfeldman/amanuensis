@@ -45,11 +45,14 @@ Measured.
 
 Substrate, smallest first:
 
-1. **Validate evidence when it is written.** `add_evidence` checks only the path's syntax and the
-   revision. It should also check that the path exists at `ref_sha`, the range lies inside the
-   file, and a supplied excerpt appears in the range. An older audit found 13 of 35 rows past the
-   end of their file; the catch-up avoided this only because its prompts required the check.
-   Done when an out-of-range row and a mismatched excerpt are refused.
+1. ~~**Validate evidence when it is written.**~~ Done on branch `server-fixes`, 2026-11-16:
+   `add_evidence` and review-pass `new_evidence` refuse a path missing at `ref_sha`, a range
+   outside the file, and an excerpt not in the cited lines (whitespace ignored, `...` an
+   elision). Rows already in a store are not re-checked. Measured before the change: with
+   whitespace and elisions forgiven, 304 of 716 excerpted AxiomDB rows and 29 of 38 in the
+   self-conspectus still did not appear at their cited lines. Some are coordinate errors (one is
+   off by a line), some HTML-escaped (`&lt;`), some paraphrase. A store audit for the existing rows
+   is not scheduled.
 2. **Run the orientation lint when an explanation is recorded,** not only at render, and narrow
    the count-fraction rule (`lint.py`, `_FRACTION`), which flags any `\d+/\d+`. It withheld an
    account for "exit codes 0/1/3", and the author learned of it only when publishing failed. Done
@@ -120,13 +123,13 @@ Workflow:
 
 ## Server defects
 
-- **Non-ASCII paths probably break staleness and refresh.** `git.ts` (lines 205–208 and 331) and
-  `refresh.ts` (line 416) split `git diff --name-only` on newlines without `-z` or
-  `core.quotePath=false`, so git's quoted form of a non-ASCII path would never match the ledger.
-  The materializer's read-back already handles this (`readback.py`). Read, not reproduced.
-- **`upsert_subsystem` defaults `status` to `unmapped`.** A call that updates only scope or
-  start-here is refused as a downgrade unless the caller repeats the current status. Default to
-  the existing status on update.
+- ~~**Non-ASCII paths break staleness and refresh.**~~ Reproduced, then fixed on branch
+  `server-fixes`, 2026-11-16: with `core.quotePath` on (git's default), a modified `café.ts`
+  was never marked stale, and change impact recorded `"caf\303\251.ts"`. `detect_changes`,
+  the refresh drift check and `predict_change_impact` (a fourth site, not in the original
+  report) now read `-z` output.
+- ~~**`upsert_subsystem` defaults `status` to `unmapped`.**~~ Fixed on branch `server-fixes`,
+  2026-11-16: an omitted status keeps the current one on update.
 
 ## Model routing
 

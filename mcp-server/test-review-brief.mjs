@@ -148,12 +148,18 @@ function freshFixture() {
   ).run();
 
   const evidenceByPath = new Map();
-  for (const path of ["src/a.ts", "src/benign-old.ts", "src/control.ts"]) {
+  // Each excerpt is the file's text at base: add_evidence refuses one the file
+  // does not contain.
+  for (const [path, excerpt] of [
+    ["src/a.ts", "export const eventVersion = 1;"],
+    ["src/benign-old.ts", "export const stable = true;"],
+    ["src/control.ts", "export const acceptsVersion = 1;"],
+  ]) {
     const evidence = call(tools, ctx, "add_evidence", {
       file_path: path,
       ref_sha: base,
       kind: "code-verified",
-      excerpt: `${path} fixture evidence`,
+      excerpt,
       note: "review-context positive control",
     });
     evidenceByPath.set(path, evidence.id);
