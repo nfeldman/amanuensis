@@ -24,6 +24,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDatabase } from "./dist/db.js";
+import { carriedTools } from "./dist/tools/carried.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { findingTools } from "./dist/tools/findings.js";
@@ -97,7 +98,14 @@ const project = {
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: null };
 const tools = new Map(
-  [...projectTools, ...findingTools, ...evidenceTools, ...claimTools, ...locusTools].map((tool) => [
+  [
+    ...projectTools,
+    ...findingTools,
+    ...evidenceTools,
+    ...claimTools,
+    ...locusTools,
+    ...carriedTools,
+  ].map((tool) => [
     tool.name,
     tool,
   ]),
@@ -378,6 +386,53 @@ try {
         evidence_ids: [fresh.id],
       }),
     );
+  });
+
+  // ── R: a live finding id never re-mints a carried one (B03-R6) ──────────
+  const carryRun = call("begin_carry_run", {
+    source_kind: "store",
+    source_path: "/record-integrity/archive/memory.db",
+    archived_store_id: "store-recordintegrity",
+    archived_anchor: seedSha,
+    reason: "an archived store carried into this one",
+    expected_count: 2,
+    imported_count: 2,
+  }).carry_run_id;
+  const carry = (archivedId) =>
+    call("carry_finding", {
+      carry_run_id: carryRun,
+      archived_finding_id: archivedId,
+      subsystem_id: "B-01",
+      severity: "MEDIUM",
+      symptom: `archived ${archivedId}`,
+      root_cause: "archived",
+      archived_resolution: "open",
+    });
+  const newFinding = (id) =>
+    call("add_finding", {
+      finding_id: id,
+      subsystem_id: "B-01",
+      symptom: `defect ${id}`,
+      root_cause: "fixture",
+      severity: "LOW",
+      status: "confirmed-bug",
+      ref_sha: seedSha,
+      pass_type: "survey",
+    });
+  check("R1 add_finding refuses an id a carried record holds", () => {
+    carry("B01-R9");
+    const message = refusal(() => newFinding("B01-R9"));
+    if (message === null) return "a live finding re-minted the carried id B01-R9";
+    if (!message.includes("store-recordintegrity")) return `refusal does not name the archive: ${message}`;
+    const row = db.prepare("SELECT 1 FROM findings WHERE finding_id = 'B01-R9'").get();
+    return row ? "the refused finding was written anyway" : null;
+  });
+  check("R2 an id no carried record holds is still accepted", () => refusal(() => newFinding("B01-4")));
+  check("R3 carrying an id a live finding already holds says so", () => {
+    const result = carry("B01-1");
+    return String(result.shadowed_by_live_finding ?? "").includes("obligation_id")
+      ? null
+      : `carry_finding returned ${JSON.stringify(result)}`;
   });
 } catch (error) {
   failures.push(`setup: ${String(error?.stack ?? error)}`);

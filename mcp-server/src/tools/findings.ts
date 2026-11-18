@@ -76,7 +76,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "add_finding",
     description:
-      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at.",
+      "Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at. A finding_id that a carried record already holds as its archived id is refused, because a live finding with that id would answer references to the archived one.",
     inputSchema: {
       type: "object",
       properties: {
@@ -128,6 +128,25 @@ export const findingTools: ToolDefinition[] = [
       if (status === "fixed" || status === "ruled-out") {
         throw new ToolError(
           `add_finding cannot create a finding already ${status}; record the finding first, then use the evidence-gated resolution transition`,
+        );
+      }
+
+      // An id a carried record already holds would make an unqualified
+      // reference to the archived finding answer with this one instead: a
+      // resolver reads live findings first, so a wrong closure gets a clean
+      // exit (finding B03-R6). Ids are minted by the caller, so the store is
+      // the only place that can see the collision.
+      const carried = ctx.db
+        .prepare(
+          `SELECT carried_id, archived_store_id FROM carried_findings
+            WHERE archived_finding_id = ? ORDER BY carried_id LIMIT 1`,
+        )
+        .get(findingId) as { carried_id: number; archived_store_id: string } | undefined;
+      if (carried) {
+        throw new ToolError(
+          `finding_id ${findingId} is already the id of carried record ${carried.carried_id} ` +
+            `(from ${carried.archived_store_id}); a live finding with that id would answer every ` +
+            "reference to the archived one. Choose an id no carried record holds.",
         );
       }
 

@@ -413,12 +413,25 @@ export const carriedTools: ToolDefinition[] = [
         return carriedId;
       });
       const carriedId = write();
+      // The record is carried regardless: refusing it would lose the archive's
+      // obligation. But an unqualified reference to this id now resolves to
+      // the live finding first (B03-R6), so the caller is told.
+      const shadowed = ctx.db
+        .prepare("SELECT 1 FROM findings WHERE finding_id = ?")
+        .get(archivedFindingId);
       return ok({
         carried_id: carriedId,
         archived_store_id: archivedStoreId,
         archived_finding_id: archivedFindingId,
         pre_recorded: ARCHIVED_CLOSED.has(archivedResolution) ? "archived-terminal" : null,
         obligation_id: `carried:${archivedStoreId}:${archivedFindingId}`,
+        ...(shadowed
+          ? {
+              shadowed_by_live_finding:
+                `a live finding is also ${archivedFindingId}; refer to this record by its ` +
+                "obligation_id, since an unqualified reference resolves to the live finding",
+            }
+          : {}),
       });
     },
   },
