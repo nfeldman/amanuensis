@@ -206,10 +206,25 @@ function parseArgs(argv: string[]): { workspace: string | null; selectionSource:
       allowWorkspacePin || process.env.AMANUENSIS_ALLOW_WORKSPACE_PIN === "1",
       launchWorkspace,
     );
+    if (amanuensisWorkspace) {
+      return {
+        workspace: amanuensisWorkspace,
+        selectionSource: "environment:AMANUENSIS_WORKSPACE",
+      };
+    }
+    // Claude Code sets CLAUDE_PROJECT_DIR to the directory a session started
+    // in, which may be a subdirectory. The store belongs to the repository,
+    // so a directory inside a Git work tree resolves to its root.
+    const claudeRoot = gitRoot(claudeWorkspace as string);
+    // A user-level registration serves every session, including one started
+    // in the home directory; outside a repository it waits for the handshake.
+    if (!claudeRoot && process.env.AMANUENSIS_ACTIVATION_CONTRACT === "user-cwd-v1") {
+      return { workspace: null, selectionSource: "awaiting-workspace-handshake" };
+    }
     return {
-      workspace: fromEnvironment,
-      selectionSource: amanuensisWorkspace
-        ? "environment:AMANUENSIS_WORKSPACE"
+      workspace: claudeRoot ?? (claudeWorkspace as string),
+      selectionSource: claudeRoot
+        ? "environment:CLAUDE_PROJECT_DIR-git-root"
         : "environment:CLAUDE_PROJECT_DIR",
     };
   }
@@ -230,8 +245,12 @@ function parseArgs(argv: string[]): { workspace: string | null; selectionSource:
   // Codex desktop starts user-scoped MCP processes outside the chat's project,
   // commonly at /. That is a launcher location, never a project selection.
   // Stay reachable for a workspace handshake without resolving or opening state.
+  // A user-level registration in another host (user-cwd-v1) is launched from
+  // wherever that host starts it — often the home directory — so a non-Git
+  // directory is likewise a launcher location, not the project.
   if (
     process.env.AMANUENSIS_ACTIVATION_CONTRACT === "codex-user-cwd-v1" ||
+    process.env.AMANUENSIS_ACTIVATION_CONTRACT === "user-cwd-v1" ||
     process.cwd() === parse(process.cwd()).root
   ) {
     return { workspace: null, selectionSource: "awaiting-workspace-handshake" };

@@ -63,15 +63,15 @@ jobs:
           git -C "$RUNNER_TEMP/a24-repository-a" init --quiet
           git -C "$RUNNER_TEMP/a24-repository-b" init --quiet
           printf '# unrelated published-smoke bytes\n[features]\nkeep = true\n' > "$CODEX_HOME/config.toml"
-          amanuensis install --dir "$RUNNER_TEMP/a24-repository-a"
+          amanuensis install --client codex --dir "$RUNNER_TEMP/a24-repository-a"
           test ! -e "$RUNNER_TEMP/a24-repository-a/.codex"
           test ! -e "$RUNNER_TEMP/a24-repository-a/.amanuensis"
           test ! -e "$RUNNER_TEMP/a24-repository-b/.codex"
           test ! -e "$RUNNER_TEMP/a24-repository-b/.amanuensis"
           amanuensis doctor --client codex --dir "$RUNNER_TEMP/a24-repository-a" --json
           amanuensis doctor --client codex --dir "$RUNNER_TEMP/a24-repository-b" --json
-          amanuensis upgrade --dir "$RUNNER_TEMP/a24-repository-a" --dry-run
-          amanuensis upgrade --dir "$RUNNER_TEMP/a24-repository-a"
+          amanuensis upgrade --client codex --dir "$RUNNER_TEMP/a24-repository-a" --dry-run
+          amanuensis upgrade --client codex --dir "$RUNNER_TEMP/a24-repository-a"
 
       - name: amanuensis init writes every client adapter
         shell: bash

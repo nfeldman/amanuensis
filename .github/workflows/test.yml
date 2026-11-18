@@ -124,6 +124,9 @@ jobs:
       - name: Nested Codex activation selects the Git root lazily
         working-directory: mcp-server
         run: node test-nested-activation-binding.mjs
+      - name: Claude Code and Copilot user-level launches bind the repository root
+        working-directory: mcp-server
+        run: node test-user-host-binding.mjs
       - name: Lazy first use leaves an untouched repository unchanged
         working-directory: mcp-server
         run: node test-first-use-laziness.mjs

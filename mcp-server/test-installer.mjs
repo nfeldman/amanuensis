@@ -190,7 +190,7 @@ test("Codex install and upgrade are dry-run-first lifecycle commands that preser
     const configPath = join(userHome, "config.toml");
     const unrelated = "# preserve byte-for-byte\n[features]\nkeep = true\n";
     writeFileSync(configPath, unrelated);
-    const installed = runCli(["install", "--dir", workspace], {
+    const installed = runCli(["install", "--client", "codex", "--dir", workspace], {
       env: { ...process.env, CODEX_HOME: userHome },
     });
     assert(installed.status === 0, installed.stderr);
@@ -211,7 +211,7 @@ test("Codex install and upgrade are dry-run-first lifecycle commands that preser
     writeFileSync(configPath, staleConfig);
     const backupsBefore = backupsFor(configPath).length;
 
-    const dryRun = runCli(["upgrade", "--dir", workspace, "--dry-run"], {
+    const dryRun = runCli(["upgrade", "--client", "codex", "--dir", workspace, "--dry-run"], {
       env: { ...process.env, CODEX_HOME: userHome },
     });
     assert(dryRun.status === 0, dryRun.stderr);
@@ -219,7 +219,7 @@ test("Codex install and upgrade are dry-run-first lifecycle commands that preser
     assert(readFileSync(configPath, "utf8") === staleConfig, "upgrade dry run changed config");
     assert(readFileSync(skillPath, "utf8") === "stale managed skill\n", "dry run changed skill");
 
-    const upgraded = runCli(["upgrade", "--dir", workspace], {
+    const upgraded = runCli(["upgrade", "--client", "codex", "--dir", workspace], {
       env: { ...process.env, CODEX_HOME: userHome },
     });
     assert(upgraded.status === 0, upgraded.stderr);
@@ -763,6 +763,411 @@ test("nonexistent target fails with no side effects", () => {
   assert(result.status !== 0, "nonexistent target should fail");
   assert(result.stderr.includes("does not exist or is not a directory"), result.stderr);
   assert(!existsSync(workspace), "nonexistent target was created");
+});
+
+// ---- User-level installation for every host (amanuensis install) ----
+//
+// Every probe below runs with HOME, PATH, and each host's home variable
+// pointed at scratch directories, so no run can read or write the real
+// ~/.claude.json, ~/.codex, or ~/.copilot of the machine running the suite.
+
+function isolatedHost({ hosts = [], commands = [] } = {}) {
+  const home = fresh();
+  const bin = join(home, "bin");
+  mkdirSync(bin);
+  symlinkSync(process.execPath, join(bin, "node"));
+  for (const command of commands) {
+    writeFileSync(join(bin, command), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  }
+  for (const host of hosts) mkdirSync(join(home, host), { recursive: true });
+  const env = { ...process.env, HOME: home, PATH: `${bin}:/usr/bin:/bin` };
+  for (const key of ["CODEX_HOME", "CLAUDE_CONFIG_DIR", "COPILOT_HOME", "AMANUENSIS_PYTHON"]) {
+    delete env[key];
+  }
+  return { home, env };
+}
+
+const USER_CONTRACT = "user-cwd-v1";
+
+test("install sets up Claude Code and Copilot for every repository and leaves the project alone", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    const claudeJson = join(home, ".claude.json");
+    const original = '{\n  "numStartups": 7,\n  "mcpServers": {\n    "other": { "command": "keep" }\n  }\n}\n';
+    writeFileSync(claudeJson, original);
+    const result = runCli(["install", "--client", "claude,copilot", "--dir", workspace], { env });
+    assert(result.status === 0, result.stderr);
+    assert(readdirSync(workspace).length === 0, "a user-level install wrote into the project");
+
+    const claude = readJson(claudeJson);
+    assert(claude.numStartups === 7, "unrelated Claude state was not preserved");
+    assert(claude.mcpServers?.other?.command === "keep", "unrelated Claude server was lost");
+    const claudeEntry = claude.mcpServers?.["amanuensis-memory"];
+    assert(claudeEntry?.type === "stdio", "Claude entry is not stdio");
+    assert(claudeEntry.command === process.execPath, "Claude launcher is not durable");
+    assert(!claudeEntry.args?.includes("--workspace"), "Claude user entry pins a repository");
+    assert(claudeEntry.env?.AMANUENSIS_ACTIVATION_CONTRACT === USER_CONTRACT, "contract missing");
+    assert(backupsFor(claudeJson).length === 1, "Claude config was rewritten without a backup");
+    assert(existsSync(join(home, ".claude/skills/amanuensis/SKILL.md")), "Claude skill missing");
+
+    const copilot = readJson(join(home, ".copilot/mcp-config.json"));
+    const copilotEntry = copilot.mcpServers?.["amanuensis-memory"];
+    assert(copilotEntry?.type === "local", "Copilot entry is not a local server");
+    assert(copilotEntry.tools?.[0] === "*", "Copilot entry exposes no tools");
+    assert(copilotEntry.env?.AMANUENSIS_ACTIVATION_CONTRACT === USER_CONTRACT, "contract missing");
+    assert(existsSync(join(home, ".copilot/skills/amanuensis/SKILL.md")), "Copilot skill missing");
+    assert(!existsSync(join(home, ".codex")), "an unnamed host was installed");
+    assert(result.stdout.includes("Restart Claude Code once"), "Claude restart not reported");
+    assert(result.stdout.includes("amanuensis status"), "the verification command is not named");
+
+    const again = runCli(["install", "--client", "claude,copilot", "--dir", workspace], { env });
+    assert(again.status === 0, again.stderr);
+    assert(backupsFor(claudeJson).length === 1, "an unchanged rerun rewrote the Claude config");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("install with no --client installs exactly the hosts present on the machine", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost({ hosts: [".copilot"], commands: ["claude"] });
+  try {
+    const result = runCli(["install", "--dir", workspace], { env });
+    assert(result.status === 0, result.stderr);
+    assert(existsSync(join(home, ".copilot/mcp-config.json")), "Copilot home was not detected");
+    assert(existsSync(join(home, ".claude.json")), "claude on PATH was not detected");
+    assert(!existsSync(join(home, ".codex")), "an absent host was installed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("install with no host on the machine fails, names the hosts, and writes nothing", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    const result = runCli(["install", "--dir", workspace], { env });
+    assert(result.status !== 0, "install succeeded with no host present");
+    assert(result.stderr.includes("--client codex, claude, or copilot"), result.stderr);
+    assert(
+      readdirSync(home).every((entry) => entry === "bin"),
+      "install wrote with no host present",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("a hand-written registration is a conflict that writes nothing until --force", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    const copilotConfig = join(home, ".copilot/mcp-config.json");
+    mkdirSync(dirname(copilotConfig), { recursive: true });
+    const original = '{"mcpServers":{"amanuensis-memory":{"type":"local","command":"mine"}}}\n';
+    writeFileSync(copilotConfig, original);
+    const refused = runCli(["install", "--client", "claude,copilot", "--dir", workspace], { env });
+    assert(refused.status !== 0, "a hand-written registration was overwritten");
+    assert(refused.stderr.includes("registered by hand"), refused.stderr);
+    assert(readFileSync(copilotConfig, "utf8") === original, "conflicting config was changed");
+    assert(!existsSync(join(home, ".claude.json")), "another host was written before the refusal");
+    assert(!existsSync(join(home, ".copilot/skills")), "skill was partially installed");
+
+    const forced = runCli(
+      ["install", "--client", "copilot", "--dir", workspace, "--force"],
+      { env },
+    );
+    assert(forced.status === 0, forced.stderr);
+    const entry = readJson(copilotConfig).mcpServers["amanuensis-memory"];
+    assert(entry.env?.AMANUENSIS_ACTIVATION_CONTRACT === USER_CONTRACT, "--force did not replace");
+    assert(backupsFor(copilotConfig).length === 1, "--force replaced without a backup");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("status reports each host, exits non-zero until every present host is set up", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost({ hosts: [".copilot", ".claude"] });
+  try {
+    const before = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(before.status !== 0, "status passed before installation");
+    const beforeReport = JSON.parse(before.stdout);
+    assert(beforeReport.status === "incomplete", "status was not incomplete");
+    assert(beforeReport.next.includes("amanuensis install"), "status does not name the fix");
+
+    const partial = runCli(["install", "--client", "copilot", "--dir", workspace], { env });
+    assert(partial.status === 0, partial.stderr);
+    const half = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(half.status !== 0, "status passed with a present host still unset");
+
+    const installed = runCli(["install", "--dir", workspace], { env });
+    assert(installed.status === 0, installed.stderr);
+    const after = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(after.status === 0, after.stdout);
+    const report = JSON.parse(after.stdout);
+    const byHost = Object.fromEntries(report.hosts.map((host) => [host.host, host]));
+    assert(byHost.claude.installed && byHost.copilot.installed, "installed hosts not reported");
+    assert(!byHost.codex.detected && !byHost.codex.installed, "an absent host was reported");
+    const text = runCli(["status"], { env, cwd: workspace });
+    assert(text.stdout.includes("Claude Code: installed"), text.stdout);
+
+    const skill = join(home, ".claude/skills/amanuensis/SKILL.md");
+    writeFileSync(skill, "stale\n");
+    const stale = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(stale.status !== 0, "status passed with a stale skill");
+    assert(JSON.parse(stale.stdout).next.includes("amanuensis upgrade"), "upgrade not named");
+    const upgraded = runCli(["upgrade", "--dir", workspace], { env });
+    assert(upgraded.status === 0, upgraded.stderr);
+    assert(readFileSync(skill, "utf8").includes("name: amanuensis"), "upgrade missed the skill");
+    assert(runCli(["status"], { env, cwd: workspace }).status === 0, "status after upgrade");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("uninstall removes only its own entries and skills, and refuses a hand-written one", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    const claudeJson = join(home, ".claude.json");
+    writeFileSync(claudeJson, '{"mcpServers":{"other":{"command":"keep"}}}\n');
+    assert(
+      runCli(["install", "--client", "claude,copilot", "--dir", workspace], { env }).status === 0,
+      "fixture install failed",
+    );
+    const dryRun = runCli(["uninstall", "--dir", workspace, "--dry-run"], { env });
+    assert(dryRun.status === 0, dryRun.stderr);
+    assert(readJson(claudeJson).mcpServers["amanuensis-memory"], "dry run removed the entry");
+
+    const removed = runCli(["uninstall", "--dir", workspace], { env });
+    assert(removed.status === 0, removed.stderr);
+    const claude = readJson(claudeJson);
+    assert(claude.mcpServers.other?.command === "keep", "uninstall removed another server");
+    assert(!claude.mcpServers["amanuensis-memory"], "uninstall left the Claude entry");
+    assert(!existsSync(join(home, ".claude/skills/amanuensis")), "Claude skill left behind");
+    assert(!existsSync(join(home, ".copilot/skills/amanuensis")), "Copilot skill left behind");
+
+    writeFileSync(claudeJson, '{"mcpServers":{"amanuensis-memory":{"command":"mine"}}}\n');
+    const refused = runCli(["uninstall", "--client", "claude", "--dir", workspace], { env });
+    assert(refused.status !== 0, "uninstall removed a hand-written registration");
+    assert(readJson(claudeJson).mcpServers["amanuensis-memory"].command === "mine", "changed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("CLAUDE_CONFIG_DIR and COPILOT_HOME relocate where install writes", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  const claudeDir = join(home, "elsewhere-claude");
+  const copilotDir = join(home, "elsewhere-copilot");
+  try {
+    const result = runCli(["install", "--client", "claude,copilot", "--dir", workspace], {
+      env: { ...env, CLAUDE_CONFIG_DIR: claudeDir, COPILOT_HOME: copilotDir },
+    });
+    assert(result.status === 0, result.stderr);
+    assert(existsSync(join(claudeDir, ".claude.json")), "CLAUDE_CONFIG_DIR config ignored");
+    assert(existsSync(join(claudeDir, "skills/amanuensis/SKILL.md")), "CLAUDE_CONFIG_DIR skill");
+    assert(existsSync(join(copilotDir, "mcp-config.json")), "COPILOT_HOME ignored");
+    assert(!existsSync(join(home, ".claude.json")), "default Claude config written anyway");
+    assert(!existsSync(join(home, ".copilot")), "default Copilot home written anyway");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("a skill linked to a development checkout is reported and left in place", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  const checkout = fresh();
+  try {
+    writeFileSync(join(checkout, "SKILL.md"), "development copy\n");
+    mkdirSync(join(home, ".claude/skills"), { recursive: true });
+    symlinkSync(checkout, join(home, ".claude/skills/amanuensis"), "dir");
+    const result = runCli(["install", "--client", "claude", "--dir", workspace], { env });
+    assert(result.status === 0, result.stderr);
+    assert(result.stdout.includes("symbolic link"), "the linked skill was not reported");
+    assert(
+      readFileSync(join(checkout, "SKILL.md"), "utf8") === "development copy\n",
+      "install wrote through the development link",
+    );
+    const status = JSON.parse(runCli(["status", "--json"], { env, cwd: workspace }).stdout);
+    assert(status.hosts.find((host) => host.host === "claude").skill === "linked", "not linked");
+    const removed = runCli(["uninstall", "--client", "claude", "--dir", workspace], { env });
+    assert(removed.status === 0, removed.stderr);
+    assert(existsSync(join(checkout, "SKILL.md")), "uninstall removed the development checkout");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+    rmSync(checkout, { recursive: true, force: true });
+  }
+});
+
+test("a dangling symbolic link at a config path is refused, not followed", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  const outside = fresh();
+  const target = join(outside, "created-through-link.json");
+  try {
+    symlinkSync(target, join(home, ".claude.json"));
+    const result = runCli(["install", "--client", "claude", "--dir", workspace], { env });
+    assert(result.status !== 0, "install followed a dangling config link");
+    assert(result.stderr.includes("symbolic link"), result.stderr);
+    assert(!existsSync(target), "install created a file outside the managed location");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+test("a configuration rewrite keeps the file's permissions and leaves no temporary file", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    const claudeJson = join(home, ".claude.json");
+    writeFileSync(claudeJson, "{}\n", { mode: 0o600 });
+    const result = runCli(["install", "--client", "claude", "--dir", workspace], { env });
+    assert(result.status === 0, result.stderr);
+    assert((statSync(claudeJson).mode & 0o777) === 0o600, "rewrite widened permissions");
+    assert(
+      readdirSync(home).every((entry) => !entry.includes(".amanuensis-")),
+      "a temporary file was left beside the config",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("an unwritable file for one host stops the install before any host is written", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  const copilotConfig = join(home, ".copilot/mcp-config.json");
+  try {
+    mkdirSync(dirname(copilotConfig), { recursive: true });
+    writeFileSync(copilotConfig, "{}\n", { mode: 0o444 });
+    const result = runCli(["install", "--client", "claude,copilot", "--dir", workspace], { env });
+    assert(result.status !== 0, "install proceeded past an unwritable config");
+    assert(result.stderr.includes("not writable"), result.stderr);
+    assert(!existsSync(join(home, ".claude.json")), "Claude was written before the refusal");
+    assert(!existsSync(join(home, ".claude/skills")), "a skill was written before the refusal");
+    assert(!existsSync(join(home, ".copilot/skills")), "Copilot skill was partially written");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("upgrade removes skill files a newer release no longer ships", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    assert(
+      runCli(["install", "--client", "copilot", "--dir", workspace], { env }).status === 0,
+      "fixture install failed",
+    );
+    const obsolete = join(home, ".copilot/skills/amanuensis/references/retired.md");
+    writeFileSync(obsolete, "shipped by an earlier release\n");
+    const stale = JSON.parse(runCli(["status", "--json"], { env, cwd: workspace }).stdout);
+    assert(stale.hosts.find((host) => host.host === "copilot").skill === "outdated", "not stale");
+    const upgraded = runCli(["upgrade", "--dir", workspace], { env });
+    assert(upgraded.status === 0, upgraded.stderr);
+    assert(!existsSync(obsolete), "upgrade left an obsolete skill file");
+    const status = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(status.status === 0, status.stdout);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("Codex install and upgrade both leave a linked development skill in place", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  const checkout = fresh();
+  try {
+    writeFileSync(join(checkout, "SKILL.md"), "development copy\n");
+    mkdirSync(join(home, ".codex/skills"), { recursive: true });
+    symlinkSync(checkout, join(home, ".codex/skills/amanuensis"), "dir");
+    const installed = runCli(["install", "--client", "codex", "--dir", workspace], { env });
+    assert(installed.status === 0, installed.stderr);
+    const upgraded = runCli(["upgrade", "--client", "codex", "--dir", workspace], { env });
+    assert(upgraded.status === 0, upgraded.stderr);
+    assert(
+      readFileSync(join(checkout, "SKILL.md"), "utf8") === "development copy\n",
+      "the development checkout was written",
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+    rmSync(checkout, { recursive: true, force: true });
+  }
+});
+
+test("VS Code's user directory counts as Copilot being present", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost({ hosts: [".vscode"] });
+  try {
+    const result = runCli(["install", "--dir", workspace], { env });
+    assert(result.status === 0, result.stderr);
+    assert(existsSync(join(home, ".copilot/mcp-config.json")), "VS Code was not detected");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("status refuses a broken skill link and a Codex file that does not parse", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    assert(
+      runCli(["install", "--client", "codex,claude", "--dir", workspace], { env }).status === 0,
+      "fixture install failed",
+    );
+    const config = join(home, ".codex/config.toml");
+    writeFileSync(config, `${readFileSync(config, "utf8")}\n[broken\n`);
+    rmSync(join(home, ".claude/skills/amanuensis"), { recursive: true });
+    symlinkSync(join(home, "missing-checkout"), join(home, ".claude/skills/amanuensis"), "dir");
+    const status = runCli(["status", "--json"], { env, cwd: workspace });
+    assert(status.status !== 0, "status passed with broken installations");
+    const byHost = Object.fromEntries(
+      JSON.parse(status.stdout).hosts.map((host) => [host.host, host]),
+    );
+    assert(byHost.codex.registration === "unreadable", `codex: ${byHost.codex.registration}`);
+    assert(byHost.claude.skill === "broken", `claude skill: ${byHost.claude.skill}`);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("uninstall with no --client also removes a skill left without its registration", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost();
+  try {
+    assert(
+      runCli(["install", "--client", "copilot", "--dir", workspace], { env }).status === 0,
+      "fixture install failed",
+    );
+    writeFileSync(join(home, ".copilot/mcp-config.json"), '{"mcpServers":{}}\n');
+    const removed = runCli(["uninstall", "--dir", workspace], { env });
+    assert(removed.status === 0, removed.stderr);
+    assert(!existsSync(join(home, ".copilot/skills/amanuensis")), "orphan skill left behind");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

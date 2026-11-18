@@ -172,7 +172,7 @@ try {
     unrelatedSuffix;
   writeFileSync(configPath, originalConfig);
 
-  const installArgs = ["install", "--dir", repositories[0].path, "--force"];
+  const installArgs = ["install", "--client", "codex", "--dir", repositories[0].path, "--force"];
   const migrationDryRun = assertCli(
     runCli(installRoot, [...installArgs, "--dry-run"], repositories[0].path, codexHome),
     "migration dry run",
@@ -227,7 +227,7 @@ try {
   const upgradeDryRun = assertCli(
     runCli(
       installRoot,
-      ["upgrade", "--dir", repositories[0].path, "--dry-run"],
+      ["upgrade", "--client", "codex", "--dir", repositories[0].path, "--dry-run"],
       repositories[0].path,
       codexHome,
     ),
@@ -249,7 +249,7 @@ try {
   const upgraded = assertCli(
     runCli(
       installRoot,
-      ["upgrade", "--dir", repositories[0].path],
+      ["upgrade", "--client", "codex", "--dir", repositories[0].path],
       repositories[0].path,
       codexHome,
     ),
@@ -273,7 +273,7 @@ try {
   const rollbackDryRun = assertCli(
     runCli(
       installRoot,
-      ["upgrade", "--dir", repositories[0].path, "--dry-run"],
+      ["upgrade", "--client", "codex", "--dir", repositories[0].path, "--dry-run"],
       repositories[0].path,
       codexHome,
     ),
@@ -288,7 +288,7 @@ try {
   const rolledBack = assertCli(
     runCli(
       installRoot,
-      ["upgrade", "--dir", repositories[0].path],
+      ["upgrade", "--client", "codex", "--dir", repositories[0].path],
       repositories[0].path,
       codexHome,
     ),

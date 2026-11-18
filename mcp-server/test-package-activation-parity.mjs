@@ -252,7 +252,7 @@ async function runScenario(mode, root, spec, packageVersion) {
   const configPath = join(codexHome, "config.toml");
   writeFileSync(configPath, unrelated);
 
-  const installed = runCli(spec, ["install", "--dir", repositories[0]], repositories[0], codexHome);
+  const installed = runCli(spec, ["install", "--client", "codex", "--dir", repositories[0]], repositories[0], codexHome);
   assert.equal(installed.status, 0, installed.stderr);
   assert(installed.stdout.includes("Restart Codex once"), `${mode}: install restart missing`);
   assert(
@@ -330,12 +330,12 @@ async function runScenario(mode, root, spec, packageVersion) {
   const custody = repositories.map(repositoryCustody);
   const upgradeDryRun = runCli(
     spec,
-    ["upgrade", "--dir", repositories[0], "--dry-run"],
+    ["upgrade", "--client", "codex", "--dir", repositories[0], "--dry-run"],
     repositories[0],
     codexHome,
   );
   assert.equal(upgradeDryRun.status, 0, upgradeDryRun.stderr);
-  const upgraded = runCli(spec, ["upgrade", "--dir", repositories[0]], repositories[0], codexHome);
+  const upgraded = runCli(spec, ["upgrade", "--client", "codex", "--dir", repositories[0]], repositories[0], codexHome);
   assert.equal(upgraded.status, 0, upgraded.stderr);
   assert(custody.every(({ path }) => readFileSync(path, "utf8") === "preserve-a24\n"));
 

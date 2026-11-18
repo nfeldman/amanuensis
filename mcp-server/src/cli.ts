@@ -7,8 +7,11 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  accessSync,
+  chmodSync,
   copyFileSync,
   existsSync,
+  constants as fsConstants,
   lstatSync,
   mkdirSync,
   readdirSync,
@@ -19,8 +22,9 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { applyEdits, modify, type ParseError, parse, printParseErrorCode } from "jsonc-parser";
@@ -68,8 +72,23 @@ const LEGACY_AGENT_FILES = [
   "amanuensis.agent.md",
 ] as const;
 
-type Client = "claude" | "codex" | "vscode" | "generic";
+type Client = "claude" | "codex" | "copilot" | "vscode" | "generic";
 type InstallScope = "user" | "project";
+
+// The hosts one `amanuensis install` sets up for every repository at once.
+// Each reads a user-level MCP registration and a user-level skills directory.
+const USER_HOSTS = ["codex", "claude", "copilot"] as const;
+type UserHost = (typeof USER_HOSTS)[number];
+const HOST_LABEL: Record<UserHost, string> = {
+  codex: "Codex",
+  claude: "Claude Code",
+  copilot: "GitHub Copilot (CLI and VS Code)",
+};
+// A user-level registration launched by a host other than Codex. The server
+// binds from CLAUDE_PROJECT_DIR or a Git working directory, and otherwise
+// waits for the skill's workspace handshake instead of claiming a non-Git
+// launcher directory such as the home directory.
+const USER_CWD_CONTRACT = "user-cwd-v1";
 
 type InitFlags = {
   dir: string;
@@ -88,7 +107,19 @@ type PlanAction =
   | { kind: "skip-file"; path: string; reason: string }
   | { kind: "conflict"; path: string; reason: string }
   | { kind: "mkdir"; path: string }
-  | { kind: "remove-tree"; path: string };
+  | { kind: "remove-tree"; path: string }
+  | { kind: "remove-file"; path: string }
+  // A JSON edit computed from the file as it is when the edit is applied, not
+  // when it was planned: another program (Claude Code rewrites ~/.claude.json
+  // constantly) may change the file in between, and its change must survive.
+  | {
+      kind: "edit-json";
+      path: string;
+      keyPath: string[];
+      value: unknown;
+      backupTo: string;
+      allowUnmanaged: boolean;
+    };
 
 type JsonObject = Record<string, unknown>;
 
@@ -121,12 +152,17 @@ function assertSafeRootPath(rootPath: string, target: string): void {
   if (!isWithin(lexicalRoot, lexicalTarget)) {
     throw new Error(`installer path escapes managed root: ${target}`);
   }
+  // A root that does not exist yet (a dry run before a host's first install)
+  // has nothing beneath it to traverse; the lexical check is the whole check.
+  if (!lstatExists(rootPath)) return;
   const root = realpathSync(rootPath);
   const resolvedTarget = join(root, relative(lexicalRoot, lexicalTarget));
   let cursor = root;
   for (const segment of relative(root, resolvedTarget).split(sep).filter(Boolean)) {
     cursor = join(cursor, segment);
-    if (!existsSync(cursor)) break;
+    // lstat, not exists: a dangling symbolic link does not "exist", and
+    // treating it as absent would let a write follow it out of the root.
+    if (!lstatExists(cursor)) break;
     const stat = lstatSync(cursor);
     if (stat.isSymbolicLink()) {
       throw new Error(`installer path traverses a symbolic link: ${cursor}`);
@@ -154,36 +190,47 @@ function printUsage(): void {
       "amanuensis — manage the Amanuensis MCP server and workflow skill.",
       "",
       "Usage:",
-      "  amanuensis install [--client codex] [options]",
-      "  amanuensis init --client <claude|codex|vscode|generic> [options]",
-      "  amanuensis upgrade [--client codex] [options]",
+      "  amanuensis install [--client codex,claude,copilot] [options]",
+      "  amanuensis status [--json]",
+      "  amanuensis upgrade [--client <names>] [options]",
+      "  amanuensis uninstall [--client <names>] [options]",
+      "  amanuensis init --client <claude|codex|vscode|generic> --dir <project> [options]",
       "  amanuensis doctor --client codex [options]",
-      "  amanuensis uninstall --client codex [options]",
+      "",
+      "install sets up every host it finds on this machine (Codex, Claude Code,",
+      "GitHub Copilot) once, for every repository; --client limits it to the",
+      "named hosts. status reports what is installed and exits non-zero when a",
+      "host it finds is not set up. init installs into one project instead.",
       "",
       "Options:",
-      "  --client <name>  Target agent runtime. Required because MCP clients use",
-      "                   different project configuration files.",
-      "  --dir <path>     Target project (default: current directory).",
-      "  --scope <name>   Codex installation scope: user (default) or project.",
-      "  --force          Replace conflicting Amanuensis-managed files; config",
-      "                   migrations receive timestamped backups.",
+      "  --client <name>  Host(s): codex, claude, copilot (comma-separated) for",
+      "                   install, upgrade, and uninstall; one of claude, codex,",
+      "                   vscode, generic for init.",
+      "  --dir <path>     Target project for init and doctor (default: current directory).",
+      "  --scope <name>   user (default for install) or project.",
+      "  --force          Replace conflicting Amanuensis files or a hand-written",
+      "                   registration; config rewrites receive timestamped backups.",
       "  --mcp-only       Configure only the MCP launcher. Intended for",
       "                   local development with a live global skill symlink.",
       "  --dry-run        Print the complete plan; write nothing.",
       "  --agent-instructions",
-      "                   Opt in to a short Amanuensis paragraph in the",
+      "                   With init, add a short Amanuensis paragraph to the",
       "                   project's agent instructions: CLAUDE.md for Claude",
       "                   Code, AGENTS.md for the other clients. Nothing is",
       "                   written to either file without this flag.",
       "  --repair         With doctor, prepare a bounded user/project migration.",
       "  --apply-plan ID  Apply only the exact repair plan ID returned by dry-run.",
-      "  --json           Emit the doctor report as machine-readable JSON.",
+      "  --json           Emit the status or doctor report as machine-readable JSON.",
       "  --help           Show this message.",
       "",
-      "Client adapters:",
+      "Where install writes (user level):",
+      "  codex    $CODEX_HOME/config.toml + $CODEX_HOME/skills/amanuensis/",
+      "  claude   ~/.claude.json + ~/.claude/skills/amanuensis/ ($CLAUDE_CONFIG_DIR)",
+      "  copilot  $COPILOT_HOME/mcp-config.json + $COPILOT_HOME/skills/amanuensis/",
+      "",
+      "Project adapters (init):",
       "  claude   .mcp.json + .claude/skills/amanuensis/",
-      "  codex    user: $CODEX_HOME/config.toml + skills/amanuensis/",
-      "           project pin: .codex/config.toml + .agents/skills/amanuensis/",
+      "  codex    --scope project: .codex/config.toml + .agents/skills/amanuensis/",
       "  vscode   .vscode/mcp.json + .agents/skills/amanuensis/",
       "  generic  portable skill only; prints the stdio registration command",
       "",
@@ -195,32 +242,92 @@ function printUsage(): void {
 }
 
 function parseClient(value: string | undefined): Client {
-  if (value === "claude" || value === "codex" || value === "vscode" || value === "generic") {
+  if (
+    value === "claude" ||
+    value === "codex" ||
+    value === "copilot" ||
+    value === "vscode" ||
+    value === "generic"
+  ) {
     return value;
   }
   if (value == null) {
     throw new Error(
-      "--client is required (claude, codex, vscode, or generic); MCP does not standardize a universal project config file",
+      "--client is required (claude, codex, copilot, vscode, or generic); MCP does not standardize a universal project config file",
     );
   }
   throw new Error(
-    `unsupported --client ${JSON.stringify(value)}; expected claude, codex, vscode, or generic`,
+    `unsupported --client ${JSON.stringify(value)}; expected claude, codex, copilot, vscode, or generic`,
   );
 }
 
-function parseScope(value: string | undefined, client: Client): InstallScope {
-  if (value == null) return client === "codex" ? "user" : "project";
+/** Parse `--client a,b` for the user-level commands; every name must be a user host. */
+function parseUserHosts(value: string): UserHost[] {
+  const names = value
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (names.length === 0) throw new Error("--client names no host");
+  const hosts: UserHost[] = [];
+  for (const name of names) {
+    const client = parseClient(name);
+    if (!(USER_HOSTS as readonly string[]).includes(client)) {
+      throw new Error(
+        `${client} has no user-level installation; use \`amanuensis init --client ${client} --dir <project>\``,
+      );
+    }
+    if (!hosts.includes(client as UserHost)) hosts.push(client as UserHost);
+  }
+  return hosts;
+}
+
+function parseScope(
+  value: string | undefined,
+  client: Client,
+  operation: "init" | "install" | "upgrade" | "uninstall" = "init",
+): InstallScope {
+  if (value == null) {
+    if (client === "codex" || client === "copilot") return "user";
+    if (client === "claude" && operation !== "init") return "user";
+    return "project";
+  }
   if (value !== "user" && value !== "project") {
     throw new Error(`unsupported --scope ${JSON.stringify(value)}; expected user or project`);
   }
-  if (value === "user" && client !== "codex") {
-    throw new Error("--scope user is currently supported only for Codex");
+  if (value === "user" && !(USER_HOSTS as readonly string[]).includes(client)) {
+    throw new Error("--scope user is supported for codex, claude, and copilot");
+  }
+  if (value === "project" && client === "copilot") {
+    throw new Error(
+      "copilot is installed at user scope; use --client vscode for a project adapter",
+    );
   }
   return value;
 }
 
 function codexHome(): string {
   return resolve(process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"));
+}
+
+function claudeHome(): string {
+  return resolve(process.env.CLAUDE_CONFIG_DIR?.trim() || join(homedir(), ".claude"));
+}
+
+/** Claude Code keeps user-scoped MCP servers in `.claude.json`, beside `~/.claude`. */
+function claudeUserConfigPath(): string {
+  const configDir = process.env.CLAUDE_CONFIG_DIR?.trim();
+  return configDir ? join(resolve(configDir), ".claude.json") : join(homedir(), ".claude.json");
+}
+
+/** Copilot CLI and VS Code's Copilot both read `$COPILOT_HOME` (default `~/.copilot`). */
+function copilotHome(): string {
+  return resolve(process.env.COPILOT_HOME?.trim() || join(homedir(), ".copilot"));
+}
+
+function userHostHome(host: UserHost): string {
+  if (host === "codex") return codexHome();
+  if (host === "claude") return claudeHome();
+  return copilotHome();
 }
 
 function findBundledSkill(): string {
@@ -244,7 +351,9 @@ function findBundledSkill(): string {
 }
 
 function skillDestination(workspace: string, client: Client, scope: InstallScope): string {
-  if (client === "codex" && scope === "user") return join(codexHome(), "skills", "amanuensis");
+  if (scope === "user" && (USER_HOSTS as readonly string[]).includes(client)) {
+    return join(userHostHome(client as UserHost), "skills", "amanuensis");
+  }
   if (client === "claude") return join(workspace, ".claude", "skills", "amanuensis");
   return join(workspace, ".agents", "skills", "amanuensis");
 }
@@ -618,6 +727,33 @@ function doctorReport(workspace: string): JsonObject & { diagnoses: DoctorDiagno
   };
 }
 
+/** The directory every path a plan writes must stay inside. */
+function installRoot(flags: InitFlags, workspace: string): string {
+  if (flags.scope !== "user") return workspace;
+  return userHostHome(flags.client as UserHost);
+}
+
+const LINKED_SKILL_REASON = "skill is a symbolic link (a development checkout); left in place";
+
+/**
+ * A user-level skill directory that is itself a symbolic link is a
+ * contributor's link to a source checkout. The installer neither writes
+ * through it nor removes it; it reports the link and leaves it.
+ */
+function isLinkedSkill(root: string, destination: string): boolean {
+  assertSafeRootPath(root, dirname(destination));
+  return lstatExists(destination) && lstatSync(destination).isSymbolicLink();
+}
+
+function lstatExists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function planSkill(
   actions: PlanAction[],
   workspace: string,
@@ -626,10 +762,15 @@ function planSkill(
 ): void {
   const source = findBundledSkill();
   const destination = skillDestination(workspace, flags.client, flags.scope);
+  const root = installRoot(flags, workspace);
+  if (flags.scope === "user" && isLinkedSkill(root, destination)) {
+    actions.push({ kind: "skip-file", path: destination, reason: LINKED_SKILL_REASON });
+    return;
+  }
   planMkdir(destination);
   for (const { relPath, src } of walkFiles(source)) {
     const dest = join(destination, relPath);
-    assertSafeRootPath(flags.scope === "user" ? codexHome() : workspace, dest);
+    assertSafeRootPath(root, dest);
     const content = readFileSync(src, "utf8");
     planMkdir(dirname(dest));
     if (!existsSync(dest)) {
@@ -650,11 +791,26 @@ function planSkill(
     }
     actions.push({ kind: "write-file", path: dest, content, mode: "overwrite" });
   }
+  // An upgrade (always forced) also removes files an earlier release shipped
+  // and this one does not, so the installed skill matches the package exactly.
+  if (flags.force && existsSync(destination) && statSync(destination).isDirectory()) {
+    const shipped = new Set(walkFiles(source).map((file) => file.relPath));
+    for (const { relPath } of walkFiles(destination)) {
+      if (shipped.has(relPath)) continue;
+      const path = join(destination, relPath);
+      assertSafeRootPath(root, path);
+      actions.push({ kind: "remove-file", path });
+    }
+  }
 }
 
 function planSkillUninstall(actions: PlanAction[], workspace: string, flags: InitFlags): void {
-  const root = flags.scope === "user" ? codexHome() : workspace;
+  const root = installRoot(flags, workspace);
   const destination = skillDestination(workspace, flags.client, flags.scope);
+  if (flags.scope === "user" && isLinkedSkill(root, destination)) {
+    actions.push({ kind: "skip-file", path: destination, reason: LINKED_SKILL_REASON });
+    return;
+  }
   assertSafeRootPath(root, destination);
   if (!existsSync(destination)) {
     actions.push({ kind: "skip-file", path: destination, reason: "skill is not installed" });
@@ -925,6 +1081,342 @@ function planCodexUninstall(actions: PlanAction[], workspace: string, flags: Ini
   });
 }
 
+type PlanSegment = { actions: PlanAction[]; root: string };
+
+function planSegment(root: string): PlanSegment & { planMkdir: (dir: string) => void } {
+  const actions: PlanAction[] = [];
+  const planned = new Set<string>();
+  return {
+    actions,
+    root,
+    planMkdir: (dir: string) => {
+      assertSafeRootPath(root, dir);
+      if (planned.has(dir)) return;
+      planned.add(dir);
+      if (!existsSync(dir)) actions.push({ kind: "mkdir", path: dir });
+    },
+  };
+}
+
+type JsonUserHost = Exclude<UserHost, "codex">;
+
+function userConfigPath(host: UserHost): string {
+  if (host === "codex") return join(codexHome(), "config.toml");
+  if (host === "claude") return claudeUserConfigPath();
+  return join(copilotHome(), "mcp-config.json");
+}
+
+/**
+ * The user-level registration for a host other than Codex. Both files key
+ * servers under `mcpServers`; Copilot names a stdio server `local` and lists
+ * the tools it may call. The contract marker in `env` is how a later install,
+ * upgrade, or uninstall recognizes the entry as the installer's own.
+ */
+function userServerEntry(host: JsonUserHost, launch: ServerLaunch): JsonObject {
+  const env = {
+    AMANUENSIS_AUTOPROGRESS: "1",
+    AMANUENSIS_ACTIVATION_CONTRACT: USER_CWD_CONTRACT,
+  };
+  if (host === "claude") {
+    return { type: "stdio", command: launch.command, args: launch.args, env };
+  }
+  return { type: "local", command: launch.command, args: launch.args, env, tools: ["*"] };
+}
+
+function isManagedUserEntry(entry: unknown): boolean {
+  return (
+    isJsonObject(entry) &&
+    isJsonObject(entry.env) &&
+    entry.env.AMANUENSIS_ACTIVATION_CONTRACT === USER_CWD_CONTRACT
+  );
+}
+
+function readUserServers(path: string): { raw: string; value: JsonObject; servers: JsonObject } {
+  let parsed: { raw: string; value: JsonObject };
+  try {
+    parsed = readJsonWithComments(path);
+  } catch (error) {
+    throw new Error(
+      `${path} is not parseable JSON (${(error as Error).message}); fix or move it before rerunning`,
+    );
+  }
+  const servers = parsed.value.mcpServers ?? {};
+  if (!isJsonObject(servers)) throw new Error(`${path} has a non-object mcpServers field`);
+  return { ...parsed, servers };
+}
+
+function planUserJsonConfig(
+  segment: PlanSegment & { planMkdir: (dir: string) => void },
+  host: JsonUserHost,
+  flags: InitFlags,
+): void {
+  const { actions } = segment;
+  const configPath = userConfigPath(host);
+  assertSafeRootPath(segment.root, configPath);
+  const desired = userServerEntry(host, serverLaunch());
+  segment.planMkdir(dirname(configPath));
+  if (!existsSync(configPath)) {
+    actions.push({
+      kind: "write-file",
+      path: configPath,
+      content: `${JSON.stringify({ mcpServers: { [SERVER_NAME]: desired } }, null, 2)}\n`,
+      mode: "create",
+    });
+    return;
+  }
+  const { servers } = readUserServers(configPath);
+  const prior = servers[SERVER_NAME];
+  if (sameJson(prior, desired)) {
+    actions.push({ kind: "skip-file", path: configPath, reason: "already up-to-date" });
+    return;
+  }
+  if (prior !== undefined && !isManagedUserEntry(prior) && !flags.force) {
+    actions.push({
+      kind: "conflict",
+      path: configPath,
+      reason: `${SERVER_NAME} is registered by hand with different settings; rerun with --force to replace it`,
+    });
+    return;
+  }
+  actions.push({
+    kind: "edit-json",
+    path: configPath,
+    keyPath: ["mcpServers", SERVER_NAME],
+    value: desired,
+    backupTo: backupPath(configPath),
+    allowUnmanaged: flags.force,
+  });
+}
+
+function planUserJsonUninstall(segment: PlanSegment, host: JsonUserHost, flags: InitFlags): void {
+  const { actions } = segment;
+  const configPath = userConfigPath(host);
+  assertSafeRootPath(segment.root, configPath);
+  if (!existsSync(configPath)) {
+    actions.push({ kind: "skip-file", path: configPath, reason: "configuration is absent" });
+    return;
+  }
+  const { servers } = readUserServers(configPath);
+  const prior = servers[SERVER_NAME];
+  if (prior === undefined) {
+    actions.push({ kind: "skip-file", path: configPath, reason: "server is not registered" });
+    return;
+  }
+  if (!isManagedUserEntry(prior) && !flags.force) {
+    actions.push({
+      kind: "conflict",
+      path: configPath,
+      reason: `${SERVER_NAME} was registered by hand; rerun with --force to remove it`,
+    });
+    return;
+  }
+  actions.push({
+    kind: "edit-json",
+    path: configPath,
+    keyPath: ["mcpServers", SERVER_NAME],
+    value: undefined,
+    backupTo: backupPath(configPath),
+    allowUnmanaged: flags.force,
+  });
+}
+
+function userFlags(host: UserHost, base: InitFlags): InitFlags {
+  return { ...base, client: host, scope: "user", agentInstructions: false };
+}
+
+/** The complete user-level install (or upgrade, with force) for one host. */
+function buildUserPlan(host: UserHost, flags: InitFlags, workspace: string): PlanSegment[] {
+  if (host === "codex") return [buildPlan(flags, workspace)];
+  const segments: PlanSegment[] = [];
+  if (!flags.mcpOnly) {
+    const skill = planSegment(userHostHome(host));
+    planSkill(skill.actions, workspace, flags, skill.planMkdir);
+    segments.push(skill);
+  }
+  const config = planSegment(dirname(userConfigPath(host)));
+  planUserJsonConfig(config, host, flags);
+  segments.push(config);
+  return segments;
+}
+
+function buildUserUninstallPlan(
+  host: UserHost,
+  flags: InitFlags,
+  workspace: string,
+): PlanSegment[] {
+  if (host === "codex") return [buildUninstallPlan(flags, workspace)];
+  const segments: PlanSegment[] = [];
+  if (!flags.mcpOnly) {
+    const skill = planSegment(userHostHome(host));
+    planSkillUninstall(skill.actions, workspace, flags);
+    segments.push(skill);
+  }
+  const config = planSegment(dirname(userConfigPath(host)));
+  planUserJsonUninstall(config, host, flags);
+  segments.push(config);
+  return segments;
+}
+
+const HOST_HOME_VARIABLE: Record<UserHost, string> = {
+  codex: "CODEX_HOME",
+  claude: "CLAUDE_CONFIG_DIR",
+  copilot: "COPILOT_HOME",
+};
+
+/**
+ * A host is present when its home is configured or exists, or its command is
+ * on PATH. VS Code's `code` counts for Copilot: VS Code's Copilot reads the
+ * same `~/.copilot` registration and skills as the Copilot CLI.
+ */
+function hostPresent(host: UserHost): boolean {
+  if (process.env[HOST_HOME_VARIABLE[host]]?.trim()) return true;
+  if (existsSync(userHostHome(host))) return true;
+  if (host === "claude" && existsSync(claudeUserConfigPath())) return true;
+  // VS Code's own user directories count too: its `code` shell command is
+  // optional, and ~/.copilot may not exist until Copilot first runs.
+  if (host === "copilot" && VSCODE_USER_DIRS().some((dir) => existsSync(dir))) return true;
+  const commands = host === "copilot" ? ["copilot", "code"] : [host];
+  return commands.some((command) => commandExists(command));
+}
+
+function VSCODE_USER_DIRS(): string[] {
+  return [
+    join(homedir(), ".vscode"),
+    join(homedir(), "Library", "Application Support", "Code"),
+    join(homedir(), ".config", "Code"),
+  ];
+}
+
+type RegistrationState = "installed" | "outdated" | "absent" | "unmanaged" | "unreadable";
+type SkillState = "installed" | "outdated" | "absent" | "linked" | "broken";
+
+function userRegistrationState(host: UserHost): RegistrationState {
+  const path = userConfigPath(host);
+  if (!existsSync(path)) return "absent";
+  if (host === "codex") {
+    const raw = readFileSync(path, "utf8");
+    const start = raw.indexOf(CODEX_BLOCK_START);
+    const end = raw.indexOf(CODEX_BLOCK_END);
+    if (start >= 0 && end > start) {
+      // The whole file must parse: Codex loads nothing from an invalid file,
+      // however correct the managed block inside it is.
+      try {
+        parseToml(raw);
+      } catch {
+        return "unreadable";
+      }
+      const block = raw.slice(start, end + CODEX_BLOCK_END.length);
+      return block === codexBlock(serverLaunch(), "user", homedir()) ? "installed" : "outdated";
+    }
+    try {
+      const servers = (parseToml(raw) as Record<string, unknown>).mcp_servers;
+      return isJsonObject(servers) && Object.hasOwn(servers, SERVER_NAME) ? "unmanaged" : "absent";
+    } catch {
+      return "unreadable";
+    }
+  }
+  let servers: JsonObject;
+  try {
+    servers = readUserServers(path).servers;
+  } catch {
+    return "unreadable";
+  }
+  const entry = servers[SERVER_NAME];
+  if (entry === undefined) return "absent";
+  if (sameJson(entry, userServerEntry(host, serverLaunch()))) return "installed";
+  return isManagedUserEntry(entry) ? "outdated" : "unmanaged";
+}
+
+function userSkillState(host: UserHost): SkillState {
+  const destination = join(userHostHome(host), "skills", "amanuensis");
+  if (!lstatExists(destination)) return "absent";
+  if (lstatSync(destination).isSymbolicLink()) {
+    return existsSync(join(destination, "SKILL.md")) ? "linked" : "broken";
+  }
+  if (!statSync(destination).isDirectory()) return "outdated";
+  const source = walkFiles(findBundledSkill()).sort((a, b) => a.relPath.localeCompare(b.relPath));
+  const installed = walkFiles(destination).sort((a, b) => a.relPath.localeCompare(b.relPath));
+  const exact =
+    source.length === installed.length &&
+    source.every(
+      (file, index) =>
+        file.relPath === installed[index]?.relPath &&
+        readFileSync(file.src, "utf8") === readFileSync(installed[index].src, "utf8"),
+    );
+  return exact ? "installed" : "outdated";
+}
+
+/** A host whose registration this installer wrote, current or not. */
+function hasUserInstallation(host: UserHost): boolean {
+  const state = userRegistrationState(host);
+  return state === "installed" || state === "outdated";
+}
+
+/** A registration or a copied skill: anything uninstall has to remove. */
+function hasAnyUserInstallation(host: UserHost): boolean {
+  if (hasUserInstallation(host)) return true;
+  const skill = userSkillState(host);
+  return skill === "installed" || skill === "outdated";
+}
+
+/** Whether the launcher a registration names can start on this machine. */
+function launcherAvailable(): boolean {
+  const launch = serverLaunch();
+  if (!commandExists(launch.command)) return false;
+  return launch.args.every((arg) => !isAbsolute(arg) || existsSync(arg));
+}
+
+function nearestExistingAncestor(path: string): string {
+  let cursor = path;
+  while (!lstatExists(cursor)) {
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  return cursor;
+}
+
+function writable(path: string): boolean {
+  try {
+    accessSync(path, fsConstants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Turn every write a plan would fail on into a conflict before anything is
+ * written, so one unwritable host cannot leave another half-installed.
+ */
+function preflightWritable(segment: PlanSegment): void {
+  const conflicts: PlanAction[] = [];
+  for (const action of segment.actions) {
+    const targets =
+      action.kind === "write-file" || action.kind === "edit-json"
+        ? [action.path]
+        : action.kind === "remove-file" || action.kind === "remove-tree"
+          ? [action.path]
+          : action.kind === "mkdir"
+            ? [action.path]
+            : [];
+    for (const target of targets) {
+      const directory = nearestExistingAncestor(dirname(target));
+      if (
+        !writable(directory) ||
+        (lstatExists(target) && action.kind !== "mkdir" && !writable(target))
+      ) {
+        conflicts.push({
+          kind: "conflict",
+          path: target,
+          reason: "not writable by this user; fix its permissions and rerun",
+        });
+      }
+    }
+  }
+  segment.actions.push(...conflicts);
+}
+
 /**
  * The file the selected client reads for project-wide agent instructions.
  *
@@ -1141,7 +1633,9 @@ function applyPlan(
     if (action.kind === "backup" || action.kind === "archive") {
       assertSafeRootPath(workspace, action.from);
       assertSafeRootPath(workspace, action.to);
-    } else if (action.kind !== "conflict") {
+    } else if (action.kind !== "conflict" && action.kind !== "skip-file") {
+      // A skip writes nothing, so it needs no containment check; a linked
+      // development skill is reported through one.
       assertSafeRootPath(workspace, action.path);
     }
     switch (action.kind) {
@@ -1170,8 +1664,31 @@ function applyPlan(
           if (!quiet) console.log(`[dry-run] ${action.mode} ${rel(action.path)}`);
         } else {
           mkdirSync(dirname(action.path), { recursive: true });
-          writeFileSync(action.path, action.content, "utf8");
+          const mode = lstatExists(action.path) ? statSync(action.path).mode & 0o777 : 0o644;
+          atomicWrite(action.path, action.content, mode);
           if (!quiet) console.log(`  ${action.mode === "create" ? "+" : "~"} ${rel(action.path)}`);
+        }
+        break;
+      case "edit-json": {
+        if (flags.dryRun) {
+          const exists = lstatExists(action.path);
+          if (!quiet && exists)
+            console.log(`[dry-run] backup ${rel(action.path)} → ${rel(action.backupTo)}`);
+          if (!quiet)
+            console.log(`[dry-run] ${exists ? "overwrite" : "create"} ${rel(action.path)}`);
+          break;
+        }
+        const outcome = applyJsonEdit(action);
+        if (!quiet && outcome !== "unchanged")
+          console.log(`  ${outcome === "create" ? "+" : "~"} ${rel(action.path)}`);
+        break;
+      }
+      case "remove-file":
+        if (flags.dryRun) {
+          if (!quiet) console.log(`[dry-run] remove obsolete skill file ${rel(action.path)}`);
+        } else {
+          rmSync(action.path, { force: false });
+          if (!quiet) console.log(`  - removed obsolete skill file ${rel(action.path)}`);
         }
         break;
       case "skip-file":
@@ -1189,6 +1706,59 @@ function applyPlan(
         break;
     }
   }
+}
+
+/**
+ * Replace a file by writing a sibling and renaming it over the original, so a
+ * reader never sees a truncated file and an interruption leaves the old one.
+ */
+function atomicWrite(path: string, content: string, mode: number): void {
+  const temp = join(dirname(path), `.${basename(path)}.amanuensis-${process.pid}.tmp`);
+  try {
+    writeFileSync(temp, content, { encoding: "utf8", mode, flag: "wx" });
+    chmodSync(temp, mode);
+    renameSync(temp, path);
+  } catch (error) {
+    rmSync(temp, { force: true });
+    throw error;
+  }
+}
+
+/**
+ * Apply one `mcpServers` edit to the file as it is now. Everything else in
+ * the file, including whatever another program wrote after planning, is kept.
+ */
+function applyJsonEdit(
+  action: Extract<PlanAction, { kind: "edit-json" }>,
+): "create" | "overwrite" | "unchanged" {
+  const name = action.keyPath.at(-1) as string;
+  if (!lstatExists(action.path)) {
+    if (action.value === undefined) return "unchanged";
+    atomicWrite(
+      action.path,
+      `${JSON.stringify({ mcpServers: { [name]: action.value } }, null, 2)}\n`,
+      0o600,
+    );
+    return "create";
+  }
+  const { raw, servers } = readUserServers(action.path);
+  const prior = servers[name];
+  if (prior === undefined && action.value === undefined) return "unchanged";
+  if (prior !== undefined && !isManagedUserEntry(prior) && !action.allowUnmanaged) {
+    throw new Error(
+      `${action.path} gained a hand-written ${name} entry during installation; it was not changed. Rerun to see the conflict.`,
+    );
+  }
+  copyFileSync(action.path, action.backupTo);
+  const eol = raw.includes("\r\n") ? "\r\n" : "\n";
+  const content = applyEdits(
+    raw,
+    modify(raw, action.keyPath, action.value, {
+      formattingOptions: { insertSpaces: true, tabSize: 2, eol },
+    }),
+  );
+  atomicWrite(action.path, content, statSync(action.path).mode & 0o777);
+  return "overwrite";
 }
 
 function printNextSteps(
@@ -1354,7 +1924,9 @@ function assertUpgradeableCodexInstallation(workspace: string, flags: InitFlags)
   }
   if (!flags.mcpOnly) {
     const skill = skillDestination(workspace, "codex", "user");
-    if (!existsSync(skill) || lstatSync(skill).isSymbolicLink() || !statSync(skill).isDirectory()) {
+    // A development link is left in place by the plan, exactly as install does.
+    if (lstatExists(skill) && lstatSync(skill).isSymbolicLink()) return;
+    if (!existsSync(skill) || !statSync(skill).isDirectory()) {
       throw new Error(
         "the user-scoped Amanuensis skill is absent or unsafe; run doctor before upgrade",
       );
@@ -1382,6 +1954,10 @@ function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = 
     printUsage();
     return;
   }
+  if (operation !== "init" && isUserLevelRequest(values.client, values.scope)) {
+    cmdUserInstall(values, operation);
+    return;
+  }
   const client = parseClient(values.client ?? (operation === "init" ? undefined : "codex"));
   const flags: InitFlags = {
     dir: values.dir as string,
@@ -1389,7 +1965,7 @@ function cmdInstall(argv: string[], operation: "init" | "install" | "upgrade" = 
     dryRun: values["dry-run"] as boolean,
     force: operation === "upgrade" ? true : (values.force as boolean),
     mcpOnly: values["mcp-only"] as boolean,
-    scope: parseScope(values.scope, client),
+    scope: parseScope(values.scope, client, operation),
     agentInstructions: values["agent-instructions"] as boolean,
   };
   if (flags.client === "generic" && flags.mcpOnly) {
@@ -1443,8 +2019,12 @@ function cmdUninstall(argv: string[]): void {
     printUsage();
     return;
   }
+  if (isUserLevelRequest(values.client, values.scope)) {
+    cmdUserUninstall(values);
+    return;
+  }
   const client = parseClient(values.client);
-  if (client !== "codex") throw new Error("uninstall currently supports only Codex");
+  if (client !== "codex") throw new Error("uninstall at project scope supports only Codex");
   const flags: InitFlags = {
     dir: values.dir as string,
     client,
@@ -1475,6 +2055,305 @@ function cmdUninstall(argv: string[]): void {
   }
 }
 
+type CliValues = Record<string, string | boolean | undefined>;
+
+/**
+ * install, upgrade and uninstall act at user level unless a project scope is
+ * asked for or the named client has no user-level installation (vscode,
+ * generic), which keeps their per-project behavior.
+ */
+function isUserLevelRequest(client: unknown, scope: unknown): boolean {
+  if (scope === "project") return false;
+  if (client == null) return true;
+  return String(client)
+    .split(",")
+    .map((name) => name.trim())
+    .every((name) => (USER_HOSTS as readonly string[]).includes(name));
+}
+
+function existingDirectory(dir: string): string {
+  const requested = resolve(dir);
+  if (!existsSync(requested) || !statSync(requested).isDirectory()) {
+    throw new Error(`target directory does not exist or is not a directory: ${requested}`);
+  }
+  return realpathSync(requested);
+}
+
+function assertUpgradeableUserInstallation(
+  host: UserHost,
+  flags: InitFlags,
+  workspace: string,
+): void {
+  if (host === "codex") {
+    assertUpgradeableCodexInstallation(workspace, flags);
+    return;
+  }
+  if (!hasUserInstallation(host)) {
+    throw new Error(
+      `no ${HOST_LABEL[host]} installation found at ${userConfigPath(host)}; run \`amanuensis install --client ${host}\` first`,
+    );
+  }
+}
+
+function throwOnConflicts(plans: Array<{ host: UserHost; segments: PlanSegment[] }>): void {
+  const conflicts = plans.flatMap(({ host, segments }) =>
+    segments.flatMap((segment) =>
+      segment.actions
+        .filter((action) => action.kind === "conflict")
+        .map((action) => `  ${host}: ${action.path}: ${(action as { reason: string }).reason}`),
+    ),
+  );
+  if (conflicts.length > 0) {
+    throw new Error(
+      `installation has ${conflicts.length} conflict(s); nothing was written:\n${conflicts.join("\n")}`,
+    );
+  }
+}
+
+function cmdUserInstall(values: CliValues, operation: "install" | "upgrade"): void {
+  if (values["agent-instructions"]) {
+    throw new Error(
+      "--agent-instructions writes into a project; use `amanuensis init --client <name> --dir <project> --agent-instructions`",
+    );
+  }
+  const workspace = existingDirectory(values.dir as string);
+  const named = typeof values.client === "string" ? parseUserHosts(values.client) : null;
+  const hosts =
+    named ??
+    (operation === "install"
+      ? USER_HOSTS.filter(hostPresent)
+      : USER_HOSTS.filter(hasUserInstallation));
+  if (hosts.length === 0) {
+    throw new Error(
+      operation === "install"
+        ? "found no Codex, Claude Code, or GitHub Copilot on this machine; install one, or name it with --client codex, claude, or copilot"
+        : "no Amanuensis installation found; run `amanuensis install` first",
+    );
+  }
+  const dryRun = values["dry-run"] as boolean;
+  const base: InitFlags = {
+    dir: workspace,
+    client: hosts[0] as UserHost,
+    dryRun,
+    force: operation === "upgrade" ? true : (values.force as boolean),
+    mcpOnly: values["mcp-only"] as boolean,
+    scope: "user",
+    agentInstructions: false,
+  };
+  if (!dryRun) {
+    for (const host of hosts) mkdirSync(userHostHome(host), { recursive: true });
+  }
+  const plans = hosts.map((host) => {
+    const flags = userFlags(host, base);
+    if (operation === "upgrade") assertUpgradeableUserInstallation(host, flags, workspace);
+    const segments = buildUserPlan(host, flags, workspace);
+    for (const segment of segments) preflightWritable(segment);
+    return { host, flags, segments };
+  });
+  throwOnConflicts(plans);
+  for (const { host, flags, segments } of plans) {
+    console.log(
+      `${dryRun ? "[dry-run] " : ""}${operation === "upgrade" ? "Upgrading" : "Installing"} Amanuensis for ${host} (user) into ${userHostHome(host)}`,
+    );
+    for (const segment of segments) applyPlan(segment.actions, flags, segment.root);
+  }
+  if (dryRun) return;
+  for (const warning of prerequisiteWarnings()) console.log(`\nNote: ${warning}`);
+  console.log("");
+  for (const host of hosts) {
+    console.log(
+      operation === "upgrade"
+        ? `Restart ${HOST_LABEL[host]} once to load the upgraded Amanuensis installation.`
+        : `Restart ${HOST_LABEL[host]} once to load the Amanuensis registration.`,
+    );
+  }
+  console.log("New trusted Git repositories then require no Amanuensis setup or restart.");
+  console.log('Open a Git repository in your agent and ask it to "run Amanuensis onboarding".');
+  console.log("Check the installation at any time with: amanuensis status");
+}
+
+function cmdUserUninstall(values: CliValues): void {
+  const workspace = existingDirectory(values.dir as string);
+  const named = typeof values.client === "string" ? parseUserHosts(values.client) : null;
+  const hosts = named ?? USER_HOSTS.filter(hasAnyUserInstallation);
+  const dryRun = values["dry-run"] as boolean;
+  if (hosts.length === 0) {
+    console.log(`${dryRun ? "[dry-run] " : ""}Amanuensis is not installed for any host`);
+    return;
+  }
+  const base: InitFlags = {
+    dir: workspace,
+    client: hosts[0] as UserHost,
+    dryRun,
+    force: values.force as boolean,
+    mcpOnly: values["mcp-only"] as boolean,
+    scope: "user",
+    agentInstructions: false,
+  };
+  const plans = hosts
+    .filter((host) => host !== "codex" || existsSync(codexHome()))
+    .map((host) => {
+      const flags = userFlags(host, base);
+      const segments = buildUserUninstallPlan(host, flags, workspace);
+      for (const segment of segments) preflightWritable(segment);
+      return { host, flags, segments };
+    });
+  if (plans.length === 0) {
+    console.log(`${dryRun ? "[dry-run] " : ""}Amanuensis is not installed at ${codexHome()}`);
+    return;
+  }
+  throwOnConflicts(plans);
+  for (const { host, flags, segments } of plans) {
+    console.log(
+      `${dryRun ? "[dry-run] " : ""}Uninstalling Amanuensis for ${host === "codex" ? "Codex" : HOST_LABEL[host]} (user) from ${userHostHome(host)}`,
+    );
+    for (const segment of segments) applyPlan(segment.actions, flags, segment.root);
+  }
+  if (dryRun) return;
+  for (const { host } of plans) {
+    console.log(`Restart ${HOST_LABEL[host]} once to stop using the removed registration.`);
+  }
+  console.log("Repository conspectus storage was not changed.");
+}
+
+function pythonVersion(): { command: string; version: string | null } {
+  const command = process.env.AMANUENSIS_PYTHON?.trim() || "python3";
+  try {
+    const version = execFileSync(
+      command,
+      ["-c", "import sys; print('%d.%d' % sys.version_info[:2])"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: DOCTOR_PROBE_TIMEOUT_MS,
+        killSignal: "SIGKILL",
+      },
+    ).trim();
+    return { command, version: version || null };
+  } catch {
+    return { command, version: null };
+  }
+}
+
+function atLeast(version: string | null, major: number, minor: number): boolean {
+  if (!version) return false;
+  const [left = 0, right = 0] = version.split(".").map((part) => Number.parseInt(part, 10));
+  return left > major || (left === major && right >= minor);
+}
+
+/** Python runs only the publication step, so its absence is a note, not a failure. */
+function prerequisiteWarnings(): string[] {
+  const python = pythonVersion();
+  if (atLeast(python.version, 3, 11)) return [];
+  return [
+    python.version
+      ? `${python.command} is Python ${python.version}; publishing the human-readable map needs Python 3.11 or newer (set AMANUENSIS_PYTHON to choose another interpreter).`
+      : `${python.command} was not found; publishing the human-readable map needs Python 3.11 or newer (set AMANUENSIS_PYTHON to choose another interpreter). Everything else works without it.`,
+  ];
+}
+
+/**
+ * Whether the server's native SQLite module loads. npm builds it with an
+ * install script; an npm that declines to run the script leaves the package
+ * installed but unable to open any store.
+ */
+function databaseModule(): { ok: boolean; error?: string } {
+  try {
+    const Database = createRequire(import.meta.url)("better-sqlite3") as new (
+      path: string,
+    ) => { prepare: (sql: string) => { get: () => unknown }; close: () => void };
+    const db = new Database(":memory:");
+    db.prepare("select 1").get();
+    db.close();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message.split("\n")[0] };
+  }
+}
+
+function cmdStatus(argv: string[]): void {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      json: { type: "boolean", default: false },
+      help: { type: "boolean", default: false },
+    },
+    allowPositionals: false,
+    strict: true,
+  });
+  if (values.help) {
+    printUsage();
+    return;
+  }
+  const launcherReady = launcherAvailable();
+  const database = databaseModule();
+  const hosts = USER_HOSTS.map((host) => {
+    const registration = userRegistrationState(host);
+    const skill = userSkillState(host);
+    const installed =
+      registration === "installed" &&
+      (skill === "installed" || skill === "linked") &&
+      launcherReady;
+    return {
+      host,
+      label: HOST_LABEL[host],
+      detected: hostPresent(host),
+      installed,
+      registration,
+      registrationPath: userConfigPath(host),
+      skill,
+      skillPath: join(userHostHome(host), "skills", "amanuensis"),
+    };
+  });
+  const anyInstalled = hosts.some((host) => host.installed);
+  const ok = anyInstalled && database.ok && hosts.every((host) => host.installed || !host.detected);
+  const python = pythonVersion();
+  const report = {
+    status: ok ? "ok" : "incomplete",
+    version: packageVersion,
+    node: process.versions.node,
+    launcher: { ...serverLaunch(), available: launcherReady },
+    database,
+    python: {
+      command: python.command,
+      version: python.version,
+      ok: atLeast(python.version, 3, 11),
+    },
+    hosts,
+    next: ok
+      ? 'Restart any host installed since it was opened, then ask it to "run Amanuensis onboarding" in a Git repository.'
+      : !database.ok
+        ? `The database module (better-sqlite3) does not load: ${database.error}. Reinstall with \`npm install -g @gruetech/amanuensis\`, allowing its install script to run.`
+        : !launcherReady
+          ? `The server launcher ${serverLaunch().command} cannot be found; reinstall the package with \`npm install -g @gruetech/amanuensis\`.`
+          : hosts.some((host) => host.registration === "outdated" || host.skill === "outdated")
+            ? "Run `amanuensis upgrade`."
+            : "Run `amanuensis install`.",
+  };
+  if (values.json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    console.log(`Amanuensis ${packageVersion}: ${report.status}`);
+    for (const host of hosts) {
+      const state = host.installed
+        ? "installed"
+        : host.detected
+          ? `not installed (registration ${host.registration}, skill ${host.skill})`
+          : "not found on this machine";
+      console.log(`  ${host.label}: ${state}`);
+    }
+    console.log(
+      `  Database module: ${database.ok ? "loads" : `does not load (${database.error})`}`,
+    );
+    if (!launcherReady) console.log(`  Server launcher: ${serverLaunch().command} not found`);
+    console.log(
+      `  Python: ${python.version ? `${python.version} (${python.command})` : `not found (${python.command})`}${report.python.ok ? "" : " — needed only to publish the human-readable map"}`,
+    );
+    console.log(`Next: ${report.next}`);
+  }
+  if (!ok) process.exitCode = 1;
+}
+
 function main(): void {
   const argv = process.argv.slice(2);
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
@@ -1487,6 +2366,7 @@ function main(): void {
     else if (subcommand === "install") cmdInstall(argv.slice(1), "install");
     else if (subcommand === "upgrade") cmdInstall(argv.slice(1), "upgrade");
     else if (subcommand === "doctor") cmdDoctor(argv.slice(1));
+    else if (subcommand === "status") cmdStatus(argv.slice(1));
     else if (subcommand === "uninstall") cmdUninstall(argv.slice(1));
     else {
       process.stderr.write(`unknown subcommand: ${subcommand}\n\n`);
