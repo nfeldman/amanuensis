@@ -15,8 +15,8 @@ ships:
 
 ## v2 beta
 
-This source tree packages as `0.2.0-beta.1`. It is being dogfooded and remains
-under longitudinal validation. Until `1.0.0`, expect breaking changes between
+This source tree packages as the version in `package.json`. It is being dogfooded
+and remains under longitudinal validation. Until `1.0.0`, expect breaking changes between
 releases.
 
 ```bash
@@ -126,9 +126,9 @@ The server requires Node.js 20 or newer. Materialization also requires Python
 3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
 interpreter. Survey state defaults to `<project>/.amanuensis/`.
 
-Install the current prerelease with
-`npm install -g @gruetech/amanuensis` after publication. To select this release
-explicitly, use `npm install -g @gruetech/amanuensis@0.2.0-beta.1`.
+Install the current prerelease with `npm install -g @gruetech/amanuensis`. To
+select a release explicitly, name its version:
+`npm install -g @gruetech/amanuensis@<version>`.
 
 ## Documentation
 

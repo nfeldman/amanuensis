@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { realpathSync } from "node:fs";
-import { isAbsolute, parse } from "node:path";
+import { readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, parse, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -36,7 +37,14 @@ const SERVER_INSTRUCTIONS =
   "The standing describe_locus returns states what the record authorizes and what it cannot justify; do not claim beyond it, and when standing is unledgered or scoped-unread say so rather than reading the file and improvising. get_attention returns what is unresolved; get_history returns what was concluded. To build or maintain an evidence-backed codebase conspectus, start with get_project_info, then get_dashboard and list_subsystems; read source code for evidence and write survey state only through Amanuensis tools. Bind claims to repository revisions, keep observations separate from inference and open questions, and do not claim beyond a subsystem's recorded status. Use the Amanuensis skill when installed for the full survey, review, design, and refresh workflows.";
 const WORKSPACE_INSTRUCTIONS =
   "Before using project tools, call get_project_info with workspace set to the absolute project directory from this chat's environment context (not the MCP process cwd). An unbound response is not a cold start. The first workspace handshake binds this server process once; a different workspace is refused before database access.";
-const SERVER_VERSION = "0.2.0-beta.5";
+// The package's own version, read at startup rather than written here: a
+// literal had to be bumped by hand at release and drifted twice, into what a
+// host shows and into the binding receipt (findings B05-R1, B02-R7).
+const SERVER_VERSION = (
+  JSON.parse(
+    readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8"),
+  ) as { version: string }
+).version;
 
 // MCP defines destructiveHint=false as a guarantee that a tool performs only
 // additive updates. Default every mutation to destructive and carve out only

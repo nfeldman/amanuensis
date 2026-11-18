@@ -3,9 +3,9 @@
 // rather than importing handlers directly, so it catches regressions in the
 // initialization contract, tool annotations, structured results, and errors.
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -90,6 +90,18 @@ try {
     initialized.instructions?.includes("evidence-backed codebase conspectus"),
     "initialization instructions missing or uninformative",
   );
+  // B02-R7/B05-R1: the version a host sees and stamps into the binding receipt
+  // is the package's, not a literal a release has to remember to bump. Only a
+  // local entry is compared: a published command carries its own package.json.
+  if (!process.env.AMANUENSIS_SERVER_COMMAND) {
+    const pkg = JSON.parse(
+      readFileSync(join(dirname(resolve(serverEntry)), "..", "package.json"), "utf8"),
+    );
+    assert(
+      initialized.serverInfo?.version === pkg.version,
+      `server reports ${initialized.serverInfo?.version}, package is ${pkg.version}`,
+    );
+  }
   notify("notifications/initialized");
 
   const listed = await request("tools/list");
