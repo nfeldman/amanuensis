@@ -340,12 +340,18 @@ function codexBlock(launch: ServerLaunch, scope: InstallScope, workspace: string
   ].join("\n");
 }
 
+// The doctor's probes are a person waiting at a terminal; a stalled git or
+// shell must not hang it (test-startup-bounds.mjs holds every direct call).
+const DOCTOR_PROBE_TIMEOUT_MS = 10_000;
+
 function canonicalGitRoot(path: string): string {
   try {
     const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
       cwd: path,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      timeout: DOCTOR_PROBE_TIMEOUT_MS,
+      killSignal: "SIGKILL",
     }).trim();
     if (root) return realpathSync(root);
   } catch {
@@ -406,6 +412,8 @@ function commandExists(command: unknown): boolean {
   try {
     execFileSync("sh", ["-c", 'command -v "$1"', "amanuensis-doctor", command], {
       stdio: "ignore",
+      timeout: DOCTOR_PROBE_TIMEOUT_MS,
+      killSignal: "SIGKILL",
     });
     return true;
   } catch {

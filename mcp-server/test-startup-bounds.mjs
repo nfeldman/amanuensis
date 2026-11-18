@@ -9,7 +9,7 @@
 // The probes here put a deliberately slow executable ahead of the real one on
 // PATH and require the call to give up and stay usable. Before the repair each
 // one blocked for the full sleep.
-import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -100,6 +100,50 @@ t("a stalled git does not hang project binding", () => {
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }
+});
+
+// The probes above exercise the calls a test can reach. A call in a module
+// nothing exports (index.ts:gitRoot) or one first use makes (storage-git.ts)
+// is not reachable that way, so the rule is also read off the source: a module
+// that calls node:child_process directly passes a timeout on every call, and
+// everything else goes through src/subprocess.ts, which supplies one.
+t("every direct child_process call in src passes a timeout", () => {
+  const src = join(import.meta.dirname, "src");
+  const offenders = [];
+  const files = execFileSync("git", ["ls-files", "--", "*.ts"], { cwd: src, encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean);
+  for (const rel of files) {
+    if (rel === "subprocess.ts") continue;
+    const text = readFileSync(join(src, rel), "utf8");
+    if (/import\s*\*\s*as\s+\w+\s+from\s*"node:child_process"|require\(\s*"(node:)?child_process"/.test(text)) {
+      offenders.push(`${rel} (namespace or require import; name the calls so they can be checked)`);
+      continue;
+    }
+    const imported = text.match(/import\s*\{([^}]*)\}\s*from\s*"node:child_process"/);
+    if (!imported) continue;
+    const names = imported[1]
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => name && !name.startsWith("type "))
+      .map((name) => name.split(/\s+as\s+/).pop());
+    for (const name of names) {
+      const call = new RegExp(`\\b${name}\\(`, "g");
+      for (const match of text.matchAll(call)) {
+        let depth = 0;
+        let end = match.index + match[0].length - 1;
+        for (; end < text.length; end++) {
+          if (text[end] === "(") depth++;
+          else if (text[end] === ")" && --depth === 0) break;
+        }
+        if (!/\btimeout\s*:/.test(text.slice(match.index, end))) {
+          const line = text.slice(0, match.index).split("\n").length;
+          offenders.push(`${rel}:${line} ${name}`);
+        }
+      }
+    }
+  }
+  assert(offenders.length === 0, `unbounded: ${offenders.join(", ")}`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
