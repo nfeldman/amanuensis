@@ -153,31 +153,34 @@ than model choice.
 
 ## Older defects from the Pecia ledger
 
-Open in `.pecia/work.jsonl` as of 2026-09-22 and not re-checked since; some may be fixed. The ids
-are the self-conspectus findings they came from.
+Open in `.pecia/work.jsonl` as of 2026-09-22. Rows were checked against the published
+self-conspectus (`docs/findings.md`, `docs/resolved-findings.md`) on 2026-11-17; unmarked rows were not
+re-checked. The ids are the self-conspectus findings they came from; several were carried forward under
+new ids (B03-6 became B03-R2, for example), and some ids were later re-minted for different findings
+(B03-R6).
 
 | Finding | Defect |
 |---|---|
 | B04-R1 | A default `describe_locus` call returns no items (see the first decision above) |
 | ~~B02-R1, B02-2, B02-3, B04-R4~~ | ~~A stalled `git` or `ps` subprocess can hang server startup or a tool call indefinitely~~ Fixed on branch `server-fixes`, 2026-11-16: startup probes were already bounded; the 28 tool-time sites now go through `src/subprocess.ts` (120 s default, `AMANUENSIS_SUBPROCESS_TIMEOUT_MS`). Reproduced first: each tool waited out a stalled `git` |
 | B02-R2 | The gate certifying time-bounded activation probes passes with an unbounded probe |
-| B02-R4 | Under Codex Desktop the user-scoped registration starts the server with cwd `/` |
-| B02-R3, B05-2 | The server reported an older version than its package; at beta.5 `SERVER_VERSION` matches, so likely fixed |
-| B02-4 | A verified-fixed finding can be silently demoted to fixed-pending-verification |
+| ~~B02-R4~~ | ~~Under Codex Desktop the user-scoped registration starts the server with cwd `/`~~ Repaired, per `docs/resolved-findings.md` |
+| ~~B02-R3, B05-2~~ | ~~The server reported an older version than its package~~ Fixed 2026-11-17 (893d94a, also B05-R1/B02-R7): the server reads its version from `package.json`, the compatibility probe asserts it, and the README no longer names one |
+| ~~B02-4~~ | ~~A verified-fixed finding can be silently demoted to fixed-pending-verification~~ Repaired at 34a8762, per `docs/resolved-findings.md` |
 | B03-5 | A subsystem can report `mapped` with no unledgered, absent or stale rows while most of its scoped files were never examined |
-| B03-6 | A finding can reach verified-fixed with a `fix_sha` the fix is not at |
+| ~~B03-6~~ | ~~A finding can reach verified-fixed with a `fix_sha` the fix is not at~~ Fixed 2026-11-17 (carried as B03-R2): `fix_sha` must be the last commit to change the file `fix_location` names (not a directory), checked on write and again at verification; a carried finding's `repaired_sha` must have changed a file it cites |
 | B03-7 | Moved content with still-valid claims has no way to be re-anchored |
-| B03-8 | A finding's severity cannot be amended |
+| ~~B03-8~~ | ~~A finding's severity cannot be amended~~ Fixed 2026-11-17 (carried as B03-R4): `update_finding_severity`, with each re-grade and the revision it was judged at in `finding_severity_events`; `describe_locus` with `as_of_sha` replays it. The pages and `get_finding_resolution_history` show only the current grade |
 | B03-R1 | A rebuilt store can re-mint a finding id and satisfy an old external reference |
 | B03-R2 | A clean-slate rebuild cannot carry an unresolved finding forward |
-| B04-2 | Every HTML page shows "No recorded stale entries" whatever the drift |
-| B04-3 | The read-back gate cannot turn red on a stale-marker fault |
-| B04-4 | "How to read this conspectus" teaches a superseded contradiction model |
+| ~~B04-2~~ | ~~Every HTML page shows "No recorded stale entries" whatever the drift~~ Repaired, per `docs/resolved-findings.md` |
+| B04-3 | The read-back gate cannot turn red on a stale-marker fault. Mostly addressed (checked 2026-11-17): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`. What is left is dead code: `readback.py` and the index page still read stale markers from `entries`, which nothing writes |
+| ~~B04-4~~ | ~~"How to read this conspectus" teaches a superseded contradiction model~~ Repaired, per `docs/resolved-findings.md` |
 | B04-5 | Publishing went red on seven dangling anchors |
 | B04-R2 | The adversarial pass cannot record a negative outcome at a single revision |
-| B04-R3 | `add_claim` accepts a `claim_key` whose slug does not name the subject |
+| ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passes the server and fails the gate |
 | B05-R1 | A clean publish and the live site can be green while the overview shows a placeholder thesis |
-| B01-1 | A subsystem surveyed as documented reports zero claims |
+| ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |
 | B01-R1 | The phase references drift from the tools they describe, unchecked |
 | B07-1 | A research refresh can hang on a network fetch. Operator-run scripts under `scholiast/` (fetch, the shadcn CLI, a Python child), not the server; a stall hangs a terminal. Left as LOW, 2026-11-16 |
 | B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI |
