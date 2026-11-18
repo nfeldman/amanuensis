@@ -69,6 +69,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
 import { writeCitedSources } from "./fixtures/cited-source.mjs";
+import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -255,7 +256,7 @@ function main(mods) {
       "add_claim",
       {
         claim_id: `SD1-CL-${seededClaims}`,
-        claim_key: `${id}/key-type/unit`,
+        claim_key: stableClaimKey(id, "key-type", `${filePath}:Unit`),
         subject_type: "symbol",
         subject_id: `${filePath}:Unit`,
         statement: `Unit is the type ${id} is built around.`,

@@ -764,6 +764,31 @@ function defectsEmptyStatement(locus: ResolvedLocus, state: string): string {
   return "Findings are recorded against files and subsystems, not against a term.";
 }
 
+interface SeverityEventRow {
+  previous_severity: string;
+  severity: string;
+  at_sha: string;
+}
+
+/**
+ * A finding's grade as of a revision (B03-R4). Re-grades are replayed in the
+ * order they were recorded, each from the revision it was judged at; one judged
+ * at a revision the probe cannot place before `asOf` is not applied. With no
+ * re-grade the stored grade is the only one there has been.
+ */
+function severityAt(
+  events: SeverityEventRow[],
+  current: string,
+  probe: CommitProbe,
+  asOf: string,
+): string {
+  let severity = events[0]?.previous_severity ?? current;
+  for (const event of events) {
+    if (probe.isAncestor(event.at_sha, asOf)) severity = event.severity;
+  }
+  return severity;
+}
+
 function buildDefects(
   db: DB,
   rows: FindingRow[],
@@ -775,14 +800,30 @@ function buildDefects(
     `SELECT id, finding_id, resolution_state, fix_sha, effective_sha, fix_location, rationale, recorded_at
        FROM finding_resolution_events WHERE finding_id = ? ORDER BY id`,
   );
+  const regradesFor = db.prepare(
+    `SELECT previous_severity, severity, at_sha
+       FROM finding_severity_events WHERE finding_id = ? ORDER BY id`,
+  );
   const placed = rows.map((row) => {
     if (!asOf) {
-      return { row, state: row.resolution_state, placeable: true, unplaceable: 0 };
+      return {
+        row,
+        severity: row.severity,
+        state: row.resolution_state,
+        placeable: true,
+        unplaceable: 0,
+      };
     }
     const events = eventsFor.all(row.finding_id) as ResolutionEventRow[];
     const replay = resolutionAt(events, row.resolution_state, probe, asOf);
     return {
       row,
+      severity: severityAt(
+        regradesFor.all(row.finding_id) as SeverityEventRow[],
+        row.severity,
+        probe,
+        asOf,
+      ),
       state: replay.state,
       placeable: replay.placeable,
       unplaceable: replay.unplaceable,
@@ -796,14 +837,14 @@ function buildDefects(
       .filter((entry) => partitionOf(entry.state) === partition && entry.state === resolution)
       .sort(
         (a, b) =>
-          severityRank(a.row.severity) - severityRank(b.row.severity) ||
+          severityRank(a.severity) - severityRank(b.severity) ||
           a.row.finding_id.localeCompare(b.row.finding_id),
       );
     for (const entry of inPartition) {
       const item: Item = {
         finding_id: entry.row.finding_id,
         subsystem_id: entry.row.subsystem_id,
-        severity: entry.row.severity,
+        severity: entry.severity,
         resolution_state: entry.state,
         partition,
         symptom: entry.row.symptom,

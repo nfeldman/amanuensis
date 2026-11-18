@@ -426,7 +426,7 @@ check("add_claim refuses a subject_type outside {symbol, subsystem, seam}", () =
   if (blocked) return blocked;
   const message = fixture.refuse("add_claim", {
     claim_id: "reject-subject-type",
-    claim_key: "B-01/key-type/file-subject",
+    claim_key: "B-01/key-type/src-ledger-ts",
     subject_type: "file",
     subject_id: "src/ledger.ts",
     statement: "a file is not a claim subject.",
@@ -448,7 +448,7 @@ check("add_claim accepts each of the three subject types the enum names", () => 
   const accepted = [
     {
       claim_id: "b01-key-type-row",
-      claim_key: "B-01/key-type/row",
+      claim_key: "B-01/key-type/src-ledger-ts-row",
       subject_type: "symbol",
       subject_id: "src/ledger.ts:Row",
       statement: "Row is the ledger's unit of storage.",
@@ -495,7 +495,7 @@ check("a structural claim whose evidence kinds are all outside the two is refuse
   if (blocked) return blocked;
   const message = fixture.refuse("add_claim", {
     claim_id: "reject-weak-kind",
-    claim_key: "B-01/state-container/weak",
+    claim_key: "B-01/state-container/src-ledger-ts-cache",
     subject_type: "symbol",
     subject_id: "src/ledger.ts:Cache",
     statement: "Cache holds the pending rows.",
@@ -520,7 +520,7 @@ check("a structural claim whose evidence cites another file is refused", () => {
   if (blocked) return blocked;
   const message = fixture.refuse("add_claim", {
     claim_id: "reject-wrong-file",
-    claim_key: "B-01/state-container/elsewhere",
+    claim_key: "B-01/state-container/src-ledger-ts-cache",
     subject_type: "symbol",
     subject_id: "src/ledger.ts:Cache",
     statement: "Cache holds the pending rows.",
@@ -543,7 +543,7 @@ check("a structural claim that satisfies both halves on one row is accepted", ()
   try {
     fixture.addClaim({
       claim_id: "b01-state-container-cache",
-      claim_key: "B-01/state-container/cache",
+      claim_key: "B-01/state-container/src-ledger-ts-cache",
       subject_type: "symbol",
       subject_id: "src/ledger.ts:Cache",
       statement: "Cache holds the pending rows until the writer drains it.",
@@ -580,7 +580,7 @@ check("the rule reads one row at a time, not the union of two half-satisfying ro
   if (blocked) return blocked;
   const message = fixture.refuse("add_claim", {
     claim_id: "reject-split-halves",
-    claim_key: "B-01/key-type/split",
+    claim_key: "B-01/key-type/src-ledger-ts-split",
     subject_type: "symbol",
     subject_id: "src/ledger.ts:Split",
     statement: "Split is a key type.",
@@ -619,9 +619,9 @@ check("the structure section serves a subsystem's current claims", () => {
     "B-01/concurrency",
     "B-01/flow/read/01",
     "B-01/flow/write/01",
-    "B-01/key-type/row",
+    "B-01/key-type/src-ledger-ts-row",
     "B-01/seam/S-01",
-    "B-01/state-container/cache",
+    "B-01/state-container/src-ledger-ts-cache",
   ];
   const missing = expected.filter((key) => !keys.includes(key));
   if (missing.length) return `the section does not serve ${missing.join(", ")}`;
@@ -910,7 +910,7 @@ check("apply_change_impact closes a claim and the structure section stops servin
   const blocked = needFixture();
   if (blocked) return blocked;
   const before = structureOf({ locus: "B-01", sections: SECTIONS }).section;
-  if (!(before?.items ?? []).some((item) => item.claim_key === "B-01/key-type/row")) {
+  if (!(before?.items ?? []).some((item) => item.claim_key === "B-01/key-type/src-ledger-ts-row")) {
     return "the claim to be closed is not served before the run, so closing it proves nothing";
   }
   let run;
@@ -938,14 +938,14 @@ check("apply_change_impact closes a claim and the structure section stops servin
   if (!closed?.valid_until_sha) return "the claim was not closed by the application";
   const after = structureOf({ locus: "B-01", sections: SECTIONS }).section;
   const keys = (after?.items ?? []).map((item) => item.claim_key);
-  if (keys.includes("B-01/key-type/row")) return "a closed claim is still served as current";
+  if (keys.includes("B-01/key-type/src-ledger-ts-row")) return "a closed claim is still served as current";
   const historical = structureOf({
     locus: "B-01",
     sections: SECTIONS,
     as_of_sha: fixture.base,
   }).section;
   const historicalKeys = (historical?.items ?? []).map((item) => item.claim_key);
-  return historicalKeys.includes("B-01/key-type/row")
+  return historicalKeys.includes("B-01/key-type/src-ledger-ts-row")
     ? null
     : "the closed claim vanished from a historical reading at the commit it was current at";
 });
@@ -989,7 +989,7 @@ check("supersede_claim refuses a successor whose evidence is not file-anchored",
   try {
     fixture.addClaim({
       claim_id: "b09-probe-refuse",
-      claim_key: "B-09/key-type/probe-refuse",
+      claim_key: "B-09/key-type/src-external-ts-probe",
       subject_type: "symbol",
       subject_id: "src/external.ts:Probe",
       statement: "Probe is a key type.",
@@ -1035,9 +1035,9 @@ check("supersede_claim accepts a successor that satisfies the rule", () => {
   try {
     fixture.addClaim({
       claim_id: "b09-probe-accept",
-      claim_key: "B-09/key-type/probe-accept",
+      claim_key: "B-09/key-type/src-external-ts-probeaccept",
       subject_type: "symbol",
-      subject_id: "src/external.ts:Probe",
+      subject_id: "src/external.ts:ProbeAccept",
       statement: "Probe is a key type.",
       evidence_ids: [fixture.ev.externalCode],
     });

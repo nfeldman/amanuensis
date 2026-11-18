@@ -1236,6 +1236,7 @@ CREATE TABLE IF NOT EXISTS finding_severity_events (
     previous_severity  TEXT NOT NULL CHECK (previous_severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
     severity           TEXT NOT NULL CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
     rationale          TEXT NOT NULL CHECK (length(trim(rationale)) > 0),
+    at_sha             TEXT NOT NULL,  -- the revision the re-grade was judged at
     session_id         TEXT,
     recorded_at        TEXT NOT NULL DEFAULT (datetime('now')),
     CHECK (severity != previous_severity)

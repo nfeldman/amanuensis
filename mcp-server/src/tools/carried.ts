@@ -3,6 +3,7 @@ import {
   optString,
   requireEnum,
   requireInt,
+  requireRepairCommit,
   requireString,
   resolveWorkspaceCommit,
   type ServerContext,
@@ -113,6 +114,17 @@ function readCarried(ctx: ServerContext, carriedId: number) {
     | undefined;
   if (!row) throw new ToolError(`carried_id ${carriedId} names no carried finding`);
   return row;
+}
+
+/** The archived `primary_files` JSON array, or none when it is absent or unreadable. */
+function parsePrimaryFiles(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 /** The envelope budget the other list tools observe (§5.2a). */
@@ -507,7 +519,7 @@ export const carriedTools: ToolDefinition[] = [
   {
     name: "record_carried_outcome",
     description:
-      "Record what became of one carried finding. Three outcomes, each asserting something about THIS store: 'successor-finding' requires successor_id to name a findings row filed in this session; 'ruled-out' requires at least one evidence row collected in the current session and attached through attach_carried_evidence; 'repaired' requires repaired_sha to resolve in the bound workspace AND an attached evidence row whose revision is a descendant of, or equal to, it. The fourth outcome, 'archived-terminal', is written by carry_finding alone and is refused here. One outcome per carried record, and outcomes are never deleted — a mistaken one is corrected by a new carried record from the same archive.",
+      "Record what became of one carried finding. Three outcomes, each asserting something about THIS store: 'successor-finding' requires successor_id to name a findings row filed in this session; 'ruled-out' requires at least one evidence row collected in the current session and attached through attach_carried_evidence; 'repaired' requires repaired_sha to resolve in the bound workspace, to be the last commit to change a file the carried finding cites (its primary_files or an attached reading), AND an attached evidence row whose revision is a descendant of, or equal to, it. The fourth outcome, 'archived-terminal', is written by carry_finding alone and is refused here. One outcome per carried record, and outcomes are never deleted — a mistaken one is corrected by a new carried record from the same archive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -612,13 +624,26 @@ export const carriedTools: ToolDefinition[] = [
         );
         const attached = ctx.db
           .prepare(
-            `SELECT e.id, e.ref_sha
+            `SELECT e.id, e.ref_sha, e.file_path
                FROM carried_finding_evidence cfe
                JOIN evidence e ON e.id = cfe.evidence_id
               WHERE cfe.carried_id = ?`,
           )
-          .all(carriedId) as Array<{ id: number; ref_sha: string }>;
+          .all(carriedId) as Array<{ id: number; ref_sha: string; file_path: string | null }>;
         const workspacePath = ctx.project.workspacePath;
+        // B03-R2's rule on the carried path: the repair commit changed a file
+        // the carried finding cites, either in its archived primary_files or
+        // in an attached reading. An unrelated ancestor of the readings would
+        // otherwise discharge it.
+        const cited = new Set<string>();
+        for (const row of attached) if (row.file_path) cited.add(row.file_path);
+        for (const ref of parsePrimaryFiles(carried.primary_files)) {
+          const colon = ref.indexOf(":");
+          const at = ref.lastIndexOf("@");
+          const path = colon >= 0 ? ref.slice(0, colon) : at >= 0 ? ref.slice(0, at) : ref;
+          if (path) cited.add(path);
+        }
+        requireRepairCommit(workspacePath as string, repairedSha, [...cited], "repaired_sha");
         const postRepair = attached.filter((row) =>
           isAncestorOrSame(workspacePath, repairedSha as string, row.ref_sha),
         );

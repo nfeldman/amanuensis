@@ -495,7 +495,7 @@ check("a file-anchored claim also satisfies the gate", () => {
   if (blocked) return blocked;
   scopedSubsystem("B-06");
   seedClaim({
-    claimKey: "B-06/key-type/record",
+    claimKey: "B-06/key-type/src-b-06-ts-record",
     subjectType: "symbol",
     subjectId: "src/B-06.ts:Record",
     statement: "Record is the unit B-06 stores and returns.",
@@ -534,7 +534,7 @@ check("the prefix is matched literally, not as a LIKE pattern", () => {
   // would let B-08's claim admit `B_08`, and any claim at all admit `B%`.
   scopedSubsystem("B-08");
   seedClaim({
-    claimKey: "B-08/key-type/token",
+    claimKey: "B-08/key-type/src-b-08-ts-token",
     subjectType: "symbol",
     subjectId: "src/B-08.ts:Token",
     statement: "Token is the unit B-08 parses.",
@@ -722,7 +722,7 @@ check("resetting below structural discards the claims that satisfied the gate", 
   // least one current claim" stops meaning the phase ran.
   scopedSubsystem("B-23");
   seedClaim({
-    claimKey: "B-23/key-type/row",
+    claimKey: "B-23/key-type/src-unit-ts-row",
     subjectType: "symbol",
     subjectId: "src/unit.ts:Row",
     statement: "Row is B-23's unit of storage.",

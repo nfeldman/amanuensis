@@ -1104,7 +1104,10 @@ async function main(mods) {
       git(ws, "checkout", "-q", "-");
       git(ws, "checkout", "-q", "-b", "cf1-sibling", base);
       const siblingSha = commitMore(ctx, "src/sibling.ts");
-      const id = seedCarried(ctx, { archived_finding_id: "D4" });
+      const id = seedCarried(ctx, {
+        archived_finding_id: "D4",
+        primary_files: JSON.stringify(["src/repair.ts:n@0000000"]),
+      });
       const evidenceId = addEvidence(ctx, siblingSha);
       refusal(() => call("attach_carried_evidence", { carried_id: id, evidence_id: evidenceId }, ctx));
       const said = outcome(id, {
@@ -1121,6 +1124,35 @@ async function main(mods) {
       const rows = outcomeRows(id).length;
       cleanup();
       return rows === 0 ? null : "the call was refused and the outcome row was written anyway";
+    });
+
+    check("D4b repaired is refused at a commit that changed no file the finding cites", () => {
+      if (missingTool) return missingTool;
+      // B03-R2 on the carried path: an ancestor of the reading that never
+      // touched the cited file is not where the repair is.
+      // On a branch of its own, so cf1-repair's head stays the repair G4b reads.
+      const ws = ctx.project.workspacePath;
+      git(ws, "checkout", "-q", "-b", "cf1-d4b");
+      const unrelatedSha = commitMore(ctx, "src/unrelated-d4b.ts");
+      const readingSha = commitMore(ctx, "src/after-d4b.ts");
+      git(ws, "checkout", "-q", "cf1-repair");
+      const id = seedCarried(ctx, {
+        archived_finding_id: "D4b",
+        primary_files: JSON.stringify(["src/a.ts:a@0000000"]),
+      });
+      const evidenceId = addEvidence(ctx, readingSha);
+      refusal(() => call("attach_carried_evidence", { carried_id: id, evidence_id: evidenceId }, ctx));
+      const said = outcome(id, {
+        outcome: "repaired",
+        repaired_sha: unrelatedSha,
+        rationale: "an ancestor of the reading that touched another file",
+        ref_sha: readingSha,
+      });
+      if (!said) {
+        return `a repair was recorded at ${unrelatedSha.slice(0, 7)}, which changed neither src/a.ts nor any file the finding cites`;
+      }
+      if (!said.includes("did not change")) return `refused for another reason: ${said}`;
+      return outcomeRows(id).length === 0 ? null : "the call was refused and the outcome row was written anyway";
     });
 
     check("D5 archived-terminal is refused: only the carry writes it", () => {
@@ -1255,8 +1287,10 @@ async function main(mods) {
       git(ws, "checkout", "-q", "cf1-repair");
       const repairSha = headSha(ctx);
       const laterSha = commitMore(ctx, "src/after-repair.ts");
-      const atRepair = seedCarried(ctx, { archived_finding_id: "G4b-at" });
-      const afterRepair = seedCarried(ctx, { archived_finding_id: "G4b-after" });
+      // The archived finding cites the file the repair commit changed (B03-R2).
+      const cites = JSON.stringify(["src/repair.ts:n@0000000"]);
+      const atRepair = seedCarried(ctx, { archived_finding_id: "G4b-at", primary_files: cites });
+      const afterRepair = seedCarried(ctx, { archived_finding_id: "G4b-after", primary_files: cites });
       const said = [];
       for (const [id, evidenceSha, which] of [
         [atRepair, repairSha, "at the repair itself"],

@@ -396,6 +396,68 @@ export function workspaceTreeHasPath(
 }
 
 /**
+ * B03-R2: a repair is recorded at the commit that changed a file the record
+ * names. Verification proves only that its evidence descends from the repair
+ * commit, so without this any older commit passed — the further back, the more
+ * likely — and a verified repair could name a commit the repair is not at.
+ *
+ * `repairSha` must be the last commit at or before itself to change one of
+ * `paths`. A path that is the repository root or a directory at `repairSha` is
+ * refused, since any change beneath it would pass. A fix that arrived by a
+ * merge is recorded at the commit on its branch that made the change. Throws
+ * a ToolError naming the commit that did change the file when there is one.
+ */
+export function requireRepairCommit(
+  workspacePath: string,
+  repairSha: string,
+  paths: string[],
+  label = "fix_sha",
+): void {
+  const named = [...new Set(paths.map((path) => path.replace(/\/+$/, "")))];
+  if (named.length === 0) {
+    throw new ToolError(`${label} cannot be checked: the record names no file the repair changed`);
+  }
+  for (const path of named) {
+    if (path === "" || path === ".") {
+      throw new ToolError(
+        `${label} must name the file the repair changed, not the repository root`,
+      );
+    }
+    const entry = spawnSync(
+      "git",
+      ["--literal-pathspecs", "ls-tree", "-z", repairSha, "--", path],
+      { cwd: workspacePath, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    const isTree = splitGitPaths(String(entry.stdout ?? "")).some(
+      (line) => line.slice(line.indexOf("\t") + 1) === path && / tree /.test(line),
+    );
+    if (isTree) {
+      throw new ToolError(
+        `${path} is a directory at ${repairSha.slice(0, 12)}; name the file the repair changed`,
+      );
+    }
+  }
+  const result = spawnSync(
+    "git",
+    ["--literal-pathspecs", "rev-list", "-1", repairSha, "--", ...named],
+    { cwd: workspacePath, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+  if (result.status !== 0) {
+    throw new ToolError(
+      `cannot read the history of ${named.join(", ")}: ${String(result.stderr ?? "").trim() || "git failed"}`,
+    );
+  }
+  const last = String(result.stdout).trim();
+  if (last === repairSha) return;
+  const files = named.length === 1 ? named[0] : `any of ${named.join(", ")}`;
+  throw new ToolError(
+    last
+      ? `${label} ${repairSha.slice(0, 12)} did not change ${files}; the last commit at or before it that did is ${last.slice(0, 12)}. Record the repair at the commit that changed the file`
+      : `no commit at or before ${label} ${repairSha.slice(0, 12)} changed ${files}`,
+  );
+}
+
+/**
  * Split the output of a git command run with `-z` into paths.
  *
  * Without `-z`, git quotes any path holding a byte outside printable ASCII

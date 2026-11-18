@@ -148,7 +148,7 @@ function seedStructuralClaim(ws, ctx, subsystemId) {
     "add_claim",
     {
       claim_id: `CL-${subsystemId}`,
-      claim_key: `${subsystemId}/key-type/x`,
+      claim_key: `${subsystemId}/key-type/main-ts-x`,
       subject_type: "symbol",
       subject_id: "main.ts:x",
       statement: "x is the only value main.ts exports.",

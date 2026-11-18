@@ -27,6 +27,7 @@ import { subsystemTools } from "./dist/tools/subsystems.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
 import { writeCitedSources } from "./fixtures/cited-source.mjs";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
 let passed = 0,
   failed = 0;
@@ -173,7 +174,7 @@ function seedStructuralClaim(ctx, id, filePath = `src/${id}/index.ts`) {
     "add_claim",
     {
       claim_id: `CL-${seededClaims}`,
-      claim_key: `${id}/key-type/unit`,
+      claim_key: stableClaimKey(id, "key-type", `${filePath}:Unit`),
       subject_type: "symbol",
       subject_id: `${filePath}:Unit`,
       statement: `Unit is the type ${id} is built around.`,
@@ -999,7 +1000,7 @@ t("a claim closed at a later commit no longer satisfies the structural gate", ()
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
     ctx.db.prepare("UPDATE claims SET valid_until_sha = 'closed' WHERE claim_key = ?").run(
-      "B-01/key-type/unit",
+      stableClaimKey("B-01", "key-type", "a.ts:Unit"),
     );
     assertThrows(
       () => call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx),

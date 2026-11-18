@@ -122,9 +122,11 @@ For each verdict:
   to note the narrower scope, and add a field note describing
   which code paths are in vs. out of scope. If the narrower scope
   changes how severe the defect is, re-grade it with
-  `update_finding_severity(finding_id, severity, rationale)`, so the
-  grade the pages sort on matches the one you argued for; the
-  earlier grade stays in the finding's severity history.
+  `update_finding_severity(finding_id, severity, rationale, ref_sha)`,
+  with `ref_sha` the revision you judged at, so the grade the pages
+  sort on matches the one you argued for. The earlier grade stays in
+  the finding's severity history, and `describe_locus` with an
+  `as_of_sha` before `ref_sha` still reports it.
 - **`quality-upgraded`** — `add_evidence` with the stronger
   `kind`, attach via `attach_evidence_to_disposition` with role
   `supports`, and consider `set_disposition` again with

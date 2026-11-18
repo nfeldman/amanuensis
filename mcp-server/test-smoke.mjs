@@ -203,7 +203,7 @@ const smokeEvidence = run("add_evidence", {
 }, (r) => r.ok && typeof r.id === "number");
 run("add_claim", {
   claim_id: "CL-B01-runjob",
-  claim_key: "B-01/key-type/job",
+  claim_key: "B-01/key-type/scheduler-main-ts-job",
   subject_type: "symbol",
   subject_id: "scheduler/main.ts:Job",
   statement: "Job is the unit the scheduler queues, runs, and retires.",
@@ -257,7 +257,9 @@ run("add_finding", {
 run("update_finding_status", {
   finding_id: "B01-1",
   status: "fixed",
-  fix_location: "scheduler/main.ts:runJob",
+  // The repair is recorded at a commit that changed the file it names
+  // (B03-R2); the second fixture commit changes only claim-fixture.txt.
+  fix_location: "claim-fixture.txt",
   fix_sha: claimSha2,
 }, (r) => r.previous_status === "confirmed-bug" && r.resolution_state === "fixed-pending-verification");
 run("get_findings", {}, (r) => r.length === 1);

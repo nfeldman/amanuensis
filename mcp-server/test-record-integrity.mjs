@@ -27,6 +27,7 @@ import { openDatabase } from "./dist/db.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { evidenceTools } from "./dist/tools/evidence.js";
 import { findingTools } from "./dist/tools/findings.js";
+import { locusTools } from "./dist/tools/locus.js";
 import { projectTools } from "./dist/tools/project.js";
 
 const failures = [];
@@ -96,7 +97,7 @@ const project = {
 const db = openDatabase(project.dbPath);
 const ctx = { project, db, sessionId: null };
 const tools = new Map(
-  [...projectTools, ...findingTools, ...evidenceTools, ...claimTools].map((tool) => [
+  [...projectTools, ...findingTools, ...evidenceTools, ...claimTools, ...locusTools].map((tool) => [
     tool.name,
     tool,
   ]),
@@ -112,10 +113,15 @@ try {
   db.prepare(
     "INSERT INTO subsystems (id, name, status) VALUES ('B-01', 'Fixture', 'concerns')",
   ).run();
+  // B01-3 is re-graded below and read back through describe_locus, whose
+  // default budget serves one finding; it gets a subsystem of its own.
+  db.prepare(
+    "INSERT INTO subsystems (id, name, status) VALUES ('B-02', 'Regraded', 'concerns')",
+  ).run();
   for (const id of ["B01-1", "B01-2", "B01-3"]) {
     call("add_finding", {
       finding_id: id,
-      subsystem_id: "B-01",
+      subsystem_id: id === "B01-3" ? "B-02" : "B-01",
       symptom: `defect ${id}`,
       root_cause: "fixture",
       severity: "HIGH",
@@ -150,6 +156,25 @@ try {
       fix_sha: fixSha,
     });
     return result.resolution_state === "fixed-pending-verification" ? null : JSON.stringify(result);
+  });
+  check("F4 a fix_location naming a directory or the root is refused", () => {
+    // `rev-list -- .` matches every commit that changed anything, so a
+    // directory would let any commit pass.
+    const cases = { ".:Config": "the root", "src:Config": "a directory" };
+    mkdirSync(join(workspace, "src"), { recursive: true });
+    const dirSha = commit("a directory", { "src/inner.ts": "export const inner = 1;\n" });
+    for (const [location, what] of Object.entries(cases)) {
+      const message = refusal(() =>
+        call("update_finding_status", {
+          finding_id: "B01-2",
+          status: "fixed",
+          fix_location: location,
+          fix_sha: dirSha,
+        }),
+      );
+      if (message === null) return `accepted ${what} (${location}) as the repaired file`;
+    }
+    return null;
   });
   check("F3 verify_finding_fix refuses a stored pending repair at the wrong commit", () => {
     // A row written before the check existed: the write path no longer
@@ -192,6 +217,7 @@ try {
       finding_id: "B01-3",
       severity: "LOW",
       rationale: "the adversarial pass found the path unreachable from any public entry point",
+      ref_sha: laterSha,
     });
     if (result.previous_severity !== "HIGH" || result.severity !== "LOW") {
       return JSON.stringify(result);
@@ -216,13 +242,28 @@ try {
   });
   check("V3 an unchanged severity, a blank rationale and an unknown grade are refused", () => {
     const same = refusal(() =>
-      call("update_finding_severity", { finding_id: "B01-3", severity: "LOW", rationale: "again" }),
+      call("update_finding_severity", {
+        finding_id: "B01-3",
+        severity: "LOW",
+        rationale: "again",
+        ref_sha: laterSha,
+      }),
     );
     const blank = refusal(() =>
-      call("update_finding_severity", { finding_id: "B01-3", severity: "MEDIUM", rationale: "  " }),
+      call("update_finding_severity", {
+        finding_id: "B01-3",
+        severity: "MEDIUM",
+        rationale: "  ",
+        ref_sha: laterSha,
+      }),
     );
     const unknown = refusal(() =>
-      call("update_finding_severity", { finding_id: "B01-3", severity: "SEVERE", rationale: "x" }),
+      call("update_finding_severity", {
+        finding_id: "B01-3",
+        severity: "SEVERE",
+        rationale: "x",
+        ref_sha: laterSha,
+      }),
     );
     const missing = [same, blank, unknown].findIndex((message) => message === null);
     if (missing >= 0) return `case ${["unchanged", "blank", "unknown"][missing]} was accepted`;
@@ -239,6 +280,22 @@ try {
     if (update === null) return "UPDATE succeeded";
     if (remove === null) return "DELETE succeeded";
     return null;
+  });
+
+  check("V6 describe_locus as of a revision reports the grade that stood there", () => {
+    const gradeAt = (asOf) => {
+      const payload = call("describe_locus", {
+        locus: "B-02",
+        sections: ["defects"],
+        as_of_sha: asOf,
+      });
+      return (payload?.sections?.defects?.items ?? []).find((item) => item.finding_id === "B01-3")
+        ?.severity;
+    };
+    const before = gradeAt(fixSha);
+    const after = gradeAt(laterSha);
+    if (before !== "HIGH") return `as of the commit before the re-grade it reports ${before}`;
+    return after === "LOW" ? null : `as of the re-grade's own commit it reports ${after}`;
   });
 
   check("V5 the history goes with its finding, so a re-minted id inherits none", () => {
