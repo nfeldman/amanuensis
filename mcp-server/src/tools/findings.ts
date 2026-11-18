@@ -57,6 +57,33 @@ function requireAncestor(ctx: ServerContext, ancestor: string, descendant: strin
   );
 }
 
+/**
+ * B03-R2: a repair is recorded at the commit that changed the repaired file.
+ * `verify_finding_fix` proves only that the verification evidence descends
+ * from `fix_sha`, so without this any older commit passed — and the further
+ * back it was, the more likely it passed — and verified-fixed named a commit
+ * the repair is not at. The test is that `fix_sha` is the last commit at or
+ * before itself to change the file `fix_location` names. A fix that arrived
+ * by a merge is recorded at the commit on its branch that made the change.
+ */
+function requireRepairCommit(ctx: ServerContext, fixSha: string, fixLocation: string): void {
+  const colon = fixLocation.indexOf(":");
+  const path = colon < 0 ? fixLocation : fixLocation.slice(0, colon);
+  const result = git(ctx, ["--literal-pathspecs", "rev-list", "-1", fixSha, "--", path]);
+  if (result.status !== 0) {
+    throw new ToolError(
+      `cannot read the history of ${path}: ${result.stderr?.toString().trim() || "git failed"}`,
+    );
+  }
+  const last = String(result.stdout).trim();
+  if (last === fixSha) return;
+  throw new ToolError(
+    last
+      ? `fix_sha ${fixSha.slice(0, 12)} did not change ${path}; the last commit at or before it that did is ${last.slice(0, 12)}. Record the repair at the commit that changed the file`
+      : `no commit at or before fix_sha ${fixSha.slice(0, 12)} changed ${path}`,
+  );
+}
+
 function stateForStatus(
   status: (typeof FINDING_STATUSES)[number],
 ): "open" | "accepted" | "ruled-out" {
@@ -198,7 +225,7 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "update_finding_status",
     description:
-      "Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session.",
+      "Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha, where fix_sha is the commit that changed the file fix_location names, and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session.",
     inputSchema: {
       type: "object",
       properties: {
@@ -241,6 +268,7 @@ export const findingTools: ToolDefinition[] = [
           );
         }
         fixSha = resolveWorkspaceCommit(ctx, requestedFixSha, "fix_sha");
+        requireRepairCommit(ctx, fixSha, fixLocation);
       }
 
       const overturnEvidence =
@@ -290,6 +318,53 @@ export const findingTools: ToolDefinition[] = [
         resolution_state: resolutionState,
         fix_sha: fixSha,
       });
+    },
+  },
+  {
+    name: "update_finding_severity",
+    description:
+      "Re-grade a finding's severity, for example when an adversarial pass finds the defect narrower or wider than first judged. Requires a rationale. The grade every projection sorts and filters on changes, and the re-grade is appended to finding_severity_events with the grade it replaced; earlier grades are never rewritten.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        finding_id: { type: "string" },
+        severity: { type: "string", enum: [...SEVERITIES] },
+        rationale: { type: "string" },
+      },
+      required: ["finding_id", "severity", "rationale"],
+      additionalProperties: false,
+    },
+    handler: (args, ctx) => {
+      const sessionId = requireActiveSession(ctx, "update_finding_severity");
+      const findingId = requireString(args, "finding_id");
+      const severity = requireEnum(args, "severity", SEVERITIES);
+      const rationale = requireString(args, "rationale").trim();
+      if (!rationale) throw new ToolError("rationale must say why the grade changed");
+      const row = ctx.db
+        .prepare("SELECT severity, subsystem_id FROM findings WHERE finding_id = ?")
+        .get(findingId) as { severity: string; subsystem_id: string } | undefined;
+      if (!row) throw new ToolError(`unknown finding: ${findingId}`);
+      // The same depth update_finding_status requires: re-judging a finding
+      // needs the evidentiary base the concerns pass builds.
+      requireSubsystemStatus(ctx.db, row.subsystem_id, "concerns", "update_finding_severity");
+      if (row.severity === severity) {
+        throw new ToolError(`finding ${findingId} is already ${severity}`);
+      }
+      ctx.db.transaction(() => {
+        ctx.db
+          .prepare(
+            "UPDATE findings SET severity = ?, updated_at = datetime('now') WHERE finding_id = ?",
+          )
+          .run(severity, findingId);
+        ctx.db
+          .prepare(
+            `INSERT INTO finding_severity_events
+               (finding_id, previous_severity, severity, rationale, session_id)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(findingId, row.severity, severity, rationale, sessionId);
+      })();
+      return ok({ finding_id: findingId, previous_severity: row.severity, severity });
     },
   },
   {
@@ -357,6 +432,9 @@ export const findingTools: ToolDefinition[] = [
         throw new ToolError("verification evidence must be attached with role fix-verification");
       }
       const fixSha = resolveWorkspaceCommit(ctx, current.fix_sha, "fix_sha");
+      // A pending repair stored before the write-time check is held to it
+      // here, at the promotion that would make the attribution authoritative.
+      requireRepairCommit(ctx, fixSha, current.fix_location);
       const evidenceSha = resolveWorkspaceCommit(
         ctx,
         evidence.ref_sha,

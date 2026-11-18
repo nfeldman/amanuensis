@@ -211,6 +211,9 @@ jobs:
       - name: Write-path fixes — evidence coordinates, upsert status, non-ASCII paths
         working-directory: mcp-server
         run: node test-write-path-fixes.mjs
+      - name: Record integrity — repair commit, severity re-grade, stable claim keys
+        working-directory: mcp-server
+        run: node test-record-integrity.mjs
       - name: Startup bounds — no unbounded probe on the activation path
         working-directory: mcp-server
         run: node test-startup-bounds.mjs

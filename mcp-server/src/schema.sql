@@ -1222,6 +1222,34 @@ CREATE TABLE IF NOT EXISTS finding_resolution_events (
     CHECK (resolution_state != 'verified-fixed' OR evidence_id IS NOT NULL)
 );
 
+-- Each re-grade of a finding's severity, with the grade it replaced (finding
+-- B03-R4: severity was the one graded field with no write path after insert,
+-- so a re-grade lived in prose while findings.severity kept the old grade).
+-- A row is never rewritten, and never deleted while its finding exists. It is
+-- deleted with its finding, as resolution events are: a history left behind
+-- would attach itself to whatever later finding re-mints the id (B03-R6).
+-- That is why it is not in contracts/append-only-tables.txt, and why its
+-- triggers are not named with that contract's suffixes.
+CREATE TABLE IF NOT EXISTS finding_severity_events (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    finding_id         TEXT NOT NULL REFERENCES findings(finding_id) ON DELETE CASCADE,
+    previous_severity  TEXT NOT NULL CHECK (previous_severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+    severity           TEXT NOT NULL CHECK (severity IN ('CRITICAL','HIGH','MEDIUM','LOW')),
+    rationale          TEXT NOT NULL CHECK (length(trim(rationale)) > 0),
+    session_id         TEXT,
+    recorded_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (severity != previous_severity)
+);
+CREATE INDEX IF NOT EXISTS idx_finding_severity_events_finding
+    ON finding_severity_events(finding_id, id);
+CREATE TRIGGER IF NOT EXISTS finding_severity_event_never_rewritten
+BEFORE UPDATE ON finding_severity_events FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'a severity re-grade is never rewritten'); END;
+CREATE TRIGGER IF NOT EXISTS finding_severity_event_outlives_no_finding
+BEFORE DELETE ON finding_severity_events FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM findings WHERE finding_id = OLD.finding_id)
+BEGIN SELECT RAISE(ABORT, 'a severity re-grade is deleted only with its finding'); END;
+
 CREATE INDEX IF NOT EXISTS idx_finding_resolution_finding
     ON finding_resolution_events(finding_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_finding_resolution_evidence

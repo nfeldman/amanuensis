@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_212 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
+_213 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -238,7 +238,7 @@ _212 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. |
+| `add_claim` | Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. A key-type or state-container key must be <sid>/<category>/<symbol-slug>, the slug being subject_id lowercased with non-alphanumeric runs collapsed to '-'; a flow key must be <sid>/flow/<flow-slug>/<nn>. |
 | `record_claim_challenge` | Record the adversarial pass's outcome for one current claim (spec.md §9.1, Phase 4). outcome ∈ {survived, overturned, superseded}. `challenge` is what would have overturned the claim and where that was looked for, in prose of at least 24 characters; a one-word note is not a challenge. An 'overturned' or 'superseded' outcome must name the claim_validity_events row that closed the claim — invalidate_claim and supersede_claim write it — and 'survived' must not, because nothing was closed. field_note_id optionally links the probe note the pass wrote. The record is append-only: a later pass records a further outcome, it does not edit this one. Every current `<sid>/` claim must carry an outcome before the subsystem may advance to 'mapped'. |
 | `get_claim_challenges` | Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history. |
 | `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. |
@@ -416,12 +416,13 @@ _212 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | `update_file_classification` | Transition a scoped file to a new classification (e.g., candidate → examined). Updates examined_at when the new classification is 'examined'. |
 | `get_subsystem_files` | List the file ledger for a subsystem. classification_filter narrows to e.g. 'examined' or 'candidate'. |
 
-### `findings` (6)
+### `findings` (7)
 
 | Tool | Description |
 |---|---|
 | `add_finding` | Record a confirmed finding. finding_id conventionally looks like 'B01-1' (subsystem code + sequence). primary_files is a JSON array of file:symbol@sha references. business_context explains why this is (or isn't) a real bug in domain terms. ref_sha is the revision the finding was read at: it must resolve to a commit in the bound workspace, is stored resolved, and is the revision the opening resolution event is placed at. |
-| `update_finding_status` | Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session. |
+| `update_finding_status` | Change a finding's coarse compatibility status. A transition to fixed requires fix_location + fix_sha, where fix_sha is the commit that changed the file fix_location names, and creates fixed-pending-verification; it never creates verified-fixed. Use verify_finding_fix with post-fix evidence for that. Overturning to ruled-out requires new disproving evidence attached in the current session. |
+| `update_finding_severity` | Re-grade a finding's severity, for example when an adversarial pass finds the defect narrower or wider than first judged. Requires a rationale. The grade every projection sorts and filters on changes, and the re-grade is appended to finding_severity_events with the grade it replaced; earlier grades are never rewritten. |
 | `verify_finding_fix` | Promote a fixed-pending-verification finding to verified-fixed. The evidence must be attached to the finding, collected in the active session, and repository-bound to the fix commit or one of its descendants. Historical events remain append-only. |
 | `get_finding_resolution_history` | Return the append-only resolution history for one finding, including pending repairs, verification evidence, reopenings, and superseded verified states. |
 | `get_findings` | List findings with optional filters (subsystem_id, severity, status). primary_files is returned as a JSON-parsed array. |

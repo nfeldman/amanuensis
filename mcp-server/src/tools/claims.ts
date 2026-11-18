@@ -107,6 +107,47 @@ function requireFileAnchoredEvidence(
   );
 }
 
+/**
+ * phase-2-structural.md's `<symbol-slug>`: the whole `<path>:<symbol>` pair
+ * lowercased with non-alphanumeric runs collapsed to `-`, so two files that
+ * both define `Config` get two keys (slice-S3, F9/codex).
+ */
+function symbolSlug(subjectId: string): string {
+  return subjectId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const STABLE_KEY_PREFIX = /^([^/\s]+)\/(key-type|state-container|flow)\//;
+
+/**
+ * B04-R7: the stable-key rule, checked when the key is written. A key-type or
+ * state-container key is `<sid>/<category>/<symbol-slug>`, so the next reading
+ * of the same symbol supersedes this one instead of sitting beside it; a flow
+ * step is `<sid>/flow/<flow-slug>/<nn>`, ordered by its number. The rule used
+ * to run only in a dev gate after the record was durable, when correcting a
+ * key meant discarding the structural phase, because `supersede_claim` keeps
+ * the key. It runs in `add_claim` only: a successor inherits its key, and a
+ * key written before this check must stay supersedable.
+ */
+function requireStableClaimKey(claimKey: string, subjectId: string): void {
+  const match = STABLE_KEY_PREFIX.exec(claimKey);
+  if (!match) return;
+  const [prefix, sid, category] = match;
+  if (category === "flow") {
+    if (/^[a-z0-9]+(?:-[a-z0-9]+)*\/[0-9]{2,}$/.test(claimKey.slice(prefix.length))) return;
+    throw new ToolError(
+      `claim_key ${claimKey} is a flow step whose key is not ${sid}/flow/<flow-slug>/<nn>, so its steps have no recorded order`,
+    );
+  }
+  const expected = `${sid}/${category}/${symbolSlug(subjectId)}`;
+  if (claimKey === expected) return;
+  throw new ToolError(
+    `claim_key ${claimKey} names subject ${subjectId}, whose stable key is ${expected}; an unstable key duplicates rather than supersedes`,
+  );
+}
+
 function requireEvidenceIds(args: Record<string, unknown>): number[] {
   const value = args.evidence_ids;
   if (!Array.isArray(value) || value.length === 0) {
@@ -297,7 +338,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "add_claim",
     description:
-      "Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version.",
+      "Create one current, immutable, epistemically typed claim backed by structured evidence. The Git commit and every evidence SHA must resolve in the target workspace. A claim_key may have only one current version. A key-type or state-container key must be <sid>/<category>/<symbol-slug>, the slug being subject_id lowercased with non-alphanumeric runs collapsed to '-'; a flow key must be <sid>/flow/<flow-slug>/<nn>.",
     inputSchema: {
       type: "object",
       properties: {
@@ -331,6 +372,7 @@ export const claimTools: ToolDefinition[] = [
       // by code rather than asked for in a prompt (GP8's v2 scope note).
       const subjectType = requireEnum(args, "subject_type", CLAIM_SUBJECT_TYPES);
       const subjectId = requireString(args, "subject_id");
+      requireStableClaimKey(claimKey, subjectId);
       const statement = requireString(args, "statement");
       const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const assertedAtSha = resolveCommit(ctx, requireString(args, "ref_sha"));
