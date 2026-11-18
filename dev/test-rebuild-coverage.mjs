@@ -213,7 +213,10 @@ function symbolSlug(subjectId) {
  */
 function keyShapeFailure(sid, category, key, subjectId) {
   if (category === "flow") {
-    return new RegExp(`^${sid}/flow/[a-z0-9]+(?:-[a-z0-9]+)*/[0-9]{2,}$`).test(key)
+    // The id is matched literally: a regex character in it (`B+01`) would
+    // otherwise refuse a key the server accepts.
+    const literal = sid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`^${literal}/flow/[a-z0-9]+(?:-[a-z0-9]+)*/[0-9]{2,}$`).test(key)
       ? null
       : `claim ${key} is a flow step whose key is not <sid>/flow/<flow-slug>/<nn>, so its steps have no recorded order`;
   }
