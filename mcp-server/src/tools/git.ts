@@ -338,6 +338,14 @@ export const gitTools: ToolDefinition[] = [
       const unverifiable: typeof ledgerRows = [];
       const fresh: typeof ledgerRows = [];
       for (const [refSha, rows] of byRefSha) {
+        // A row stored before writers resolved revisions may hold a name such
+        // as HEAD. `git diff HEAD <current>` is empty whenever HEAD is current,
+        // so the row would read fresh however far its file had moved; it is
+        // unverified instead.
+        if (!/^[0-9a-f]{7,40}$/.test(refSha)) {
+          unverifiable.push(...rows);
+          continue;
+        }
         let changedSinceExamination: Set<string>;
         try {
           changedSinceExamination = new Set(

@@ -16,7 +16,12 @@ that bias.
 Call `get_subsystem_files(subsystem_id)` first. If there are
 pre-existing rows from an earlier session, they were produced at a
 different SHA and may be stale — review them, keep classifications
-that still apply, update where the file moved.
+that still apply, update where the file moved. A row already marked
+stale keeps its old `ref_sha` when you re-add it: the response lists it
+under `held_stale`. Its staleness is discharged by `clear_staleness`
+after Phase 2 re-reads the file, not by scoping. A clear needs an
+evidence row citing the file or a one-line reason; without either the
+server answers `clear_staleness refuses: a clear records its basis`.
 
 ## Process
 

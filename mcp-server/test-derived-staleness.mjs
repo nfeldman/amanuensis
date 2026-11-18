@@ -481,17 +481,32 @@ t("S1: a ref_sha given as HEAD is stored as its commit and can turn stale", () =
   }
 });
 
-t("S2: re-adding a stale file at a newer commit is refused and it stays stale", () => {
-  const { ctx, head, base, cleanup } = staleFixture();
+t("S2: re-adding a stale file at a newer commit holds its ref_sha and it stays stale", () => {
+  const { ws, ctx, head, base, cleanup } = staleFixture();
   try {
-    refused(
-      () => call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: head, files: [{ file_path: "src/core.ts", classification: "examined" }] }, ctx),
-      /src\/core\.ts \(git-drift\) is stale in B-01; .*clear_staleness/,
+    writeAndCommit(ws, "src/other.ts", "x\n", "another file");
+    const result = call(
+      "add_files_to_scope",
+      {
+        subsystem_id: "B-01",
+        ref_sha: "HEAD",
+        files: [
+          { file_path: "src/core.ts", classification: "examined", why_in_scope: "re-scoped" },
+          { file_path: "src/other.ts" },
+        ],
+      },
+      ctx,
     );
-    assert(ledgerRow(ctx).ref_sha === base, "the refused batch moved the ref_sha");
-    call("detect_changes", { current_sha: head }, ctx);
+    assert(result.added === 2, "the batch was not applied");
+    assert(
+      result.held_stale.length === 1 && result.held_stale[0].file_path === "src/core.ts",
+      `held_stale reads ${JSON.stringify(result.held_stale)}`,
+    );
+    assert(ledgerRow(ctx).ref_sha === base, "the stale row's ref_sha moved");
+    call("detect_changes", { current_sha: git(ws, "rev-parse", "HEAD") }, ctx);
     assert(ledgerRow(ctx).stale === 1, "the row was discharged without a staleness_clears row");
     assert(clears(ctx) === 0, "no clear was recorded, so none should exist");
+    void head;
   } finally {
     cleanup();
   }
@@ -502,7 +517,7 @@ t("S3: update_file_classification may reclassify a stale row but not move its re
   try {
     refused(
       () => call("update_file_classification", { subsystem_id: "B-01", file_path: "src/core.ts", classification: "examined", ref_sha: head }, ctx),
-      /is stale in B-01; .*clear_staleness/,
+      /is stale in B-01 \(git-drift\); .*clear_staleness/,
     );
     call("update_file_classification", { subsystem_id: "B-01", file_path: "src/core.ts", classification: "deferred-with-reason" }, ctx);
     call("detect_changes", { current_sha: head }, ctx);
@@ -530,6 +545,24 @@ t("S5: a stale row stored as an abbreviation accepts the same commit in full", (
     ctx.db.prepare("UPDATE file_ledger SET ref_sha = ? WHERE file_path = 'src/core.ts'").run(base.slice(0, 7));
     call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: base, files: [{ file_path: "src/core.ts", why_in_scope: "same reading" }] }, ctx);
     assert(ledgerRow(ctx).stale === 1, "the row must stay stale");
+  } finally {
+    cleanup();
+  }
+});
+
+t("S6: a row stored at a name such as HEAD reads unverified, not fresh", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: base, files: [{ file_path: "src/core.ts" }] }, ctx);
+    // What a writer stored before revisions were resolved.
+    ctx.db.prepare("UPDATE file_ledger SET ref_sha = 'HEAD'").run();
+    const head = writeAndCommit(ws, "src/core.ts", "2\n", "drift");
+    call("detect_changes", { current_sha: head }, ctx);
+    const row = ctx.db.prepare("SELECT stale, stale_reason FROM file_ledger").get();
+    assert(row.stale === 1 && row.stale_reason === "unverifiable-ref", `row reads ${JSON.stringify(row)}`);
   } finally {
     cleanup();
   }

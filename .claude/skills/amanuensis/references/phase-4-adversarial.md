@@ -163,15 +163,21 @@ the claim and where you looked for it, in prose, not a one-word note.
   the overturning (finding B04-R6). Do not record `survived` for it.
   Record the disproof as evidence and an
   `add_field_note(category="anomaly", ...)` naming the `claim_key`,
-  and name the claim in the hand-back. The advance to `mapped` stays
-  refused until it carries an outcome.
+  and name the claim in the hand-back. Do not advance the subsystem to
+  `mapped` while it stands. The server refuses that advance only if
+  the claim has no outcome at all: one that already carries an outcome
+  from an earlier probe, `survived` included, satisfies the check, so
+  holding the subsystem back is the coordinator's job here, not the
+  server's.
 - **`superseded`** — `supersede_claim`, which closes the predecessor
   and opens the successor on the same `claim_key` in one commit and
   writes the `superseded` event, returned as `validity_event_id`.
   Use this, not delete-and-re-add: the history is the point. Then
   `record_claim_challenge(..., outcome="superseded",
   validity_event_id=<that id>)`. The same strict-descendant rule
-  applies.
+  applies. The successor is now a current claim with no outcome of
+  its own, and the advance to `mapped` checks it: challenge it in this
+  pass and record its outcome too.
 - **`survived`** — no claim row changes, so the outcome has to be
   recorded explicitly or it is indistinguishable from a claim nobody
   looked at. `record_claim_challenge(..., outcome="survived")` with

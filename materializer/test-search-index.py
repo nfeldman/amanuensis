@@ -630,6 +630,21 @@ class Browser:
         # startup can fill and stall the browser, and readline() on it blocks past
         # any deadline. The endpoint is read from DevToolsActivePort, which Chrome
         # writes into the profile once it listens, whatever wrapper launched it.
+        self.log: Any = None
+        self.process: subprocess.Popen[bytes] | None = None
+        self.socket: _Socket | None = None
+        self.counter = 0
+        self.session = ""
+        # Everything from here to the last enable is one guarded setup: a failure
+        # at any step (launch, endpoint, socket, target, attach) stops the browser
+        # and removes the profile, since the caller's try/finally has no object yet.
+        try:
+            self._start(binary)
+        except BaseException:
+            self._stop()
+            raise
+
+    def _start(self, binary: str) -> None:
         self.log = open(os.path.join(self.profile, "stderr.log"), "w+")  # noqa: SIM115 -- open for the browser's life; _stop closes it
         self.process = subprocess.Popen(
             [
@@ -652,14 +667,7 @@ class Browser:
             stderr=self.log,
             start_new_session=True,
         )
-        try:
-            endpoint = self._endpoint(time.time() + 60)
-            self.socket = _Socket(endpoint)
-        except Exception:
-            self._stop()
-            raise
-        self.counter = 0
-        self.session = ""
+        self.socket = _Socket(self._endpoint(time.time() + 60))
         target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
         self.session = self.call(
             "Target.attachToTarget", {"targetId": target, "flatten": True}
@@ -675,7 +683,9 @@ class Browser:
                     lines = handle.read().splitlines()
                 if len(lines) >= 2 and lines[0].strip().isdigit() and lines[1].startswith("/"):
                     return f"ws://127.0.0.1:{int(lines[0])}{lines[1].strip()}"
-            if self.process.poll() is not None:
+            # A wrapper may exit 0 after starting the browser in the background;
+            # only a failed launcher ends the wait early.
+            if self.process.poll() not in (None, 0):
                 break
             time.sleep(0.1)
         status = self.process.poll()
@@ -688,17 +698,23 @@ class Browser:
         )
 
     def _stop(self) -> None:
-        # The launcher may be a wrapper script; signal the whole process group so
-        # the browser it started does not outlive the test.
-        with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.killpg(self.process.pid, signal.SIGTERM)
-        try:
-            self.process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
+        if self.socket is not None:
+            self.socket.close()
+        if self.process is not None:
+            # The launcher may be a wrapper script that exits while the browser
+            # it started keeps running, so the group is signalled whatever the
+            # launcher did: TERM, a grace period, then KILL for anything left.
+            # A child that moved itself to a new session is out of reach here.
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(self.process.pid, signal.SIGTERM)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                self.process.wait(timeout=10)
             with contextlib.suppress(ProcessLookupError, PermissionError):
                 os.killpg(self.process.pid, signal.SIGKILL)
-            self.process.wait(timeout=10)
-        self.log.close()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                self.process.wait(timeout=10)
+        if self.log is not None:
+            self.log.close()
         shutil.rmtree(self.profile, ignore_errors=True)
 
     def call(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -769,10 +785,7 @@ class Browser:
         time.sleep(0.05)
 
     def close(self) -> None:
-        try:
-            self.socket.close()
-        finally:
-            self._stop()
+        self._stop()
 
 
 # ---------------------------------------------------------------------------

@@ -22,36 +22,45 @@ function isClassification(v: string): v is FileClassification {
  * advanced the ref_sha of a stale row would discharge the staleness on the next
  * reconciliation with no basis recorded in staleness_clears. Classification and
  * rationale may still change; only the revision is held.
+ *
+ * Returns the rows among `paths` that are stale at a commit other than `refSha`.
  */
-function refuseStaleRefMove(
+function staleRowsAtOtherCommits(
   ctx: ServerContext,
   subsystemId: string,
-  moves: ReadonlyArray<{ file_path: string; ref_sha: string }>,
-): void {
+  paths: readonly string[],
+  refSha: string,
+): Map<string, { stale_reason: string; ref_sha: string | null }> {
   const current = ctx.db.prepare(
     "SELECT stale, stale_reason, ref_sha FROM file_ledger WHERE subsystem_id = ? AND file_path = ?",
   );
-  const held: string[] = [];
-  for (const move of moves) {
-    const row = current.get(subsystemId, move.file_path) as
+  const held = new Map<string, { stale_reason: string; ref_sha: string | null }>();
+  for (const path of paths) {
+    const row = current.get(subsystemId, path) as
       | { stale: number; stale_reason: string | null; ref_sha: string | null }
       | undefined;
-    // Rows written before revisions were resolved may hold an abbreviation
-    // (48 such rows in the self-conspectus); the same commit is not a move.
-    const sameCommit =
-      row?.ref_sha != null &&
-      /^[0-9a-f]{7,40}$/.test(row.ref_sha) &&
-      move.ref_sha.startsWith(row.ref_sha);
-    if (row?.stale && !sameCommit) {
-      held.push(`${move.file_path} (${row.stale_reason ?? "stale"})`);
+    if (!row?.stale) continue;
+    if (!sameCommit(ctx, row.ref_sha, refSha)) {
+      held.set(path, { stale_reason: row.stale_reason ?? "stale", ref_sha: row.ref_sha });
     }
   }
-  if (held.length > 0) {
-    throw new ToolError(
-      `${held.join(", ")} ${held.length === 1 ? "is" : "are"} stale in ${subsystemId}; ` +
-        "a stale row's ref_sha moves only through clear_staleness, which records what the " +
-        "re-examination found. Clear it first, or omit the new ref_sha to change only the classification.",
-    );
+  return held;
+}
+
+/**
+ * Rows written before revisions were resolved may hold an abbreviation (48 in
+ * the self-conspectus). It names the same commit only if it still resolves, and
+ * resolves uniquely, to that commit: a bare prefix match would accept a later
+ * commit that happens to share the prefix.
+ */
+function sameCommit(ctx: ServerContext, stored: string | null, resolved: string): boolean {
+  if (stored === null) return false;
+  if (stored === resolved) return true;
+  if (!/^[0-9a-f]{7,39}$/.test(stored) || !resolved.startsWith(stored)) return false;
+  try {
+    return resolveWorkspaceCommit(ctx, stored) === resolved;
+  } catch {
+    return false;
   }
 }
 
@@ -59,7 +68,7 @@ export const fileTools: ToolDefinition[] = [
   {
     name: "add_files_to_scope",
     description:
-      "Append or update file ledger rows for a subsystem. Each file gets a why_in_scope rationale and an optional classification (default 'candidate'). ref_sha anchors the observation to a specific commit; a name such as HEAD is resolved to its commit. A row already marked stale keeps its ref_sha: re-adding it at a different commit is refused, because only clear_staleness records the re-examination that discharges staleness.",
+      "Append or update file ledger rows for a subsystem. Each file gets a why_in_scope rationale and an optional classification (default 'candidate'). ref_sha anchors the observation to a specific commit; a name such as HEAD is resolved to its commit. A row already marked stale keeps its ref_sha, because only clear_staleness records the re-examination that discharges staleness; its other fields are updated, and the response lists it under held_stale.",
     inputSchema: {
       type: "object",
       properties: {
@@ -122,11 +131,15 @@ export const fileTools: ToolDefinition[] = [
            ref_sha = excluded.ref_sha,
            examined_at = CASE WHEN excluded.classification='examined' THEN datetime('now') ELSE file_ledger.examined_at END`,
       );
-      ctx.db.transaction(() => {
-        refuseStaleRefMove(
+      // Re-scoping is routine (Phase 1 re-adds rows from an earlier session at
+      // the survey's commit), so a stale row in the batch is held rather than
+      // refusing the batch: it keeps its revision and is reported.
+      const held = ctx.db.transaction(() => {
+        const stale = staleRowsAtOtherCommits(
           ctx,
           subsystemId,
-          normalized.map((f) => ({ file_path: f.file_path, ref_sha: refSha })),
+          normalized.map((f) => f.file_path),
+          refSha,
         );
         for (const f of normalized) {
           stmt.run(
@@ -134,12 +147,21 @@ export const fileTools: ToolDefinition[] = [
             f.file_path,
             f.why_in_scope,
             f.classification,
-            refSha,
+            stale.has(f.file_path) ? stale.get(f.file_path)?.ref_sha : refSha,
             f.classification,
           );
         }
+        return stale;
       })();
-      return ok({ added: normalized.length });
+      return ok({
+        added: normalized.length,
+        held_stale: [...held].map(([file_path, row]) => ({
+          file_path,
+          stale_reason: row.stale_reason,
+          ref_sha: row.ref_sha,
+          note: "kept its ref_sha; clear_staleness records the re-examination that moves it",
+        })),
+      });
     },
   },
   {
@@ -164,8 +186,16 @@ export const fileTools: ToolDefinition[] = [
       const classification = requireEnum(args, "classification", FILE_CLASSIFICATIONS);
       const requestedRef = optString(args, "ref_sha");
       const refSha = requestedRef === null ? null : resolveWorkspaceCommit(ctx, requestedRef);
-      if (refSha !== null)
-        refuseStaleRefMove(ctx, subsystemId, [{ file_path: filePath, ref_sha: refSha }]);
+      if (refSha !== null) {
+        const stale = staleRowsAtOtherCommits(ctx, subsystemId, [filePath], refSha).get(filePath);
+        if (stale) {
+          throw new ToolError(
+            `${filePath} is stale in ${subsystemId} (${stale.stale_reason}); a stale row's ref_sha ` +
+              "moves only through clear_staleness, which records what the re-examination found. " +
+              "Clear it first, or omit ref_sha to change only the classification.",
+          );
+        }
+      }
       const res = ctx.db
         .prepare(
           `UPDATE file_ledger
