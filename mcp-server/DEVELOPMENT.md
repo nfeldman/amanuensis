@@ -412,8 +412,8 @@ _213 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `add_files_to_scope` | Append or update file ledger rows for a subsystem. Each file gets a why_in_scope rationale and an optional classification (default 'candidate'). ref_sha anchors the observation to a specific commit. |
-| `update_file_classification` | Transition a scoped file to a new classification (e.g., candidate → examined). Updates examined_at when the new classification is 'examined'. |
+| `add_files_to_scope` | Append or update file ledger rows for a subsystem. Each file gets a why_in_scope rationale and an optional classification (default 'candidate'). ref_sha anchors the observation to a specific commit; a name such as HEAD is resolved to its commit. A row already marked stale keeps its ref_sha: re-adding it at a different commit is refused, because only clear_staleness records the re-examination that discharges staleness. |
+| `update_file_classification` | Transition a scoped file to a new classification (e.g., candidate → examined). Updates examined_at when the new classification is 'examined'. An optional ref_sha moves the row's revision (a name such as HEAD is resolved to its commit); on a stale row that is refused, since clear_staleness is what records a re-examination. |
 | `get_subsystem_files` | List the file ledger for a subsystem. classification_filter narrows to e.g. 'examined' or 'candidate'. |
 
 ### `findings` (7)

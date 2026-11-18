@@ -272,7 +272,7 @@ function advanceTo(ctx, id, status) {
         "add_files_to_scope",
         {
           subsystem_id: id,
-          ref_sha: "fixture-ref",
+          ref_sha: headSha(ctx),
           files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "fixture" }],
         },
         ctx,
@@ -776,7 +776,7 @@ t("reset_subsystem to unmapped also clears file_ledger", () => {
       {
         subsystem_id: "B-01",
         files: [{ file_path: "a.ts", why_in_scope: "main" }],
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
       },
       ctx,
     );
@@ -805,7 +805,7 @@ t("reset_subsystem to structural preserves file_ledger", () => {
       {
         subsystem_id: "B-01",
         files: [{ file_path: "a.ts", why_in_scope: "main" }],
-        ref_sha: "abc",
+        ref_sha: headSha(ctx),
       },
       ctx,
     );
@@ -965,7 +965,7 @@ t("advance to 'structural' without a current <sid>/ claim is rejected", () => {
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call(
       "add_files_to_scope",
-      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      { subsystem_id: "B-01", ref_sha: headSha(ctx), files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
     // Another subsystem's claim does not stand in for this one's.
@@ -995,7 +995,7 @@ t("a claim closed at a later commit no longer satisfies the structural gate", ()
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call(
       "add_files_to_scope",
-      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      { subsystem_id: "B-01", ref_sha: headSha(ctx), files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
@@ -1019,7 +1019,7 @@ t("advance to 'concerns' without subsystem-survey artifact is rejected", () => {
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call(
       "add_files_to_scope",
-      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      { subsystem_id: "B-01", ref_sha: headSha(ctx), files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
@@ -1042,7 +1042,7 @@ t("advance to 'adversarial' without dispositions is rejected", () => {
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call(
       "add_files_to_scope",
-      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      { subsystem_id: "B-01", ref_sha: headSha(ctx), files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
@@ -1087,7 +1087,7 @@ t("phase prerequisites: happy path passes all gates", () => {
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
     call(
       "add_files_to_scope",
-      { subsystem_id: "B-01", ref_sha: "r", files: [{ file_path: "a.ts", why_in_scope: "test" }] },
+      { subsystem_id: "B-01", ref_sha: headSha(ctx), files: [{ file_path: "a.ts", why_in_scope: "test" }] },
       ctx,
     );
     seedStructuralClaim(ctx, "B-01", "a.ts");
@@ -1146,7 +1146,7 @@ t("project-local Amanuensis state is rejected at source and evidence ingress", (
         () =>
           call(
             "add_files_to_scope",
-            { subsystem_id: "B-SELF", ref_sha: "r", files: [{ file_path: path }] },
+            { subsystem_id: "B-SELF", ref_sha: headSha(ctx), files: [{ file_path: path }] },
             ctx,
           ),
         "reserved Amanuensis tool state",

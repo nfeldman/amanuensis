@@ -200,7 +200,7 @@ t("workflow-shape: cloud run produces the expected conspectus layout", () => {
     // 3. Onboarding: register subsystem + advance + concerns.
     call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
     call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
-    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
+    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: headSha(target), files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
     const readingId = seedStructuralClaim(target, ctx, "B-01");
     dischargeVocabulary(target, ctx, "B-01");
     call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);
@@ -319,7 +319,7 @@ t("workflow-shape: compare_conspectuses works on two cloud runs in the same cons
       ctx.sessionId = call("start_session", { intent: "e2e" }, ctx).session_id;
       call("upsert_subsystem", { id: "B-01", name: "Main" }, ctx);
       call("update_subsystem_status", { id: "B-01", status: "scoping" }, ctx);
-      call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "abc", files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
+      call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: headSha(ws), files: [{ file_path: "main.ts", why_in_scope: "entry" }] }, ctx);
       const reading = seedStructuralClaim(ws, ctx, "B-01");
       dischargeVocabulary(ws, ctx, "B-01");
       call("update_subsystem_status", { id: "B-01", status: "structural" }, ctx);

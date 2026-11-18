@@ -89,12 +89,12 @@ for (let i = 0; i < 40; i++) {
   const id = `B-${String(i).padStart(2, "0")}`;
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
-  call("add_files_to_scope", { subsystem_id: id, ref_sha: "perf-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "perf fixture" }] }, ctx);
+  call("add_files_to_scope", { subsystem_id: id, ref_sha: seedSha, files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "perf fixture" }] }, ctx);
   const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
   // §2.2: set_disposition names the readings it rests on, so the measured call
   // below has one to name.
   subsystemEvidence.push(evidenceId);
-  call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
+  call("add_claim", { claim_id: `CL-${id}`, claim_key: `${id}/key-type/src-${id.toLowerCase()}-index-ts-row`, subject_type: "symbol", subject_id: `src/${id}/index.ts:Row`, statement: `Row is the unit ${id} stores.`, epistemic_kind: "observation", ref_sha: seedSha, evidence_ids: [evidenceId] }, ctx);
   // §4.4: the structural pass discharges its vocabulary obligation or declares
   // the subsystem has none. A fixture subsystem coins no word of its own.
   call("decline_domain_vocabulary", { subsystem_id: id, reason: "perf fixture: its one file coins no term of its own", ref_sha: seedSha }, ctx);

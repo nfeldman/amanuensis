@@ -182,14 +182,14 @@ run("list_concerns", { status_filter: "active" }, (r) => Array.isArray(r) && r.l
 // 5. Files — must come before advancing B-01 to 'structural' (phase prerequisite).
 run("add_files_to_scope", {
   subsystem_id: "B-01",
-  ref_sha: "deadbeef",
+  ref_sha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: TMP, encoding: "utf8" }).trim(),
   files: [
     { file_path: "scheduler/main.ts", why_in_scope: "entry", classification: "examined" },
     { file_path: "scheduler/queue.ts", why_in_scope: "state", classification: "candidate" },
   ],
 }, (r) => r.ok && r.added === 2);
 run("update_file_classification", {
-  subsystem_id: "B-01", file_path: "scheduler/queue.ts", classification: "examined", ref_sha: "deadbeef",
+  subsystem_id: "B-01", file_path: "scheduler/queue.ts", classification: "examined", ref_sha: "HEAD",
 }, (r) => r.ok);
 run("get_subsystem_files", { subsystem_id: "B-01", classification_filter: "examined" }, (r) => r.length === 2);
 

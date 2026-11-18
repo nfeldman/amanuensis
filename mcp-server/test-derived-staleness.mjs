@@ -425,5 +425,115 @@ t("a row that becomes provably fresh again is un-marked", () => {
   }
 });
 
+// ------------------------------------------------- staleness bypasses ----
+// A stale row's ref_sha moves only through clear_staleness, and a revision is
+// stored resolved. Before the repair, re-adding a stale file at a newer commit
+// (or update_file_classification with a newer ref_sha) let the next
+// detect_changes mark it fresh with no staleness_clears row, and a row stored
+// at the literal "HEAD" compared `git diff HEAD <current>`, which is empty, so
+// it could never turn stale.
+
+function staleFixture() {
+  const fx = freshCtx();
+  const base = writeAndCommit(fx.ws, "src/core.ts", "1\n", "base");
+  call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, fx.ctx);
+  call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, fx.ctx);
+  call(
+    "add_files_to_scope",
+    { subsystem_id: "B-01", ref_sha: base, files: [{ file_path: "src/core.ts", classification: "examined" }] },
+    fx.ctx,
+  );
+  const head = writeAndCommit(fx.ws, "src/core.ts", "2\n", "drift");
+  call("detect_changes", { current_sha: head }, fx.ctx);
+  assert(call("get_dashboard", {}, fx.ctx).stale_entries === 1, "precondition: stale");
+  return { ...fx, base, head };
+}
+const ledgerRow = (ctx) =>
+  ctx.db.prepare("SELECT stale, ref_sha FROM file_ledger WHERE subsystem_id='B-01' AND file_path='src/core.ts'").get();
+const clears = (ctx) => ctx.db.prepare("SELECT count(*) AS n FROM staleness_clears").get().n;
+function refused(fn, pattern) {
+  try {
+    fn();
+  } catch (e) {
+    assert(pattern.test(e.message), `refused, but with: ${e.message}`);
+    return;
+  }
+  throw new Error("expected a refusal");
+}
+
+t("S1: a ref_sha given as HEAD is stored as its commit and can turn stale", () => {
+  const { ws, ctx, cleanup } = freshCtx();
+  try {
+    const base = writeAndCommit(ws, "src/core.ts", "1\n", "base");
+    call("set_git_state", { canonical_branch: "main", onboarding_sha: base }, ctx);
+    call("upsert_subsystem", { id: "B-01", name: "Core", status: "scoping" }, ctx);
+    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "HEAD", files: [{ file_path: "src/core.ts" }] }, ctx);
+    assert(ledgerRow(ctx).ref_sha === base, `stored ref_sha ${ledgerRow(ctx).ref_sha}, expected ${base}`);
+    const head = writeAndCommit(ws, "src/core.ts", "2\n", "drift");
+    call("detect_changes", { current_sha: head }, ctx);
+    assert(ledgerRow(ctx).stale === 1, "a row recorded at HEAD never turned stale after drift");
+    refused(
+      () => call("update_file_classification", { subsystem_id: "B-01", file_path: "src/core.ts", classification: "examined", ref_sha: "no-such-ref" }, ctx),
+      /does not resolve to a commit/,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+t("S2: re-adding a stale file at a newer commit is refused and it stays stale", () => {
+  const { ctx, head, base, cleanup } = staleFixture();
+  try {
+    refused(
+      () => call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: head, files: [{ file_path: "src/core.ts", classification: "examined" }] }, ctx),
+      /src\/core\.ts \(git-drift\) is stale in B-01; .*clear_staleness/,
+    );
+    assert(ledgerRow(ctx).ref_sha === base, "the refused batch moved the ref_sha");
+    call("detect_changes", { current_sha: head }, ctx);
+    assert(ledgerRow(ctx).stale === 1, "the row was discharged without a staleness_clears row");
+    assert(clears(ctx) === 0, "no clear was recorded, so none should exist");
+  } finally {
+    cleanup();
+  }
+});
+
+t("S3: update_file_classification may reclassify a stale row but not move its ref_sha", () => {
+  const { ctx, head, cleanup } = staleFixture();
+  try {
+    refused(
+      () => call("update_file_classification", { subsystem_id: "B-01", file_path: "src/core.ts", classification: "examined", ref_sha: head }, ctx),
+      /is stale in B-01; .*clear_staleness/,
+    );
+    call("update_file_classification", { subsystem_id: "B-01", file_path: "src/core.ts", classification: "deferred-with-reason" }, ctx);
+    call("detect_changes", { current_sha: head }, ctx);
+    assert(ledgerRow(ctx).stale === 1, "reclassifying discharged the staleness");
+  } finally {
+    cleanup();
+  }
+});
+
+t("S4: after clear_staleness the row moves freely and the clear is on record", () => {
+  const { ctx, head, cleanup } = staleFixture();
+  try {
+    call("clear_staleness", { subsystem_id: "B-01", file_path: "src/core.ts", ref_sha: head, reason: "re-read the new value" }, ctx);
+    assert(clears(ctx) === 1, "the clear was not recorded");
+    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: "HEAD", files: [{ file_path: "src/core.ts", classification: "examined" }] }, ctx);
+    assert(ledgerRow(ctx).ref_sha === head && ledgerRow(ctx).stale === 0, "a fresh row should accept a new ref_sha");
+  } finally {
+    cleanup();
+  }
+});
+
+t("S5: a stale row stored as an abbreviation accepts the same commit in full", () => {
+  const { ctx, base, cleanup } = staleFixture();
+  try {
+    ctx.db.prepare("UPDATE file_ledger SET ref_sha = ? WHERE file_path = 'src/core.ts'").run(base.slice(0, 7));
+    call("add_files_to_scope", { subsystem_id: "B-01", ref_sha: base, files: [{ file_path: "src/core.ts", why_in_scope: "same reading" }] }, ctx);
+    assert(ledgerRow(ctx).stale === 1, "the row must stay stale");
+  } finally {
+    cleanup();
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

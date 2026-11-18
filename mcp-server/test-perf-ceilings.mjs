@@ -128,7 +128,7 @@ for (let i = 0; i < 20; i++) {
   const id = `B-${String(i).padStart(2, "0")}`;
   call("upsert_subsystem", { id, name: `Subsystem ${i}` }, ctx);
   call("update_subsystem_status", { id, status: "scoping" }, ctx);
-  call("add_files_to_scope", { subsystem_id: id, ref_sha: "ceil-ref", files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "ceiling fixture" }] }, ctx);
+  call("add_files_to_scope", { subsystem_id: id, ref_sha: seedSha, files: [{ file_path: `src/${id}/index.ts`, why_in_scope: "ceiling fixture" }] }, ctx);
   const evidenceId = call("add_evidence", { file_path: `src/${id}/index.ts`, symbol: "Row", line_range: "1-4", ref_sha: seedSha, kind: "code-verified" }, ctx).id;
   // §2.2: set_disposition names the readings it rests on. Five per subsystem,
   // so the multi-evidence ceiling below measures a batch rather than a single.
