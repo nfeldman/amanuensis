@@ -22,6 +22,18 @@ real run; "read" means found by reading code and not reproduced.
   sentence needs about 10,240. Measured in
   [design/explanation/locus-default-measure.json](design/explanation/locus-default-measure.json);
   deferred in [design/explanation/decisions.md](design/explanation/decisions.md) §5.
+- **May a claim close at the revision it was recorded at?** An adversarial pass that finds a claim
+  wrong at the commit it was recorded at cannot record `overturned` (self-conspectus finding
+  B04-R6, carried from B04-R2; all 8 recorded outcomes there are `survived`). `invalidate_claim`
+  and `supersede_claim` require a strict descendant of `valid_from_sha`, and the `claims` table
+  forbids an empty interval with a `CHECK`, so allowing "never held" means rebuilding `claims`
+  in every store behind its append-only triggers (`db.ts` has the pattern, in
+  `migrateVocabularyChecks`). Until then the Phase 4 reference tells the pass to record the
+  disproof as evidence and an anomaly note and to leave the subsystem short of `mapped`. The
+  server does not enforce that: the `mapped` check accepts any earlier outcome on the claim, so
+  a claim that recorded `survived` and was disproved later at the same commit still lets the
+  subsystem advance (found by review, 2026-11-18). A latest-outcome rule would close it, but it
+  needs a way to record the negative outcome first.
 - **Resume the self-rebuild?** Paused 2026-11-06. The plan has three stages: real exclusion (an
   `.amanuensisignore` file: excluded paths get no ledger row, count or label anywhere), a model
   pilot (Haiku, Sonnet, Opus, Luna, Terra and Sol, two runs each, judged blind; judge not settled
@@ -76,9 +88,13 @@ Substrate, smallest first:
    clear appends a row to `staleness_clears` (append-only) with an evidence row citing the file
    or a one-line reason, what it discharged, and the commit, now resolved: the old handler
    stored `ref_sha: "HEAD"` literally in the ledger. No tool reads the table yet; it is
-   queryable in the store. Not covered (found by review): `update_file_classification` or
-   `add_files_to_scope` with a newer `ref_sha`, followed by `detect_changes`, also clears a stale
-   row without a `staleness_clears` row, and so does a genuine content revert.
+   queryable in the store. The bypass found by review is closed (2026-11-18, 1095eb9):
+   `add_files_to_scope` and `update_file_classification` refuse to move the `ref_sha` of a row
+   marked stale (`add_files_to_scope` keeps the row's revision and reports it as `held_stale`;
+   `update_file_classification` refuses), both resolve `ref_sha`, and `detect_changes` reads a
+   stored name such as `HEAD` as unverified rather than fresh. Still not
+   recorded: a genuine content revert, and a row whose drift no `detect_changes` has seen yet,
+   whose `ref_sha` a caller may still move.
 7. **Other prose ages too.** Subsystem scope, start-here and survey notes are unbound text that
    never shows as ageing; a scope field carried a file's line count three months after the file
    tripled. Bind them to the revision written at and mark them ageing like explanations, and lint
@@ -170,18 +186,18 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 | B03-5 | A subsystem can report `mapped` with no unledgered, absent or stale rows while most of its scoped files were never examined |
 | ~~B03-6~~ | ~~A finding can reach verified-fixed with a `fix_sha` the fix is not at~~ Fixed 2026-11-17 (carried as B03-R2): `fix_sha` must be the last commit to change the file `fix_location` names (not a directory), checked on write and again at verification; a carried finding's `repaired_sha` must have changed a file it cites |
 | B03-7 | Moved content with still-valid claims has no way to be re-anchored |
-| ~~B03-8~~ | ~~A finding's severity cannot be amended~~ Fixed 2026-11-17 (carried as B03-R4): `update_finding_severity`, with each re-grade and the revision it was judged at in `finding_severity_events`; `describe_locus` with `as_of_sha` replays it. The pages and `get_finding_resolution_history` show only the current grade |
+| ~~B03-8~~ | ~~A finding's severity cannot be amended~~ Fixed 2026-11-17 (carried as B03-R4): `update_finding_severity`, with each re-grade and the revision it was judged at in `finding_severity_events`; `describe_locus` with `as_of_sha` replays it, and since f9c7e95 each re-grade is a row on `resolution-history.md`. `get_finding_resolution_history` stays resolution-only |
 | B03-R1 | A rebuilt store can re-mint a finding id and satisfy an old external reference |
 | B03-R2 | A clean-slate rebuild cannot carry an unresolved finding forward |
 | ~~B04-2~~ | ~~Every HTML page shows "No recorded stale entries" whatever the drift~~ Repaired, per `docs/resolved-findings.md` |
-| B04-3 | The read-back gate cannot turn red on a stale-marker fault. Mostly addressed (checked 2026-11-17): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`. What is left is dead code: `readback.py` and the index page still read stale markers from `entries`, which nothing writes |
+| B04-3 | The read-back gate cannot turn red on a stale-marker fault. Mostly addressed (checked 2026-11-17): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`. What is left is dead code: `readback.py` and the index page still read stale markers from `entries`, which nothing writes. Removing it means retiring two CI gate checks that require the marker (`test-overview-truthfulness.py` "the entries-derived stale marker survives", `test-ledger-freshness.py`'s `stale_marker` check), so it is left for the owner |
 | ~~B04-4~~ | ~~"How to read this conspectus" teaches a superseded contradiction model~~ Repaired, per `docs/resolved-findings.md` |
 | B04-5 | Publishing went red on seven dangling anchors |
-| B04-R2 | The adversarial pass cannot record a negative outcome at a single revision |
-| ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passes the server and fails the gate |
+| B04-R2 | The adversarial pass cannot record a negative outcome at a single revision. Now B04-R6 in the self-conspectus; see the decision above. The Phase 4 reference says so (8ca8754) |
+| ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passed the server and failed the gate; escaped 2026-11-18 (760bda0) |
 | B05-R1 | A clean publish and the live site can be green while the overview shows a placeholder thesis |
 | ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |
-| B01-R1 | The phase references drift from the tools they describe, unchecked |
+| B01-R1 | The phase references drift from the tools they describe, unchecked. The instance re-found as B01-R2 is fixed (8ca8754): Phase 4 recorded `survived` as a field note, which the `mapped` advance does not count, and never named `record_claim_challenge`; the P12 gate now requires it. The general case is still checked only for registered refusals (`check-refusal-parity.mjs`) |
 | B07-1 | A research refresh can hang on a network fetch. Operator-run scripts under `scholiast/` (fetch, the shadcn CLI, a Python child), not the server; a stall hangs a terminal. Left as LOW, 2026-11-16 |
 | B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI |
 | B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild |
