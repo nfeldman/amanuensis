@@ -74,6 +74,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
 import sqlite3
 import struct
@@ -508,6 +509,8 @@ _BROWSER_GLOBS = (
     "Google Chrome for Testing",
     "~/.cache/puppeteer/chrome/*/chrome-*/chrome",
     "~/Library/Caches/ms-playwright/chromium-*/chrome-*/Chromium.app/Contents/MacOS/Chromium",
+    "~/Library/Caches/ms-playwright/chromium-*/chrome-*/Google Chrome for Testing.app/Contents/MacOS/"
+    "Google Chrome for Testing",
     "~/Library/Caches/ms-playwright/chromium-*/chrome-*/chrome",
     "~/.cache/ms-playwright/chromium-*/chrome-*/chrome",
 )
@@ -623,6 +626,11 @@ class Browser:
 
     def __init__(self, binary: str) -> None:
         self.profile = tempfile.mkdtemp(prefix="amanuensis-p10-browser-")
+        # Chrome's stderr goes to a file, not a pipe: a pipe nobody drains after
+        # startup can fill and stall the browser, and readline() on it blocks past
+        # any deadline. The endpoint is read from DevToolsActivePort, which Chrome
+        # writes into the profile once it listens, whatever wrapper launched it.
+        self.log = open(os.path.join(self.profile, "stderr.log"), "w+")  # noqa: SIM115 -- open for the browser's life; _stop closes it
         self.process = subprocess.Popen(
             [
                 binary,
@@ -641,24 +649,15 @@ class Browser:
                 "about:blank",
             ],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
+            stderr=self.log,
+            start_new_session=True,
         )
-        endpoint = None
-        deadline = time.time() + 45
-        while time.time() < deadline:
-            line = self.process.stderr.readline()
-            if not line:
-                if self.process.poll() is not None:
-                    break
-                continue
-            found = re.search(r"(ws://\S+)", line)
-            if found:
-                endpoint = found.group(1)
-                break
-        if not endpoint:
-            raise RuntimeError("the browser never reported a debugging endpoint")
-        self.socket = _Socket(endpoint)
+        try:
+            endpoint = self._endpoint(time.time() + 60)
+            self.socket = _Socket(endpoint)
+        except Exception:
+            self._stop()
+            raise
         self.counter = 0
         self.session = ""
         target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
@@ -667,6 +666,40 @@ class Browser:
         )["sessionId"]
         self.call("Page.enable")
         self.call("Runtime.enable")
+
+    def _endpoint(self, deadline: float) -> str:
+        active = os.path.join(self.profile, "DevToolsActivePort")
+        while time.time() < deadline:
+            with contextlib.suppress(OSError, ValueError):
+                with open(active, encoding="utf-8") as handle:
+                    lines = handle.read().splitlines()
+                if len(lines) >= 2 and lines[0].strip().isdigit() and lines[1].startswith("/"):
+                    return f"ws://127.0.0.1:{int(lines[0])}{lines[1].strip()}"
+            if self.process.poll() is not None:
+                break
+            time.sleep(0.1)
+        status = self.process.poll()
+        self.log.flush()
+        self.log.seek(0)
+        tail = " | ".join(line.strip() for line in self.log.read().splitlines()[-3:])
+        state = "still running" if status is None else f"exited with status {status}"
+        raise RuntimeError(
+            f"the browser never reported a debugging endpoint ({state}; stderr: {scrub(tail)[:240] or 'empty'})"
+        )
+
+    def _stop(self) -> None:
+        # The launcher may be a wrapper script; signal the whole process group so
+        # the browser it started does not outlive the test.
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(self.process.pid, signal.SIGTERM)
+        try:
+            self.process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(self.process.pid, signal.SIGKILL)
+            self.process.wait(timeout=10)
+        self.log.close()
+        shutil.rmtree(self.profile, ignore_errors=True)
 
     def call(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self.counter += 1
@@ -739,12 +772,7 @@ class Browser:
         try:
             self.socket.close()
         finally:
-            try:
-                self.process.terminate()
-                self.process.wait(timeout=10)
-            except Exception:
-                self.process.kill()
-            shutil.rmtree(self.profile, ignore_errors=True)
+            self._stop()
 
 
 # ---------------------------------------------------------------------------
