@@ -4374,12 +4374,14 @@ def render_hot_spots(conn: sqlite3.Connection, storage: Path) -> RenderResult:
 
 
 def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> RenderResult:
-    """One newest-first timeline over the two tables that keep an event trail.
+    """One newest-first timeline over the tables that keep an event trail.
 
     Findings and contradictions are the only record families whose history is
     append-only: no code path in `mcp-server/src` or `materializer` updates or
-    deletes either event table. Every other family carries a mutable terminal
-    column and is reported on `resolved-leads.md`, which says so (§1.1, C58).
+    deletes their event tables. A finding's severity re-grades are a third
+    trail (`finding_severity_events`), read when the store has the table.
+    Every other family carries a mutable terminal column and is reported on
+    `resolved-leads.md`, which says so (§1.1, C58).
     """
 
     del storage  # the two event tables are the only source
@@ -4393,6 +4395,19 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
         "  LEFT JOIN finding_state_current v ON v.finding_id = e.finding_id"
         " ORDER BY e.id DESC",
     )
+    severity_events = (
+        rows(
+            conn,
+            "SELECT e.id, e.finding_id, e.previous_severity, e.severity, e.rationale,"
+            "       e.at_sha, e.session_id, e.recorded_at,"
+            "       v.resolution_state AS current_state"
+            "  FROM finding_severity_events e"
+            "  LEFT JOIN finding_state_current v ON v.finding_id = e.finding_id"
+            " ORDER BY e.id DESC",
+        )
+        if table_exists(conn, "finding_severity_events")
+        else []
+    )
     contradiction_events = rows(
         conn,
         "SELECT e.id, e.contradiction_id, e.resolution, e.scope_note, e.rationale,"
@@ -4403,7 +4418,13 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     )
 
     out = ["# Resolution history", ""]
-    if not (finding_events or contradiction_events):
+    sources = {
+        **_db_source("history:finding-events", finding_events),
+        **_db_source("history:contradiction-events", contradiction_events),
+    }
+    if severity_events:
+        sources.update(_db_source("history:severity-events", severity_events))
+    if not (finding_events or contradiction_events or severity_events):
         out += _empty_lens(
             conn,
             "No resolution event is recorded.",
@@ -4412,10 +4433,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
             "`finding_resolution_events` and `contradiction_resolution_events`, the"
             " two tables nothing updates or deletes.",
         )
-        return "\n".join(out) + "\n", {
-            **_db_source("history:finding-events", finding_events),
-            **_db_source("history:contradiction-events", contradiction_events),
-        }
+        return "\n".join(out) + "\n", sources
 
     timeline: list[tuple[str, int, int, list[str]]] = []
     for e in finding_events:
@@ -4436,6 +4454,25 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
                     f"`{e['resolution_state']}`",
                     f"`{e['session_id']}`" if e["session_id"] else "not recorded",
                     account or "No account was recorded with this event.",
+                ],
+            )
+        )
+    for e in severity_events:
+        fid = str(e["finding_id"])
+        page = finding_page(e["current_state"]) or FINDING_LENS_PAGES[0][1]
+        account = _table_cell(e["rationale"] or "")
+        account = f"Judged at {_short(str(e['at_sha'] or ''))}. {account}".strip()
+        timeline.append(
+            (
+                str(e["recorded_at"] or ""),
+                2,
+                int(e["id"]),
+                [
+                    _fmt_time(e["recorded_at"]),
+                    f"[{fid}]({page}#{fid.lower()})",
+                    f"`{e['previous_severity']}` → `{e['severity']}`",
+                    f"`{e['session_id']}`" if e["session_id"] else "not recorded",
+                    account,
                 ],
             )
         )
@@ -4462,8 +4499,9 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     timeline.sort(key=lambda entry: (entry[0], entry[1], entry[2]), reverse=True)
 
     out += [
-        "_Every state a finding or a contradiction was recorded in, newest first,"
-        " with the account given at the time. Nothing here is rewritten when a"
+        "_Every state a finding or a contradiction was recorded in, and every"
+        " re-grade of a finding's severity, newest first, with the account given"
+        " at the time. Nothing here is rewritten when a"
         " record moves on: a repair that was later defeated keeps the event that"
         " recorded it, which is how a regression is visible at all. Each row links"
         " to where that record is written in full today._",
@@ -4476,10 +4514,7 @@ def render_resolution_history(conn: sqlite3.Connection, storage: Path) -> Render
     out += [f"| {' | '.join(cells)} |" for _at, _rank, _id, cells in timeline]
     out.append("")
 
-    return "\n".join(out) + "\n", {
-        **_db_source("history:finding-events", finding_events),
-        **_db_source("history:contradiction-events", contradiction_events),
-    }
+    return "\n".join(out) + "\n", sources
 
 
 # §1.1's two statements about what the store keeps for the record families that
