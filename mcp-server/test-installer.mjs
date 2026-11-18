@@ -5,6 +5,7 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -1166,6 +1167,147 @@ test("uninstall with no --client also removes a skill left without its registrat
     assert(!existsSync(join(home, ".copilot/skills/amanuensis")), "orphan skill left behind");
   } finally {
     rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+// Codex rewrites config.toml when it starts: the start marker disappears, the
+// inline env becomes a sub-table, and later servers land before the end
+// marker. This is the shape of a real config observed after that rewrite.
+function codexRewrite(config, { command } = {}) {
+  const entry = parseToml(config).mcp_servers["amanuensis-memory"];
+  const toml = (value) => JSON.stringify(value);
+  const lines = [
+    'model = "keep-model"',
+    "",
+    "[mcp_servers.other]",
+    'command = "keep-server"',
+    "",
+    "[mcp_servers.amanuensis-memory]",
+    `command = ${toml(command ?? entry.command)}`,
+    `args = [${entry.args.map(toml).join(", ")}]`,
+    `cwd = ${toml(entry.cwd)}`,
+    "",
+    "[mcp_servers.amanuensis-memory.env]",
+    ...Object.entries(entry.env).map(([key, value]) => `${key} = ${toml(value)}`),
+    "",
+    "[mcp_servers.later]",
+    'command = "keep-later"',
+    "# <<< amanuensis init (managed)",
+    "",
+    '[projects."/somewhere"]',
+    'trust_level = "trusted"',
+    "",
+  ];
+  return lines.join("\n");
+}
+
+test("a Codex-rewritten config is still recognised, upgraded and uninstalled", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost({ hosts: [".codex"] });
+  try {
+    const config = join(home, ".codex/config.toml");
+    const cli = (args) => runCli([...args, "--client", "codex", "--mcp-only", "--dir", workspace], { env });
+    const status = () => {
+      const result = runCli(["status", "--json"], { env });
+      return JSON.parse(result.stdout).hosts.find((host) => host.host === "codex").registration;
+    };
+    let result = cli(["install"]);
+    assert(result.status === 0, result.stderr);
+
+    writeFileSync(config, codexRewrite(readFileSync(config, "utf8")));
+    const rewritten = readFileSync(config, "utf8");
+    assert(status() === "installed", `rewritten current entry reported ${status()}`);
+    result = cli(["install"]);
+    assert(result.status === 0, result.stderr);
+    assert(readFileSync(config, "utf8") === rewritten, "a current rewritten entry was rewritten");
+    assert(result.stdout.includes("nothing to restart"), `restart advised for no change: ${result.stdout}`);
+
+    writeFileSync(config, codexRewrite(rewritten, { command: "/old/node" }));
+    assert(status() === "outdated", `older rewritten entry reported ${status()}`);
+    result = cli(["upgrade"]);
+    assert(result.status === 0, result.stderr);
+    const upgraded = readFileSync(config, "utf8");
+    const parsed = parseToml(upgraded);
+    assert(parsed.mcp_servers["amanuensis-memory"].command === process.execPath, "not upgraded");
+    assert(parsed.mcp_servers.other?.command === "keep-server", "earlier server lost");
+    assert(parsed.mcp_servers.later?.command === "keep-later", "later server lost");
+    assert(parsed.model === "keep-model" && parsed.projects["/somewhere"], "settings lost");
+    assert(upgraded.split("amanuensis init (managed)").length === 3, "markers not restored once");
+    assert(status() === "installed", `upgraded entry reported ${status()}`);
+
+    writeFileSync(config, codexRewrite(upgraded));
+    result = cli(["uninstall"]);
+    assert(result.status === 0, result.stderr);
+    const removed = readFileSync(config, "utf8");
+    const after = parseToml(removed);
+    assert(!after.mcp_servers["amanuensis-memory"], "entry survived uninstall");
+    assert(after.mcp_servers.other && after.mcp_servers.later, "uninstall removed another server");
+    assert(after.model === "keep-model" && after.projects["/somewhere"], "uninstall lost settings");
+    assert(!removed.includes("amanuensis init (managed)"), "a stray marker survived uninstall");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("a rewritten Codex entry without the installer's contract stays unmanaged", () => {
+  const workspace = fresh();
+  const { home, env } = isolatedHost({ hosts: [".codex"] });
+  try {
+    const config = join(home, ".codex/config.toml");
+    const original =
+      '[mcp_servers.amanuensis-memory]\ncommand = "hand"\n\n[mcp_servers.amanuensis-memory.env]\nX = "1"\n';
+    writeFileSync(config, original);
+    const result = runCli(["install", "--client", "codex", "--mcp-only", "--dir", workspace], { env });
+    assert(result.status !== 0, "a hand-written entry was taken over");
+    assert(result.stderr.includes("unmanaged TOML section"), result.stderr);
+    assert(readFileSync(config, "utf8") === original, "a hand-written entry was changed");
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("doctor repair leaves a linked project skill and does not call one checkout a shadow", () => {
+  const { home, env } = isolatedHost({ hosts: [".codex"] });
+  const repository = join(home, "repo");
+  const checkout = join(home, "checkout-skill");
+  try {
+    mkdirSync(repository);
+    spawnSync("git", ["init", "-q"], { cwd: repository });
+    mkdirSync(checkout);
+    writeFileSync(join(checkout, "SKILL.md"), "linked\n");
+    const installed = runCli(["install", "--client", "codex", "--mcp-only", "--dir", repository], { env });
+    assert(installed.status === 0, installed.stderr);
+    mkdirSync(join(home, ".codex/skills"), { recursive: true });
+    symlinkSync(checkout, join(home, ".codex/skills/amanuensis"), "dir");
+    mkdirSync(join(repository, ".agents/skills"), { recursive: true });
+    symlinkSync(checkout, join(repository, ".agents/skills/amanuensis"), "dir");
+    mkdirSync(join(repository, ".codex"));
+    writeFileSync(
+      join(repository, ".codex/config.toml"),
+      '[mcp_servers.amanuensis-memory]\ncommand = "node"\ncwd = "."\n' +
+        'env = { AMANUENSIS_ACTIVATION_CONTRACT = "codex-project-pin-v1" }\n',
+    );
+    const doctor = (extra) =>
+      runCli(["doctor", "--client", "codex", "--dir", repository, "--json", ...extra], { env });
+    const before = JSON.parse(doctor([]).stdout);
+    const codes = before.diagnoses.map((diagnosis) => diagnosis.code);
+    assert(codes.includes("duplicate-registration"), `duplicate not diagnosed: ${codes}`);
+    assert(!codes.includes("shadowed-user-skill"), "one checkout linked twice reported as a shadow");
+    const plan = doctor(["--repair", "--dry-run"]);
+    assert(plan.status === 0 || plan.stdout.includes("repairPlanId"), plan.stderr);
+    const planId = JSON.parse(plan.stdout).repairPlanId;
+    assert(planId, `no repair plan: ${plan.stderr}`);
+    const applied = doctor(["--repair", "--apply-plan", planId]);
+    assert(JSON.parse(applied.stdout).status === "ok", applied.stdout);
+    assert(
+      lstatSync(join(repository, ".agents/skills/amanuensis")).isSymbolicLink(),
+      "repair removed a linked project skill",
+    );
+    assert(readFileSync(join(checkout, "SKILL.md"), "utf8") === "linked\n", "repair followed the link");
+  } finally {
     rmSync(home, { recursive: true, force: true });
   }
 });

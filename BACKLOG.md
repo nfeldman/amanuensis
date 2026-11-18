@@ -145,7 +145,8 @@ Workflow:
 
 ## Server defects
 
-- **Codex rewrites `config.toml` and breaks the installer's managed block.** Observed
+- ~~**Codex rewrites `config.toml` and breaks the installer's managed block.**~~ Fixed
+  on main, 2026-11-18, as proposed below; `test-installer.mjs` replays the rewrite. Observed
   2026-11-18 on the owner's machine: the Codex CLI rewrote `~/.codex/config.toml` at
   startup, dropping the `# >>> amanuensis init (managed)` start comment, turning the
   inline `env` into an `[mcp_servers.amanuensis-memory.env]` sub-table, and moving two

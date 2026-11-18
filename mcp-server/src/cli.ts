@@ -449,6 +449,145 @@ function codexBlock(launch: ServerLaunch, scope: InstallScope, workspace: string
   ].join("\n");
 }
 
+// Codex rewrites its own config.toml: it drops comments, turns an inline `env`
+// into a sub-table, and moves tables around. The comment markers are therefore
+// a hint, not the identity. An entry is the installer's when it carries one of
+// the installer's activation contracts or, for an installation older than the
+// contract, when one intact marker pair surrounds the file's only entry.
+const CODEX_CONTRACTS = new Set(["codex-user-cwd-v1", "codex-project-pin-v1"]);
+
+type CodexMarkers = { present: boolean; paired: boolean };
+
+function codexMarkers(raw: string): CodexMarkers {
+  const start = raw.indexOf(CODEX_BLOCK_START);
+  const end = raw.indexOf(CODEX_BLOCK_END);
+  const startCount = raw.split(CODEX_BLOCK_START).length - 1;
+  const endCount = raw.split(CODEX_BLOCK_END).length - 1;
+  return {
+    present: start >= 0 || end >= 0,
+    paired: startCount === 1 && endCount === 1 && start < end,
+  };
+}
+
+function codexServerEntry(parsed: Record<string, unknown>): JsonObject | undefined {
+  const servers = parsed.mcp_servers;
+  if (!isJsonObject(servers)) return undefined;
+  const entry = servers[SERVER_NAME];
+  return isJsonObject(entry) ? entry : undefined;
+}
+
+function codexEntryIsManaged(raw: string, entry: JsonObject): boolean {
+  const env = entry.env;
+  const contract = isJsonObject(env) ? env.AMANUENSIS_ACTIVATION_CONTRACT : undefined;
+  if (typeof contract === "string" && CODEX_CONTRACTS.has(contract)) return true;
+  return codexMarkers(raw).paired;
+}
+
+function desiredCodexEntry(block: string): JsonObject {
+  const entry = codexServerEntry(parseToml(block) as Record<string, unknown>);
+  if (!entry) throw new Error("internal error: the Codex block has no server entry");
+  return entry;
+}
+
+/** The text of `[mcp_servers.amanuensis-memory]` and its sub-tables, if written as tables. */
+function codexEntrySpan(existing: string): { start: number; end: number } | undefined {
+  const lines = existing.match(/.*(?:\r?\n|$)/g)?.filter(Boolean) ?? [];
+  const header =
+    /^\s*\[\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')\s*\]\s*(?:#.*)?(?:\r?\n)?$/;
+  const headerOrDescendant =
+    /^\s*\[\[?\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')(?=\s*(?:\.|\]))/;
+  let offset = 0;
+  let start = -1;
+  for (const line of lines) {
+    if (start < 0 && header.test(line)) start = offset;
+    else if (start >= 0 && /^\s*\[/.test(line) && !headerOrDescendant.test(line)) {
+      return { start, end: offset };
+    }
+    offset += line.length;
+  }
+  return start >= 0 ? { start, end: existing.length } : undefined;
+}
+
+function stripCodexMarkers(text: string): string {
+  return text
+    .split(/(?<=\n)/)
+    .filter((line) => {
+      const trimmed = line.trim();
+      return trimmed !== CODEX_BLOCK_START && trimmed !== CODEX_BLOCK_END;
+    })
+    .join("");
+}
+
+function withoutCodexEntry(parsed: Record<string, unknown>): unknown {
+  const copy = JSON.parse(JSON.stringify(parsed)) as Record<string, unknown>;
+  const servers = copy.mcp_servers;
+  if (isJsonObject(servers)) {
+    delete servers[SERVER_NAME];
+    if (Object.keys(servers).length === 0) delete copy.mcp_servers;
+  }
+  return copy;
+}
+
+/**
+ * Replace (or, with `replacement` null, remove) the server's tables and every
+ * stray marker line, then prove by parsing that nothing else in the file moved.
+ */
+function rewriteCodexEntry(
+  existing: string,
+  parsed: Record<string, unknown>,
+  replacement: string | null,
+  configPath: string,
+): string {
+  const span = codexEntrySpan(existing);
+  if (!span) {
+    throw new Error(
+      `${configPath} defines ${SERVER_NAME} in a form the installer cannot rewrite; ` +
+        `change it to a [mcp_servers.${SERVER_NAME}] table or remove it, then rerun`,
+    );
+  }
+  const before = stripCodexMarkers(existing.slice(0, span.start));
+  const after = stripCodexMarkers(existing.slice(span.end));
+  let content: string;
+  if (replacement === null) {
+    content =
+      before.endsWith("\n\n") && after.startsWith("\n") ? before + after.slice(1) : before + after;
+  } else {
+    const left = before.length === 0 || before.endsWith("\n") ? before : `${before}\n`;
+    const right = after.length === 0 || after.startsWith("\n") ? after : `\n${after}`;
+    content = `${left}${replacement}\n${right}`;
+  }
+  let rewritten: Record<string, unknown>;
+  try {
+    rewritten = parseToml(content) as Record<string, unknown>;
+  } catch (error) {
+    throw new Error(
+      `${configPath}: rewriting ${SERVER_NAME} would leave invalid TOML (${(error as Error).message}); edit it by hand`,
+    );
+  }
+  const expected = replacement === null ? undefined : desiredCodexEntry(replacement);
+  if (
+    !sameJson(withoutCodexEntry(rewritten), withoutCodexEntry(parsed)) ||
+    !sameJson(codexServerEntry(rewritten) ?? null, expected ?? null)
+  ) {
+    throw new Error(
+      `${configPath}: rewriting ${SERVER_NAME} would change other settings; edit it by hand`,
+    );
+  }
+  return content;
+}
+
+function parseCodexConfig(existing: string, configPath: string): Record<string, unknown> {
+  try {
+    return parseToml(existing) as Record<string, unknown>;
+  } catch (error) {
+    const markers = codexMarkers(existing);
+    if (markers.present && !markers.paired) {
+      throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
+    }
+    throw new Error(`${configPath} is not parseable TOML (${(error as Error).message})`);
+  }
+}
+
 // The doctor's probes are a person waiting at a terminal; a stalled git or
 // shell must not hang it (test-startup-bounds.mjs holds every direct call).
 const DOCTOR_PROBE_TIMEOUT_MS = 10_000;
@@ -497,16 +636,15 @@ function inspectCodexRegistration(
   assertSafeRootPath(root, path);
   if (!existsSync(path)) return { path, present: false, managed: false };
   const raw = readFileSync(path, "utf8");
-  const managed = raw.includes(CODEX_BLOCK_START) && raw.includes(CODEX_BLOCK_END);
+  const managed = codexMarkers(raw).paired;
   try {
     const parsed = parseToml(raw) as Record<string, unknown>;
-    const servers = parsed.mcp_servers;
-    const entry = isJsonObject(servers) ? servers[SERVER_NAME] : undefined;
-    if (!isJsonObject(entry)) return { path, present: true, managed };
+    const entry = codexServerEntry(parsed);
+    if (!entry) return { path, present: true, managed };
     return {
       path,
       present: true,
-      managed,
+      managed: codexEntryIsManaged(raw, entry),
       entry,
       workspace: registrationWorkspace(entry, workspace),
     };
@@ -676,7 +814,12 @@ function doctorReport(workspace: string): JsonObject & { diagnoses: DoctorDiagno
 
   const userSkill = join(userRoot, "skills", "amanuensis");
   const projectSkill = join(repositoryRoot, ".agents", "skills", "amanuensis");
-  if (existsSync(userSkill) && existsSync(projectSkill)) {
+  // Two links to one checkout are the same skill, not a shadow.
+  if (
+    existsSync(userSkill) &&
+    existsSync(projectSkill) &&
+    realpathSync(userSkill) !== realpathSync(projectSkill)
+  ) {
     diagnose({
       code: "shadowed-user-skill",
       path: projectSkill,
@@ -807,7 +950,8 @@ function planSkill(
 function planSkillUninstall(actions: PlanAction[], workspace: string, flags: InitFlags): void {
   const root = installRoot(flags, workspace);
   const destination = skillDestination(workspace, flags.client, flags.scope);
-  if (flags.scope === "user" && isLinkedSkill(root, destination)) {
+  // A link is never the installer's own work, at any scope: leave it.
+  if (isLinkedSkill(root, destination)) {
     actions.push({ kind: "skip-file", path: destination, reason: LINKED_SKILL_REASON });
     return;
   }
@@ -934,28 +1078,13 @@ function planCodexConfig(
   }
 
   const existing = readFileSync(configPath, "utf8");
-  const start = existing.indexOf(CODEX_BLOCK_START);
-  const end = existing.indexOf(CODEX_BLOCK_END);
-  const hasManagedMarker = start >= 0 || end >= 0;
-  if (hasManagedMarker) {
-    const startCount = existing.split(CODEX_BLOCK_START).length - 1;
-    const endCount = existing.split(CODEX_BLOCK_END).length - 1;
-    if (start < 0 || end < start || startCount !== 1 || endCount !== 1) {
-      throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
-    }
-  }
+  const markers = codexMarkers(existing);
+  const parsed = parseCodexConfig(existing, configPath);
+  const entry = codexServerEntry(parsed);
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = parseToml(existing) as Record<string, unknown>;
-  } catch (error) {
-    throw new Error(`${configPath} is not parseable TOML (${(error as Error).message})`);
-  }
-
-  if (hasManagedMarker) {
-    const blockEnd = end + CODEX_BLOCK_END.length;
-    const priorBlock = existing.slice(start, blockEnd);
-    if (priorBlock === desiredBlock) {
+  if (entry && codexEntryIsManaged(existing, entry)) {
+    // Compared as data, so Codex reformatting the entry is not a difference.
+    if (sameJson(entry, desiredCodexEntry(desiredBlock))) {
       actions.push({ kind: "skip-file", path: configPath, reason: "already up-to-date" });
       return;
     }
@@ -967,50 +1096,22 @@ function planCodexConfig(
       });
       return;
     }
+    const content = rewriteCodexEntry(existing, parsed, desiredBlock, configPath);
     actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
-    actions.push({
-      kind: "write-file",
-      path: configPath,
-      content: existing.slice(0, start) + desiredBlock + existing.slice(blockEnd),
-      mode: "overwrite",
-    });
+    actions.push({ kind: "write-file", path: configPath, content, mode: "overwrite" });
     return;
   }
 
   const mcpServers = parsed.mcp_servers;
   if (isJsonObject(mcpServers) && Object.hasOwn(mcpServers, SERVER_NAME)) {
-    if (flags.force) {
-      const lines = existing.match(/.*(?:\r?\n|$)/g)?.filter(Boolean) ?? [];
-      const header =
-        /^\s*\[\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')\s*\]\s*(?:#.*)?(?:\r?\n)?$/;
-      const headerOrDescendant =
-        /^\s*\[\[?\s*mcp_servers\s*\.\s*(?:amanuensis-memory|"amanuensis-memory"|'amanuensis-memory')(?=\s*(?:\.|\]))/;
-      let offset = 0;
-      let sectionStart = -1;
-      let sectionEnd = -1;
-      for (const line of lines) {
-        if (sectionStart < 0 && header.test(line)) sectionStart = offset;
-        else if (sectionStart >= 0 && /^\s*\[/.test(line) && !headerOrDescendant.test(line)) {
-          sectionEnd = offset;
-          break;
-        }
-        offset += line.length;
-      }
-      if (sectionStart >= 0) {
-        if (sectionEnd < 0) sectionEnd = existing.length;
-        const before = existing.slice(0, sectionStart);
-        const after = existing.slice(sectionEnd);
-        const left = before.length === 0 || before.endsWith("\n") ? before : `${before}\n`;
-        const right = after.length === 0 || after.startsWith("\n") ? after : `\n${after}`;
-        actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
-        actions.push({
-          kind: "write-file",
-          path: configPath,
-          content: `${left}${desiredBlock}\n${right}`,
-          mode: "overwrite",
-        });
-        return;
-      }
+    if (markers.present && !markers.paired) {
+      throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
+    }
+    if (flags.force && codexEntrySpan(existing)) {
+      const content = rewriteCodexEntry(existing, parsed, desiredBlock, configPath);
+      actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
+      actions.push({ kind: "write-file", path: configPath, content, mode: "overwrite" });
+      return;
     }
     actions.push({
       kind: "conflict",
@@ -1020,17 +1121,15 @@ function planCodexConfig(
     return;
   }
 
+  // No entry: leftover markers from an earlier installation are dropped.
+  const base = stripCodexMarkers(existing);
   actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
   const separator =
-    existing.length === 0 || existing.endsWith("\n\n")
-      ? ""
-      : existing.endsWith("\n")
-        ? "\n"
-        : "\n\n";
+    base.length === 0 || base.endsWith("\n\n") ? "" : base.endsWith("\n") ? "\n" : "\n\n";
   actions.push({
     kind: "write-file",
     path: configPath,
-    content: `${existing}${separator}${desiredBlock}\n`,
+    content: `${base}${separator}${desiredBlock}\n`,
     mode: "overwrite",
   });
 }
@@ -1045,40 +1144,38 @@ function planCodexUninstall(actions: PlanAction[], workspace: string, flags: Ini
     return;
   }
   const existing = readFileSync(configPath, "utf8");
-  const start = existing.indexOf(CODEX_BLOCK_START);
-  const end = existing.indexOf(CODEX_BLOCK_END);
-  const startCount = existing.split(CODEX_BLOCK_START).length - 1;
-  const endCount = existing.split(CODEX_BLOCK_END).length - 1;
-  if (start < 0 && end < 0) {
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = parseToml(existing) as Record<string, unknown>;
-    } catch (error) {
-      throw new Error(`${configPath} is not parseable TOML (${(error as Error).message})`);
-    }
-    const mcpServers = parsed.mcp_servers;
-    if (isJsonObject(mcpServers) && Object.hasOwn(mcpServers, SERVER_NAME)) {
-      actions.push({
-        kind: "conflict",
-        path: configPath,
-        reason: "Amanuensis server entry is unmanaged; migrate it before uninstalling",
-      });
-    } else {
+  const markers = codexMarkers(existing);
+  const parsed = parseCodexConfig(existing, configPath);
+  const entry = codexServerEntry(parsed);
+  const mcpServers = parsed.mcp_servers;
+  if (!entry && !(isJsonObject(mcpServers) && Object.hasOwn(mcpServers, SERVER_NAME))) {
+    if (!markers.present) {
       actions.push({ kind: "skip-file", path: configPath, reason: "managed server is absent" });
+      return;
     }
+    actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
+    actions.push({
+      kind: "write-file",
+      path: configPath,
+      content: stripCodexMarkers(existing),
+      mode: "overwrite",
+    });
     return;
   }
-  if (start < 0 || end < start || startCount !== 1 || endCount !== 1) {
-    throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
+  if (!entry || !codexEntryIsManaged(existing, entry)) {
+    if (markers.present && !markers.paired) {
+      throw new Error(`${configPath} contains an incomplete Amanuensis-managed block`);
+    }
+    actions.push({
+      kind: "conflict",
+      path: configPath,
+      reason: "Amanuensis server entry is unmanaged; migrate it before uninstalling",
+    });
+    return;
   }
-  const blockEnd = end + CODEX_BLOCK_END.length;
+  const content = rewriteCodexEntry(existing, parsed, null, configPath);
   actions.push({ kind: "backup", from: configPath, to: backupPath(configPath) });
-  actions.push({
-    kind: "write-file",
-    path: configPath,
-    content: existing.slice(0, start) + existing.slice(blockEnd),
-    mode: "overwrite",
-  });
+  actions.push({ kind: "write-file", path: configPath, content, mode: "overwrite" });
 }
 
 type PlanSegment = { actions: PlanAction[]; root: string };
@@ -1295,25 +1392,21 @@ function userRegistrationState(host: UserHost): RegistrationState {
   if (!existsSync(path)) return "absent";
   if (host === "codex") {
     const raw = readFileSync(path, "utf8");
-    const start = raw.indexOf(CODEX_BLOCK_START);
-    const end = raw.indexOf(CODEX_BLOCK_END);
-    if (start >= 0 && end > start) {
-      // The whole file must parse: Codex loads nothing from an invalid file,
-      // however correct the managed block inside it is.
-      try {
-        parseToml(raw);
-      } catch {
-        return "unreadable";
-      }
-      const block = raw.slice(start, end + CODEX_BLOCK_END.length);
-      return block === codexBlock(serverLaunch(), "user", homedir()) ? "installed" : "outdated";
-    }
+    let parsed: Record<string, unknown>;
     try {
-      const servers = (parseToml(raw) as Record<string, unknown>).mcp_servers;
-      return isJsonObject(servers) && Object.hasOwn(servers, SERVER_NAME) ? "unmanaged" : "absent";
+      // The whole file must parse: Codex loads nothing from an invalid file.
+      parsed = parseToml(raw) as Record<string, unknown>;
     } catch {
       return "unreadable";
     }
+    const entry = codexServerEntry(parsed);
+    if (!entry) {
+      const servers = parsed.mcp_servers;
+      return isJsonObject(servers) && Object.hasOwn(servers, SERVER_NAME) ? "unmanaged" : "absent";
+    }
+    if (!codexEntryIsManaged(raw, entry)) return "unmanaged";
+    const desired = desiredCodexEntry(codexBlock(serverLaunch(), "user", homedir()));
+    return sameJson(entry, desired) ? "installed" : "outdated";
   }
   let servers: JsonObject;
   try {
@@ -1911,13 +2004,13 @@ function assertUpgradeableCodexInstallation(workspace: string, flags: InitFlags)
   }
   assertSafeRootPath(codexHome(), configPath);
   const existing = readFileSync(configPath, "utf8");
-  const startCount = existing.split(CODEX_BLOCK_START).length - 1;
-  const endCount = existing.split(CODEX_BLOCK_END).length - 1;
-  if (
-    startCount !== 1 ||
-    endCount !== 1 ||
-    existing.indexOf(CODEX_BLOCK_END) < existing.indexOf(CODEX_BLOCK_START)
-  ) {
+  let entry: JsonObject | undefined;
+  try {
+    entry = codexServerEntry(parseToml(existing) as Record<string, unknown>);
+  } catch {
+    entry = undefined;
+  }
+  if (!entry || !codexEntryIsManaged(existing, entry)) {
     throw new Error(
       "the user-scoped Codex registration is absent, unmanaged, or incomplete; run doctor before upgrade",
     );
@@ -2160,7 +2253,15 @@ function cmdUserInstall(values: CliValues, operation: "install" | "upgrade"): vo
   if (dryRun) return;
   for (const warning of prerequisiteWarnings()) console.log(`\nNote: ${warning}`);
   console.log("");
-  for (const host of hosts) {
+  // Only a host whose files changed has anything new to load.
+  const changing = new Set(["write-file", "edit-json", "remove-file", "remove-tree", "archive"]);
+  const changed = plans
+    .filter(({ segments }) =>
+      segments.some((segment) => segment.actions.some((action) => changing.has(action.kind))),
+    )
+    .map(({ host }) => host);
+  if (changed.length === 0) console.log("Everything was already up to date; nothing to restart.");
+  for (const host of changed) {
     console.log(
       operation === "upgrade"
         ? `Restart ${HOST_LABEL[host]} once to load the upgraded Amanuensis installation.`

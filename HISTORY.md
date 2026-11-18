@@ -15,6 +15,13 @@ receipts carry the executable evidence, exact revisions, and current claim bound
 - Bind a Claude Code session started in a repository subdirectory to the
   repository root, and leave a user-level server unbound outside any repository
   instead of claiming the directory it was started in.
+- Recognize the installer's Codex entry by its activation contract rather than its
+  comment markers, which Codex drops when it rewrites `config.toml`. Install, upgrade,
+  uninstall, status, and doctor previously refused or reported such an entry as
+  unmanaged. Every rewrite is checked by parsing to change nothing else in the file.
+- Leave a symbolically linked skill in place at every scope, and stop reporting two
+  links to the same checkout as one skill shadowing the other.
+- Tell the user to restart only the agents whose files changed.
 - Rewrite the README, installation guide, and package README around the one-command
   installation, with steps an agent can follow to set it up.
 - Validate evidence citations, repair commits, and claim keys when they are
