@@ -274,6 +274,19 @@ function runMigrations(db: DB): void {
       "UPDATE finding_resolution_events SET effective_sha = fix_sha WHERE fix_sha IS NOT NULL",
     );
   }
+  // 3c. carried_finding_outcomes.supersedes_outcome_id — a mistaken carried
+  // outcome is corrected by a row that supersedes it. The one-row-per-record
+  // index would refuse that row, so it goes; schema.sql then creates the two
+  // partial indexes that keep one chain per record. No row is rewritten.
+  if (
+    hasTable(db, "carried_finding_outcomes") &&
+    !hasColumn(db, "carried_finding_outcomes", "supersedes_outcome_id")
+  ) {
+    db.exec(
+      "ALTER TABLE carried_finding_outcomes ADD COLUMN supersedes_outcome_id INTEGER REFERENCES carried_finding_outcomes(id)",
+    );
+    db.exec("DROP INDEX IF EXISTS idx_carried_outcome_one");
+  }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in
   // schema.sql handle the new index, scope_gaps and scope_reconciliations on
   // the next initializeSchema pass — no explicit add here. A new *table* needs

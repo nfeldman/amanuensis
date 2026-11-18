@@ -1226,7 +1226,7 @@ async function main(mods) {
         ref_sha: headSha(ctx),
       });
       if (!second) {
-        return "a second outcome was accepted for one carried record; §5.4 corrects a mistaken outcome by a new carried record from the same archive, which is visible, not by overwriting the decision";
+        return "a second outcome was accepted for one carried record without naming the outcome it corrects; a correction says which decision it supersedes, so both stay visible";
       }
       const rows = outcomeRows(id);
       return rows.length === 1
@@ -1254,12 +1254,143 @@ async function main(mods) {
       if (first) return `the first outcome row was refused: ${first}`;
       const second = insert("repaired");
       if (!second) {
-        return "the table accepted two outcome rows for one carried record; idx_carried_outcome_one is what makes 'exactly one' a fact about the store rather than a promise one tool keeps";
+        return "the table accepted two first outcome rows for one carried record; idx_carried_outcome_first is what makes 'one decision, then corrections' a fact about the store rather than a promise one tool keeps";
       }
       const rows = outcomeRows(id);
       return rows.length === 1
         ? null
         : `${rows.length} outcome rows stand for one carried record (${rows.map((r) => r.outcome).join(", ")})`;
+    });
+
+    check("D10 a mistaken outcome is corrected by one that supersedes it, and both stay", () => {
+      if (missingTool) return missingTool;
+      const id = seedCarried(ctx, { archived_finding_id: "D10" });
+      const successor = seedFinding(ctx, "B03-D10");
+      const first = outcome(id, {
+        outcome: "successor-finding",
+        successor_id: successor,
+        rationale: "looked like the re-find",
+        ref_sha: headSha(ctx),
+      });
+      if (first) return `the first outcome was refused: ${first}`;
+      const firstId = outcomeRows(id)[0].id;
+      const unnamed = outcome(id, { outcome: "ruled-out", rationale: "no", ref_sha: headSha(ctx) });
+      if (!unnamed?.includes(`corrects_outcome_id ${firstId}`)) {
+        return `a second outcome without corrects_outcome_id was not pointed at the repair: ${unnamed}`;
+      }
+      const wrong = outcome(id, {
+        outcome: "ruled-out",
+        rationale: "no",
+        ref_sha: headSha(ctx),
+        corrects_outcome_id: firstId + 999,
+      });
+      if (!wrong) return "a correction naming an outcome that is not current was accepted";
+      const evidenceId = addEvidence(ctx, headSha(ctx));
+      call("attach_carried_evidence", { carried_id: id, evidence_id: evidenceId }, ctx);
+      const corrected = outcome(id, {
+        outcome: "ruled-out",
+        rationale: "the successor was a different defect; the reading shows this one never held",
+        ref_sha: headSha(ctx),
+        corrects_outcome_id: firstId,
+      });
+      if (corrected) return `the correction was refused: ${corrected}`;
+      const rows = outcomeRows(id);
+      if (rows.length !== 2 || rows[1].supersedes_outcome_id !== firstId) {
+        return `the store holds ${JSON.stringify(rows.map((r) => [r.outcome, r.supersedes_outcome_id]))}`;
+      }
+      const read = call("get_carried_finding", { carried_id: id }, ctx);
+      if (read.outcome?.outcome !== "ruled-out" || read.corrected_outcomes?.[0]?.outcome !== "successor-finding") {
+        return `get_carried_finding reads ${JSON.stringify([read.outcome, read.corrected_outcomes])}`;
+      }
+      const listed =
+        call("list_carried_findings", { limit: 1, cursor: String(id - 1) }, ctx).carried ?? [];
+      const mine = listed.filter((row) => row.carried_id === id);
+      if (mine.length !== 1 || mine[0].outcome !== "ruled-out") {
+        return `list_carried_findings shows ${JSON.stringify(mine)} for the corrected record`;
+      }
+      const again = outcome(id, {
+        outcome: "ruled-out",
+        rationale: "a correction of a corrected outcome",
+        ref_sha: headSha(ctx),
+        corrects_outcome_id: firstId,
+      });
+      return again ? null : "the superseded outcome was corrected a second time";
+    });
+
+    check("D11 the substrate holds one chain per record", () => {
+      const a = seedCarried(ctx, { archived_finding_id: "D11a" });
+      const b = seedCarried(ctx, { archived_finding_id: "D11b" });
+      const insert = (carriedId, supersedes) =>
+        refusal(() =>
+          ctx.db
+            .prepare(
+              `INSERT INTO carried_finding_outcomes
+                 (carried_id, outcome, rationale, session_id, ref_sha, supersedes_outcome_id)
+               VALUES (?, 'ruled-out', 'cf1 fixture', ?, ?, ?)`,
+            )
+            .run(carriedId, ctx.sessionId, headSha(ctx), supersedes),
+        );
+      if (insert(a, null)) return "the first outcome row was refused";
+      const aFirst = outcomeRows(a)[0].id;
+      if (!insert(b, aFirst)) return "a row of one record superseded another record's outcome";
+      if (insert(a, aFirst)) return "a correction written around the tool was refused";
+      return insert(a, aFirst) ? null : "one outcome was superseded twice, forking the chain";
+    });
+
+    check("D12 the published census reads only the current outcome", () => {
+      const store = ctx.project.dbPath;
+      const script =
+        "import sqlite3, sys, json\n" +
+        "from amanuensis_materializer.readback import carried_records\n" +
+        "c = sqlite3.connect(sys.argv[1])\n" +
+        "print(json.dumps([[r['archived_finding_id'], r['outcome']] for r in carried_records(c)]))\n";
+      const result = spawnSync("python3", ["-c", script, store], {
+        cwd: join(REPO, "materializer"),
+        encoding: "utf8",
+      });
+      if (result.status !== 0) return `the materializer could not read the store: ${result.stderr}`;
+      const rows = JSON.parse(result.stdout).filter(([fid]) => fid === "D10");
+      return rows.length === 1 && rows[0][1] === "ruled-out"
+        ? null
+        : `carried_records reads D10 as ${JSON.stringify(rows)}`;
+    });
+
+    check("D13 a store from before corrections gains them on open, keeping its rows", () => {
+      const old = world("pre-correction");
+      const id = seedCarried(old, { archived_finding_id: "D13" });
+      // Rebuild the pre-correction shape: one row per record, no column.
+      old.db.exec(`
+        DROP TRIGGER carried_outcome_corrects_its_own_record;
+        DROP INDEX idx_carried_outcome_first;
+        DROP INDEX idx_carried_outcome_corrected_once;
+        ALTER TABLE carried_finding_outcomes DROP COLUMN supersedes_outcome_id;
+        CREATE UNIQUE INDEX idx_carried_outcome_one ON carried_finding_outcomes(carried_id);
+      `);
+      old.db
+        .prepare(
+          `INSERT INTO carried_finding_outcomes (carried_id, outcome, rationale, session_id, ref_sha)
+           VALUES (?, 'ruled-out', 'decided before corrections existed', ?, ?)`,
+        )
+        .run(id, old.sessionId, headSha(old));
+      old.db.close();
+      old.db = openDatabase(old.project.dbPath);
+      const index = old.db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_carried_outcome_one'")
+        .get();
+      if (index) return "the one-row-per-record index survived the open, so no correction can be written";
+      const rows = old.db.prepare("SELECT outcome FROM carried_finding_outcomes WHERE carried_id = ?").all(id);
+      if (rows.length !== 1 || rows[0].outcome !== "ruled-out") return `the open changed the row: ${JSON.stringify(rows)}`;
+      const firstId = old.db.prepare("SELECT id FROM carried_finding_outcomes WHERE carried_id = ?").get(id).id;
+      const correction = refusal(() =>
+        old.db
+          .prepare(
+            `INSERT INTO carried_finding_outcomes
+               (carried_id, outcome, rationale, session_id, ref_sha, supersedes_outcome_id)
+             VALUES (?, 'ruled-out', 'corrected after the upgrade', ?, ?, ?)`,
+          )
+          .run(id, old.sessionId, headSha(old), firstId),
+      );
+      return correction ? `a correction on the upgraded store was refused: ${correction}` : null;
     });
 
     // ------------------------------------------------- G4: each rule's control

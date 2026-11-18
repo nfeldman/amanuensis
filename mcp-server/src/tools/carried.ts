@@ -1,5 +1,6 @@
 import {
   ok,
+  optInt,
   optString,
   requireEnum,
   requireInt,
@@ -532,7 +533,7 @@ export const carriedTools: ToolDefinition[] = [
   {
     name: "record_carried_outcome",
     description:
-      "Record what became of one carried finding. Three outcomes, each asserting something about THIS store: 'successor-finding' requires successor_id to name a findings row filed in this session; 'ruled-out' requires at least one evidence row collected in the current session and attached through attach_carried_evidence; 'repaired' requires repaired_sha to resolve in the bound workspace, to be the last commit to change a file the carried finding cites (its primary_files or an attached reading), AND an attached evidence row whose revision is a descendant of, or equal to, it. The fourth outcome, 'archived-terminal', is written by carry_finding alone and is refused here. One outcome per carried record, and outcomes are never deleted — a mistaken one is corrected by a new carried record from the same archive.",
+      "Record what became of one carried finding. Three outcomes, each asserting something about THIS store: 'successor-finding' requires successor_id to name a findings row filed in this session; 'ruled-out' requires at least one evidence row collected in the current session and attached through attach_carried_evidence; 'repaired' requires repaired_sha to resolve in the bound workspace, to be the last commit to change a file the carried finding cites (its primary_files or an attached reading), AND an attached evidence row whose revision is a descendant of, or equal to, it. The fourth outcome, 'archived-terminal', is written by carry_finding alone and is refused here. One current outcome per carried record, and outcomes are never deleted or rewritten. To correct a mistaken one, pass corrects_outcome_id, the id of the current outcome: the new outcome supersedes it under the same rules, and both stay on record.",
     inputSchema: {
       type: "object",
       properties: {
@@ -542,6 +543,7 @@ export const carriedTools: ToolDefinition[] = [
         repaired_sha: { type: "string" },
         rationale: { type: "string" },
         ref_sha: { type: "string" },
+        corrects_outcome_id: { type: "integer" },
       },
       required: ["carried_id", "outcome", "rationale"],
       additionalProperties: false,
@@ -569,14 +571,27 @@ export const carriedTools: ToolDefinition[] = [
         );
       }
 
+      const correctsId = optInt(args, "corrects_outcome_id");
       const standing = ctx.db
-        .prepare("SELECT outcome FROM carried_finding_outcomes WHERE carried_id = ?")
-        .get(carriedId) as { outcome: string } | undefined;
-      if (standing) {
+        .prepare(
+          `SELECT o.id, o.outcome FROM carried_finding_outcomes o
+            WHERE o.carried_id = ? AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later WHERE later.supersedes_outcome_id = o.id)`,
+        )
+        .get(carriedId) as { id: number; outcome: string } | undefined;
+      if (standing && correctsId === null) {
         throw new ToolError(
-          `${carried.archived_finding_id} already reached '${standing.outcome}'. A carried finding ` +
-            `reaches exactly one outcome; correct a mistaken one by carrying the finding again from ` +
-            `the same archive, which is visible, rather than by overwriting the decision.`,
+          `${carried.archived_finding_id} already reached '${standing.outcome}' (outcome ` +
+            `${standing.id}). A carried finding has one current outcome; to correct a mistaken one, ` +
+            `pass corrects_outcome_id ${standing.id}, and both decisions stay on record.`,
+        );
+      }
+      if (correctsId !== null && standing?.id !== correctsId) {
+        throw new ToolError(
+          standing
+            ? `outcome ${correctsId} is not the current outcome of ${carried.archived_finding_id}; ` +
+                `outcome ${standing.id} ('${standing.outcome}') is, and only it can be corrected`
+            : `${carried.archived_finding_id} has no outcome yet, so there is nothing to correct; ` +
+                "omit corrects_outcome_id",
         );
       }
 
@@ -676,14 +691,24 @@ export const carriedTools: ToolDefinition[] = [
       const result = ctx.db
         .prepare(
           `INSERT INTO carried_finding_outcomes (carried_id, outcome, successor_id, repaired_sha,
-                                                 rationale, session_id, ref_sha)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                                                 rationale, session_id, ref_sha, supersedes_outcome_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(carriedId, outcome, successorId, repairedSha, rationale, sessionId, refSha);
+        .run(
+          carriedId,
+          outcome,
+          successorId,
+          repairedSha,
+          rationale,
+          sessionId,
+          refSha,
+          correctsId,
+        );
       return ok({
         id: Number(result.lastInsertRowid),
         carried_id: carriedId,
         outcome,
+        ...(correctsId !== null ? { corrects_outcome_id: correctsId } : {}),
         obligation_id: `carried:${carried.archived_store_id}:${carried.archived_finding_id}`,
       });
     },
@@ -744,7 +769,8 @@ export const carriedTools: ToolDefinition[] = [
           `SELECT cf.carried_id, cf.archived_finding_id, cf.archived_store_id, cf.subsystem_id,
                   cf.severity, cf.symptom, o.outcome
              FROM carried_findings cf
-             LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+             LEFT JOIN carried_finding_outcomes o
+                    ON o.carried_id = cf.carried_id AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later WHERE later.supersedes_outcome_id = o.id)
             WHERE ${where.join(" AND ")}
             ORDER BY cf.carried_id
             LIMIT ?`,
@@ -813,7 +839,7 @@ export const carriedTools: ToolDefinition[] = [
   {
     name: "get_carried_finding",
     description:
-      "One carried record in full — symptom, root cause, the archive it came from, the revision it was recorded at, and its terminal outcome if it has one. The compact page comes from list_carried_findings; this is the per-record read.",
+      "One carried record in full — symptom, root cause, the archive it came from, the revision it was recorded at, its terminal outcome if it has one, and any outcomes that outcome corrected (corrected_outcomes, oldest first). The compact page comes from list_carried_findings; this is the per-record read.",
     inputSchema: {
       type: "object",
       properties: { carried_id: { type: "integer" } },
@@ -823,13 +849,16 @@ export const carriedTools: ToolDefinition[] = [
     handler: (args, ctx) => {
       const carriedId = requireInt(args, "carried_id");
       const carried = readCarried(ctx, carriedId);
-      const outcome =
-        ctx.db
-          .prepare(
-            `SELECT outcome, successor_id, repaired_sha, rationale, session_id, ref_sha, recorded_at
-             FROM carried_finding_outcomes WHERE carried_id = ?`,
-          )
-          .get(carriedId) ?? null;
+      const outcomes = ctx.db
+        .prepare(
+          `SELECT o.id, o.outcome, o.successor_id, o.repaired_sha, o.rationale, o.session_id,
+                  o.ref_sha, o.recorded_at, o.supersedes_outcome_id,
+                  NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later WHERE later.supersedes_outcome_id = o.id) AS current
+             FROM carried_finding_outcomes o WHERE o.carried_id = ? ORDER BY o.id`,
+        )
+        .all(carriedId) as Array<Record<string, unknown> & { current: number }>;
+      const strip = ({ current: _current, ...row }: Record<string, unknown>) => row;
+      const outcome = outcomes.find((row) => row.current === 1);
       const evidence = ctx.db
         .prepare(
           `SELECT cfe.evidence_id, cfe.role, e.file_path, e.ref_sha
@@ -842,7 +871,8 @@ export const carriedTools: ToolDefinition[] = [
       return {
         ...carried,
         obligation_id: `carried:${carried.archived_store_id}:${carried.archived_finding_id}`,
-        outcome,
+        outcome: outcome ? strip(outcome) : null,
+        corrected_outcomes: outcomes.filter((row) => row.current !== 1).map(strip),
         evidence,
       };
     },

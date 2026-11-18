@@ -769,6 +769,19 @@ def carried_records(conn: Any) -> list[dict[str, Any]]:
 
     if not table_exists(conn, "carried_findings"):
         return []
+    # A corrected outcome stays in the table with the row that superseded it;
+    # only the row nothing supersedes is the record's outcome. A store last
+    # opened before corrections existed has no such column and one row each.
+    corrected = any(
+        column["name"] == "supersedes_outcome_id"
+        for column in rows(conn, "PRAGMA table_info(carried_finding_outcomes)")
+    )
+    current = (
+        " AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later"
+        " WHERE later.supersedes_outcome_id = o.id)"
+        if corrected
+        else ""
+    )
     return rows(
         conn,
         "SELECT c.carried_id, c.archived_finding_id, c.archived_store_id,"
@@ -777,7 +790,7 @@ def carried_records(conn: Any) -> list[dict[str, Any]]:
         " COALESCE(o.outcome, ?) AS outcome, o.successor_id, o.repaired_sha,"
         " o.rationale, o.ref_sha AS outcome_ref_sha"
         " FROM carried_findings c"
-        " LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id"
+        " LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id" + current +
         " ORDER BY CASE c.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1"
         "   WHEN 'MEDIUM' THEN 2 ELSE 3 END, c.archived_store_id, c.archived_finding_id",
         (CARRIED_UNDECIDED,),

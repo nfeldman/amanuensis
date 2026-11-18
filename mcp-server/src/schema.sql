@@ -713,9 +713,12 @@ CREATE INDEX IF NOT EXISTS idx_carried_findings_run
 CREATE INDEX IF NOT EXISTS idx_carried_findings_archived_id
     ON carried_findings(archived_finding_id);
 
--- One outcome per carried record, and outcomes are never deleted. A mistaken
--- outcome is corrected by a new carried record from the same archive, which is
--- visible (spec.md §5.4).
+-- One current outcome per carried record, and outcomes are never deleted or
+-- rewritten. A mistaken outcome is corrected by a new row that names it in
+-- supersedes_outcome_id, so both decisions stay visible (spec.md §5.4). The
+-- spec's first answer, a new carried record from the same archive, cannot be
+-- written: carried_findings is unique by (archived_store_id, archived_finding_id).
+-- The current outcome is the row no other row supersedes.
 CREATE TABLE IF NOT EXISTS carried_finding_outcomes (
     id            INTEGER PRIMARY KEY,
     carried_id    INTEGER NOT NULL REFERENCES carried_findings(carried_id) ON DELETE RESTRICT,
@@ -726,11 +729,23 @@ CREATE TABLE IF NOT EXISTS carried_finding_outcomes (
     rationale     TEXT    NOT NULL,
     session_id    TEXT    NOT NULL,
     ref_sha       TEXT    NOT NULL,
-    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    supersedes_outcome_id INTEGER REFERENCES carried_finding_outcomes(id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_one
-    ON carried_finding_outcomes(carried_id);
+-- One first decision per record, and each decision corrected at most once, so
+-- the outcomes of one record form a single chain whose end is the current one.
+-- These replace idx_carried_outcome_one (one row per record), which db.ts drops.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_first
+    ON carried_finding_outcomes(carried_id) WHERE supersedes_outcome_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_carried_outcome_corrected_once
+    ON carried_finding_outcomes(supersedes_outcome_id) WHERE supersedes_outcome_id IS NOT NULL;
+CREATE TRIGGER IF NOT EXISTS carried_outcome_corrects_its_own_record
+BEFORE INSERT ON carried_finding_outcomes FOR EACH ROW
+WHEN NEW.supersedes_outcome_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM carried_finding_outcomes
+     WHERE id = NEW.supersedes_outcome_id AND carried_id = NEW.carried_id)
+BEGIN SELECT RAISE(ABORT, 'a correction supersedes an outcome of the same carried record'); END;
 
 -- The evidence join §5.4's `ruled-out` and `repaired` authority rules require:
 -- overturning a carried finding needs a reading collected in the current
