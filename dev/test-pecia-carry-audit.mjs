@@ -572,12 +572,19 @@ async function readLiveCarried(path) {
       return { unreadable: scrub(`the live store could not be opened (${error?.message ?? error})`) };
     }
     try {
+      // A corrected outcome stays as a row; the current one is the row no later row
+      // supersedes (mcp-server/src/schema.sql, carried_finding_outcomes). A store from
+      // before corrections has no supersedes_outcome_id column and one row per record.
+      const CURRENT_ONLY =
+        " AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later" +
+        " WHERE later.supersedes_outcome_id = o.id)";
+      const corrected = db.prepare("SELECT 1 FROM pragma_table_info('carried_finding_outcomes') WHERE name = 'supersedes_outcome_id'").get() !== undefined;
       return {
         rows: db
           .prepare(
             `SELECT cf.carried_id, cf.archived_finding_id, cf.archived_store_id, o.outcome
                FROM carried_findings cf
-               LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+               LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id${corrected ? CURRENT_ONLY : ""}
               ORDER BY cf.carried_id`,
           )
           .all()

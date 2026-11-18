@@ -136,19 +136,24 @@ export const findingTools: ToolDefinition[] = [
       // resolver reads live findings first, so a wrong closure gets a clean
       // exit (finding B03-R6). Ids are minted by the caller, so the store is
       // the only place that can see the collision.
-      const carried = ctx.db
-        .prepare(
-          `SELECT carried_id, archived_store_id FROM carried_findings
-            WHERE archived_finding_id = ? ORDER BY carried_id LIMIT 1`,
-        )
-        .get(findingId) as { carried_id: number; archived_store_id: string } | undefined;
-      if (carried) {
-        throw new ToolError(
-          `finding_id ${findingId} is already the id of carried record ${carried.carried_id} ` +
-            `(from ${carried.archived_store_id}); a live finding with that id would answer every ` +
-            "reference to the archived one. Choose an id no carried record holds.",
-        );
-      }
+      // The trigger finding_id_not_held_by_carried_record holds the rule when a
+      // carry lands after this check; the catch below names the record then.
+      const refuseIfCarried = (): void => {
+        const carried = ctx.db
+          .prepare(
+            `SELECT carried_id, archived_store_id FROM carried_findings
+              WHERE archived_finding_id = ? ORDER BY carried_id LIMIT 1`,
+          )
+          .get(findingId) as { carried_id: number; archived_store_id: string } | undefined;
+        if (carried) {
+          throw new ToolError(
+            `finding_id ${findingId} is already the id of carried record ${carried.carried_id} ` +
+              `(from ${carried.archived_store_id}); a live finding with that id would answer every ` +
+              "reference to the archived one. Choose an id no carried record holds.",
+          );
+        }
+      };
+      refuseIfCarried();
 
       // A finding is a concern-pass artifact at minimum, and an
       // adversarial artifact when the pass is 'adversarial'. The
@@ -208,8 +213,14 @@ export const findingTools: ToolDefinition[] = [
         })();
       } catch (e) {
         // The PK on findings.finding_id is the only UNIQUE constraint on
-        // this table; any other SqliteError is a real failure and must
-        // surface unaltered.
+        // this table, and the carried-id trigger the only refusal; any other
+        // SqliteError is a real failure and must surface unaltered.
+        if (
+          e instanceof SqliteError &&
+          e.message.includes("finding_id is already the id of a carried record")
+        ) {
+          refuseIfCarried();
+        }
         if (e instanceof SqliteError && e.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
           return {
             ok: false,

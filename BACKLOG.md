@@ -179,7 +179,7 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 |---|---|
 | B04-R1 | A default `describe_locus` call returns no items (see the first decision above) |
 | ~~B02-R1, B02-2, B02-3, B04-R4~~ | ~~A stalled `git` or `ps` subprocess can hang server startup or a tool call indefinitely~~ Fixed on branch `server-fixes`, 2026-11-16: startup probes were already bounded; the 28 tool-time sites now go through `src/subprocess.ts` (120 s default, `AMANUENSIS_SUBPROCESS_TIMEOUT_MS`). Reproduced first: each tool waited out a stalled `git` |
-| B02-R2 | The gate certifying time-bounded activation probes passes with an unbounded probe |
+| ~~B02-R2~~ | ~~The gate certifying time-bounded activation probes passes with an unbounded probe~~ Fixed 2026-11-18 (a18f552, carried as B02-R6): `test-startup-bounds.mjs` also reads `src`, so a direct `node:child_process` call without a `timeout` turns it red; the two it found, the doctor's probes in `cli.ts`, are bounded |
 | ~~B02-R4~~ | ~~Under Codex Desktop the user-scoped registration starts the server with cwd `/`~~ Repaired, per `docs/resolved-findings.md` |
 | ~~B02-R3, B05-2~~ | ~~The server reported an older version than its package~~ Fixed 2026-11-17 (893d94a, also B05-R1/B02-R7): the server reads its version from `package.json`, the compatibility probe asserts it, and the README no longer names one |
 | ~~B02-4~~ | ~~A verified-fixed finding can be silently demoted to fixed-pending-verification~~ Repaired at 34a8762, per `docs/resolved-findings.md` |
@@ -187,22 +187,22 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 | ~~B03-6~~ | ~~A finding can reach verified-fixed with a `fix_sha` the fix is not at~~ Fixed 2026-11-17 (carried as B03-R2): `fix_sha` must be the last commit to change the file `fix_location` names (not a directory), checked on write and again at verification; a carried finding's `repaired_sha` must have changed a file it cites |
 | B03-7 | Moved content with still-valid claims has no way to be re-anchored |
 | ~~B03-8~~ | ~~A finding's severity cannot be amended~~ Fixed 2026-11-17 (carried as B03-R4): `update_finding_severity`, with each re-grade and the revision it was judged at in `finding_severity_events`; `describe_locus` with `as_of_sha` replays it, and since f9c7e95 each re-grade is a row on `resolution-history.md`. `get_finding_resolution_history` stays resolution-only |
-| B03-R1 | A rebuilt store can re-mint a finding id and satisfy an old external reference |
-| B03-R2 | A clean-slate rebuild cannot carry an unresolved finding forward |
+| B03-R1 | A rebuilt store can re-mint a finding id and satisfy an old external reference. Partly addressed 2026-11-18 (999ab78, then a trigger on `findings` so a racing carry cannot slip past the check): within one store, a live finding cannot take an id a carried record holds, and `carry_finding` reports a live finding that already has the archived id with the `<store-id>:<finding-id>` form the resolver accepts. This reverses `design/survey-depth/spec.md` §5.2, which let a successor re-find keep the archived id; gate A3 in `test-carried-findings.mjs` now asserts the refusal. A fresh store that carries nothing can still re-mint any id |
+| ~~B03-R2~~ | ~~A clean-slate rebuild cannot carry an unresolved finding forward~~ Repaired at 6ac8d89, per `docs/resolved-findings.md`; the shadowing it left open is the 999ab78 work under B03-R1 |
 | ~~B04-2~~ | ~~Every HTML page shows "No recorded stale entries" whatever the drift~~ Repaired, per `docs/resolved-findings.md` |
 | B04-3 | The read-back gate cannot turn red on a stale-marker fault. Mostly addressed (checked 2026-11-17): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`. What is left is dead code: `readback.py` and the index page still read stale markers from `entries`, which nothing writes. Removing it means retiring two CI gate checks that require the marker (`test-overview-truthfulness.py` "the entries-derived stale marker survives", `test-ledger-freshness.py`'s `stale_marker` check), so it is left for the owner |
 | ~~B04-4~~ | ~~"How to read this conspectus" teaches a superseded contradiction model~~ Repaired, per `docs/resolved-findings.md` |
 | B04-5 | Publishing went red on seven dangling anchors |
 | B04-R2 | The adversarial pass cannot record a negative outcome at a single revision. Now B04-R6 in the self-conspectus; see the decision above. The Phase 4 reference says so (8ca8754) |
 | ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passed the server and failed the gate; escaped 2026-11-18 (760bda0) |
-| B05-R1 | A clean publish and the live site can be green while the overview shows a placeholder thesis |
+| ~~B05-R1~~ | ~~A clean publish and the live site can be green while the overview shows a placeholder thesis~~ Repaired at 30c87d5, per `docs/resolved-findings.md` |
 | ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |
 | B01-R1 | The phase references drift from the tools they describe, unchecked. The instance re-found as B01-R2 is fixed (8ca8754): Phase 4 recorded `survived` as a field note, which the `mapped` advance does not count, and never named `record_claim_challenge`; the P12 gate now requires it. The general case is still checked only for registered refusals (`check-refusal-parity.mjs`) |
 | B07-1 | A research refresh can hang on a network fetch. Operator-run scripts under `scholiast/` (fetch, the shadcn CLI, a Python child), not the server; a stall hangs a terminal. Left as LOW, 2026-11-16 |
 | B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI |
 | B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild |
 | — | The regeneration gate asserts over a store the acceptance rebuild deleted; two of its failures may be genuine |
-| — | A mistaken outcome on a carried finding cannot be corrected |
+| ~~—~~ | ~~A mistaken outcome on a carried finding cannot be corrected~~ Fixed 2026-11-18 (f564925): `record_carried_outcome` takes `corrects_outcome_id`; the correction is a new append-only row that names the one it supersedes, and every reader takes the current outcome |
 
 The `dev/` receipt gates are no longer in CI, and 17 of 27 failed at `71f3450`; most fail only
 because they check that they are listed in the workflow. `dev/republish-docs.mjs` ends red until

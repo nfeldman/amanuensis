@@ -738,10 +738,17 @@ if (hasStore) {
 
   // --- B5 and B6: the carried accounting ----------------------------------
   {
+    // A corrected outcome stays as a row; the current one is the row no later row
+    // supersedes (mcp-server/src/schema.sql, carried_finding_outcomes). A store from
+    // before corrections has no supersedes_outcome_id column and one row per record.
+    const CURRENT_ONLY =
+      " AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later" +
+      " WHERE later.supersedes_outcome_id = o.id)";
+    const corrected = (all("SELECT 1 FROM pragma_table_info('carried_finding_outcomes') WHERE name = 'supersedes_outcome_id'") ?? []).length > 0;
     const carried = all(
       `SELECT c.archived_store_id, c.archived_finding_id, o.outcome
          FROM carried_findings c
-    LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id
+    LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id${corrected ? CURRENT_ONLY : ""}
         ORDER BY c.carried_id`,
     );
     if (carried === null) {

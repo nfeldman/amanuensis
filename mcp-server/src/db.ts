@@ -285,6 +285,11 @@ function runMigrations(db: DB): void {
     db.exec(
       "ALTER TABLE carried_finding_outcomes ADD COLUMN supersedes_outcome_id INTEGER REFERENCES carried_finding_outcomes(id)",
     );
+  }
+  // Outside the column guard: an open interrupted between the ALTER and the
+  // drop would otherwise skip the drop for good, and the old index refuses
+  // every correction. schema.sql no longer creates it, so dropping is safe.
+  if (hasTable(db, "carried_finding_outcomes")) {
     db.exec("DROP INDEX IF EXISTS idx_carried_outcome_one");
   }
   // The CREATE INDEX ... IF NOT EXISTS and CREATE TABLE ... IF NOT EXISTS in

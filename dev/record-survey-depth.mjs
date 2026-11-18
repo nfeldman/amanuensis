@@ -234,12 +234,19 @@ const declinations = all(
   "SELECT id, subsystem_id, ref_sha, session_id, reason FROM vocabulary_declinations ORDER BY id DESC",
 );
 
+// A corrected outcome stays as a row; the current one is the row no later row
+// supersedes (mcp-server/src/schema.sql, carried_finding_outcomes). A store from
+// before corrections has no supersedes_outcome_id column and one row per record.
+const CURRENT_ONLY =
+  " AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later" +
+  " WHERE later.supersedes_outcome_id = o.id)";
+const corrected = all("SELECT 1 FROM pragma_table_info('carried_finding_outcomes') WHERE name = 'supersedes_outcome_id'").length > 0;
 const carried = all(
   `SELECT c.carried_id, c.archived_store_id, c.archived_finding_id, c.subsystem_id,
           c.archived_resolution, c.severity,
           o.outcome, o.successor_id, o.repaired_sha, o.rationale
      FROM carried_findings c
-LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id
+LEFT JOIN carried_finding_outcomes o ON o.carried_id = c.carried_id${corrected ? CURRENT_ONLY : ""}
     ORDER BY c.carried_id`,
 );
 let carriedEvidence = [];

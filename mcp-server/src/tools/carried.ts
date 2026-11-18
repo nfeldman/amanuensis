@@ -429,8 +429,9 @@ export const carriedTools: ToolDefinition[] = [
         ...(shadowed
           ? {
               shadowed_by_live_finding:
-                `a live finding is also ${archivedFindingId}; refer to this record by its ` +
-                "obligation_id, since an unqualified reference resolves to the live finding",
+                `a live finding is also ${archivedFindingId}; refer to this record as ` +
+                `${archivedStoreId}:${archivedFindingId}, the qualified form a resolver ` +
+                "accepts, since an unqualified reference resolves to the live finding",
             }
           : {}),
       });

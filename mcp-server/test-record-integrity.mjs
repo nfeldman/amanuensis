@@ -428,11 +428,31 @@ try {
     return row ? "the refused finding was written anyway" : null;
   });
   check("R2 an id no carried record holds is still accepted", () => refusal(() => newFinding("B01-4")));
-  check("R3 carrying an id a live finding already holds says so", () => {
+  check("R3 carrying an id a live finding already holds names a reference the resolver accepts", () => {
     const result = carry("B01-1");
-    return String(result.shadowed_by_live_finding ?? "").includes("obligation_id")
+    const said = String(result.shadowed_by_live_finding ?? "");
+    // dev/pecia-resolve-finding.mjs accepts `<store-id>:<finding-id>` and
+    // nothing longer, so the obligation id (`carried:...`) would be refused.
+    const named = said.match(/\bas (\S+), the qualified form/)?.[1];
+    if (named !== "store-recordintegrity:B01-1") return `carry_finding returned ${JSON.stringify(result)}`;
+    return /^[A-Za-z0-9._-]+:[A-Za-z0-9._-]+$/.test(named) ? null : `${named} is not the resolver's form`;
+  });
+  check("R4 the store refuses the id even when add_finding's check is passed", () => {
+    // A carry that lands between add_finding's check and its insert: the
+    // trigger, not the check, has to refuse it.
+    const message = refusal(() =>
+      db
+        .prepare(
+          `INSERT INTO findings (finding_id, subsystem_id, symptom, root_cause, severity, status,
+                                 ref_sha, session_id, pass_type)
+           VALUES ('B01-R9', 'B-01', 's', 'r', 'LOW', 'confirmed-bug', ?, 'raced', 'survey')`,
+        )
+        .run(seedSha),
+    );
+    if (message === null) return "a direct insert of a carried id was accepted";
+    return message.includes("already the id of a carried record")
       ? null
-      : `carry_finding returned ${JSON.stringify(result)}`;
+      : `a direct insert of a carried id was refused for another reason: ${message}`;
   });
 } catch (error) {
   failures.push(`setup: ${String(error?.stack ?? error)}`);

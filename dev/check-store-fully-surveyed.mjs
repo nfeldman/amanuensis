@@ -509,12 +509,19 @@ function standingReconciliation(revision) {
 // --- clause 7: every carried finding has a terminal outcome -----------------
 
 {
+  // A corrected outcome stays as a row; the current one is the row no later row
+  // supersedes (mcp-server/src/schema.sql, carried_finding_outcomes). A store from
+  // before corrections has no supersedes_outcome_id column and one row per record.
+  const CURRENT_ONLY =
+    " AND NOT EXISTS (SELECT 1 FROM carried_finding_outcomes later" +
+    " WHERE later.supersedes_outcome_id = o.id)";
+  const corrected = (rows("SELECT 1 FROM pragma_table_info('carried_finding_outcomes') WHERE name = 'supersedes_outcome_id'") ?? []).length > 0;
   const carried =
     rows(
       `SELECT cf.carried_id, cf.archived_finding_id, cf.archived_store_id, cf.severity,
               o.outcome AS outcome
          FROM carried_findings cf
-         LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id
+         LEFT JOIN carried_finding_outcomes o ON o.carried_id = cf.carried_id${corrected ? CURRENT_ONLY : ""}
         ORDER BY cf.archived_store_id, cf.archived_finding_id`,
     ) ?? [];
   const undecided = carried.filter((row) => row.outcome === null || row.outcome === undefined);

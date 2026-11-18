@@ -635,11 +635,18 @@ async function main(mods) {
         ? "carrying B03-5 wrote it into `findings`, where it can be counted as a defect this survey found and where finding_resolution_current would answer about a store that no longer exists"
         : null;
     });
-    check("A3 a successor may take the archived id without colliding", () => {
+    // spec.md §5.2 let the re-find keep the archived id. The resolver reads live
+    // findings first, so a live finding with that id answers every unqualified
+    // reference to the archived one whether or not it is the successor, and the
+    // self-conspectus measured 8 such ids (B03-R6). A successor takes an id of
+    // its own and is named by successor_id; the store refuses the archived id.
+    check("A3 a live finding cannot take an id a carried record holds", () => {
       const said = refusal(() => seedFinding(ctx, "B03-5"));
-      return said
-        ? `filing a successor finding with the archived id was refused (${said}); the two namespaces are separate precisely so the re-find can keep the id`
-        : null;
+      if (!said) {
+        return "a live finding took the carried id B03-5, and now answers every reference to the archived one";
+      }
+      if (!said.includes("already the id of a carried record")) return `refused for another reason: ${said}`;
+      return refusal(() => seedFinding(ctx, "B03-5-successor"));
     });
     check("A4 carried_findings is unique by (archived_store_id, archived_finding_id)", () => {
       const same = refusal(() => seedCarried(ctx, { archived_finding_id: "B03-5" }));
@@ -1393,6 +1400,30 @@ async function main(mods) {
       return correction ? `a correction on the upgraded store was refused: ${correction}` : null;
     });
 
+    check("D14 an upgrade interrupted after its ALTER still drops the old index", () => {
+      const old = world("half-upgraded");
+      const id = seedCarried(old, { archived_finding_id: "D14" });
+      // The column arrived and the process died before the drop.
+      old.db.exec(`
+        DROP INDEX idx_carried_outcome_first;
+        CREATE UNIQUE INDEX idx_carried_outcome_one ON carried_finding_outcomes(carried_id);
+      `);
+      old.db.close();
+      old.db = openDatabase(old.project.dbPath);
+      const index = old.db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_carried_outcome_one'")
+        .get();
+      if (index) return "the old index survived a reopen, so no correction can ever be written";
+      const insert = old.db.prepare(
+        `INSERT INTO carried_finding_outcomes
+           (carried_id, outcome, rationale, session_id, ref_sha, supersedes_outcome_id)
+         VALUES (?, 'ruled-out', ?, ?, ?, ?)`,
+      );
+      const first = insert.run(id, "first", old.sessionId, headSha(old), null).lastInsertRowid;
+      const correction = refusal(() => insert.run(id, "corrected", old.sessionId, headSha(old), first));
+      return correction ? `a correction was refused: ${correction}` : null;
+    });
+
     // ------------------------------------------------- G4: each rule's control
 
     check("G4a ruled-out is accepted on evidence collected in this session", () => {
@@ -1502,6 +1533,15 @@ async function main(mods) {
          VALUES (?, 'ruled-out', 'decided', ?, ?)`,
       )
       .run(decided, undecided.sessionId, headSha(undecided));
+    // Its outcome corrected once: still one record, still decided.
+    undecided.db
+      .prepare(
+        `INSERT INTO carried_finding_outcomes
+           (carried_id, outcome, rationale, session_id, ref_sha, supersedes_outcome_id)
+         VALUES (?, 'ruled-out', 'corrected', ?, ?,
+                 (SELECT id FROM carried_finding_outcomes WHERE carried_id = ?))`,
+      )
+      .run(decided, undecided.sessionId, headSha(undecided), decided);
 
     const result = runChecker(undecided);
     check("E1 the store-scoped predicate refuses a store with an undecided carried finding", () => {
@@ -1531,6 +1571,14 @@ async function main(mods) {
       return result.status === 0
         ? `${CHECKER_REL} exited 0 while reporting an unmet clause; a predicate that reports red and exits green halts nothing`
         : null;
+    });
+
+    check("E1b a corrected outcome is counted as one carried record", () => {
+      const clause = clauseSeven(result);
+      if (!clause) return "the report carries no clause 7";
+      return clause.considered === 3
+        ? null
+        : `clause 7 considered ${JSON.stringify(clause.considered)} carried record(s) over a store holding 3, one of them corrected; each outcome row was counted as a record`;
     });
 
     check("E3 the refusal names the records it is about", () => {

@@ -199,7 +199,8 @@ async function main() {
       rationale     TEXT    NOT NULL,
       session_id    TEXT    NOT NULL,
       ref_sha       TEXT    NOT NULL,
-      recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+      recorded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+      supersedes_outcome_id INTEGER REFERENCES carried_finding_outcomes(id)
   )`);
 
   const ARCHIVE_A = "store-legacyaaaaaaaa";
@@ -226,11 +227,19 @@ async function main() {
     );
   }
   function outcome(carriedId, kind, extra = {}) {
-    db.prepare(
-      `INSERT INTO carried_finding_outcomes (carried_id, outcome, successor_id, repaired_sha,
-                                             rationale, session_id, ref_sha)
-       VALUES (?, ?, ?, ?, 'cf2 fixture', 'cf2', '0000000')`,
-    ).run(carriedId, kind, extra.successor_id ?? null, extra.repaired_sha ?? null);
+    return db
+      .prepare(
+        `INSERT INTO carried_finding_outcomes (carried_id, outcome, successor_id, repaired_sha,
+                                               rationale, session_id, ref_sha, supersedes_outcome_id)
+         VALUES (?, ?, ?, ?, 'cf2 fixture', 'cf2', '0000000', ?)`,
+      )
+      .run(
+        carriedId,
+        kind,
+        extra.successor_id ?? null,
+        extra.repaired_sha ?? null,
+        extra.supersedes ?? null,
+      ).lastInsertRowid;
   }
 
   carried("B03-6"); // undecided
@@ -239,6 +248,12 @@ async function main() {
   outcome(carried("B04-5"), "archived-terminal");
   outcome(carried("B07-1"), "successor-finding", { successor_id: "CF2-SUCCESSOR-FIXED" });
   outcome(carried("B02-3"), "successor-finding", { successor_id: "CF2-SUCCESSOR-OPEN" });
+  // A mistaken outcome, corrected: the first named an open successor, the
+  // correction rules the record out. Only the correction answers.
+  const corrected = carried("B03-CORR");
+  outcome(corrected, "ruled-out", {
+    supersedes: outcome(corrected, "successor-finding", { successor_id: "CF2-SUCCESSOR-OPEN" }),
+  });
   // The same id from two archives: §5.7 refuses rather than choosing.
   carried("B03-DUP", ARCHIVE_A);
   carried("B03-DUP", ARCHIVE_B);
@@ -315,6 +330,17 @@ async function main() {
     return qualified.status === 1
       ? null
       : `the qualified form ${ARCHIVE_A}:B03-DUP exited ${qualified.status}, not 1; §5.7 says the resolver accepts it`;
+  });
+
+  check("R4b a corrected outcome is one record, answered by its correction", () => {
+    const said = [];
+    for (const target of ["B03-CORR", `${ARCHIVE_A}:B03-CORR`]) {
+      const run = resolve(target);
+      if (run.status !== 0) said.push(`${target} exited ${run.status}: ${scrub(run.stderr) || "(silent)"}`);
+    }
+    return said.length === 0
+      ? null
+      : `a record whose outcome was corrected to ruled-out did not resolve — ${said.join("; ")}; the superseded row was read as a second record or as the answer`;
   });
 
   check("R5 the resolver never prints its argument", () => {

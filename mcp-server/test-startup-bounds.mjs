@@ -105,40 +105,54 @@ t("a stalled git does not hang project binding", () => {
 // The probes above exercise the calls a test can reach. A call in a module
 // nothing exports (index.ts:gitRoot) or one first use makes (storage-git.ts)
 // is not reachable that way, so the rule is also read off the source: a module
-// that calls node:child_process directly passes a timeout on every call, and
-// everything else goes through src/subprocess.ts, which supplies one.
+// that calls node:child_process directly names each function it imports, calls
+// it by that name, and passes a nonzero timeout inline in the call; everything
+// else goes through src/subprocess.ts, which supplies one. Options built in a
+// variable are refused too, since a text check cannot see inside them.
 t("every direct child_process call in src passes a timeout", () => {
   const src = join(import.meta.dirname, "src");
   const offenders = [];
   const files = execFileSync("git", ["ls-files", "--", "*.ts"], { cwd: src, encoding: "utf8" })
     .split("\n")
     .filter(Boolean);
+  const from = String.raw`from\s*["']node:child_process["']`;
   for (const rel of files) {
     if (rel === "subprocess.ts") continue;
     const text = readFileSync(join(src, rel), "utf8");
-    if (/import\s*\*\s*as\s+\w+\s+from\s*"node:child_process"|require\(\s*"(node:)?child_process"/.test(text)) {
-      offenders.push(`${rel} (namespace or require import; name the calls so they can be checked)`);
+    const unnamed = String.raw`import\s+(\*\s*as\s+\w+|\w+)\s*(,\s*\{[^}]*\})?\s*${from}`;
+    if (new RegExp(`${unnamed}|require\\(\\s*["'](node:)?child_process["']`).test(text)) {
+      offenders.push(`${rel} (default, namespace or require import; import the calls by name)`);
       continue;
     }
-    const imported = text.match(/import\s*\{([^}]*)\}\s*from\s*"node:child_process"/);
-    if (!imported) continue;
-    const names = imported[1]
-      .split(",")
-      .map((name) => name.trim())
-      .filter((name) => name && !name.startsWith("type "))
-      .map((name) => name.split(/\s+as\s+/).pop());
+    const names = [];
+    for (const imported of text.matchAll(
+      new RegExp(String.raw`import\s*\{([^}]*)\}\s*${from}`, "g"),
+    )) {
+      for (const part of imported[1].split(",")) {
+        const name = part.trim();
+        if (name && !name.startsWith("type ")) names.push(name.split(/\s+as\s+/).pop());
+      }
+    }
+    const body = text.replace(new RegExp(String.raw`import\s*\{[^}]*\}\s*${from}\s*;?`, "g"), "");
     for (const name of names) {
-      const call = new RegExp(`\\b${name}\\(`, "g");
-      for (const match of text.matchAll(call)) {
+      for (const match of body.matchAll(new RegExp(String.raw`\b${name}\b(\s*\()?`, "g"))) {
+        const line = body.slice(0, match.index).split("\n").length;
+        const lineStart = body.lastIndexOf("\n", match.index) + 1;
+        if (/^\s*(\/\/|\*|\/\*)/.test(body.slice(lineStart, match.index))) continue; // a comment
+        if (!match[1]) {
+          offenders.push(
+            `${rel}:~${line} ${name} used without being called (an alias escapes the check)`,
+          );
+          continue;
+        }
         let depth = 0;
         let end = match.index + match[0].length - 1;
-        for (; end < text.length; end++) {
-          if (text[end] === "(") depth++;
-          else if (text[end] === ")" && --depth === 0) break;
+        for (; end < body.length; end++) {
+          if (body[end] === "(") depth++;
+          else if (body[end] === ")" && --depth === 0) break;
         }
-        if (!/\btimeout\s*:/.test(text.slice(match.index, end))) {
-          const line = text.slice(0, match.index).split("\n").length;
-          offenders.push(`${rel}:${line} ${name}`);
+        if (!/\btimeout\s*:\s*(?!0\b|0_|null\b|undefined\b)\S/.test(body.slice(match.index, end))) {
+          offenders.push(`${rel}:~${line} ${name}`);
         }
       }
     }

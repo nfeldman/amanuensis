@@ -713,6 +713,15 @@ CREATE INDEX IF NOT EXISTS idx_carried_findings_run
 CREATE INDEX IF NOT EXISTS idx_carried_findings_archived_id
     ON carried_findings(archived_finding_id);
 
+-- A live finding may not take an id a carried record holds: an unqualified
+-- reference would resolve to the live finding instead (B03-R6). add_finding
+-- checks first, to name the record; this holds when a carry lands between that
+-- check and the insert. Rows written before the rule are left as they are.
+CREATE TRIGGER IF NOT EXISTS finding_id_not_held_by_carried_record
+BEFORE INSERT ON findings FOR EACH ROW
+WHEN EXISTS (SELECT 1 FROM carried_findings WHERE archived_finding_id = NEW.finding_id)
+BEGIN SELECT RAISE(ABORT, 'finding_id is already the id of a carried record'); END;
+
 -- One current outcome per carried record, and outcomes are never deleted or
 -- rewritten. A mistaken outcome is corrected by a new row that names it in
 -- supersedes_outcome_id, so both decisions stay visible (spec.md §5.4). The
