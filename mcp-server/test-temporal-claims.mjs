@@ -387,6 +387,67 @@ test("supersession is continuous, evidenced, historical, and cycle-safe", () => 
   }
 });
 
+test("invalidation and supersession return the event a challenge outcome cites", () => {
+  const { ctx, commits, evidence, cleanup } = freshContext();
+  try {
+    const challenge =
+      "Looked for a second writer of fixture.txt across the history and found the value changed.";
+    addClaim(ctx, { ref_sha: commits[0], evidence_ids: [evidence[0]] });
+    const superseded = call(
+      "supersede_claim",
+      {
+        predecessor_claim_id: "claim-1",
+        successor_claim_id: "claim-2",
+        statement: "The fixture now reads B.",
+        epistemic_kind: "observation",
+        at_sha: commits[1],
+        rationale: "the value moved on",
+        evidence_ids: [evidence[1]],
+      },
+      ctx,
+    );
+    const event = (id) =>
+      ctx.db.prepare("SELECT claim_id, event_type FROM claim_validity_events WHERE id = ?").get(id);
+    assertEqual(event(superseded.validity_event_id)?.event_type, "superseded", "supersede event id");
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: "claim-1",
+        outcome: "superseded",
+        challenge,
+        ref_sha: commits[1],
+        validity_event_id: superseded.validity_event_id,
+      },
+      ctx,
+    );
+
+    const invalidated = call(
+      "invalidate_claim",
+      { claim_id: "claim-2", at_sha: commits[2], reason: "contradicted", evidence_ids: [evidence[2]] },
+      ctx,
+    );
+    assertEqual(event(invalidated.validity_event_id)?.event_type, "invalidated", "invalidate event id");
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: "claim-2",
+        outcome: "overturned",
+        challenge,
+        ref_sha: commits[2],
+        validity_event_id: invalidated.validity_event_id,
+      },
+      ctx,
+    );
+    assertEqual(
+      ctx.db.prepare("SELECT COUNT(*) AS n FROM claim_challenge_outcomes").get().n,
+      2,
+      "both outcomes recorded",
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test("legacy projection is typed without mutating its source rows", () => {
   const { ctx, commits, evidence, cleanup } = freshContext();
   try {

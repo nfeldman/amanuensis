@@ -101,7 +101,8 @@ keyed by `claim_key`:
 - **Outcome** — one of:
   - `survived` — you looked and found nothing that overturns it.
   - `overturned` — you found evidence the claim is wrong at the
-    current revision.
+    current revision. The server can record this only at a commit
+    after the one the claim was recorded at; see step 5.
   - `superseded` — the claim was right and is now stale; you have a
     corrected reading of the same fact.
 
@@ -141,24 +142,43 @@ For each verdict:
   probe for ${finding_id} did not find an overturning mechanism")`
   so the pattern of successful hardening is legible.
 
-And for each claim outcome:
+And for each claim outcome, record it with
+`record_claim_challenge(claim_id, outcome, challenge, ref_sha)`. That
+writes the `claim_challenge_outcomes` row the advance to `mapped`
+counts; nothing else does. `challenge` is what would have overturned
+the claim and where you looked for it, in prose, not a one-word note.
 
 - **`overturned`** — `add_evidence` for the disproof, then
   `invalidate_claim(claim_id, at_sha, reason, evidence_ids)`. That
-  writes the `invalidated` row in `claim_validity_events`, which is
-  the durable record that the claim was challenged and lost. The
-  server rejects an invalidation whose evidence is already attached
-  to the claim, so the disproof has to be new.
+  closes the claim and writes the `invalidated` row in
+  `claim_validity_events`; its id comes back as `validity_event_id`.
+  The server rejects an invalidation whose evidence is already
+  attached to the claim, so the disproof has to be new. Then
+  `record_claim_challenge(..., outcome="overturned",
+  validity_event_id=<that id>)`.
+  `at_sha` must be a strict descendant of the claim's
+  `valid_from_sha`: a claim cannot be closed at the commit it was
+  recorded at. If the claim was already wrong there and the
+  repository has not moved since, the server has no way to record
+  the overturning (finding B04-R6). Do not record `survived` for it.
+  Record the disproof as evidence and an
+  `add_field_note(category="anomaly", ...)` naming the `claim_key`,
+  and name the claim in the hand-back. The advance to `mapped` stays
+  refused until it carries an outcome.
 - **`superseded`** — `supersede_claim`, which closes the predecessor
   and opens the successor on the same `claim_key` in one commit and
-  writes the `superseded` event. Use this, not delete-and-re-add: the
-  history is the point.
+  writes the `superseded` event, returned as `validity_event_id`.
+  Use this, not delete-and-re-add: the history is the point. Then
+  `record_claim_challenge(..., outcome="superseded",
+  validity_event_id=<that id>)`. The same strict-descendant rule
+  applies.
 - **`survived`** — no claim row changes, so the outcome has to be
   recorded explicitly or it is indistinguishable from a claim nobody
-  looked at. Write
+  looked at. `record_claim_challenge(..., outcome="survived")` with
+  no `validity_event_id`. Optionally write
   `add_field_note(category="pattern", observation="adversarial probe
-  for claim ${claim_key} did not overturn it", location=<sid>)`
-  alongside the artifact entry.
+  for claim ${claim_key} did not overturn it", location=<sid>)` and
+  pass its id as `field_note_id`; the note alone does not count.
 
 For the purpose and the account, record a field note naming any sentence
 the code contradicts, with the evidence: `add_evidence` for what you read,
@@ -188,7 +208,8 @@ Return to the coordinator with a one-line summary:
 - Counts per verdict (`upheld`, `overturned`, `scope-restricted`,
   `quality-upgraded`, `quality-downgraded`).
 - Counts per claim outcome (`survived`, `overturned`, `superseded`),
-  and the `claim_key` of any target you did not reach.
+  the `claim_key` of any target you did not reach, and of any claim
+  the server could not record as overturned.
 - Contradictions detected and their resolutions.
 - Sentences of the purpose or account the code contradicts.
 - Linchpin-dependent dispositions that remain — these are the
@@ -199,9 +220,10 @@ The coordinator advances status to `adversarial` and runs Phase 5
 packaging immediately. No pause.
 
 **Before the subsystem may advance to `mapped`, every current `<sid>/`
-claim must carry a recorded outcome** — a `claim_validity_event` from
-`invalidate_claim` or `supersede_claim`, or an explicit `survived`
-note. A claim with no recorded outcome means the structural account
+claim must carry a recorded outcome** — a `record_claim_challenge`
+row. An `overturned` or `superseded` outcome cites the
+`claim_validity_event` that `invalidate_claim` or `supersede_claim`
+wrote; a `survived` one cites none. A claim with no recorded outcome means the structural account
 was published unchallenged; say so in the hand-back rather than
 letting `mapped` imply a review that did not happen. The server refuses
 the advance in those terms: *"current claim(s) carry no challenge

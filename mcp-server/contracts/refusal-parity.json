@@ -36,7 +36,7 @@
       "id": "ladder-unchallenged-claims",
       "note": "Existing, and the prerequisite spec.md §6.1 adds to in phase-4-adversarial.md.",
       "refuses": ["update_subsystem_status"],
-      "instructs": ["invalidate_claim", "supersede_claim"],
+      "instructs": ["invalidate_claim", "supersede_claim", "record_claim_challenge"],
       "server": { "file": "src/invariants.ts", "phrase": "current claim(s) carry no challenge outcome" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/onboarding.md" },

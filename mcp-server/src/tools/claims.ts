@@ -560,7 +560,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "invalidate_claim",
     description:
-      "Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional.",
+      "Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. at_sha must be a strict descendant of the claim's valid_from_sha. Returns validity_event_id, which an 'overturned' record_claim_challenge cites.",
     inputSchema: {
       type: "object",
       properties: {
@@ -593,26 +593,31 @@ export const claimTools: ToolDefinition[] = [
       }
       const newEvidence = evidenceIds.filter((id) => !existing.has(id));
 
-      ctx.db.transaction(() => {
+      const validityEventId = ctx.db.transaction(() => {
         ctx.db
           .prepare("UPDATE claims SET valid_until_sha = ? WHERE claim_id = ?")
           .run(atSha, claimId);
         attachEvidence(ctx, claimId, newEvidence, "contradicts");
-        ctx.db
+        return ctx.db
           .prepare(
             `INSERT INTO claim_validity_events
                (claim_id, event_type, at_sha, reason, evidence_id, session_id)
              VALUES (?, 'invalidated', ?, ?, ?, ?)`,
           )
-          .run(claimId, atSha, reason, newEvidence[0], sessionId);
+          .run(claimId, atSha, reason, newEvidence[0], sessionId).lastInsertRowid;
       })();
-      return ok({ claim_id: claimId, valid_until_sha: atSha });
+      // record_claim_challenge cites this event for an 'overturned' outcome.
+      return ok({
+        claim_id: claimId,
+        valid_until_sha: atSha,
+        validity_event_id: Number(validityEventId),
+      });
     },
   },
   {
     name: "supersede_claim",
     description:
-      "Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor.",
+      "Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. Returns validity_event_id, which a 'superseded' record_claim_challenge cites.",
     inputSchema: {
       type: "object",
       properties: {
@@ -668,6 +673,7 @@ export const claimTools: ToolDefinition[] = [
       const successorRows = evidenceRows.filter((row) => !predecessorEvidence.has(row.id));
       const successorEvidence = successorRows.map((row) => row.id);
 
+      let validityEventId = 0;
       try {
         ctx.db.transaction(() => {
           ctx.db
@@ -686,13 +692,16 @@ export const claimTools: ToolDefinition[] = [
             evidenceRows: successorRows,
             reason: rationale,
           });
-          ctx.db
-            .prepare(
-              `INSERT INTO claim_validity_events
+          validityEventId = Number(
+            ctx.db
+              .prepare(
+                `INSERT INTO claim_validity_events
                  (claim_id, event_type, at_sha, reason, evidence_id, session_id)
                VALUES (?, 'superseded', ?, ?, ?, ?)`,
-            )
-            .run(predecessorId, atSha, rationale, successorEvidence[0], sessionId);
+              )
+              .run(predecessorId, atSha, rationale, successorEvidence[0], sessionId)
+              .lastInsertRowid,
+          );
           ctx.db
             .prepare(
               `INSERT INTO claim_supersessions
@@ -709,6 +718,8 @@ export const claimTools: ToolDefinition[] = [
         predecessor_claim_id: predecessorId,
         successor_claim_id: successorId,
         boundary_sha: atSha,
+        // record_claim_challenge cites this event for a 'superseded' outcome.
+        validity_event_id: validityEventId,
       });
     },
   },

@@ -122,7 +122,8 @@ comes back in.
   nothing"* refuses the advance, and so does one whose evidence sits at a
   commit the workspace can no longer reach — *"an unreachable anchor cannot
   be verified in place"*.
-- To `mapped`, every current claim must carry a challenge outcome:
+- To `mapped`, every current claim must carry a challenge outcome,
+  recorded with `record_claim_challenge`:
   *"current claim(s) carry no challenge outcome"*.
 - To `mapped`, the store must be reconciled against the tree. *"the store
   has not been reconciled against the repository at"* the revision being

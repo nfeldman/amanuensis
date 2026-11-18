@@ -1014,12 +1014,17 @@ check("phase-4-adversarial.md records each claim's challenge outcome before mapp
   if (!survived) {
     return "the document does not say how a claim that survives the challenge is recorded, so an unchallenged claim is indistinguishable from an upheld one";
   }
-  // The clause is prose, and §9.1 puts it here rather than in
-  // `enforcePhasePrerequisites` on purpose: `claim_validity_events.event_type`
-  // (schema.sql:1060) has no `survived` value, so no query can tell a claim
-  // that survived its challenge from one nobody challenged, and a substrate
-  // gate would have to refuse the legitimate all-survived result. A prose
-  // obligation is what there is to assert — so assert its *direction*, not
+  // The advance to mapped counts claim_challenge_outcomes rows and nothing
+  // else, so a reference that records an outcome any other way (a field note,
+  // as this one once did) leads the pass into a refusal (finding B01-R2).
+  if (!/record_claim_challenge\(/.test(text)) {
+    return "the document never names record_claim_challenge, the only write the mapped advance counts as an outcome";
+  }
+  if (/survived[`*]*\s*note/i.test(text)) {
+    return "the document still offers a survived note as an outcome; the mapped advance does not count notes";
+  }
+  // The mapped prerequisite itself is enforced in invariants.ts; what this
+  // asserts is the prose's *direction*, not
   // merely that the word `mapped` appears somewhere in the file. The prior
   // form ended in a bare `|mapped/i`, which the document's own two other
   // mentions satisfied no matter what the clause said.
