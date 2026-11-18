@@ -33,6 +33,54 @@ survived challenge, and which questions are still open.
 The result is a reusable situation model for code: compact enough to work from, detailed
 enough to inspect, and explicit about the edge of what is known.
 
+## Install
+
+You need Node.js 20 or newer. One command installs Amanuensis and registers it with
+every coding agent it finds on your machine: Codex, Claude Code, and GitHub Copilot
+(the Copilot CLI and VS Code).
+
+```bash
+npm install -g @gruetech/amanuensis && amanuensis install
+```
+
+Restart those agents once. Then open any Git repository and ask your agent to **run
+Amanuensis onboarding**. Nothing is set up per repository: each new repository gets
+its own record the first time the agent uses it.
+
+`amanuensis status` shows which agents are set up. Publishing the human-readable map
+also needs Python 3.11 or newer; everything else works without it.
+
+### Asking an agent to set it up
+
+An agent can do the whole installation. Give it this README and ask it to set
+Amanuensis up. For the agent, the steps are:
+
+1. Run `node --version`. If Node.js is missing or older than v20, stop and tell the
+   user that Amanuensis needs Node.js 20 or newer.
+2. Run `npm install -g @gruetech/amanuensis`. If it fails with a permissions error
+   (`EACCES`), do not retry with `sudo`. Tell the user that their Node.js is a system
+   installation and that a version manager such as nvm, fnm, or mise avoids the
+   problem, then stop. A warning that `better-sqlite3` has install scripts is
+   expected; step 4 checks that the module works.
+3. Run `amanuensis install`. If it reports a conflict, it has written nothing. Show
+   the user the message: it names each conflicting file and why, such as an
+   `amanuensis-memory` entry the installer did not write, an edited skill file, or a
+   file the user cannot write. Ask before running `amanuensis install --force`,
+   which replaces those entries and files. Configuration files are backed up first;
+   replaced skill files are not.
+4. Run `amanuensis status`. Its first line names the installed version. It exits
+   with code 0 when every agent it found is set up and the database module loads;
+   otherwise its last line names the command that fixes it. Report its output to
+   the user.
+5. Tell the user to restart their agents. The session that ran the installation
+   cannot see the new server until it restarts. After that, they can ask for
+   onboarding in any Git repository.
+
+The installer writes only its own registration and skill into each agent's
+user-level configuration. It backs up any configuration file before changing it and
+never writes into a repository. `amanuensis uninstall` removes everything it added.
+[Installation and operations](INSTALLATION.md) lists every file it touches.
+
 ## Trust is part of the architecture
 
 Amanuensis does not rely on a prompt asking the model to be careful. Its MCP server owns
@@ -61,27 +109,6 @@ true: it orients a reader, while claims remain the home of individually checkabl
 a human-readable map that opens each part of the architecture with what it is for and how
 it works, followed by the evidence, findings, seams, contradictions, and open questions
 behind this repository.
-
-## Try the beta
-
-The default installation is for Codex:
-
-```bash
-npm install -g @gruetech/amanuensis
-amanuensis install
-```
-
-Restart Codex once, open a trusted Git repository, and ask it to **run Amanuensis
-onboarding**. After that one user-scoped installation, each new trusted repository binds
-to its own Amanuensis store without repository-local setup or another restart.
-
-In the Codex app, the installed skill selects the repository from the chat's workspace.
-Each connection binds once, and concurrent repositories keep separate stores. After
-upgrading, restart existing MCP connections so they load the new server and skill.
-
-Requires Node.js 20 or newer and Python 3.11 or newer. For Claude Code, VS Code, another
-MCP host, source installs, upgrades, rollback, diagnosis, storage policy, or uninstalling,
-see [Installation and operations](INSTALLATION.md).
 
 ## Work from the memory
 

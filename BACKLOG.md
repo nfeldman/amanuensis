@@ -145,6 +145,16 @@ Workflow:
 
 ## Server defects
 
+- **Codex rewrites `config.toml` and breaks the installer's managed block.** Observed
+  2026-11-18 on the owner's machine: the Codex CLI rewrote `~/.codex/config.toml` at
+  startup, dropping the `# >>> amanuensis init (managed)` start comment, turning the
+  inline `env` into an `[mcp_servers.amanuensis-memory.env]` sub-table, and moving two
+  other servers inside the end marker. `install`, `upgrade`, `uninstall`, `status`, and
+  `doctor` all find the Codex entry by those comments, so on such a machine they refuse
+  ("incomplete Amanuensis-managed block") or report it unmanaged. The refusal is safe;
+  nothing else is deleted. The repair is to recognize the entry by its parsed content
+  (`AMANUENSIS_ACTIVATION_CONTRACT = "codex-user-cwd-v1"`) and edit the TOML table, not
+  a comment-delimited span, as the Claude Code and Copilot adapters already do.
 - ~~**Non-ASCII paths break staleness and refresh.**~~ Reproduced, then fixed on branch
   `server-fixes`, 2026-11-16: with `core.quotePath` on (git's default), a modified `café.ts`
   was never marked stale, and change impact recorded `"caf\303\251.ts"`. `detect_changes`,

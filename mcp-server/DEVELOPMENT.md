@@ -660,20 +660,26 @@ node dist/index.js --workspace /path/to/your/codebase
 
 An explicit workspace is optional. The server checks, in order,
 `--workspace`, `AMANUENSIS_WORKSPACE`, Claude Code's
-`CLAUDE_PROJECT_DIR`, the Git root containing its process cwd, and finally the
-cwd itself.
+`CLAUDE_PROJECT_DIR` (resolved to the Git root containing it), the Git root
+containing its process cwd, and finally the cwd itself. Under a user-level
+registration (`AMANUENSIS_ACTIVATION_CONTRACT` of `codex-user-cwd-v1` or
+`user-cwd-v1`), a directory outside any repository leaves the server unbound
+until the workspace handshake instead.
 
-Use the installer for client discovery:
+Use the installer for client discovery. `amanuensis install` writes a
+user-level registration and skill for every host it finds (Codex, Claude Code,
+Copilot); `init` writes one project's adapter:
 
 ```bash
+amanuensis install
 amanuensis init --client claude
-amanuensis init --client codex
+amanuensis init --client codex --scope project
 amanuensis init --client vscode
 amanuensis init --client generic
 ```
 
-Claude Code, Codex, and VS Code use different project configuration formats;
-the installer emits only the selected adapter. The portable units are the
+Each host uses a different configuration format; the installer emits only the
+selected adapters. The portable units are the
 stdio protocol and the `SKILL.md` workflow, not a universal config filename.
 
 ### MCP compatibility posture

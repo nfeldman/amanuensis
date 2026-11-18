@@ -6,33 +6,37 @@ Amanuensis has two portable parts:
 - the `amanuensis` Agent Skill, which teaches an agent how to use the tools as
   a survey, review, design, and refresh workflow.
 
-MCP standardizes the server protocol, but clients still discover project
-servers and skills from different files. Use the installer adapter for the
-runtime that will operate on the target project:
+One command installs both for every coding agent on the machine:
 
 ```bash
-amanuensis init --client claude   # Claude Code
-amanuensis init --client codex --scope user  # Codex CLI, app, or IDE extension
-amanuensis init --client vscode   # VS Code / GitHub Copilot
-amanuensis init --client generic  # any other local MCP host
+npm install -g @gruetech/amanuensis && amanuensis install
+amanuensis status   # exits 0 when every agent it found is set up
 ```
 
-Run `--dry-run` first when installing with existing agent or MCP
-configuration. The installer preserves unrelated configuration and JSONC
-comments, refuses conflicts, and writes timestamped backups before configuration
-replacements. It does not archive superseded skill copies. It also archives
-obsolete Amanuensis `.agent.md` files left by
-the pre-portable VS Code installer so they cannot compete with the skill.
+`amanuensis install` finds Codex, Claude Code, and GitHub Copilot (CLI and VS Code)
+and writes one user-level registration and skill for each, naming no repository.
+Restart each agent once; a session that was already running does not see the new
+server. `--client codex,claude,copilot` chooses agents and `--dry-run` previews.
+The installer preserves unrelated configuration, writes timestamped backups before
+rewriting a configuration file, refuses an `amanuensis-memory` entry it did not
+write unless given `--force`, and leaves a symbolically linked skill in place.
 
-## What each adapter writes
+## What each installation writes
 
-| Client | MCP configuration | Skill location |
+| Installation | MCP configuration | Skill location |
 |---|---|---|
-| Claude Code | `.mcp.json` (`mcpServers`) | `.claude/skills/amanuensis/` |
-| Codex user (default) | `$CODEX_HOME/config.toml` (`mcp_servers`) | `$CODEX_HOME/skills/amanuensis/` |
-| Codex project pin | `.codex/config.toml` (`mcp_servers`) | `.agents/skills/amanuensis/` |
-| VS Code | `.vscode/mcp.json` (`servers`) | `.agents/skills/amanuensis/` |
-| Generic | host-specific | `.agents/skills/amanuensis/` |
+| Codex (user) | `$CODEX_HOME/config.toml` (`mcp_servers`) | `$CODEX_HOME/skills/amanuensis/` |
+| Claude Code (user) | `~/.claude.json` (`mcpServers`) | `~/.claude/skills/amanuensis/` |
+| Copilot CLI and VS Code (user) | `~/.copilot/mcp-config.json` (`mcpServers`) | `~/.copilot/skills/amanuensis/` |
+| Claude Code project (`init --client claude`) | `.mcp.json` (`mcpServers`) | `.claude/skills/amanuensis/` |
+| Codex project pin (`init --client codex --scope project`) | `.codex/config.toml` (`mcp_servers`) | `.agents/skills/amanuensis/` |
+| VS Code project (`init --client vscode`) | `.vscode/mcp.json` (`servers`) | `.agents/skills/amanuensis/` |
+| Generic (`init --client generic`) | host-specific | `.agents/skills/amanuensis/` |
+
+`CLAUDE_CONFIG_DIR` and `COPILOT_HOME` relocate the Claude Code and Copilot
+entries. The project installations also archive obsolete Amanuensis `.agent.md`
+files left by the pre-portable VS Code installer so they cannot compete with the
+skill.
 
 The generic adapter prints the stdio command and required
 `AMANUENSIS_AUTOPROGRESS=1` environment setting to register. Asking the agent
@@ -43,9 +47,15 @@ does not automatically receive the full method.
 
 Client-native activation still applies: Claude Code may ask you to approve a
 project-scoped MCP server, and Codex reads project `.codex/config.toml` only
-for trusted projects. Restart Codex once after changing its user-scoped
-registration. New repositories require no Amanuensis-specific restart.
+for trusted projects. New repositories require no Amanuensis-specific restart.
 These are host security/discovery rules, not Amanuensis workflow review gates.
+
+The user-level Claude Code and Copilot registrations carry
+`AMANUENSIS_ACTIVATION_CONTRACT=user-cwd-v1`. Claude Code supplies
+`CLAUDE_PROJECT_DIR`, and the server binds the Git root containing it; Copilot
+starts the server in the session directory, and the server binds the Git root
+containing that. Outside a repository the server stays unbound until the
+workspace handshake below.
 
 The default Codex registration contains no target repository path. It launches
 the stdio server with `cwd = "."`. CLI launches can bind the Git root containing
@@ -125,9 +135,10 @@ global loader to the whole skill directory:
 
 Do not leave a copied project skill at `.agents/skills/amanuensis` in a Codex
 development project: it shadows the global link and freezes that project on
-the copied version. Configure Codex's live source MCP launcher once at user
-scope with the preceding `--mcp-only` commands. Claude Code and VS Code remain
-project adapters:
+the copied version. Configure the live source MCP launcher once at user scope
+with the preceding `--mcp-only` commands, or with
+`install --mcp-only` to register it with every agent found. A project adapter
+is still available:
 
 ```bash
 mise exec -- node mcp-server/dist/cli.js init \

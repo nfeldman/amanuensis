@@ -3,6 +3,26 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## Unreleased
+
+- `amanuensis install` sets up every agent it finds on the machine (Codex, Claude
+  Code, and GitHub Copilot's CLI and VS Code) with one user-level registration and
+  skill each, so one command covers every repository. `--client` names agents
+  explicitly.
+- Add `amanuensis status`, which reports what is installed for each agent and exits
+  non-zero until every agent it found is set up. `upgrade` and `uninstall` cover
+  every installed agent.
+- Bind a Claude Code session started in a repository subdirectory to the
+  repository root, and leave a user-level server unbound outside any repository
+  instead of claiming the directory it was started in.
+- Rewrite the README, installation guide, and package README around the one-command
+  installation, with steps an agent can follow to set it up.
+- Validate evidence citations, repair commits, and claim keys when they are
+  written; allow a finding's severity to be re-graded and a mistaken
+  carried-finding outcome to be corrected; refuse a finding id that a carried
+  record already holds; bound every subprocess call with a timeout. See
+  [BACKLOG.md](BACKLOG.md) for the itemized repairs.
+
 ## [0.2.0-beta.5] - 2026-11-07
 
 - Record a purpose and an account for each subsystem and the project with

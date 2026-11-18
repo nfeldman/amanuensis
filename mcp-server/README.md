@@ -1,141 +1,53 @@
 # @gruetech/amanuensis
 
-Evidence-backed codebase memory for MCP-capable coding agents. The package
-ships:
+Evidence-backed codebase memory for coding agents. Amanuensis gives Codex, Claude
+Code, GitHub Copilot, and other MCP-capable agents a durable, checkable account of a
+codebase. The account records what the code does, why each claim is believed, what
+has changed since, and which questions are still open.
 
-- the **MCP server** (`amanuensis-memory`) that owns persistent
-  conspectus storage and exposes the typed tool surface the agents
-  depend on,
-- the portable **Amanuensis Agent Skill**, which defines the workflow,
-- the **installer CLI** (`amanuensis install`, with `init` retained for
-  explicit project adapters) that wires the selected client's
-  project discovery files, and
-- the **materializer** that renders the conspectus into a
-  navigable human-readable site.
+## Install
 
-## v2 beta
-
-This source tree packages as the version in `package.json`. It is being dogfooded
-and remains under longitudinal validation. Until `1.0.0`, expect breaking changes between
-releases.
+Requires Node.js 20 or newer.
 
 ```bash
-git clone https://github.com/nfeldman/amanuensis
-cd amanuensis
-mise install
-mise exec -- npm --prefix mcp-server ci
-mise exec -- npm --prefix mcp-server run build
-
-mise exec -- node mcp-server/dist/cli.js install --dry-run
-mise exec -- node mcp-server/dist/cli.js install
+npm install -g @gruetech/amanuensis && amanuensis install
 ```
 
-Codex user scope is the default: it installs one global skill and a cwd-relative
-stdio registration under `$CODEX_HOME`, then requires one Codex restart. New
-trusted Git repositories require no Amanuensis setup or restart. Use
-`--scope project` only for a deliberate repository pin. Use `--client claude`
-or `--client vscode` for those project-scoped runtimes. Use
-`--client generic` for another local MCP host; it installs the portable skill
-and prints the stdio registration command and environment. Ask the agent to run
-onboarding only when that host loads Agent Skills or equivalent workflow
-instructions. Without them, the typed MCP tools and concise server instructions
-remain available, but the complete method is not installed automatically.
+`amanuensis install` finds Codex, Claude Code, and GitHub Copilot (the CLI and VS
+Code) on this machine. It registers the Amanuensis MCP server and workflow skill with
+each of them once, for every repository. Restart those agents, open any Git
+repository, and ask: **run Amanuensis onboarding**.
 
-`install` writes only its own files. Pass `--agent-instructions` to also add a
-short Amanuensis paragraph to the project's own agent instructions — `CLAUDE.md`
-for Claude Code, `AGENTS.md` for the other clients — telling agents to call
-`describe_locus` before editing an unfamiliar file. Without the flag the
-installer prints the offer and writes nothing to either file. The paragraph sits
-between `<!-- >>> amanuensis (managed) -->` delimiters, is appended once, and is
-removed by deleting the block.
+```bash
+amanuensis status      # what is installed; exits non-zero if something is missing
+amanuensis upgrade     # after installing a newer package version
+amanuensis uninstall   # remove every registration and skill it added
+```
 
-Repository binding is not an OS sandbox; host trust, approvals, and filesystem
-permissions remain authoritative. Every process exposes an immutable binding
-receipt through `get_project_info` and revalidates its canonical repository,
-identity, storage, and symlink-free write path before each tool call. Direct
-materialization, review export, refresh output, and comparison reports are
-restricted to the bound storage directory. MCP side-effect annotations are
-host hints, not broader filesystem authority.
+Add `--client codex,claude,copilot` to choose agents and `--dry-run` to preview any
+change. Publishing the human-readable map also needs Python 3.11 or newer.
 
-The Codex user-scope adapter normally binds the MCP child's cwd. For
-`codex exec --cd <repository>` / `-C`, where Codex retains the launcher cwd for
-the MCP child, Amanuensis reads the exact task-root argument from its direct
-`codex` parent and records `parent-codex-cli-cd-git-root`. It does not inspect
-prompt text or use a hard-coded repository path.
+## What the package contains
 
-Codex app-server launches use a workspace handshake instead: the skill calls
-`get_project_info({workspace: "/absolute/project/path/from/chat/environment"})`.
-The app's launcher cwd, including `/`, is never treated as its chat's project.
-An unbound connection advertises no storage and refuses all project tools until
-the handshake succeeds. The handshake also verifies existing CLI or project
-pins; it cannot switch a bound connection to another workspace. Filesystem root
-is rejected for every registration route.
+- `amanuensis-memory`, the local stdio MCP server that owns each repository's
+  `.amanuensis/` store and its typed tools;
+- the `amanuensis` Agent Skill, which teaches the agent the survey, review, design,
+  and refresh workflows;
+- the `amanuensis` installer CLI; and
+- the materializer that publishes the record as a navigable site.
 
-Default storage is worktree-local: worktrees share repository identity but
-receive distinct workspace-instance IDs and `.amanuensis` paths. A store carried
-into a second working copy of the same repository — a clone, a CI checkout, a
-moved directory — opens there, because the binding is to the repository's
-identity and not to the directory the store was created in; one naming a
-different repository is refused. A repository with no `origin` remote is
-identified by its path and its store does not travel. An explicit
-`AMANUENSIS_STORAGE_ROOT` instead selects shared-by-repository-identity custody;
-do not use it when concurrent worktrees need isolation. Run `amanuensis doctor --client codex
---dir /path/to/project --json` to inspect effective config precedence, launch
-paths, predicted repository/storage identity, skill shadows, and restart state.
-Doctor is read-only and exits non-zero for actionable faults, including an
-absolute user-scoped cwd or workspace argument. A safe repair is
-two-step: `doctor --repair --dry-run --json` returns a digest-bound plan ID;
-`doctor --repair --apply-plan <PLAN_ID> --json` applies it with timestamped
-configuration backups and refuses changed inputs.
-
-Startup, MCP negotiation, tool discovery, and `get_project_info` are read-only
-in a fresh repository. The first DB-backed tool call initializes one
-identity-bound `.amanuensis/` store by staging a complete schema and marker and
-publishing it atomically. Dead identity-matching stages are recoverable;
-unknown or nonempty incomplete stores halt for diagnosis. Use
-`amanuensis upgrade --dry-run` before `amanuensis upgrade`, and dry-run
-`amanuensis uninstall --client codex --scope user` before applying it. Both
-lifecycle commands preserve every repository store and unrelated Codex config.
-Configuration rewrites receive timestamped backups; managed skills are
-replaced or removed without creating skill archives. A deliberate package
-rollback installs the intended version and runs that version's upgrade path.
-
-The pre-publication parity gate compares this source checkout with a clean
-installation of its exact packed tarball across two repositories. It holds
-identity, storage, config ownership, restart state, skill digest, diagnosis and
-repair, upgrade, and uninstall results equal; only absolute install paths and
-launcher representation may differ. The manual published smoke repeats the
-user-scoped lifecycle on Node 20/22 and Linux/macOS after an authorized publish.
-Its presence does not claim that the current source has been published. Current
-real-host evidence covers `codex-cli-exec`; a distinct desktop-host result is
-not inferred from it. Codex trust remains a host prerequisite, and project
-scope remains the explicit pinning escape hatch.
-
-The committed A25 real-host envelope contains six independent Codex runs over
-five logical repositories, including nested cwd, linked-worktree,
-parent-`--cd`, and three-process concurrent conditions. Raw host events and
-DB-backed store custody bind every run ID to one thread, server instance,
-repository receipt, and exact session intent. Each run records zero Amanuensis
-setup commands, per-repository restarts, user interventions, and
-cross-repository writes. The result applies only after Codex trust; an
-untrusted control that caused Codex itself to persist project trust was kept
-outside the positive denominator. Desktop UI, other MCP clients, Windows, and
-published-registry operation remain unsupported or unmeasured strata.
-
-The server requires Node.js 20 or newer. Materialization also requires Python
-3.11 or newer; set `AMANUENSIS_PYTHON` if `python3` is not the desired
-interpreter. Survey state defaults to `<project>/.amanuensis/`.
-
-Install the current prerelease with `npm install -g @gruetech/amanuensis`. To
-select a release explicitly, name its version:
-`npm install -g @gruetech/amanuensis@<version>`.
+This is a beta. Until `1.0.0`, expect breaking changes between releases.
 
 ## Documentation
 
-See the [source repository](https://github.com/nfeldman/amanuensis)
-for the full README, methodology overview, and current limitations.
-`amanuensis --help` prints the installer surface; the server itself is a
-stdio process launched by the selected MCP client.
+- [README](https://github.com/nfeldman/amanuensis#readme): what Amanuensis does and
+  how to work from it
+- [Installation and operations](https://github.com/nfeldman/amanuensis/blob/main/INSTALLATION.md):
+  every file the installer touches, project-level installs, other MCP hosts,
+  repository binding, storage, diagnosis, and upgrades
+- [Release history](https://github.com/nfeldman/amanuensis/blob/main/HISTORY.md)
+
+`amanuensis --help` prints the full command reference.
 
 ## License
 
