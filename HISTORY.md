@@ -3,6 +3,29 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
+## [0.2.0-beta.7] - 2026-11-19
+
+- Let a survey correct a claim at the revision it was recorded at:
+  `invalidate_claim` and `supersede_claim` accept the claim's own `valid_from_sha`,
+  which records that the claim never held. Previously a claim found wrong during
+  the adversarial pass could not be closed until the repository gained a commit.
+  An older store is migrated when it is opened, keeping every claim.
+- Relink a published page whose own content did not change when a finding it links
+  to has moved, for example from open to resolved findings. Such a publish was
+  previously marked failed for a dangling link.
+- Refuse `mapped` while any file in the subsystem's scope has not been examined;
+  record each file as examined or deferred with a reason. `get_dashboard` reports
+  examined and unexamined files.
+- Check every status a subsystem skipped when it resumes from `deferred`, and refuse
+  a `reset_subsystem` target above its current depth. A status and its recorded
+  depth are now written together.
+- Carry stale files in the review brief, and drop the index page's stale-entry
+  markers, which could never appear; the stale-files page is the census.
+- Raise the default `describe_locus` budget to 15360 bytes, so a default call on a
+  surveyed file returns its purpose and structure.
+- Correct four tool calls the skill's references wrote with the wrong tool or
+  argument name; CI now checks every call the references write out.
+
 ## [0.2.0-beta.6] - 2026-11-19
 
 - `amanuensis install` sets up every agent it finds on the machine (Codex, Claude
