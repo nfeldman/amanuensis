@@ -51,7 +51,7 @@ from .manifest import (
 from .readback import ProjectionVerifier, finding_page, write_contract
 from .renderers import RenderResult
 from .slugs import matrix_page, subsystem_page
-from .xref import XrefIndex, resolve_all
+from .xref import XrefIndex, resolve_all, resolve_text
 
 PageFn = Callable[[], RenderResult]
 
@@ -287,6 +287,7 @@ class Materializer:
 
             # Render each page if sources changed.
             rendered: list[str] = []
+            fresh: dict[str, str] = {}
             for p in plan:
                 try:
                     text, sources = p.build()
@@ -302,6 +303,7 @@ class Materializer:
                     self.summary.ok = False
                     continue
                 new_hash = sha256_bytes(text.encode("utf-8"))
+                fresh[p.path] = text
                 prev = self.manifest.page(p.path)
                 abs_out = self.output / p.path
                 # Force re-render if version bumped.
@@ -332,7 +334,25 @@ class Materializer:
             # added → IDs previously unresolved now link).
             index = self._build_xref_index(conn, plan)
             alive = {p.path for p in plan}
-            self.summary.xref_updates = resolve_all(self.output, alive, index)
+            # An unchanged page on disk carries the links the last run
+            # resolved, and the resolver leaves an ID that is already linked
+            # alone. When an ID's target moved since — a finding resolved
+            # since, so its record left findings.md for resolved-findings.md —
+            # the page would keep pointing at the anchor that left. Put the
+            # renderer's fresh output, linked against today's index, wherever
+            # that differs from the page on disk. Each such page counts as an
+            # xref update; resolve_all then finds nothing left to change in it.
+            relinked = 0
+            for path in alive.difference(rendered):
+                abs_out = self.output / path
+                text = fresh.get(path)
+                if text is None or not abs_out.is_file():
+                    continue
+                linked = resolve_text(text, path, index)
+                if abs_out.read_text() != linked:
+                    abs_out.write_text(linked)
+                    relinked += 1
+            self.summary.xref_updates = relinked + resolve_all(self.output, alive, index)
 
             # Retire pages that used to exist but no longer have a plan.
             self.summary.pages_retired = prune_retired(

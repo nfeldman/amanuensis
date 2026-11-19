@@ -57,8 +57,21 @@ def _relative(from_rel: str, to_rel: str) -> str:
 
 def resolve_file(abs_path: Path, rel_path: str, index: XrefIndex) -> bool:
     """Rewrite IDs in a file. Returns True if the file changed."""
-    text = abs_path.read_text()
-    original = text
+    original = abs_path.read_text()
+    text = resolve_text(original, rel_path, index)
+    if text != original:
+        abs_path.write_text(text)
+        return True
+    return False
+
+
+def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
+    """Link every known bare ID in one page's rendered Markdown.
+
+    An ID already inside a Markdown link is left alone, so this must run over
+    a renderer's fresh output: run over a page it has already resolved, it
+    keeps whatever target the ID had then.
+    """
 
     # Protect fenced and inline code by replacing with placeholders.
     placeholders: list[str] = []
@@ -101,11 +114,7 @@ def resolve_file(abs_path: Path, rel_path: str, index: XrefIndex) -> bool:
     for i in reversed(range(len(placeholders))):
         saved = placeholders[i]
         text = text.replace(f"\x00{i}\x00", saved)
-
-    if text != original:
-        abs_path.write_text(text)
-        return True
-    return False
+    return text
 
 
 def resolve_all(output_root: Path, rel_paths: Iterable[str], index: XrefIndex) -> int:
