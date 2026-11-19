@@ -410,7 +410,7 @@ def seed(storage: Path, entry_point: str) -> None:
             ("domain-knowledge", "Which branch is canonical?", "answered"),
         ],
     )
-    # The `entries`-derived stale marker must survive the rewrite (§11.3).
+    # A stale `entries` row, which publishes nothing since B04-3.
     cur.execute(
         "INSERT INTO entries (id, tier, subsystem_id, source_path, content_hash,"
         " ref_sha, confidence, stale, stale_since, stale_reason)"
@@ -613,11 +613,6 @@ def section(text: str, heading: str, level: int = 2) -> str:
             break
         body.append(line)
     return "\n".join(body)
-
-
-def stale_entry_marker(entry_id: str, tier: int) -> str:
-    token = hashlib.sha256(f"{entry_id}:{tier}".encode()).hexdigest()
-    return f"<!-- amanuensis:stale-entry:{token} -->"
 
 
 def corpus(docs: Path, suffix: str) -> str:
@@ -1246,18 +1241,13 @@ def main() -> int:
 
         check("one route into each of the four lenses", lens_routes)
 
-        def stale_markers() -> str | None:
-            marker = stale_entry_marker("B-01-overview", 1)
+        def no_entries_marker() -> str | None:
             for suffix, label in ((".md", "Markdown"), (".html", "HTML")):
-                count = corpus(docs, suffix).count(marker)
-                if count != 1:
-                    return (
-                        f"the entries-derived stale marker appears {count} times in the"
-                        f" {label} corpus, not exactly once"
-                    )
+                if "amanuensis:stale-entry:" in corpus(docs, suffix):
+                    return f"the {label} corpus carries a retired `entries` stale marker (B04-3)"
             return None
 
-        check("the entries-derived stale marker survives, exactly once per corpus", stale_markers)
+        check("no retired `entries` stale marker is published", no_entries_marker)
 
         # -- an absent thesis section --------------------------------------
         missing_storage, missing_error = seeded(root, "missing", ENTRY_POINT_NO_THESIS)

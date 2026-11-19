@@ -65,7 +65,6 @@ from .readback import (
     reconciliation_standing,
     resolve_workspace,
     revision_resolves,
-    stale_marker,
     workspace_is_bound,
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page
@@ -1029,7 +1028,6 @@ def render_index(
         " ORDER BY verified_at DESC, rowid DESC LIMIT 1",
     )
 
-    stale_rows = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
     latest_session = row(
         conn,
         "SELECT intent, started_at, ended_at FROM sessions ORDER BY started_at DESC LIMIT 1",
@@ -1189,10 +1187,6 @@ def render_index(
         "",
     ]
 
-    # Secondary apparatus.  The `entries`-derived stale markers stay here until
-    # `stale.md` carries the ledger-derived ones (§11.3): read-back requires
-    # exactly one marker per stale `entries` row in each format, and nothing
-    # above may depend on them.
     if latest_session:
         out += [
             "## Latest session",
@@ -1205,7 +1199,6 @@ def render_index(
             ),
             "",
         ]
-    out += [stale_marker(str(e["id"]), int(e["tier"])) for e in stale_rows]
 
     text = "\n".join(out) + "\n"
     # Over the page as published, not over the thesis alone. C32's rule is about
@@ -1227,7 +1220,6 @@ def render_index(
         **_db_source("index:unresolved", unresolved),
         **_db_source("index:decisions", decisions),
         **_db_source("index:verification", verification or {}),
-        **_db_source("index:stale-objects", stale_rows),
         **_db_source("index:session", latest_session or {}),
         **_db_source("index:identity", {"project_name": name}),
         **_prose_source(storage, THESIS_SOURCE),

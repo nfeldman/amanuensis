@@ -169,10 +169,10 @@ def concern_coverage_heatmap(conn: sqlite3.Connection) -> str:
 def staleness_map(conn: sqlite3.Connection) -> str:
     """Bar chart of stale entries per subsystem.
 
-    An empty result is reported as absent measurement, not as health. The
-    staleness columns live on `entries`, and a projection cannot tell a
-    conspectus with nothing stale from one where nothing ever recorded
-    staleness — so it must not assert the stronger of the two.
+    An empty result is reported as absent measurement, not as health: a
+    projection cannot tell a conspectus with nothing stale from one where
+    nothing ever recorded staleness, so it must not assert the stronger of
+    the two. Staleness is read from `file_ledger`.
     """
     # The materializer reads databases it does not own and may run against a
     # store written before staleness moved onto the ledger. A missing column is

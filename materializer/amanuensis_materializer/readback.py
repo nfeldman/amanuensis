@@ -74,17 +74,12 @@ def finding_page(resolution_state: str | None) -> str | None:
 #: accepts raw HTML from the Markdown bytes only for these, so a marker kind
 #: added here reaches both corpora and one added only to a renderer is stripped
 #: out of the HTML and reported by the state axis as absent (§11.3).
-MARKER_KINDS: tuple[str, ...] = ("finding", "stale-entry", "ledger-stale", "carried")
+MARKER_KINDS: tuple[str, ...] = ("finding", "ledger-stale", "carried")
 
 
 def finding_marker(finding_id: str) -> str:
     token = hashlib.sha256(finding_id.encode("utf-8")).hexdigest()
     return f"<!-- amanuensis:finding:{token} -->"
-
-
-def stale_marker(entry_id: str, tier: int) -> str:
-    token = hashlib.sha256(f"{entry_id}:{tier}".encode()).hexdigest()
-    return f"<!-- amanuensis:stale-entry:{token} -->"
 
 
 # Where a stale ledger row is recorded, and under which heading (spec §6.1,
@@ -947,7 +942,6 @@ class ProjectionVerifier:
         conn = open_ro(self.storage / "memory.db")
         try:
             findings = rows(conn, "SELECT finding_id FROM findings ORDER BY finding_id")
-            stale = rows(conn, "SELECT id, tier FROM entries WHERE stale=1 ORDER BY id, tier")
             mismatches.extend(self._finding_partition_census(conn, projection))
             mismatches.extend(self._ledger_stale_census(conn, projection))
             mismatches.extend(self._locus_index_census(conn, projection))
@@ -972,18 +966,6 @@ class ProjectionVerifier:
                             "object_type": "finding" if label == "markdown" else "finding-html",
                             "object_id": str(finding["finding_id"]),
                             "detail": f"expected exactly one {label} state marker, found {count}",
-                        }
-                    )
-            for stale_row in stale:
-                marker = stale_marker(str(stale_row["id"]), int(stale_row["tier"]))
-                count = format_text.count(marker)
-                if count != 1:
-                    mismatches.append(
-                        {
-                            "axis": "state",
-                            "object_type": "stale-entry" if label == "markdown" else "stale-entry-html",
-                            "object_id": f"{stale_row['id']}:{stale_row['tier']}",
-                            "detail": f"expected exactly one {label} stale marker, found {count}",
                         }
                     )
 
@@ -1239,12 +1221,12 @@ class ProjectionVerifier:
     ) -> list[dict[str, str]]:
         """Every obligation-bearing stale ledger row, recorded once (§11.3).
 
-        The `entries`-derived marker check in `verify` is unchanged and stays
-        beside this one.  It could never turn red: no code path writes that
-        table, so its denominator is zero (finding B03-2, recorded in
-        `schema.sql`).  `file_ledger` is populated by construction — a subsystem
-        cannot leave scoping without rows in it — so this axis has a
-        denominator, and deleting one record turns it red (VP4).
+        This replaced an `entries`-derived marker check, retired on 2026-11-19
+        (finding B04-3): no code path writes `entries`, so that check's
+        denominator was always zero (finding B03-2, recorded in `schema.sql`).
+        `file_ledger` is populated by construction — a subsystem cannot leave
+        scoping without rows in it — so this axis has a denominator, and
+        deleting one record turns it red (VP4).
 
         Three properties, each able to turn the state axis red on its own:
 

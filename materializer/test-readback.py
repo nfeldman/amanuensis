@@ -45,11 +45,11 @@ def seed(storage: Path) -> None:
            VALUES ('B01-1', 'open', 'fixture', 'readback')"""
     )
     db.execute(
-        """INSERT INTO entries
-             (id, tier, subsystem_id, source_path, content_hash, ref_sha,
-              confidence, stale, stale_since, stale_reason)
-           VALUES ('B-01-overview', 1, 'B-01', 'survey.md', 'hash', 'fixture',
-                   'verified', 1, datetime('now'), 'fixture-drift')"""
+        """INSERT INTO file_ledger
+             (subsystem_id, file_path, why_in_scope, classification, ref_sha,
+              stale, stale_since, stale_reason)
+           VALUES ('B-01', 'src/reader.ts', 'fixture', 'examined', 'fixture',
+                   1, datetime('now'), 'git-drift')"""
     )
     db.commit()
     db.close()
@@ -121,16 +121,16 @@ def main() -> None:
 
         # VP4 red arm 3: a stale-state marker is state correspondence, not a
         # link/page coverage question.
-        index = docs / "index.md"
-        body = index.read_text()
-        stale_line = next(line for line in body.splitlines() if "amanuensis:stale-entry:" in line)
-        index.write_text(body.replace(stale_line + "\n", "", 1))
+        stale_page = docs / "stale.md"
+        body = stale_page.read_text()
+        stale_line = next(line for line in body.splitlines() if "amanuensis:ledger-stale:" in line)
+        stale_page.write_text(body.replace(stale_line + "\n", "", 1))
         missing_stale = run(storage, "--readback-only", expect=1)
         assert_axes(missing_stale, state=False, coverage=True, content=False)
         assert any(
-            m["axis"] == "state" and m["object_type"] == "stale-entry"
+            m["axis"] == "state" and m["object_type"] == "ledger-stale"
             for m in missing_stale["mismatches"]
-        )
+        ), missing_stale["mismatches"]
 
         run(storage, "--clean-publish")
 

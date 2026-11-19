@@ -23,8 +23,8 @@ Turns red when:
     lands in no section at all;
   - deleting one stale record leaves the state read-back axis green — the axis
     the `entries`-derived check could never turn red (VP4);
-  - the `entries`-derived stale marker check is dropped, or has itself stopped
-    being able to turn the state axis red;
+  - a stale `entries` row still publishes a marker: no code path writes that
+    table, so the check that read those markers back was retired (B04-3);
   - the gate does not run in CI.
 
 False green it cannot exclude: every number here is read from one store that
@@ -236,8 +236,8 @@ def seed(storage: Path, *, ledger: bool = True) -> None:
         "INSERT INTO finding_resolution_events (finding_id, resolution_state,"
         " rationale, session_id) VALUES ('B01-1', 'open', 'fixture', 'p4')"
     )
-    # The `entries`-derived stale marker must survive the rewrite (§11.3), and
-    # its count must never appear in a published freshness reading (§11.2).
+    # Stale `entries` rows: their count must never appear in a published
+    # freshness reading (§11.2), and they publish no marker (B04-3).
     cur.executemany(
         "INSERT INTO entries (id, tier, subsystem_id, source_path, content_hash,"
         " ref_sha, confidence, stale, stale_since, stale_reason)"
@@ -433,10 +433,8 @@ def main() -> int:
         pass
 
     ledger_mark: Callable[[str, str], str] | None = None
-    entry_mark: Callable[[str, int], str] | None = None
     if readback is not None:
         ledger_mark = getattr(readback, "ledger_stale_marker", None)
-        entry_mark = getattr(readback, "stale_marker", None)
 
     def exposes_ledger_marker() -> str | None:
         if ledger_mark is None:
@@ -460,21 +458,6 @@ def main() -> int:
         return None
 
     check("read-back exposes ledger_stale_marker", exposes_ledger_marker)
-
-    def keeps_entries_marker() -> str | None:
-        if entry_mark is None:
-            return (
-                "the `entries`-derived stale_marker(entry_id, tier) was removed from"
-                " amanuensis_materializer/readback.py; §11.3 keeps it unchanged"
-            )
-        legacy = entry_mark("B-01-legacy-0", 1)
-        if not isinstance(legacy, str) or "<!--" not in legacy:
-            return "stale_marker no longer returns an opaque comment"
-        if ledger_mark is not None and legacy == ledger_mark("B-01-legacy-0", "1"):
-            return "the entries-derived and ledger-derived markers are indistinguishable"
-        return None
-
-    check("read-back keeps the entries-derived stale marker", keeps_entries_marker)
 
     root = Path(tempfile.mkdtemp(prefix="p4-ledger-freshness-"))
     try:
@@ -794,31 +777,20 @@ def main() -> int:
 
         check("deleting one stale record turns the state axis red", deleting_a_record_turns_state_red)
 
-        def entries_axis_still_red_capable() -> str | None:
-            if entry_mark is None:
-                return "the entries-derived marker is unavailable"
-            marker = entry_mark("B-01-legacy-0", 1)
-            page = next(
-                (p for p in sorted(docs.rglob("*.md")) if marker in (read(p) or "")), None
-            )
-            if page is None:
+        def entries_rows_publish_no_marker() -> str | None:
+            carrying = [
+                str(p.relative_to(docs))
+                for p in sorted(docs.rglob("*"))
+                if p.suffix in (".md", ".html") and "amanuensis:stale-entry:" in (read(p) or "")
+            ]
+            if carrying:
                 return (
-                    "no published Markdown page carries the entries-derived stale marker,"
-                    " so that check has lost its denominator"
+                    "a stale `entries` row still publishes a marker, which nothing reads"
+                    f" back (B04-3): {', '.join(carrying[:3])}"
                 )
-            body = page.read_text()
-            line = next(candidate for candidate in body.splitlines() if marker in candidate)
-            page.write_text(body.replace(line + "\n", "", 1))
-            try:
-                verified = publish(storage, "--readback-only")
-                axes = verified.get("axes") or {}
-                if (axes.get("state") or {}).get("ok", True):
-                    return "the state axis stayed green after an entries stale marker was deleted"
-            finally:
-                page.write_text(body)
             return None
 
-        check("the entries-derived stale check is still red-capable", entries_axis_still_red_capable)
+        check("stale `entries` rows publish no marker", entries_rows_publish_no_marker)
 
         # -- the honest empty state -----------------------------------------
         empty_storage, empty_error = seeded(root, "empty", ledger=False)
