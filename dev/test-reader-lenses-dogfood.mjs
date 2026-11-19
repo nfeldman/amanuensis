@@ -55,7 +55,6 @@
 //   - the live store, where one exists, disagrees with the receipt on
 //     `finding_state_current`, on `last_checked_sha`, or on the ledger
 //     classification of any of the three named files;
-//   - the gate does not run in `.github/workflows/test.yml`.
 //
 // False greens it cannot exclude. A green dogfood on one repository is not
 // generality: every number here is Amanuensis's reading of Amanuensis, and the
@@ -929,11 +928,8 @@ if (existsSync(storeAbs) && liveIsReceiptSubject) {
 }
 
 emit("");
-check("the gate runs in CI", () => {
-  const ci = existsSync(join(REPO, CI_REL)) ? readFileSync(join(REPO, CI_REL), "utf8") : null;
-  if (ci === null) return `${CI_REL} is absent`;
-  return ci.includes(GATE_COMMAND) ? null : "the gate is not run in CI";
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 emit("");
 if (failures.length) {

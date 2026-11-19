@@ -54,7 +54,6 @@
 //   average the page shares for the totals               → totals
 //   --record appends a duplicate instead of replacing    → record arm
 //   --record leaves a replaced entry in its old position → record arm
-//   drop the workflow step                               → the last assertion
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -277,13 +276,8 @@ if (!Array.isArray(entries) || entries.map((e) => e.label).join() !== "two,one")
   red("--record did not replace an existing label and move it to the end");
 }
 
-// 4. The gate is listed in the workflow beside the other dev gates.
-const workflow = existsSync(join(REPO, WORKFLOW_REL)) ? readFileSync(join(REPO, WORKFLOW_REL), "utf8") : "";
-const steps = workflow.split("\n").filter((line) => /^\s+run:\s/.test(line));
-const listed = steps.filter((line) => line.includes("node dev/test-reader-measure.mjs"));
-if (listed.length !== 1) red(`${WORKFLOW_REL} lists the gate ${listed.length} times, expected once`);
-const neighbours = steps.filter((line) => line.includes("node dev/test-carried-finding-references.mjs"));
-if (neighbours.length !== 1) red(`${WORKFLOW_REL} no longer lists its neighbouring dev gate`);
+// 4. Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 // 5. The recorded "before" entry exists and is shaped by this packet.
 let recorded = null;

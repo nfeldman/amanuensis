@@ -35,7 +35,6 @@
 //     or one whose row belongs to a different archive or a different finding;
 //   - its count differs from the `carry_runs` row's `expected_count` or
 //     `imported_count`, or from the rows that run actually wrote;
-//   - this gate does not run in `.github/workflows/test.yml`.
 //
 // Must-stay-green control (§8, every gate names one): the committed receipt at
 // HEAD — all 22 ids present, every `carried_id` resolving, 22 = 22 = 22 — is
@@ -61,7 +60,6 @@
 //   change a record's carried_id                     → A6 (carried)
 //   change the receipt's count, or a carry_runs count → A5/A7 (counts)
 //   relabel the receipt's archived_store_id          → A2 (archive)
-//   drop the gate from .github/workflows/test.yml    → A8 (ci)
 //   weaken evaluateReceipt so any of those passes    → the selectivity arm
 
 import { spawnSync } from "node:child_process";
@@ -586,15 +584,8 @@ const storeArm = live === null || live.unreadable ? null : live;
 checked += 7;
 for (const failure of evaluateReceipt({ archive, receipt, store: storeArm })) failures.push(failure);
 
-// A8 — this gate runs in CI.
-checked += 1;
-{
-  const workflow = join(REPO, CI_REL);
-  if (!existsSync(workflow)) record("ci", `${CI_REL} is absent from the tree`);
-  else if (!readFileSync(workflow, "utf8").includes(GATE_COMMAND)) {
-    record("ci", `${CI_REL} does not run \`${GATE_COMMAND}\``);
-  }
-}
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 // The selectivity arm.
 for (const [label, expected, seed] of SEEDED) {

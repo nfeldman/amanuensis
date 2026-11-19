@@ -14,8 +14,6 @@
 // What a reviewer should sabotage, and what must go red:
 //   revert docs/ or a receipt                             → the sub-gate it binds
 //   decide a carried record by editing the receipt        → P10 / D0 or P11 / A1
-//   drop the server build from the roadmap job, or move it
-//     after the carried-references step                   → the workflow check
 //   restore the old thesis heading and republish          → the thesis check
 //   edit the thesis text                                  → the thesis check
 //   drop the runtime boundary table and republish         → the architecture check
@@ -23,7 +21,6 @@
 //   rerun the measure over other docs, or drop `recovered` → the measure check
 //   leave a carried record unaccounted for in the progress
 //     record, or mark it blocked                          → the progress check
-//   drop this gate's workflow step                        → the last assertion
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -107,49 +104,6 @@ function runSubGates() {
       red(`${gate.path} is red (${how})`);
     }
     console.log(`  green  ${gate.id}: ${gate.path}`);
-  }
-}
-
-/** Each job's steps, as the text of each step, in the order the workflow runs them. */
-function workflowJobs(text) {
-  const jobs = new Map();
-  let job = null;
-  let inJobs = false;
-  for (const line of text.split("\n")) {
-    if (/^\S/.test(line)) {
-      inJobs = /^jobs:/.test(line);
-      job = null;
-      continue;
-    }
-    if (!inJobs) continue;
-    const jobHeader = line.match(/^ {2}([A-Za-z0-9_-]+):\s*$/);
-    if (jobHeader) {
-      job = [];
-      jobs.set(jobHeader[1], job);
-      continue;
-    }
-    if (!job || /^\s*#/.test(line)) continue;
-    if (/^ {6}- /.test(line)) job.push(line);
-    else if (job.length) job[job.length - 1] += `\n${line}`;
-  }
-  return jobs;
-}
-
-function checkWorkflow(text) {
-  const jobs = [...workflowJobs(text)];
-  const owner = jobs.find(([, steps]) => steps.some((step) => step.includes(`node ${CARRIED_GATE}`)));
-  if (!owner) red(`no job in ${WORKFLOW} runs ${CARRIED_GATE}`);
-  const [jobName, steps] = owner;
-  const at = steps.findIndex((step) => step.includes(`node ${CARRIED_GATE}`));
-  const before = steps.slice(0, at);
-  const inServer = (step) =>
-    /working-directory:\s*mcp-server\b/.test(step) || /cd mcp-server\b/.test(step);
-  const ran = (command) => before.some((step) => inServer(step) && new RegExp(`\\brun:.*\\b${command}\\b`).test(step));
-  if (!ran("npm ci")) {
-    red(`job ${jobName} runs ${CARRIED_GATE} with no earlier npm ci step in mcp-server`);
-  }
-  if (!ran("npm run build")) {
-    red(`job ${jobName} runs ${CARRIED_GATE} with no earlier npm run build step in mcp-server`);
   }
 }
 
@@ -294,21 +248,18 @@ function checkProgress() {
   if (bad.length) red(`restore-progress.json gives no terminal outcome for ${bad.join(", ")}`);
 }
 
-function checkListed(workflow) {
-  if (!workflow.includes(`run: node ${SELF}`)) red(`${SELF} is not listed in ${WORKFLOW}`);
-}
 
 function main() {
   runSubGates();
-  const workflow = committedOrRed(WORKFLOW);
-  checkWorkflow(workflow);
+  // checkWorkflow and checkListed asserted the CI workflow's contents. Not run
+  // in CI: CI covers product and packaging only (owner decision 2026-11-06,
+  // 6c6d789).
   checkThesis();
   checkRuntimeBoundary();
   checkFindings();
   checkMeasure();
   checkCensus();
   checkProgress();
-  checkListed(workflow);
 }
 
 try {

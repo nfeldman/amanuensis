@@ -414,13 +414,8 @@ async function main() {
       : `it exited ${run.status}; the carried lookup is a fallback for an id the findings table does not hold, never an override of a live answer`;
   });
 
-  check("CI1 this gate runs in CI (spec.md §8)", () => {
-    const workflow = join(REPO, ".github", "workflows", "test.yml");
-    if (!existsSync(workflow)) return ".github/workflows/test.yml is absent";
-    return readFileSync(workflow, "utf8").includes("dev/test-carried-finding-references.mjs")
-      ? null
-      : "the workflow does not run this gate, so a break lands on a branch no run reports";
-  });
+  // Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+  // so this gate no longer asserts that it is listed there.
 
   rmSync(scratch, { recursive: true, force: true });
 }

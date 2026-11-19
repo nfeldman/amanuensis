@@ -93,7 +93,6 @@
 //     historical pair goes quiet, an arm that passed over it turns red, or a
 //     receipt that claims a store identity it does not have is excused instead
 //     of judged;
-//   - the gate does not run in `.github/workflows/test.yml`.
 //
 // Reports `cannot run` with exit 2 when, and only when, the committed depth
 // receipt does not describe the store the coverage receipt describes — the
@@ -1500,11 +1499,8 @@ check("a receipt relabelled to claim P17's store is judged red, and the same con
 });
 
 emit("");
-check("the gate runs in CI", () => {
-  const ci = existsSync(join(REPO, CI_REL)) ? readFileSync(join(REPO, CI_REL), "utf8") : null;
-  if (ci === null) return `${CI_REL} is absent`;
-  return ci.includes(GATE_COMMAND) ? null : "the gate is not run in CI";
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 emit("");
 // RED wins over `cannot run`: an arm that does not read P17's sets keeps firing

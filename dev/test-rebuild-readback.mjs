@@ -40,7 +40,6 @@
 //   - an A0 fixture under `dev/conspectus/` no longer hashes to what the live
 //     run recorded (§12.3: the rebuild changes the live store and `docs/`, never
 //     the historical baseline);
-//   - the gate does not run in `.github/workflows/test.yml`.
 //
 // False greens it cannot exclude. The procedure arm runs against a throwaway
 // workspace whose project identity is a local path, not this repository's
@@ -1212,11 +1211,8 @@ await check("the A0 fixture under dev/conspectus/ is unchanged (§12.3)", () => 
   return drifted.length ? drifted.join("; ") : null;
 });
 
-await check("the gate runs in CI", () => {
-  const ci = readText(join(REPO, CI_REL));
-  if (ci === null) return `${CI_REL} is absent`;
-  return ci.includes("node dev/test-rebuild-readback.mjs") ? null : "the gate is not run in CI";
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 // ---------------------------------------------------------------------------
 for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true });

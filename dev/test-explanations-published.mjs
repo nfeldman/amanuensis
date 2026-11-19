@@ -40,7 +40,6 @@
 //   revert docs/ or a receipt                               → the sub-gate it binds
 //   drop or rename the `explained` entry                    → the measure check
 //   edit a figure in the last measure entry                 → the measure check
-//   drop this gate's workflow step                          → the last assertion
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -344,9 +343,8 @@ function checkMeasure() {
   }
 }
 
-function checkListed() {
-  if (!committedOrRed(WORKFLOW).includes(`run: node ${SELF}`)) red(`${SELF} is not listed in ${WORKFLOW}`);
-}
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so `checkListed` was removed: this gate no longer asserts that it is listed there.
 
 function main() {
   const vocab = vocabulary();
@@ -358,7 +356,6 @@ function main() {
   runSubGates();
   checkMeasure();
   checkProgress(texts, vocab);
-  checkListed();
 }
 
 try {

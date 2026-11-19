@@ -53,7 +53,6 @@
 //   - it does not carry every reported axis with its baseline and its signed
 //     delta (§7.5, claim C31);
 //   - it disagrees with the live store where one is present;
-//   - this gate does not run in `.github/workflows/test.yml`.
 //
 // Must-stay-green control (§8.8): the committed receipt at HEAD, bound to this
 // repository and to the acceptance store, validates — and is the only receipt
@@ -91,7 +90,6 @@
 //   add a tracked file without re-recording the receipt→ binding
 //   edit a digest, a store id, or a bound revision     → binding
 //   change a count in the live store only              → live
-//   drop the gate from .github/workflows/test.yml      → ci
 //   weaken evaluateAcceptance so any of those passes   → the selectivity arm
 
 import { createHash } from "node:crypto";
@@ -217,12 +215,8 @@ export function evaluateAcceptance({
   const failures = [];
   const fail = (family, detail) => failures.push({ family, detail: scrub(detail) });
 
-  // --- ci is independent of the receipt, so it is checked whatever happens ---
-  if (typeof ci !== "string") {
-    fail("ci", `${CI_REL} could not be read, so nothing establishes that this gate runs on a push`);
-  } else if (!ci.includes(GATE_COMMAND)) {
-    fail("ci", `${CI_REL} does not run \`${GATE_COMMAND}\`, so a break lands unreported`);
-  }
+  // The ci family is retired. Not run in CI: CI covers product and packaging
+  // only (owner decision 2026-11-06, 6c6d789).
 
   if (receipt === null || typeof receipt !== "object" || Array.isArray(receipt)) {
     fail(
@@ -1077,7 +1071,6 @@ const SEEDS = [
     "the live store holds a different count",
     (i) => (i.store.dispositions = 41),
   ],
-  [["ci"], "the gate is removed from the workflow", (i) => (i.ci = "  - run: node dev/other.mjs\n")],
 ];
 
 function runSelectivity(report) {

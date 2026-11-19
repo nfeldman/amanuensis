@@ -764,10 +764,8 @@ async function main() {
     return touched ? `the lane does not modify these, and ${touched} changed` : null;
   });
 
-  await check("L1", () => {
-    const ci = readFileSync(join(repo, CI_REL), "utf8");
-    return ci.includes(`node ${GATE_REL}`) ? null : `${CI_REL} does not run ${GATE_REL}`;
-  });
+  // Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+  // so this gate no longer asserts that it is listed there.
 }
 
 function pathToUrl(path) {

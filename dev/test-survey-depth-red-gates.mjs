@@ -42,7 +42,6 @@
 //     (D9/codex, §1.2);
 //   - `dev/record-survey-depth-baseline.mjs --check` exits 0 with the archived
 //     store unreadable rather than exiting 2 (§7.2);
-//   - either gate is absent from `.github/workflows/test.yml`.
 //
 // False greens it cannot exclude. The **reported** axes are not asserted here at
 // all, by design: field notes, evidence rows, vocabulary counts and open
@@ -1395,13 +1394,8 @@ if (existsSync(ARCHIVE_PATH)) {
 // CI
 // ---------------------------------------------------------------------------
 emit("");
-check("both gates run in CI", () => {
-  const ci = existsSync(join(REPO, CI_REL)) ? readFileSync(join(REPO, CI_REL), "utf8") : null;
-  if (ci === null) return `${CI_REL} is absent`;
-  const missing = [DEPTH_GATE_COMMAND, GATE_COMMAND].filter((command) => !ci.includes(command));
-  if (missing.length) return `${CI_REL} does not run ${missing.join(" or ")}`;
-  return null;
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 finish(
   "the six blocking predicates seeded independently, the must-stay-green control, the gate's own " +

@@ -33,7 +33,6 @@
 //   rewrite the progress file through JSON.stringify      → the byte-identity check
 //   rewrite a key §4.2 does not name, or miss one it does → the byte-identity check
 //   drop `successor_id` from the depth recorder           → the recorder seam check
-//   drop the workflow step                                → the last assertion
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -1221,19 +1220,8 @@ await check(`${UNFILLED_REL} exists, is tracked, and holds a commit and a census
   return Array.isArray(census.unfilled_slots) ? null : "unfilled_slots is not a list";
 });
 
-await check("the gate is listed in the workflow beside its neighbours", () => {
-  let text = "";
-  try {
-    text = readFileSync(join(REPO, WORKFLOW_REL), "utf8");
-  } catch {
-    return `${WORKFLOW_REL} is not readable`;
-  }
-  const start = text.indexOf("\n  roadmap:");
-  const end = text.indexOf("\n  pecia-defects:", start);
-  const job = start >= 0 && end > start ? text.slice(start, end) : "";
-  if (!job.includes("run: node dev/test-reader-measure.mjs")) return "the neighbouring gate is not in the roadmap job";
-  return job.includes("run: node dev/test-republish-chain.mjs") ? null : "the roadmap job does not run this gate";
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 cleanRoots();
 

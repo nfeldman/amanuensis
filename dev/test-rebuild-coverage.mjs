@@ -39,7 +39,6 @@
 //     reason for being isolated (GP24: fan-in asserts completeness);
 //   - the live store, when present, breaks any of those invariants, or has lost
 //     a subsystem, a claim or an edge the receipt records;
-//   - the gate does not run in `.github/workflows/test.yml`.
 //
 // False greens it cannot exclude. A claim's *truth* is not checked here and
 // cannot be: the record can require that a key type be read off the file it
@@ -883,11 +882,8 @@ if (existsSync(storeAbs) && liveIsReceiptSubject) {
 }
 
 emit("");
-check("the gate runs in CI", () => {
-  const ci = readText(join(REPO, CI_REL));
-  if (ci === null) return `${CI_REL} is absent`;
-  return ci.includes(GATE_COMMAND) ? null : "the gate is not run in CI";
-});
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 emit("");
 if (failures.length) {

@@ -34,7 +34,6 @@
 //   - the document does not name the gap the audit leaves open (B03-R2);
 //   - where the live store is readable, a reference the document declares
 //     answered does not in fact resolve through `dev/pecia-resolve-finding.mjs`;
-//   - this gate does not run in `.github/workflows/test.yml`.
 //
 // **Every denominator is read from a document other than the one under test.**
 // The eight records come from `.pecia/work.jsonl`, the Pecia projection. The
@@ -80,7 +79,6 @@
 //   remove B03-R2 from the document                  → gap
 //   record an outcome the live store contradicts     → outcome (store arm)
 //   break dev/pecia-resolve-finding.mjs for one id   → resolves (store arm)
-//   drop the gate from .github/workflows/test.yml    → ci
 //   weaken evaluateCarryAudit so any of those passes → the selectivity arm
 
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -832,15 +830,8 @@ if (live?.unreadable) {
   }
 }
 
-// The gate runs in CI.
-checked += 1;
-{
-  const workflow = join(REPO, CI_REL);
-  if (!existsSync(workflow)) record("ci", `${CI_REL} is absent from the tree`);
-  else if (!readFileSync(workflow, "utf8").includes(GATE_COMMAND)) {
-    record("ci", `${CI_REL} does not run \`${GATE_COMMAND}\``);
-  }
-}
+// Not run in CI: CI covers product and packaging only (owner decision 2026-11-06, 6c6d789),
+// so this gate no longer asserts that it is listed there.
 
 // The selectivity arm.
 for (const [label, expected, seed] of SEEDED) {
