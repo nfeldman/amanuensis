@@ -22,6 +22,13 @@ receipts carry the executable evidence, exact revisions, and current claim bound
 - Leave a symbolically linked skill in place at every scope, and stop reporting two
   links to the same checkout as one skill shadowing the other.
 - Tell the user to restart only the agents whose files changed.
+- Register the user-level server by the absolute path of the Node.js that ran the
+  installer and the package's server file, as source installations already did. A
+  bare `amanuensis-memory` was missing for agents started from a desktop app when
+  Node.js came from a version manager, and with a second Node.js on the agent's
+  `PATH` the server started but failed at its first database call. Existing
+  installations report `outdated` until `amanuensis upgrade`. Committed project
+  registrations keep the bare command.
 - Rewrite the README, installation guide, and package README around the one-command
   installation, with steps an agent can follow to set it up.
 - Validate evidence citations, repair commits, and claim keys when they are

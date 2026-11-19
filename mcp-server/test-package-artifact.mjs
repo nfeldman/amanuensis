@@ -9,6 +9,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -33,6 +34,63 @@ function run(command, args, options = {}) {
 
 const moduleDir = fileURLToPath(new URL(".", import.meta.url));
 const scratch = mkdtempSync(join(tmpdir(), "amanuensis-package-artifact-"));
+
+// A desktop app starts its agent with the system PATH, not the shell's, and
+// from an arbitrary directory. The user-level registration a packaged install
+// writes must start there and open the database, which a bare
+// `amanuensis-memory` on a version manager's PATH cannot.
+async function verifyUserLaunchWithoutShellPath(packageRoot) {
+  const home = join(scratch, "app-home");
+  const repository = join(scratch, "app-repository");
+  mkdirSync(home);
+  mkdirSync(repository);
+  run("git", ["init", "--quiet", "--initial-branch=main"], { cwd: repository });
+  const appPath = "/usr/bin:/bin";
+  const hostEnv = { HOME: home, PATH: appPath };
+  run(
+    process.execPath,
+    [join(packageRoot, "dist", "cli.js"), "install", "--client", "claude", "--mcp-only"],
+    { cwd: home, env: hostEnv },
+  );
+  const entry = JSON.parse(readFileSync(join(home, ".claude.json"), "utf8")).mcpServers?.[
+    "amanuensis-memory"
+  ];
+  assert(
+    entry && realpathSync(entry.command) === realpathSync(process.execPath),
+    `user registration does not name the installing Node.js: ${entry?.command}`,
+  );
+  assert(
+    entry.args?.[0] === join(realpathSync(packageRoot), "dist", "index.js"),
+    `user registration does not name the package's server file: ${entry.args?.[0]}`,
+  );
+  const client = new Client({ name: "packed-app-path-launch", version: "1" });
+  try {
+    await client.connect(
+      new StdioClientTransport({
+        command: entry.command,
+        args: entry.args,
+        cwd: "/",
+        env: { ...hostEnv, ...entry.env },
+      }),
+    );
+    const info = await client.callTool({
+      name: "get_project_info",
+      arguments: { workspace: repository },
+    });
+    assert(!info.isError, `binding failed: ${JSON.stringify(info.content)}`);
+    const session = await client.callTool({
+      name: "start_session",
+      arguments: { intent: "Packed launch with the system PATH" },
+    });
+    const value = session.structuredContent ?? JSON.parse(session.content[0].text);
+    assert(
+      !session.isError && value.ok !== false,
+      `database call failed: ${JSON.stringify(value)}`,
+    );
+  } finally {
+    await client.close();
+  }
+}
 
 async function verifyRelocatedMaterialization(server) {
   const bound = join(scratch, "bound-checkout");
@@ -195,12 +253,17 @@ try {
         "packed VS Code adapter did not use the installed bin",
       );
     } else {
+      // The printout is for one machine's host, so it names absolute paths.
       assert(
-        installed.stdout.includes('command: "amanuensis-memory"'),
-        "packed generic adapter did not print the installed bin",
+        installed.stdout.includes(
+          JSON.stringify(join(realpathSync(packageRoot), "dist", "index.js")),
+        ),
+        "packed generic adapter did not print the package's server file",
       );
     }
   }
+
+  await verifyUserLaunchWithoutShellPath(packageRoot);
 
   run(process.execPath, [join(moduleDir, "test-mcp-compatibility.mjs")], {
     cwd: moduleDir,

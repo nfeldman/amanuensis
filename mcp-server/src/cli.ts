@@ -176,9 +176,22 @@ function assertSafeRootPath(rootPath: string, target: string): void {
   }
 }
 
-function serverLaunch(): ServerLaunch {
+/**
+ * How a registration starts the server. A user-level registration, and the
+ * generic host printout, name the Node.js executable running this installer and
+ * the package's own server file. An agent started from a desktop app does not
+ * see the shell's PATH, so a bare command can be missing there or resolve to a
+ * different Node.js than the native database module was built for. A project
+ * registration that a team commits keeps the portable bare command when it
+ * comes from a package; from a source checkout it names the checkout.
+ *
+ * process.execPath is the resolved executable, never a link on PATH: a link
+ * such as mise's `lts` alias or Homebrew's `bin/node` can later point at a
+ * Node.js the package's native module was not built for.
+ */
+function serverLaunch(scope: InstallScope): ServerLaunch {
   const pkgRoot = resolve(moduleDir, "..");
-  if (existsSync(join(pkgRoot, "src", "cli.ts"))) {
+  if (scope === "user" || existsSync(join(pkgRoot, "src", "cli.ts"))) {
     return { command: process.execPath, args: [join(pkgRoot, "dist", "index.js")] };
   }
   return { command: SERVER_NAME, args: [] };
@@ -996,7 +1009,7 @@ function planJsonConfig(
     client === "claude" ? join(workspace, ".mcp.json") : join(workspace, ".vscode", "mcp.json");
   const rootKey = client === "claude" ? "mcpServers" : "servers";
   assertSafeRootPath(workspace, configPath);
-  const desired = serverEntry(client, serverLaunch());
+  const desired = serverEntry(client, serverLaunch("project"));
   planMkdir(dirname(configPath));
 
   if (!existsSync(configPath)) {
@@ -1065,7 +1078,7 @@ function planCodexConfig(
   const configPath =
     flags.scope === "user" ? join(root, "config.toml") : join(root, ".codex", "config.toml");
   assertSafeRootPath(root, configPath);
-  const desiredBlock = codexBlock(serverLaunch(), flags.scope, workspace);
+  const desiredBlock = codexBlock(serverLaunch(flags.scope), flags.scope, workspace);
   planMkdir(dirname(configPath));
   if (!existsSync(configPath)) {
     actions.push({
@@ -1250,7 +1263,7 @@ function planUserJsonConfig(
   const { actions } = segment;
   const configPath = userConfigPath(host);
   assertSafeRootPath(segment.root, configPath);
-  const desired = userServerEntry(host, serverLaunch());
+  const desired = userServerEntry(host, serverLaunch("user"));
   segment.planMkdir(dirname(configPath));
   if (!existsSync(configPath)) {
     actions.push({
@@ -1405,7 +1418,7 @@ function userRegistrationState(host: UserHost): RegistrationState {
       return isJsonObject(servers) && Object.hasOwn(servers, SERVER_NAME) ? "unmanaged" : "absent";
     }
     if (!codexEntryIsManaged(raw, entry)) return "unmanaged";
-    const desired = desiredCodexEntry(codexBlock(serverLaunch(), "user", homedir()));
+    const desired = desiredCodexEntry(codexBlock(serverLaunch("user"), "user", homedir()));
     return sameJson(entry, desired) ? "installed" : "outdated";
   }
   let servers: JsonObject;
@@ -1416,7 +1429,7 @@ function userRegistrationState(host: UserHost): RegistrationState {
   }
   const entry = servers[SERVER_NAME];
   if (entry === undefined) return "absent";
-  if (sameJson(entry, userServerEntry(host, serverLaunch()))) return "installed";
+  if (sameJson(entry, userServerEntry(host, serverLaunch("user")))) return "installed";
   return isManagedUserEntry(entry) ? "outdated" : "unmanaged";
 }
 
@@ -1454,7 +1467,7 @@ function hasAnyUserInstallation(host: UserHost): boolean {
 
 /** Whether the launcher a registration names can start on this machine. */
 function launcherAvailable(): boolean {
-  const launch = serverLaunch();
+  const launch = serverLaunch("user");
   if (!commandExists(launch.command)) return false;
   return launch.args.every((arg) => !isAbsolute(arg) || existsSync(arg));
 }
@@ -1647,7 +1660,7 @@ function hashRepairInput(hash: ReturnType<typeof createHash>, path: string): voi
 function repairPlanId(workspace: string): string {
   const hash = createHash("sha256");
   hash.update("amanuensis-doctor-repair/v1\0");
-  hash.update(codexBlock(serverLaunch(), "user", workspace));
+  hash.update(codexBlock(serverLaunch("user"), "user", workspace));
   hashRepairInput(hash, join(codexHome(), "config.toml"));
   hashRepairInput(hash, join(workspace, ".codex", "config.toml"));
   hashRepairInput(hash, join(workspace, ".agents", "skills", "amanuensis"));
@@ -1861,7 +1874,7 @@ function printNextSteps(
   operation: "install" | "upgrade" = "install",
 ): void {
   if (client === "generic") {
-    const launch = serverLaunch();
+    const launch = serverLaunch("user");
     console.log("");
     console.log("Register this local stdio server in your MCP host:");
     console.log(`  command: ${JSON.stringify(launch.command)}`);
@@ -2413,7 +2426,7 @@ function cmdStatus(argv: string[]): void {
     status: ok ? "ok" : "incomplete",
     version: packageVersion,
     node: process.versions.node,
-    launcher: { ...serverLaunch(), available: launcherReady },
+    launcher: { ...serverLaunch("user"), available: launcherReady },
     database,
     python: {
       command: python.command,
@@ -2426,7 +2439,7 @@ function cmdStatus(argv: string[]): void {
       : !database.ok
         ? `The database module (better-sqlite3) does not load: ${database.error}. Reinstall with \`npm install -g @gruetech/amanuensis\`, allowing its install script to run.`
         : !launcherReady
-          ? `The server launcher ${serverLaunch().command} cannot be found; reinstall the package with \`npm install -g @gruetech/amanuensis\`.`
+          ? `The server launcher ${serverLaunch("user").command} cannot be found; reinstall the package with \`npm install -g @gruetech/amanuensis\`.`
           : hosts.some((host) => host.registration === "outdated" || host.skill === "outdated")
             ? "Run `amanuensis upgrade`."
             : "Run `amanuensis install`.",
@@ -2446,7 +2459,7 @@ function cmdStatus(argv: string[]): void {
     console.log(
       `  Database module: ${database.ok ? "loads" : `does not load (${database.error})`}`,
     );
-    if (!launcherReady) console.log(`  Server launcher: ${serverLaunch().command} not found`);
+    if (!launcherReady) console.log(`  Server launcher: ${serverLaunch("user").command} not found`);
     console.log(
       `  Python: ${python.version ? `${python.version} (${python.command})` : `not found (${python.command})`}${report.python.ok ? "" : " — needed only to publish the human-readable map"}`,
     );

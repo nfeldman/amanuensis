@@ -10,6 +10,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -806,7 +807,13 @@ test("install sets up Claude Code and Copilot for every repository and leaves th
     assert(claude.mcpServers?.other?.command === "keep", "unrelated Claude server was lost");
     const claudeEntry = claude.mcpServers?.["amanuensis-memory"];
     assert(claudeEntry?.type === "stdio", "Claude entry is not stdio");
-    assert(claudeEntry.command === process.execPath, "Claude launcher is not durable");
+    // PATH's node is a link to the running executable, as mise's `lts` alias is.
+    // The link can later move to another Node.js, so the executable is named.
+    assert(claudeEntry.command === process.execPath, "Claude launcher is not the executable");
+    assert(
+      claudeEntry.args?.[0] === join(realpathSync(moduleDir), "dist", "index.js"),
+      "Claude launcher does not name the server file",
+    );
     assert(!claudeEntry.args?.includes("--workspace"), "Claude user entry pins a repository");
     assert(claudeEntry.env?.AMANUENSIS_ACTIVATION_CONTRACT === USER_CONTRACT, "contract missing");
     assert(backupsFor(claudeJson).length === 1, "Claude config was rewritten without a backup");

@@ -117,10 +117,11 @@ mise exec -- node mcp-server/dist/cli.js init \
   --client codex --scope user --mcp-only
 ```
 
-Use the appropriate `--client` value. In a source checkout the installer writes
-the absolute pinned Node executable and in-tree `dist/index.js` path, so a GUI
-host does not depend on the shell that ran `mise`. An installed npm package uses
-the `amanuensis-memory` bin instead.
+Use the appropriate `--client` value. A user-level registration names the
+absolute Node executable that ran the installer and the server's `dist/index.js`
+path, from a source checkout or an npm package alike, so a GUI host does not
+depend on the shell that ran `mise`. A project registration from an npm package
+names the portable `amanuensis-memory` bin instead, so it can be committed.
 
 ### Live global skill, versioned published skill
 

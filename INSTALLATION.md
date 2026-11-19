@@ -47,6 +47,10 @@ running, including the one that ran the installation, does not see the new serve
 - It adds one `amanuensis-memory` server entry to each agent's configuration and
   copies the `amanuensis` skill into each agent's skills directory. Every other
   entry and setting is preserved.
+- Each entry names, by absolute path, the Node.js that ran the installer and the
+  package's own server file. An agent started from a desktop app does not see your
+  shell's `PATH`, so it starts the same server, on the same Node.js the database
+  module was built for, as `amanuensis status` checks.
 - Before it rewrites a configuration file, it saves a timestamped copy beside it
   (`config.toml.bak.<time>`, `.claude.json.bak.<time>`, `mcp-config.json.bak.<time>`).
 - It writes nothing into any repository.
@@ -112,6 +116,15 @@ amanuensis upgrade
 agents named with `--client`. It replaces the skill with the package's copy, including
 removing files a newer release no longer ships. Restart the agents afterwards.
 
+After switching to another Node.js version, install the package again under it and
+run `amanuensis upgrade`. Version managers such as nvm, fnm, and mise keep global
+packages per Node.js version, so the `amanuensis` command is missing under the new
+one until then. The agents keep starting the server with the Node.js they were
+registered with for as long as that version stays installed, and `status` reports
+their registrations as `outdated` until `upgrade` points them at the new one.
+Homebrew's Node.js keeps the package across `brew upgrade node`, but the versioned
+executable a registration names is removed, so run `amanuensis upgrade` after it too.
+
 ```bash
 amanuensis uninstall --dry-run
 amanuensis uninstall
@@ -142,6 +155,12 @@ amanuensis init --client codex --scope project --dir /path/to/project
 
 `--client vscode` targets VS Code's per-workspace `.vscode/mcp.json`. The user-level
 Copilot installation above does not need it.
+
+Because these files are meant to be committed, a project installation from the npm
+package names the bare `amanuensis-memory` command rather than a path on one machine.
+Each person's agent must then find that command on its own `PATH`, which an agent
+started from a desktop app may not see. A project registration also takes precedence
+over the user-level one in Claude Code and Codex, so use one or the other.
 
 `--agent-instructions` also adds a short Amanuensis paragraph to the project's
 `CLAUDE.md` (Claude Code) or `AGENTS.md` (other clients). Without the flag, the
@@ -271,8 +290,10 @@ Codex after repair and verify the new task's binding with `get_project_info`.
 The release-candidate suite compares the source checkout with a clean installation of
 the exact packed npm tarball across two repositories. It checks repository identity,
 storage, configuration ownership, restart state, skill content, diagnosis and repair,
-upgrade, and uninstall for Codex. Absolute installation paths and source-versus-package
-launcher spelling are the only declared representation differences.
+upgrade, and uninstall for Codex. Absolute installation paths, including the
+launcher's, are the only declared representation differences. The package test also
+starts the user-level registration with only the system `PATH` and from `/`, and makes
+a database call through it.
 
 The separately dispatched published-package smoke covers Node.js 20 and 22 on Linux
 and macOS after publication. The real-host evidence for Codex covers `codex-cli-exec`
