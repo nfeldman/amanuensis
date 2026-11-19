@@ -770,6 +770,28 @@ t("reset_subsystem rejects short reason", () => {
   }
 });
 
+t("reset_subsystem never climbs: not from a status, and not from a parked one", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    startSession(ctx);
+    advanceTo(ctx, "B-01", "concerns");
+    const up = call("reset_subsystem", { id: "B-01", to_status: "mapped", reason: "skip the ladder" }, ctx);
+    assert(up.ok === false && up.error.includes("a reset only regresses"), `reset climbed: ${JSON.stringify(up)}`);
+    assert(readStatus(ctx, "B-01") === "concerns", "a refused reset moved the status");
+    call("update_subsystem_status", { id: "B-01", status: "deferred", defer_reason: "parked" }, ctx);
+    const parked = call("reset_subsystem", { id: "B-01", to_status: "adversarial", reason: "skip the ladder" }, ctx);
+    assert(
+      parked.ok === false && parked.error.includes("stands at 'concerns' (parked)"),
+      `a parked reset climbed: ${JSON.stringify(parked)}`,
+    );
+    // Re-running the phase it was parked at, or regressing below it, still works.
+    const same = call("reset_subsystem", { id: "B-01", to_status: "concerns", reason: "redo the concerns pass" }, ctx);
+    assert(same.ok !== false && readStatus(ctx, "B-01") === "concerns", `same-depth reset refused: ${JSON.stringify(same)}`);
+  } finally {
+    cleanup();
+  }
+});
+
 t("reset_subsystem to unmapped also clears file_ledger", () => {
   const { ctx, cleanup } = freshCtx();
   try {

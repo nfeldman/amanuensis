@@ -1281,7 +1281,7 @@ export function enforcePhasePrerequisites(
  * ladder was kept, which is let through as it always was rather than made to
  * re-answer for rungs it was never asked for.
  */
-function heldBeforeParking(db: DB, subsystemId: string): SubsystemStatus | null {
+export function heldBeforeParking(db: DB, subsystemId: string): SubsystemStatus | null {
   const row = db
     .prepare(
       `SELECT from_status FROM subsystem_status_transitions

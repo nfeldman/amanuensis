@@ -10,6 +10,7 @@ import {
 import {
   enforceForwardPrerequisites,
   enforceMonotonicTransition,
+  heldBeforeParking,
   readSubsystemStatus,
   recordStatusTransition,
   requireActiveSession,
@@ -150,35 +151,39 @@ export const subsystemTools: ToolDefinition[] = [
         ),
       );
 
-      // COALESCE on the UPDATE path: omitted priority leaves the
-      // prior value alone. Pass explicit priority=null in the future
-      // if we need a "clear it" path.
-      ctx.db
-        .prepare(
-          `INSERT INTO subsystems (id, name, status, layer, scope, jump_in_reading, notes, priority)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET
-             name=excluded.name,
-             status=excluded.status,
-             layer=COALESCE(excluded.layer, subsystems.layer),
-             scope=COALESCE(excluded.scope, subsystems.scope),
-             jump_in_reading=COALESCE(excluded.jump_in_reading, subsystems.jump_in_reading),
-             notes=COALESCE(excluded.notes, subsystems.notes),
-             priority=COALESCE(excluded.priority, subsystems.priority),
-             updated_at=datetime('now')`,
-        )
-        .run(id, name, status, layer, scope, jumpIn, notes, priority ?? null);
-      // The rung this write climbed, appended to the ladder. `upsert_subsystem`
-      // is a status writer as much as `update_subsystem_status` is, so a ladder
-      // that recorded only the latter would have a hole exactly where the
-      // second door is (slice-S3 F3/codex; slice-S6 F6/codex).
-      recordStatusTransition(ctx.db, {
-        subsystemId: id,
-        fromStatus: previousStatus,
-        toStatus: status,
-        tool: "upsert_subsystem",
-        sessionId: ctx.sessionId,
-      });
+      // The status and its rung are one write: a status committed without its
+      // rung would leave a parked subsystem with no recorded depth to resume from.
+      ctx.db.transaction(() => {
+        // COALESCE on the UPDATE path: omitted priority leaves the
+        // prior value alone. Pass explicit priority=null in the future
+        // if we need a "clear it" path.
+        ctx.db
+          .prepare(
+            `INSERT INTO subsystems (id, name, status, layer, scope, jump_in_reading, notes, priority)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(id) DO UPDATE SET
+               name=excluded.name,
+               status=excluded.status,
+               layer=COALESCE(excluded.layer, subsystems.layer),
+               scope=COALESCE(excluded.scope, subsystems.scope),
+               jump_in_reading=COALESCE(excluded.jump_in_reading, subsystems.jump_in_reading),
+               notes=COALESCE(excluded.notes, subsystems.notes),
+               priority=COALESCE(excluded.priority, subsystems.priority),
+               updated_at=datetime('now')`,
+          )
+          .run(id, name, status, layer, scope, jumpIn, notes, priority ?? null);
+        // The rung this write climbed, appended to the ladder. `upsert_subsystem`
+        // is a status writer as much as `update_subsystem_status` is, so a ladder
+        // that recorded only the latter would have a hole exactly where the
+        // second door is (slice-S3 F3/codex; slice-S6 F6/codex).
+        recordStatusTransition(ctx.db, {
+          subsystemId: id,
+          fromStatus: previousStatus,
+          toStatus: status,
+          tool: "upsert_subsystem",
+          sessionId: ctx.sessionId,
+        });
+      })();
       // §2.3's non-refusing half: an attachment whose revision the workspace can
       // no longer reach, on a disposition that still carries a resolvable one.
       // Reported rather than swallowed, and omitted entirely when there is
@@ -234,16 +239,19 @@ export const subsystemTools: ToolDefinition[] = [
         ),
       );
 
-      ctx.db
-        .prepare("UPDATE subsystems SET status=?, updated_at=datetime('now') WHERE id=?")
-        .run(status, id);
-      recordStatusTransition(ctx.db, {
-        subsystemId: id,
-        fromStatus: currentStatus,
-        toStatus: status,
-        tool: "update_subsystem_status",
-        sessionId: ctx.sessionId,
-      });
+      // One write, as in `upsert_subsystem` above.
+      ctx.db.transaction(() => {
+        ctx.db
+          .prepare("UPDATE subsystems SET status=?, updated_at=datetime('now') WHERE id=?")
+          .run(status, id);
+        recordStatusTransition(ctx.db, {
+          subsystemId: id,
+          fromStatus: currentStatus,
+          toStatus: status,
+          tool: "update_subsystem_status",
+          sessionId: ctx.sessionId,
+        });
+      })();
       // §2.3's non-refusing half — see `upsert_subsystem` above.
       return reported.length > 0
         ? ok({ previous_status: currentStatus, reported })
@@ -300,7 +308,9 @@ export const subsystemTools: ToolDefinition[] = [
     name: "reset_subsystem",
     description:
       "Discard a subsystem's survey artifacts and reset its status to " +
-      "an earlier phase. This is the only path that regresses a " +
+      "an earlier phase, or re-run the phase it stands at; it never " +
+      "climbs (a parked subsystem stands at the depth it was parked " +
+      "from). This is the only path that regresses a " +
       "subsystem's knowledge depth — the normal update_subsystem_status " +
       "tool rejects regressions. reset_subsystem deletes dependent rows " +
       "(dispositions, findings, field-notes, xrefs, artifact manifest " +
@@ -338,6 +348,30 @@ export const subsystemTools: ToolDefinition[] = [
         | { status: string }
         | undefined;
       if (!row) return { ok: false, error: `unknown subsystem: ${id}` };
+
+      // A reset regresses, or re-runs the phase it stands at; it never climbs.
+      // Without this it was a third door to every status, unchecked: an
+      // `adversarial` subsystem reset "to" `mapped` skipped every prerequisite
+      // `mapped` makes. A parked subsystem stands at the depth it was parked
+      // from; one parked before the ladder was kept has no recorded depth and
+      // is let through as it always was.
+      const depth =
+        row.status === "deferred"
+          ? heldBeforeParking(ctx.db, id)
+          : (row.status as Exclude<SubsystemStatus, "deferred">);
+      if (depth !== null && depth !== "deferred") {
+        const depthRank = STATUS_ORDER.indexOf(depth as Exclude<SubsystemStatus, "deferred">);
+        if (STATUS_ORDER.indexOf(toStatus) > depthRank) {
+          return {
+            ok: false,
+            error:
+              `cannot reset ${id} to '${toStatus}': it stands at '${depth}'` +
+              (row.status === "deferred" ? " (parked)" : "") +
+              `, and a reset only regresses or re-runs a phase. Advance it with ` +
+              `update_subsystem_status, which checks each rung's prerequisites.`,
+          };
+        }
+      }
 
       // An explanation is append-only, so the reset cannot delete the ones this
       // subsystem holds; it withdraws them instead (spec.md §3.1). The withdrawn
