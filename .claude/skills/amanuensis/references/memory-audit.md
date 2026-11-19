@@ -22,7 +22,9 @@ get_contradictions(resolution_filter="unresolved")
 Any row here is by definition a priority — two findings about the same
 code disagree, and nobody has reconciled them. For each:
 
-- Pull the two findings (`get_findings(finding_id=...)`) for context.
+- Pull the two findings for context: `get_findings(subsystem_id=...)` on
+  each one's subsystem, and `get_finding_evidence(finding_id)` for what
+  each cites.
 - Check whether the finding sessions are weeks apart (stale) or
   recent.
 - Surface the pair with a one-sentence recommendation:

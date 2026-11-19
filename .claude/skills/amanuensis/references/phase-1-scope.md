@@ -92,7 +92,7 @@ subsystem:
   party_a=<this subsystem>, party_b=<counterpart>, ...)`.
 - If the counterpart subsystem does not exist in the master plan
   yet, still record the seam with a best-guess `party_b` and a
-  `field_note(category="connection", ...)` flagging the missing
+  `add_field_note(category="connection", ...)` flagging the missing
   counterpart. The coordinator will reconcile IDs later.
 - Leave behavioral-contract fields (`a_writes`,
   `ordering_assumption`, etc.) blank at this phase — those are

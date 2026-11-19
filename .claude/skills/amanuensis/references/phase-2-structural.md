@@ -269,7 +269,7 @@ Phase 5 revises or confirms it.
   `add_claim` needs its evidence rows.
 - **Do not classify concerns yet.** Phase 3 does that. If you notice
   a concern while structural reading, record a
-  `field_note(category="candidate-concern")` and continue mapping.
+  `add_field_note(category="candidate-concern")` and continue mapping.
 - **Do not cross into unmapped territory.** If a flow exits this
   subsystem into another, stop at the seam, record the boundary
   contract, and record the crossing itself as an edge (step 6).

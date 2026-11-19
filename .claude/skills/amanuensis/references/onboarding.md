@@ -89,7 +89,7 @@ The checklist drives every subsystem's Phase 3, so calibration quality
 matters. If a territory's applicability is genuinely uncertain — the
 codebase has hybrid semantics, or you can't tell whether a substrate is
 in use without runtime evidence — record an
-`open_question(category="ambiguous-evidence")` and proceed with your
+`record_open_question(category="ambiguous-evidence")` and proceed with your
 best read. Continue to Phase 5.
 
 ## Phase 5 · Draft master plan

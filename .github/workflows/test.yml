@@ -260,6 +260,9 @@ jobs:
       - name: Refusal parity red gates — the check fires, and names what drifted
         working-directory: mcp-server
         run: node test-refusal-parity.mjs
+      - name: Reference calls — every tool call the skill writes names a real tool and argument
+        working-directory: mcp-server
+        run: node scripts/check-reference-calls.mjs
       - name: Single enum source — generated files, SQL CHECKs, validators, hint tables
         working-directory: mcp-server
         run: node test-vocabulary-source.mjs
