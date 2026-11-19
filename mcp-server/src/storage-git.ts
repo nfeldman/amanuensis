@@ -18,6 +18,8 @@ import { spawnSync } from "./subprocess.js";
 export interface GitResult {
   ok: boolean;
   reason?: string;
+  /** On failure: `label` when the caller's label was refused, `git` otherwise. */
+  code?: "label" | "git";
   commit_sha?: string;
   stdout?: string;
 }
@@ -32,6 +34,10 @@ const GITIGNORE_CONTENTS = [
   "",
 ].join("\n");
 const STORAGE_MODE_FILE = ".storage-mode";
+// The call log (call-log.ts) lives beside the record and is never part of
+// its history. Its own `.gitignore` is the first guard; this pathspec is the
+// second, and it also holds for a store whose top-level ignore predates it.
+const STORAGE_PATHSPEC = [".", ":(exclude)call-log"];
 const INDEPENDENT_MODE = "independent\n";
 
 // Per-invocation config overrides applied to every amanuensis git call.
@@ -253,13 +259,13 @@ export function commitStorage(storagePath: string, label: string): GitResult {
   // readable and preventing accidentally-huge messages.
   const trimmed = (label ?? "").trim();
   if (!trimmed) {
-    return { ok: false, reason: "empty commit label" };
+    return { ok: false, code: "label", reason: "empty commit label" };
   }
   if (trimmed.length > 500) {
-    return { ok: false, reason: "commit label exceeds 500 chars" };
+    return { ok: false, code: "label", reason: "commit label exceeds 500 chars" };
   }
   if (trimmed.includes("\n")) {
-    return { ok: false, reason: "commit label must be single-line" };
+    return { ok: false, code: "label", reason: "commit label must be single-line" };
   }
 
   // Stage everything under this storage dir only. The `.` pathspec
@@ -267,7 +273,7 @@ export function commitStorage(storagePath: string, label: string): GitResult {
   // (cloud-mode shared conspectus repo), where two concurrent surveys
   // of different projects share one outer repo and must not entangle
   // each other's changes.
-  const add = runGit(storagePath, ["add", "-A", "."]);
+  const add = runGit(storagePath, ["add", "-A", "--", ...STORAGE_PATHSPEC]);
   if (add.status !== 0) {
     return { ok: false, reason: `git add failed: ${add.stderr.trim()}` };
   }
@@ -275,7 +281,7 @@ export function commitStorage(storagePath: string, label: string): GitResult {
   // Check if there's anything to commit under this storage dir.
   // `git diff --cached --quiet .` exits 0 if no changes, 1 if changes,
   // >1 if error. Scoped to cwd for the same reason as the add.
-  const diff = runGit(storagePath, ["diff", "--cached", "--quiet", "."]);
+  const diff = runGit(storagePath, ["diff", "--cached", "--quiet", "--", ...STORAGE_PATHSPEC]);
   if (diff.status === 0) {
     return { ok: true, reason: "no changes" };
   }
@@ -290,7 +296,7 @@ export function commitStorage(storagePath: string, label: string): GitResult {
   // subdir) will remain staged and unaffected.
   const commit = runGit(
     storagePath,
-    ["commit", "--quiet", "--no-verify", "-F", "-", "--", "."],
+    ["commit", "--quiet", "--no-verify", "-F", "-", "--", ...STORAGE_PATHSPEC],
     `${trimmed}\n`,
   );
   if (commit.status !== 0) {
@@ -342,4 +348,15 @@ export function getStorageLog(
         message: msg.join("\t"),
       };
     });
+}
+
+/**
+ * Whether the storage directory's history tracks anything under `relPath`.
+ * False when the directory is not a repository: with no history there is
+ * nothing to pollute.
+ */
+export function storagePathIsTracked(storagePath: string, relPath: string): boolean {
+  if (!isGitRepo(storagePath)) return false;
+  const listed = runGit(storagePath, ["ls-files", "--", relPath]);
+  return listed.status === 0 && listed.stdout.trim().length > 0;
 }

@@ -7,6 +7,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
+import { CallLog, type CallOutcome, digestArguments, throwSite } from "./call-log.js";
 import { discoverCodexParentLaunch, STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { type DB, openDatabase } from "./db.js";
 import { jsonResult, type ServerContext, type ToolDefinition, ToolError } from "./helpers.js";
@@ -16,6 +17,7 @@ import {
   type ProjectContext,
   resolveProject,
 } from "./project.js";
+import { storagePathIsTracked } from "./storage-git.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
@@ -268,6 +270,7 @@ async function main(): Promise<void> {
     if (!project) {
       throw new ToolError(
         "workspace is unbound; call get_project_info with workspace set to the absolute project directory from the chat environment before using project tools",
+        "workspace.unbound",
       );
     }
     return project;
@@ -373,30 +376,82 @@ async function main(): Promise<void> {
     };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: rawArgs } = request.params;
+  // Layer A of design/self-observability: every call is recorded by the
+  // dispatcher, whatever the model does. `dispatchTool` classifies; the
+  // handler below times, records and returns. The call log never changes a
+  // response and never fails a call.
+  const callLog = new CallLog({
+    serverVersion: SERVER_VERSION,
+    clientInfo: () => server.getClientVersion(),
+    isTrackedInStorage: storagePathIsTracked,
+  });
+  process.once("exit", () => callLog.close());
+
+  interface Dispatched {
+    data: unknown;
+    compact: boolean;
+    outcome: CallOutcome;
+    rule: string | null;
+    /** Where a thrown refusal or exception came from; never its message. */
+    site: string | null;
+  }
+
+  const refusal = (data: unknown): Pick<Dispatched, "outcome" | "rule" | "site"> => {
+    // Handlers refuse in two ways: by throwing ToolError, and by returning
+    // `{ ok: false, error }`. Both are refusals to the host (`isError`), so
+    // both are refusals here.
+    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+      const body = data as { ok?: unknown; error?: unknown; rule?: unknown };
+      if (body.ok === false) {
+        return {
+          outcome: "refusal",
+          rule: typeof body.rule === "string" ? body.rule : null,
+          site: null,
+        };
+      }
+    }
+    return { outcome: "ok", rule: null, site: null };
+  };
+
+  const dispatchTool = (name: string, rawArgs: unknown): Dispatched => {
     const tool = byName.get(name);
     if (!tool) {
-      return jsonResult({ ok: false, error: `unknown tool: ${name}` });
+      const message = `unknown tool: ${name}`;
+      return {
+        data: { ok: false, error: message },
+        compact: false,
+        outcome: "validation",
+        rule: "protocol.unknown-tool",
+        site: null,
+      };
     }
     const args = (rawArgs ?? {}) as Record<string, unknown>;
     const validate = validators.get(name);
     if (!validate?.(args)) {
-      return jsonResult({
-        ok: false,
-        error: `invalid arguments for ${name}: ${formatValidationErrors(validate?.errors)}`,
-      });
+      const message = `invalid arguments for ${name}: ${formatValidationErrors(validate?.errors)}`;
+      const keyword = validate?.errors?.[0]?.keyword;
+      return {
+        data: { ok: false, error: message },
+        compact: false,
+        outcome: "validation",
+        rule: keyword ? `schema.${keyword}` : "schema.invalid",
+        site: null,
+      };
     }
     try {
       if (name === "get_project_info") {
         const requested = args.workspace;
         if (typeof requested === "string") {
           if (!isAbsolute(requested))
-            throw new ToolError("workspace must be an absolute directory path");
+            throw new ToolError(
+              "workspace must be an absolute directory path",
+              "workspace.not-absolute",
+            );
           const canonical = gitRoot(requested) ?? realpathSync(requested);
           if (project && project.workspacePath !== canonical) {
             throw new ToolError(
               `workspace mismatch: this server is bound to ${project.workspacePath}, but this chat requested ${canonical}. Start a separate server connection for the other workspace; rebinding is refused.`,
+              "workspace.mismatch",
             );
           }
           if (!project) {
@@ -410,14 +465,15 @@ async function main(): Promise<void> {
           }
         }
         if (!project) {
-          return jsonResult({
+          const data = {
             ok: false,
             binding_status: "unbound",
             workspace_path: null,
             storage_path: null,
             binding_receipt: null,
             error: WORKSPACE_INSTRUCTIONS,
-          });
+          };
+          return { data, compact: false, ...refusal(data), rule: "workspace.unbound" };
         }
       }
       assertProjectBinding(requireProject());
@@ -426,15 +482,81 @@ async function main(): Promise<void> {
       // §4.1: the tool declares whether its text block is serialized compactly,
       // and the dispatcher honors the declaration. A tool that carries a byte
       // budget therefore has it enforced on the emitted response.
-      return jsonResult(data, { compact: tool.compact === true });
+      return { data, compact: tool.compact === true, ...refusal(data) };
     } catch (e) {
       if (e instanceof ToolError) {
-        return jsonResult({ ok: false, error: e.message });
+        return {
+          data: { ok: false, error: e.message },
+          compact: false,
+          outcome: "refusal",
+          rule: e.rule ?? null,
+          site: throwSite(e),
+        };
       }
       const message = e instanceof Error ? e.message : String(e);
       process.stderr.write(`[amanuensis-memory] tool ${name} threw: ${message}\n`);
-      return jsonResult({ ok: false, error: message });
+      return {
+        data: { ok: false, error: message },
+        compact: false,
+        outcome: "exception",
+        rule: "exception",
+        site: throwSite(e),
+      };
     }
+  };
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: rawArgs } = request.params;
+    const sessionBefore = ctx.sessionId;
+    const startedAt = new Date().toISOString();
+    const started = performance.now();
+    let dispatched = dispatchTool(name, rawArgs);
+    let result: ReturnType<typeof jsonResult>;
+    try {
+      result = jsonResult(dispatched.data, { compact: dispatched.compact });
+    } catch (e) {
+      // Serialization ran inside the handler's try before the dispatcher was
+      // split, so an unserializable result reached the host as a tool error,
+      // not a protocol error. Keep that.
+      const message = e instanceof Error ? e.message : String(e);
+      process.stderr.write(`[amanuensis-memory] tool ${name} threw: ${message}\n`);
+      dispatched = {
+        data: { ok: false, error: message },
+        compact: false,
+        outcome: "exception",
+        rule: "exception",
+        site: throwSite(e),
+      };
+      result = jsonResult(dispatched.data);
+    }
+    const latencyMs = performance.now() - started;
+    if (callLog.enabled) {
+      try {
+        // Attach only once the record itself is open: the call log must never be
+        // the thing that creates a store.
+        if (db && project) callLog.attach(project.storagePath);
+        const digest = digestArguments(rawArgs);
+        callLog.record({
+          tool: name,
+          outcome: dispatched.outcome,
+          rule: dispatched.rule,
+          site: dispatched.site,
+          // start_session sets the session and end_session clears it: the
+          // row belongs to whichever was in force on either side of the call.
+          sessionId: ctx.sessionId ?? sessionBefore,
+          startedAt,
+          latencyMs,
+          argsBytes: digest.bytes,
+          argsSha256: digest.sha256,
+          // The envelope the host receives, measured as helpers.responseBytes does.
+          responseBytes: Buffer.byteLength(JSON.stringify(result), "utf8"),
+        });
+      } catch {
+        // Recording is best-effort by contract; CallLog reports its own
+        // failures. Nothing here may change the response.
+      }
+    }
+    return result;
   });
 
   process.stderr.write(

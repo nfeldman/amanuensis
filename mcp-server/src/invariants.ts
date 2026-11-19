@@ -105,6 +105,7 @@ export function requireSubsystemStatus(
     throw new ToolError(
       `subsystem ${subsystemId} is deferred; ${operation} is not permitted. ` +
         `Un-defer via update_subsystem_status before proceeding.`,
+      "knowledge-depth.deferred",
     );
   }
   const current = STATUS_RANK[status];
@@ -124,6 +125,7 @@ export function requireSubsystemStatus(
       `subsystem ${subsystemId} is '${status}', but ${operation} requires at ` +
         `least '${minStatus}' (knowledge-depth contract). Advance the ` +
         `subsystem via update_subsystem_status first.`,
+      "knowledge-depth.below-minimum",
     );
   }
 }
@@ -1278,7 +1280,10 @@ export function enforceForwardPrerequisites(
  */
 export function requireActiveSession(ctx: ServerContext, operation: string): string {
   if (!ctx.sessionId) {
-    throw new ToolError(`${operation} requires an active session. Call start_session first.`);
+    throw new ToolError(
+      `${operation} requires an active session. Call start_session first.`,
+      "session.required",
+    );
   }
   return ctx.sessionId;
 }

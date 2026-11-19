@@ -20,6 +20,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { CALL_LOG_DIRECTORY } from "./call-log.js";
 import { STARTUP_PROBE_TIMEOUT_MS } from "./codex-host.js";
 import { ensureStorageRepo, isGitRepo } from "./storage-git.js";
 
@@ -207,7 +208,15 @@ function assertNoSymlinkTree(root: string, label: string): void {
   const visit = (dir: string) => {
     for (const entry of readdirSync(dir)) {
       const child = join(dir, entry);
-      const stat = lstatSync(child);
+      let stat: ReturnType<typeof lstatSync>;
+      try {
+        stat = lstatSync(child);
+      } catch (error) {
+        // SQLite removes its -wal and -shm files when the last connection
+        // closes; one that vanished between listing and lstat is not a link.
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw error;
+      }
       if (stat.isSymbolicLink()) {
         throw new Error(`${label} contains a symbolic link: ${child}`);
       }
@@ -304,6 +313,10 @@ function appendTextNoFollow(path: string, value: string): void {
 function storageManifest(root: string, relPath = ""): string[] {
   const rows: string[] = [];
   for (const entry of readdirSync(join(root, relPath)).sort()) {
+    // The call log is not the record (call-log.ts): another process may
+    // append to it while a copy is read back, and two copies of one record
+    // differ in it. Comparing it would fail a correct migration.
+    if (relPath === "" && entry === CALL_LOG_DIRECTORY) continue;
     const childRel = relPath ? join(relPath, entry) : entry;
     const path = join(root, childRel);
     const stat = lstatSync(path);

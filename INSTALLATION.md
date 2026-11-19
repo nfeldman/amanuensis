@@ -253,6 +253,25 @@ storage paths.
 Clones or worktrees with the same verified repository identity intentionally converge
 there. Do not use the override when concurrent worktrees need isolated state.
 
+### Call log
+
+Every tool call is recorded locally in `call-log/calls.db` inside the store
+directory. This sidecar sits beside the record, not inside it. A row holds:
+
+- the tool and its outcome (`ok`, `validation`, `refusal` or `exception`);
+- a stable rule id, where the refusing check declares one;
+- for a thrown refusal, the source line that threw it;
+- latency, argument and response sizes, and a SHA-256 of the arguments;
+- the session.
+
+No argument values, response text or refusal messages are stored, because messages
+can echo arguments. The store's history never includes the sidecar: its directory has
+its own `.gitignore`, storage commits exclude it, and recording is refused if that
+history already tracks it. The sidecar is opened only after the store exists, so
+startup stays read-only. Rows are written after each response and never wait on
+another process's lock. Set `AMANUENSIS_CALL_LOG=off` to disable it. Nothing is sent
+anywhere.
+
 ## Diagnose and repair Codex activation
 
 Diagnosis is read-only:

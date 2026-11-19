@@ -226,7 +226,7 @@ export function workspaceIsBound(workspacePath: string): boolean {
 export function requireString(args: Record<string, unknown>, key: string): string {
   const v = args[key];
   if (typeof v !== "string" || v.length === 0) {
-    throw new ToolError(`missing required string: ${key}`);
+    throw new ToolError(`missing required string: ${key}`, "arg.missing");
   }
   return v;
 }
@@ -724,7 +724,7 @@ export function extractWorkspaceCitations(
 export function optString(args: Record<string, unknown>, key: string): string | null {
   const v = args[key];
   if (v == null) return null;
-  if (typeof v !== "string") throw new ToolError(`expected string for ${key}`);
+  if (typeof v !== "string") throw new ToolError(`expected string for ${key}`, "arg.type");
   return v;
 }
 
@@ -735,7 +735,7 @@ export function requireEnum<T extends string>(
 ): T {
   const v = requireString(args, key);
   if (!values.includes(v as T)) {
-    throw new ToolError(`${key} must be one of: ${values.join(", ")}`);
+    throw new ToolError(`${key} must be one of: ${values.join(", ")}`, "arg.enum");
   }
   return v as T;
 }
@@ -748,7 +748,7 @@ export function optEnum<T extends string>(
   const v = optString(args, key);
   if (v === null) return null;
   if (!values.includes(v as T)) {
-    throw new ToolError(`${key} must be one of: ${values.join(", ")}`);
+    throw new ToolError(`${key} must be one of: ${values.join(", ")}`, "arg.enum");
   }
   return v as T;
 }
@@ -756,7 +756,7 @@ export function optEnum<T extends string>(
 export function requireInt(args: Record<string, unknown>, key: string): number {
   const v = args[key];
   if (typeof v !== "number" || !Number.isInteger(v)) {
-    throw new ToolError(`missing required integer: ${key}`);
+    throw new ToolError(`missing required integer: ${key}`, "arg.missing");
   }
   return v;
 }
@@ -769,7 +769,7 @@ export function optInt(
   const v = args[key];
   if (v == null) return fallback;
   if (typeof v !== "number" || !Number.isInteger(v)) {
-    throw new ToolError(`expected integer for ${key}`);
+    throw new ToolError(`expected integer for ${key}`, "arg.type");
   }
   return v;
 }
@@ -777,7 +777,7 @@ export function optInt(
 export function optBool(args: Record<string, unknown>, key: string, fallback = false): boolean {
   const v = args[key];
   if (v == null) return fallback;
-  if (typeof v !== "boolean") throw new ToolError(`expected boolean for ${key}`);
+  if (typeof v !== "boolean") throw new ToolError(`expected boolean for ${key}`, "arg.type");
   return v;
 }
 
@@ -785,7 +785,7 @@ export function optStringArray(args: Record<string, unknown>, key: string): stri
   const v = args[key];
   if (v == null) return null;
   if (!Array.isArray(v) || !v.every((x) => typeof x === "string")) {
-    throw new ToolError(`expected string[] for ${key}`);
+    throw new ToolError(`expected string[] for ${key}`, "arg.type");
   }
   return v as string[];
 }
@@ -797,10 +797,10 @@ export function requireStringArray(
 ): string[] {
   const v = args[key];
   if (!Array.isArray(v) || !v.every((x) => typeof x === "string")) {
-    throw new ToolError(`expected string[] for ${key}`);
+    throw new ToolError(`expected string[] for ${key}`, "arg.type");
   }
   if (opts.minLength != null && v.length < opts.minLength) {
-    throw new ToolError(`${key} must contain at least ${opts.minLength} entries`);
+    throw new ToolError(`${key} must contain at least ${opts.minLength} entries`, "arg.min-length");
   }
   return v as string[];
 }
@@ -809,12 +809,27 @@ export function optIntArray(args: Record<string, unknown>, key: string): number[
   const v = args[key];
   if (v == null) return null;
   if (!Array.isArray(v) || !v.every((x) => typeof x === "number" && Number.isInteger(x))) {
-    throw new ToolError(`expected integer[] for ${key}`);
+    throw new ToolError(`expected integer[] for ${key}`, "arg.type");
   }
   return v as number[];
 }
 
-export class ToolError extends Error {}
+/**
+ * A refusal the caller can act on. `rule` is a stable id for the refusing
+ * rule (for example `session.required`), recorded by the call log so that
+ * refusals can be counted by cause rather than by message prose. It is
+ * optional: an unlabelled refusal is still recorded, grouped by its message
+ * template. Prefer `<area>.<condition>` in kebab case, and never reuse an id
+ * for a different rule.
+ */
+export class ToolError extends Error {
+  constructor(
+    message: string,
+    readonly rule?: string,
+  ) {
+    super(message);
+  }
+}
 
 /**
  * Validate that every given ID exists in `table.column`. Throws a
@@ -839,7 +854,7 @@ export function requireExistingIds<T extends string | number>(
   const have = new Set(rows.map((r) => r.id));
   const missing = ids.filter((id) => !have.has(id));
   if (missing.length) {
-    throw new ToolError(`unknown ${label}: ${missing.join(", ")}`);
+    throw new ToolError(`unknown ${label}: ${missing.join(", ")}`, "ref.unknown-id");
   }
 }
 

@@ -25,7 +25,11 @@ const srcDir = join(mcpRoot, "src");
 // ---- schema extraction ----
 // Strip `--` single-line comments before parsing — SQL comments can
 // contain semicolons that confuse the body-capture regex.
-const schemaText = readFileSync(schemaPath, "utf8")
+// The call log keeps its tables in a sidecar database, not in schema.sql
+// (src/call-log.ts explains why); its DDL is the schema for those names.
+const callLogSchemaPath = join(mcpRoot, "src", "call-log.ts");
+const schemaText = [readFileSync(schemaPath, "utf8"), readFileSync(callLogSchemaPath, "utf8")]
+  .join("\n")
   .split("\n")
   .map((l) => {
     // Remove anything from `--` to end of line, but preserve `--` that

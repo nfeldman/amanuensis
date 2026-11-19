@@ -32,7 +32,13 @@ export const storageHistoryTools: ToolDefinition[] = [
       checkpointDatabaseForStorageCommit(ctx.db);
       const result = commitStorage(ctx.project.storagePath, label);
       if (!result.ok) {
-        throw new ToolError(result.reason ?? "commit failed");
+        // The label guardrails are the commonest refusal recorded in host
+        // transcripts (26 of 176); naming them apart from Git failures lets
+        // the call log tell a caller's mistake from a broken storage repository.
+        throw new ToolError(
+          result.reason ?? "commit failed",
+          result.code === "label" ? "storage-commit.label" : "storage-commit.git",
+        );
       }
       return {
         committed: result.reason === "committed",
