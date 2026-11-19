@@ -100,11 +100,12 @@ keyed by `claim_key`:
   wrong, and where you looked.
 - **Outcome** — one of:
   - `survived` — you looked and found nothing that overturns it.
-  - `overturned` — you found evidence the claim is wrong at the
-    current revision. The server can record this only at a commit
-    after the one the claim was recorded at; see step 5.
-  - `superseded` — the claim was right and is now stale; you have a
-    corrected reading of the same fact.
+  - `overturned` — you found evidence the claim is wrong, and there
+    is no corrected statement of the same fact to put in its place.
+  - `superseded` — you have a corrected reading of the same fact:
+    either the claim was right and the code has since changed, or it
+    was imprecise when it was recorded (it overstates or understates
+    its scope, say) and a narrower statement is true.
 
 ### 5. Update the DB
 
@@ -156,26 +157,22 @@ the claim and where you looked for it, in prose, not a one-word note.
   attached to the claim, so the disproof has to be new. Then
   `record_claim_challenge(..., outcome="overturned",
   validity_event_id=<that id>)`.
-  `at_sha` must be a strict descendant of the claim's
-  `valid_from_sha`: a claim cannot be closed at the commit it was
-  recorded at. If the claim was already wrong there and the
-  repository has not moved since, the server has no way to record
-  the overturning (finding B04-R6). Do not record `survived` for it.
-  Record the disproof as evidence and an
-  `add_field_note(category="anomaly", ...)` naming the `claim_key`,
-  and name the claim in the hand-back. Do not advance the subsystem to
-  `mapped` while it stands. The server refuses that advance only if
-  the claim has no outcome at all: one that already carries an outcome
-  from an earlier probe, `survived` included, satisfies the check, so
-  holding the subsystem back is the coordinator's job here, not the
-  server's.
+  `at_sha` is the first commit at which the claim is false. If it was
+  already false at its `valid_from_sha` (usually the commit it was
+  recorded at, but a claim may be recorded as holding from an earlier
+  one), pass `valid_from_sha`: the claim then never held at any
+  revision. If it held there and a later change made it false, pass the
+  commit of that change, even when that is the commit you are reading
+  now. `at_sha` may not precede `valid_from_sha`. Do not record
+  `survived` for a claim you found wrong.
 - **`superseded`** — `supersede_claim`, which closes the predecessor
   and opens the successor on the same `claim_key` in one commit and
   writes the `superseded` event, returned as `validity_event_id`.
   Use this, not delete-and-re-add: the history is the point. Then
   `record_claim_challenge(..., outcome="superseded",
-  validity_event_id=<that id>)`. The same strict-descendant rule
-  applies. The successor is now a current claim with no outcome of
+  validity_event_id=<that id>)`. `at_sha` follows the same rule: the
+  claim's own `valid_from_sha` when it was imprecise from there, the
+  commit that changed the code when it went stale. The successor is now a current claim with no outcome of
   its own, and the advance to `mapped` checks it: challenge it in this
   pass and record its outcome too.
 - **`survived`** — no claim row changes, so the outcome has to be
@@ -214,8 +211,7 @@ Return to the coordinator with a one-line summary:
 - Counts per verdict (`upheld`, `overturned`, `scope-restricted`,
   `quality-upgraded`, `quality-downgraded`).
 - Counts per claim outcome (`survived`, `overturned`, `superseded`),
-  the `claim_key` of any target you did not reach, and of any claim
-  the server could not record as overturned.
+  and the `claim_key` of any target you did not reach.
 - Contradictions detected and their resolutions.
 - Sentences of the purpose or account the code contradicts.
 - Linchpin-dependent dispositions that remain — these are the

@@ -123,7 +123,7 @@ function freshContext() {
     commits,
     evidence,
     cleanup: () => {
-      db.close();
+      if (ctx.db.open) ctx.db.close();
       rmSync(root, { recursive: true, force: true });
     },
   };
@@ -272,22 +272,20 @@ test("invalid boundaries and reused evidence leave the current claim untouched",
   const { ctx, commits, evidence, cleanup } = freshContext();
   try {
     addClaim(ctx, { ref_sha: commits[1], evidence_ids: [evidence[1]] });
-    for (const invalid of [commits[0], commits[1]]) {
-      assertThrows(
-        () =>
-          call(
-            "invalidate_claim",
-            {
-              claim_id: "claim-1",
-              at_sha: invalid,
-              reason: "invalid boundary fixture",
-              evidence_ids: [evidence[1]],
-            },
-            ctx,
-          ),
-        "strict descendant",
-      );
-    }
+    assertThrows(
+      () =>
+        call(
+          "invalidate_claim",
+          {
+            claim_id: "claim-1",
+            at_sha: commits[0],
+            reason: "a boundary before the claim opened",
+            evidence_ids: [evidence[0]],
+          },
+          ctx,
+        ),
+      "or a descendant of it",
+    );
     assertThrows(
       () =>
         call(
@@ -443,6 +441,137 @@ test("invalidation and supersession return the event a challenge outcome cites",
       2,
       "both outcomes recorded",
     );
+  } finally {
+    cleanup();
+  }
+});
+
+function addEvidenceAt(ctx, sha, note) {
+  return call(
+    "add_evidence",
+    { file_path: "fixture.txt", line_range: "1-1", ref_sha: sha, kind: "test-observed", note },
+    ctx,
+  ).id;
+}
+
+const CHALLENGE =
+  "Looked for every reader of fixture.txt at the recorded commit and found one the claim leaves out.";
+
+test("a claim wrong at the commit it was recorded at is overturned there and never held (B04-R6)", () => {
+  const { ctx, commits, evidence, cleanup } = freshContext();
+  try {
+    addClaim(ctx, { ref_sha: commits[1], evidence_ids: [evidence[1]] });
+    const disproof = addEvidenceAt(ctx, commits[1], "the reader the claim missed");
+    const closed = call(
+      "invalidate_claim",
+      { claim_id: "claim-1", at_sha: commits[1], reason: "wrong when recorded", evidence_ids: [disproof] },
+      ctx,
+    );
+    assertEqual(closed.valid_until_sha, commits[1], "closed at its own valid_from_sha");
+    for (const sha of commits) {
+      assertEqual(call("get_claims", { query_sha: sha }, ctx).length, 0, `never held, yet current at ${sha}`);
+    }
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: "claim-1",
+        outcome: "overturned",
+        challenge: CHALLENGE,
+        ref_sha: commits[1],
+        validity_event_id: closed.validity_event_id,
+      },
+      ctx,
+    );
+    const outcome = ctx.db.prepare("SELECT outcome FROM claim_challenge_outcomes").get();
+    assertEqual(outcome?.outcome, "overturned", "the negative outcome is recorded");
+  } finally {
+    cleanup();
+  }
+});
+
+test("an imprecise claim is corrected at the commit it was recorded at (B04-R6)", () => {
+  const { ctx, commits, evidence, cleanup } = freshContext();
+  try {
+    addClaim(ctx, { ref_sha: commits[1], evidence_ids: [evidence[1]] });
+    const reader = addEvidenceAt(ctx, commits[1], "the second reader");
+    const corrected = call(
+      "supersede_claim",
+      {
+        predecessor_claim_id: "claim-1",
+        successor_claim_id: "claim-2",
+        statement: "The fixture has two readers; the search path is not one of them.",
+        epistemic_kind: "observation",
+        at_sha: commits[1],
+        rationale: "the recorded statement overstated its scope",
+        evidence_ids: [reader],
+      },
+      ctx,
+    );
+    assertEqual(corrected.boundary_sha, commits[1], "corrected at the recording commit");
+    for (const sha of commits.slice(1)) {
+      const current = call("get_claims", { query_sha: sha }, ctx).map((c) => c.claim_id);
+      assertEqual(JSON.stringify(current), JSON.stringify(["claim-2"]), `as of ${sha}`);
+    }
+    assertEqual(call("get_claims", { query_sha: commits[0] }, ctx).length, 0, "before either opened");
+    call(
+      "record_claim_challenge",
+      {
+        claim_id: "claim-1",
+        outcome: "superseded",
+        challenge: CHALLENGE,
+        ref_sha: commits[1],
+        validity_event_id: corrected.validity_event_id,
+      },
+      ctx,
+    );
+  } finally {
+    cleanup();
+  }
+});
+
+test("a store created with the never-held CHECK is rebuilt without it, rows and triggers intact", () => {
+  const { ctx, commits, evidence, cleanup } = freshContext();
+  try {
+    const db = ctx.db;
+    // Put the claims table back in the shape every store before B04-R6 has.
+    const live = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='claims'").get().sql;
+    const old = live.replace(
+      /CHECK \(length\(statement\) > 0\)/,
+      "CHECK (length(statement) > 0),\n    CHECK (valid_until_sha IS NULL OR valid_until_sha != valid_from_sha)",
+    );
+    assert(old !== live, "could not build the old claims DDL");
+    const objects = db
+      .prepare("SELECT sql FROM sqlite_master WHERE tbl_name='claims' AND sql IS NOT NULL AND type IN ('index','trigger')")
+      .all();
+    db.pragma("foreign_keys = OFF");
+    db.pragma("legacy_alter_table = ON");
+    db.exec("DROP TABLE claims");
+    db.exec(old);
+    for (const object of objects) db.exec(object.sql);
+    db.pragma("legacy_alter_table = OFF");
+    db.pragma("foreign_keys = ON");
+    addClaim(ctx, { ref_sha: commits[1], evidence_ids: [evidence[1]] });
+    assertThrows(
+      () => db.prepare("UPDATE claims SET valid_until_sha = valid_from_sha").run(),
+      "CHECK constraint failed",
+    );
+
+    const dbPath = ctx.project.dbPath;
+    db.close();
+    ctx.db = openDatabase(dbPath);
+    const rebuilt = ctx.db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='claims'").get().sql;
+    assert(!rebuilt.includes("valid_until_sha != valid_from_sha"), "the CHECK survived the reopen");
+    assertEqual(ctx.db.prepare("SELECT statement FROM claims").get()?.statement, "The fixture behaves as observed.", "row kept");
+    for (const name of ["claims_versions_are_immutable", "idx_claims_current_key"]) {
+      assert(ctx.db.prepare("SELECT 1 FROM sqlite_master WHERE name = ?").get(name), `${name} lost in the rebuild`);
+    }
+    const disproof = addEvidenceAt(ctx, commits[1], "after the rebuild");
+    const closed = call(
+      "invalidate_claim",
+      { claim_id: "claim-1", at_sha: commits[1], reason: "wrong when recorded", evidence_ids: [disproof] },
+      ctx,
+    );
+    assertEqual(closed.valid_until_sha, commits[1], "closes at its own commit after the rebuild");
   } finally {
     cleanup();
   }

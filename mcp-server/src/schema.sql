@@ -564,9 +564,9 @@ BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
 ----------------------------------------------------------------------
 -- The survey measures a subsystem and until this table had nowhere to say what
 -- it is *for* (design/explanation/spec.md §3.1). Not a claim: a claim is closed
--- by `apply_change_impact` when a ledger file changes, and can be superseded
--- only at a strict descendant of the commit it was asserted at, so a corrected
--- account written at the same commit could not replace it. Not an `entries` row:
+-- by `apply_change_impact` when a ledger file changes, and when this table was
+-- added it could be superseded only at a strict descendant of the commit it was
+-- asserted at (finding B04-R6, since lifted). Not an `entries` row:
 -- that table holds a pointer to a prose section and no body.
 --
 -- Three stored dispositions. `recorded` is an explanation a survey session
@@ -1432,6 +1432,12 @@ CREATE INDEX IF NOT EXISTS idx_projection_mismatch_run
 -- Exactly one open-ended version may occupy a claim_key. Supersession closes
 -- the predecessor and opens the successor at the same commit, while the edge
 -- and validity events retain why the transition happened.
+--
+-- A claim closed at its own `valid_from_sha` has an empty interval: it never
+-- held at any revision. That is how a claim found wrong at the commit it was
+-- recorded at is corrected (finding B04-R6). Earlier stores forbade it with
+-- `CHECK (valid_until_sha IS NULL OR valid_until_sha != valid_from_sha)`;
+-- `migrateClaimsNeverHeld` in db.ts rebuilds those tables without it.
 
 CREATE TABLE IF NOT EXISTS claims (
     claim_id          TEXT    PRIMARY KEY,
@@ -1452,8 +1458,7 @@ CREATE TABLE IF NOT EXISTS claims (
     CHECK (length(claim_key) > 0),
     CHECK (length(subject_type) > 0),
     CHECK (length(subject_id) > 0),
-    CHECK (length(statement) > 0),
-    CHECK (valid_until_sha IS NULL OR valid_until_sha != valid_from_sha)
+    CHECK (length(statement) > 0)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_current_key

@@ -187,15 +187,25 @@ function isAncestor(ctx: ServerContext, ancestor: string, descendant: string): b
   );
 }
 
-function requireStrictDescendant(
+/**
+ * A claim closes at its own valid_from_sha or at a descendant of it.
+ *
+ * Closing at a descendant says the claim held until that commit. Closing at
+ * valid_from_sha leaves an empty interval: the claim never held, which is the
+ * record of a claim found wrong at the commit it was recorded at. A survey
+ * reads one revision, so before this was allowed it could not overturn its own
+ * claim at all (finding B04-R6). A boundary that is not a descendant would put
+ * the end of the interval before its start.
+ */
+function requireClosingBoundary(
   ctx: ServerContext,
   boundary: string,
   validFrom: string,
   operation: string,
 ): void {
-  if (boundary === validFrom || !isAncestor(ctx, validFrom, boundary)) {
+  if (!isAncestor(ctx, validFrom, boundary)) {
     throw new ToolError(
-      `${operation} commit ${boundary} must be a strict descendant of valid_from_sha ${validFrom}`,
+      `${operation} commit ${boundary} must be the claim's valid_from_sha ${validFrom} or a descendant of it`,
     );
   }
 }
@@ -560,7 +570,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "invalidate_claim",
     description:
-      "Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. at_sha must be a strict descendant of the claim's valid_from_sha. Returns validity_event_id, which an 'overturned' record_claim_challenge cites.",
+      "Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. at_sha must be the claim's valid_from_sha or a descendant of it; closing at valid_from_sha records that the claim never held, for a claim that was already false there; a claim that held and later became false closes at the commit that made it false. Returns validity_event_id, which an 'overturned' record_claim_challenge cites.",
     inputSchema: {
       type: "object",
       properties: {
@@ -578,7 +588,7 @@ export const claimTools: ToolDefinition[] = [
       const reason = requireString(args, "reason");
       const claim = currentClaim(ctx, claimId);
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
-      requireStrictDescendant(ctx, atSha, claim.valid_from_sha, "invalidation");
+      requireClosingBoundary(ctx, atSha, claim.valid_from_sha, "invalidation");
       const evidenceIds = requireEvidenceIds(args);
       requireEvidence(ctx, evidenceIds, atSha);
       const existing = new Set(
@@ -617,7 +627,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "supersede_claim",
     description:
-      "Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. The successor id must be new and its supporting evidence must not already support the predecessor. Returns validity_event_id, which a 'superseded' record_claim_challenge cites.",
+      "Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. at_sha must be the predecessor's valid_from_sha or a descendant of it; at valid_from_sha the predecessor never held, which corrects a claim that was already imprecise there. The successor id must be new and its supporting evidence must not already support the predecessor. Returns validity_event_id, which a 'superseded' record_claim_challenge cites.",
     inputSchema: {
       type: "object",
       properties: {
@@ -654,7 +664,7 @@ export const claimTools: ToolDefinition[] = [
       const epistemicKind = requireEnum(args, "epistemic_kind", CLAIM_EPISTEMIC_KINDS);
       const rationale = requireString(args, "rationale");
       const atSha = resolveCommit(ctx, requireString(args, "at_sha"));
-      requireStrictDescendant(ctx, atSha, predecessor.valid_from_sha, "supersession");
+      requireClosingBoundary(ctx, atSha, predecessor.valid_from_sha, "supersession");
       const evidenceIds = requireEvidenceIds(args);
       const evidenceRows = requireEvidence(ctx, evidenceIds, atSha);
       const predecessorEvidence = new Set(

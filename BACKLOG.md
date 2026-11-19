@@ -20,18 +20,16 @@ real run; "read" means found by reading code and not reproduced.
   15360 bytes (4aa6a66). Re-measured on the self-conspectus, each of the three dogfood loci now
   serves its purpose sentence and structure item
   ([design/explanation/locus-default-measure.json](design/explanation/locus-default-measure.json)).
-- **May a claim close at the revision it was recorded at?** An adversarial pass that finds a claim
-  wrong at the commit it was recorded at cannot record `overturned` (self-conspectus finding
-  B04-R6, carried from B04-R2; all 8 recorded outcomes there are `survived`). `invalidate_claim`
-  and `supersede_claim` require a strict descendant of `valid_from_sha`, and the `claims` table
-  forbids an empty interval with a `CHECK`, so allowing "never held" means rebuilding `claims`
-  in every store behind its append-only triggers (`db.ts` has the pattern, in
-  `migrateVocabularyChecks`). Until then the Phase 4 reference tells the pass to record the
-  disproof as evidence and an anomaly note and to leave the subsystem short of `mapped`. The
-  server does not enforce that: the `mapped` check accepts any earlier outcome on the claim, so
-  a claim that recorded `survived` and was disproved later at the same commit still lets the
-  subsystem advance (found by review, 2026-11-18). A latest-outcome rule would close it, but it
-  needs a way to record the negative outcome first.
+- ~~**May a claim close at the revision it was recorded at?**~~ Yes, decided 2026-11-19 after
+  the first beta tester hit it: an adversarial pass found a structural claim overstated
+  its scope and could not correct it until HEAD moved. `invalidate_claim` and `supersede_claim`
+  now accept the claim's own `valid_from_sha`, which leaves an empty interval: the claim never
+  held. Opening a store rebuilds `claims` without the `CHECK` that forbade it
+  (`migrateClaimsNeverHeld` in `db.ts`). Every as-of reader already treats `valid_until_sha` as
+  exclusive, so a never-held claim is current at no revision. The Phase 4 reference now routes a
+  claim wrong when recorded to the recording commit. The `mapped` check still accepts any outcome
+  on a current claim; a claim disproved after recording `survived` now has a way to be closed,
+  but the server cannot make the pass do it.
 - **Resume the self-rebuild?** Paused 2026-11-06. The plan has three stages: real exclusion (an
   `.amanuensisignore` file: excluded paths get no ledger row, count or label anywhere), a model
   pilot (Haiku, Sonnet, Opus, Luna, Terra and Sol, two runs each, judged blind; judge not settled
@@ -240,7 +238,7 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 | ~~B04-3~~ | ~~The read-back gate cannot turn red on a stale-marker fault~~ Closed 2026-11-19 (056b737): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`, and the `entries`-derived marker, its read-back check and the two tests that required it are retired by the owner's decision; those tests now assert no such marker is published |
 | ~~B04-4~~ | ~~"How to read this conspectus" teaches a superseded contradiction model~~ Repaired, per `docs/resolved-findings.md` |
 | B04-5 | Publishing went red on seven dangling anchors. Mechanism unknown; reproducing it needs the downstream store's rows |
-| B04-R2 | The adversarial pass cannot record a negative outcome at a single revision. Now B04-R6 in the self-conspectus; see the decision above. The Phase 4 reference says so (8ca8754) |
+| ~~B04-R2~~ | ~~The adversarial pass cannot record a negative outcome at a single revision~~ Fixed 2026-11-19 (B04-R6 in the self-conspectus): a claim closes at its own `valid_from_sha`; see the decision above |
 | ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passed the server and failed the gate; escaped 2026-11-18 (760bda0) |
 | ~~B05-R1~~ | ~~A clean publish and the live site can be green while the overview shows a placeholder thesis~~ Repaired at 30c87d5, per `docs/resolved-findings.md` |
 | ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |

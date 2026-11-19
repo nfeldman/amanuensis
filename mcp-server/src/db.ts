@@ -305,6 +305,28 @@ function runMigrations(db: DB): void {
   // 4. CHECK-constrained vocabularies — a widened enum reaches an existing
   // store only through a table rebuild.
   migrateVocabularyChecks(db);
+  //
+  // 5. A claim may close at its own valid_from_sha (finding B04-R6).
+  migrateClaimsNeverHeld(db);
+}
+
+/**
+ * Drop the CHECK that forbade a claim closing at the commit it opened at.
+ *
+ * Without it nothing can record that a claim was wrong when it was recorded:
+ * invalidate_claim and supersede_claim could only close a claim at a later
+ * commit, so a survey reading one revision could never overturn its own claim
+ * (finding B04-R6). An empty interval is the record of "never held", and every
+ * as-of reader already excludes it, because each treats valid_until_sha as an
+ * exclusive boundary that an equal commit reaches.
+ */
+function migrateClaimsNeverHeld(db: DB): void {
+  if (!hasTable(db, "claims")) return;
+  const live = liveCreateSql(db, "claims").replace(/\s+/g, " ");
+  if (!live.includes("valid_until_sha != valid_from_sha")) return;
+  const canonicalCreate = canonicalCreateSql(readSchemaText(), "claims");
+  if (!canonicalCreate) return;
+  rebuildTable(db, "claims", canonicalCreate);
 }
 
 /**
@@ -468,7 +490,7 @@ function rebuildTable(db: DB, table: string, canonicalCreate: string): void {
       const violations = db.pragma("foreign_key_check") as unknown[];
       if (violations.length > 0) {
         throw new Error(
-          `amanuensis-memory: rebuilding ${table} for the vocabulary source left ${violations.length} foreign-key violation(s); the store is unchanged`,
+          `amanuensis-memory: rebuilding ${table} to the canonical schema left ${violations.length} foreign-key violation(s); the store is unchanged`,
         );
       }
     })();
