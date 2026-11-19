@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process"
 import { writeFile } from "node:fs/promises"
 
-const result = spawnSync("npm", ["audit", "--json"], { encoding: "utf8" })
+// Bounded, so a stalled registry fails the capture instead of hanging (B07-1).
+const result = spawnSync("npm", ["audit", "--json"], { encoding: "utf8", timeout: 120_000 })
+if (result.error) throw new Error(`npm audit: ${result.error.message}`)
 if (!result.stdout) throw new Error(result.stderr || "npm audit returned no JSON")
 const audit = JSON.parse(result.stdout)
 audit._amanuensis_record = {

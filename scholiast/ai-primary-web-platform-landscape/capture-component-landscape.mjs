@@ -34,10 +34,15 @@ const packages = [
   "tailwind-merge",
 ]
 
+// Every network call and child process is bounded, so a stalled GitHub, npm
+// or registry fails the capture instead of hanging the terminal (B07-1).
+const TIMEOUT_MS = 60_000
+
 async function github(repo) {
   const url = `https://api.github.com/repos/${repo}`
   const response = await fetch(url, {
     headers: { Accept: "application/vnd.github+json", "User-Agent": "amanuensis-scholiast-survey" },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   })
   if (!response.ok) throw new Error(`${url}: ${response.status} ${await response.text()}`)
   const data = await response.json()
@@ -60,8 +65,9 @@ function npmMetadata(name) {
   const result = spawnSync(
     "npm",
     ["view", name, "version", "time.modified", "license", "dist.unpackedSize", "dependencies", "peerDependencies", "engines", "repository", "--json"],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: TIMEOUT_MS },
   )
+  if (result.error) throw new Error(`npm view ${name}: ${result.error.message}`)
   if (result.status !== 0) throw new Error(result.stderr || `npm view ${name} exited ${result.status}`)
   return { package: name, ...JSON.parse(result.stdout) }
 }

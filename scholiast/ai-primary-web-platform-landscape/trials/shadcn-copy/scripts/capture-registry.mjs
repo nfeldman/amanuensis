@@ -4,11 +4,16 @@ import { writeFile } from "node:fs/promises"
 
 const items = ["button", "input", "label", "table"]
 const cli = new URL("../node_modules/.bin/shadcn", import.meta.url).pathname
+// Bounded, so a stalled registry fails the capture instead of hanging (B07-1).
 const result = spawnSync(cli, ["view", ...items], {
   cwd: new URL("..", import.meta.url),
   encoding: "utf8",
+  timeout: 120_000,
 })
 
+if (result.error) {
+  throw new Error(`shadcn view: ${result.error.message}`)
+}
 if (result.status !== 0) {
   throw new Error(result.stderr || `shadcn view exited ${result.status}`)
 }

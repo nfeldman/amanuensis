@@ -10,6 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 recorded = json.loads((ROOT / "trial-inspection.json").read_text(encoding="utf-8"))
-live = json.loads(subprocess.check_output([sys.executable, str(ROOT / "trial-inspection.py")], text=True))
+# Bounded, so a stalled detector fails the check instead of hanging (B07-1).
+live = json.loads(
+    subprocess.check_output(
+        [sys.executable, str(ROOT / "trial-inspection.py")], text=True, timeout=300
+    )
+)
 assert live == recorded, "live trial inspection differs from trial-inspection.json"
 print("PASS: live trial inspection exactly matches recorded snapshot")

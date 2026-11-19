@@ -9,6 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 recorded = json.loads((ROOT / "registry-trial-inspection.json").read_text(encoding="utf-8"))
-live = json.loads(subprocess.check_output(["python3", "registry-trial-inspection.py"], cwd=ROOT))
+# Bounded, so a stalled detector fails the check instead of hanging (B07-1).
+live = json.loads(
+    subprocess.check_output(["python3", "registry-trial-inspection.py"], cwd=ROOT, timeout=300)
+)
 assert live == recorded, "live registry-trial inspection differs from recorded snapshot"
 print("registry trial snapshot matches live outputs")
