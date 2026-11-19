@@ -174,6 +174,11 @@ Workflow:
   `compile_review_brief` read stale rows from `entries`, which nothing writes, so its
   `unknowns` never carried one. It now reads obligation-bearing stale `file_ledger` rows, as
   object type `stale-file`.
+- ~~**Three doors round the status ladder.**~~ Found by cross-family review and fixed 2026-11-19:
+  leaving `deferred` skipped every forward prerequisite (3d0d20c); `reset_subsystem` could
+  reset *up* to `mapped` (0df7889); and a status committed without its ladder rung lost the
+  depth a parked subsystem resumes from (0df7889). A row parked before the ladder was kept
+  still has no recorded depth and passes as it always did.
 - ~~**`upsert_subsystem` defaults `status` to `unmapped`.**~~ Fixed on branch `server-fixes`,
   2026-11-16: an omitted status keeps the current one on update.
 
