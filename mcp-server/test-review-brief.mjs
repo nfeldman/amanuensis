@@ -269,13 +269,11 @@ function freshFixture() {
              'Does every deployed consumer accept both event versions?',
              'complete compatibility proof', 'the legacy consumer is still deployed', ?, ?, 'open')`,
   ).run(ctx.sessionId, base);
+  // Staleness lives on the file ledger; the review brief reads it there.
   db.prepare(
-    `INSERT INTO entries
-       (id, tier, subsystem_id, content_hash, source_path, ref_sha, confidence,
-        stale, stale_since, stale_reason)
-     VALUES ('C-summary', 1, 'C', 'fixture', 'conspectus/C.md', ?, 'verified',
-             1, datetime('now'), 'git-drift')`,
-  ).run(base);
+    `UPDATE file_ledger SET stale=1, stale_since=datetime('now'), stale_reason='git-drift'
+      WHERE subsystem_id='C' AND file_path='src/candidate.ts'`,
+  ).run();
 
   call(tools, ctx, "predict_change_impact", {
     base_sha: rename,
@@ -349,6 +347,15 @@ test("known seam defect compiles into a complete impact-first brief", () => {
     assert(
       result.brief.sections.unknowns.length >= 2,
       "unknown and unverified context was omitted",
+    );
+    assert(
+      result.trace.some(
+        (trace) =>
+          trace.section === "unknowns" &&
+          trace.object_type === "stale-file" &&
+          trace.object_id === "C:src/candidate.ts",
+      ),
+      "a stale file in an impacted subsystem was omitted from the unknowns",
     );
     assertEqual(
       ids(result.brief.sections.uncovered_files, "gap_id"),

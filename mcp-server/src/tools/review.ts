@@ -11,6 +11,7 @@ import {
 } from "../helpers.js";
 import { requireActiveSession } from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
+import { OBLIGATION_BEARING_SQL } from "../vocabulary.js";
 
 const CONTEXT_PROFILES = ["diff-scoped", "control-wide", "integral-head"] as const;
 const VALIDATION_ABLATIONS = ["task-constraints", "impacted-seams", "stale-claims"] as const;
@@ -628,32 +629,35 @@ function buildCandidates(
         profileIncluded: true,
       });
     }
-    const staleEntries = ctx.db
+    // Staleness lives on the file ledger. This read once took `entries`,
+    // which no code path writes, so no brief ever carried a stale file.
+    const staleFiles = ctx.db
       .prepare(
-        `SELECT * FROM entries
-          WHERE stale=1 AND subsystem_id IN (${placeholders(impactedSubsystems)})
-          ORDER BY id, tier`,
+        `SELECT * FROM file_ledger
+          WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}
+            AND subsystem_id IN (${placeholders(impactedSubsystems)})
+          ORDER BY subsystem_id, file_path`,
       )
       .all(...impactedSubsystems) as Array<
-      Record<string, unknown> & { id: string; tier: number; subsystem_id: string }
+      Record<string, unknown> & { subsystem_id: string; file_path: string }
     >;
-    for (const entry of staleEntries) {
+    for (const file of staleFiles) {
       add({
         section: "unknowns",
-        objectType: "stale-entry",
-        objectId: `${entry.id}:${entry.tier}`,
+        objectType: "stale-file",
+        objectId: `${file.subsystem_id}:${file.file_path}`,
         required: true,
         priority: 2,
-        reason: "an impacted subsystem contains explicitly stale knowledge",
+        reason: "an impacted subsystem contains a file that changed since it was recorded",
         compact: {
-          entry_id: entry.id,
-          tier: entry.tier,
-          stale_reason: entry.stale_reason,
-          stale_since: entry.stale_since,
+          subsystem_id: file.subsystem_id,
+          file_path: file.file_path,
+          stale_reason: file.stale_reason,
+          stale_since: file.stale_since,
         },
-        source: { type: "stale-entry", entry },
+        source: { type: "stale-file", file },
         provenance: {
-          impact_reason_path: paths.get(`subsystem\u0000${entry.subsystem_id}`) ?? [],
+          impact_reason_path: paths.get(`subsystem\u0000${file.subsystem_id}`) ?? [],
         },
         profileIncluded: true,
       });
