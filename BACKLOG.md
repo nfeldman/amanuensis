@@ -16,12 +16,10 @@ real run; "read" means found by reading code and not reproduced.
 
 ## Decisions waiting on the owner
 
-- **Raise the default `describe_locus` budget?** A default call on a surveyed file returns no
-  items at all, explanations included: the response is 8,548–8,708 bytes with every item removed,
-  over the 8,192-byte budget, because the envelope carries the payload twice. Serving a purpose
-  sentence needs about 10,240. Measured in
-  [design/explanation/locus-default-measure.json](design/explanation/locus-default-measure.json);
-  deferred in [design/explanation/decisions.md](design/explanation/decisions.md) §5.
+- ~~**Raise the default `describe_locus` budget?**~~ Decided 2026-11-19: raised from 8192 to
+  15360 bytes (4aa6a66). Re-measured on the self-conspectus, each of the three dogfood loci now
+  serves its purpose sentence and structure item
+  ([design/explanation/locus-default-measure.json](design/explanation/locus-default-measure.json)).
 - **May a claim close at the revision it was recorded at?** An adversarial pass that finds a claim
   wrong at the commit it was recorded at cannot record `overturned` (self-conspectus finding
   B04-R6, carried from B04-R2; all 8 recorded outcomes there are `survived`). `invalidate_claim`
@@ -43,7 +41,14 @@ real run; "read" means found by reading code and not reproduced.
 - **Release-time host evidence.** The A25/A26 activation checks left CI on 2026-11-06. Nothing
   compares the recorded host runs with the code between releases. A release that wants them needs
   a live Codex capture first, and the capture harness needs repair before it passes on current
-  code.
+  code. `dev/test-activation-evidence.mjs` (B07-R1) is red for the same reason: a recorded source
+  digest for `mcp-server/src/project.ts` has drifted.
+- **Reconcile the self-conspectus, or wait for the rebuild?** P11
+  (`dev/test-survey-depth-acceptance.mjs`) is red only on its binding: the acceptance receipt's
+  ledger accounts for 690 paths; at 7d7e153 the tree has 711, of which 23 are unledgered, and two ledgered paths were deleted with P20. The gap grows with each commit that adds a file.
+  EX8 and EX14 run P11, so they are red with it. Repairing it means running `detect_changes` on
+  the self-conspectus store and assigning or exempting each new path, which is Amanuensis use and
+  needs the owner's go-ahead; the self-rebuild would replace it anyway.
 
 ## Explanation quality
 
@@ -161,13 +166,39 @@ Workflow:
   was never marked stale, and change impact recorded `"caf\303\251.ts"`. `detect_changes`,
   the refresh drift check and `predict_change_impact` (a fourth site, not in the original
   report) now read `-z` output.
-- **`dev/check-living-conspectus.mjs` lists the fixture tree without `-z`.** Found by review,
-  2026-11-16. A non-ASCII manifest path would read as missing from the tree. The A0 fixture is
-  all ASCII, so nothing is wrong today. The fix is one flag, but the checker hashes its own
-  source: any edit needs a detector version bump and an explicit rebaseline of a frozen
-  measurement, which is the owner's call.
+- ~~**`dev/check-living-conspectus.mjs` lists the fixture tree without `-z`.**~~ Fixed
+  2026-11-19 (ccfcc3c) as detector 1.1.0, by the owner's decision: a new report and registry
+  beside the 1.0.0 ones, which stay byte-identical because the rebuild receipts pin them. The
+  1.1.0 report differs only in its measurement block; a test pins a non-ASCII path.
+- ~~**The impact-aware review brief never lists a stale file.**~~ Found and fixed 2026-11-19 (7d7e153):
+  `compile_review_brief` read stale rows from `entries`, which nothing writes, so its
+  `unknowns` never carried one. It now reads obligation-bearing stale `file_ledger` rows, as
+  object type `stale-file`.
 - ~~**`upsert_subsystem` defaults `status` to `unmapped`.**~~ Fixed on branch `server-fixes`,
   2026-11-16: an omitted status keeps the current one on update.
+
+## Self-measurement
+
+From `design/self-observability/README.md`. Layer A, the automatic per-call log, shipped in
+0.2.0-beta.6 (21623df).
+
+- **Layers B–D are proposals.** B records session provenance and lifecycle, including the
+  model, which MCP does not carry. C adds truth signals: per pass type, model and skill version,
+  how often a recorded conclusion is later overturned. D is an analyzer over A–C. Each builds on
+  the one before.
+- **Two call-log fixes have no test.** Storage migration's `storageManifest` skips `call-log/`,
+  and the symlink walk tolerates a file vanishing mid-walk (ENOENT). Either could regress
+  silently.
+
+## Hosts and CI
+
+- **No real Copilot session has been seen loading the registration.** The installer writes the
+  Copilot CLI and VS Code registration (shared `~/.copilot`) and isolated-home tests cover it,
+  but neither host has been observed starting the server. Codex and Claude Code have been.
+- **An intermittent CI failure in the Python 3.11 materializer job.** GATE P10
+  (`test-search-index.py`) once failed with "the browser never reported a debugging endpoint"
+  (run 44238970148, 8464eef): headless Chrome did not start in time. It passed on every later
+  run. Not investigated; a longer startup wait or one retry would likely cover it.
 
 ## Model routing
 
@@ -188,33 +219,41 @@ new ids (B03-6 became B03-R2, for example), and some ids were later re-minted fo
 
 | Finding | Defect |
 |---|---|
-| B04-R1 | A default `describe_locus` call returns no items (see the first decision above) |
+| ~~B04-R1~~ | ~~A default `describe_locus` call returns no items~~ Fixed 2026-11-19 (4aa6a66): the default budget is 15360 bytes, and each dogfood locus now serves its purpose sentence |
 | ~~B02-R1, B02-2, B02-3, B04-R4~~ | ~~A stalled `git` or `ps` subprocess can hang server startup or a tool call indefinitely~~ Fixed on branch `server-fixes`, 2026-11-16: startup probes were already bounded; the 28 tool-time sites now go through `src/subprocess.ts` (120 s default, `AMANUENSIS_SUBPROCESS_TIMEOUT_MS`). Reproduced first: each tool waited out a stalled `git` |
 | ~~B02-R2~~ | ~~The gate certifying time-bounded activation probes passes with an unbounded probe~~ Fixed 2026-11-18 (a18f552, carried as B02-R6): `test-startup-bounds.mjs` also reads `src`, so a direct `node:child_process` call without a `timeout` turns it red; the two it found, the doctor's probes in `cli.ts`, are bounded |
 | ~~B02-R4~~ | ~~Under Codex Desktop the user-scoped registration starts the server with cwd `/`~~ Repaired, per `docs/resolved-findings.md` |
 | ~~B02-R3, B05-2~~ | ~~The server reported an older version than its package~~ Fixed 2026-11-17 (893d94a, also B05-R1/B02-R7): the server reads its version from `package.json`, the compatibility probe asserts it, and the README no longer names one |
 | ~~B02-4~~ | ~~A verified-fixed finding can be silently demoted to fixed-pending-verification~~ Repaired at 34a8762, per `docs/resolved-findings.md` |
-| B03-5 | A subsystem can report `mapped` with no unledgered, absent or stale rows while most of its scoped files were never examined |
+| ~~B03-5~~ | ~~A subsystem can report `mapped` with no unledgered, absent or stale rows while most of its scoped files were never examined~~ Fixed 2026-11-19 (3c777a9): the advance to `mapped` refuses while any obligation-bearing ledger row of the subsystem is still `candidate`, naming the files (*"still 'candidate', never examined"*); `deferred-with-reason` or an exempt classification discharges a file. `get_dashboard` reports `examined_files` and `unexamined_files`. A store whose subsystems are already `mapped` is not re-checked |
 | ~~B03-6~~ | ~~A finding can reach verified-fixed with a `fix_sha` the fix is not at~~ Fixed 2026-11-17 (carried as B03-R2): `fix_sha` must be the last commit to change the file `fix_location` names (not a directory), checked on write and again at verification; a carried finding's `repaired_sha` must have changed a file it cites |
-| B03-7 | Moved content with still-valid claims has no way to be re-anchored |
+| B03-7 | Moved content with still-valid claims has no way to be re-anchored. Needs design: evidence is insert-only, so a re-anchor is a new append-only row that supersedes the old citation, validated like `add_evidence`, and every reader of `claim_evidence` and `finding_evidence` has to take the current anchor |
 | ~~B03-8~~ | ~~A finding's severity cannot be amended~~ Fixed 2026-11-17 (carried as B03-R4): `update_finding_severity`, with each re-grade and the revision it was judged at in `finding_severity_events`; `describe_locus` with `as_of_sha` replays it, and since f9c7e95 each re-grade is a row on `resolution-history.md`. `get_finding_resolution_history` stays resolution-only |
 | B03-R1 | A rebuilt store can re-mint a finding id and satisfy an old external reference. Partly addressed 2026-11-18 (999ab78, then a trigger on `findings` so a racing carry cannot slip past the check): within one store, a live finding cannot take an id a carried record holds, and `carry_finding` reports a live finding that already has the archived id with the `<store-id>:<finding-id>` form the resolver accepts. This reverses `design/survey-depth/spec.md` §5.2, which let a successor re-find keep the archived id; gate A3 in `test-carried-findings.mjs` now asserts the refusal. A fresh store that carries nothing can still re-mint any id |
 | ~~B03-R2~~ | ~~A clean-slate rebuild cannot carry an unresolved finding forward~~ Repaired at 6ac8d89, per `docs/resolved-findings.md`; the shadowing it left open is the 999ab78 work under B03-R1 |
 | ~~B04-2~~ | ~~Every HTML page shows "No recorded stale entries" whatever the drift~~ Repaired, per `docs/resolved-findings.md` |
-| B04-3 | The read-back gate cannot turn red on a stale-marker fault. Mostly addressed (checked 2026-11-17): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`. What is left is dead code: `readback.py` and the index page still read stale markers from `entries`, which nothing writes. Removing it means retiring two CI gate checks that require the marker (`test-overview-truthfulness.py` "the entries-derived stale marker survives", `test-ledger-freshness.py`'s `stale_marker` check), so it is left for the owner |
+| ~~B04-3~~ | ~~The read-back gate cannot turn red on a stale-marker fault~~ Closed 2026-11-19 (056b737): `_ledger_stale_census` checks one marker per stale `file_ledger` row on `stale.md`, and the `entries`-derived marker, its read-back check and the two tests that required it are retired by the owner's decision; those tests now assert no such marker is published |
 | ~~B04-4~~ | ~~"How to read this conspectus" teaches a superseded contradiction model~~ Repaired, per `docs/resolved-findings.md` |
-| B04-5 | Publishing went red on seven dangling anchors |
+| B04-5 | Publishing went red on seven dangling anchors. Mechanism unknown; reproducing it needs the downstream store's rows |
 | B04-R2 | The adversarial pass cannot record a negative outcome at a single revision. Now B04-R6 in the self-conspectus; see the decision above. The Phase 4 reference says so (8ca8754) |
 | ~~B04-R3~~ | ~~`add_claim` accepts a `claim_key` whose slug does not name the subject~~ Fixed 2026-11-17 (carried as B04-R7): `add_claim` applies the stable-key rule; keys stored earlier stay supersedable. Found by review, not fixed: `dev/test-rebuild-coverage.mjs` builds its flow-key regex from the subsystem id unescaped, so an id with a regex character (`B+01`) passed the server and failed the gate; escaped 2026-11-18 (760bda0) |
 | ~~B05-R1~~ | ~~A clean publish and the live site can be green while the overview shows a placeholder thesis~~ Repaired at 30c87d5, per `docs/resolved-findings.md` |
 | ~~B01-1~~ | ~~A subsystem surveyed as documented reports zero claims~~ Repaired, per `docs/resolved-findings.md` |
-| B01-R1 | The phase references drift from the tools they describe, unchecked. The instance re-found as B01-R2 is fixed (8ca8754): Phase 4 recorded `survived` as a field note, which the `mapped` advance does not count, and never named `record_claim_challenge`; the P12 gate now requires it. The general case is still checked only for registered refusals (`check-refusal-parity.mjs`) |
-| B07-1 | A research refresh can hang on a network fetch. Operator-run scripts under `scholiast/` (fetch, the shadcn CLI, a Python child), not the server; a stall hangs a terminal. Left as LOW, 2026-11-16 |
-| B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI |
-| B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild |
-| — | The regeneration gate asserts over a store the acceptance rebuild deleted; two of its failures may be genuine |
+| ~~B01-R1~~ | ~~The phase references drift from the tools they describe, unchecked~~ Fixed 2026-11-19 (22a3005): `scripts/check-reference-calls.mjs`, in CI, requires every `tool(args)` code span in the skill to name a real tool and real arguments. Its first run found four drifts (`field_note` twice, `open_question`, `get_findings(finding_id=…)`), fixed. It cannot see a call outside a code span or a wrong argument value |
+| ~~B07-1~~ | ~~A research refresh can hang on a network fetch~~ Fixed 2026-11-19 (dc5ad34): the GitHub fetch, the npm and shadcn CLI calls and the two snapshot verifiers' detector runs are bounded, and fail with the cause |
+| B07-R1 | `dev/test-activation-evidence.mjs` never runs in CI. That is now the owner's CI scope (6c6d789); the gate is red on a drifted source digest and needs a live Codex capture (see "Release-time host evidence") |
+| B07-R2 | `dev/test-rebuild-depth.mjs` cannot pass on a genuine clean-slate rebuild. It now exits at its designed CANNOT RUN state (2) rather than red, since its CI self-check was removed |
+| ~~—~~ | ~~The regeneration gate asserts over a store the acceptance rebuild deleted~~ Deleted 2026-11-19 (443174e), by the owner's 2026-11-06 decision. **Replace it:** a regeneration gate bound to the store it reads, whose denominators come from the live store's own subsystems: every ladder rung witnessed by a recorded transition, every current claim challenged before `mapped`, every cross-subsystem import carried by a recorded edge, and the dogfood and depth receipts recorded at one store revision. Known gaps it would find today: no subsystem is `mapped`, three current claims have no challenge outcome, and the B-02→B-03 edge is unrecorded |
 | ~~—~~ | ~~A mistaken outcome on a carried finding cannot be corrected~~ Fixed 2026-11-18 (f564925): `record_carried_outcome` takes `corrects_outcome_id`; the correction is a new append-only row that names the one it supersedes, and every reader takes the current outcome |
 
-The `dev/` receipt gates are no longer in CI, and 17 of 27 failed at `71f3450`; most fail only
-because they check that they are listed in the workflow. `dev/republish-docs.mjs` ends red until
-they are cleaned up or retired.
+The `dev/` receipt gates are no longer in CI. On 2026-11-19 (97b62b4) the twelve that asserted
+their own step in `test.yml` stopped doing so. Measured in a worktree with a copy of the store,
+19 of the 26 left are green and P19 is at its designed CANNOT RUN exit. Six are still red:
+- P11, EX8 and EX14: the self-conspectus is not reconciled with the tree (see the decision above).
+- `dev/test-activation-evidence.mjs`: a drifted source digest that needs a live Codex capture.
+- `dev/test-pecia-carry-audit.mjs` (P9): `dev/pecia-dogfood.md` does not account for `pc-5465`.
+- `dev/test-amanuensis-pecia-defects.mjs`: Pecia v3.5 moved its output behind `--json`, and the
+  ledger is rejected by the current Pecia CLI anyway (`E013`).
+
+`dev/republish-docs.mjs` needs P11 among others, so a republish still ends red until the store is
+reconciled or rebuilt.
