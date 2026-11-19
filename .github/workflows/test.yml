@@ -263,6 +263,9 @@ jobs:
       - name: Reference calls — every tool call the skill writes names a real tool and argument
         working-directory: mcp-server
         run: node scripts/check-reference-calls.mjs
+      - name: Reference calls red arms — the checker sees wrapped and fenced calls
+        working-directory: mcp-server
+        run: node test-reference-calls.mjs
       - name: Single enum source — generated files, SQL CHECKs, validators, hint tables
         working-directory: mcp-server
         run: node test-vocabulary-source.mjs

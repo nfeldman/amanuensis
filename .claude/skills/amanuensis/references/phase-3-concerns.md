@@ -133,7 +133,7 @@ Only after the matrix resolves do you write dispositions.
 ### 8. Seam concerns
 
 If a concern path crosses a seam into another subsystem, stop at
-the boundary. Record a `field_note(category="candidate-concern",
+the boundary. Record an `add_field_note(category="candidate-concern",
 location=<seam id>)` describing what would need to be evaluated
 once the counterpart is `mapped`. Do not enter unmapped territory.
 

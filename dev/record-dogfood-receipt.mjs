@@ -49,8 +49,8 @@ const DOGFOOD_LOCI = [
   "materializer/amanuensis_materializer/core.py",
 ];
 
-// The three optional sections. Asking for them raises the wire budget from 8192
-// to 20480 (`WIRE_BUDGET + 4096 × optional-sections-requested`), which is what
+// The three optional sections. Asking for them raises the wire budget from 15360
+// to 27648 (`WIRE_BUDGET + 4096 × optional-sections-requested`), which is what
 // leaves room for the account itself; `structure` is a default section and does
 // not raise it.
 const LOCUS_SECTIONS = ["structure", "reviews", "leads", "history_pointer"];

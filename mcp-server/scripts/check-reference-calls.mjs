@@ -102,7 +102,51 @@ function referenceFiles() {
   return files;
 }
 
-const CALL = /(?<![A-Za-z0-9_])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\(([^`]*)\)/g;
+const CALL_NAME = /(?<![A-Za-z0-9_])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\(/g;
+
+/**
+ * Every `name(…)` in a span, with its argument text read to the matching
+ * parenthesis. A greedy pattern ran to the last `)` in a fenced block and
+ * swallowed every later call on it into the first one's arguments.
+ */
+export function callsIn(body) {
+  const calls = [];
+  for (const match of body.matchAll(CALL_NAME)) {
+    const open = match.index + match[0].length;
+    let depth = 1;
+    let quote = null;
+    let i = open;
+    for (; i < body.length && depth > 0; i += 1) {
+      const ch = body[i];
+      if (quote) {
+        if (ch === quote) quote = null;
+      } else if (ch === '"' || ch === "'") quote = ch;
+      else if (ch === "(") depth += 1;
+      else if (ch === ")") depth -= 1;
+    }
+    if (depth === 0) calls.push([match[1], body.slice(open, i - 1)]);
+  }
+  return calls;
+}
+
+/** Code spans, fenced and inline, each with its offset in `text`. */
+export function spansIn(text) {
+  const spans = [];
+  const fence = /```[^\n]*\n([\s\S]*?)```/g;
+  let masked = text;
+  for (const match of text.matchAll(fence)) {
+    spans.push({ body: match[1], index: match.index });
+    masked = masked.slice(0, match.index) + " ".repeat(match[0].length) + masked.slice(match.index + match[0].length);
+  }
+  // Inline spans, backticks paired in order as Markdown pairs them. One pass,
+  // so a span wrapped across lines is read whole, and a closing backtick is
+  // never paired with the next span's opening one. A span does not cross a
+  // blank line.
+  for (const match of masked.matchAll(/`((?:[^`\n]|\n(?![ \t]*\n))+)`/g)) {
+    spans.push({ body: match[1], index: match.index });
+  }
+  return spans;
+}
 
 export async function checkReferenceCalls() {
   const tools = await loadTools();
@@ -110,20 +154,9 @@ export async function checkReferenceCalls() {
   let calls = 0;
   for (const file of referenceFiles()) {
     const text = readFileSync(file, "utf8");
-    // Code spans, single-backtick and fenced, with their line numbers.
-    const spans = [];
-    const fence = /```[^\n]*\n([\s\S]*?)```/g;
-    let masked = text;
-    for (const match of text.matchAll(fence)) {
-      spans.push({ body: match[1], index: match.index });
-      masked = masked.slice(0, match.index) + " ".repeat(match[0].length) + masked.slice(match.index + match[0].length);
-    }
-    for (const match of masked.matchAll(/`([^`\n]+)`/g)) spans.push({ body: match[1], index: match.index });
-    // A span split across lines by wrapping: `name(a,\n b)`.
-    for (const match of masked.matchAll(/`([^`]*\n[^`]*)`/g)) spans.push({ body: match[1], index: match.index });
+    const spans = spansIn(text);
     for (const span of spans) {
-      for (const call of span.body.matchAll(CALL)) {
-        const [, name, inner] = call;
+      for (const [name, inner] of callsIn(span.body)) {
         calls += 1;
         const line = text.slice(0, span.index).split("\n").length;
         const where = `${relative(resolve(MCP, ".."), file)}:${line}`;
