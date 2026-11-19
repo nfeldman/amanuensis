@@ -32,11 +32,11 @@ The horizons are dependency bands, not calendar promises. An initiative advances
 
 **Conspectus read-back:** `v2-integration-0e2dafb-terminal` passed state, coverage, and content with 0 mismatches at source `0e2dafb81d08ebfd3bce718aed376a588095a3a8`; durable storage commit `533962b5d55edfe112caf6fff7fb82d0588bed63`.
 
-**Release:** established; [v0.2.0-beta.6](https://github.com/nfeldman/amanuensis/tree/v0.2.0-beta.6) published [@gruetech/amanuensis@0.2.0-beta.6](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-beta.6) as `latest` on npmjs.
+**Release:** established; [v0.2.0-beta.7](https://github.com/nfeldman/amanuensis/tree/v0.2.0-beta.7) published [@gruetech/amanuensis@0.2.0-beta.7](https://www.npmjs.com/package/@gruetech/amanuensis/v/0.2.0-beta.7) as `latest` on npmjs.
 
-**Publication evidence:** [publish.yml run 44540909369](https://github.com/nfeldman/amanuensis/actions/runs/44540909369) concluded success at tag commit `572d1025ade91b7c2cf94603523ff3c0553d039c`; registry shasum `ef806785074abe2383ea73fbf86a59ddf64193ce`.
+**Publication evidence:** [publish.yml run 44640560519](https://github.com/nfeldman/amanuensis/actions/runs/44640560519) concluded success at tag commit `28441ca67e65f8f38c1cb4d67e113839c3e23e0e`; registry shasum `016188713418cf84c04812645a059dc2e4774496`.
 
-**Published-package smoke:** [published-smoke.yml run 44542371015](https://github.com/nfeldman/amanuensis/actions/runs/44542371015) concluded success for `0.2.0-beta.6`.
+**Published-package smoke:** [published-smoke.yml run 44641198593](https://github.com/nfeldman/amanuensis/actions/runs/44641198593) concluded success for `0.2.0-beta.7`.
 
 ## Epistemic baseline
 

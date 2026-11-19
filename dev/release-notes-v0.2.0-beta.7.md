@@ -35,6 +35,11 @@ Correct a claim without waiting for a new commit, and stop failing a publish ove
 
 ### Validation scope
 
+The repository's [`tests` workflow passed](https://github.com/nfeldman/amanuensis/actions/runs/44638953638) at the release commit, and the
+publish workflow verified the packed artifact before it published.
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/44640560519), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/44641198593) against the registry version.
+
 Every server test and every materializer test passed serially at the release commit.
 The claim and link fixes each have a test that reproduces the failure a beta tester
 reported and fails without the fix. Product efficacy remains unestablished.
