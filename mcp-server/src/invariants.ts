@@ -147,7 +147,9 @@ export function enforceMonotonicTransition(
 ): void {
   if (currentStatus === null) return;
   // deferred is bidirectional — a subsystem can be parked and later
-  // unparked to resume the survey at whatever depth it held before.
+  // unparked to resume the survey at whatever depth it held before. That depth
+  // is not taken on trust: enforceForwardPrerequisites checks every rung up to
+  // the one it resumes at.
   if (currentStatus === "deferred" || targetStatus === "deferred") return;
   const currentRank = STATUS_RANK[currentStatus];
   const targetRank = STATUS_RANK[targetStatus];
@@ -1271,10 +1273,32 @@ export function enforcePhasePrerequisites(
 }
 
 /**
+ * The depth a parked subsystem held when it was parked, read from the status
+ * ladder. Resuming answers for every rung above it, or `adversarial → deferred
+ * → mapped` would walk around every check `mapped` makes. A subsystem inserted
+ * straight at `deferred` by a writer held nothing, so it resumes from
+ * `unmapped`. `null` when no parking was recorded: a row parked before the
+ * ladder was kept, which is let through as it always was rather than made to
+ * re-answer for rungs it was never asked for.
+ */
+function heldBeforeParking(db: DB, subsystemId: string): SubsystemStatus | null {
+  const row = db
+    .prepare(
+      `SELECT from_status FROM subsystem_status_transitions
+        WHERE subsystem_id = ? AND to_status = 'deferred'
+        ORDER BY id DESC LIMIT 1`,
+    )
+    .get(subsystemId) as { from_status: SubsystemStatus | null } | undefined;
+  if (!row) return null;
+  return row.from_status ?? "unmapped";
+}
+
+/**
  * Every prerequisite between where a subsystem is and where a write is putting
  * it, checked in order so the first missing one names the phase that was
- * skipped. Regressions, no-op writes and `deferred` toggles pass through: the
- * rule binds genuine forward motion only.
+ * skipped. Regressions, no-op writes and moves into `deferred` pass through: the
+ * rule binds genuine forward motion only. A move out of `deferred` is forward
+ * motion from the depth the subsystem held when it was parked.
  *
  * `previousStatus` is `null` for a row that does not exist yet, which an insert
  * opening straight at a later status is. That is read as `unmapped` — the
@@ -1299,7 +1323,11 @@ export function enforceForwardPrerequisites(
   targetStatus: SubsystemStatus,
   workspacePath: string | null = null,
 ): string[] {
-  const from = previousStatus ?? "unmapped";
+  const from =
+    previousStatus === "deferred"
+      ? heldBeforeParking(db, subsystemId)
+      : (previousStatus ?? "unmapped");
+  if (from === null) return [];
   const currentRank = STATUS_ORDER.indexOf(from as Exclude<SubsystemStatus, "deferred">);
   const targetRank = STATUS_ORDER.indexOf(targetStatus as Exclude<SubsystemStatus, "deferred">);
   if (currentRank < 0 || targetRank <= currentRank) return [];

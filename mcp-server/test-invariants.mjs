@@ -1222,6 +1222,27 @@ t("B03-5: another subsystem's examined rows do not satisfy the gate", () => {
   }
 });
 
+t("leaving deferred answers for every rung: deferred → mapped is not a way round the ladder", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    climbToAdversarialWithUnread(ctx, "B-01");
+    call("update_subsystem_status", { id: "B-01", status: "deferred", defer_reason: "parked" }, ctx);
+    reconcileStore(ctx);
+    for (const tool of ["update_subsystem_status", "upsert_subsystem"]) {
+      assertThrows(
+        () => call(tool, { id: "B-01", name: "B-01", status: "mapped" }, ctx),
+        "still 'candidate', never examined",
+      );
+    }
+    assert(readStatus(ctx, "B-01") === "deferred", "a refused un-deferral moved the status");
+    // Resuming at a rung it earned before it was parked still passes.
+    const r = call("update_subsystem_status", { id: "B-01", status: "adversarial" }, ctx);
+    assert(r.previous_status === "deferred", "the resume to adversarial did not land");
+  } finally {
+    cleanup();
+  }
+});
+
 // ---- Evidence-required-to-overturn gate ----
 
 t("project-local Amanuensis state is rejected at source and evidence ingress", () => {
