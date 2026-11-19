@@ -40,6 +40,11 @@ agents explicitly. Nothing is written into any repository.
 
 ### Validation scope
 
+The repository's [`tests` workflow passed](https://github.com/nfeldman/amanuensis/actions/runs/44538975152) at the release commit, and the
+publish workflow verified the packed artifact before it published.
+[Publication succeeded](https://github.com/nfeldman/amanuensis/actions/runs/44540909369), and [all four Linux/macOS
+Node.js 20/22 smoke jobs passed](https://github.com/nfeldman/amanuensis/actions/runs/44542371015) against the registry version.
+
 The installer is covered by tests in isolated home directories for all three agents,
 and the packed-artifact test starts the user-level registration with only the system
 `PATH`, from `/`, through a database call. A real Claude Code session bound the
