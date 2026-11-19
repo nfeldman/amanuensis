@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
-export const DETECTOR_VERSION = "1.0.0";
+export const DETECTOR_VERSION = "1.1.0";
 const VALID_DISPOSITIONS = new Set([
   "confirmed-bug",
   "confirmed-acceptable",
@@ -595,7 +595,7 @@ function compareReport(expected, actual) {
   return stableJson(expected) === stableJson(actual);
 }
 
-function verifyPinnedRepository(root, manifest) {
+export function verifyPinnedRepository(root, manifest) {
   if (!existsSync(resolve(root, ".git"))) return [];
   const failures = [];
   const runGit = (args) => spawnSync("git", args, { cwd: root, encoding: "utf8" });
@@ -614,12 +614,14 @@ function verifyPinnedRepository(root, manifest) {
       detail: `expected ${manifest.tree}, observed ${tree.stdout.trim()}`,
     });
   }
-  const listing = runGit(["ls-tree", "-r", "--name-only", manifest.revision]);
+  // -z: with core.quotePath on (git's default), a non-ASCII path is printed
+  // quoted and escaped, and would read as missing from the tree (1.1.0).
+  const listing = runGit(["ls-tree", "-r", "-z", "--name-only", manifest.revision]);
   if (listing.status !== 0) {
     failures.push({ id: "fixture:inventory:readable", detail: listing.stderr.trim() });
     return failures;
   }
-  const observed = listing.stdout.split("\n").filter(Boolean).sort();
+  const observed = listing.stdout.split("\0").filter(Boolean).sort();
   const expected = sortedUnique(manifest.inventory?.paths ?? []);
   if (!sameSet(observed, expected)) {
     const missing = expected.filter((path) => !observed.includes(path));
@@ -723,11 +725,11 @@ function main() {
   const fixturePath = resolve(root, cli.fixture ?? "dev/conspectus/self-baseline.json");
   const reportPath = resolve(
     root,
-    cli.report ?? "dev/conspectus/baseline-report-detector-1.0.0.json",
+    cli.report ?? "dev/conspectus/baseline-report-detector-1.1.0.json",
   );
   const detectorRegistryPath = resolve(
     root,
-    cli.detector_registry ?? "dev/conspectus/detector-registry.json",
+    cli.detector_registry ?? "dev/conspectus/detector-registry-1.1.0.json",
   );
   const manifest = JSON.parse(readFileSync(fixturePath, "utf8"));
   const result = evaluateConspectus(manifest);

@@ -185,7 +185,7 @@ those are governed by the roadmap's controls, metrics, and kill criteria.
 [`dev/conspectus/self-baseline.json`](dev/conspectus/self-baseline.json) is the
 immutable A0 self-survey pinned to commit `b8b566f`. It owns the expected file,
 subsystem, concern, seam, run, and export sets. The checker derives
-[`dev/conspectus/baseline-report-detector-1.0.0.json`](dev/conspectus/baseline-report-detector-1.0.0.json)
+[`dev/conspectus/baseline-report-detector-1.1.0.json`](dev/conspectus/baseline-report-detector-1.1.0.json)
 from that fixture and fails if the checked-in successor report drifts. The
 original [`dev/conspectus/baseline-report.json`](dev/conspectus/baseline-report.json)
 remains frozen under its unversioned historical checker; the detector registry

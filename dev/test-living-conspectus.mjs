@@ -5,13 +5,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { evaluateConspectus } from "./check-living-conspectus.mjs";
+import { evaluateConspectus, verifyPinnedRepository } from "./check-living-conspectus.mjs";
 
 const DEV_DIR = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = resolve(DEV_DIR, "conspectus/self-baseline.json");
-const REPORT_PATH = resolve(DEV_DIR, "conspectus/baseline-report-detector-1.0.0.json");
+const REPORT_PATH = resolve(DEV_DIR, "conspectus/baseline-report-detector-1.1.0.json");
 const CHECKER_PATH = resolve(DEV_DIR, "check-living-conspectus.mjs");
-const DETECTOR_REGISTRY_PATH = resolve(DEV_DIR, "conspectus/detector-registry.json");
+const DETECTOR_REGISTRY_PATH = resolve(DEV_DIR, "conspectus/detector-registry-1.1.0.json");
 const BASELINE = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
 
 function clone() {
@@ -151,10 +151,10 @@ try {
   mkdirSync(cleanConspectus, { recursive: true });
   cpSync(CHECKER_PATH, resolve(cleanDev, "check-living-conspectus.mjs"), { recursive: false });
   cpSync(FIXTURE_PATH, resolve(cleanConspectus, "self-baseline.json"), { recursive: false });
-  cpSync(REPORT_PATH, resolve(cleanConspectus, "baseline-report-detector-1.0.0.json"), {
+  cpSync(REPORT_PATH, resolve(cleanConspectus, "baseline-report-detector-1.1.0.json"), {
     recursive: false,
   });
-  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry.json"), {
+  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry-1.1.0.json"), {
     recursive: false,
   });
   const exportDir = resolve(scratch, "export");
@@ -173,15 +173,15 @@ try {
   );
 
   const detectorRegistry = JSON.parse(
-    readFileSync(resolve(cleanConspectus, "detector-registry.json"), "utf8"),
+    readFileSync(resolve(cleanConspectus, "detector-registry-1.1.0.json"), "utf8"),
   );
   detectorRegistry.fixtures[0].currentVerification.detectorVersion = "0.9.0";
   writeFileSync(
-    resolve(cleanConspectus, "detector-registry.json"),
+    resolve(cleanConspectus, "detector-registry-1.1.0.json"),
     `${JSON.stringify(detectorRegistry, null, 2)}\n`,
   );
   runChecker(cleanChecker, ["--root", cleanRoot], 1, "detector:version:mismatch");
-  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry.json"), {
+  cpSync(DETECTOR_REGISTRY_PATH, resolve(cleanConspectus, "detector-registry-1.1.0.json"), {
     recursive: false,
   });
 
@@ -206,6 +206,33 @@ try {
   rmSync(scratch, { recursive: true, force: true });
 }
 
+// Detector 1.1.0: a non-ASCII path in the pinned tree matches its manifest
+// entry. git quotes and escapes such a path unless the listing uses -z.
+const quoted = mkdtempSync(resolve(tmpdir(), "amanuensis-a0-quoted-path-"));
+try {
+  const git = (...args) => {
+    const result = spawnSync("git", args, { cwd: quoted, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`git ${args[0]}: ${result.stderr.trim()}`);
+    return result.stdout.trim();
+  };
+  git("init", "-q");
+  git("config", "core.quotePath", "true");
+  writeFileSync(resolve(quoted, "café.ts"), "export const cafe = 1;\n");
+  git("add", "café.ts");
+  git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "fixture");
+  const revision = git("rev-parse", "HEAD");
+  const failures = verifyPinnedRepository(quoted, {
+    revision,
+    tree: git("rev-parse", "HEAD^{tree}"),
+    inventory: { paths: ["café.ts"] },
+  });
+  if (failures.length > 0) {
+    throw new Error(`non-ASCII path: expected no failures, observed ${JSON.stringify(failures)}`);
+  }
+} finally {
+  rmSync(quoted, { recursive: true, force: true });
+}
+
 console.log(
-  "A0 red gates verified: file, concern, seam endpoint/assessment, phase, landed, scored, replication, all control classes, and clean-export state/coverage/content read-back",
+  "A0 red gates verified: file, concern, seam endpoint/assessment, phase, landed, scored, replication, all control classes, clean-export state/coverage/content read-back, and a non-ASCII pinned path",
 );
