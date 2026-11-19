@@ -44,6 +44,12 @@ Clarification added by the design session after review: the lane adds one new re
 earlier phase recorded and no other path existed. It is a separate tool with its own bounded
 response. `describe_locus`, its contract and its budgets are untouched.
 
+Decided by the owner on 2026-11-19, after the lane: the default `describe_locus` budget is raised
+from 8192 to 15360 bytes. The lane's measurement (`locus-default-measure.json`) showed the
+item-free floor of a default call at 8548–8708 bytes on the three dogfood loci, so the default
+served no item; serving a purpose sentence needed about 10,240. The per-section increment, the
+standing budget and the 32768 ceiling are unchanged.
+
 ## 6. Cuts
 
 Not built in this lane: a Method-page census; a collapsed file ledger; purposes on the overview

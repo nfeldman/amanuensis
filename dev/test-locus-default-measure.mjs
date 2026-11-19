@@ -78,7 +78,8 @@ const RECEIPT_REL = "design/reader-lenses/dogfood-receipt.json";
 const CI_REL = ".github/workflows/test.yml";
 const GATE_REL = "dev/test-locus-default-measure.mjs";
 const PROTECTED = ["mcp-server/src/tools/locus.ts", "mcp-server/contracts/locus-account.schema.json"];
-const WIRE_BUDGET = 8192;
+// The default budget; 8192 until the owner raised it on 2026-11-19.
+const WIRE_BUDGET = 15360;
 const RED_EXPECT = "the reported wire bytes differ from the response measured";
 
 // A crash signature in this gate's output means the run never reached its
@@ -376,9 +377,10 @@ async function buildFixture() {
     const hotEvidence = (await must("add_evidence", { file_path: HOT, symbol: "hot", line_range: "1-1", ref_sha: sha, kind: "code-verified" })).id;
     const quietEvidence = (await must("add_evidence", { file_path: QUIET, symbol: "quiet", line_range: "1-1", ref_sha: sha, kind: "code-verified" })).id;
     // Enough prose on the loaded file that a default call cannot serve it all
-    // inside 8192 bytes: the floor leaves room for nought to two items, so any
-    // count above that proves truncation without leaning on a particular size.
-    for (let i = 1; i <= 24; i += 1) {
+    // inside the default budget: 48 rows of about 200 bytes, doubled by the
+    // envelope, are several times 15360, so truncation is proved without
+    // leaning on a particular size.
+    for (let i = 1; i <= 48; i += 1) {
       await must("add_claim", {
         claim_id: `HOT-${String(i).padStart(2, "0")}`,
         claim_key: `hot/row/${i}`,
@@ -748,11 +750,16 @@ async function main() {
   await check("F1", () => {
     const plan = JSON.parse(readFileSync(join(repo, "design/explanation/plan.json"), "utf8"));
     const packet = (plan.packets ?? plan).find?.((candidate) => candidate.id === "EX13");
+    // The packet's own span: the owner changed the budget after the lane, on
+    // 2026-11-19, so the invariant is bounded at the packet's green commit.
     const start = packet?.start_sha;
-    if (!start) return null;
-    const known = spawnSync("git", ["cat-file", "-e", `${start}^{commit}`], { cwd: repo });
-    if (known.status !== 0) return null;
-    const diff = spawnSync("git", ["diff", "--name-only", start, "--", ...PROTECTED], { cwd: repo, encoding: "utf8" });
+    const end = packet?.green_sha;
+    if (!start || !end) return null;
+    for (const sha of [start, end]) {
+      const known = spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: repo });
+      if (known.status !== 0) return null;
+    }
+    const diff = spawnSync("git", ["diff", "--name-only", start, end, "--", ...PROTECTED], { cwd: repo, encoding: "utf8" });
     const touched = String(diff.stdout ?? "").trim();
     return touched ? `the lane does not modify these, and ${touched} changed` : null;
   });

@@ -339,7 +339,7 @@ interface SectionBuild {
  * prose. The survey artifact is model-authored and not bound to any revision
  * item by item, so it is served as a path and a content hash a reader can
  * resolve — §9.1 renders its body on the subsystem page, where the labelling
- * travels with it, and never inside a response §4.1 bounds to 8192 bytes.
+ * travels with it, and never inside a response §4.1 bounds to 15360 bytes.
  *
  * That settles the drift F7/codex left open across §4.2, §5.1 and §9.1, in one
  * place. §4.2 lists `narrative` as opt-in while §5.1 fixes this tool's
@@ -1229,7 +1229,14 @@ function buildHistoryPointer(
  * repeats it — except the two that §4.1 states over the compact payload's own
  * values, which are named for what they bound.
  */
-const WIRE_BUDGET = 8192;
+/**
+ * The default `describe_locus` budget was 8192 until 2026-11-19. Measured on
+ * the self-conspectus, the item-free floor of a default call on a surveyed
+ * file was 8548–8708 bytes, so the default served no item at all, purpose
+ * sentence included (`design/explanation/locus-default-measure.json`). The
+ * owner raised it to 15 KiB.
+ */
+const WIRE_BUDGET = 15360;
 const WIRE_BUDGET_PER_OPTIONAL_SECTION = 4096;
 const WIRE_CEILING = 32768;
 const STANDING_VALUE_BUDGET = 3072;

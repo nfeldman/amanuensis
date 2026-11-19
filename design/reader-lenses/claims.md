@@ -223,7 +223,8 @@ Evidence:
 
 ### C18
 
-Response budgets are 8192 bytes for the `describe_locus` default, 3072 for standing, 4096 per
+Response budgets are 15360 bytes for the `describe_locus` default (8192 until the owner raised it on
+2026-11-19), 3072 for standing, 4096 per
 optional section, 32768 as a hard ceiling, 12288 for `get_attention`, 8192 for `get_history`,
 enforced on the emitted wire response — compact text block plus `structuredContent` — and not on
 an internal payload.

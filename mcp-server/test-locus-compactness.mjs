@@ -10,7 +10,7 @@
 //     or the live server emits a pretty text block for `describe_locus` or a
 //     compact one for a tool that is not a locus tool;
 //   - the whole wire response — compact text block plus the duplicated
-//     `structuredContent` — exceeds 8192 bytes on the pathological fixture,
+//     `structuredContent` — exceeds 15360 bytes on the pathological fixture,
 //     or the standing block exceeds 3072, or a requested optional section
 //     exceeds 4096, or an every-section request exceeds the 32768 ceiling;
 //   - the census the same fixture holds would fit inside the budget without
@@ -37,17 +37,16 @@
 //     weaker evidence is served while a stronger one is dropped;
 //   - the gate does not run in CI.
 //
-// What the measurements below show, and the gate does not judge: §4.1's 8192
-// bytes are the *whole* wire response, and the emitted envelope measures 2.13x
+// What the measurements below show, and the gate does not judge: §4.1's
+// default budget is the *whole* wire response, and the emitted envelope measures 2.13x
 // the compact payload it carries (the JSON-escaped text block plus the
 // duplicated structuredContent). The floor — standing, the eight section views,
 // the census, the ledger, the trace, and no item at all — is 3467 bytes on a
-// one-owner file with an empty store and 3695 on §4.4's pathological locus, so
-// the default response has room for nought to two items and a second owner puts
-// the floor alone past the budget. The assertions here therefore bind the floor
-// and the declaration; the account's content under pressure is asserted on the
-// every-section budget, where there is room to serve some of it. Whether 8192 is
-// the right number is decision 5's to revisit, not this gate's.
+// one-owner file with an empty store and 3695 on §4.4's pathological locus.
+// At the original 8192-byte budget that left room for nought to two items, and
+// on the self-conspectus a default call served none; the owner raised the
+// default to 15360 on 2026-11-19. Whether 15360 is the right number is not this
+// gate's to judge.
 //
 // False greens it cannot exclude. The budget *numbers* are this file's own
 // constants read against §4.1's table; a consistent change to both the spec
@@ -58,8 +57,7 @@
 // their policy omissions. It cannot exclude a wire measurement that is right
 // in-process and wrong under a host that re-serializes the envelope, though
 // the live-server check narrows that to hosts which rewrite the text block.
-// And it says nothing about whether 8192 is the right budget: that is decision
-// 5's, not this gate's.
+// And it says nothing about whether 15360 is the right budget.
 //
 // Output protocol: exactly one status line, last, on stdout. Every subprocess
 // is captured and never echoed, and every message is scrubbed, so a missing
@@ -87,7 +85,7 @@ const CI_REL = ".github/workflows/test.yml";
 
 // §4.1's table, written out rather than read from the implementation so that
 // changing a budget in the code cannot also change what this gate expects.
-const WIRE_BUDGET = 8192;
+const WIRE_BUDGET = 15360;
 const STANDING_BUDGET = 3072;
 const OPTIONAL_SECTION_BUDGET = 4096;
 const WIRE_CEILING = 32768;
@@ -255,7 +253,7 @@ function prettyWireBytes(payload) {
 //   src/wide.ts     a 150-item census in a single section, so the aggregated
 //                   ledger's id sub-budget is what gives way rather than the
 //                   count.
-//   src/owned.ts    six agreeing owners, so `owners[]` is bigger than the
+//   src/owned.ts    twenty agreeing owners, so `owners[]` is bigger than the
 //                   standing budget and cannot be truncated to reach it.
 //   src/crowded.ts  forty owners, so the whole response is past the 32768
 //                   ceiling that §4.1 says is an error rather than a
@@ -324,11 +322,13 @@ function buildFixture() {
   ledger.run("B-02", "src/wide.ts", head);
   ledger.run("B-03", "src/quiet.ts", head);
   ledger.run("B-04", "src/spread.ts", head);
-  // Six owners that agree, so the file's standing state stays `examined` and
-  // the only thing over budget is the owner list itself.
+  // Twenty owners that agree, so the file's standing state stays `examined`
+  // and the only thing over budget is the owner list itself. Six sufficed at
+  // the 8192-byte default; at 15360 the floor needs about fifteen, and forty
+  // (src/crowded.ts) is past the ceiling.
   const ownerIds = [];
-  for (let i = 1; i <= 6; i += 1) {
-    const id = `O-0${i}`;
+  for (let i = 1; i <= 20; i += 1) {
+    const id = `O-${String(i).padStart(2, "0")}`;
     ownerIds.push(id);
     subsystem.run(id, `Owner ${i}`, "concerns", "src/owned.ts", "src/owned.ts");
     ledger.run(id, "src/owned.ts", head);
@@ -375,7 +375,7 @@ function buildFixture() {
       id,
       `hot/row/${i}`,
       "src/hot.ts",
-      `the reader retries the ${i}th bounded read under a ceiling`,
+      `the reader retries the ${i}th bounded read under a ceiling, backs off between attempts, and reports the attempt count to its caller`,
       head,
       head,
     );
@@ -410,7 +410,7 @@ function buildFixture() {
     const status = statuses[i % statuses.length];
     finding.run(
       id,
-      `the reader mishandles the ${i}th retry of a bounded read`,
+      `the reader mishandles the ${i}th retry of a bounded read and reports a stall as a slow read to its caller`,
       severities[i % severities.length],
       status,
       primary,
@@ -458,7 +458,7 @@ function buildFixture() {
       `SP-${String(i).padStart(2, "0")}`,
       `spread/row/${i}`,
       "src/spread.ts",
-      `the spread reader holds invariant ${i} across a restart`,
+      `the spread reader holds invariant ${i} across a restart, re-reading the row cursor from the handle table before it resumes, so a restarted read never skips a row`,
       head,
       head,
     );
@@ -472,7 +472,7 @@ function buildFixture() {
   for (let i = 1; i <= 8; i += 1) {
     spreadFinding.run(
       `B04-${String(i).padStart(2, "0")}`,
-      `the spread reader drops the ${i}th row on a restart`,
+      `the spread reader drops the ${i}th row on a restart when the retry ceiling is reached before the row cursor has been re-read from the handle table`,
       spreadPrimary,
       head,
     );
@@ -500,18 +500,20 @@ function buildFixture() {
     `INSERT INTO vocabulary (term, gloss, subsystem_id, first_seen, ref_sha, created_at)
      VALUES (?, ?, 'B-04', ?, ?, ?)`,
   );
+  // Reverse alphabetical, so the oldest n terms differ from the
+  // alphabetically first n for every n a truncation can serve.
   const termOrder = [
-    "restart barrier",
-    "row cursor",
-    "retry ceiling",
-    "handle table",
-    "spread lock",
     "wide fence",
+    "spread lock",
+    "row cursor",
+    "restart barrier",
+    "handle table",
+    "retry ceiling",
   ];
   termOrder.forEach((term, index) => {
     vocab.run(
       term,
-      `the ${term} the spread reader depends on`,
+      `the ${term} the spread reader depends on to resume a bounded read after a restart without skipping a row`,
       `src/spread.ts:spread1@${head}`,
       head,
       `2026-09-0${index + 1} 09:00:00`,
@@ -730,7 +732,7 @@ if (hot) {
   );
 }
 
-await check("the default wire response fits 8192 bytes on the pathological fixture", () => {
+await check(`the default wire response fits ${WIRE_BUDGET} bytes on the pathological fixture`, () => {
   const reason = needFixture();
   if (reason) return reason;
   if (!hot) return fixtureError ?? "the pathological response is absent";
@@ -738,6 +740,16 @@ await check("the default wire response fits 8192 bytes on the pathological fixtu
   return measured <= WIRE_BUDGET
     ? null
     : `the wire response is ${measured} B, over the ${WIRE_BUDGET} B budget`;
+});
+
+await check("the default call declares §4.1's budget, not a smaller one", () => {
+  const reason = needFixture();
+  if (reason) return reason;
+  if (!hot) return fixtureError ?? "the pathological response is absent";
+  const declared = hot.trace?.budget_bytes;
+  return declared === WIRE_BUDGET
+    ? null
+    : `the default call declares a ${declared} B budget, not §4.1's ${WIRE_BUDGET} B`;
 });
 
 await check("the same fixture is over budget before truncation, so the budget bites (VP4)", () => {
@@ -1089,7 +1101,7 @@ await check("owners[] keeps every owner, and the residue is declared rather than
   const served = SECTIONS.reduce((total, name) => total + (sectionOf(owned, name)?.items ?? []).length, 0);
   if (unknown.length !== 0 || served !== 0)
     return `the residue is declared while ${served} item(s) and ${unknown.length} unknown entr(ies) are still served`;
-  emit(`  measured  six owners: standing ${standingBytes} B, wire ${wire} B, declared over budget`);
+  emit(`  measured  ${fixture.ownerIds.length} owners: standing ${standingBytes} B, wire ${wire} B, declared over budget`);
   return null;
 });
 
