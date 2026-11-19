@@ -24,6 +24,7 @@ import { spawnSync } from "./subprocess.js";
 import {
   EXPLANATION_SLOTS,
   type ExplanationDischarge,
+  OBLIGATION_BEARING_SQL,
   VOCABULARY,
   type VocabularyDischarge,
 } from "./vocabulary.js";
@@ -677,6 +678,44 @@ function requireChallengedClaims(db: DB, subsystemId: string): void {
 }
 
 /**
+ * Finding B03-5: a subsystem could reach `mapped` while most of its scoped
+ * files were never read, because the only ledger gate is scoping's "at least
+ * one row". A row still at `candidate` (or with no classification) that
+ * carries the survey obligation is a file the survey put in scope and did not
+ * examine; the advance names them. `deferred-with-reason` is the honest
+ * classification for a file left unread on purpose, and the three exempt
+ * classifications remove a file from the obligation altogether.
+ */
+function requireExaminedScope(db: DB, subsystemId: string): void {
+  const unread = db
+    .prepare(
+      `SELECT file_path FROM file_ledger
+        WHERE subsystem_id = ?
+          AND COALESCE(classification, 'candidate') = 'candidate'
+          AND ${OBLIGATION_BEARING_SQL}
+        ORDER BY file_path`,
+    )
+    .all(subsystemId) as Array<{ file_path: string }>;
+  if (unread.length === 0) return;
+  const { total } = db
+    .prepare(
+      `SELECT COUNT(*) AS total FROM file_ledger WHERE subsystem_id = ? AND ${OBLIGATION_BEARING_SQL}`,
+    )
+    .get(subsystemId) as { total: number };
+  const named = unread
+    .slice(0, 5)
+    .map((row) => row.file_path)
+    .join(", ");
+  const more = unread.length > 5 ? ` and ${unread.length - 5} more` : "";
+  throw new ToolError(
+    `cannot advance ${subsystemId} to 'mapped': ${unread.length} of ${total} scoped file(s) are ` +
+      `still 'candidate', never examined — ${named}${more}. Read each one and record it with ` +
+      `update_file_classification as 'examined', or as 'deferred-with-reason' with the reason it ` +
+      `was left unread; a subsystem whose scope was inventoried but not read is not mapped.`,
+  );
+}
+
+/**
  * Append one rung to the ladder a subsystem actually climbed.
  *
  * Called by every tool that writes `subsystems.status`, and only when the
@@ -1210,6 +1249,7 @@ export function enforcePhasePrerequisites(
     }
     case "mapped": {
       requireChallengedClaims(db, subsystemId);
+      requireExaminedScope(db, subsystemId);
       // §3.3, beside the challenge check and after it: an unchallenged claim is
       // this subsystem's own missing pass, and naming it first tells the caller
       // to do the thing only it can do. The reconciliation is a whole-store

@@ -68,6 +68,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { examineScope } from "./fixtures/examine-scope.mjs";
 import { writeCitedSources } from "./fixtures/cited-source.mjs";
 import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
@@ -865,6 +866,7 @@ function main(mods) {
       // after the last ledger write, because a reconciliation is invalidated by
       // the next one. This control is about §2.3's attachment rule, so the
       // reconciliation is a prerequisite it satisfies rather than one it tests.
+      examineScope(call, ctx, "B-01");
       reconcileStore(ctx);
       dischargeExplanations(call, ctx, "B-01", headSha(ctx));
       let result;

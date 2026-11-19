@@ -169,7 +169,10 @@ where their truth is tested.
 ### 8. Update file classifications
 
 Files actually read in this phase move from `candidate` to
-`examined` via `update_file_classification`.
+`examined` via `update_file_classification`. Every file still at
+`candidate` when the subsystem advances to `mapped` is refused there by
+name (*"still 'candidate', never examined"*): read it, or classify it
+`deferred-with-reason` and say why it was left unread.
 
 ### 9. Vocabulary
 

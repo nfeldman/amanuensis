@@ -125,6 +125,10 @@ comes back in.
 - To `mapped`, every current claim must carry a challenge outcome,
   recorded with `record_claim_challenge`:
   *"current claim(s) carry no challenge outcome"*.
+- To `mapped`, every scoped file that carries the survey obligation must have
+  been read: *"still 'candidate', never examined"* names the files left at
+  `candidate`. Record each with `update_file_classification` as `examined`,
+  or as `deferred-with-reason` with the reason it was left unread.
 - To `mapped`, the store must be reconciled against the tree. *"the store
   has not been reconciled against the repository at"* the revision being
   claimed is the sentence; run `detect_changes(current_sha=<HEAD>)` and

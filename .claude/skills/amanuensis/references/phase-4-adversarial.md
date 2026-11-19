@@ -235,6 +235,11 @@ letting `mapped` imply a review that did not happen. The server refuses
 the advance in those terms: *"current claim(s) carry no challenge
 outcome"*.
 
+`mapped` also refuses a scope that was inventoried but not read. A file
+the survey left at `candidate` is *"still 'candidate', never examined"*;
+classify it with `update_file_classification` as `examined` once read, or
+as `deferred-with-reason` with the reason.
+
 `mapped` additionally refuses an unreconciled store. *"the store has not
 been reconciled against the repository at"* the revision being claimed is
 the sentence, and the repair is `detect_changes(current_sha=<HEAD>)`

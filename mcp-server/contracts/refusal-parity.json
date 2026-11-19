@@ -44,6 +44,18 @@
       ]
     },
     {
+      "id": "ladder-unexamined-scope",
+      "note": "New 2026-11-19, finding B03-5. The advance to mapped refuses while an obligation-bearing ledger row is still candidate.",
+      "refuses": ["update_subsystem_status"],
+      "instructs": ["update_file_classification"],
+      "server": { "file": "src/invariants.ts", "phrase": "still 'candidate', never examined" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/onboarding.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" },
+        { "file": "../.claude/skills/amanuensis/references/phase-4-adversarial.md" }
+      ]
+    },
+    {
       "id": "disposition-unattached",
       "note": "New, spec.md §2.3. An answer nobody can open is not a disposition.",
       "refuses": ["update_subsystem_status"],

@@ -25,7 +25,7 @@ export const dashboardTools: ToolDefinition[] = [
   {
     name: "get_dashboard",
     description:
-      "Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, open field notes, unresolved contradictions.",
+      "Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, scoped files with how many were examined and how many are still unread candidates, open field notes, unresolved contradictions.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: (_args, ctx) => {
       // One round-trip: SQLite assembles the per-table counts as
@@ -44,6 +44,8 @@ export const dashboardTools: ToolDefinition[] = [
                   (SELECT COUNT(*) FILTER (WHERE stale=1 AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS stale_entries,
                   (SELECT COUNT(*) FILTER (WHERE stale=1 AND NOT (${OBLIGATION_BEARING_SQL})) FROM file_ledger) AS stale_exempt,
                   (SELECT COUNT(*)                                       FROM file_ledger)     AS scoped_files,
+                  (SELECT COUNT(*) FILTER (WHERE classification='examined') FROM file_ledger)  AS examined_files,
+                  (SELECT COUNT(*) FILTER (WHERE COALESCE(classification, 'candidate')='candidate' AND ${OBLIGATION_BEARING_SQL}) FROM file_ledger) AS unexamined_files,
                   (SELECT COUNT(*) FILTER (WHERE kind='unledgered')      FROM scope_gaps)      AS unclassified_paths,
                   (SELECT COUNT(*) FILTER (WHERE kind='absent')          FROM scope_gaps)      AS absent_files,
                   (SELECT COUNT(*) FILTER (WHERE follow_up='open')       FROM field_notes)     AS open_field_notes,
@@ -63,6 +65,8 @@ export const dashboardTools: ToolDefinition[] = [
         stale_entries: number;
         stale_exempt: number;
         scoped_files: number;
+        examined_files: number;
+        unexamined_files: number;
         unclassified_paths: number;
         absent_files: number;
         open_field_notes: number;
@@ -71,6 +75,9 @@ export const dashboardTools: ToolDefinition[] = [
         blocked_revalidation_obligations: number;
         failed_revalidation_runs: number;
       };
+      // scoped_files mixes examined, candidate and exempt rows; examined_files
+      // and unexamined_files (still 'candidate', carrying the survey
+      // obligation) say how much of the scope was read (finding B03-5).
       // stale_entries = 0 is only a health claim when something was actually
       // measured. staleness_measured carries the denominator so a caller cannot
       // read an empty ledger as a fresh conspectus (finding B03-2).

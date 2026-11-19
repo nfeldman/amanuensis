@@ -19,6 +19,7 @@ import { evidenceTools } from "./dist/tools/evidence.js";
 import { explanationTools } from "./dist/tools/explanations.js";
 import { claimTools } from "./dist/tools/claims.js";
 import { fieldNoteTools } from "./dist/tools/field-notes.js";
+import { dashboardTools } from "./dist/tools/dashboard.js";
 import { fileTools } from "./dist/tools/files.js";
 import { findingTools } from "./dist/tools/findings.js";
 import { gitTools } from "./dist/tools/git.js";
@@ -27,6 +28,7 @@ import { subsystemTools } from "./dist/tools/subsystems.js";
 import { vocabularyTools } from "./dist/tools/vocabulary.js";
 import { writeCitedSources } from "./fixtures/cited-source.mjs";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { examineScope } from "./fixtures/examine-scope.mjs";
 import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
 let passed = 0,
@@ -324,6 +326,9 @@ function advanceTo(ctx, id, status) {
       // recorded challenge outcome before the subsystem may publish its
       // structural account as mapped (spec.md §9.1; slice-S6, F6/codex).
       seedChallengeOutcomes(ctx, id);
+      // Finding B03-5: the scope was read. Before reconciling, since a
+      // classification change is a ledger change.
+      examineScope(call, ctx, id);
       reconcileStore(ctx);
       // …and the two answers §3.4 of the explanation spec owes at this advance.
       dischargeExplanations(call, ctx, id, headSha(ctx));
@@ -1121,10 +1126,97 @@ t("phase prerequisites: happy path passes all gates", () => {
     // is published as mapped (§9.1), and the whole store has been reconciled
     // against the repository's tree at HEAD (§3.3).
     seedChallengeOutcomes(ctx, "B-01");
+    examineScope(call, ctx, "B-01");
     reconcileStore(ctx);
     dischargeExplanations(call, ctx, "B-01", headSha(ctx));
     const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
     assert(r.previous_status === "adversarial");
+  } finally {
+    cleanup();
+  }
+});
+
+// ---- Finding B03-5: mapped requires the scope to have been read ----
+
+function climbToAdversarialWithUnread(ctx, id) {
+  advanceTo(ctx, id, "adversarial");
+  call(
+    "add_files_to_scope",
+    {
+      subsystem_id: id,
+      ref_sha: headSha(ctx),
+      files: [
+        { file_path: `src/${id}/unread.ts`, why_in_scope: "fixture" },
+        { file_path: `src/${id}/gen.ts`, why_in_scope: "fixture", classification: "generated-ignore" },
+      ],
+    },
+    ctx,
+  );
+  seedChallengeOutcomes(ctx, id);
+  dischargeExplanations(call, ctx, id, headSha(ctx));
+}
+
+t("B03-5: mapped is refused while a scoped file is still candidate, and names it", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    climbToAdversarialWithUnread(ctx, "B-01");
+    call(
+      "update_file_classification",
+      { subsystem_id: "B-01", file_path: "src/B-01/index.ts", classification: "examined" },
+      ctx,
+    );
+    reconcileStore(ctx);
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx),
+      "1 of 2 scoped file(s) are still 'candidate', never examined — src/B-01/unread.ts",
+    );
+    assertThrows(
+      () => call("upsert_subsystem", { id: "B-01", name: "B-01", status: "mapped" }, ctx),
+      "still 'candidate', never examined",
+    );
+    assert(readStatus(ctx, "B-01") === "adversarial", "a refused advance moved the status");
+    const dash = dashboardTools.find((td) => td.name === "get_dashboard").handler({}, ctx);
+    assert(dash.unexamined_files === 1, `dashboard unexamined_files is ${dash.unexamined_files}, not 1`);
+    assert(dash.examined_files === 1, `dashboard examined_files is ${dash.examined_files}, not 1`);
+  } finally {
+    cleanup();
+  }
+});
+
+t("B03-5: deferred-with-reason and the exempt classifications discharge the scope", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    climbToAdversarialWithUnread(ctx, "B-01");
+    call(
+      "update_file_classification",
+      { subsystem_id: "B-01", file_path: "src/B-01/index.ts", classification: "examined" },
+      ctx,
+    );
+    call(
+      "update_file_classification",
+      { subsystem_id: "B-01", file_path: "src/B-01/unread.ts", classification: "deferred-with-reason" },
+      ctx,
+    );
+    reconcileStore(ctx);
+    const r = call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx);
+    assert(r.previous_status === "adversarial", "the advance did not land");
+    assert(dashboardTools.find((td) => td.name === "get_dashboard").handler({}, ctx).unexamined_files === 0, "unexamined_files is not 0");
+  } finally {
+    cleanup();
+  }
+});
+
+t("B03-5: another subsystem's examined rows do not satisfy the gate", () => {
+  const { ctx, cleanup } = freshCtx();
+  try {
+    climbToAdversarialWithUnread(ctx, "B-01");
+    advanceTo(ctx, "B-02", "structural");
+    examineScope(call, ctx, "B-02");
+    reconcileStore(ctx);
+    assertThrows(
+      () => call("update_subsystem_status", { id: "B-01", status: "mapped" }, ctx),
+      "2 of 2 scoped file(s) are still 'candidate'",
+    );
   } finally {
     cleanup();
   }

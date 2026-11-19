@@ -317,7 +317,7 @@ _213 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 | Tool | Description |
 |---|---|
 | `get_hot_subsystems` | Return the most-accessed subsystems over the last 7 days, weighted by recency. Reads from the hot_subsystems view. |
-| `get_dashboard` | Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, open field notes, unresolved contradictions. |
+| `get_dashboard` | Return a high-level project overview: project key, canonical branch, SHAs, subsystem counts, open bugs, stale entries, scoped files with how many were examined and how many are still unread candidates, open field notes, unresolved contradictions. |
 
 ### `decisions` (8)
 

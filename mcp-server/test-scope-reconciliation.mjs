@@ -81,6 +81,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dischargeExplanations } from "./fixtures/explanation-discharge.mjs";
+import { examineScope } from "./fixtures/examine-scope.mjs";
 import { citedSource } from "./fixtures/cited-source.mjs";
 import { stableClaimKey } from "./fixtures/claim-key.mjs";
 
@@ -442,12 +443,16 @@ function main(mods) {
       ctx,
     );
     call("update_subsystem_status", { id, status: "adversarial" }, ctx);
+    // Examined here, before any test reconciles: a classification change is a
+    // ledger change, and it would void the reconciliation the test then takes.
+    examineScope(call, ctx, id);
     return id;
   }
 
   /** Try the advance §3.3 guards, returning its refusal or null. */
   function advanceToMapped(ctx, id) {
     seedChallenges(ctx, id);
+    examineScope(call, ctx, id);
     dischargeExplanations(call, ctx, id, headSha(ctx));
     return refusal(() => call("update_subsystem_status", { id, status: "mapped" }, ctx));
   }
