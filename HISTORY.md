@@ -3,7 +3,7 @@
 This file summarizes user-visible releases. The [roadmap](ROADMAP.md) and its linked
 receipts carry the executable evidence, exact revisions, and current claim boundaries.
 
-## Unreleased
+## [0.2.0-beta.6] - 2026-11-19
 
 - `amanuensis install` sets up every agent it finds on the machine (Codex, Claude
   Code, and GitHub Copilot's CLI and VS Code) with one user-level registration and
@@ -29,6 +29,10 @@ receipts carry the executable evidence, exact revisions, and current claim bound
   `PATH` the server started but failed at its first database call. Existing
   installations report `outdated` until `amanuensis upgrade`. Committed project
   registrations keep the bare command.
+- Record every tool call in a local call log beside each repository's store: the
+  tool, its outcome, the refusing rule where one is declared, latency and sizes, but
+  no argument values or response text. It never enters the store's history, and
+  `AMANUENSIS_CALL_LOG=off` disables it.
 - Rewrite the README, installation guide, and package README around the one-command
   installation, with steps an agent can follow to set it up.
 - Validate evidence citations, repair commits, and claim keys when they are
