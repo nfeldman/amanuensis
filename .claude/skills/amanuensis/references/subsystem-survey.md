@@ -81,7 +81,8 @@ After the phase returns, apply the "when the phase ends" rows.
 | 4 | `adversarial` | before the phase starts |
 | 5 | `mapped` | when the phase ends |
 
-Phase 5 sets `mapped` before it materializes (see below).
+Phase 5 sets `mapped` once its explanations are settled, before it
+materializes (see below).
 
 The DB enforces the knowledge-depth contract; a premature status update
 raises a `ToolError`. **If that fires**, the phase before it didn't

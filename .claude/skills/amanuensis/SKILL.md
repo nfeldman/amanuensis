@@ -132,7 +132,8 @@ unmapped → scoping → structural → concerns → adversarial → mapped
 `scoping` is set when Phase 1 ends. `structural` is set when Phase 2 ends.
 `concerns` is set before Phase 3 starts, so it names the pass under way.
 `adversarial` is set before Phase 4 starts, for the same reason. `mapped` is
-set when Phase 5 ends, before the phase materializes.
+set when Phase 5 ends its survey work: after the explanations are settled, and
+before the phase publishes, checks its seams and closes the session.
 `references/subsystem-survey.md` has the table.
 
 Each phase produces a deliverable and a one-line summary. You set the
