@@ -128,6 +128,10 @@ def insert_page_head(markdown: str, hint: str, use_when: str) -> str:
     return "\n".join(lines[: first + 1] + ["", line] + lines[first + 1 :])
 
 
+def _visible_inline(text: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
+
+
 def strip_page_head(markdown: str, hint: str, use_when: str) -> str:
     """The inverse of `insert_page_head`, for the HTML projection's body."""
 
@@ -136,9 +140,10 @@ def strip_page_head(markdown: str, hint: str, use_when: str) -> str:
     found = _first_two_content_lines(lines) if line else None
     if found is None or found[1] >= len(lines):
         return markdown
-    # The xref pass may have linked an ID inside the paragraph since it was
-    # written; compare what the reader sees, not the link markup.
-    if re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", lines[found[1]]) != line:
+    # The xref pass may have linked or bolded an ID inside the paragraph since
+    # it was written (a subsystem named after its own ID gets `**B-01**`);
+    # compare what the reader sees, not the link or bold markup.
+    if _visible_inline(lines[found[1]]) != _visible_inline(line):
         return markdown
     return "\n".join(lines[: found[1]] + lines[found[1] + 1 :])
 
