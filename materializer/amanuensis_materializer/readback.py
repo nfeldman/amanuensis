@@ -1199,8 +1199,10 @@ class ProjectionVerifier:
             if body is None or suffix not in (".md", ".html"):
                 continue  # coverage owns a missing page
             if suffix == ".md":
-                forms = [notice_paragraph(n) for n in others]
-                count = body.count(notice_paragraph(expected)) if expected else 0
+                # The sentence, not its italic paragraph: emphasis is presentation,
+                # and a plain copy says the same thing to a reader.
+                forms = list(others)
+                count = body.count(expected) if expected else 0
                 placed = not expected or (
                     count == 1 and body.rstrip("\n").endswith("\n" + notice_paragraph(expected))
                 )
