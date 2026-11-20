@@ -127,12 +127,16 @@ Surveys run continuously through the five per-subsystem phases:
 
 ```
 unmapped → scoping → structural → concerns → adversarial → mapped
-   ↑          ↑           ↑           ↑           ↑           ↑
- Phase 1   Phase 2    Phase 3    Phase 4     Phase 5 (you run)
 ```
 
-Each phase produces a deliverable and a one-line summary. You advance the
-subsystem's status (`update_subsystem_status`) at each transition and move
+`scoping` is set when Phase 1 ends. `structural` is set when Phase 2 ends.
+`concerns` is set before Phase 3 starts, so it names the pass under way.
+`adversarial` is set before Phase 4 starts, for the same reason. `mapped` is
+set when Phase 5 ends, before the phase materializes.
+`references/subsystem-survey.md` has the table.
+
+Each phase produces a deliverable and a one-line summary. You set the
+subsystem's status (`update_subsystem_status`) as that table says and move
 to the next phase immediately. Open questions and field notes accumulate;
 the materializer at Phase 5 surfaces everything.
 

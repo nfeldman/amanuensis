@@ -18,10 +18,19 @@ Phase 5.
    carries the most recent `update_subsystem_status` value). Resume
    from whichever phase comes next:
    - `unmapped` → Phase 1 (scope)
-   - `scoping` (approved) → Phase 2 (structural)
-   - `structural` (approved) → Phase 3 (concerns)
-   - `concerns` (approved) → Phase 4 (adversarial)
-   - `adversarial` (approved) → Phase 5 (packaging, you run this)
+   - `scoping` → Phase 2 (structural)
+   - `structural` → advance to `concerns`, then Phase 3 (concerns)
+   - `concerns` → finish Phase 3: `get_concern_coverage` shows the
+     concerns still without a verdict. Then advance to `adversarial`
+     and run Phase 4 (adversarial)
+   - `adversarial` → finish Phase 4: the claims without a
+     `record_claim_challenge` outcome (the advance to `mapped` is
+     refused with *"current claim(s) carry no challenge outcome"*).
+     Then Phase 5 (packaging, you run this)
+
+   A status names the pass under way for `concerns` and `adversarial`,
+   and the pass just finished for `scoping` and `structural`. The
+   table under "Running a phase" says when each is set.
 
 ## Session setup
 
@@ -50,22 +59,46 @@ context is isolated. Give it:
 
 Run inline only if subagents are unavailable.
 
-After the phase returns:
+Before the phase starts, apply the "before the phase starts" rows of
+the table below. The server checks the previous pass's output:
 
-1. Call `update_subsystem_status(id, status=<phase_name>)`. The DB
-   enforces the knowledge-depth contract; a premature status update
-   raises a `ToolError`. **If that fires**, the phase didn't produce
-   what the next phase needs. Diagnose the missing deliverable, re-run the
-   phase once with that deficiency explicit, and if it remains blocked mark
-   the subsystem `deferred` with the gap as its reason.
-2. Emit a one-line status block (counts, new findings,
+- `concerns` needs the registered `subsystem-survey` artifact (Phase 2's
+  output).
+- `adversarial` needs at least one disposition (Phase 3's output).
+
+Call `update_subsystem_status(id, status=<status>)`. Phases 1 and 2 need
+nothing first.
+
+After the phase returns, apply the "when the phase ends" rows.
+
+### When each phase sets the status
+
+| Phase | Status | When |
+|---|---|---|
+| 1 | `scoping` | when the phase ends |
+| 2 | `structural` | when the phase ends |
+| 3 | `concerns` | before the phase starts |
+| 4 | `adversarial` | before the phase starts |
+| 5 | `mapped` | when the phase ends |
+
+Phase 5 sets `mapped` before it materializes (see below).
+
+The DB enforces the knowledge-depth contract; a premature status update
+raises a `ToolError`. **If that fires**, the phase before it didn't
+produce what this one needs. Diagnose the missing deliverable, re-run that
+phase once with that deficiency explicit, and if it remains blocked mark
+the subsystem `deferred` with the gap as its reason.
+
+Then, once the phase has returned:
+
+1. Emit a one-line status block (counts, new findings,
    contradictions, field notes, open questions added).
-3. Run the next phase immediately. No pause.
+2. Run the next phase immediately. No pause.
 
 ## Phase 5 · Output packaging (you run this directly)
 
-Phase 4 returns, status advances to `adversarial`, and you continue
-straight into Phase 5:
+Phase 4 returns, the subsystem is already at `adversarial`, and you
+continue straight into Phase 5:
 
 1. **Update `master-plan.md`** — the subsystem's row (status,
    findings counts, ranked priority post-survey).
@@ -79,22 +112,24 @@ straight into Phase 5:
 4. **Register and rehash every touched artifact**:
    `register_artifact(path, kind, ...)` then `rehash_artifact(path,
    ref_sha=session_sha)`.
-5. **Materialize**: `materialize_docs()`. Refused, like the advance to
-   `mapped` at step 9, while *"the store has not been reconciled
-   against the repository at"* the revision being published — run
-   `detect_changes(current_sha=<HEAD>)` first and assign or exempt
-   every unledgered path it names.
-6. **Contradiction detection.** For each finding in this pass, check
+5. **Advance status.** Call
+   `update_subsystem_status(id, status="mapped")`. Refused while *"the
+   store has not been reconciled against the repository at"* the
+   revision being published — run `detect_changes(current_sha=<HEAD>)`
+   first and assign or exempt every unledgered path it names. Settle
+   the explanations first (see `phase-5-packaging.md`); `mapped` needs
+   the purpose and the account each recorded or declined.
+6. **Materialize**: `materialize_docs()`, so the published site shows
+   the subsystem as `mapped`.
+7. **Contradiction detection.** For each finding in this pass, check
    `get_findings(subsystem_id=...)` for pre-existing findings citing
    the same file:symbol. On any incompatible classification, call
    `add_contradiction(finding_a, finding_b, shared_location,
    conflict_type)`. Do not resolve silently.
-7. **Seam assessability check.** Call `get_seam_assessability()`.
+8. **Seam assessability check.** Call `get_seam_assessability()`.
    Any seam whose status just flipped to `assessable` is queued for
    seam assessment (see the main SKILL.md "Seam assessment" section).
-8. **Close the session.** Call `end_session(outcome="completed")`.
-9. **Advance status.** Call
-   `update_subsystem_status(id, status="mapped")`.
+9. **Close the session.** Call `end_session(outcome="completed")`.
 
 ## When a phase can't produce what the next one needs
 

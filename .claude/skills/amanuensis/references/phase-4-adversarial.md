@@ -4,6 +4,9 @@ Phase 4 of a subsystem survey: **try to overturn each confirmed finding
 and each linchpin-dependent disposition** from Phase 3. Findings that
 survive this pass are the highest-confidence claims in the conspectus.
 
+The coordinator has already advanced this subsystem to `adversarial`;
+adversarial `set_disposition` and `add_finding` are refused below it.
+
 ## Mindset
 
 Phase 3 looked for evidence that concerns obtain. Your job is the
@@ -218,8 +221,7 @@ Return to the coordinator with a one-line summary:
   legitimate ongoing fragility the materializer will surface.
 - Open questions logged this phase.
 
-The coordinator advances status to `adversarial` and runs Phase 5
-packaging immediately. No pause.
+The coordinator runs Phase 5 packaging immediately. No pause.
 
 **Before the subsystem may advance to `mapped`, every current `<sid>/`
 claim must carry a recorded outcome** — a `record_claim_challenge`

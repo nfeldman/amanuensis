@@ -127,11 +127,13 @@ function check() {
       return `Phase ${p.phase} sets ${p.status} "${row[2]}" in the skill, "${WHEN[p.set_when]}" in the contract`;
   }
 
-  const before = ss.match(/\n#+\s*[^\n]*Before the phase starts[^\n]*\n([\s\S]*?)(?=\n#+\s|\n\d+\.\s\*\*|$)/i);
-  const beforeText = before ? before[0] : ss.slice(ss.search(/Before the phase starts/i));
-  if (!/Before the phase starts/i.test(ss))
+  const beforeAt = ss.search(/Before the phase starts/i);
+  if (beforeAt < 0)
     return 'subsystem-survey.md lacks a "Before the phase starts" step in "Running a phase"';
-  const flat = beforeText.replace(/\s+/g, " ");
+  const beforeEnd = ss.slice(beforeAt).search(/\n#{2,3}\s/);
+  const flat = ss
+    .slice(beforeAt, beforeEnd < 0 ? undefined : beforeAt + beforeEnd)
+    .replace(/\s+/g, " ");
   if (!/`concerns`[^.]*`subsystem-survey` artifact/.test(flat))
     return 'the "Before the phase starts" step does not name the `subsystem-survey` artifact `concerns` needs';
   if (!/`adversarial`[^.]*disposition/.test(flat))
