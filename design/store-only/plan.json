@@ -92,14 +92,14 @@
   "packets": [
     {
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "fcef5573e990ca68602c42ff064f0ac9fca2c39b",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "e4cb1665aea45eac4ef94e132c88c292e9a5d4fa",
+      "green_sha": "7b25528ea62946f37224486ec5447c71e0051284",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "",
+      "notes": "The store-only item now links PLAN.md, replaces the false 'read-back compares the two' with the §0 correction, and lists D1-D16 as nested one-line items (D16 as amended). Gate checks each entry's date and an outcome keyword from §9; step added to test.yml. No regression commands; the O0 gate stays green.",
       "id": "SO0",
       "slice": "S1",
       "title": "Record the plan in BACKLOG.md",
