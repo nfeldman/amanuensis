@@ -151,6 +151,22 @@ def main() -> int:
             )
         )
         return 2
+    # --recorded-publication says the caller records this read-back, so pages
+    # carry no notice. With no read-back there is nothing to record: refuse
+    # before writing rather than publish pages that claim custody.
+    if args.recorded_publication and args.no_verify_readback:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": (
+                        "--recorded-publication needs a read-back to record;"
+                        " drop --no-verify-readback"
+                    ),
+                }
+            )
+        )
+        return 2
     # A hand-run render stays in the store's own docs unless told otherwise
     # (PLAN §5 D6). The server passes the flag and enforces containment itself.
     # A read-back writes nothing, so it is never refused; a clean publish is

@@ -293,12 +293,20 @@ export const materializeTools: ToolDefinition[] = [
       const cleanPublish = optBool(args, "clean_publish", false);
       const verifyReadback = optBool(args, "verify_readback", true);
       const verificationRunId = optString(args, "verification_run_id");
+      // Every server render is a recorded publication: its pages carry no
+      // command-line notice because the read-back is recorded below. With the
+      // read-back off there would be nothing to record, so refuse it.
+      if (!verifyReadback)
+        return {
+          ok: false,
+          error:
+            "verify_readback=false is refused: a server render records its read-back, and pages published without one would claim it. Run materialize.py --no-verify-readback by hand for a diagnostic render; its pages say they were not read back.",
+        };
       const refusal = preflightReconciliation(ctx);
       if (refusal) return { ok: false, error: refusal };
       const cliArgs: string[] = [];
       if (forceFull) cliArgs.push("--force-full");
       if (cleanPublish) cliArgs.push("--clean-publish");
-      if (!verifyReadback) cliArgs.push("--no-verify-readback");
       return execute(
         ctx,
         outputDir,

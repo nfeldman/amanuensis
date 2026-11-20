@@ -16,6 +16,8 @@ Turns red when:
     summary lacks "recorded": true; a recorded render over a stamped one leaves a
     notice behind, or a CLI render over a recorded one misses a page;
   - the --no-verify-readback variant has the wrong sentence;
+  - --recorded-publication with --no-verify-readback is not refused (exit 2,
+    nothing written): there would be no read-back to record;
   - materialize.ts's execute does not pass both --recorded-publication and
     --allow-external-output;
   - the read-back of a stamped CLI render is not green on all three axes, or the
@@ -305,6 +307,19 @@ def main() -> int:
 
         check("with --allow-external-output a default render outside succeeds", allowed(()))
         check("with --allow-external-output a clean publish outside succeeds", allowed(("--clean-publish",)))
+
+        def recorded_without_readback() -> str | None:
+            # A recorded publication's pages carry no notice because the caller
+            # records the read-back; with none run, the claim would be false.
+            storage = fresh_store(base, "recorded_unverified")
+            status, summary = run(storage, "--recorded-publication", "--no-verify-readback")
+            if status != 2 or summary.get("ok") is not False:
+                return f"--recorded-publication with --no-verify-readback exited {status}, not refused with 2"
+            if files_under(storage / "docs"):
+                return "the refused render wrote pages"
+            return None
+
+        check("--recorded-publication with --no-verify-readback is refused before writing", recorded_without_readback)
 
         # 3. A default CLI render to <storage>/docs stamps every page.
         cli = fresh_store(base, "cli")
