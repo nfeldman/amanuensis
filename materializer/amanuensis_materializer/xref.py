@@ -139,7 +139,8 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
     for at, line in enumerate(lines):
         # A table's header row names columns, and the HTML recognises some
         # tables by those names (the review-coverage matrix), so it gains no
-        # name and no prefix. Nor does a heading, whose text may be an anchor.
+        # name and no prefix. A heading gains no name (it names its own
+        # subject), but a concern code in it is still introduced as one.
         header_row = (
             line.lstrip().startswith("|")
             and at + 1 < len(lines)
@@ -147,7 +148,7 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
         )
         heading = line.lstrip().startswith("#")
         lines[at] = _resolve_line(
-            line, rel_path, index, pattern, named, plain=header_row or heading
+            line, rel_path, index, pattern, named, plain=header_row or heading, header_row=header_row
         )
     text = "\n".join(lines)
 
@@ -169,39 +170,55 @@ def _resolve_line(
     named: set[str],
     *,
     plain: bool,
+    header_row: bool = False,
 ) -> str:
-    def _name_after(id_: str) -> str:
+    def _name_after(id_: str, start: int, end: int, label: str = "") -> str:
         """` (Name)` for a page's first mention of a subsystem, else nothing.
 
-        A line that already shows the name (a table with a Name column, a
-        heading, a mention named on an earlier run) counts as the naming
-        mention and gains nothing. A link's destination is not shown, so a
-        name in a page path does not count.
+        The mention counts as named, and gains nothing, when the reader already
+        sees the name: in a table row that holds it (an adjacent Name column),
+        in a heading, in the link's own label, or beside the ID in prose
+        ("R-06 — Rule evaluation", "Rule evaluation (R-06)", a name an earlier
+        run printed). The name elsewhere in a sentence is not beside the ID. A
+        link's destination is not shown, so a name in a page path never counts.
         """
 
         name = index.names.get(id_)
         if name is None or id_ in named:
             return ""
         shown = name.replace("|", "/")
-        if shown in LINK_TARGET_PAT.sub("]", line):
+        whole_line = shown in LINK_TARGET_PAT.sub("]", line)
+        if plain or line.lstrip().startswith("|"):
+            if whole_line:
+                named.add(id_)
+            return "" if plain or whole_line else _print(id_, shown)
+        if shown in label:
             named.add(id_)
             return ""
-        if plain:
+        after = LINK_TARGET_PAT.sub("]", line[end:])
+        before = LINK_TARGET_PAT.sub("]", line[:start])
+        if re.match(r"[\s*_)\]:,(\u2014\u2013-]*" + re.escape(shown), after) or re.search(
+            re.escape(shown) + r"[\s*_\[(:,\u2014\u2013-]*$", before
+        ):
+            named.add(id_)
             return ""
+        return _print(id_, shown)
+
+    def _print(id_: str, shown: str) -> str:
         named.add(id_)
         return f" ({shown})"
 
     def _concern_label(id_: str, at: int) -> bool:
         """Whether a concern code printed here owes the "concern" prefix.
 
-        A heading or a table's header row (the review-coverage matrix names
-        its columns by concern code) is left alone, as is a code the words
-        before it already introduce. A link's destination and anchor are not
+        A table's header row (the review-coverage matrix names its columns by
+        concern code) is left alone, as is a code the words before it already
+        introduce. A heading and the code's own page are not exempt. A link's destination and anchor are not
         touched; only the text the reader sees gains the word.
         """
 
         return (
-            not plain
+            not header_row
             and index.kinds.get(id_) == "concern"
             and not CONCERN_WORD_PAT.search(line[:at])
         )
@@ -215,7 +232,14 @@ def _resolve_line(
             label = m.group("label").strip("*")
             if _concern_label(label, m.start()):
                 link = "[concern " + link[1:]
-            suffix = _name_after(label) if label in index.names else ""
+            if label in index.names:
+                suffix = _name_after(label, m.start(), m.end())
+            else:
+                # A subsystem ID inside the visible label ("the auth subsystem")
+                # is a mention too; its name goes after the link.
+                inner = identifier_pattern(index.names)
+                hit = inner.search(label) if inner else None
+                suffix = _name_after(hit.group(1), m.start(), m.end(), label) if hit else ""
             return link + (m.group("lpost") or "") + suffix
         id_ = m.group("id")
         pre, post = m.group("pre") or "", m.group("post") or ""
@@ -223,14 +247,17 @@ def _resolve_line(
         if linked is None:
             return m.group(0)
         self_ref = linked == f"**{id_}**"
-        if self_ref and pre and post:
+        concern = _concern_label(id_, m.start())
+        if self_ref and (pre or post):
             # Self references render as strong text. If the renderer already
             # supplied that emphasis, keep the token itself so repeated passes
             # do not accumulate another pair of ``**`` delimiters.
-            linked = id_
-        elif not self_ref and _concern_label(id_, m.start()):
+            linked = f"concern {id_}" if concern else id_
+        elif self_ref and concern:
+            linked = f"**concern {id_}**"
+        elif concern:
             linked = linked.replace(f"[{id_}]", f"[concern {id_}]", 1)
-        return pre + linked + post + _name_after(id_)
+        return pre + linked + post + _name_after(id_, m.start(), m.end())
 
     return pattern.sub(_replace, line)
 

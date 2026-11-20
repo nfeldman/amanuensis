@@ -14,6 +14,9 @@ Turns red when:
     prints, prints no `use_when` at all, or prints the Markdown's italic
     paragraph a second time inside the article body, including when the xref pass
     has bolded or linked an ID inside it (a subsystem named after its own ID);
+  - the xref pass links or names an ID inside a static page's generated head
+    paragraph (the lowercase subsystem `code` in "the part of the code that
+    does something");
   - the reader's guide has no "Pages on this site" section, still has "What to
     look at first", or its tables are not headed Page / What it shows /
     Use it when;
@@ -163,6 +166,9 @@ SUBSYSTEMS = (
     # A name that carries its own ID: the xref pass bolds the self-reference
     # inside the page-head paragraph, which must still be found and printed once.
     ("B-03", "B-03 reader", "mapped", "backend", "src/cache.ts", None, None),
+    # A lowercase ID that is an ordinary word of the page-head copy ("the part
+    # of the code that does something"): the generated head must not link it.
+    ("code", "Code gen", "mapped", "tooling", "src/gen.ts", None, None),
 )
 MATRIX_ID = 7
 MATRIX_SYMPTOM = "rows appear twice after a restart"
@@ -428,6 +434,8 @@ def main() -> int:
                 head = md_head(text)
                 if head is None:
                     return f"{path} does not open with an H1"
+                if "](" in head[1] or re.search(r"\(Code gen\)", head[1]):
+                    return f"{path}: the generated head paragraph was linked or named by the xref pass ({head[1][:120]!r})"
                 split = split_head(head[1])
                 if split is None:
                     return f"{path}: the paragraph under the H1 is not an italic hint plus 'Use it when' ({head[1][:80]!r})"
