@@ -13,8 +13,11 @@ Turns red when:
     optional for `survey-plan`); the five mark kinds with `applies_to` a claim key
     family (`flow`), `requires`, and `only_step` 00 on `trigger`; a missing label,
     meaning or `cannot_justify`; a missing `reader_facing` flag;
-  - any of the five carries an `sql` binding (SO2 adds them with the DDL, so
-    `--check-sql` holds at every commit);
+  - any of the five is not bound to exactly the column SO2 declares for it
+    (narratives.section, narratives.disposition, claim_marks.kind,
+    territory_dispositions.disposition, runtime_boundaries.origin). SO1 shipped
+    them unbound so `--check-sql` held at every commit; SO2 added the bindings
+    with the DDL and moved this assertion from "no binding" to "this binding";
   - the generated `vocabulary.py` or `vocabulary.ts` lacks the enums, their constant
     arrays, or the per-value metadata the contract carries;
   - the generator accepts a broken copy of the contract (run on a scratch copy of
@@ -121,6 +124,14 @@ NEW_ENUMS = (
     "territory_disposition",
     "runtime_boundary_origin",
 )
+# Where SO2 binds each enum (design/store-only/PLAN.md §2.1, §2.2, §7.2).
+SQL_BINDINGS = {
+    "narrative_section": ("narratives", "section"),
+    "narrative_disposition": ("narratives", "disposition"),
+    "claim_mark_kind": ("claim_marks", "kind"),
+    "territory_disposition": ("territory_dispositions", "disposition"),
+    "runtime_boundary_origin": ("runtime_boundaries", "origin"),
+}
 CONST_NAMES = {
     "narrative_section": "NARRATIVE_SECTIONS",
     "narrative_disposition": "NARRATIVE_DISPOSITIONS",
@@ -206,8 +217,9 @@ def check_shape_of_each() -> str | None:
             bad.append(f"{name}.reader_facing is not a boolean")
         if not decl.get("axis"):
             bad.append(f"{name} has no axis")
-        if "sql" in decl:
-            bad.append(f"{name} carries an sql binding; SO2 adds it with the DDL")
+        want_sql = [{"table": SQL_BINDINGS[name][0], "column": SQL_BINDINGS[name][1]}]
+        if decl.get("sql") != want_sql:
+            bad.append(f"{name}.sql is {decl.get('sql')!r}, not {want_sql!r} (bound by SO2)")
         for value in decl["values"]:
             for field in ("value", "label", "meaning", "cannot_justify"):
                 if not isinstance(value.get(field), str) or not value[field].strip():
@@ -333,8 +345,13 @@ def check_typescript() -> str | None:
             bad.append(f"vocabulary.ts has no {table}")
             continue
         for name in NEW_ENUMS:
-            if re.search(rf"^  {name}:", m.group(1), re.M):
-                bad.append(f"{table} binds {name}")
+            if table == "VOCABULARY_SQL_BINDINGS":
+                want_table, want_column = SQL_BINDINGS[name]
+                line = rf'^  {name}: \[\{{ table: "{want_table}", column: "{want_column}" \}}\],$'
+                if not re.search(line, m.group(1), re.M):
+                    bad.append(f"{table} does not bind {name} to {want_table}.{want_column}")
+            elif not re.search(rf"^  {name}:", m.group(1), re.M):
+                bad.append(f"{table} lacks {name}")
     return "; ".join(bad[:6]) or None
 
 
@@ -519,12 +536,12 @@ def main() -> int:
     emit("GATE SO1 — contract enums: narrative sections, claim mark kinds, territory dispositions")
     check("gen-vocabulary --check and --check-sql are green", check_generator_green)
     check("contract_version is 1.2.0", check_version)
-    check("the five enums exist, with labels, meanings, flags and no sql binding", check_shape_of_each)
+    check("the five enums exist, with labels, meanings, flags and their SO2 sql binding", check_shape_of_each)
     check("narrative_section matches §2.1", check_sections)
     check("claim_mark_kind matches §7.2", check_marks)
     check("the dispositions and origin match §2.1, §2.2", check_plain)
     check("vocabulary.py carries the enums and their metadata", check_python)
-    check("vocabulary.ts carries the enums and their metadata, bound to no SQL column", check_typescript)
+    check("vocabulary.ts carries the enums and their metadata, each bound to its SO2 column", check_typescript)
     check("the generator accepts the unbroken contract", check_control)
     check("the generator accepts a valid added section and mark kind", check_accepts_valid_addition)
     for label, mutate, word in SABOTAGE:
