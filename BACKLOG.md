@@ -65,6 +65,12 @@ real run; "read" means found by reading code and not reproduced.
   alone, and stops the skill writing files. It also settles what a downstream copy carries
   (D7 decided HTML).
 
+  Generated diagrams join this plan rather than the orientation lane (decided 2026-11-20).
+  The catalog in `design/diagrams/CATALOG.md` (local, not committed) ranks a survey workflow
+  diagram, a status ladder and a coverage view first, since all three draw on records the
+  store already holds. Code diagrams need new records, flow marks above all. Surveys must
+  record those before a diagram has anything to show, so the plan should add them early.
+
 ## Explanation quality
 
 From the AxiomDB catch-up. Codex blind-read every model-written explanation (71 slots, about
