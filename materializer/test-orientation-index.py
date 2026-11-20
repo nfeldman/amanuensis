@@ -23,6 +23,10 @@ Turns red when:
     row per subgroup ("Subsystem pages", "Evidence tables"), or those rows do
     not route to a page that lists every page of the subgroup;
   - a subsystem page or an evidence matrix page prints no `use_when`;
+  - the HTML index differs from the Markdown index: its lens groups, the lens
+    meaning under each heading, its column headers, or any row's page label,
+    link, "What it shows" or "Use it when" (so an HTML index whose tables are
+    dropped is red even while the Markdown is whole);
   - the gate does not run in CI.
 
 False green it cannot exclude: the fixture is small (three subsystems, one
@@ -300,6 +304,48 @@ def table_rows(lines: list[str]) -> tuple[list[str], list[list[str]]]:
 LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
+def html_text(fragment: str) -> str:
+    return " ".join(htmllib.unescape(re.sub(r"<[^>]+>", "", fragment)).split())
+
+
+def html_section(text: str, heading: str) -> str | None:
+    """The HTML between the `<h2>` titled `heading` and the next `<h2>`."""
+
+    for match in re.finditer(r"<h2\b[^>]*>(.*?)</h2>", text, re.S):
+        if html_text(match.group(1)).lstrip("§").strip() == heading:
+            rest = text[match.end() :]
+            end = re.search(r"<h2\b", rest)
+            return rest[: end.start()] if end else rest
+    return None
+
+
+def html_index_groups(section: str) -> list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str, str]]]]]]:
+    """(group, prose under the heading, [(header, [(label, href, shows, use)])]) per `<h3>`."""
+
+    out: list[tuple[str, str, list[tuple[list[str], list[tuple[str, str, str, str]]]]]] = []
+    parts = re.split(r"(<h3\b[^>]*>.*?</h3>)", section, flags=re.S)
+    for heading, body in zip(parts[1::2], parts[2::2], strict=True):
+        name = html_text(heading).lstrip("§").strip()
+        prose = " ".join(html_text(p) for p in re.findall(r"<p\b[^>]*>(.*?)</p>", body.split("<table", 1)[0], re.S))
+        tables: list[tuple[list[str], list[tuple[str, str, str, str]]]] = []
+        for table in re.findall(r"<table\b.*?</table>", body, re.S):
+            header = [html_text(th) for th in re.findall(r"<th\b[^>]*>(.*?)</th>", table, re.S)]
+            rows: list[tuple[str, str, str, str]] = []
+            tbody = re.search(r"<tbody\b.*?</tbody>", table, re.S)
+            for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", tbody.group(0) if tbody else "", re.S):
+                cells = re.findall(r"<td\b[^>]*>(.*?)</td>", tr, re.S)
+                link = re.search(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>', cells[0] if cells else "", re.S)
+                if len(cells) != 3 or not link:
+                    rows.append((html_text(cells[0]) if cells else "", "", "", ""))
+                    continue
+                rows.append(
+                    (html_text(link.group(2)), htmllib.unescape(link.group(1)), html_text(cells[1]), html_text(cells[2]))
+                )
+            tables.append((header, rows))
+        out.append((name, prose, tables))
+    return out
+
+
 def main() -> int:
     emit("GATE O2 — the page index with 'Use it when'")
     emit("")
@@ -539,6 +585,47 @@ def main() -> int:
             return None
 
         check("each subgroup row routes to a page that lists every member", subgroup_rows_route_to_a_listing)
+
+        # -- the HTML index carries what the Markdown index carries ----------
+        def html_index_agrees() -> str | None:
+            page_html = read(docs / "how-to-read.html")
+            if page_html is None:
+                return "how-to-read.html is not published"
+            section = html_section(page_html, INDEX_HEADING)
+            if section is None:
+                return f"how-to-read.html has no '{INDEX_HEADING}' section"
+            md_groups = groups_of(index_lines)
+            html_groups = html_index_groups(section)
+            if [name for name, _p, _t in html_groups] != [name for name, _ in md_groups]:
+                return (
+                    f"HTML index groups are {[name for name, _p, _t in html_groups]!r}, "
+                    f"Markdown's are {[name for name, _ in md_groups]!r}"
+                )
+            for (name, prose, tables), (_name, body) in zip(html_groups, md_groups, strict=True):
+                if len(tables) != 1:
+                    return f"{name}: the HTML group has {len(tables)} index tables, not one"
+                header, rows = tables[0]
+                if header != INDEX_COLUMNS:
+                    return f"{name}: HTML table is headed {header!r}, not {INDEX_COLUMNS!r}"
+                if name in LENS_OF_GROUP:
+                    md_prose = " ".join(
+                        line.strip() for line in body if line.strip() and not line.strip().startswith("|")
+                    )
+                    if not prose or prose not in md_prose:
+                        return f"{name}: the HTML lens meaning {prose!r} is not the Markdown's"
+                expected = []
+                for cells in table_rows(body)[1]:
+                    match = LINK.search(cells[0])
+                    if not match or len(cells) != 3:
+                        return f"{name}: a Markdown row cannot be compared: {cells!r}"
+                    expected.append(
+                        (match.group(1), re.sub(r"\.md(#|$)", r".html\1", match.group(2)), cells[1], cells[2])
+                    )
+                if rows != expected:
+                    return f"{name}: HTML rows {rows!r} differ from Markdown rows {expected!r}"
+            return None
+
+        check("the HTML index has the Markdown index's groups, lens meanings, columns and rows", html_index_agrees)
 
     def runs_in_ci() -> str | None:
         text = read(CI_FILE)
