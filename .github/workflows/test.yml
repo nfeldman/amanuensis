@@ -210,6 +210,12 @@ jobs:
       - name: Project records — purpose before any subsystem, profile, runtime boundaries, territory dispositions, concern territory and probe
         working-directory: mcp-server
         run: node test-store-only-project-records.mjs
+      # GATE SO5 (design/store-only/PLAN.md §8 SO5). The flow-mark tools over
+      # temporary git workspaces and stores the gate creates itself; one arm
+      # spawns the built server over stdio to read tools/list.
+      - name: Flow marks — record, withdraw, decline, returned by get_claims, closed claims and withdrawn marks not current
+        working-directory: mcp-server
+        run: node test-store-only-claim-marks.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

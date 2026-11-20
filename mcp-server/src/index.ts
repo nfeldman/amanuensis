@@ -21,6 +21,7 @@ import { storagePathIsTracked } from "./storage-git.js";
 import { artifactTools } from "./tools/artifacts.js";
 import { carriedTools } from "./tools/carried.js";
 import { chorusmithAdapterTools } from "./tools/chorusmith-adapter.js";
+import { claimMarkTools } from "./tools/claim-marks.js";
 import { claimTools } from "./tools/claims.js";
 import { codebaseBriefTools } from "./tools/codebase-brief.js";
 import { compareTools } from "./tools/compare.js";
@@ -84,6 +85,11 @@ const ADDITIVE_TOOLS = new Set([
   "record_runtime_boundary",
   "withdraw_runtime_boundary",
   "record_territory_disposition",
+  // `claim_marks`, `claim_mark_withdrawals` and `claim_mark_declinations` are
+  // append-only in the same way (PLAN §7.2); a withdrawal is a row too.
+  "record_claim_mark",
+  "withdraw_claim_mark",
+  "decline_claim_marks",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -343,6 +349,7 @@ async function main(): Promise<void> {
     ...explanationTools,
     ...narrativeTools,
     ...projectRecordTools,
+    ...claimMarkTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,

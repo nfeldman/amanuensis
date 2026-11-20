@@ -803,6 +803,236 @@
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]
+    },
+    {
+      "id": "claim-mark-kind",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a mark kind" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-claim",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no claim" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-closed",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is closed, so its marks would not be current" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-not-flow-step",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a flow step. A mark goes on a claim keyed" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-trigger-step",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "a trigger is the start of a flow, so it belongs to step 00" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-needs",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "mark needs a" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-unused",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "mark takes no" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-label",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: a label is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-seam",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no seam" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-not-party",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not one of them" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-exit-target",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "an exit unwinds to a step of its own flow or to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-no-evidence",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: no evidence row" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-evidence-file",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "does not show the step" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-evidence-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "does not descend from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "record_claim_mark refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-duplicate",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["record_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "already says this about the step" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-no-mark",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "withdraw_claim_mark refuses: no mark" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-already",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is already withdrawn" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-withdraw-reason",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["withdraw_claim_mark"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "withdraw_claim_mark refuses: a reason is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-flow",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "is not a flow. Name it" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-no-steps",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "has no current step claim" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-reason",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "decline_claim_marks refuses: a reason is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
+    },
+    {
+      "id": "claim-mark-decline-revision",
+      "note": "New, store-only PLAN §7.2 (SO5).",
+      "refuses": ["decline_claim_marks"],
+      "instructs": [],
+      "server": { "file": "src/tools/claim-marks.ts", "phrase": "decline_claim_marks refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/phase-2-structural.md" }
+      ]
     }
   ]
 }

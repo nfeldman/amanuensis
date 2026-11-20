@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_221 tools across 46 groups. Generated from `tools/list` — do not hand-edit._
+_224 tools across 47 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -234,6 +234,14 @@ _221 tools across 46 groups. Generated from `tools/list` — do not hand-edit._
 | `export_chorusmith_adapter_artifact` | Project one durable CodebaseBrief, ReviewBrief, ResearchRequest, Decision, Obligation, or RunManifest through its @1.0.0 adapter into an Amanuensis custody envelope containing a Chorusmith PersistArtifactInput-compatible projection. Chorusmith must compute its own native record hash during future ingress; export is append-only, projection-only, and grants no external write authority. |
 | `get_chorusmith_adapter_run` | Read one immutable adapter manifest, its ordered landed/pending steps, restart receipts, and parity verifications. This is also the RunManifest@1.0.0 adapter's projection source. |
 
+### `claim-marks` (3)
+
+| Tool | Description |
+|---|---|
+| `record_claim_mark` | Record a flow mark on one current flow-step claim (a claim keyed <sid>/flow/<slug>/<nn>): kind commit-point (the step after which the flow's effect is kept), crash-point (a step where the process can stop partway; label says what is left half done), exit (a way the flow stops early; label says why, target is a step number of the same flow or 'leaves-flow'), crosses-seam (target is a seam the subsystem is party to) or trigger (what starts the flow; step 00 only). A label is one line of at most 120 characters; a kind takes only the label and target it needs. evidence_id names one evidence row that is code-verified or contract-stated and cites the file the step's claim is about. A mark stands while its claim is current and it is not withdrawn: a closed claim's marks are not current, and its successor records its own. The record is append-only. Returns a receipt. |
+| `withdraw_claim_mark` | Withdraw a flow mark that was recorded by mistake, with the reason, without closing its claim: mark_id is the id record_claim_mark returned or get_claims lists. The reason is one paragraph of at most 400 UTF-8 bytes. The withdrawal is a new row and the mark is kept; a withdrawn mark is no longer returned by get_claims, and the same mark can be recorded again. Returns a receipt. |
+| `decline_claim_marks` | Declare that a flow has no marks to record, with the reason (for example that it writes nothing, so it has no commit point): the other way to answer the obligation record_claim_mark carries. flow is <sid>/flow/<slug>, without the step number, and has to have a current step claim. The reason is one paragraph of at most 400 UTF-8 bytes. The record is append-only: the newest declination is the one get_claims returns on the flow's steps. Returns a receipt. |
+
 ### `claims` (8)
 
 | Tool | Description |
@@ -243,7 +251,7 @@ _221 tools across 46 groups. Generated from `tools/list` — do not hand-edit._
 | `get_claim_challenges` | Return the recorded adversarial outcomes for one claim or for every current claim of one subsystem, oldest first. Read-only; the record is append-only, so the last row is the latest reading and the earlier ones are the history. |
 | `invalidate_claim` | Close a current claim's validity interval at an exclusive Git boundary while preserving its history. Requires new contradictory evidence and a reason; rejected transitions are transactional. at_sha must be the claim's valid_from_sha or a descendant of it; closing at valid_from_sha records that the claim never held, for a claim that was already false there; a claim that held and later became false closes at the commit that made it false. Returns validity_event_id, which an 'overturned' record_claim_challenge cites. |
 | `supersede_claim` | Atomically close a current predecessor and create its successor in the same claim_key at one Git commit. at_sha must be the predecessor's valid_from_sha or a descendant of it; at valid_from_sha the predecessor never held, which corrects a claim that was already imprecise there. The successor id must be new and its supporting evidence must not already support the predecessor. Returns validity_event_id, which a 'superseded' record_claim_challenge cites. |
-| `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. |
+| `get_claims` | Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. Each claim carries marks, the flow marks recorded on it that stand now (none once the claim is closed, and none that were withdrawn), and a flow-step claim carries mark_declination, the newest declaration that its flow has no marks to record, or null. |
 | `get_claim_history` | Return every version, evidence link, validity event, and supersession edge for one claim_key. |
 | `get_legacy_claim_projection` | Read the non-destructive compatibility projection of legacy entries, evidence, dispositions, findings, and contradictions. Null temporal fields remain null rather than being invented. |
 

@@ -729,6 +729,92 @@ export function readTerritoryDispositions(db: DB): TerritoryDispositionRow[] {
 }
 
 /**
+ * A flow step's claim key, `<sid>/flow/<slug>/<nn>` (the shape `requireStableClaimKey`
+ * enforces), taken apart: the subsystem, the flow (`<sid>/flow/<slug>`) and the step.
+ * Null for any other key.
+ */
+export function parseFlowStepKey(
+  claimKey: string,
+): { subsystemId: string; flow: string; step: string } | null {
+  const match = /^([^/\s]+)\/flow\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([0-9]{2,})$/.exec(claimKey);
+  const [, subsystemId, slug, step] = match ?? [];
+  if (subsystemId === undefined || slug === undefined || step === undefined) return null;
+  return { subsystemId, flow: `${subsystemId}/flow/${slug}`, step };
+}
+
+export interface ClaimMarkRow {
+  id: number;
+  claim_id: string;
+  kind: string;
+  label: string | null;
+  target: string | null;
+  evidence_id: number;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/**
+ * The marks that are current on each of `claimIds` (PLAN §7.2): a mark with no
+ * withdrawal, on a claim whose validity interval is still open. A closed claim
+ * has none, and a successor records its own, so nothing here is inherited.
+ * Ordered by id.
+ */
+export function readCurrentClaimMarks(
+  db: DB,
+  claimIds: readonly string[],
+): Map<string, ClaimMarkRow[]> {
+  const byClaim = new Map<string, ClaimMarkRow[]>();
+  if (claimIds.length === 0) return byClaim;
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.claim_id, m.kind, m.label, m.target, m.evidence_id, m.ref_sha,
+              m.session_id, m.recorded_at
+         FROM claim_marks m
+         JOIN claims c ON c.claim_id = m.claim_id
+        WHERE m.claim_id IN (${claimIds.map(() => "?").join(", ")})
+          AND c.valid_until_sha IS NULL
+          AND NOT EXISTS (SELECT 1 FROM claim_mark_withdrawals w WHERE w.mark_id = m.id)
+        ORDER BY m.id`,
+    )
+    .all(...claimIds) as ClaimMarkRow[];
+  for (const row of rows) {
+    const list = byClaim.get(row.claim_id);
+    if (list) list.push(row);
+    else byClaim.set(row.claim_id, [row]);
+  }
+  return byClaim;
+}
+
+export interface ClaimMarkDeclinationRow {
+  id: number;
+  flow_key: string;
+  reason: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The newest declination for each of `flowKeys` (`<sid>/flow/<slug>`) that has one (PLAN §7.2). */
+export function readClaimMarkDeclinations(
+  db: DB,
+  flowKeys: readonly string[],
+): Map<string, ClaimMarkDeclinationRow> {
+  const byFlow = new Map<string, ClaimMarkDeclinationRow>();
+  if (flowKeys.length === 0) return byFlow;
+  const rows = db
+    .prepare(
+      `SELECT id, flow_key, reason, ref_sha, session_id, recorded_at
+         FROM claim_mark_declinations
+        WHERE flow_key IN (${flowKeys.map(() => "?").join(", ")})
+        ORDER BY id`,
+    )
+    .all(...flowKeys) as ClaimMarkDeclinationRow[];
+  for (const row of rows) byFlow.set(row.flow_key, row);
+  return byFlow;
+}
+
+/**
  * §3.4, checked at every write into `mapped`, on its own path.
  *
  * Both status writers call this directly, beside {@link enforceForwardPrerequisites}

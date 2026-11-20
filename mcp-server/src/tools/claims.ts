@@ -10,7 +10,12 @@ import {
   type ToolDefinition,
   ToolError,
 } from "../helpers.js";
-import { requireActiveSession } from "../invariants.js";
+import {
+  parseFlowStepKey,
+  readClaimMarkDeclinations,
+  readCurrentClaimMarks,
+  requireActiveSession,
+} from "../invariants.js";
 import { spawnSync } from "../subprocess.js";
 import {
   CLAIM_EPISTEMIC_KINDS,
@@ -72,12 +77,12 @@ const MIN_CHALLENGE_LENGTH = 24;
  * the generated vocabulary rather than restated: if the enum source ever drops
  * one, this list shrinks with it instead of naming a kind nothing can carry.
  */
-const FILE_ANCHORED_EVIDENCE: readonly string[] = EVIDENCE_KINDS.filter(
+export const FILE_ANCHORED_EVIDENCE: readonly string[] = EVIDENCE_KINDS.filter(
   (kind) => kind === "code-verified" || kind === "contract-stated",
 );
 
 /** §2.1's symbol split: the path is everything before the **first** colon. */
-function subjectPath(subjectId: string): string {
+export function subjectPath(subjectId: string): string {
   const at = subjectId.indexOf(":");
   return at < 0 ? subjectId : subjectId.slice(0, at);
 }
@@ -177,7 +182,7 @@ function resolveCommit(ctx: ServerContext, requested: string): string {
   return sha;
 }
 
-function isAncestor(ctx: ServerContext, ancestor: string, descendant: string): boolean {
+export function isAncestor(ctx: ServerContext, ancestor: string, descendant: string): boolean {
   if (ancestor === descendant) return true;
   const result = git(ctx, ["merge-base", "--is-ancestor", ancestor, descendant]);
   if (result.status === 0) return true;
@@ -736,7 +741,7 @@ export const claimTools: ToolDefinition[] = [
   {
     name: "get_claims",
     description:
-      "Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted.",
+      "Return typed claims, current by default. subsystem_id returns every claim whose claim_key begins '<subsystem_id>/', matched literally. query_sha performs a Git-ancestry as-of query using exclusive invalidation boundaries; include_historical returns every stored version when query_sha is omitted. Each claim carries marks, the flow marks recorded on it that stand now (none once the claim is closed, and none that were withdrawn), and a flow-step claim carries mark_declination, the newest declaration that its flow has no marks to record, or null.",
     inputSchema: {
       type: "object",
       properties: {
@@ -795,7 +800,22 @@ export const claimTools: ToolDefinition[] = [
         .prepare(`SELECT * FROM claims ${where} ORDER BY claim_key, valid_from_sha, claim_id`)
         .all(...params) as ClaimRow[];
       if (querySha !== null) rows = rows.filter((row) => claimAppliesAt(ctx, row, querySha));
-      return rows.map((row) => claimWithEvidence(ctx, row));
+      // PLAN §7.2: each claim carries its current, unwithdrawn marks (none once the claim
+      // is closed), and a flow step its flow's newest declination.
+      const marks = readCurrentClaimMarks(
+        ctx.db,
+        rows.map((row) => row.claim_id),
+      );
+      const flows = rows.flatMap((row) => parseFlowStepKey(row.claim_key)?.flow ?? []);
+      const declinations = readClaimMarkDeclinations(ctx.db, [...new Set(flows)]);
+      return rows.map((row) => {
+        const flow = parseFlowStepKey(row.claim_key)?.flow;
+        return {
+          ...claimWithEvidence(ctx, row),
+          marks: marks.get(row.claim_id) ?? [],
+          mark_declination: (flow !== undefined && declinations.get(flow)) || null,
+        };
+      });
     },
   },
   {

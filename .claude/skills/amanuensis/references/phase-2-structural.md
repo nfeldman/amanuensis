@@ -166,6 +166,50 @@ padding rather than accuracy. Record what you found; the adversarial
 pass in Phase 4 pulls every one of these claims as a target and is
 where their truth is tested.
 
+**Flow marks.** A flow step can carry marks that say what the step does
+to the flow. `record_claim_mark(claim_id, kind, label?, target?, evidence_id,
+ref_sha)` records one on a current flow-step claim:
+
+- `commit-point` — the step after which the flow's effect is kept; no label or target.
+- `crash-point` — a step where the process can stop partway; `label` says what is left half done.
+- `exit` — a way the flow stops early; `label` says why, `target` is the number of the step it unwinds to (`03`) or `leaves-flow`.
+- `crosses-seam` — a step where work passes a system boundary; `target` is a seam the subsystem is party to (`SM-02`).
+- `trigger` — what starts the flow; step `00` only; no label or target.
+
+A label is one line of at most 120 characters. `evidence_id` is one row that is
+`code-verified` or `contract-stated` and cites the file the step's claim is about.
+A mark stands while its claim is current. When a claim is superseded its marks
+do not carry over, so the successor records its own. `withdraw_claim_mark(mark_id,
+reason)` retracts a mistaken mark without closing the claim, and a flow with no
+marks to record says so with `decline_claim_marks(flow, reason, ref_sha)`, where
+`flow` is `<sid>/flow/<slug>`. `get_claims` returns each claim's standing marks as
+`marks`, and a flow step's flow's newest declination as `mark_declination`. The
+writers need an active session. They refuse:
+
+- `record_claim_mark refuses: <kind> is not a mark kind` — use one of the five.
+- `record_claim_mark refuses: no claim <id>` — pass the `claim_id` of a flow step `get_claims` lists.
+- `record_claim_mark refuses: <key> is not a flow step. A mark goes on a claim keyed <sid>/flow/<slug>/<nn>` — mark a flow step.
+- `record_claim_mark refuses: claim <id> is closed, so its marks would not be current` — mark the claim that replaced it.
+- `record_claim_mark refuses: a trigger is the start of a flow, so it belongs to step 00` — put it on step `00`.
+- `record_claim_mark refuses: a <kind> mark needs a <label or target>` — pass the one the kind carries.
+- `record_claim_mark refuses: a <kind> mark takes no <label or target>` — leave it out.
+- `record_claim_mark refuses: a label is one line of at most 120 characters` — say it in fewer.
+- `record_claim_mark refuses: no seam <id>` — name a seam `upsert_seam` recorded.
+- `record_claim_mark refuses: seam <id> lies between <a> and <b>, and <sid> is not one of them` — name a seam the flow's subsystem is party to.
+- `record_claim_mark refuses: an exit unwinds to a step of its own flow or to 'leaves-flow'` — name a current step of the same flow by its number.
+- `record_claim_mark refuses: no evidence row <id>` — `add_evidence` records one.
+- `record_claim_mark refuses: evidence <id> does not show the step` — cite the step's file in a strong kind.
+- `record_claim_mark refuses: evidence <id> was taken at a revision that ref_sha <ref> does not descend from` — record the mark at a revision that includes it.
+- `record_claim_mark refuses: ref_sha <ref> does not resolve` — record the revision the mark was read at.
+- `record_claim_mark refuses: mark <id> already says this about the step` — withdraw it first if it is to change.
+- `withdraw_claim_mark refuses: no mark <id>` — pass the id `record_claim_mark` returned.
+- `withdraw_claim_mark refuses: mark <id> is already withdrawn` — record it again if it should stand.
+- `withdraw_claim_mark refuses: a reason is one paragraph of at most 400 bytes` — no blank line, and no line starting with `#`, `-`, `*` or `|`.
+- `decline_claim_marks refuses: <flow> is not a flow. Name it <sid>/flow/<slug>` — without the step number.
+- `decline_claim_marks refuses: flow <flow> has no current step claim` — record its steps first.
+- `decline_claim_marks refuses: a reason is one paragraph of at most 400 bytes` — say why the flow has no marks in fewer.
+- `decline_claim_marks refuses: ref_sha <ref> does not resolve` — record the revision the flow was read at.
+
 ### 8. Update file classifications
 
 Files actually read in this phase move from `candidate` to
