@@ -954,6 +954,14 @@ OVERVIEW_IDENTITY = (
     " site? Start with [{guide}](how-to-read.md)."
 )
 
+# The read-back is recorded after the pages are written, so the overview can only
+# show the publication before it. No digit and neither "red" nor "green": the
+# overview's truthfulness gate counts those words in this block.
+PUBLICATION_INTEGRITY_LAG = (
+    "A publication's read-back is recorded after its pages are written, so these"
+    " results describe the publication before this one."
+)
+
 
 def render_index(
     conn: sqlite3.Connection,
@@ -1155,6 +1163,7 @@ def render_index(
     out += _metric_table(work)
     out += ["### Publication integrity", ""]
     if verification:
+        out += [PUBLICATION_INTEGRITY_LAG, ""]
         out += _metric_table(
             [
                 *(
@@ -1164,7 +1173,7 @@ def render_index(
                     )
                     for axis in ("state", "coverage", "content")
                 ),
-                ("Verified at", _fmt_time(str(verification["verified_at"]))),
+                ("Read back at", _fmt_time(str(verification["verified_at"]))),
             ]
         )
     else:
