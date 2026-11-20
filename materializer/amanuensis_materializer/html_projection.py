@@ -1458,13 +1458,24 @@ def _code_html(value: str) -> str:
     return f"<code>{html.escape(value)}</code>"
 
 
+def _names_label(text: str) -> bool:
+    """Whether a bare cell is a stored value or its own label, not another enum's word.
+
+    A label such as pass_type's "Adversarial" lowercases to a status value whose
+    label differs; chipping it would print that other label in its place.
+    """
+
+    key = text.lower()
+    return text == key or text == DISPLAY_STATUS.get(key, key.replace("-", " ").title())
+
+
 def _inline(text: str) -> str:
     """Render the deliberately small inline subset emitted by Amanuensis."""
 
     stripped = text.strip()
-    if stripped.lower() in STATUS_HINTS:
+    if stripped.lower() in STATUS_HINTS and _names_label(stripped):
         return _status_html(stripped)
-    if stripped.lower() in EVIDENCE_HINTS:
+    if stripped.lower() in EVIDENCE_HINTS and _names_label(stripped):
         return _code_html(stripped)
     if stripped.upper() in SEVERITY_HINTS:
         return _status_html(stripped, severity=True)
