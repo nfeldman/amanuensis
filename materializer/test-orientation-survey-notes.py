@@ -30,6 +30,12 @@ Turns red when, in the Markdown or the HTML of the subsystem pages:
   - an artifact file's bytes change in the publish;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: it checks the dated line's words and place, not
 that a reader takes the later record as the current one.
 
@@ -48,6 +54,8 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -416,6 +424,7 @@ def main() -> int:
             return None
 
         check("no artifact file is modified", files_unchanged)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

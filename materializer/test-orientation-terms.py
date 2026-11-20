@@ -26,6 +26,12 @@ Turns red when, on a store this gate seeds and publishes:
     disabled, or prints it twice (a head line left in the body);
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the fixture publishes the pages one small store
 yields, so a family whose pages this store has none of (a matrix for every
 case) is exercised by the ones it has. The HTML checks read bytes; they do not
@@ -48,6 +54,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -441,6 +449,7 @@ def main() -> int:
             return None
 
         check("every page that names terms prints the line in HTML, and no other does", html_view)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
         def runs_in_ci() -> str | None:
             ci = read(CI_FILE)

@@ -24,6 +24,12 @@ Turns red when:
     of the existing sentence, or loses the "Subsystem map" H1;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the fixture is eight subsystems in three layers,
 so a layout that fails only at 35 rows is exercised by count. The HTML checks
 read bytes; they do not drive a browser.
@@ -44,6 +50,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -484,6 +492,7 @@ def main() -> int:
             return None
 
         check("a store with no subsystems keeps its sentence and renders no atlas", empty_store)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs, empty / "docs"))
 
     def runs_in_ci() -> str | None:
         text = read(CI_FILE)

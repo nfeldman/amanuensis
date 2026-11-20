@@ -24,6 +24,12 @@ Turns red when:
     the Markdown italic or plain, or in the HTML;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: it reads the server's source for the two flags rather
 than running the server; and it reads bytes, it does not drive a browser.
 
@@ -43,6 +49,8 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -311,6 +319,7 @@ def main() -> int:
             return None
 
         check("a default CLI render publishes and its summary says recorded: false", cli_render_publishes)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(cli_docs))
         check(
             "every page of a CLI render carries the notice (Markdown last paragraph, HTML page head)",
             lambda: stamped_problem(cli_docs, NOTICE, NOTICE_UNVERIFIED),

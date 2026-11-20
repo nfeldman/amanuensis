@@ -19,6 +19,12 @@ Turns red when:
     sections are not the expected list in order;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: "nothing else changes" is checked on the lens
 routes, the H2 list and the identity paragraph, not byte for byte against the
 previous overview. The HTML checks read bytes; they do not drive a browser.
@@ -39,6 +45,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -440,6 +448,7 @@ def main() -> int:
             return None
 
         check("the overview's sections are unchanged", sections_unchanged)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
     def in_ci() -> str | None:
         ci = read(CI_FILE)

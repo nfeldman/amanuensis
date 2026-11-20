@@ -44,6 +44,12 @@ Turns red when:
     both views is not reported;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the fixture's prose is short, so first-mention
 tracking is exercised on a handful of pages, not at AxiomDB's size. The HTML
 checks read bytes; they do not drive a browser.
@@ -64,6 +70,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -593,6 +601,7 @@ def main() -> int:
             summary = publish(storage)
             check(f"{name}: the fixture publishes", lambda s=summary, d=docs: published(s, d))
             guide_checks(name, docs, letters, wrong, kinds, examples)
+            check(f"{name}: no published page hides its report from assistive technology", lambda d=docs: hidden_pages(d))
             if prose:
                 prose_checks(docs)
                 first = snapshot(docs)

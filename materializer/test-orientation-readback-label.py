@@ -19,6 +19,12 @@ failed; newer: every axis passed), in either the Markdown or the HTML overview:
     "No publication read-back is recorded" sentence;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: it checks the wording and its position, not that the
 reader understands it; and it reads bytes, it does not drive a browser.
 
@@ -37,6 +43,8 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -300,6 +308,7 @@ def main() -> int:
             return None
 
         check("a store with no read-back keeps its own sentence and prints no lag claim", no_run_is_unchanged)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(*(path / "docs" for path, _ in stores.values())))
 
         def runs_in_ci() -> str | None:
             if "test-orientation-readback-label.py" not in read(CI_FILE):

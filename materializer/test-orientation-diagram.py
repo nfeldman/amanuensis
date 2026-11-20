@@ -42,6 +42,12 @@ Turns red when:
     the Markdown;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the HTML checks read bytes; they do not drive a
 browser, so overlapping labels or clipped text at a real store's size are not
 measured.
@@ -63,6 +69,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -704,6 +712,7 @@ def main() -> int:
             return None
 
         check("the Markdown view links every subsystem and seam and names every xref", markdown_account)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(*(root / name / "docs" for name in stores)))
 
     def runs_in_ci() -> str | None:
         text = read(CI_FILE)

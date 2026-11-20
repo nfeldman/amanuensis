@@ -28,6 +28,12 @@ Turns red when:
   - reader-lenses spec §7.8 does not point to design/orientation/PLAN.md;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the fixture is small, so a Terms section that
 only breaks at AxiomDB's size is exercised by count, not by reading. The HTML
 checks read bytes; they do not drive a browser.
@@ -48,6 +54,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -685,6 +693,7 @@ def main() -> int:
             return None
 
         check("reader-lenses spec §7.8 points to the orientation plan", spec_note)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
         # -- CI ----------------------------------------------------------
         def runs_in_ci() -> str | None:

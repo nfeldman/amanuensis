@@ -30,6 +30,12 @@ Turns red when:
     Amanuensis";
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the fixture has one open question and two
 subsystems, so a section that only misbehaves at a real store's size is exercised
 by count, not by reading. The HTML checks read bytes; they do not drive a browser.
@@ -51,6 +57,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -616,6 +624,7 @@ def main() -> int:
             return None
 
         check("the table is generated from the contract constants, not copied", generated)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
     # -- CI ----------------------------------------------------------------
     def in_ci() -> str | None:

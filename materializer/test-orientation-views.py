@@ -17,6 +17,12 @@ Turns red when, on a seeded store:
   - the first 600 bytes of the guide's Markdown carry a backtick;
   - the gate does not run in CI.
 
+Also red when a published HTML page hides its report from assistive technology
+(`orientation_exposure.hidden_pages`: `aria-hidden="true"`, `hidden`, `inert`,
+an inline `display: none` or `role="presentation"` on `<main>`, the page head,
+the article or any element around them), which every text check above reads
+straight through.
+
 False green it cannot exclude: the paragraph's claims (the HTML adds diagrams,
 search and hover definitions) are checked against the plan's wording, not
 against what the HTML view actually contains; this fixture has no diagram.
@@ -38,6 +44,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from orientation_exposure import hidden_pages
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -331,6 +339,7 @@ def main() -> int:
             return None
 
         check("no other page repeats the paragraph, in either view", other_pages_do_not)
+        check("no published page hides its report from assistive technology", lambda: hidden_pages(docs))
 
         # -- CI ------------------------------------------------------------
         def runs_in_ci() -> str | None:
