@@ -621,7 +621,21 @@ class Materializer:
 
     # ---------------------------------------------------------------------
     def _build_xref_index(self, conn, plan: list[PagePlan]) -> XrefIndex:
-        del plan  # database records carry the human definitions
+        # Database records carry the human definitions. The plan carries the
+        # generated copy every page head and the guide's index print (hints,
+        # "Use it when" sentences, terms lines): constant prose, so a lowercase
+        # ID that is an ordinary word in it ("the part of the code") is not a
+        # mention of that subsystem.
+        protected = tuple(
+            sorted(
+                {
+                    text
+                    for p in plan
+                    for text in (p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path)))
+                    if text and text.strip()
+                }
+            )
+        )
         entries: dict[str, tuple[str, str, str]] = {}
 
         # Subsystems.
@@ -716,4 +730,4 @@ class Materializer:
             for identifier, name in subsystem_names.items()
             if kinds.get(identifier) == "subsystem"
         }
-        return XrefIndex(entries=entries, names=names, kinds=kinds)
+        return XrefIndex(entries=entries, names=names, kinds=kinds, protected=protected)

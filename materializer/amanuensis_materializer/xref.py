@@ -27,6 +27,9 @@ class XrefIndex:
     names: dict[str, str] = field(default_factory=dict)
     # id → record kind ("subsystem", "concern", "seam", "finding", "matrix")
     kinds: dict[str, str] = field(default_factory=dict)
+    # Generated copy (page hints, "Use it when" sentences, terms lines) left
+    # exactly as written: an ID-shaped word in it is not a mention.
+    protected: tuple[str, ...] = ()
     _pattern: re.Pattern[str] | None = field(default=None, init=False, repr=False)
 
     def link(self, id_: str, from_page_rel: str) -> str | None:
@@ -130,6 +133,9 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
         placeholders.append(m.group(0))
         return f"\x00{len(placeholders) - 1}\x00"
 
+    # Generated copy first: a hint may hold a code span of its own.
+    if index.protected:
+        text = re.compile(identifier_alternation(index.protected)).sub(_stash, text)
     text = CODE_FENCE_PAT.sub(_stash, text)
     text = INLINE_CODE_PAT.sub(_stash, text)
     text = HTML_TAG_PAT.sub(_stash, text)
