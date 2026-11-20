@@ -41,6 +41,7 @@ from .html_projection import (
     assert_nav_groups,
     insert_page_head,
     render_html_projection,
+    terms_line,
 )
 from .manifest import (
     MATERIALIZER_VERSION,
@@ -310,7 +311,9 @@ class Materializer:
                     continue
                 # The hint and "Use it when" sentence sit under the H1 in this
                 # view, and the HTML head prints the same two (PLAN §2.4).
-                text = insert_page_head(text, p.hint, p.use_when)
+                text = insert_page_head(
+                    text, p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path))
+                )
                 new_hash = sha256_bytes(text.encode("utf-8"))
                 fresh[p.path] = text
                 prev = self.manifest.page(p.path)
@@ -403,6 +406,7 @@ class Materializer:
                     label=p.label or p.title,
                     hint=p.hint,
                     use_when=p.use_when,
+                    terms=renderers.page_terms(p.path),
                     group=p.group,
                     subgroup=p.subgroup,
                     kind=p.kind,

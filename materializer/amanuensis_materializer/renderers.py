@@ -3294,6 +3294,28 @@ def term_slug(term: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", term.lower()).strip("-")
 
 
+def page_terms(page: str) -> tuple[tuple[str, str], ...]:
+    """The `READER_TERMS` entries a page names, as `(term, anchor slug)` in contract order.
+
+    A term's `pages` holds exact page paths, or a family glob (`subsystems/*.md`)
+    for every page directly under that directory.
+    """
+
+    found: list[tuple[str, str]] = []
+    for entry in READER_TERMS:
+        for pattern in entry.get("pages") or ():  # type: ignore[union-attr]
+            pattern = str(pattern)
+            if pattern == page or (
+                pattern.endswith("/*.md")
+                and page.startswith(pattern[: -len("*.md")])
+                and "/" not in page[len(pattern) - len("*.md") :]
+            ):
+                term = str(entry["term"])
+                found.append((term, term_slug(term)))
+                break
+    return tuple(found)
+
+
 def _enum_heading(name: str) -> str:
     """A reader-facing name for one enum; the stored name goes beside it."""
 

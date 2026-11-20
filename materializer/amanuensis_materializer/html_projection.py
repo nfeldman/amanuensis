@@ -89,6 +89,9 @@ class SitePage:
     # group's ungrouped items (§7.1). Empty means the page sits directly in the
     # group.
     subgroup: str = ""
+    # `(term, anchor slug)` for the "Terms on this page" line, from the
+    # contract's `reader_terms`; empty prints no line.
+    terms: tuple[tuple[str, str], ...] = ()
 
     @property
     def html_path(self) -> str:
@@ -108,6 +111,25 @@ def page_head_line(hint: str, use_when: str) -> str:
     return f"*{text}*" if text else ""
 
 
+GUIDE_PAGE = "how-to-read.md"
+TERMS_LABEL = "Terms on this page:"
+
+
+def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
+    """The Markdown paragraph listing a page's terms, linked to the guide's anchors.
+
+    The HTML head prints the same terms as its own paragraph, and
+    `strip_page_head` removes this one before the HTML body is built.
+    """
+
+    if not terms:
+        return ""
+    base = posixpath.dirname(page_path) or "."
+    guide = posixpath.relpath(GUIDE_PAGE, base)
+    links = " · ".join(f"[{term}]({guide}#term-{slug})" for term, slug in terms)
+    return f"{TERMS_LABEL} {links}"
+
+
 def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
     first = next((i for i, line in enumerate(lines) if line.strip()), None)
     if first is None or not lines[first].startswith("# "):
@@ -116,8 +138,8 @@ def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
     return first, second
 
 
-def insert_page_head(markdown: str, hint: str, use_when: str) -> str:
-    """Put the page-head paragraph directly under the page's H1, when it has one."""
+def insert_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
+    """Put the page-head paragraph, then the terms line, directly under the page's H1."""
 
     line = page_head_line(hint, use_when)
     lines = markdown.split("\n")
@@ -125,14 +147,15 @@ def insert_page_head(markdown: str, hint: str, use_when: str) -> str:
     if found is None:
         return markdown
     first, _second = found
-    return "\n".join(lines[: first + 1] + ["", line] + lines[first + 1 :])
+    head = [line, "", terms] if terms else [line]
+    return "\n".join(lines[: first + 1] + [""] + head + lines[first + 1 :])
 
 
 def _visible_inline(text: str) -> str:
     return re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
 
 
-def strip_page_head(markdown: str, hint: str, use_when: str) -> str:
+def strip_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
     """The inverse of `insert_page_head`, for the HTML projection's body."""
 
     line = page_head_line(hint, use_when)
@@ -145,7 +168,12 @@ def strip_page_head(markdown: str, hint: str, use_when: str) -> str:
     # compare what the reader sees, not the link or bold markup.
     if _visible_inline(lines[found[1]]) != _visible_inline(line):
         return markdown
-    return "\n".join(lines[: found[1]] + lines[found[1] + 1 :])
+    del lines[found[1]]
+    if terms:
+        nxt = next((i for i in range(found[1], len(lines)) if lines[i].strip()), None)
+        if nxt is not None and _visible_inline(lines[nxt]) == _visible_inline(terms):
+            del lines[nxt]
+    return "\n".join(lines)
 
 
 @dataclass
@@ -404,6 +432,8 @@ h1 {
   font-variant-ligatures: common-ligatures discretionary-ligatures;
 }
 .page-use-when { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: clamp(.95rem, .3vw + .88rem, 1.1rem)/1.5 var(--body); text-wrap: pretty; }
+.page-terms { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: .85rem/1.6 var(--body); }
+.page-terms a { color: var(--accent); }
 .page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
 .snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
@@ -3091,6 +3121,17 @@ def _shell(
         if page.use_when
         else ""
     )
+    guide_href = _rel_link(page.html_path, GUIDE_PAGE.replace(".md", ".html"))
+    terms_para = (
+        f'<p class="page-terms">{html.escape(TERMS_LABEL)} '
+        + " · ".join(
+            f'<a href="{html.escape(guide_href + "#term-" + slug, quote=True)}">{html.escape(term)}</a>'
+            for term, slug in page.terms
+        )
+        + "</p>"
+        if page.terms
+        else ""
+    )
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
@@ -3157,6 +3198,7 @@ def _shell(
         <h1>{html.escape(display_title)}</h1>
         {hint_para}
         {use_when_para}
+        {terms_para}
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
@@ -3244,7 +3286,12 @@ def render_html_projection(
             repository_url=str(context.get("repository_url") or "") or None,
         )
         source_title, body = parser.render(
-            strip_page_head(source.read_text(), page.hint, page.use_when)
+            strip_page_head(
+                source.read_text(),
+                page.hint,
+                page.use_when,
+                terms_line(page.markdown_path, page.terms),
+            )
         )
         document = _shell(
             page,
