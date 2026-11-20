@@ -20,7 +20,8 @@ Turns red when:
     --allow-external-output;
   - the read-back of a stamped CLI render is not green on all three axes, or the
     read-back stays green when a page loses the notice it should carry, or gains one
-    under a recorded publication (with the receipt rewritten to match the bytes);
+    under a recorded publication (with the receipt rewritten to match the bytes): in
+    the Markdown italic or plain, or in the HTML;
   - the gate does not run in CI.
 
 False green it cannot exclude: it reads the server's source for the two flags rather
@@ -376,23 +377,47 @@ def main() -> int:
 
         check("a --recorded-publication render carries no notice on any page", recorded_over_cli)
 
-        def gained_notice_is_red() -> str | None:
-            rel = "entry-point.md"
-            page = cli_docs / rel
-            original = page.read_text()
-            receipt = (cli_docs / ".projection-contract.json").read_text()
-            try:
-                page.write_text(original.rstrip("\n") + f"\n\n*{NOTICE}*\n")
-                rewrite_receipt(cli_docs, rel)
-                status, verified = run(cli, "--readback-only")
-                if status == 0 or verified.get("ok") is not False:
-                    return "the read-back stayed green with a notice on a recorded publication"
-                return None
-            finally:
-                page.write_text(original)
-                (cli_docs / ".projection-contract.json").write_text(receipt)
+        def gained_notice_is_red(rel: str, inject: Callable[[str], str]) -> Callable[[], str | None]:
+            def body() -> str | None:
+                page = cli_docs / rel
+                original = page.read_text()
+                receipt = (cli_docs / ".projection-contract.json").read_text()
+                try:
+                    gained = inject(original)
+                    if gained == original:
+                        return f"{rel} has no place to put the notice"
+                    page.write_text(gained)
+                    rewrite_receipt(cli_docs, rel)
+                    status, verified = run(cli, "--readback-only")
+                    if status == 0 or verified.get("ok") is not False:
+                        return "the read-back stayed green with a notice on a recorded publication"
+                    return None
+                finally:
+                    page.write_text(original)
+                    (cli_docs / ".projection-contract.json").write_text(receipt)
 
-        check("the read-back turns red when a recorded publication carries the notice", gained_notice_is_red)
+            return body
+
+        check(
+            "the read-back turns red when a recorded publication carries the notice",
+            gained_notice_is_red("entry-point.md", lambda text: text.rstrip("\n") + f"\n\n*{NOTICE}*\n"),
+        )
+        # The emphasis is presentation: the plain sentence is the same notice.
+        check(
+            "the read-back turns red when a recorded publication carries the notice without emphasis",
+            gained_notice_is_red("entry-point.md", lambda text: text.rstrip("\n") + f"\n\n{NOTICE}\n"),
+        )
+        check(
+            "the read-back turns red when a recorded HTML page carries the notice",
+            gained_notice_is_red(
+                "index.html",
+                lambda text: text.replace(
+                    '<header class="page-head">',
+                    f'<header class="page-head"><p>{htmllib.escape(NOTICE)}</p>',
+                    1,
+                ),
+            ),
+        )
 
         def cli_over_recorded() -> str | None:
             status, summary = run(cli)
