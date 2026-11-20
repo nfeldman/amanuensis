@@ -10,6 +10,12 @@ Turns red when, on a store this gate seeds and publishes:
   - a published page that no entry names has the line in either view;
   - the line's links are not exactly the entries naming the page, in contract
     order, with the term as the link text;
+  - a page prints a term as a label (a heading, a bold field label such as
+    `**Layer**:`, a table header cell or a row's first cell; whole word,
+    plural allowed, longest term first) that its terms line omits: read from
+    the page, not from the contract's `pages`, so an incomplete mapping such
+    as subsystem pages without Layer, or the overview without Survey depth, is
+    red;
   - the line is not directly under the page's hint and "Use it when" sentence
     (Markdown: the paragraph after it; HTML: after the `page-use-when`
     paragraph, inside the page head);
@@ -184,6 +190,39 @@ def terms_for(page: str, terms: list[dict[str, Any]]) -> list[str]:
     return out
 
 
+def labelled_terms(text: str, names: list[str]) -> dict[str, str]:
+    """Terms a page prints as a label, read from its Markdown, not from the contract.
+
+    A label is a heading, a bold field label (`**Layer**:`), a table header
+    cell, or a row's first cell. A term counts when its name is a whole word or
+    phrase there, plural allowed, longest name first, so "Survey depth" is not
+    also "Survey". Maps each term to the label that printed it.
+    """
+
+    ordered = sorted(names, key=len, reverse=True)
+    lines = text.splitlines()
+    separator = re.compile(r"^\|\s*:?-{3,}")
+    found: dict[str, str] = {}
+    for i, line in enumerate(lines):
+        if line.startswith(LINE_LABEL) or line.startswith(f"*{LINE_LABEL}"):
+            continue
+        cells = re.findall(r"\*\*([^*]+)\*\*\s*:", line)
+        if re.match(r"#{1,6}\s", line):
+            cells.append(line.lstrip("#").strip())
+        if line.startswith("|") and not separator.match(line):
+            row = [c.strip() for c in line.strip().strip("|").split("|")]
+            header = i + 1 < len(lines) and bool(separator.match(lines[i + 1]))
+            cells += row if header else row[:1]
+        for cell in cells:
+            rest = LINK.sub(lambda m: m.group(1), cell)
+            for name in ordered:
+                pattern = re.compile(r"(?<![\w-])" + re.escape(name) + r"(?:s|es)?(?![\w-])", re.I)
+                if pattern.search(rest):
+                    found.setdefault(name, cell)
+                    rest = pattern.sub(" ", rest)
+    return found
+
+
 def relative(from_page: str, to: str) -> str:
     base = posixpath.dirname(from_page) or "."
     return posixpath.relpath(to, base)
@@ -342,6 +381,23 @@ def main() -> int:
             return None
 
         check("every page that names terms prints the line in Markdown, and no other does", markdown_view)
+
+        def labels_are_listed() -> str | None:
+            # Independent of the contract's `pages`: a term a page prints as a
+            # label must be on that page's terms line. The guide defines every
+            # term and carries no line.
+            names = [str(t["term"]) for t in terms]
+            missing = []
+            for page in pages:
+                if page == f"{GUIDE}.md":
+                    continue
+                listed = set(terms_for(page, terms))
+                for term, label in labelled_terms(read(docs / page) or "", names).items():
+                    if term not in listed:
+                        missing.append(f"{page}: {term} (printed as {label[:40]!r})")
+            return f"terms printed as labels but not on the page's line: {missing}" if missing else None
+
+        check("every term a page prints as a label is on its terms line", labels_are_listed)
 
         def html_view() -> str | None:
             for page in pages:
