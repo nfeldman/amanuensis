@@ -23,7 +23,11 @@ Turns red when:
     says "dependency" while zero `xrefs` are recorded;
   - the "N of M subsystems have no recorded boundary" count is wrong in either
     view;
-  - the SVG lacks `role="img"`, a `<title>` or a `<desc>`;
+  - the SVG lacks `role="img"`, a `<title>` or a `<desc>` as parsed direct
+    children (one hidden in a comment does not count), or its
+    `aria-labelledby` names an ID no SVG element carries;
+  - the SVG holds a non-SVG element, such as an identifier pass's HTML
+    `<abbr>` inside a `<text>`;
   - the page contains `<script` referencing a diagram library;
   - zero seams and zero xrefs produce an SVG instead of a sentence;
   - the layout differs from §2.5: columns are not the layers in the order the
@@ -55,6 +59,7 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -323,6 +328,18 @@ def diagram_of(page: str | None) -> Diagram | None:
     return Diagram(found[0])
 
 
+# The elements an SVG renders. HTML elements inside it (an identifier
+# pass's <abbr>) are unknown to the SVG renderer and hide their text.
+SVG_ELEMENTS = frozenset({
+    "svg", "title", "desc", "defs", "marker", "g", "rect", "line", "path",
+    "polygon", "polyline", "circle", "ellipse", "text", "tspan",
+})
+
+
+def local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
 COUNT = re.compile(r"(\d+) of (\d+) subsystems? (?:has|have) no recorded boundary")
 
 
@@ -535,16 +552,42 @@ def main() -> int:
                 tag = attrs(diagram.open_tag)
                 if tag.get("role") != "img":
                     return f"{name}: the SVG's role is {tag.get('role')!r}, not 'img'"
-                title = re.search(r'<title\b([^>]*)>(.*?)</title>', diagram.svg, re.S)
-                desc = re.search(r'<desc\b([^>]*)>(.*?)</desc>', diagram.svg, re.S)
-                if not title or not html_text(title.group(2)) or not desc or not html_text(desc.group(2)):
-                    return f"{name}: the SVG lacks a non-empty <title> or <desc>"
-                labelled = set(tag.get("aria-labelledby", "").split())
-                if attrs(title.group(1)).get("id") not in labelled or attrs(desc.group(1)).get("id") not in labelled:
+                # Parsed, not matched: a <desc> inside a comment is no element,
+                # and aria-labelledby must name elements that exist.
+                try:
+                    root = ElementTree.fromstring(diagram.svg)
+                except ElementTree.ParseError as exc:
+                    return f"{name}: the SVG does not parse as XML ({exc})"
+                children = {local(child.tag): child for child in reversed(list(root))}
+                title, desc = children.get("title"), children.get("desc")
+                if title is None or not "".join(title.itertext()).strip() or desc is None or not "".join(desc.itertext()).strip():
+                    return f"{name}: the SVG lacks a non-empty <title> or <desc> as a direct child"
+                labelled = tag.get("aria-labelledby", "").split()
+                ids = {el.get("id") for el in root.iter() if el.get("id")}
+                if title.get("id") not in labelled or desc.get("id") not in labelled:
                     return f"{name}: aria-labelledby does not name the title and the description"
+                missing = [ref for ref in labelled if ref not in ids]
+                if missing:
+                    return f"{name}: aria-labelledby names {missing}, which no SVG element carries"
             return None
 
         check("the SVG has role=img, a title and a description it is labelled by", accessible_svg)
+
+        def svg_elements_only() -> str | None:
+            for name in ("seams", "xrefs", "wide"):
+                diagram = diagram_of(page[name])
+                if diagram is None:
+                    return f"{name}: no boundary SVG"
+                try:
+                    root = ElementTree.fromstring(diagram.svg)
+                except ElementTree.ParseError as exc:
+                    return f"{name}: the SVG does not parse as XML ({exc})"
+                foreign = sorted({local(el.tag) for el in root.iter()} - SVG_ELEMENTS)
+                if foreign:
+                    return f"{name}: the SVG carries elements SVG does not render: {foreign}"
+            return None
+
+        check("the SVG holds SVG elements only (no HTML markup such as <abbr> in its text)", svg_elements_only)
 
         def no_diagram_runtime() -> str | None:
             for name in stores:
