@@ -1,0 +1,1880 @@
+{
+  "version": 1,
+  "branch": "store-only",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Records",
+      "packets": [
+        "SO0",
+        "SO1",
+        "SO2",
+        "SO3",
+        "SO4",
+        "SO5",
+        "SO6",
+        "SO7"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S2",
+      "title": "Pages from the store, and the skill",
+      "packets": [
+        "SO8",
+        "SO9",
+        "SO10"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S3",
+      "title": "HTML without Markdown",
+      "packets": [
+        "SO11",
+        "SO12",
+        "SO13",
+        "SO14",
+        "SO15",
+        "SO16",
+        "SO17",
+        "SO18",
+        "SO19"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Read-back and publication",
+      "packets": [
+        "SO20",
+        "SO21"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    },
+    {
+      "id": "S5",
+      "title": "Diagrams",
+      "packets": [
+        "SO22",
+        "SO23",
+        "SO24",
+        "SO25"
+      ],
+      "review": {
+        "status": "pending",
+        "start_sha": "",
+        "reviewed_sha": "",
+        "findings": 0
+      }
+    }
+  ],
+  "packets": [
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO0",
+      "slice": "S1",
+      "title": "Record the plan in BACKLOG.md",
+      "claims": [
+        "§8 SO0",
+        "§0",
+        "§9"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "BACKLOG.md",
+        "dev/test-store-only-backlog.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-backlog.mjs",
+        "command": "node dev/test-store-only-backlog.mjs",
+        "marker": "GATE SO0",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "PLAN §8 SO0: the store-only item links design/store-only/PLAN.md, carries the §0 read-back correction, and lists D1–D16 one line each, each marked decided on 2026-11-20 (D16 as amended in PLAN §9)."
+      ],
+      "budget_minutes": 30
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO1",
+      "slice": "S1",
+      "title": "Contract enums: narrative sections, claim mark kinds, territory dispositions (no SQL bindings)",
+      "claims": [
+        "§8 SO1",
+        "§2.1",
+        "§2.2",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO0"
+      ],
+      "deliverables": [
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/test-store-only-contract.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-contract.py",
+        "command": "cd materializer && python3 test-store-only-contract.py",
+        "marker": "GATE SO1",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd materializer && python3 test-orientation-contract.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO1 enums and generator validation errors; no sql bindings (SO2 adds them with the DDL); contract_version minor bump."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO2",
+      "slice": "S1",
+      "title": "Schema, migrations, SQL bindings and legacy fixtures",
+      "model": "opus",
+      "claims": [
+        "§8 SO2",
+        "§2",
+        "§5.1",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO1"
+      ],
+      "deliverables": [
+        "mcp-server/src/schema.sql",
+        "mcp-server/src/db.ts",
+        "mcp-server/contracts/append-only-tables.txt",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/fixtures/build-legacy-stores.mjs",
+        "mcp-server/fixtures/legacy-stores/",
+        "mcp-server/test-store-only-schema.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-schema.mjs",
+        "command": "cd mcp-server && node test-store-only-schema.mjs",
+        "marker": "GATE SO2",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node test-existing-store-migration.mjs",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-record-integrity.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO2 red conditions on a fresh store and both committed legacy fixtures; hermetic (no real store).",
+        "The base tree's server still opens and smoke-reads a store the new server migrated."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO3",
+      "slice": "S1",
+      "title": "Narrative tools: record, decline, get, reset withdrawal",
+      "claims": [
+        "§8 SO3",
+        "§2.1"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/narratives.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-store-only-narratives.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-narratives.mjs",
+        "command": "cd mcp-server && node test-store-only-narratives.mjs",
+        "marker": "GATE SO3",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-tool-schemas.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO3 red conditions, including acceptance of a valid narrative of each section."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO4",
+      "slice": "S1",
+      "title": "Project records: purpose (write and read), profile, runtime boundaries, concern territory and probe",
+      "claims": [
+        "§8 SO4",
+        "§2.2"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/explanations.ts",
+        "mcp-server/src/invariants.ts",
+        "materializer/amanuensis_materializer/readback.py",
+        "mcp-server/src/tools/concerns.ts",
+        "mcp-server/src/tools/project-records.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/test-store-only-project-records.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-project-records.mjs",
+        "command": "cd mcp-server && node test-store-only-project-records.mjs",
+        "marker": "GATE SO4",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-explanations.mjs",
+        "cd mcp-server && node test-explanation-gate.mjs",
+        "cd mcp-server && node test-explanation-read.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-concern-checklist.mjs",
+        "cd materializer && python3 test-explanation-pages.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO4 red conditions; a purpose recorded before any structural subsystem is readable in TS and Python; no refusal names entry-point.md."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO5",
+      "slice": "S1",
+      "title": "Flow marks: record, withdraw, decline, returned by get_claims",
+      "claims": [
+        "§8 SO5",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO2"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/claim-marks.ts",
+        "mcp-server/src/tools/claims.ts",
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/index.ts",
+        "mcp-server/test-store-only-claim-marks.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-claim-marks.mjs",
+        "command": "cd mcp-server && node test-store-only-claim-marks.mjs",
+        "marker": "GATE SO5",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-temporal-claims.mjs",
+        "cd mcp-server && node test-phase2-claims-gate.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO5 and §7.2: each valid kind persists and returns; invalid ones refused; withdrawn and closed-claim marks not current."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO6",
+      "slice": "S1",
+      "title": "The server stops depending on hand-written files (prerequisite, locus, artifacts, composition)",
+      "claims": [
+        "§8 SO6",
+        "§2.5"
+      ],
+      "depends_on": [
+        "SO3"
+      ],
+      "deliverables": [
+        "mcp-server/src/invariants.ts",
+        "mcp-server/src/tools/locus.ts",
+        "mcp-server/src/tools/artifacts.ts",
+        "mcp-server/src/tools/subsystems.ts",
+        "mcp-server/src/tools/composition.ts",
+        "mcp-server/test-store-only-no-files.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-no-files.mjs",
+        "command": "cd mcp-server && node test-store-only-no-files.mjs",
+        "marker": "GATE SO6",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-locus-standing.mjs",
+        "cd mcp-server && node test-locus-compactness.mjs",
+        "cd mcp-server && node test-composition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO6: a fixture reaches mapped with no file written under storage; register_artifact refuses hand-written kinds and accepts other; composition 'record' items score correctly."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO7",
+      "slice": "S1",
+      "title": "Import every artifact's bytes into the store",
+      "model": "opus",
+      "claims": [
+        "§8 SO7",
+        "§5.2",
+        "§5.3"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO4"
+      ],
+      "deliverables": [
+        "mcp-server/src/tools/import.ts",
+        "materializer/amanuensis_materializer/legacy_extract.py",
+        "mcp-server/src/index.ts",
+        "mcp-server/contracts/refusal-parity.json",
+        "mcp-server/accept-store-only-real-stores.mjs",
+        "mcp-server/test-store-only-import.mjs"
+      ],
+      "gate": {
+        "test_path": "mcp-server/test-store-only-import.mjs",
+        "command": "cd mcp-server && node test-store-only-import.mjs",
+        "marker": "GATE SO7",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-store-only-schema.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO7 red conditions on the committed legacy fixtures; artifact files unchanged, database files expected to change.",
+        "accept-store-only-real-stores.mjs written (VACUUM INTO snapshots) but not run by the packet."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO8",
+      "slice": "S2",
+      "title": "The materializer reads the store, not files",
+      "claims": [
+        "§8 SO8",
+        "§3.3",
+        "§3.4",
+        "§5.4"
+      ],
+      "depends_on": [
+        "SO4",
+        "SO7"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/manifest.py",
+        "materializer/amanuensis_materializer/legacy_prose.py",
+        "materializer/test-store-only-sources.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-sources.py",
+        "command": "cd materializer && python3 test-store-only-sources.py",
+        "marker": "GATE SO8",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-edge-contract.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO8 red conditions; only database and binding files opened under storage; O13 placement kept for imported bodies."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO9",
+      "slice": "S2",
+      "title": "New records on pages, censused by the read-back",
+      "claims": [
+        "§8 SO9",
+        "§2.1",
+        "§2.2"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO8"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/test-store-only-record-pages.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-record-pages.py",
+        "command": "cd materializer && python3 test-store-only-record-pages.py",
+        "marker": "GATE SO9",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-sources.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO9 placements and red conditions; runtime SVG drawn from runtime_boundaries."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO10",
+      "slice": "S2",
+      "title": "The skill records instead of writing files",
+      "claims": [
+        "§8 SO10",
+        "§4",
+        "§7.2"
+      ],
+      "depends_on": [
+        "SO3",
+        "SO4",
+        "SO5",
+        "SO6",
+        "SO9"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/SKILL.md",
+        ".claude/skills/amanuensis/references/onboarding.md",
+        ".claude/skills/amanuensis/references/phase-2-structural.md",
+        ".claude/skills/amanuensis/references/phase-3-concerns.md",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+        ".claude/skills/amanuensis/references/phase-5-packaging.md",
+        ".claude/skills/amanuensis/references/subsystem-survey.md",
+        ".claude/skills/amanuensis/references/records.md",
+        ".claude/skills/amanuensis/references/memory-audit.md",
+        ".claude/skills/amanuensis/references/explanations.md",
+        "dev/test-skill-no-file-writes.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-skill-no-file-writes.mjs",
+        "command": "node dev/test-skill-no-file-writes.mjs",
+        "marker": "GATE SO10",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/check-reference-calls.mjs",
+        "cd mcp-server && node test-reference-calls.mjs",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "node dev/test-skill-workflow-text.mjs",
+        "cd mcp-server && node scripts/check-concern-checklist.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4 and §8 SO10: gate red on the unedited skill (FAIL lines in the red commit); artifact-templates.md replaced by records.md; Phase 2 records flow marks or a declination.",
+        "Edit only .claude/skills/amanuensis, then run prepack-bundle-assets.mjs."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO11",
+      "slice": "S3",
+      "title": "Split the parser: Markdown → page model → HTML",
+      "model": "opus",
+      "claims": [
+        "§8 SO11",
+        "§3.1",
+        "§3.2"
+      ],
+      "depends_on": [
+        "SO9"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/page.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/make-golden.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-model.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-model.py",
+        "command": "cd materializer && python3 test-store-only-model.py",
+        "marker": "GATE SO11",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check ."
+      ],
+      "acceptance": [
+        "PLAN §8 SO11: golden HTML generated in the red commit from the unchanged tree; byte-identical after; one block kind per hook in HOOKS (EnumTable included); write_html has no Markdown handling."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO12",
+      "slice": "S3",
+      "title": "Move the tests to HTML while Markdown is still written",
+      "claims": [
+        "§8 SO12",
+        "§3.2",
+        "§11"
+      ],
+      "depends_on": [
+        "SO11"
+      ],
+      "deliverables": [
+        "materializer/",
+        "mcp-server/test-finding-partition.mjs",
+        "mcp-server/test-projection-custody.mjs",
+        "mcp-server/test-edge-contract.mjs",
+        "mcp-server/test-structural-claims.mjs",
+        "mcp-server/test-residual-hardening.mjs",
+        "mcp-server/test-invariants.mjs",
+        "dev/test-store-only-test-views.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-test-views.mjs",
+        "command": "node dev/test-store-only-test-views.mjs",
+        "marker": "GATE SO12",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-edge-contract.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs",
+        "cd mcp-server && node test-invariants.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO12: no listed test reads a generated .md page; suites green; any assertion without an HTML equivalent named in the commit message."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO13",
+      "slice": "S3",
+      "title": "HTML-only output",
+      "model": "opus",
+      "claims": [
+        "§8 SO13",
+        "§3.2",
+        "§3.5",
+        "§6"
+      ],
+      "depends_on": [
+        "SO12"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/materialize.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-html-only.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-html-only.py",
+        "command": "cd materializer && python3 test-store-only-html-only.py",
+        "marker": "GATE SO13",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-edge-contract.mjs",
+        "cd mcp-server && node test-structural-claims.mjs",
+        "cd mcp-server && node test-residual-hardening.mjs",
+        "cd mcp-server && node test-invariants.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO13 red conditions; golden regenerated at the green commit under the §3.2 rule."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO14",
+      "slice": "S3",
+      "title": "Renderers build the model: overview, architecture, subsystem map, guide",
+      "claims": [
+        "§8 SO14–SO18",
+        "§3.4"
+      ],
+      "depends_on": [
+        "SO13"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/prose.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/test-store-only-convert-overview.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-overview.py",
+        "command": "cd materializer && python3 test-store-only-convert-overview.py",
+        "marker": "GATE SO14",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO14–SO18: family pages equal the current golden HTML and never call parse_markdown."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO15",
+      "slice": "S3",
+      "title": "Renderers build the model: subsystem pages",
+      "claims": [
+        "§8 SO14–SO18",
+        "§3.4",
+        "§5.4"
+      ],
+      "depends_on": [
+        "SO14"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/legacy_prose.py",
+        "materializer/test-store-only-convert-subsystem.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-subsystem.py",
+        "command": "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "marker": "GATE SO15",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-overview.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO14–SO18 for subsystem pages; _nest_prose removed; imported bodies through legacy_prose.py."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO16",
+      "slice": "S3",
+      "title": "Renderers build the model: Unresolved pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO15"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-unresolved.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-unresolved.py",
+        "command": "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "marker": "GATE SO16",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO16: open findings, disagreements, decisions needed, leads, stale knowledge, hot spots."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO17",
+      "slice": "S3",
+      "title": "Renderers build the model: History pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO16"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-history.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-history.py",
+        "command": "cd materializer && python3 test-store-only-convert-history.py",
+        "marker": "GATE SO17",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO17: resolved findings, resolution history, resolved leads, sessions, conflicting evidence."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO18",
+      "slice": "S3",
+      "title": "Renderers build the model: Method and remaining pages",
+      "claims": [
+        "§8 SO14–SO18"
+      ],
+      "depends_on": [
+        "SO17"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-convert-method.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-convert-method.py",
+        "command": "cd materializer && python3 test-store-only-convert-method.py",
+        "marker": "GATE SO18",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-convert-history.py",
+        "cd materializer && python3 test-store-only-html-only.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO18: review coverage, review checklist, competing explanations, matrices, onboarding record, where to begin, files, not yet surveyed, system boundaries, glossary."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO19",
+      "slice": "S3",
+      "title": "Delete the Markdown intermediate",
+      "claims": [
+        "§8 SO19",
+        "§3.2",
+        "§3.4"
+      ],
+      "depends_on": [
+        "SO18"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-store-only-no-markdown.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-no-markdown.py",
+        "command": "cd materializer && python3 test-store-only-no-markdown.py",
+        "marker": "GATE SO19",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-model.py",
+        "cd materializer && python3 test-store-only-html-only.py",
+        "cd materializer && python3 test-store-only-convert-overview.py",
+        "cd materializer && python3 test-store-only-convert-subsystem.py",
+        "cd materializer && python3 test-store-only-convert-unresolved.py",
+        "cd materializer && python3 test-store-only-convert-history.py",
+        "cd materializer && python3 test-store-only-convert-method.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO19: no parse_markdown, no page-level _*_PROJECTION, legacy_prose only on the imported-body path, no .md page id; composite-index lint runs on the overview model."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO20",
+      "slice": "S4",
+      "title": "Read-back against the store: record marks and drawn-element census",
+      "model": "opus",
+      "claims": [
+        "§8 SO20",
+        "§3.5"
+      ],
+      "depends_on": [
+        "SO19"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/page.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-readback.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-readback.py",
+        "command": "cd materializer && python3 test-store-only-readback.py",
+        "marker": "GATE SO20",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-no-markdown.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO20 sabotage table with the contract resealed after each edit; an unsabotaged publication is green; golden changes only in attributes."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO21",
+      "slice": "S4",
+      "title": "Publication chain and copies are HTML-only",
+      "claims": [
+        "§8 SO21",
+        "§6"
+      ],
+      "depends_on": [
+        "SO13",
+        "SO20"
+      ],
+      "deliverables": [
+        "dev/promote-docs.mjs",
+        "dev/republish-docs.mjs",
+        "dev/test-reader-lenses-dogfood.mjs",
+        "dev/test-rebuild-readback.mjs",
+        "dev/test-explanations-published.mjs",
+        "dev/test-republish-chain.mjs",
+        "dev/test-receipt-gates-restored.mjs",
+        "dev/measure-reader-prose.mjs",
+        "dev/test-store-only-publish-chain.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-store-only-publish-chain.mjs",
+        "command": "node dev/test-store-only-publish-chain.mjs",
+        "marker": "GATE SO21",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-store-only-readback.py",
+        "node dev/test-reader-lenses-dogfood.mjs",
+        "node dev/test-rebuild-readback.mjs",
+        "node dev/test-explanations-published.mjs",
+        "node dev/test-republish-chain.mjs",
+        "node dev/test-receipt-gates-restored.mjs"
+      ],
+      "acceptance": [
+        "PLAN §8 SO21: no republish; the six dev readers read HTML and are judged by FAIL lines against their own baseline; the content-free README is written (D10 decided)."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO22",
+      "slice": "S5",
+      "title": "Diagram primitives, survey workflow (B1) and status ladder (B2)",
+      "claims": [
+        "§8 SO22",
+        "§7.3",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO20"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-method-diagrams.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-method-diagrams.py",
+        "command": "cd materializer && python3 test-store-only-method-diagrams.py",
+        "marker": "GATE SO22",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-readback.py",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd materializer && python3 test-orientation-contract.py"
+      ],
+      "acceptance": [
+        "PLAN §8 S5 common red conditions plus SO22: survey_passes gains actor and checkpoint; contract rung prerequisites agree with enforcePhasePrerequisites."
+      ],
+      "budget_minutes": 180
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO23",
+      "slice": "S5",
+      "title": "Coverage bars (A5) and finding badges (A4)",
+      "claims": [
+        "§8 SO23",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-coverage-badges.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-coverage-badges.py",
+        "command": "cd materializer && python3 test-store-only-coverage-badges.py",
+        "marker": "GATE SO23",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO23; A4 counts equal hot-spots.html's."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO24",
+      "slice": "S5",
+      "title": "Seam contract diagram (A2)",
+      "claims": [
+        "§8 SO24",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-seam-diagram.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-seam-diagram.py",
+        "command": "cd materializer && python3 test-store-only-seam-diagram.py",
+        "marker": "GATE SO24",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO24."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": "",
+      "id": "SO25",
+      "slice": "S5",
+      "title": "Flow strip (A3)",
+      "claims": [
+        "§8 SO25",
+        "§7.2",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "SO5",
+        "SO22"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/fixtures/store-only-golden/",
+        "materializer/test-store-only-flow-strip.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-store-only-flow-strip.py",
+        "command": "cd materializer && python3 test-store-only-flow-strip.py",
+        "marker": "GATE SO25",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-orientation-terms.py",
+        "cd materializer && python3 test-orientation-overview.py",
+        "cd materializer && python3 test-orientation-views.py",
+        "cd materializer && python3 test-orientation-ids.py",
+        "cd materializer && python3 test-orientation-map.py",
+        "cd materializer && python3 test-orientation-diagram.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd materializer && python3 test-orientation-survey-notes.py",
+        "cd materializer && python3 test-orientation-cli-render.py",
+        "cd materializer && ruff check .",
+        "cd materializer && python3 test-store-only-method-diagrams.py",
+        "cd materializer && python3 test-store-only-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §8 SO25 thresholds and the 'marks not recorded' sentence."
+      ],
+      "budget_minutes": 150
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/test-store-only-backlog.mjs",
+      "cd materializer && python3 test-store-only-contract.py",
+      "cd mcp-server && node test-store-only-schema.mjs",
+      "cd mcp-server && node test-store-only-narratives.mjs",
+      "cd mcp-server && node test-store-only-project-records.mjs",
+      "cd mcp-server && node test-store-only-claim-marks.mjs",
+      "cd mcp-server && node test-store-only-no-files.mjs",
+      "cd mcp-server && node test-store-only-import.mjs",
+      "cd materializer && python3 test-store-only-sources.py",
+      "cd materializer && python3 test-store-only-record-pages.py",
+      "node dev/test-skill-no-file-writes.mjs",
+      "cd materializer && python3 test-store-only-model.py",
+      "node dev/test-store-only-test-views.mjs",
+      "cd materializer && python3 test-store-only-html-only.py",
+      "cd materializer && python3 test-store-only-convert-overview.py",
+      "cd materializer && python3 test-store-only-convert-subsystem.py",
+      "cd materializer && python3 test-store-only-convert-unresolved.py",
+      "cd materializer && python3 test-store-only-convert-history.py",
+      "cd materializer && python3 test-store-only-convert-method.py",
+      "cd materializer && python3 test-store-only-no-markdown.py",
+      "cd materializer && python3 test-store-only-readback.py",
+      "node dev/test-store-only-publish-chain.mjs",
+      "cd materializer && python3 test-store-only-method-diagrams.py",
+      "cd materializer && python3 test-store-only-coverage-badges.py",
+      "cd materializer && python3 test-store-only-seam-diagram.py",
+      "cd materializer && python3 test-store-only-flow-strip.py",
+      "cd mcp-server && npm run build && npx biome check src/",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node scripts/check-reference-calls.mjs",
+      "cd mcp-server && node test-reference-calls.mjs",
+      "cd mcp-server && node scripts/check-refusal-parity.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-existing-store-migration.mjs",
+      "cd mcp-server && node test-smoke.mjs",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-readback.py",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-prose-retention.py",
+      "cd materializer && python3 test-narrative-placement.py",
+      "cd materializer && python3 test-explanation-pages.py",
+      "cd materializer && python3 test-explanation-orientation.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd materializer && python3 test-ledger-grouping.py",
+      "cd materializer && python3 test-placeholder-census.py",
+      "cd materializer && python3 test-claim-register.py",
+      "cd materializer && python3 test-history-and-disagreements.py",
+      "cd materializer && python3 test-severity-history.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd materializer && python3 test-unmeasured-coverage.py",
+      "cd materializer && python3 test-xref-moved-target.py",
+      "cd materializer && python3 test-orientation-index.py",
+      "cd materializer && python3 test-orientation-guide.py",
+      "cd materializer && python3 test-orientation-workflow.py",
+      "cd materializer && python3 test-orientation-terms.py",
+      "cd materializer && python3 test-orientation-overview.py",
+      "cd materializer && python3 test-orientation-views.py",
+      "cd materializer && python3 test-orientation-ids.py",
+      "cd materializer && python3 test-orientation-map.py",
+      "cd materializer && python3 test-orientation-diagram.py",
+      "cd materializer && python3 test-orientation-readback-label.py",
+      "cd materializer && python3 test-orientation-survey-notes.py",
+      "cd materializer && python3 test-orientation-cli-render.py",
+      "cd materializer && ruff check ."
+    ]
+  },
+  "final_review": {
+    "status": "pending",
+    "reviewed_sha": "",
+    "findings": 0
+  }
+}
