@@ -284,16 +284,6 @@
       ]
     },
     {
-      "id": "explanation-record-project-purpose",
-      "note": "New, spec.md §3.3 R4.",
-      "refuses": ["record_explanation"],
-      "instructs": [],
-      "server": { "file": "src/tools/explanations.ts", "phrase": "record_explanation refuses: the project's purpose is the thesis in entry-point.md" },
-      "references": [
-        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
-      ]
-    },
-    {
       "id": "explanation-record-cites-evidence",
       "note": "New, spec.md §3.3 R5.",
       "refuses": ["record_explanation"],
@@ -405,10 +395,10 @@
     },
     {
       "id": "explanation-decline-project-purpose",
-      "note": "New, spec.md §3.3.",
+      "note": "New, spec.md §3.3; reworded when the project's purpose became recordable (store-only PLAN §2.2, SO4).",
       "refuses": ["decline_explanation"],
       "instructs": [],
-      "server": { "file": "src/tools/explanations.ts", "phrase": "decline_explanation refuses: the project's purpose is the thesis in entry-point.md" },
+      "server": { "file": "src/tools/explanations.ts", "phrase": "decline_explanation refuses: the project's purpose is recorded, not declined" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]
@@ -640,6 +630,176 @@
       "refuses": ["decline_narrative"],
       "instructs": [],
       "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: the reason carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "project-profile-name",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_project_profile"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_project_profile refuses: a name is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "project-profile-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_project_profile"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_project_profile refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-field",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-notes",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: notes is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-evidence",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: a crossing cites the evidence it was" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-too-many-evidence",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: a crossing cites at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_runtime_boundary refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-no-edge",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: no crossing from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-reason",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: a reason is one line of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "runtime-boundary-withdraw-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["withdraw_runtime_boundary"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "withdraw_runtime_boundary refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "concern-territory-id",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["add_concern"],
+      "instructs": [],
+      "server": { "file": "src/tools/concerns.ts", "phrase": "add_concern refuses: territory is the id of a territory in concern-territories.md" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "concern-probe-cap",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["add_concern"],
+      "instructs": [],
+      "server": { "file": "src/tools/concerns.ts", "phrase": "add_concern refuses: a probe is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-id",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: territory is the id of a territory in concern-territories.md" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-condition-needed",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: a disqualified territory names the condition that rules it out" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-condition-shape",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: a condition is one paragraph of at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-no-question",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: no open question" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "territory-disposition-revision",
+      "note": "New, store-only PLAN §2.2 (SO4).",
+      "refuses": ["record_territory_disposition"],
+      "instructs": [],
+      "server": { "file": "src/tools/project-records.ts", "phrase": "record_territory_disposition refuses: ref_sha" },
       "references": [
         { "file": "../.claude/skills/amanuensis/references/explanations.md" }
       ]

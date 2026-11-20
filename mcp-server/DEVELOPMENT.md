@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_216 tools across 45 groups. Generated from `tools/list` — do not hand-edit._
+_221 tools across 46 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -282,8 +282,8 @@ _216 tools across 45 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `list_concerns` | Return concern codes with status and origin. Use status_filter='active' to get the working checklist; 'retired' and 'merged' are excluded by default only if a filter is passed. |
-| `add_concern` | Add a concern to the calibrated checklist. origin='seeded' for concerns derived from territory map; 'discovered' for those found mid-survey. Use codes like CC-1 (cache coherence #1), SC-3 (seam contract #3). |
+| `list_concerns` | Return concern codes with status, origin, the territory each was seeded from and the probe that tests it. Use status_filter='active' to get the working checklist; 'retired' and 'merged' are excluded by default only if a filter is passed. |
+| `add_concern` | Add a concern to the calibrated checklist. origin='seeded' for concerns derived from territory map; 'discovered' for those found mid-survey. Use codes like CC-1 (cache coherence #1), SC-3 (seam contract #3). territory is the id of the territory of concern-territories.md the concern was seeded from (T1, T2, …) and probe is the codebase-specific check that tests it, in at most 1200 bytes; adding a code again updates them when given and keeps them when not. |
 | `retire_concern` | Retire a concern or merge it into another. For action='merge', provide merged_into. Retiring records a final state — it does not delete the row, so historical dispositions keyed on this code remain readable. |
 
 ### `contradictions` (3)
@@ -396,9 +396,9 @@ _216 tools across 45 groups. Generated from `tools/list` — do not hand-edit._
 
 | Tool | Description |
 |---|---|
-| `record_explanation` | Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body. |
+| `record_explanation` | Record an explanation of a subsystem or of the project (its purpose or its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural' and for a project account while no subsystem has been (the project's purpose is its thesis and is accepted at any status), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body. |
 | `decline_explanation` | Declare that no explanation is written for a subsystem or project slot, with the reason: the other way to answer the obligation record_explanation carries. The reason is one paragraph of at most 400 UTF-8 bytes, refused if the pages' orientation lint would withhold it, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject conditions as record_explanation. It is accepted whether or not an explanation is already recorded: the newest row is the effective one. The record is append-only. Returns a receipt and does not echo the reason. |
-| `get_explanations` | Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing. |
+| `get_explanations` | Read the explanations recorded for a subsystem or for the project (its purpose and its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been (its purpose reads at any status), and so does a slot whose newest row was withdrawn by a reset. A project purpose copied in by the import reads as recorded, with the disposition 'imported' on its row. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing. |
 
 ### `field-notes` (3)
 
@@ -514,6 +514,16 @@ _216 tools across 45 groups. Generated from `tools/list` — do not hand-edit._
 | `get_session` | Return the stored metadata for a session. If no session_id is provided, returns the most recently started session. |
 | `end_session` | Mark a session ended with an outcome ('completed', 'deferred', 'superseded', etc.). Not required — sessions are still valid while open — but closing them makes the activity log legible. |
 | `list_sessions` | List sessions, newest first. Filter by state ('active' = not ended, 'ended' = ended, or omit for all). |
+
+### `project-records` (5)
+
+| Tool | Description |
+|---|---|
+| `record_project_profile` | Record the project's name, bound to a revision: the replacement for the codebase line of the onboarding report. The name is one line of at most 120 characters. The record is append-only: the newest row is the effective name, and a correction is a new row. Returns a receipt. |
+| `record_runtime_boundary` | Record one crossing between runtimes on the runtime boundary map: from_runtime (with its from_language), to_runtime and the mechanism of the crossing, with notes and the evidence it was read from. Each of from_runtime, from_language, to_runtime and mechanism is one line of at most 120 characters with no '\|'; notes is one line of at most 400 UTF-8 bytes. At least one evidence row is required and at most 64 may be cited. The record is append-only: the newest row per (from_runtime, to_runtime, mechanism) is the effective one, so a correction is a new row, and withdraw_runtime_boundary removes an edge. Returns a receipt. |
+| `withdraw_runtime_boundary` | Withdraw a crossing from the runtime boundary map: the edge named by from_runtime, to_runtime and mechanism, which has to be on the map now, with an optional one-line reason of at most 400 UTF-8 bytes. The withdrawal is a new row and the earlier rows are kept; recording the edge again puts it back. Returns a receipt. |
+| `get_runtime_boundaries` | Read the runtime boundary map: the effective crossing for each (from_runtime, to_runtime, mechanism) as {id, from_runtime, from_language, to_runtime, mechanism, notes, origin (recorded or imported), ref_sha, session_id, recorded_at, evidence_ids}, ordered by edge, and how many edges were withdrawn. An imported crossing carries no evidence. Every row is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing. |
+| `record_territory_disposition` | Record whether a territory of concern-territories.md applies to the project, by its id (T1, T2, …): disposition 'applies' or 'disqualified'. A disqualified territory names the condition that rules it out, one paragraph of at most 400 UTF-8 bytes, and may point at the open question that records the doubt. The record is append-only: the newest row per territory is the effective one, and a correction is a new row. Returns a receipt. |
 
 ### `refresh` (8)
 

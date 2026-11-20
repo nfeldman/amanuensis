@@ -7,10 +7,10 @@ newest row whose revision still resolves is the effective one. The record
 establishes who wrote the explanation, at which revision and over which evidence.
 It does not establish that the explanation is true.
 
-There are two slots. A **purpose** (subsystem) is one paragraph of at most 400
-bytes. An **account** (subsystem or project) is prose and lists of at most 4096
-bytes. The project has no purpose slot: its purpose is the thesis in
-`entry-point.md`. There is no minimum length and one evidence row is enough.
+There are two slots. A **purpose** (subsystem or project) is one paragraph of at
+most 400 bytes. An **account** (subsystem or project) is prose and lists of at
+most 4096 bytes. The project's purpose is its thesis: what the codebase is, in
+one paragraph. There is no minimum length and one evidence row is enough.
 Declining is a real answer. A session that cannot say something true and
 specific says so, with the reason, and the reason is kept.
 
@@ -19,6 +19,10 @@ specific says so, with the reason, and the reason is kept.
 **Purpose** (subsystem): one paragraph on what this part is for, in terms of what
 the rest of the system or its users get from it. Not a file list, not a
 restatement of scope.
+
+**Purpose** (project): one paragraph on what the codebase is and who it is for,
+written from its entry points and manifests. It is recorded at onboarding, before
+any subsystem has been read.
 
 **Account** (subsystem), in this order, as short prose:
 
@@ -56,7 +60,7 @@ later pass that knows more records over it.
 | Structural (`phase-2-structural.md`) | After the advance to `structural`, record the purpose and a draft account, or decline each. |
 | Adversarial (`phase-4-adversarial.md`) | Read both with `get_explanations`, then against the code. A sentence the code contradicts becomes a field note with the evidence. |
 | Packaging (`phase-5-packaging.md`) | Read the account with `get_explanations`, then revise it by recording a new version or confirm it stands. The advance to `mapped` refuses a slot that is neither recorded nor declined. |
-| Onboarding (`onboarding.md`) | The project account is recorded once the first subsystem reaches `structural`, and revised at each later packaging. |
+| Onboarding (`onboarding.md`) | The project purpose is recorded first, over the evidence it was read from, and needs no subsystem. The project account is recorded once the first subsystem reaches `structural`, and revised at each later packaging. |
 | Refresh (`refresh.md`) | An explanation that cites changed files is read with `get_explanations` and revised or confirmed. |
 
 ## Tools
@@ -72,7 +76,8 @@ the body.
 `record_explanation(subject_type, subject_id?, slot, body, evidence_ids, ref_sha)`
 records an explanation as `recorded`. Call it for a subsystem that has been
 advanced to `structural` or later, citing the `add_evidence` rows the
-explanation was written from. Call it again to correct an earlier explanation,
+explanation was written from. A project's purpose is accepted at any status, with
+one evidence row at least. Call it again to correct an earlier explanation,
 even at the same commit.
 
 It refuses, each time with the sentence to repair:
@@ -80,7 +85,6 @@ It refuses, each time with the sentence to repair:
 - `record_explanation refuses: no subsystem <id>` — the subsystem does not exist.
 - `record_explanation refuses: <id> is '<status>'. An explanation is written by a pass that has read the subsystem` — its status is `unmapped`, `scoping` or `deferred`.
 - `record_explanation refuses: no subsystem has been read to 'structural'` — a project account needs at least one subsystem that has.
-- `record_explanation refuses: the project's purpose is the thesis in entry-point.md` — a project subject takes only the account slot.
 - `record_explanation refuses: an explanation cites the evidence it was written from` — `evidence_ids` is empty or names a row that does not exist.
 - `record_explanation refuses: an explanation cites at most 64 evidence rows` — cite the rows the text rests on. A read serves every cited id, so its response is bounded only if the count is.
 - `record_explanation refuses: an explanation resting only on names and patterns` — every cited row's kind is `name-inferred` or `pattern-matched`.
@@ -102,7 +106,7 @@ It applies the subject conditions of `record_explanation` with its own sentences
 - `decline_explanation refuses: no subsystem <id>` — the subsystem does not exist.
 - `decline_explanation refuses: <id> is '<status>'. An explanation is written by a pass that has read the subsystem` — its status is `unmapped`, `scoping` or `deferred`.
 - `decline_explanation refuses: no subsystem has been read to 'structural'` — a project account is answered once one has.
-- `decline_explanation refuses: the project's purpose is the thesis in entry-point.md` — only the account is declined for the project.
+- `decline_explanation refuses: the project's purpose is recorded, not declined` — record it with `record_explanation` from the evidence the entry points and manifests give; only the project's account is declined.
 - `decline_explanation refuses: a reason is limited to 400 bytes` — the reason is too long.
 - `decline_explanation refuses: a reason is one paragraph` — the reason has a blank line or a line starting with `#`, `-`, `*` or `|`.
 - `decline_explanation refuses: the reason carries survey-status language or a count fraction` — the same lint as for a recorded explanation.
@@ -111,8 +115,8 @@ It applies the subject conditions of `record_explanation` with its own sentences
 
 `get_explanations(subject_type, subject_id?)` reads back what was recorded. It is
 the way a later pass sees an earlier one's explanation; `describe_locus` does not
-serve one. It needs no session and writes nothing. For each slot of the subject (a
-subsystem has `purpose` and `account`, the project only `account`) it returns
+serve one. It needs no session and writes nothing. For each slot of the subject (the
+subsystem and the project each have `purpose` and `account`) it returns
 
     {slot, state, checked, authored: "model",
      row: {id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids} | null,
@@ -123,7 +127,9 @@ the effective row: the newest whose `ref_sha` the workspace still reaches, so a
 row written at a revision that has since been rewritten away is passed over for
 the older row that resolves. `earlier_rows` counts the rows kept below it. A
 subsystem that has not been read to `structural` reads `not-recorded` whatever
-rows exist, the project's account reads the same while no subsystem has been, and
+rows exist, the project's account reads the same while no subsystem has been (its
+purpose reads at any status, and a purpose copied in by the import reads as
+`recorded` with the disposition `imported` on its row), and
 `checked` is false when no workspace was bound to resolve revisions against, or
 when the bound path is one git cannot answer in; the newest row is effective then. The body is served whole, so a response carries at most the
 400-byte purpose and the 4096-byte account with their fields and 64 evidence ids
@@ -219,3 +225,60 @@ reset's reason as its body, for every effective narrative of that subsystem, and
 withdrawal for each imported survey body of it, and needs an active session to
 attribute them. The earlier rows are kept, and the resurveyed subsystem owes a new
 narrative.
+
+## Project records
+
+Four more records describe the project as a whole, each kept in the store and
+each over a revision. The project's purpose is the explanation above; the others
+are these.
+
+### `record_project_profile`
+
+`record_project_profile(name, ref_sha)` records the project's name, as one line of
+at most 120 characters. The newest row is the effective name. It needs an active
+session, and returns `{id, name, ref_sha}`. It refuses:
+
+- `record_project_profile refuses: a name is one line of at most 120 characters` — the name is blank, has a line break or is longer.
+- `record_project_profile refuses: ref_sha <ref> does not resolve` — record the revision the name was read at.
+
+### `record_runtime_boundary`, `withdraw_runtime_boundary` and `get_runtime_boundaries`
+
+`record_runtime_boundary(from_runtime, from_language?, to_runtime, mechanism, notes?, evidence_ids, ref_sha)`
+records one crossing between runtimes: a TypeScript server starting a Python
+process, say, over stdio. The newest row for each `(from_runtime, to_runtime, mechanism)`
+is the effective one, so a correction is a new row. `withdraw_runtime_boundary(from_runtime, to_runtime, mechanism, reason?, ref_sha)`
+takes an edge off the map; recording it again puts it back. `get_runtime_boundaries()`
+returns the effective crossings, each with its `origin` (`recorded`, or `imported`
+from an earlier version's table, with no evidence), its `evidence_ids`, and how many
+edges were withdrawn. The writers need an active session. They refuse:
+
+- `record_runtime_boundary refuses: <field> is one line of at most 120 characters with no '|'` — `from_runtime`, `from_language`, `to_runtime` or `mechanism`; the map is a table with a row for each crossing.
+- `record_runtime_boundary refuses: notes is one line of at most 400 bytes with no '|'` — say less.
+- `record_runtime_boundary refuses: a crossing cites the evidence it was written from` — `evidence_ids` is empty or names a row that does not exist.
+- `record_runtime_boundary refuses: a crossing cites at most 64 evidence rows` — cite the rows the crossing rests on.
+- `record_runtime_boundary refuses: ref_sha <ref> does not resolve` — record the revision the crossing was read at.
+- `withdraw_runtime_boundary refuses: no crossing from <from> to <to> by <mechanism> is on the map` — name an edge `get_runtime_boundaries` lists.
+- `withdraw_runtime_boundary refuses: a reason is one line of at most 400 bytes with no '|'` — say why the crossing is gone in fewer.
+- `withdraw_runtime_boundary refuses: ref_sha <ref> does not resolve` — record the revision the crossing was found gone at.
+
+### Concern territory and probe, and `record_territory_disposition`
+
+`add_concern(code, category?, origin, discovered_in?, notes?, territory?, probe?)`
+takes the territory the concern was seeded from, by its id in
+`concern-territories.md` (`T7`), and the probe that tests it in this codebase, of
+at most 1200 bytes. Adding a code again updates them when given and keeps them
+when not; `list_concerns` returns both. It refuses:
+
+- `add_concern refuses: territory is the id of a territory in concern-territories.md` — name it as `T7`, not in words.
+- `add_concern refuses: a probe is limited to 1200 bytes` — say the check in fewer.
+
+`record_territory_disposition(territory, disposition, condition?, open_question_id?, ref_sha)`
+records whether a territory applies to the project: `applies`, or `disqualified`
+with the condition that rules it out. The newest row for each territory is
+effective. It needs an active session, and refuses:
+
+- `record_territory_disposition refuses: territory is the id of a territory in concern-territories.md` — name it as `T7`.
+- `record_territory_disposition refuses: a disqualified territory names the condition that rules it out` — pass `condition`.
+- `record_territory_disposition refuses: a condition is one paragraph of at most 400 bytes` — no blank line, and no line starting with `#`, `-`, `*` or `|`.
+- `record_territory_disposition refuses: no open question <id>` — pass the id `record_open_question` returned, or omit it.
+- `record_territory_disposition refuses: ref_sha <ref> does not resolve` — record the revision the territory was judged at.

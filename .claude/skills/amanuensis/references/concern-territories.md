@@ -29,7 +29,10 @@ area. A malformed entry is generic ("does this codebase have caching
 bugs?") or requires runtime to falsify.
 
 Add each derived concern via the MCP tool
-`add_concern(code, category, origin="seeded", notes)`. Non-applicable
+`add_concern(code, category, origin="seeded", notes, territory, probe)`, with
+`territory` the id of the territory it came from (`T7`) and `probe` the
+codebase-specific check; `add_concern refuses: territory is the id of a
+territory in concern-territories.md` when it is named in words. Non-applicable
 territories do not get a concern row — record the disqualifying
 condition in the onboarding report's Concern Calibration section.
 

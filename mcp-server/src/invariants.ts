@@ -350,25 +350,30 @@ export function isExplanationEligible(status: string | null): boolean {
  * Whether a subject can hold an effective explanation, as a pure function so both
  * languages run `explanation-effective-cases.json` over it. A subsystem answers
  * by its own status. The project's account is written once a subsystem has been
- * read (R3), and reads `not-recorded` while none is eligible.
+ * read (R3), and reads `not-recorded` while none is eligible. The project's
+ * purpose is its thesis, written at onboarding before any subsystem is read, so
+ * it is eligible whatever the statuses are (design/store-only/PLAN.md §2.2).
  */
 export function isSubjectExplanationEligible(
   subjectType: string,
   subjectStatus: string | null,
   allStatuses: readonly (string | null)[],
+  slot?: string,
 ): boolean {
-  return subjectType === "project"
-    ? allStatuses.some(isExplanationEligible)
-    : isExplanationEligible(subjectStatus);
+  if (subjectType === "project") {
+    return slot === "purpose" || allStatuses.some(isExplanationEligible);
+  }
+  return isExplanationEligible(subjectStatus);
 }
 
 /** Whether any subsystem in the store is explanation-eligible, the project's condition. */
-export function isProjectExplanationEligible(db: DB): boolean {
+export function isProjectExplanationEligible(db: DB, slot?: string): boolean {
   const statuses = db.prepare("SELECT status FROM subsystems").all() as Array<{ status: string }>;
   return isSubjectExplanationEligible(
     "project",
     null,
     statuses.map((row) => row.status),
+    slot,
   );
 }
 
@@ -415,11 +420,16 @@ export interface ExplanationSelection<R extends ExplanationCandidate = Explanati
  * `not-recorded`. Earlier rows are kept and never selected: a correction is a new
  * row, and it may be written at the same commit as the row it replaces, so the
  * greatest id and not the newest revision decides.
+ *
+ * An `imported` row is the thesis copied in by the import (PLAN §2.2, D2). It
+ * reads as `recorded` where `admitsImported` is true, which only the project's
+ * purpose passes, and as `not-recorded` anywhere else.
  */
 export function selectExplanation<R extends ExplanationCandidate>(
   rows: readonly R[],
   resolvable: ReadonlySet<string> | null,
   eligible: boolean,
+  admitsImported = false,
 ): ExplanationSelection<R> {
   const checked = resolvable !== null;
   let effective: R | null = null;
@@ -432,10 +442,13 @@ export function selectExplanation<R extends ExplanationCandidate>(
   const earlierRows =
     effective === null ? rows.length : rows.filter((row) => row.id < (effective as R).id).length;
   const state: ExplanationDischarge =
-    effective !== null &&
-    (effective.disposition === "recorded" || effective.disposition === "declined")
-      ? effective.disposition
-      : "not-recorded";
+    effective === null
+      ? "not-recorded"
+      : effective.disposition === "recorded" || effective.disposition === "declined"
+        ? effective.disposition
+        : effective.disposition === "imported" && admitsImported
+          ? "recorded"
+          : "not-recorded";
   return { state, row: state === "not-recorded" ? null : effective, checked, earlierRows };
 }
 
@@ -472,7 +485,7 @@ export function readExplanation(
     .all(subjectType, subjectId, slot) as ExplanationRow[];
   const eligible =
     subjectType === "project"
-      ? isProjectExplanationEligible(db)
+      ? isProjectExplanationEligible(db, slot)
       : isSubjectExplanationEligible(
           subjectType,
           atStatus ?? readSubsystemStatus(db, subjectId),
@@ -486,7 +499,12 @@ export function readExplanation(
     );
     resolvable = new Set([...resolved].filter(([, sha]) => sha !== null).map(([key]) => key));
   }
-  const selection = selectExplanation(rows, resolvable, eligible);
+  const selection = selectExplanation(
+    rows,
+    resolvable,
+    eligible,
+    subjectType === "project" && slot === "purpose",
+  );
   const reachable = resolvable;
   const unreachable =
     reachable === null || !eligible
@@ -611,6 +629,103 @@ export function readNarrative(
     readNarratives(db, subjectType, subjectId, section).rows.find((row) => row.topic === topic) ??
     null
   );
+}
+
+export interface ProjectProfileRow {
+  id: number;
+  name: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The project's name: the newest `project_profile` row, or null when none is recorded (PLAN §2.2). */
+export function readProjectProfile(db: DB): ProjectProfileRow | null {
+  return (
+    (db
+      .prepare(
+        "SELECT id, name, ref_sha, session_id, recorded_at FROM project_profile ORDER BY id DESC LIMIT 1",
+      )
+      .get() as ProjectProfileRow | undefined) ?? null
+  );
+}
+
+export interface RuntimeBoundaryRow {
+  id: number;
+  from_runtime: string;
+  from_language: string | null;
+  to_runtime: string;
+  mechanism: string;
+  notes: string | null;
+  origin: string;
+  withdrawn: number;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+export interface RuntimeBoundaryReading {
+  /** Per (from_runtime, to_runtime, mechanism), the newest row, when it is not a withdrawal. Ordered by edge. */
+  rows: RuntimeBoundaryRow[];
+  /** Edges whose newest row is a withdrawal. */
+  withdrawn: number;
+}
+
+/**
+ * The runtime boundary map, re-derived from the rows at every read: for each
+ * edge the row with the greatest id, and an edge whose newest row has
+ * `withdrawn = 1` is not on the map (PLAN §2.2).
+ */
+export function readRuntimeBoundaries(db: DB): RuntimeBoundaryReading {
+  const rows = db
+    .prepare(
+      `SELECT id, from_runtime, from_language, to_runtime, mechanism, notes, origin, withdrawn,
+              ref_sha, session_id, recorded_at
+         FROM runtime_boundaries
+        ORDER BY id DESC`,
+    )
+    .all() as RuntimeBoundaryRow[];
+  const newest = new Map<string, RuntimeBoundaryRow>();
+  for (const row of rows) {
+    const key = [row.from_runtime, row.to_runtime, row.mechanism].join("\u0000");
+    if (!newest.has(key)) newest.set(key, row);
+  }
+  const current = [...newest.values()];
+  const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  return {
+    rows: current
+      .filter((row) => row.withdrawn === 0)
+      .sort(
+        (a, b) =>
+          compare(a.from_runtime, b.from_runtime) ||
+          compare(a.to_runtime, b.to_runtime) ||
+          compare(a.mechanism, b.mechanism),
+      ),
+    withdrawn: current.filter((row) => row.withdrawn === 1).length,
+  };
+}
+
+export interface TerritoryDispositionRow {
+  id: number;
+  territory: string;
+  disposition: string;
+  condition: string | null;
+  open_question_id: number | null;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+/** The effective disposition of every territory that has one: the newest row per territory, ordered by id (PLAN §2.2). */
+export function readTerritoryDispositions(db: DB): TerritoryDispositionRow[] {
+  return db
+    .prepare(
+      `SELECT id, territory, disposition, condition, open_question_id, ref_sha, session_id, recorded_at
+         FROM territory_dispositions
+        WHERE id IN (SELECT MAX(id) FROM territory_dispositions GROUP BY territory)
+        ORDER BY id`,
+    )
+    .all() as TerritoryDispositionRow[];
 }
 
 /**

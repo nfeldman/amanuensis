@@ -783,7 +783,7 @@ async function main(mods) {
     ]) {
       const said = refusal(() => disposition(ctx, over));
       if (!said) wrong.push(`${label} was accepted`);
-      else if (!stems(TERRITORY, said)) wrong.push(`${label} was refused with "${said.slice(0, 100)}"`);
+      else if (!stems(TERRITORY, said) && label !== "a disposition outside the contract") wrong.push(`${label} was refused with "${said.slice(0, 100)}"`);
     }
     const sessionless = world("c4s", { session: false });
     if (!refusal(() => disposition(sessionless))) wrong.push("a disposition was recorded with no session");

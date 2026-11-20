@@ -412,16 +412,30 @@ async function main(mods) {
           "a missing subsystem",
         );
       });
-      check(`R4 ${tool} refuses the project's purpose`, () => {
-        const missing = absent(tool);
-        if (missing) return missing;
-        return refusesWith(
-          ctx,
-          () => run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
-          `${T(tool)} the project's purpose is the thesis in entry-point.md`,
-          "a project purpose",
-        );
-      });
+      // The project holds a purpose since store-only SO4 (design/store-only/PLAN.md
+      // §2.2): it is recorded at any status, so only declining it is refused.
+      // Recording one, and every refusal on that path, is test-store-only-project-records.mjs.
+      if (tool === DECLINE) {
+        check(`R4 ${tool} refuses the project's purpose`, () => {
+          const missing = absent(tool);
+          if (missing) return missing;
+          return refusesWith(
+            ctx,
+            () => run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
+            `${T(tool)} the project's purpose is recorded, not declined`,
+            "a project purpose",
+          );
+        });
+      } else {
+        check(`R4 ${tool} accepts the project's purpose`, () => {
+          const missing = absent(tool);
+          if (missing) return missing;
+          const said = refusal(() =>
+            run({ subject_type: "project", subject_id: "project", slot: "purpose" }),
+          );
+          return said ? `the project's purpose was refused: ${said.slice(0, 120)}` : null;
+        });
+      }
     }
 
     check("R3 record_explanation refuses a project account while no subsystem has reached structural", () => {

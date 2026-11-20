@@ -202,6 +202,14 @@ jobs:
       - name: Narrative tools — record, decline, get, the rungs, the shape, the effective row, reset withdrawal
         working-directory: mcp-server
         run: node test-store-only-narratives.mjs
+      # GATE SO4 (design/store-only/PLAN.md §8 SO4). The project's purpose, name,
+      # runtime boundary map and concern calibration over temporary git
+      # workspaces and stores the gate creates itself; one arm spawns the built
+      # server over stdio, another reads the store through the materializer's
+      # own reader. Needs python3 and the materializer.
+      - name: Project records — purpose before any subsystem, profile, runtime boundaries, territory dispositions, concern territory and probe
+        working-directory: mcp-server
+        run: node test-store-only-project-records.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

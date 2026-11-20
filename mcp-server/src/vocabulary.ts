@@ -685,7 +685,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         meaning:
           "The explanation is about the codebase as a whole, and its subject id is the literal 'project'.",
         cannot_justify:
-          "a purpose for the project; the project's purpose is the thesis in entry-point.md, and only an account is recorded here",
+          "that the project's account still matches the subsystems it was written from; the account is recorded once a subsystem has been read to 'structural', and the purpose at any status",
       },
     ],
   },

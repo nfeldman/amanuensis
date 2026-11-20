@@ -41,8 +41,6 @@ const RECORD_REFUSALS = {
     `record_explanation refuses: ${id} is '${status}'. An explanation is written by a pass that has read the subsystem; advance it to 'structural' first.`,
   noStructural: () =>
     "record_explanation refuses: no subsystem has been read to 'structural'. The project account is recorded once the first subsystem reaches that status.",
-  projectPurpose: () =>
-    "record_explanation refuses: the project's purpose is the thesis in entry-point.md. Record the project's account, or write the thesis under '## What is this codebase?'.",
   citesEvidence: () =>
     "record_explanation refuses: an explanation cites the evidence it was written from. Pass evidence_ids naming evidence rows that exist; add_evidence records one.",
   tooManyEvidence: () =>
@@ -69,7 +67,7 @@ const DECLINE_REFUSALS = {
   noStructural: () =>
     "decline_explanation refuses: no subsystem has been read to 'structural'. The project account is answered once the first subsystem reaches that status.",
   projectPurpose: () =>
-    "decline_explanation refuses: the project's purpose is the thesis in entry-point.md. Only the project's account is recorded or declined here.",
+    "decline_explanation refuses: the project's purpose is recorded, not declined. Record it with record_explanation from the evidence the project's entry points and manifests give.",
   reasonTooLong: () =>
     `decline_explanation refuses: a reason is limited to ${REASON_CAP} bytes. Say the reason in fewer; the cap counts UTF-8 bytes.`,
   reasonOneParagraph: () =>
@@ -123,8 +121,12 @@ function resolveSubject(ctx: ServerContext, tool: Tool, args: Record<string, unk
     if (suppliedId !== null && suppliedId !== "project") {
       throw new ToolError("subject_id must be 'project' for a project explanation, or omitted");
     }
-    if (slot === "purpose") throw new ToolError(refusals.projectPurpose());
-    if (!isProjectExplanationEligible(ctx.db)) throw new ToolError(refusals.noStructural());
+    // The purpose is the project's thesis, written at onboarding before any
+    // subsystem is read, so only the account waits for a structural one (PLAN §2.2).
+    if (slot === "purpose" && tool === "decline_explanation") {
+      throw new ToolError(DECLINE_REFUSALS.projectPurpose());
+    }
+    if (!isProjectExplanationEligible(ctx.db, slot)) throw new ToolError(refusals.noStructural());
     return { type, id: "project", slot };
   }
   if (suppliedId === null || suppliedId === "") {
@@ -164,10 +166,10 @@ const SUBJECT_PROPERTIES = {
   slot: { type: "string", enum: [...EXPLANATION_SLOTS] },
 } as const;
 
-/** The slots a subject holds: a subsystem has both, the project only its account. */
+/** The slots a subject holds: a subsystem and the project both hold a purpose and an account. */
 const SLOTS_OF = {
   subsystem: EXPLANATION_SLOTS,
-  project: ["account"],
+  project: EXPLANATION_SLOTS,
 } as const;
 
 /**
@@ -203,7 +205,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "record_explanation",
     description:
-      "Record an explanation of a subsystem (its purpose or its account) or of the project (its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural', for a project purpose (the thesis in entry-point.md is the project's purpose), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
+      "Record an explanation of a subsystem or of the project (its purpose or its account), written from the evidence cited. A purpose is one paragraph of at most 400 UTF-8 bytes; an account is prose and lists of at most 4096 bytes. There is no minimum length and one evidence row is enough; at most 64 may be cited, since a read serves them all. Refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for a subsystem that has not been read to 'structural' and for a project account while no subsystem has been (the project's purpose is its thesis and is accepted at any status), for evidence that is missing, rests only on names and patterns, or has no file in the subsystem's ledger. The record is append-only: a correction is a new row, which may share the earlier row's commit. Returns a receipt and does not echo the body.",
     inputSchema: {
       type: "object",
       properties: {
@@ -313,7 +315,7 @@ export const explanationTools: ToolDefinition[] = [
   {
     name: "get_explanations",
     description:
-      "Read the explanations recorded for a subsystem (its purpose and its account) or for the project (its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been, and so does a slot whose newest row was withdrawn by a reset. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
+      "Read the explanations recorded for a subsystem or for the project (its purpose and its account). For each slot it returns the state (recorded, declined or not-recorded), whether the revision was checked against the bound workspace, the effective row (id, disposition, body, ref_sha, session_id, recorded_at, evidence_ids) or null, and how many earlier rows are kept. The effective row is the newest whose ref_sha the workspace still reaches; a subsystem that has not been read to 'structural' reads not-recorded whatever rows exist, the project's account reads the same while no subsystem has been (its purpose reads at any status), and so does a slot whose newest row was withdrawn by a reset. A project purpose copied in by the import reads as recorded, with the disposition 'imported' on its row. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing.",
     inputSchema: {
       type: "object",
       properties: {

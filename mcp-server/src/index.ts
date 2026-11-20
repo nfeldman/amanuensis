@@ -77,6 +77,13 @@ const ADDITIVE_TOOLS = new Set([
   // (PLAN §2.1): each writer inserts rows, and a correction is a new row.
   "record_narrative",
   "decline_narrative",
+  // `project_profile`, `runtime_boundaries`, `runtime_boundary_evidence` and
+  // `territory_dispositions` are append-only in the same way (PLAN §2.2); a
+  // withdrawal is a row too.
+  "record_project_profile",
+  "record_runtime_boundary",
+  "withdraw_runtime_boundary",
+  "record_territory_disposition",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -138,6 +145,7 @@ import { materializeTools } from "./tools/materialize.js";
 import { narrativeTools } from "./tools/narratives.js";
 import { openQuestionTools } from "./tools/open-questions.js";
 import { projectTools } from "./tools/project.js";
+import { projectRecordTools } from "./tools/project-records.js";
 import { refreshTools } from "./tools/refresh.js";
 import { researchTools } from "./tools/research.js";
 import { resolutionTools } from "./tools/resolution.js";
@@ -334,6 +342,7 @@ async function main(): Promise<void> {
     ...vocabularyTools,
     ...explanationTools,
     ...narrativeTools,
+    ...projectRecordTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,

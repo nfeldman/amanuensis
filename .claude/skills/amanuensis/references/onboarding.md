@@ -74,9 +74,11 @@ This is the territory pass. For each territory in
 - **Applicability check.** Does it apply to this codebase's languages,
   runtimes, and concurrency model?
 - **If yes**: derive 1–4 codebase-specific concern entries via
-  `add_concern(code, category, origin="seeded", notes)`. Codes should
-  be short ids (e.g. `CC-1`, `RC-2`) so they survive in dispositions
-  later.
+  `add_concern(code, category, origin="seeded", notes, territory, probe)`.
+  Codes should be short ids (e.g. `CC-1`, `RC-2`) so they survive in
+  dispositions later. `territory` is the territory's id (`T7`) and `probe`
+  the check that tests the concern here; `add_concern refuses: territory is
+  the id of a territory in concern-territories.md` when it is named in words.
 - **If no**: record the disqualifying condition in the onboarding
   report's Concern Calibration section. Do **not** silently skip.
 

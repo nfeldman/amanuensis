@@ -286,6 +286,7 @@ def select_explanation(
     candidates: list[dict[str, Any]],
     resolvable: set[str] | None,
     eligible: bool,
+    admits_imported: bool = False,
 ) -> ExplanationReading:
     """§3.2 as a pure function over `(rows, resolvable revisions, eligibility)`.
 
@@ -295,6 +296,10 @@ def select_explanation(
     A `withdrawn` effective row, no row, or an ineligible subject all read
     `not-recorded`. The TypeScript reader runs the same cases from
     `mcp-server/contracts/explanation-effective-cases.json`.
+
+    An `imported` row is the thesis the import copied in (store-only PLAN §2.2).
+    With `admits_imported`, which only the project's purpose passes, it reads as
+    `recorded`; anywhere else it reads `not-recorded`.
     """
 
     checked = resolvable is not None
@@ -309,22 +314,31 @@ def select_explanation(
         return ExplanationReading("not-recorded", None, checked)
     effective = max(pool, key=lambda candidate: int(candidate["id"]))
     disposition = str(effective["disposition"])
+    if disposition == "imported":
+        disposition = "recorded" if admits_imported else "withdrawn"
     if disposition == "withdrawn":
         return ExplanationReading("not-recorded", None, checked)
     return ExplanationReading(disposition, effective, checked)
 
 
 def subject_explanation_eligible(
-    subject_type: str, status: str | None, all_statuses: list[str | None]
+    subject_type: str,
+    status: str | None,
+    all_statuses: list[str | None],
+    slot: str | None = None,
 ) -> bool:
     """Whether a subject can hold an effective explanation, by the shared cases.
 
     A subsystem answers by its own status. The project's account is written once a
     subsystem has been read (R3), and reads `not-recorded` while none is eligible.
+    The project's purpose is its thesis, written at onboarding before any subsystem
+    is read, so it is eligible whatever the statuses are (store-only PLAN §2.2).
     """
 
     if subject_type == "project":
-        return any(value in EXPLANATION_ELIGIBLE_STATUSES for value in all_statuses)
+        return slot == "purpose" or any(
+            value in EXPLANATION_ELIGIBLE_STATUSES for value in all_statuses
+        )
     return status in EXPLANATION_ELIGIBLE_STATUSES
 
 
@@ -437,11 +451,16 @@ def effective_explanations(
         grouped.setdefault(key, []).append(record)
     readings: dict[tuple[str, str, str], ExplanationReading] = {}
     for key, candidates in grouped.items():
-        subject_type, subject_id, _slot = key
+        subject_type, subject_id, slot = key
         eligible = subject_explanation_eligible(
-            subject_type, statuses.get(subject_id), list(statuses.values())
+            subject_type, statuses.get(subject_id), list(statuses.values()), slot
         )
-        readings[key] = select_explanation(candidates, resolvable, eligible)
+        readings[key] = select_explanation(
+            candidates,
+            resolvable,
+            eligible,
+            admits_imported=subject_type == "project" and slot == "purpose",
+        )
     return readings
 
 
