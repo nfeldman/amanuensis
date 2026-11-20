@@ -147,6 +147,9 @@ jobs:
       # GATE O0 (design/orientation/PLAN.md §4 O0). Reads BACKLOG.md and the plan only.
       - name: Orientation backlog — the plan is linked and W1–W9 are listed
         run: node dev/test-orientation-backlog.mjs
+      # GATE SO0 (design/store-only/PLAN.md §8 SO0). Reads BACKLOG.md and the plan only.
+      - name: Store-only backlog — the plan is linked and D1–D16 are listed
+        run: node dev/test-store-only-backlog.mjs
       - name: Exact-package rollback preserves five repository stores
         working-directory: mcp-server
         run: node test-release-rollback.mjs

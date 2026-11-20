@@ -54,8 +54,10 @@ real run; "read" means found by reading code and not reproduced.
 - **The database holds everything; HTML is the only published projection.** Decided
   2026-11-20; planning starts after the orientation lane lands (its renderer changes would
   collide). Two gaps today:
-  - The HTML is built from the published Markdown, and the read-back compares the two, so the
-    Markdown is an intermediate no reader needs.
+  - The HTML is built from the published Markdown, so the Markdown is an intermediate no reader
+    needs. Correction (PLAN §0): an earlier version of this item said the read-back compares the
+    Markdown with the HTML. It does not. The read-back censuses both views against store rows
+    and hashes every file; it only has to drop the Markdown branch and cover the new records.
   - The skill has the agent hand-write files whose content the store never holds. These are
     `<id>-<slug>.md` survey narratives, `master-plan.md`, `entry-point.md` (whose thesis
     `record_explanation` treats as the project's purpose) and the onboarding report.
@@ -70,6 +72,25 @@ real run; "read" means found by reading code and not reproduced.
   diagram, a status ladder and a coverage view first, since all three draw on records the
   store already holds. Code diagrams need new records, flow marks above all. Surveys must
   record those before a diagram has anything to show, so the plan should add them early.
+
+  The plan is [design/store-only/PLAN.md](design/store-only/PLAN.md): 26 packets, SO0 to SO25.
+  Its owner decisions, all decided 2026-11-20 as recommended:
+  - D1 decided 2026-11-20: render imported survey bodies, onboarding report, entry point and concern checklist "as written"; hold master plan, findings index and field notes.
+  - D2 decided 2026-11-20: the imported thesis becomes an `imported` project purpose with no evidence, labelled until a recorded one replaces it.
+  - D3 decided 2026-11-20: flow marks are generic `claim_marks` with per-kind contract rules; relations deferred.
+  - D4 decided 2026-11-20: flow marks print the gap and never refuse an advance; the skill discharges or declines.
+  - D5 decided 2026-11-20: contract entries count as records for the method diagrams, with a gate holding the server's rung prerequisites to them.
+  - D6 decided 2026-11-20: import AxiomDB in its maintenance lane after a release with S1–S2, and this repository's store before any republish of `docs/`; each runs only after the lane lands.
+  - D7 decided 2026-11-20: `register_artifact` and `rehash_artifact` refuse hand-written kinds now (SO6) and are removed at the next minor version.
+  - D8 decided 2026-11-20: drop the dispatch prompt template; keep nothing beyond `subagent_log`.
+  - D9 decided 2026-11-20: server-written exports (review export, `compare_conspectuses write_to`, research handoff `claims.md`) are out of scope.
+  - D10 decided 2026-11-20: published output and copies carry a content-free `README.md` pointing at `index.html`.
+  - D11 decided 2026-11-20: files on disk stay untouched after import; deleting them is the owner's, by hand.
+  - D12 decided 2026-11-20: pages lose their `.md` form, a breaking output change released as `0.3.0` with a release note.
+  - D13 decided 2026-11-20: the stored-prose grammar (PLAN §3.4) is the documented contract for every prose field.
+  - D14 decided 2026-11-20: illustrations are allowed and labelled; no diagram on the overview; scroll inside the frame on narrow screens.
+  - D15 decided 2026-11-20: republish and real-store checks (`docs/`, AxiomDB's copy) only after the lane lands and D6's imports run.
+  - D16 decided 2026-11-20, amended: legacy data needs no protecting, so the AxiomDB lanes are not paused and the next nightly open migrates the store; one `VACUUM INTO` backup is taken just before `dist` is rebuilt, as a rollback point only.
 
 ## Explanation quality
 
