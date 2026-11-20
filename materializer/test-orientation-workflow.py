@@ -17,8 +17,8 @@ Turns red when:
     still publishes the old words;
   - the section lacks the subheadings "What it expects from you" and "Phase
     numbers", the first does not say the survey keeps going without the reader,
-    points the reader to "Decisions needed", and tells them they can redirect or
-    stop it, or the second does not decode onboarding Phases 0–7 and survey
+    points the reader to "Decisions needed" and to telling the agent, says the
+    site is read-only, and tells them they can redirect or stop it, or the second does not decode onboarding Phases 0–7 and survey
     Phases 1–5 against every pass name;
   - the HTML guide's table, subheadings and prose differ from the Markdown's;
   - the "Decisions needed" page lacks the line saying to tell the agent in the
@@ -307,19 +307,13 @@ def html_table_rows(fragment: str) -> list[list[str]]:
     return out
 
 
-def first_paragraph_after_h1(md: str) -> str:
-    lines = md.splitlines()
-    index = next((i for i, line in enumerate(lines) if line.startswith("# ")), -1)
-    paragraph: list[str] = []
-    for line in lines[index + 1 :]:
-        if not line.strip():
-            if paragraph:
-                break
-            continue
-        if line.startswith("#"):
-            break
-        paragraph.append(line.strip())
-    return " ".join(paragraph)
+def identity_paragraph(md: str) -> str:
+    """The last paragraph before the first H2: the page-head hint, if any, sits above it."""
+
+    head = md.split("\n## ", 1)[0]
+    paragraphs = [" ".join(p.split()) for p in re.split(r"\n\s*\n", head) if p.strip()]
+    paragraphs = [p for p in paragraphs if not p.startswith("# ")]
+    return paragraphs[-1] if paragraphs else ""
 
 
 def load_contract() -> dict[str, Any]:
@@ -456,7 +450,7 @@ def main() -> int:
         def expects() -> str | None:
             text = body(SUBHEADINGS[0])
             lowered = text.lower()
-            for needle in ("decisions needed", "tell the agent", "stop"):
+            for needle in ("decisions needed", "telling the agent", "stop"):
                 if needle not in lowered:
                     return f"'{SUBHEADINGS[0]}' does not say {needle!r}: {text[:200]!r}"
             if "nothing" not in lowered:
@@ -464,8 +458,8 @@ def main() -> int:
             if "read-only" not in lowered:
                 return f"'{SUBHEADINGS[0]}' does not say the site is read-only: {text[:200]!r}"
             html_block = html_text(html_section(page, SECTION))
-            if "tell the agent" not in html_block.lower():
-                return "the HTML section does not say 'tell the agent'"
+            if "telling the agent" not in html_block.lower():
+                return "the HTML section does not say 'telling the agent'"
             return None
 
         check("'What it expects from you' says what to do, and to tell the agent", expects)
@@ -535,7 +529,7 @@ def main() -> int:
                 return "docs/index.md was not written"
             if IDENTITY_FORBIDDEN_OLD in index_md:
                 return f"the overview still says {IDENTITY_FORBIDDEN_OLD!r}"
-            paragraph = first_paragraph_after_h1(index_md)
+            paragraph = identity_paragraph(index_md)
             if paragraph != IDENTITY:
                 return f"the identity paragraph is {paragraph!r}, expected Appendix C's {IDENTITY!r}"
             digits = re.findall(r"\d", paragraph)

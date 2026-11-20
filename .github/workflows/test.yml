@@ -409,6 +409,9 @@ jobs:
       - name: Reader's guide — new shape, Terms, and the closed full vocabulary
         working-directory: materializer
         run: python3 test-orientation-guide.py
+      - name: How a survey works — pass table from the contract, how to answer a decision, overview identity
+        working-directory: materializer
+        run: python3 test-orientation-workflow.py
       - name: Prose retention — every model-authored field reaches a page
         working-directory: materializer
         run: python3 test-prose-retention.py

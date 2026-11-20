@@ -72,6 +72,7 @@ from .vocabulary import (
     OBLIGATION_BEARING_SQL,
     OPEN_FINDING_SQL,
     READER_TERMS,
+    SURVEY_PASSES,
     VOCABULARY,
     VOCABULARY_CONTRACT_VERSION,
     cannot_justify,
@@ -941,6 +942,16 @@ def _empty_lens(
 # ---------------------------------------------------------------------------
 
 
+# Appendix C, "Overview identity". The project is the subject and Amanuensis the
+# method; the sentence carries no digit and none of the orientation lint's terms,
+# and ends by sending a new reader to the guide.
+OVERVIEW_IDENTITY = (
+    "An architecture survey of {name}. An AI agent running Amanuensis read the"
+    " repository, without changing it, and recorded what it found here. New to this"
+    " site? Start with [{guide}](how-to-read.md)."
+)
+
+
 def render_index(
     conn: sqlite3.Connection,
     storage: Path,
@@ -1039,7 +1050,7 @@ def render_index(
     out = [
         f"# {name}",
         "",
-        f"An architecture survey of {name}, recorded by Amanuensis.",
+        OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE),
         "",
         # 2. Thesis — by heading, from entry-point.md, or the named instruction.
         "## What is this codebase?",
@@ -3257,6 +3268,7 @@ def _ledger_stale_table(
 # the order PLAN §4 O3 gives: what the site is, pages, terms, status values,
 # then the vocabulary a reader never sees as a label.
 GUIDE_TITLE = "How to read this survey"
+SURVEY_SECTION = "How a survey works"
 HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
 
 HOW_TO_READ_CLOSING = ""
@@ -3290,6 +3302,103 @@ def _enum_heading(name: str) -> str:
 
 def _site_is(name: str) -> list[str]:
     return ["## What this site is", "", SITE_IS.format(name=name), ""]
+
+
+# Appendix C, "How a survey works". The surrounding sentences are constants; the
+# pass table's labels, meanings and timing come from the contract (`SURVEY_PASSES`
+# and `subsystem_status`), so the guide cannot drift from what the server enforces.
+SURVEY_LEAD = (
+    "The agent works in two stages and does not wait for approval between steps."
+)
+SURVEY_ONBOARDING = (
+    "**Onboarding**, once. The agent reads the repository's shape, splits it into"
+    " subsystems grouped by layer, writes a review checklist of defects worth looking"
+    " for in this codebase, ranks the subsystems, and publishes the first version of"
+    " this site."
+)
+SURVEY_EACH = (
+    "**A survey of each subsystem**, highest priority first, in {passes} passes:"
+)
+SURVEY_IN_PROGRESS = (
+    "A subsystem shown as {labels} is in the middle of that pass: its verdicts and"
+    " findings so far are not the last word."
+)
+SURVEY_REFRESH = (
+    "**Refresh**, when the code changes. The agent re-reads files that changed since it"
+    " read them. Until then they are listed on Stale knowledge."
+)
+EXPECTS_HEADING = "What it expects from you"
+SURVEY_EXPECTS = (
+    "- Nothing, for it to keep going. When it cannot decide something, it records a"
+    " *decision needed* with the assumption it used, and carries on.",
+    "- At each checkpoint (after onboarding, after each subsystem, and at the start of"
+    " each session) it posts a summary in your chat. Read **Decisions needed** then, and"
+    " answer what you can by telling the agent in your session. This site is read-only;"
+    " answers reach the record only through the agent.",
+    '- You can redirect it at any time: name a subsystem to survey next, say "stop", or'
+    ' ask "what do we know about <file>".',
+)
+PHASES_HEADING = "Phase numbers"
+PHASES_LEAD = (
+    'Notes written by the agent may say "Phase 2". The numbers belong to one of two'
+    " sequences:"
+)
+ONBOARDING_PHASES = "0–7"
+ONBOARDING_PHASES_MEANING = "The one-time stage above, before any subsystem is surveyed."
+_NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven"}
+
+# How the table says when a pass sets its depth (D4): the depths that name a
+# finished pass are set when it ends, the two that name one under way as it starts.
+_WHEN = {"end": "when the pass is done", "start": "as the pass starts"}
+
+
+def _survey_passes_section() -> list[str]:
+    """Appendix C's "How a survey works", the pass table generated from the contract."""
+
+    spec = [dict(p) for p in SURVEY_PASSES]
+    count = len(spec)
+    out = [
+        f"## {SURVEY_SECTION}",
+        "",
+        SURVEY_LEAD,
+        "",
+        SURVEY_ONBOARDING,
+        "",
+        SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count))),
+        "",
+        "| Pass | What the agent does | Survey depth it sets, and when | What that depth means |",
+        "|---|---|---|---|",
+    ]
+    for p in spec:
+        status = str(p["status"])
+        label = SUBSYSTEM_STATUS_LABELS.get(status, status)
+        out.append(
+            f"| {_table_cell(p['pass'])} | {_table_cell(p['does'])} |"
+            f" **{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))} |"
+            f" {_table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, ''))} |"
+        )
+    under_way = [
+        f"*{SUBSYSTEM_STATUS_LABELS.get(str(p['status']), p['status'])}*"
+        for p in spec
+        if p["set_when"] == "start"
+    ]
+    out += ["", SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way)), ""]
+    out += [SURVEY_REFRESH, "", f"### {EXPECTS_HEADING}", "", *SURVEY_EXPECTS, ""]
+    phases = [int(str(p["phase"])) for p in spec]
+    survey_phases = f"{min(phases)}–{max(phases)}"
+    named = ", ".join(f"{p['pass']} ({p['phase']})" for p in spec)
+    out += [
+        f"### {PHASES_HEADING}",
+        "",
+        PHASES_LEAD,
+        "",
+        "| Numbering | Phases | What they are |",
+        "|---|---|---|",
+        f"| Onboarding | {ONBOARDING_PHASES} | {ONBOARDING_PHASES_MEANING} |",
+        f"| Subsystem survey | {survey_phases} | {_table_cell(named)}, in order. |",
+        "",
+    ]
+    return out
 
 
 def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
@@ -3452,6 +3561,7 @@ def render_how_to_read(
     body = [HOW_TO_READ_INTRO, ""]
     body += _site_is(project_name(storage))
     body += _route_tables(routes or ())
+    body += _survey_passes_section()
     body += _terms_section(routes or ())
     body += _vocabulary_tables()
     body += [HOW_TO_READ_CLOSING]
@@ -3478,6 +3588,14 @@ OPEN_QUESTION_ORDER: tuple[str, ...] = (
     "tooling-limit",
     "priority-ranking",
     "other",
+)
+
+
+# §2.3 (W1): a reader cannot call the tool that records an answer, and this site
+# is read-only, so the page says where an answer goes.
+HOW_TO_ANSWER = (
+    "To answer, tell the agent in your session, for example: “Decision #12: tenancy is"
+    " per account.” This site is read-only."
 )
 
 
@@ -3510,6 +3628,8 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "which readings would change if the assumption turns out wrong. Questions "
         "already settled are on "
         "[Resolved leads and questions](resolved-leads.md)._",
+        "",
+        HOW_TO_ANSWER,
         "",
     ]
     if not questions:
