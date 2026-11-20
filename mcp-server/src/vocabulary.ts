@@ -89,7 +89,7 @@ export const EXPLANATION_SLOTS = ["purpose", "account"] as const;
 export type ExplanationSlot = (typeof EXPLANATION_SLOTS)[number];
 
 /** explanation_disposition — explanation axis. */
-export const EXPLANATION_DISPOSITIONS = ["recorded", "declined", "withdrawn"] as const;
+export const EXPLANATION_DISPOSITIONS = ["recorded", "declined", "withdrawn", "imported"] as const;
 export type ExplanationDisposition = (typeof EXPLANATION_DISPOSITIONS)[number];
 
 /** explanation_discharge — explanation axis. */
@@ -739,6 +739,14 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
           "An earlier explanation was withdrawn, with the reason, and the subject owes a new one.",
         cannot_justify:
           "that the earlier explanation was wrong; it says only that it no longer stands for this subject",
+      },
+      {
+        value: "imported",
+        label: "Imported",
+        meaning:
+          "The project's purpose, copied from the entry point an earlier version wrote, with no evidence attached. Only the project purpose may be imported.",
+        cannot_justify:
+          "that anyone has checked the purpose against the code; the copy carries the old entry point's words as they were",
       },
     ],
   },
@@ -1742,6 +1750,11 @@ export const VOCABULARY_SQL_BINDINGS: Readonly<Record<string, readonly Vocabular
     { table: "dispositions", column: "pass_type" },
     { table: "findings", column: "pass_type" },
   ],
+  narrative_section: [{ table: "narratives", column: "section" }],
+  narrative_disposition: [{ table: "narratives", column: "disposition" }],
+  claim_mark_kind: [{ table: "claim_marks", column: "kind" }],
+  territory_disposition: [{ table: "territory_dispositions", column: "disposition" }],
+  runtime_boundary_origin: [{ table: "runtime_boundaries", column: "origin" }],
 };
 
 /** The values a CHECK on those columns must admit, by enum name. */
@@ -1767,6 +1780,11 @@ export const SQL_CONSTRAINED_VOCABULARIES: Readonly<Record<string, readonly stri
   claim_epistemic_kind: CLAIM_EPISTEMIC_KINDS,
   concern_status: CONCERN_STATUSES,
   pass_type: PASS_TYPES,
+  narrative_section: NARRATIVE_SECTIONS,
+  narrative_disposition: NARRATIVE_DISPOSITIONS,
+  claim_mark_kind: CLAIM_MARK_KINDS,
+  territory_disposition: TERRITORY_DISPOSITIONS,
+  runtime_boundary_origin: RUNTIME_BOUNDARY_ORIGINS,
 };
 
 /**

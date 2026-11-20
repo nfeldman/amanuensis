@@ -15,7 +15,10 @@ jobs:
     name: MCP server (TypeScript)
     runs-on: ubuntu-latest
     steps:
+      # Full history: GATE SO2 builds the server of an earlier commit from git.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "24.18.0"
@@ -185,6 +188,13 @@ jobs:
       - name: Explanation record — the two writers, the effective row, the byte caps
         working-directory: mcp-server
         run: node test-explanations.mjs
+      # GATE SO2 (design/store-only/PLAN.md §8 SO2). The store-only tables and the
+      # explanations rebuild, on a fresh store and the two committed legacy
+      # fixtures; builds the lane's start commit's server into a temp directory
+      # to check it still opens a migrated store (hence fetch-depth: 0 above).
+      - name: Store-only schema — new tables, explanations rebuild, legacy fixtures, base server reads a migrated store
+        working-directory: mcp-server
+        run: node test-store-only-schema.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

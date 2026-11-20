@@ -611,6 +611,23 @@ for (const name of LEGACY) {
   }
   const path = loaded.path;
 
+  // An index and a trigger schema.sql does not declare. `initializeSchema`
+  // re-creates the declared ones after any rebuild, so without these a rebuild
+  // that dropped every object of the table would pass unnoticed (as GATE XS1's
+  // M4 found for `dispositions`).
+  {
+    const db = new Database(path);
+    try {
+      db.exec("CREATE INDEX idx_so2_explanations_probe ON explanations(ref_sha)");
+      db.exec(
+        "CREATE TRIGGER so2_explanations_probe BEFORE INSERT ON explanations FOR EACH ROW " +
+          "WHEN NEW.body = 'so2 probe: refuse me' BEGIN SELECT RAISE(ABORT, 'so2 probe'); END",
+      );
+    } finally {
+      db.close();
+    }
+  }
+
   // Shape and age, on the unmigrated copy.
   let before = null;
   let explanationsBefore = null;
@@ -625,7 +642,10 @@ for (const name of LEGACY) {
           wrong.push("its explanations table does not carry the CHECK that forbids a project purpose");
         }
         if (db.prepare("SELECT COUNT(*) AS n FROM explanations").get().n === 0) wrong.push("it holds no explanations to carry through the rebuild");
-        if (objectsOn(db, "explanations").length < 3) wrong.push("its explanations table carries fewer than an index and two triggers");
+        const objects = objectsOn(db, "explanations");
+        for (const object of ["index:idx_explanations_subject", "index:idx_so2_explanations_probe", "trigger:explanation_is_immutable", "trigger:explanation_cannot_be_deleted", "trigger:so2_explanations_probe"]) {
+          if (!objects.includes(object)) wrong.push(`its explanations table lacks ${object}`);
+        }
         return wrong.length ? wrong.join("; ") : null;
       });
       check(`${name}: the fixture keeps the shape later packets rely on`, () => fixtureShape(name, db));
@@ -810,6 +830,9 @@ for (const [label, path] of smokeTargets) {
             Object.keys(NEW_TABLES).map((t) => [t, db.prepare(`SELECT COUNT(*) AS n FROM "${t}"`).get().n]),
           ),
           explanations: db.prepare("SELECT COUNT(*) AS n FROM explanations").get().n,
+          subsystemIds: db.prepare("SELECT id FROM subsystems ORDER BY id").all().map((r) => r.id).join(","),
+          projectAccount:
+            db.prepare("SELECT MAX(id) AS id FROM explanations WHERE subject_type = 'project' AND slot = 'account'").get().id ?? null,
         };
       } finally {
         db.close();
@@ -828,7 +851,14 @@ for (const [label, path] of smokeTargets) {
     if (countOf(out.artifacts) !== want.artifacts) wrong.push(`list_artifacts read ${countOf(out.artifacts)}, the store holds ${want.artifacts}`);
     if (countOf(out.seams) !== want.seams) wrong.push(`list_seams read ${countOf(out.seams)}, the store holds ${want.seams}`);
     if (out.dashboard?.subsystem_count !== want.subsystems) wrong.push(`get_dashboard counted ${out.dashboard?.subsystem_count} subsystems`);
-    if (!Array.isArray(out.project?.slots)) wrong.push(`get_explanations(project) read ${JSON.stringify(out.project).slice(0, 120)}`);
+    const ids = Array.isArray(out.subsystems) ? out.subsystems.map((r) => r.id).sort().join(",") : null;
+    if (ids !== want.subsystemIds) wrong.push(`list_subsystems read [${ids}], the store holds [${want.subsystemIds}]`);
+    const account = Array.isArray(out.project?.slots) ? out.project.slots.find((slot) => slot.slot === "account") : null;
+    if (!account) wrong.push(`get_explanations(project) read ${JSON.stringify(out.project).slice(0, 120)}`);
+    else if (want.projectAccount === null) wrong.push("the store holds no project account for the base server to read");
+    else if (account.state !== "recorded" || account.row?.id !== want.projectAccount) {
+      wrong.push(`get_explanations(project) read the account as ${account.state}, row ${account.row?.id}; the newest is ${want.projectAccount}`);
+    }
     // The new server reopens what the old one opened, with the new rows intact.
     try {
       openDatabase(path).close();

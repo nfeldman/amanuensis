@@ -145,6 +145,11 @@ CREATE TABLE IF NOT EXISTS concerns (
                           CHECK (status IN ('active','retired','merged','candidate')),
     merged_into   TEXT,                 -- if merged, target concern code
     notes         TEXT,
+    -- Concern calibration (design/store-only/PLAN.md §2.2): the
+    -- concern-territories.md territory the concern was seeded from, and the
+    -- probe that tests it. Added to existing stores by runMigrations.
+    territory     TEXT,
+    probe         TEXT,
     FOREIGN KEY (merged_into) REFERENCES concerns(code)
 );
 
@@ -580,18 +585,26 @@ BEGIN SELECT RAISE(ABORT, 'vocabulary declination cannot be deleted'); END;
 -- Append-only, for the reason `vocabulary_declinations` gives: an explanation
 -- that can be edited after the fact is not a record of what a reader concluded
 -- and when. A correction is a new row, and it may share its predecessor's commit.
+--
+-- The project carries a purpose (its thesis) as well as an account
+-- (design/store-only/PLAN.md §2.2). A fourth disposition, `imported`, holds the
+-- thesis copied out of an earlier version's entry-point.md, with no evidence
+-- (D2); it is admitted for the project purpose and nowhere else. Stores created
+-- before this forbade a project purpose in a CHECK, so
+-- `migrateExplanationsProjectPurpose` in db.ts rebuilds them from this text.
 CREATE TABLE IF NOT EXISTS explanations (
     id            INTEGER PRIMARY KEY,
     subject_type  TEXT    NOT NULL CHECK (subject_type IN ('subsystem','project')),
     subject_id    TEXT    NOT NULL,   -- a subsystem id, or the literal 'project'
     slot          TEXT    NOT NULL CHECK (slot IN ('purpose','account')),
-    disposition   TEXT    NOT NULL CHECK (disposition IN ('recorded','declined','withdrawn')),
+    disposition   TEXT    NOT NULL CHECK (disposition IN ('recorded','declined','withdrawn','imported')),
     body          TEXT    NOT NULL,   -- the explanation, or the reason none is written or it was withdrawn
     ref_sha       TEXT    NOT NULL,
     session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
     recorded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
     CHECK (length(body) > 0),
-    CHECK (subject_type <> 'project' OR (subject_id = 'project' AND slot = 'account'))
+    CHECK (subject_type <> 'project' OR subject_id = 'project'),
+    CHECK (disposition <> 'imported' OR (subject_type = 'project' AND slot = 'purpose'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_explanations_subject
@@ -617,6 +630,197 @@ BEGIN SELECT RAISE(ABORT, 'explanation evidence is immutable'); END;
 CREATE TRIGGER IF NOT EXISTS explanation_evidence_cannot_be_deleted
 BEFORE DELETE ON explanation_evidence FOR EACH ROW
 BEGIN SELECT RAISE(ABORT, 'explanation evidence cannot be deleted'); END;
+
+
+----------------------------------------------------------------------
+-- STORE-ONLY RECORDS: prose and project facts the survey used to write by hand
+----------------------------------------------------------------------
+-- design/store-only/PLAN.md §2. Each table below holds content that until now
+-- lived only in a Markdown file under the storage directory: a subsystem's
+-- survey narrative, the project's name, its runtime boundary table, its
+-- territory calibration, and the files themselves as imported (§5). Every one
+-- is append-only, for the reason `explanations` gives: a correction is a new
+-- row, a withdrawal is a new row, and the effective row is read by one function
+-- in the server, never selected here.
+
+-- NARRATIVES: the survey's prose, bound to a revision (§2.1). One row per
+-- (subject, section, topic) version; `topic` replaces headings, and '' is the
+-- section's single body. Which sections a subject may hold, at which status,
+-- and whether evidence is required is the contract's `narrative_section` and is
+-- enforced by the writer.
+CREATE TABLE IF NOT EXISTS narratives (
+    id            INTEGER PRIMARY KEY,
+    subject_type  TEXT    NOT NULL CHECK (subject_type IN ('subsystem','project')),
+    subject_id    TEXT    NOT NULL,   -- a subsystem id, or the literal 'project'
+    section       TEXT    NOT NULL CHECK (section IN (
+                            'structure','concern-reasoning','challenge',
+                            'repository-shape','runtime','stateful-entities',
+                            'concern-calibration','start-here','survey-plan')),
+    topic         TEXT    NOT NULL DEFAULT '',
+    disposition   TEXT    NOT NULL CHECK (disposition IN ('recorded','declined','withdrawn')),
+    body          TEXT    NOT NULL,   -- the prose, or the reason none is written or it was withdrawn
+    ref_sha       TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (length(body) > 0),
+    CHECK (length(topic) <= 120),
+    CHECK (subject_type <> 'project' OR subject_id = 'project')
+);
+
+CREATE INDEX IF NOT EXISTS idx_narratives_subject
+    ON narratives(subject_type, subject_id, section, topic);
+
+CREATE TABLE IF NOT EXISTS narrative_evidence (
+    narrative_id  INTEGER NOT NULL REFERENCES narratives(id) ON DELETE RESTRICT,
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id)   ON DELETE RESTRICT,
+    PRIMARY KEY (narrative_id, evidence_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS narrative_is_immutable
+BEFORE UPDATE ON narratives FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'narrative is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS narrative_cannot_be_deleted
+BEFORE DELETE ON narratives FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'narrative cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS narrative_evidence_is_immutable
+BEFORE UPDATE ON narrative_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'narrative evidence is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS narrative_evidence_cannot_be_deleted
+BEFORE DELETE ON narrative_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'narrative evidence cannot be deleted'); END;
+
+-- PROJECT_PROFILE: the project's name (§2.2). The newest row is effective. It
+-- replaces the `**Codebase**:` line of onboarding-report.md.
+CREATE TABLE IF NOT EXISTS project_profile (
+    id            INTEGER PRIMARY KEY,
+    name          TEXT    NOT NULL CHECK (length(name) > 0),
+    ref_sha       TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TRIGGER IF NOT EXISTS project_profile_is_immutable
+BEFORE UPDATE ON project_profile FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'project profile is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS project_profile_cannot_be_deleted
+BEFORE DELETE ON project_profile FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'project profile cannot be deleted'); END;
+
+-- RUNTIME_BOUNDARIES: the runtime boundary map, one row per crossing (§2.2).
+-- The first five columns are the onboarding report's table. The effective row
+-- is the newest per (from_runtime, to_runtime, mechanism); a row with
+-- withdrawn = 1 retracts the edge. `imported` rows come from §5's import and
+-- carry no evidence; `recorded` rows need it, which the writer enforces.
+CREATE TABLE IF NOT EXISTS runtime_boundaries (
+    id            INTEGER PRIMARY KEY,
+    from_runtime  TEXT    NOT NULL CHECK (length(from_runtime) > 0),
+    from_language TEXT,
+    to_runtime    TEXT    NOT NULL CHECK (length(to_runtime) > 0),
+    mechanism     TEXT    NOT NULL CHECK (length(mechanism) > 0),
+    notes         TEXT,
+    origin        TEXT    NOT NULL CHECK (origin IN ('recorded','imported')),
+    withdrawn     INTEGER NOT NULL DEFAULT 0 CHECK (withdrawn IN (0, 1)),
+    ref_sha       TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_runtime_boundaries_edge
+    ON runtime_boundaries(from_runtime, to_runtime, mechanism);
+
+CREATE TABLE IF NOT EXISTS runtime_boundary_evidence (
+    boundary_id   INTEGER NOT NULL REFERENCES runtime_boundaries(id) ON DELETE RESTRICT,
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id)           ON DELETE RESTRICT,
+    PRIMARY KEY (boundary_id, evidence_id)
+);
+
+CREATE TRIGGER IF NOT EXISTS runtime_boundary_is_immutable
+BEFORE UPDATE ON runtime_boundaries FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'runtime boundary is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS runtime_boundary_cannot_be_deleted
+BEFORE DELETE ON runtime_boundaries FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'runtime boundary cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS runtime_boundary_evidence_is_immutable
+BEFORE UPDATE ON runtime_boundary_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'runtime boundary evidence is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS runtime_boundary_evidence_cannot_be_deleted
+BEFORE DELETE ON runtime_boundary_evidence FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'runtime boundary evidence cannot be deleted'); END;
+
+-- TERRITORY_DISPOSITIONS: whether a territory of concern-territories.md
+-- applies to the project (§2.2). The newest row per territory is effective. A
+-- disqualified territory names the condition that rules it out.
+CREATE TABLE IF NOT EXISTS territory_dispositions (
+    id               INTEGER PRIMARY KEY,
+    territory        TEXT    NOT NULL CHECK (length(territory) > 0),
+    disposition      TEXT    NOT NULL CHECK (disposition IN ('applies','disqualified')),
+    condition        TEXT,
+    open_question_id INTEGER REFERENCES open_questions(id),
+    ref_sha          TEXT    NOT NULL,
+    session_id       TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (disposition <> 'disqualified' OR length(trim(coalesce(condition, ''))) > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_territory_dispositions_territory
+    ON territory_dispositions(territory);
+
+CREATE TRIGGER IF NOT EXISTS territory_disposition_is_immutable
+BEFORE UPDATE ON territory_dispositions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'territory disposition is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS territory_disposition_cannot_be_deleted
+BEFORE DELETE ON territory_dispositions FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'territory disposition cannot be deleted'); END;
+
+-- IMPORTED_ARTIFACTS: every hand-written file an earlier version registered,
+-- as written (§2.4, §5.2). One row per path; `body` is the file's bytes as
+-- UTF-8 text and `hash_matches` says whether they still equal the hash
+-- `artifacts` registered. A subsystem reset retires an imported survey body by
+-- appending a withdrawal, never by deleting it.
+CREATE TABLE IF NOT EXISTS imported_artifacts (
+    id                 INTEGER PRIMARY KEY,
+    path               TEXT    NOT NULL UNIQUE,
+    kind               TEXT    NOT NULL CHECK (kind IN (
+                                 'onboarding-report','entry-point','master-plan',
+                                 'findings-index','concern-checklist','field-notes',
+                                 'subsystem-survey','seam-assessment','dispatch-prompt')),
+    subsystem_id       TEXT,
+    body               TEXT    NOT NULL,
+    body_sha256        TEXT    NOT NULL CHECK (length(body_sha256) = 64),
+    registered_hash    TEXT,               -- artifacts.content_hash at import
+    hash_matches       INTEGER NOT NULL CHECK (hash_matches IN (0, 1)),
+    registered_ref_sha TEXT,               -- artifacts.ref_sha at import
+    written_at         TEXT,               -- artifacts.written_at at import
+    imported_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    session_id         TEXT    NOT NULL REFERENCES sessions(session_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_imported_artifacts_subsystem
+    ON imported_artifacts(subsystem_id);
+
+CREATE TABLE IF NOT EXISTS imported_artifact_withdrawals (
+    id            INTEGER PRIMARY KEY,
+    path          TEXT    NOT NULL REFERENCES imported_artifacts(path) ON DELETE RESTRICT,
+    reason        TEXT    NOT NULL CHECK (length(reason) > 0),
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    at            TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_imported_artifact_withdrawals_path
+    ON imported_artifact_withdrawals(path);
+
+CREATE TRIGGER IF NOT EXISTS imported_artifact_is_immutable
+BEFORE UPDATE ON imported_artifacts FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'imported artifact is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS imported_artifact_cannot_be_deleted
+BEFORE DELETE ON imported_artifacts FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'imported artifact cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS imported_artifact_withdrawal_is_immutable
+BEFORE UPDATE ON imported_artifact_withdrawals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'imported artifact withdrawal is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS imported_artifact_withdrawal_cannot_be_deleted
+BEFORE DELETE ON imported_artifact_withdrawals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'imported artifact withdrawal cannot be deleted'); END;
 
 
 ----------------------------------------------------------------------
@@ -1692,6 +1896,76 @@ SELECT 'legacy:contradiction:' || id,
        conflict_type || ' between ' || finding_a || ' and ' || finding_b,
        'inference', NULL, shared_location, 'contradictions'
   FROM contradictions;
+
+----------------------------------------------------------------------
+-- CLAIM MARKS: what a flow step does, for the flow strip
+----------------------------------------------------------------------
+-- design/store-only/PLAN.md §7.2 (catalog N1). A mark records that a flow-step
+-- claim (`<sid>/flow/<slug>/<nn>`) is a commit point, a crash point, an exit, a
+-- seam crossing or the flow's trigger, over one evidence row citing the claim
+-- subject's file. Which claims a kind applies to and which of `label` and
+-- `target` it requires is the contract's `claim_mark_kind`, enforced by the
+-- writer. A mark inherits its claim's validity: a closed claim's marks are not
+-- current, and its successor records its own.
+--
+-- Append-only. A mistaken mark is retracted by a row in
+-- `claim_mark_withdrawals`, so its claim need not close; a flow that has no
+-- marks to record says so in `claim_mark_declinations`, keyed by the flow
+-- (`<sid>/flow/<slug>`), which is what `decline_claim_marks` takes.
+CREATE TABLE IF NOT EXISTS claim_marks (
+    id            INTEGER PRIMARY KEY,
+    claim_id      TEXT    NOT NULL REFERENCES claims(claim_id) ON DELETE RESTRICT,
+    kind          TEXT    NOT NULL CHECK (kind IN (
+                            'commit-point','crash-point','exit','crosses-seam','trigger')),
+    label         TEXT,               -- crash-point label, exit status
+    target        TEXT,               -- exit: the step it unwinds to, or 'leaves-flow'; crosses-seam: a seam id
+    evidence_id   INTEGER NOT NULL REFERENCES evidence(id) ON DELETE RESTRICT,
+    ref_sha       TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_marks_claim ON claim_marks(claim_id);
+
+CREATE TABLE IF NOT EXISTS claim_mark_withdrawals (
+    id            INTEGER PRIMARY KEY,
+    mark_id       INTEGER NOT NULL REFERENCES claim_marks(id) ON DELETE RESTRICT,
+    reason        TEXT    NOT NULL CHECK (length(reason) > 0),
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_mark_withdrawals_mark ON claim_mark_withdrawals(mark_id);
+
+CREATE TABLE IF NOT EXISTS claim_mark_declinations (
+    id            INTEGER PRIMARY KEY,
+    flow_key      TEXT    NOT NULL CHECK (length(flow_key) > 0),
+    reason        TEXT    NOT NULL CHECK (length(reason) > 0),
+    ref_sha       TEXT    NOT NULL,
+    session_id    TEXT    NOT NULL REFERENCES sessions(session_id),
+    recorded_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_mark_declinations_flow ON claim_mark_declinations(flow_key);
+
+CREATE TRIGGER IF NOT EXISTS claim_mark_is_immutable
+BEFORE UPDATE ON claim_marks FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS claim_mark_cannot_be_deleted
+BEFORE DELETE ON claim_marks FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS claim_mark_withdrawal_is_immutable
+BEFORE UPDATE ON claim_mark_withdrawals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark withdrawal is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS claim_mark_withdrawal_cannot_be_deleted
+BEFORE DELETE ON claim_mark_withdrawals FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark withdrawal cannot be deleted'); END;
+CREATE TRIGGER IF NOT EXISTS claim_mark_declination_is_immutable
+BEFORE UPDATE ON claim_mark_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark declination is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS claim_mark_declination_cannot_be_deleted
+BEFORE DELETE ON claim_mark_declinations FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'claim mark declination cannot be deleted'); END;
 
 ----------------------------------------------------------------------
 -- CHANGE IMPACT: predicted diffs, explanation paths, and application

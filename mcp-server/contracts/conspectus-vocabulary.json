@@ -470,6 +470,12 @@
           "label": "Withdrawn",
           "meaning": "An earlier explanation was withdrawn, with the reason, and the subject owes a new one.",
           "cannot_justify": "that the earlier explanation was wrong; it says only that it no longer stands for this subject"
+        },
+        {
+          "value": "imported",
+          "label": "Imported",
+          "meaning": "The project's purpose, copied from the entry point an earlier version wrote, with no evidence attached. Only the project purpose may be imported.",
+          "cannot_justify": "that anyone has checked the purpose against the code; the copy carries the old entry point's words as they were"
         }
       ]
     },
@@ -1298,7 +1304,13 @@
       "axis": "narrative",
       "const_name": "NARRATIVE_SECTIONS",
       "reader_facing": false,
-      "note": "The sections of stored prose, by the subject that owns them. A subsystem section is written once the subsystem has reached min_status; a project section has none. evidence says whether the prose must cite a file. SO2 binds this to the schema.",
+      "sql": [
+        {
+          "table": "narratives",
+          "column": "section"
+        }
+      ],
+      "note": "The sections of stored prose, by the subject that owns them. A subsystem section is written once the subsystem has reached min_status; a project section has none. evidence says whether the prose must cite a file.",
       "values": [
         {
           "value": "structure",
@@ -1381,7 +1393,13 @@
       "axis": "narrative",
       "const_name": "NARRATIVE_DISPOSITIONS",
       "reader_facing": false,
-      "note": "What a stored narrative row says. Earlier rows are kept and never rendered as current; the newest row that resolves is the effective one. SO2 binds this to the schema.",
+      "sql": [
+        {
+          "table": "narratives",
+          "column": "disposition"
+        }
+      ],
+      "note": "What a stored narrative row says. Earlier rows are kept and never rendered as current; the newest row that resolves is the effective one.",
       "values": [
         {
           "value": "recorded",
@@ -1407,7 +1425,13 @@
       "axis": "flow-mark",
       "const_name": "CLAIM_MARK_KINDS",
       "reader_facing": false,
-      "note": "Marks on a flow step: what the flow draws from them. applies_to names a claim key family (claim_key_families); requires lists the mark columns the kind must carry; only_step limits the kind to one step number. SO2 binds this to the schema.",
+      "sql": [
+        {
+          "table": "claim_marks",
+          "column": "kind"
+        }
+      ],
+      "note": "Marks on a flow step: what the flow draws from them. applies_to names a claim key family (claim_key_families); requires lists the mark columns the kind must carry; only_step limits the kind to one step number.",
       "values": [
         {
           "value": "commit-point",
@@ -1463,7 +1487,13 @@
       "axis": "territory",
       "const_name": "TERRITORY_DISPOSITIONS",
       "reader_facing": false,
-      "note": "Whether a territory of concern applies to the project. The newest row per territory is the effective one. SO2 binds this to the schema.",
+      "sql": [
+        {
+          "table": "territory_dispositions",
+          "column": "disposition"
+        }
+      ],
+      "note": "Whether a territory of concern applies to the project. The newest row per territory is the effective one.",
       "values": [
         {
           "value": "applies",
@@ -1483,7 +1513,13 @@
       "axis": "runtime",
       "const_name": "RUNTIME_BOUNDARY_ORIGINS",
       "reader_facing": false,
-      "note": "Where a runtime boundary row came from. SO2 binds this to the schema.",
+      "sql": [
+        {
+          "table": "runtime_boundaries",
+          "column": "origin"
+        }
+      ],
+      "note": "Where a runtime boundary row came from.",
       "values": [
         {
           "value": "recorded",

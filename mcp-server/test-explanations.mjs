@@ -792,7 +792,11 @@ async function main(mods) {
             .run(type, id, slot, disposition, body, headSha(ctx), ctx.sessionId),
         );
       const wrong = [];
-      if (!insert("project", "project", "purpose", "recorded")) wrong.push("a project purpose row was stored");
+      // The project holds a purpose since store-only SO2 (design/store-only/PLAN.md
+      // §2.2), so the refusal moved to the one row the schema still forbids for
+      // it: `imported` belongs to the project purpose and nowhere else.
+      if (!insert("subsystem", "S-01", "purpose", "imported")) wrong.push("an imported subsystem row was stored");
+      if (!insert("project", "project", "account", "imported")) wrong.push("an imported project account was stored");
       if (!insert("project", "S-01", "account", "recorded")) wrong.push("a project row with a subsystem id was stored");
       if (!insert("subsystem", "S-01", "summary", "recorded")) wrong.push("an unknown slot was stored");
       if (!insert("subsystem", "S-01", "purpose", "superseded")) wrong.push("an unknown disposition was stored");
@@ -939,7 +943,9 @@ async function main(mods) {
       explanation_subject: { values: ["subsystem", "project"], column: "subject_type", constName: "EXPLANATION_SUBJECTS" },
       explanation_slot: { values: ["purpose", "account"], column: "slot", constName: "EXPLANATION_SLOTS" },
       explanation_disposition: {
-        values: ["recorded", "declined", "withdrawn"],
+        // `imported` is the thesis copied from an earlier entry point
+        // (design/store-only/PLAN.md §2.2, D2; added by SO2).
+        values: ["recorded", "declined", "withdrawn", "imported"],
         column: "disposition",
         constName: "EXPLANATION_DISPOSITIONS",
       },

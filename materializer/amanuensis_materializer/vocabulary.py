@@ -95,6 +95,7 @@ EXPLANATION_DISPOSITIONS: tuple[str, ...] = (
     "recorded",
     "declined",
     "withdrawn",
+    "imported",
 )
 
 # explanation_discharge — explanation axis.
@@ -707,6 +708,12 @@ VOCABULARY: dict[str, dict[str, object]] = {
                 "label": "Withdrawn",
                 "meaning": "An earlier explanation was withdrawn, with the reason, and the subject owes a new one.",
                 "cannot_justify": "that the earlier explanation was wrong; it says only that it no longer stands for this subject",
+            },
+            {
+                "value": "imported",
+                "label": "Imported",
+                "meaning": "The project's purpose, copied from the entry point an earlier version wrote, with no evidence attached. Only the project purpose may be imported.",
+                "cannot_justify": "that anyone has checked the purpose against the code; the copy carries the old entry point's words as they were",
             },
         ),
     },
