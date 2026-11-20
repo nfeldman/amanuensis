@@ -195,6 +195,13 @@ jobs:
       - name: Store-only schema — new tables, explanations rebuild, legacy fixtures, base server reads a migrated store
         working-directory: mcp-server
         run: node test-store-only-schema.mjs
+      # GATE SO3 (design/store-only/PLAN.md §8 SO3). The narrative tools over
+      # temporary git workspaces and stores the gate creates itself; one arm
+      # spawns the built server over stdio to read tools/list. Needs python3 and
+      # the materializer for the orientation lint, as the explanation gates do.
+      - name: Narrative tools — record, decline, get, the rungs, the shape, the effective row, reset withdrawal
+        working-directory: mcp-server
+        run: node test-store-only-narratives.mjs
       # The orientation lint at write time (BACKLOG explanation quality item 2):
       # both writers refuse text the pages would withhold. Needs python3 and the
       # materializer, as the projection gates do.

@@ -453,6 +453,196 @@
         { "file": "../.claude/skills/amanuensis/references/memory-audit.md" },
         { "file": "../.claude/skills/amanuensis/references/refresh.md" }
       ]
+    },
+    {
+      "id": "narrative-record-no-subsystem",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: no subsystem" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-below-rung",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative is written once a subsystem has reached" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-wrong-subject",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "Record it with subject_type" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-cites-evidence",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative cites the evidence it was written from" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-too-many-evidence",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "a narrative cites at most" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-not-in-ledger",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: none of the cited evidence is in" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-too-long",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: a narrative is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-shape",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "a narrative is prose and lists" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-topic",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: a topic is a short title on one line" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-revision",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "record_narrative refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-record-orientation",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["record_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "the narrative carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-no-subsystem",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: no subsystem" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-below-rung",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "narrative is answered once a subsystem has reached" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-wrong-subject",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "Decline it with subject_type" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-reason-too-long",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a reason is limited to" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-reason-one-paragraph",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a reason is one paragraph" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-topic",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: a topic is a short title on one line" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-revision",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: ref_sha" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
+    },
+    {
+      "id": "narrative-decline-orientation",
+      "note": "New, store-only PLAN §2.1 (SO3).",
+      "refuses": ["decline_narrative"],
+      "instructs": [],
+      "server": { "file": "src/tools/narratives.ts", "phrase": "decline_narrative refuses: the reason carries survey-status language or a count fraction" },
+      "references": [
+        { "file": "../.claude/skills/amanuensis/references/explanations.md" }
+      ]
     }
   ]
 }

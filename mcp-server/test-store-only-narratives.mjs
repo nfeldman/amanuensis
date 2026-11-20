@@ -787,7 +787,7 @@ async function main(mods) {
     const rowsBefore = narrativeCount(ctx);
     const result = call(
       "reset_subsystem",
-      { id: "S-01", to_status: "scoping", reason: "the structure was read wrongly" },
+      { id: "S-01", to_status: "structural", reason: "the structure was read wrongly" },
       ctx,
     );
     if (result.ok === false) return `the reset was refused: ${result.error}`;

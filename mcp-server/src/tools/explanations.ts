@@ -20,9 +20,9 @@ import { EXPLANATION_SLOTS, EXPLANATION_SUBJECTS } from "../vocabulary.js";
 
 /** Caps in UTF-8 bytes (design/explanation/spec.md §3.3). 4096 is the optional-section budget of the reader-lenses wire. */
 const BODY_CAPS = { purpose: 400, account: 4096 } as const;
-const REASON_CAP = 400;
+export const REASON_CAP = 400;
 /** A read serves every cited id, so the response is bounded only if the count is. */
-const EVIDENCE_CAP = 64;
+export const EVIDENCE_CAP = 64;
 /** The read echoes the subject id and `upsert_subsystem` takes one of any size, so the envelope is bounded only if the read refuses a longer one. */
 const READ_SUBJECT_ID_CAP = 256;
 
@@ -80,7 +80,7 @@ const DECLINE_REFUSALS = {
 
 type Tool = "record_explanation" | "decline_explanation";
 
-const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
+export const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
 
 /**
  * Every line break a page recognizes. The HTML projection splits on Python's
@@ -88,10 +88,10 @@ const byteLength = (text: string) => Buffer.byteLength(text, "utf8");
  * and the shape checks have to see the same lines.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: these separators are what the check is for
-const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
+export const LINE_BREAK = /\r\n|[\n\r\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/;
 
 /** A paragraph carries no blank line and no heading, list or table line. */
-function isOneParagraph(text: string): boolean {
+export function isOneParagraph(text: string): boolean {
   return text.split(LINE_BREAK).every((line) => {
     const trimmed = line.trimStart();
     return trimmed !== "" && !/^[#\-*|]/.test(trimmed);
@@ -99,7 +99,7 @@ function isOneParagraph(text: string): boolean {
 }
 
 /** An account is prose and lists: blank lines and list lines pass, headings and tables do not. */
-function isProseAndLists(text: string): boolean {
+export function isProseAndLists(text: string): boolean {
   return text.split(LINE_BREAK).every((line) => !/^[#|]/.test(line.trimStart()));
 }
 

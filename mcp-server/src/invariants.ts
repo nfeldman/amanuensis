@@ -498,6 +498,121 @@ export function readExplanation(
   return { ...selection, unreachable };
 }
 
+/** One narrative section as the contract states it: who owns it, from which rung, and whether it must cite a file. */
+export interface NarrativeSectionRule {
+  section: string;
+  subjectType: "subsystem" | "project";
+  /** The lowest status at which a subsystem section is written; null for a project section. */
+  minStatus: string | null;
+  evidenceRequired: boolean;
+}
+
+/** The sections `narrative_section` carries, read from the contract so the tools and the contract cannot disagree. */
+export const NARRATIVE_SECTION_RULES: readonly NarrativeSectionRule[] = (
+  VOCABULARY.narrative_section?.values ?? []
+).map((entry) => ({
+  section: entry.value,
+  subjectType: entry.subject_type === "project" ? "project" : "subsystem",
+  minStatus: entry.min_status ?? null,
+  evidenceRequired: entry.evidence === "required",
+}));
+
+export function narrativeSectionRule(section: string): NarrativeSectionRule | null {
+  return NARRATIVE_SECTION_RULES.find((rule) => rule.section === section) ?? null;
+}
+
+/**
+ * Whether a subsystem at `status` may hold a narrative of `section`: its status
+ * is on the ladder and at or above the section's rung. A parked subsystem is
+ * `deferred`, which is off the ladder, and holds none until it is resumed.
+ */
+export function isNarrativeEligible(section: string, status: string | null): boolean {
+  const rule = narrativeSectionRule(section);
+  if (rule === null || rule.subjectType !== "subsystem" || rule.minStatus === null) return false;
+  const have = status === null ? undefined : statusRank(status);
+  const need = statusRank(rule.minStatus);
+  return have !== undefined && need !== undefined && have >= need;
+}
+
+export interface NarrativeRow {
+  id: number;
+  subject_type: string;
+  subject_id: string;
+  section: string;
+  topic: string;
+  disposition: string;
+  body: string;
+  ref_sha: string;
+  session_id: string;
+  recorded_at: string;
+}
+
+export interface NarrativeReading {
+  /** Per (section, topic), the newest row, when it is recorded or declined. Ordered by section, topic. */
+  rows: NarrativeRow[];
+  /** Keys whose newest row is a withdrawal: the subject owes a new narrative there. */
+  withdrawn: number;
+  /** Every row kept that is not an effective one, newest first. */
+  earlier: NarrativeRow[];
+}
+
+/**
+ * The effective narratives of one subject, re-derived from the rows at every
+ * read: for each `(section, topic)` the row with the greatest id, a correction
+ * being a new row that may share the earlier row's commit. A key whose newest
+ * row is `withdrawn` has no effective narrative. Every reader and the reset call
+ * this, and nothing keeps a flag.
+ */
+export function readNarratives(
+  db: DB,
+  subjectType: string,
+  subjectId: string,
+  section?: string,
+): NarrativeReading {
+  const rows = db
+    .prepare(
+      `SELECT id, subject_type, subject_id, section, topic, disposition, body, ref_sha, session_id, recorded_at
+         FROM narratives
+        WHERE subject_type = ? AND subject_id = ? AND (? IS NULL OR section = ?)
+        ORDER BY id DESC`,
+    )
+    .all(subjectType, subjectId, section ?? null, section ?? null) as NarrativeRow[];
+  const newest = new Map<string, NarrativeRow>();
+  const earlier: NarrativeRow[] = [];
+  for (const row of rows) {
+    const key = `${row.section}\u0000${row.topic}`;
+    if (newest.has(key)) earlier.push(row);
+    else newest.set(key, row);
+  }
+  const current = [...newest.values()];
+  const order = new Map(NARRATIVE_SECTION_RULES.map((rule, index) => [rule.section, index]));
+  return {
+    rows: current
+      .filter((row) => row.disposition !== "withdrawn")
+      .sort(
+        (a, b) =>
+          (order.get(a.section) ?? 0) - (order.get(b.section) ?? 0) ||
+          (a.topic < b.topic ? -1 : a.topic > b.topic ? 1 : 0),
+      ),
+    withdrawn: current.filter((row) => row.disposition === "withdrawn").length,
+    earlier,
+  };
+}
+
+/** One slot of {@link readNarratives}: the effective narrative at a topic, or null. */
+export function readNarrative(
+  db: DB,
+  subjectType: string,
+  subjectId: string,
+  section: string,
+  topic = "",
+): NarrativeRow | null {
+  return (
+    readNarratives(db, subjectType, subjectId, section).rows.find((row) => row.topic === topic) ??
+    null
+  );
+}
+
 /**
  * §3.4, checked at every write into `mapped`, on its own path.
  *

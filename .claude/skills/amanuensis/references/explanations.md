@@ -142,3 +142,80 @@ read `not-recorded`, and the resurveyed subsystem owes a new explanation:
 the workspace's current revision. When that cannot be resolved it is written at
 each revision the slot's rows name, so the withdrawal still holds in whichever
 workspace is bound later.
+
+## Narratives
+
+A **narrative** is the survey's longer prose about one subject, kept in the store
+and not in a file: how a subsystem is built, why each concern was judged as it
+was, what the challenge tried, and the project's shape, runtime, state, concern
+calibration, reading route and plan. It is recorded at a revision, over the
+evidence it was written from, and is kept: a correction is a new row. The record
+establishes who wrote it, at which revision and over which evidence, not that it
+is true.
+
+| Section | Subject | Written once the subsystem has reached | Evidence |
+|---|---|---|---|
+| `structure` | subsystem | `scoping` | required |
+| `concern-reasoning` | subsystem | `concerns` | required |
+| `challenge` | subsystem | `adversarial` | required |
+| `repository-shape`, `runtime`, `stateful-entities`, `concern-calibration`, `start-here` | project | no rung | required |
+| `survey-plan` | project | no rung | optional |
+
+A body is prose and lists of at most 8192 bytes: no line starting with `#` or `|`,
+since the page owns its headings and tables. A section holds several narratives,
+one per **topic** (a short title of at most 120 characters, empty for the
+section's single body); the effective one for each subject, section and topic is
+the newest. Cite at least one file in the subsystem's ledger.
+
+### `record_narrative`
+
+`record_narrative(subject_type, subject_id?, section, topic?, body, evidence_ids, ref_sha)`
+records a narrative as `recorded`. It needs an active session, and returns
+`{id, subject_type, subject_id, section, topic, disposition, ref_sha}` without the
+body. It refuses, each time with the sentence to repair:
+
+- `record_narrative refuses: no subsystem <id>` — the subsystem does not exist.
+- `a <section> narrative is written once a subsystem has reached '<rung>'` — advance the subsystem first; a parked (`deferred`) subsystem holds none until it is resumed.
+- `Record it with subject_type` — the section belongs to the other kind of subject.
+- `a <section> narrative cites the evidence it was written from` — `evidence_ids` is empty or names a row that does not exist; only `survey-plan` may cite none.
+- `a narrative cites at most` 64 evidence rows.
+- `record_narrative refuses: none of the cited evidence is in <id>'s ledger` — cite a file the ledger holds; files outside it may accompany it.
+- `record_narrative refuses: a narrative is limited to 8192 bytes` — split it into topics.
+- `a narrative is prose and lists` — the body has a line starting with `#` or `|`.
+- `record_narrative refuses: a topic is a short title on one line` — over 120 characters, or on more than one line.
+- `record_narrative refuses: ref_sha <ref> does not resolve` — record the revision the reading was taken at.
+- `the narrative carries survey-status language or a count fraction` — the same lint as for an explanation.
+
+### `decline_narrative`
+
+`decline_narrative(subject_type, subject_id?, section, topic?, reason, ref_sha)`
+records the reason no narrative is written, as `declined`; the newest row is
+effective whether or not a narrative is recorded. The reason is one paragraph of
+at most 400 bytes. It applies the subject and rung conditions of `record_narrative`
+with its own sentences:
+
+- `decline_narrative refuses: no subsystem <id>`
+- `narrative is answered once a subsystem has reached '<rung>'`
+- `Decline it with subject_type`
+- `decline_narrative refuses: a reason is limited to 400 bytes`
+- `decline_narrative refuses: a reason is one paragraph`
+- `decline_narrative refuses: a topic is a short title on one line`
+- `decline_narrative refuses: ref_sha <ref> does not resolve`
+- `decline_narrative refuses: the reason carries survey-status language or a count fraction`
+
+### `get_narratives`
+
+`get_narratives(subject_type, subject_id?, section?, history?)` reads back the
+effective narrative for each section and topic, as
+`{id, section, topic, disposition, authored: "model", body, ref_sha, session_id, recorded_at, evidence_ids}`,
+with `withdrawn` counting the keys a reset withdrew and `model_calls: 0`. `history`
+adds the rows that are not effective, without their bodies. It needs no session
+and writes nothing.
+
+### A reset withdraws
+
+`reset_subsystem` does not delete narratives. It appends a `withdrawn` row, with the
+reset's reason as its body, for every effective narrative of that subsystem, and a
+withdrawal for each imported survey body of it, and needs an active session to
+attribute them. The earlier rows are kept, and the resurveyed subsystem owes a new
+narrative.

@@ -11,6 +11,7 @@ import {
   enforceForwardPrerequisites,
   enforceMonotonicTransition,
   heldBeforeParking,
+  readNarratives,
   readSubsystemStatus,
   recordStatusTransition,
   requireActiveSession,
@@ -386,18 +387,34 @@ export const subsystemTools: ToolDefinition[] = [
         )
         .all(id) as Array<{ slot: string; ref_sha: string }>;
       const withdrawnSlots = [...new Set(explained.map((row) => row.slot))];
+      // The same holds for a narrative (PLAN §2.1) and for an imported survey
+      // body (§2.4): neither is deleted, each is withdrawn by a new row, and
+      // the new row is attributed to a session.
+      const narrated = readNarratives(ctx.db, "subsystem", id).rows;
+      const importedSurveys = ctx.db
+        .prepare(
+          `SELECT path FROM imported_artifacts
+            WHERE subsystem_id = ? AND kind = 'subsystem-survey'
+              AND path NOT IN (SELECT path FROM imported_artifact_withdrawals)
+            ORDER BY id`,
+        )
+        .all(id) as Array<{ path: string }>;
       const withdrawnBy =
-        explained.length > 0 ? requireActiveSession(ctx, "reset_subsystem") : null;
+        explained.length > 0 || narrated.length > 0 || importedSurveys.length > 0
+          ? requireActiveSession(ctx, "reset_subsystem")
+          : null;
       // The withdrawn row has to resolve in the workspace or the reader would skip
       // it and fall back to the row it withdraws, so it is written at the
       // workspace's current revision. When that cannot be resolved, one row is
       // written at each revision the slot's rows name: whichever of them a later
       // workspace still reaches, a withdrawal at that revision outranks it.
       let withdrawals = explained;
-      if (explained.length > 0) {
+      let narrativeRevision: string | null = null;
+      if (explained.length > 0 || narrated.length > 0) {
         try {
           const head = resolveWorkspaceCommit(ctx, "HEAD");
           withdrawals = withdrawnSlots.map((slot) => ({ slot, ref_sha: head }));
+          narrativeRevision = head;
         } catch {
           /* no revision to name here, so the rows' own revisions stand */
         }
@@ -469,6 +486,24 @@ export const subsystemTools: ToolDefinition[] = [
             )
             .run(id, slot.slot, reason, slot.ref_sha, withdrawnBy);
         }
+        // The narrative reader takes the newest row per key, so a withdrawal
+        // needs no revision that resolves; it names the workspace's head when
+        // there is one and the row it withdraws otherwise.
+        for (const row of narrated) {
+          ctx.db
+            .prepare(
+              `INSERT INTO narratives (subject_type, subject_id, section, topic, disposition, body, ref_sha, session_id)
+               VALUES ('subsystem', ?, ?, ?, 'withdrawn', ?, ?, ?)`,
+            )
+            .run(id, row.section, row.topic, reason, narrativeRevision ?? row.ref_sha, withdrawnBy);
+        }
+        for (const survey of importedSurveys) {
+          ctx.db
+            .prepare(
+              "INSERT INTO imported_artifact_withdrawals (path, reason, session_id) VALUES (?, ?, ?)",
+            )
+            .run(survey.path, reason, withdrawnBy);
+        }
         ctx.db
           .prepare(
             "UPDATE subsystems SET status=?, updated_at=datetime('now'), notes = COALESCE(notes, '') || char(10) || ? WHERE id = ?",
@@ -493,6 +528,8 @@ export const subsystemTools: ToolDefinition[] = [
         new_status: toStatus,
         deleted,
         withdrawn_explanations: withdrawnSlots.length,
+        withdrawn_narratives: narrated.length,
+        withdrawn_imported_surveys: importedSurveys.length,
       });
     },
   },

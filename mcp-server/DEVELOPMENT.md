@@ -199,7 +199,7 @@ field or why nothing changed; it cannot mutate accepted decision history.
 
 <!-- TOOL-INVENTORY-START -->
 
-_213 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
+_216 tools across 45 groups. Generated from `tools/list` — do not hand-edit._
 
 ### `artifacts` (3)
 
@@ -487,6 +487,14 @@ _213 tools across 44 groups. Generated from `tools/list` — do not hand-edit._
 |---|---|
 | `materialize_docs` | Render synchronized self-contained HTML and Markdown conspectus views inside the bound project storage, returning html_entrypoint as the primary human reading surface, then read both formats back independently on state, coverage, and content axes. clean_publish=true renders in isolation and promotes only when every axis is green; a red run leaves the previous output untouched and records mismatches without altering durable truth. Refuses before rendering when the store has no standing reconciliation at HEAD, or when the standing one reports tracked paths with no ledger row or ledger rows the tree no longer carries: run detect_changes and assign or exempt every path it reports first. |
 | `verify_materialized_docs` | Read back existing HTML and Markdown projections inside the bound project storage without rendering or repairing them. Records state, coverage, and content mismatches as an auditable verification run and returns the HTML entrypoint; durable source truth is read-only. |
+
+### `narratives` (3)
+
+| Tool | Description |
+|---|---|
+| `record_narrative` | Record a narrative: the survey's prose about a subsystem (structure, concern-reasoning or challenge) or about the project (repository-shape, runtime, stateful-entities, concern-calibration, start-here or survey-plan), written from the evidence cited and bound to a revision. A subsystem section is written once the subsystem has reached its rung ('scoping' for structure, 'concerns' for concern-reasoning, 'adversarial' for challenge); a project section has none. The body is prose and lists of at most 8192 UTF-8 bytes with no heading or table line; use topic (a short title of at most 120 characters, empty for the section's single body) to name one part of a section. It is refused for text the pages' orientation lint would withhold (survey-status language, or a count fraction such as 12/35), for evidence that is missing or does not exist, and, for a subsystem, for evidence that names no file in its ledger; survey-plan needs no evidence and at most 64 rows may be cited. The record is append-only: the newest row per subject, section and topic is the effective one, and a correction is a new row. Returns a receipt and does not echo the body. |
+| `decline_narrative` | Declare that no narrative is written for a subsystem or project section, with the reason: the other way to answer the obligation record_narrative carries. The reason is one paragraph of at most 400 UTF-8 bytes, refused if the pages' orientation lint would withhold it, and declining is a real answer that has to be said out loud rather than left as silence. It applies the same subject, section and rung conditions as record_narrative. It is accepted whether or not a narrative is already recorded: the newest row per subject, section and topic is the effective one. The record is append-only. Returns a receipt and does not echo the reason. |
+| `get_narratives` | Read the narratives recorded for a subsystem or for the project, optionally for one section. Returns the effective row for each section and topic (id, section, topic, disposition recorded or declined, body, ref_sha, session_id, recorded_at, evidence_ids), ordered by section as the contract lists them, and how many section-and-topic keys were withdrawn by a reset and are owed again. With history it also lists the rows that are not effective, newest first, without their bodies. Every body is authored by a model and is served whole; model_calls is 0. It needs no session and writes nothing. |
 
 ### `open-questions` (4)
 

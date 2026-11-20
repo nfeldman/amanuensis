@@ -73,6 +73,10 @@ const ADDITIVE_TOOLS = new Set([
   // new row.
   "record_explanation",
   "decline_explanation",
+  // `narratives` and `narrative_evidence` are append-only in the same way
+  // (PLAN §2.1): each writer inserts rows, and a correction is a new row.
+  "record_narrative",
+  "decline_narrative",
   "record_open_question",
   "rebaseline_operating_envelope",
 ]);
@@ -131,6 +135,7 @@ import { learningTools } from "./tools/learning.js";
 import { lockTools } from "./tools/locks.js";
 import { loggingTools } from "./tools/logging.js";
 import { materializeTools } from "./tools/materialize.js";
+import { narrativeTools } from "./tools/narratives.js";
 import { openQuestionTools } from "./tools/open-questions.js";
 import { projectTools } from "./tools/project.js";
 import { refreshTools } from "./tools/refresh.js";
@@ -328,6 +333,7 @@ async function main(): Promise<void> {
     ...fieldNoteTools,
     ...vocabularyTools,
     ...explanationTools,
+    ...narrativeTools,
     ...carriedTools,
     ...xrefTools,
     ...contradictionTools,
