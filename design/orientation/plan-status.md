@@ -20,7 +20,7 @@
 | O9 | Overview Method route | done (1 attempt) | O3, O4 | `materializer/test-orientation-overview.py` | §4 O9, §3 |
 | O14 | Say what the Markdown view leaves out | done (1 attempt) | O3 | `materializer/test-orientation-views.py` | §4 O14, §4 Publishing defects |
 
-## S3 · IDs and structure visuals (review: pending)
+## S3 · IDs and structure visuals (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|

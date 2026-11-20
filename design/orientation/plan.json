@@ -43,10 +43,10 @@
         "O8"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "20a3f09bf1b0a0a722ff3ab71d5cbb88d730cf7c",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "fe716f3ec10965807ec311ac8b6667e3658d242a",
+        "findings": 8
       }
     },
     {
