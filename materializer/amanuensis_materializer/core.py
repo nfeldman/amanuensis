@@ -689,4 +689,24 @@ class Materializer:
                 ),
             )
 
-        return XrefIndex(entries=entries)
+        # The resolver names a subsystem beside its first mention on a page and
+        # introduces a concern code as one (PLAN §2.2 items 3 and 5); it needs
+        # each ID's kind for that, and the subsystem's name.
+        kinds = dict.fromkeys(subsystem_names, "subsystem")
+        kinds.update({c["code"]: "concern" for c in rows(conn, "SELECT code FROM concerns")})
+        kinds.update({s["id"]: "seam" for s in rows(conn, "SELECT id FROM seams")})
+        kinds.update(
+            {f["finding_id"]: "finding" for f in rows(conn, "SELECT finding_id FROM findings")}
+        )
+        kinds.update(
+            {f"DM-{m['id']}": "matrix" for m in rows(conn, "SELECT id FROM diagnosticity_sessions")}
+        )
+        # A later family overwrites an earlier one's entry for a shared ID, so
+        # the kind follows the entry the index kept.
+        kinds = {identifier: kinds[identifier] for identifier in entries if identifier in kinds}
+        names = {
+            identifier: name
+            for identifier, name in subsystem_names.items()
+            if kinds.get(identifier) == "subsystem"
+        }
+        return XrefIndex(entries=entries, names=names, kinds=kinds)

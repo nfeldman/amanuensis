@@ -461,6 +461,37 @@ def _flat(text: str) -> str:
     return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
 
 
+def _without_first_names(text: str, names: dict[str, str]) -> str:
+    """Text with each `<subsystem id> (<its name>)` read as the bare id.
+
+    The publication prints a subsystem's name beside the first mention of its id
+    on each page (PLAN §2.2 item 3), so an account that names an id reads, on
+    the page, with a name its author did not write. The name is the
+    publication's, like the link and the bold around the id, and is read out on
+    both sides of the comparison. Only that subsystem's exact name in brackets
+    directly after its own id is read out; every other word is still owed.
+    """
+
+    for identifier, name in names.items():
+        text = re.sub(
+            rf"(?<![\w-])({re.escape(identifier)}(?![\w-])(?:\*\*)?) \({re.escape(name.replace('|', '/'))}\)",
+            r"\1",
+            text,
+        )
+    return text
+
+
+def _words_without_first_names(page_words: str, names: dict[str, str]) -> str:
+    """`_without_first_names` for an HTML page's words (`_html_words`)."""
+
+    for identifier, name in names.items():
+        bare = _html_words(identifier)
+        page_words = page_words.replace(
+            f"{bare}{_html_words(name.replace('|', '/')).strip()} ", bare
+        )
+    return page_words
+
+
 def _html_words(text: str) -> str:
     """A generated HTML page's visible words, space-delimited, for presence checks.
 
@@ -1595,7 +1626,9 @@ class ProjectionVerifier:
                 page = "architecture.md"
             body = str(reading.row["body"])
             owed = explanation_refusal(slot) if orientation_violations(body) else body
-            if _flat(owed) not in _flat(projection.get(page, "")):
+            if _without_first_names(_flat(owed), names) not in _without_first_names(
+                _flat(projection.get(page, "")), names
+            ):
                 mismatches.append(
                     {
                         "axis": "state",
@@ -1607,7 +1640,12 @@ class ProjectionVerifier:
                     }
                 )
             html_page = str(Path(page).with_suffix(".html"))
-            absent = _missing_html_line(owed, _html_words(projection.get(html_page, "")))
+            absent = _missing_html_line(
+                _without_first_names(owed, names),
+                _words_without_first_names(
+                    _html_words(projection.get(html_page, "")), names
+                ),
+            )
             if absent is not None:
                 mismatches.append(
                     {

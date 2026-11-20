@@ -69,6 +69,7 @@ from .readback import (
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
+    ID_KINDS,
     OBLIGATION_BEARING_SQL,
     OPEN_FINDING_SQL,
     READER_TERMS,
@@ -3265,8 +3266,9 @@ def _ledger_stale_table(
 # the generated `vocabulary.py`, and the route table comes from the page plan,
 # so a value the server enforces or a page the projection publishes cannot be
 # missing from the guide without the generator changing. The sections run in
-# the order PLAN §4 O3 gives: what the site is, pages, terms, status values,
-# then the vocabulary a reader never sees as a label.
+# the order PLAN §4 O3 gives: what the site is, pages, how a survey works,
+# terms, how IDs are formed, status values, then the vocabulary a reader never
+# sees as a label.
 GUIDE_TITLE = "How to read this survey"
 SURVEY_SECTION = "How a survey works"
 HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
@@ -3466,6 +3468,105 @@ def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> lis
     return out
 
 
+# Appendix B, "How IDs are formed" (PLAN §2.2 items 1 and 2, D1). The kinds come
+# from the contract (`ID_KINDS`); the example in each row and the sentence about
+# this store's subsystem letters come from the store, so both stay true per store
+# without any rule at onboarding.
+IDS_SECTION = "How IDs are formed"
+IDS_LEAD = (
+    "IDs are short labels so records can point at each other. Except where this page"
+    " says otherwise, the letters are not a code: read the name beside the ID."
+)
+LETTERS_ARE_LAYERS = "Here the letter is the layer: {pairs}."
+LETTERS_ENCODE_NOTHING = (
+    "The letters were chosen when the survey began and do not encode anything."
+    " Read the name beside the ID."
+)
+NO_EXAMPLE = "none yet"
+
+
+def _id_letters(identifier: str) -> str:
+    """A subsystem ID's leading letters: `R` for `R-06`, `auth` for `auth`."""
+
+    match = re.match(r"[A-Za-z]+", identifier)
+    return match.group(0) if match else identifier[:1]
+
+
+def subsystem_letter_key(subsystems: Sequence[tuple[str, str | None]]) -> str | None:
+    """What this store's subsystem letters say, from `(id, layer)` pairs.
+
+    The letter is the layer only when every letter's subsystems sit in one
+    layer and no layer is spelled by two letters; a letter that is right most of
+    the time is worse for a reader than one that is plainly arbitrary (§2.2).
+    """
+
+    if not subsystems:
+        return None
+    layers: dict[str, set[str | None]] = {}
+    for identifier, layer in subsystems:
+        layers.setdefault(_id_letters(identifier), set()).add(layer or None)
+    owners: dict[str, set[str]] = {}
+    for letter, found in layers.items():
+        for layer in found:
+            owners.setdefault(str(layer), set()).add(letter)
+    one_to_one = all(
+        len(found) == 1 and None not in found for found in layers.values()
+    ) and all(len(letters) == 1 for letters in owners.values())
+    if not one_to_one:
+        return LETTERS_ENCODE_NOTHING
+    pairs = ", ".join(
+        f"{letter} is {next(iter(layers[letter]))}" for letter in sorted(layers)
+    )
+    return LETTERS_ARE_LAYERS.format(pairs=pairs)
+
+
+def _id_examples(conn: sqlite3.Connection) -> dict[str, str]:
+    """One ID per kind from this store, keyed by `ID_KINDS[*].kind`."""
+
+    def first(sql: str) -> str | None:
+        found = row(conn, sql)
+        return None if found is None or found["v"] is None else str(found["v"])
+
+    concerns = [str(r["code"]) for r in rows(conn, "SELECT code FROM concerns ORDER BY code")]
+    matrix = first("SELECT MIN(id) AS v FROM diagnosticity_sessions")
+    decision = first("SELECT MIN(id) AS v FROM open_questions")
+    found = {
+        "Subsystem": first("SELECT MIN(id) AS v FROM subsystems"),
+        "Finding": first("SELECT MIN(finding_id) AS v FROM findings"),
+        "Seam": first("SELECT MIN(id) AS v FROM seams"),
+        "Concern": next((c for c in concerns if not c.startswith("SC-")), None),
+        "Seam concern": next((c for c in concerns if c.startswith("SC-")), None),
+        "Competing explanations": f"DM-{matrix}" if matrix else None,
+        "Decision": f"#{decision}" if decision else None,
+    }
+    return {kind: example for kind, example in found.items() if example}
+
+
+def _ids_section(conn: sqlite3.Connection) -> list[str]:
+    """Appendix B's table of ID kinds, with this store's examples and letter key."""
+
+    out = [f"## {IDS_SECTION}", "", IDS_LEAD, ""]
+    key = subsystem_letter_key(
+        [(str(r["id"]), r["layer"]) for r in rows(conn, "SELECT id, layer FROM subsystems ORDER BY id")]
+    )
+    if key:
+        out += [key, ""]
+    examples = _id_examples(conn)
+    out += [
+        "| Kind | Shape | Names | Chosen by | Example here | Links to |",
+        "|---|---|---|---|---|---|",
+    ]
+    for kind in ID_KINDS:
+        name = str(kind["kind"])
+        out.append(
+            f"| {_table_cell(name)} | {_table_cell(kind['shape'])} | {_table_cell(kind['names'])}"
+            f" | {_table_cell(kind['chosen_by'])} | {_table_cell(examples.get(name, NO_EXAMPLE))}"
+            f" | {_table_cell(kind['links_to'])} |"
+        )
+    out.append("")
+    return out
+
+
 def _enum_tables(heading: str, lede: str, reader_facing: bool) -> list[str]:
     """The enum tables whose `reader_facing` flag matches, in declared order."""
 
@@ -3585,13 +3686,12 @@ def render_how_to_read(
     `verified-fixed`. Nothing kept them in step, so nothing did.
     """
 
-    del conn  # the contract and the page plan are the source; the store names the project
-
     body = [HOW_TO_READ_INTRO, ""]
     body += _site_is(project_name(storage))
     body += _route_tables(routes or ())
     body += _survey_passes_section()
     body += _terms_section(routes or ())
+    body += _ids_section(conn)
     body += _vocabulary_tables()
     body += [HOW_TO_READ_CLOSING]
     text = "\n".join(body)

@@ -4,12 +4,18 @@ Builds a global ID → relative-path map once per materialization, then
 passes over every rendered markdown file and replaces bare IDs with
 working links. Respects fenced code blocks (leaves IDs inside them
 alone).
+
+The match pattern is built from the index's own keys, so any ID the store
+holds links, whatever its shape (`B04-R6`, a lowercase `auth`), and nothing
+the store does not hold is touched (PLAN §2.2 item 4). The same pass names a
+subsystem beside its first mention on a page (item 3) and introduces a concern
+code as "concern RC-2" (item 5).
 """
 from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -17,6 +23,11 @@ from pathlib import Path
 class XrefIndex:
     # id → (display, abs_target_path, human definition)
     entries: dict[str, tuple[str, str, str]]
+    # subsystem id → name, printed beside a page's first mention of the id
+    names: dict[str, str] = field(default_factory=dict)
+    # id → record kind ("subsystem", "concern", "seam", "finding", "matrix")
+    kinds: dict[str, str] = field(default_factory=dict)
+    _pattern: re.Pattern[str] | None = field(default=None, init=False, repr=False)
 
     def link(self, id_: str, from_page_rel: str) -> str | None:
         hit = self.entries.get(id_)
@@ -27,19 +38,49 @@ class XrefIndex:
         # page should render as bold text, not a link-to-self.
         # We also suppress anchor-only self-links (target starts with
         # the same relative path and differs only by #fragment).
-        target_no_frag = target.split("#", 1)[0]
-        if target == from_page_rel or target_no_frag == from_page_rel:
+        if _is_self(target, from_page_rel):
             return f"**{display}**"
         rel = _relative(from_page_rel, target)
         return f"[{display}]({rel})"
 
+    def pattern(self) -> re.Pattern[str] | None:
+        """Existing Markdown links, or a known ID with any bold around it."""
+
+        if self._pattern is None and self.entries:
+            ids = identifier_alternation(self.entries)
+            self._pattern = re.compile(
+                r"(?P<link>\[(?P<label>[^\]]*)\]\([^)]*\))(?P<lpost>\*\*)?"
+                rf"|(?P<pre>\*\*)?(?<![\w-])(?P<id>{ids})(?![\w-])(?P<post>\*\*)?"
+            )
+        return self._pattern
+
 
 CODE_FENCE_PAT = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)", re.MULTILINE)
 INLINE_CODE_PAT = re.compile(r"`[^`]*`")
-# Any uppercase letters + optional digits + dash + digits, captured as
-# a single token. This intentionally overmatches — we let the index
-# decide whether the ID is known.
-ID_PAT = re.compile(r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])")
+# A raw HTML tag (`<a id="b04-r6"></a>`): its attributes are not prose.
+HTML_TAG_PAT = re.compile(r"</?[A-Za-z][^>\n]*>")
+TABLE_RULE_PAT = re.compile(r"^\s*\|?\s*:?-{3,}")
+# "concern RC-2" already says what RC-2 is.
+CONCERN_WORD_PAT = re.compile(r"(?i)\bconcerns?[\s*_]*$")
+
+
+def identifier_alternation(ids: Iterable[str]) -> str:
+    """An alternation of exact IDs, longest first, so `B-01x` beats `B-01`."""
+
+    return "|".join(re.escape(i) for i in sorted(set(ids), key=lambda i: (-len(i), i)))
+
+
+def identifier_pattern(ids: Iterable[str]) -> re.Pattern[str] | None:
+    """A pattern for exactly these IDs, delimited as a whole token."""
+
+    keys = [i for i in ids if i]
+    if not keys:
+        return None
+    return re.compile(rf"(?<![\w-])({identifier_alternation(keys)})(?![\w-])")
+
+
+def _is_self(target: str, from_page_rel: str) -> bool:
+    return target == from_page_rel or target.split("#", 1)[0] == from_page_rel
 
 
 def _relative(from_rel: str, to_rel: str) -> str:
@@ -70,10 +111,17 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
 
     An ID already inside a Markdown link is left alone, so this must run over
     a renderer's fresh output: run over a page it has already resolved, it
-    keeps whatever target the ID had then.
+    keeps whatever target the ID had then. Run over its own output it changes
+    nothing: a mention already linked still counts toward the page's first
+    mention, and a line that holds the subsystem's name is never given it again.
     """
 
-    # Protect fenced and inline code by replacing with placeholders.
+    pattern = index.pattern()
+    if pattern is None:
+        return text
+
+    # Protect fenced and inline code, and raw HTML tags, by replacing them
+    # with placeholders.
     placeholders: list[str] = []
 
     def _stash(m: re.Match) -> str:
@@ -82,30 +130,24 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
 
     text = CODE_FENCE_PAT.sub(_stash, text)
     text = INLINE_CODE_PAT.sub(_stash, text)
+    text = HTML_TAG_PAT.sub(_stash, text)
 
-    # Also protect existing markdown links: avoid rewriting IDs that are
-    # already inside (…).
-    def _skip_in_links(match: re.Match) -> str:
-        # Will be restored later.
-        placeholders.append(match.group(0))
-        return f"\x00{len(placeholders) - 1}\x00"
-
-    text = re.sub(r"\[[^\]]*\]\([^)]*\)", _skip_in_links, text)
-
-    def _replace(m: re.Match) -> str:
-        id_ = m.group(1)
-        linked = index.link(id_, rel_path)
-        # Self references render as strong text. If the renderer already
-        # supplied that emphasis, keep the token itself so repeated passes do
-        # not accumulate another pair of ``**`` delimiters.
-        if linked == f"**{id_}**":
-            before = text[max(0, m.start() - 2) : m.start()]
-            after = text[m.end() : m.end() + 2]
-            if before == "**" and after == "**":
-                return id_
-        return linked if linked else m.group(0)
-
-    text = ID_PAT.sub(_replace, text)
+    named: set[str] = set()
+    lines = text.split("\n")
+    for at, line in enumerate(lines):
+        # A table's header row names columns, and the HTML recognises some
+        # tables by those names (the review-coverage matrix), so it gains no
+        # name and no prefix. Nor does a heading, whose text may be an anchor.
+        header_row = (
+            line.lstrip().startswith("|")
+            and at + 1 < len(lines)
+            and bool(TABLE_RULE_PAT.match(lines[at + 1]))
+        )
+        heading = line.lstrip().startswith("#")
+        lines[at] = _resolve_line(
+            line, rel_path, index, pattern, named, plain=header_row or heading
+        )
+    text = "\n".join(lines)
 
     # Restore placeholders.
     # Existing Markdown links can contain protected inline-code placeholders.
@@ -115,6 +157,73 @@ def resolve_text(text: str, rel_path: str, index: XrefIndex) -> str:
         saved = placeholders[i]
         text = text.replace(f"\x00{i}\x00", saved)
     return text
+
+
+def _resolve_line(
+    line: str,
+    rel_path: str,
+    index: XrefIndex,
+    pattern: re.Pattern[str],
+    named: set[str],
+    *,
+    plain: bool,
+) -> str:
+    def _name_after(id_: str) -> str:
+        """` (Name)` for a page's first mention of a subsystem, else nothing.
+
+        A line that already holds the name (a table with a Name column, a
+        heading, a mention named on an earlier run) counts as the naming
+        mention and gains nothing.
+        """
+
+        name = index.names.get(id_)
+        if name is None or id_ in named:
+            return ""
+        shown = name.replace("|", "/")
+        if shown in line:
+            named.add(id_)
+            return ""
+        if plain:
+            return ""
+        named.add(id_)
+        return f" ({shown})"
+
+    # A table row's first cell is its record's key, and the HTML builds the
+    # record's anchor from that text, so a concern code there gains no prefix.
+    key_cell_end = -1
+    if line.lstrip().startswith("|"):
+        first = line.index("|")
+        key_cell_end = line.find("|", first + 1)
+
+    def _replace(m: re.Match) -> str:
+        if m.group("link"):
+            # A link the renderer (or an earlier run) wrote. Its label is left
+            # alone; a subsystem ID as the whole label is still a mention.
+            label = m.group("label").strip("*")
+            suffix = _name_after(label) if label in index.names else ""
+            return m.group("link") + (m.group("lpost") or "") + suffix
+        id_ = m.group("id")
+        pre, post = m.group("pre") or "", m.group("post") or ""
+        linked = index.link(id_, rel_path)
+        if linked is None:
+            return m.group(0)
+        self_ref = linked == f"**{id_}**"
+        if self_ref and pre and post:
+            # Self references render as strong text. If the renderer already
+            # supplied that emphasis, keep the token itself so repeated passes
+            # do not accumulate another pair of ``**`` delimiters.
+            linked = id_
+        elif (
+            not self_ref
+            and not plain
+            and m.start() > key_cell_end
+            and index.kinds.get(id_) == "concern"
+            and not CONCERN_WORD_PAT.search(line[: m.start()])
+        ):
+            linked = linked.replace(f"[{id_}]", f"[concern {id_}]", 1)
+        return pre + linked + post + _name_after(id_)
+
+    return pattern.sub(_replace, line)
 
 
 def resolve_all(output_root: Path, rel_paths: Iterable[str], index: XrefIndex) -> int:

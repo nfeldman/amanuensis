@@ -26,6 +26,7 @@ from .manifest import sha256_bytes
 from .readback import MARKER_KINDS
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
+from .xref import identifier_pattern
 
 _MARKER_RE = re.compile(
     r"<!--\s*amanuensis:(?:"
@@ -1551,7 +1552,10 @@ def _inline(text: str) -> str:
     return text
 
 
-_IDENTIFIER_PATTERN = re.compile(
+# The shape of a concern code heading a review-coverage column. It only
+# recognises that table; which IDs get a definition is decided by the index's
+# own keys (`identifier_pattern`), whatever their shape (PLAN §2.2 item 4).
+_IDENTIFIER_SHAPE = re.compile(
     r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
 )
 
@@ -1568,6 +1572,7 @@ class _IdentifierMarkup(HTMLParser):
     def __init__(self, definitions: dict[str, str]):
         super().__init__(convert_charrefs=False)
         self.definitions = definitions
+        self.pattern = identifier_pattern(definitions)
         self.parts: list[str] = []
         self.protected_depth = 0
 
@@ -1592,7 +1597,7 @@ class _IdentifierMarkup(HTMLParser):
             self.protected_depth -= 1
 
     def handle_data(self, data: str) -> None:
-        if self.protected_depth:
+        if self.protected_depth or self.pattern is None:
             self.parts.append(data)
             return
 
@@ -1608,7 +1613,7 @@ class _IdentifierMarkup(HTMLParser):
                 f'aria-label="{escaped}">{html.escape(identifier)}</abbr>'
             )
 
-        self.parts.append(_IDENTIFIER_PATTERN.sub(replace, data))
+        self.parts.append(self.pattern.sub(replace, data))
 
     def handle_entityref(self, name: str) -> None:
         self.parts.append(f"&{name};")
@@ -2715,7 +2720,7 @@ class MarkdownRenderer:
         if (
             len(signature) > 1
             and signature[0] == "subsystem"
-            and all(_IDENTIFIER_PATTERN.fullmatch(header.upper()) for header in signature[1:])
+            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
         ):
             return self._coverage_index(headers, rows)
         projection = _RECORD_PROJECTIONS.get(signature)
