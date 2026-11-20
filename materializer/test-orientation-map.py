@@ -13,11 +13,14 @@ Turns red when:
   - the atlas does not sit above the per-layer tables, in either view;
   - an atlas row's region, subsystem ID, name, link or survey depth differs from
     the subsystem's recorded layer, ID, name and status, or a deferred
-    subsystem's depth reads as anything but "deferred";
+    subsystem's depth reads as anything but "deferred"; or an HTML depth is not
+    the status chip of the recorded value;
   - the atlas's regions are not the layers, in the order the per-layer tables
     follow, or a region's count differs from its subsystems;
   - the Markdown carries the atlas table (Region | Subsystem | Survey depth)
-    with a different set of rows than the HTML atlas shows;
+    with a different set of rows than the HTML atlas shows, or a depth cell
+    that is the stored value rather than the contract's label (the HTML prints
+    the label, so the two views would disagree);
   - the per-layer tables are gone or changed: each layer keeps its own `##`
     heading and its Priority/ID/Name/Status table with one row per subsystem;
   - a store with no subsystems renders an atlas table or atlas element instead
@@ -125,9 +128,9 @@ SUBSYSTEMS: tuple[tuple[str, str, str, str, str], ...] = (
 )
 # Layer order the per-layer tables follow: ORDER BY layer.
 LAYER_ORDER = ("backend", "frontend", "tooling")
-# What the HTML prints for each recorded status; the Markdown prints the stored
-# value, as the architecture page's atlas does. "scoping" reads "Scoped" (D4);
-# "concerns" and "adversarial" print the contract's in-progress labels.
+# What both views print for each recorded status: the contract's label, never
+# the stored value. "scoping" reads "Scoped" (D4); "concerns" and "adversarial"
+# print the contract's in-progress labels.
 DEPTH_LABEL = {
     "unmapped": "unmapped",
     "scoping": "scoped",
@@ -388,6 +391,17 @@ def main() -> int:
 
         check("the atlas rows are the recorded subsystems: region, ID, name, link, depth", atlas_rows_match_record)
 
+        def depth_chips() -> str | None:
+            # The Markdown prints the label; the HTML still shows it as the
+            # status chip of the stored value, not as plain text.
+            if page is None:
+                return "master-plan.html is not published"
+            chips = re.findall(r'<div class="atlas-depth"><span class="status\b[^"]*\bstatus-([a-z-]+)"', page)
+            want = sorted(status for _sid, _name, status, _layer, _scope in SUBSYSTEMS)
+            return None if sorted(chips) == want else f"atlas depth chips are {sorted(chips)}, expected {want}"
+
+        check("each atlas depth is the status chip of its recorded value", depth_chips)
+
         # -- the atlas in Markdown -------------------------------------------
         def md_atlas_table() -> str | None:
             if md is None:
@@ -416,8 +430,8 @@ def main() -> int:
                     return f"{sid}: subsystem cell {cells[1]!r} does not link to {slug_href(sid, name)}"
                 if name not in md_visible(cells[1]):
                     return f"{sid}: subsystem cell {cells[1]!r} lacks the name {name!r}"
-                if md_visible(cells[2]).split()[-1] != status:
-                    return f"{sid}: depth cell {cells[2]!r}, status is {status!r}"
+                if md_visible(cells[2]).strip().lower() != DEPTH_LABEL[status]:
+                    return f"{sid}: depth cell {cells[2]!r}, the contract's label for {status!r} is {DEPTH_LABEL[status]!r}"
             return None
 
         check("the Markdown carries the Region | Subsystem | Survey depth table, above the layers", md_atlas_table)
