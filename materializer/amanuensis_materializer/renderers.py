@@ -3273,12 +3273,19 @@ HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
 
 HOW_TO_READ_CLOSING = ""
 
-# Appendix C, "What this site is". The project name is the only variable.
+# Appendix C, "What this site is". The project name is the only variable. The
+# second paragraph (PLAN §4 O14) says what the Markdown view leaves out; it has
+# no code span, since the guide's first 600 bytes carry none.
 SITE_IS = (
     "This site is the record of an AI agent's survey of {name}. The agent read the code,"
     " recorded what it concluded and the code each conclusion rests on, and listed what it"
     " could not settle. It does not change the code. Every page is as of one commit, shown"
     " at the top as *Checked*."
+)
+SITE_VIEWS = (
+    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
+    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
+    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
 )
 
 # A term's `pages` may name a family; the family's listing page stands for it.
@@ -3323,7 +3330,7 @@ def _enum_heading(name: str) -> str:
 
 
 def _site_is(name: str) -> list[str]:
-    return ["## What this site is", "", SITE_IS.format(name=name), ""]
+    return ["## What this site is", "", SITE_IS.format(name=name), "", SITE_VIEWS, ""]
 
 
 # Appendix C, "How a survey works". The surrounding sentences are constants; the
