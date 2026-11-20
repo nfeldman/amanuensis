@@ -11,10 +11,10 @@
         "O2"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "e19d43f4bb401783f6b7be01b3dfa30dcc426d93",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "94f17813a4c48e77c5a9eb3fb4b4ad2b40ce8762",
+        "findings": 6
       }
     },
     {
