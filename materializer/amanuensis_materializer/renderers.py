@@ -3429,7 +3429,7 @@ SURVEY_EXPECTS = (
     " answer what you can by telling the agent in your session. This site is read-only;"
     " answers reach the record only through the agent.",
     '- You can redirect it at any time: name a subsystem to survey next, say "stop", or'
-    ' ask "what do we know about <file>".',
+    ' ask "what do we know about `<file>`".',
 )
 PHASES_HEADING = "Phase numbers"
 PHASES_LEAD = (
