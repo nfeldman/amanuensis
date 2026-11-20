@@ -1,6 +1,7 @@
 # Orientation: what the published site tells a first-time reader
 
-- Status: plan, 2026-11-19. Nothing here is implemented.
+- Status: plan, 2026-11-19. Nothing here is implemented. Owner decisions D1–D4 recorded
+  2026-11-20 and folded into the packets (§5); D5 is still open.
 - Source: branch `claude/orientation-plan-e03563`, from `main` at `6c9b181`.
 - Corpora read, not written: this repository's store (`.amanuensis/docs/` in the primary
   checkout, subsystem IDs `B-NN`) and the AxiomDB store (`~/repos/axiomdb/.amanuensis/docs/`,
@@ -156,13 +157,30 @@ Inconsistencies, recorded as findings. None is fixed by this plan except where a
   and the seam does not flip; no packaging step ever sees it flip. Only the audit route catches
   it (`memory-audit.md`'s example: "SM-02 (B-01 ↔ B-04) — both parties mapped; 0 SC-N
   dispositions"). Read, not reproduced.
-- **W6. Does a status name the pass just finished or the pass under way?** The skill sets the
-  status to the phase's name when the phase returns (`subsystem-survey.md`, "After the phase
-  returns"). The contract's meanings say `concerns` is "concern-by-concern review is in
-  progress" and `adversarial` is "Candidate conclusions are being challenged". The server's
-  checks agree with neither cleanly: `concerns` needs only the structural artifact; `adversarial`
-  needs dispositions (`onboarding.md`, Phase 5). A reader cannot tell from "Concerns" whether
-  the concern review is done.
+- **W6. Does a status name the pass just finished or the pass under way?** Decided by D4: for
+  `concerns` and `adversarial` it names the pass under way. The server and the contract already
+  work that way; the skill does not.
+  - **[O] Server.** `set_disposition` and `add_finding` with a concern pass need the subsystem at
+    `concerns` or above, and with `pass_type="adversarial"` at `adversarial` or above
+    (`mcp-server/src/tools/dispositions.ts:96-97`, `findings.ts:162-163`).
+    `update_finding_status`, `update_finding_severity` and `verify_finding_fix` need `concerns`
+    (`findings.ts:269`, `:366`, `:424`). The advance itself checks the previous pass's output and
+    says so: `concerns` needs a `subsystem-survey` artifact "before the concern pass begins";
+    `adversarial` needs at least one disposition "before the adversarial pass begins"
+    (`mcp-server/src/invariants.ts`, `enforcePhasePrerequisites`).
+  - **[O] Contract.** `concerns` means "concern-by-concern review is in progress";
+    `adversarial` means "Candidate conclusions are being challenged". `scoping` and
+    `structural` describe a finished pass. The labels ("Concerns", "Adversarial") do not say
+    which.
+  - **[O] Skill.** It advances after each pass: `phase-3-concerns.md:188` ("The coordinator
+    advances to `concerns` status and starts adversarial review"), `phase-4-adversarial.md:225`
+    ("advances status to `adversarial` and runs Phase 5"), `subsystem-survey.md:55` ("After the
+    phase returns: … `update_subsystem_status(id, status=<phase_name>)`") and `:67`. `SKILL.md`'s
+    ladder (`:129-131`) puts Phase 3 under `structural` and Phase 4 under `concerns`. The resume
+    list (`subsystem-survey.md:20-24`) reads each status as "this pass is done". Followed
+    literally, Phase 3's first `set_disposition` is refused, because the subsystem is still
+    `structural`. Read, not reproduced: the stores' dispositions show agents got past it,
+    probably by advancing early on the refusal.
 - **W7. `deferred` is a depth the site prints and the skill's ladder leaves out, on purpose.**
   The contract carries it; the tool calls it an orthogonal flag (`subsystems.ts`,
   `update_subsystem_status` description); `mcp-server/scripts/check-evidence-vocabulary.mjs`
@@ -179,7 +197,7 @@ Inconsistencies, recorded as findings. None is fixed by this plan except where a
 
 ## 2. What to build
 
-Five parts, each answering one item of the report. Packets are in §4.
+Each part answers one item of the report. Packets are in §4.
 
 ### 2.1 Amanuensis's own terms (report item 1, 5)
 
@@ -202,7 +220,7 @@ sentences), and `pages` (where a reader meets it). The generator emits it into
 
 ### 2.2 IDs (report item 4)
 
-**[J] Recommendation: the letters stay labels. Do not make them carry meaning.**
+**Decided (D1): the letters stay labels and the site explains them. They carry no meaning.**
 
 Reasons: an ID is a primary key in `subsystems`, a prefix of every finding ID, a party in seams,
 and a key in carried findings across stores (`carried_findings.archived_finding_id`). A scheme
@@ -232,7 +250,7 @@ What the site does instead:
    matrix, prefix it with "concern" in the link text ("concern RC-2"), the way findings are
    already introduced as "Finding in …" in the tooltip.
 
-If the owner wants a scheme for new stores anyway, see decision D1.
+No onboarding change and no ID scheme for new stores (D1).
 
 ### 2.3 How a survey works (report item 2, and the tester's last point)
 
@@ -243,10 +261,13 @@ covers:
 - **Who wrote this:** an AI agent, reading the repository without changing it.
 - **The two stages** (onboarding once; one survey per subsystem) and refresh, with what each
   produces and where it shows on the site.
-- **The five passes** of a survey, each with the depth it leads to and what that depth lets a
-  reader rely on. The depth labels and their meanings are taken from the contract's
-  `subsystem_status` entries, so they cannot drift. The pass→depth pairing comes from a new
-  contract section `survey_passes`, because nothing else records it in one place.
+- **The five passes** of a survey, each with the depth it sets, *when* it sets it, and what that
+  depth lets a reader rely on. Per D4, Scope and Structure set `scoping` and `structural` when
+  they finish; Concern review and Challenge set `concerns` and `adversarial` when they start;
+  Packaging sets `mapped` when it finishes. The depth labels and meanings come from the
+  contract's `subsystem_status` entries, so they cannot drift. The pairing of pass, depth and
+  timing comes from a new contract section `survey_passes`, because nothing else records it in
+  one place. The skill's gate (O10) reads the same section.
 - **What it expects from you:** nothing in order to keep going; reading "Decisions needed" and
   answering in your chat with the agent; redirecting or stopping it; asking about a file. And
   *when*: at checkpoints, which it names.
@@ -257,9 +278,9 @@ The "Decisions needed" page gets one line under its title saying how to answer: 
 tell the agent in your session, for example: 'Decision #12: tenancy is per account.' This site
 is read-only." (W1.)
 
-Where the real workflow is unclear (W4–W7), the section describes what the record shows and
-does not paper over it: it states the depth meanings as the contract has them. Decision D4
-settles W6; packet O10 fixes W1–W5 in the skill.
+Where the real workflow is unclear (W4, W5, W7), the section describes what the record shows
+and does not paper over it. D4 settled W6: the two in-progress depths get labels that say so
+("Reviewing concerns", "Challenging claims"; O1), and packet O10 fixes W1–W6 in the skill.
 
 ### 2.4 Page index (report: "what each page is for and when to use it")
 
@@ -308,10 +329,16 @@ band. This is plain, legible at AxiomDB's size (35 boxes, 20 lines), and testabl
 
 ### 2.6 The word "conspectus"
 
-**[J]** Reader-facing copy says "this survey" or "this site" and defines "conspectus" once, in
-Terms, as the product's name for the record and the site built from it. Titles change: "How to
-read the conspectus" → "How to read this survey". Durable names (`conspectus-vocabulary.json`,
-`#conspectus-search`) stay. Decision D2.
+**Decided (D2).** Reader-facing copy says "this survey" or "this site" and defines "conspectus"
+once, in Terms, as the product's name for the record and the site built from it. Titles change:
+"How to read the conspectus" → "How to read this survey". Durable names
+(`conspectus-vocabulary.json`, `#conspectus-search`) stay.
+
+### 2.7 "Map"
+
+**Decided (D3).** The page keeps the title "Subsystem map" once O7 gives it the atlas, and its
+heading "# Master plan" becomes that title. The status label "Mapped" stays and Terms defines it
+(Appendix A). The other "map" names (§1.3) are left alone.
 
 ## 3. Relation to existing work
 
@@ -362,6 +389,7 @@ Rules for every packet:
   existing materializer gates in `test.yml` are no redder than before (diff the FAIL lines, not
   only exit codes). Commit each green packet.
 - Order: O0 → O1 → (O2, O5, O7, O8 in any order) → O3 → O4 → O6 → O9 → O10. O11 only on D5.
+  O10's gate reads O1's `survey_passes`, so O10 cannot start before O1.
 
 ### O0 · Record the plan
 
@@ -378,7 +406,20 @@ Rules for every packet:
 - **Do:**
   1. Add `reader_terms` (Appendix A), `id_kinds` (Appendix B: `kind`, `shape`, `names`,
      `chosen_by`, `links_to`), and `survey_passes` (Appendix C table: `pass`, `phase`, `does`,
-     `status_after`).
+     `status`, `set_when`). `set_when` is `"start"` or `"end"`: the pass sets `status` when it
+     starts or when it finishes. Values, per D4: Scope `scoping`/end, Structure `structural`/end,
+     Concern review `concerns`/start, Challenge `adversarial`/start, Packaging `mapped`/end.
+  1a. **D4 labels and meanings** in `subsystem_status`: `concerns` label "Concerns" →
+     "Reviewing concerns"; `adversarial` label "Adversarial" → "Challenging claims". Values,
+     `authorizes` and `cannot_justify` do not change. Meanings: `scoping` becomes "The scope
+     pass is done: the subsystem's boundary and files are established, nothing more.";
+     `structural` becomes "The structure pass is done: types, state, flows and concurrency are
+     mapped; correctness claims are not yet authorized."; `concerns` and `adversarial` keep
+     theirs (they already say "in progress" / "being challenged"). Leave the `pass_type` enum's
+     own "Adversarial" label alone; it is a different enum. Before changing, `rg -n
+     '"Concerns"|"Adversarial"|Reviewing concerns' materializer mcp-server/src dev` and update
+     any test that asserts the old status label (none did at `1f4b72b`; labels are read from
+     `VOCABULARY`).
   2. Add `"reader_facing": true|false` to every enum. True for: `finding_resolution_state`,
      `severity`, `subsystem_status`, `standing_state`, `stale_reason`, `file_classification`,
      `evidence_kind`, `disposition_classification`, `field_note_category`,
@@ -387,12 +428,18 @@ Rules for every packet:
   3. Teach the generator to validate and emit them to Python as `READER_TERMS`, `ID_KINDS`,
      `SURVEY_PASSES` (tuples of dicts) and to carry `reader_facing` inside `VOCABULARY`. Validation
      errors: a term without a definition; an alias equal to another term; a `survey_passes`
-     `status_after` not in `subsystem_status`; an enum missing `reader_facing`.
+     `status` not in `subsystem_status`, or `set_when` other than `start`/`end`; the
+     `survey_passes` statuses out of ladder order; an enum missing `reader_facing`.
   4. Bump `contract_version` to `1.1.0`.
 - **Gate:** `node mcp-server/scripts/gen-vocabulary.mjs --check` and `--check-sql` green; new
   `materializer/test-orientation-contract.py` turns red when any of the four validation errors
   above is accepted (it writes a broken copy of the JSON to a temp dir and runs the generator on
-  it) or when `vocabulary.py` lacks the three constants.
+  it); when `vocabulary.py` lacks the three constants; or when a `subsystem_status` value whose
+  `survey_passes` row has `set_when: "start"` has a label that does not begin with an "-ing"
+  word, or one with `set_when: "end"` has a meaning containing neither "done" nor "complete" (checks
+  D4's labels and meanings stay in step with the timing). `node
+  mcp-server/scripts/check-evidence-vocabulary.mjs` stays green (it compares status values, not
+  labels).
 
 ### O2 · The page index
 
@@ -422,7 +469,8 @@ Rules for every packet:
   from the list above (ignoring the two not yet filled); a `READER_TERMS` entry has no anchor; a
   non-reader-facing enum appears before "Full vocabulary"; the first 600 bytes of the guide's
   Markdown body contain a backtick (raw stored names up top are the thing being fixed); the
-  guide's title contains "conspectus" (only if D2 is accepted).
+  guide's title contains "conspectus" (D2); the Terms section lacks an entry for "Conspectus"
+  or for "Mapped" (D2, D3).
 
 ### O4 · How a survey works
 
@@ -434,8 +482,9 @@ Rules for every packet:
   sentence to Appendix C's overview version. Add the how-to-answer line to "Decisions needed".
 - **Gate:** new `materializer/test-orientation-workflow.py`. Turns red when: the pass table has
   a row count different from `SURVEY_PASSES`, or a depth label that differs from the contract's
-  label; the section lacks the subheadings "What it expects from you" and "Phase numbers"; the
-  Decisions needed page lacks "tell the agent"; the overview identity paragraph contains a
+  label, or a row whose "when" cell disagrees with its `set_when` (D4); the section lacks the
+  subheadings "What it expects from you" and "Phase numbers"; the Decisions needed page lacks
+  "tell the agent"; the overview identity paragraph contains a
   forbidden term or a digit. `test-overview-truthfulness.py` must stay green with only its
   identity expectation updated.
 
@@ -467,8 +516,9 @@ Rules for every packet:
 
 ### O7 · Subsystem map atlas and one name
 
-- **Files:** `renderers.py` (`render_master_plan`), `core.py` (title if D3 changes it).
-- **Do:** §2.5 item 1. Change `# Master plan` to the page title.
+- **Files:** `renderers.py` (`render_master_plan`).
+- **Do:** §2.5 item 1. Change `# Master plan` to the page title, "Subsystem map" (D3: the title
+  in `core.py` stays as it is).
 - **Gate:** extend `materializer/test-lens-pages.py` or a new `test-orientation-map.py`: turns
   red when `master-plan.html` lacks `class="subsystem-atlas"` with one `atlas-item` per
   subsystem, or the Markdown H1 differs from the plan's title.
@@ -495,11 +545,14 @@ Rules for every packet:
 - **Gate:** `test-overview-truthfulness.py` green; `test-orientation-workflow.py` asserts the
   Method route text.
 
-### O10 · Skill workflow repairs (W1–W5)
+### O10 · Skill workflow repairs (W1–W6)
 
 - **Files:** `.claude/skills/amanuensis/references/open-questions.md`,
-  `references/subsystem-survey.md`, `references/phase-5-packaging.md`, `SKILL.md`; new
+  `references/subsystem-survey.md`, `references/phase-3-concerns.md`,
+  `references/phase-4-adversarial.md`, `references/phase-5-packaging.md`, `SKILL.md`; new
   `dev/test-skill-workflow-text.mjs`.
+- **First:** write the gate and run it on the unedited skill. It must be red on W6 (and W3, W4).
+  Put its FAIL lines in the commit message. Then edit the skill until it is green.
 - **Do:**
   - W1/W2: in "Reviewing the queue", say the person answers by telling the agent, which then
     calls `resolve_open_question`; name the "Decisions needed" page.
@@ -509,13 +562,55 @@ Rules for every packet:
     `phase-5-packaging.md` and the summary list in `subsystem-survey.md`; keep step 10's commit
     last. Check first that nothing in steps 5–8 needs the subsystem below `mapped`; if something
     does, stop and record it instead.
-- **Gate:** the new script turns red when: `open-questions.md` contains "option **A**" or tells
-  the human to call a tool; `subsystem-survey.md` contains "(approved)"; in
-  `phase-5-packaging.md` the "Advance status" heading comes after "Materialize" or "Seam
-  assessability". Also run `node mcp-server/scripts/check-evidence-vocabulary.mjs` (it reads
-  `SKILL.md`'s ladder) and keep it green.
-- **Not here:** W6 waits for D4; W7 is handled by Terms; W8 by O4's phase key; W9 by Terms'
-  aliases.
+  - W6 (D4: a status names the pass under way for `concerns` and `adversarial`):
+    - `subsystem-survey.md`: replace "After the phase returns" step 1's generic
+      `status=<phase_name>` with a table **"When each phase sets the status"**, columns
+      `Phase | Status | When`, five rows. The When cell is exactly "before the phase starts" or
+      "when the phase ends": 1 `scoping` ends; 2 `structural` ends; 3 `concerns` starts;
+      4 `adversarial` starts; 5 `mapped` ends (within Phase 5, before materializing; W4).
+      Add a "Before the phase starts" step to "Running a phase" that applies the "before" rows,
+      with the server's prerequisite for each: `concerns` needs the registered
+      `subsystem-survey` artifact (Phase 2's output); `adversarial` needs at least one
+      disposition (Phase 3's output). Keep the refusal handling (diagnose, re-run once, else
+      `deferred`). Fix line 67 ("Phase 4 returns, status advances to `adversarial`") to say the
+      status is already `adversarial`.
+    - Resume list: `unmapped` → Phase 1; `scoping` → Phase 2; `structural` → advance to
+      `concerns`, then Phase 3; `concerns` → finish Phase 3 (`get_concern_coverage` shows the
+      concerns still without a verdict), then advance to `adversarial` and run Phase 4;
+      `adversarial` → finish Phase 4 (claims without a `record_claim_challenge` outcome), then
+      Phase 5.
+    - `phase-3-concerns.md`: near the top, before the first `set_disposition`, say "The
+      coordinator has already advanced this subsystem to `concerns`; `set_disposition` and
+      `add_finding` are refused below it." Replace `:188` with "The coordinator advances to
+      `adversarial` and starts adversarial review immediately. No pause."
+    - `phase-4-adversarial.md`: the same opening sentence for `adversarial` (adversarial
+      `set_disposition`/`add_finding` are refused below it). Replace `:225` with "The coordinator
+      runs Phase 5 packaging immediately. No pause."
+    - `SKILL.md` (`:129-131`): keep the ladder line exactly as it is (the vocabulary check parses
+      it); replace the arrow row under it with one sentence per rung saying which phase sets it
+      and when, matching the table above. The "Authorized claims" table keeps its rows and values.
+- **Gate:** the new script turns red when:
+  - `open-questions.md` contains "option **A**" or tells the human to call a tool;
+  - `subsystem-survey.md` contains "(approved)";
+  - in `phase-5-packaging.md` the "Advance status" heading comes after "Materialize" or "Seam
+    assessability";
+  - **(W6)** `subsystem-survey.md` contains `status=<phase_name>`, or lacks the "When each phase
+    sets the status" table, or that table's (status, when) pairs differ from the contract's
+    `survey_passes` (`status`, `set_when`; "before the phase starts" = `start`, "when the phase
+    ends" = `end`). Read `mcp-server/contracts/conspectus-vocabulary.json` directly, so the
+    skill and the site share one source (this makes O10 depend on O1);
+  - **(W6)** in `phase-3-concerns.md`, the first mention of `set_disposition` comes before a
+    sentence saying the subsystem is already at `concerns`; or any line says the coordinator
+    "advances to `concerns`" after the phase. The same for `phase-4-adversarial.md` with
+    `adversarial`, using its first `set_disposition` or `pass_type="adversarial"` mention;
+  - **(W6)** `SKILL.md`'s arrow row still puts "Phase 3" under `structural` or "Phase 4" under
+    `concerns`.
+  
+  Also run `node mcp-server/scripts/check-evidence-vocabulary.mjs` (it parses `SKILL.md`'s
+  ladder line and its "Authorized claims" table) and keep it green, and add the new script as a
+  step in `.github/workflows/test.yml` beside the vocabulary check.
+- **Not here:** W7 is handled by Terms; W8 by O4's phase key; W9 by Terms' aliases. The server
+  and the contract's values need no change for W6 (D4).
 
 ### O11 · Cold-reader check (only on D5)
 
@@ -529,15 +624,25 @@ Rules for every packet:
 
 ## 5. Decisions for the owner
 
-- **D1. ID letters.** Recommended: labels only, explained by the site (§2.2). Alternative: from
-  now on, onboarding derives the letter from the layer's initial and records the key; the site's
-  generated letter key would then report it automatically. Existing stores unchanged either way.
-- **D2. "Conspectus" in reader copy.** Recommended: "this survey" in titles and copy, the word
-  defined once in Terms.
-- **D3. "Map".** Recommended: keep "Subsystem map" as the title once O7 gives it a picture; keep
-  the status label "Mapped" and define it.
-- **D4. Status timing (W6).** Does `concerns` mean "review done" or "review under way"? Pick one
-  and change either the contract meanings or the skill's step.
+Decided by the owner on 2026-11-20 (relayed by the backlog-triage session):
+
+- **D1. ID letters: decided, labels only.** The site explains them (§2.2, O5). No onboarding
+  change and no scheme for new stores.
+- **D2. "Conspectus": decided.** "This survey" in titles and copy; the word is defined once in
+  Terms (§2.6, O3).
+- **D3. "Map": decided.** "Subsystem map" stays the title once O7 gives it the atlas; the label
+  "Mapped" stays and Terms defines it (§2.7, O7, Appendix A).
+- **D4. Status timing (W6): decided, option A.** A status names the pass under way for
+  `concerns` and `adversarial`; `scoping`, `structural` and `mapped` are set when their pass is
+  done. The server and the contract's values stay as they are. The contract gets labels that
+  say "under way" and meanings that say "done" (O1); the skill advances to `concerns` and
+  `adversarial` before those passes start (O10), and a gate fails on the old order.
+  - Left as it is, not decided: the label "Scoping" reads as under way although the depth means
+    the scope pass is done. Terms says so plainly (Appendix A). Relabelling it ("Scoped") is a
+    one-line change in O1 if the owner wants it.
+
+Still open:
+
 - **D5. Republish and test on a real store.** Reaching `docs/` and running O11 on AxiomDB need
   Amanuensis use and a dogfood receipt re-record. Go or wait.
 
@@ -551,7 +656,7 @@ Rules for every packet:
 | Session | | One stretch of work by the agent. Sessions and publications lists them. |
 | Subsystem | | A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding. |
 | Layer | region | A group of subsystems with a similar role. Pages group subsystems by layer. |
-| Survey depth | status | How far the survey of a subsystem has got: unmapped, scoping, structural, concerns, adversarial, mapped, or deferred. Each depth limits what the record may claim. |
+| Survey depth | status | How far the survey of a subsystem has got. Unmapped: not started. Scoping and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim. |
 | Mapped | | The last survey depth: every pass has run. It does not mean every file is read or every bug found. |
 | Scope | file ledger | The files a subsystem owns, each marked as read, not yet read, or left out with a reason. |
 | Evidence | | A pointer to code at a commit (file, symbol, lines) with a note of how strong it is: read in code, seen in a test, stated in a comment, and so on. |
@@ -613,13 +718,16 @@ shown at the top as *Checked*."
 >
 > **A survey of each subsystem**, highest priority first, in five passes:
 
-| Pass | What the agent does | Survey depth after it |
+| Pass | What the agent does | Survey depth it sets, and when |
 |---|---|---|
-| Scope | Lists the subsystem's files and the terms it uses. | *(generated label and meaning)* |
-| Structure | Reads the files; records types, state, data flows, concurrency, and claims. | … |
-| Concern review | Gives every checklist item a verdict with evidence. Confirmed defects become findings. | … |
-| Challenge | Tries to prove each claim and finding wrong. | … |
-| Packaging | Writes the subsystem's purpose and account, updates the site. | … |
+| Scope | Lists the subsystem's files and the terms it uses. | Scoping, when the pass is done *(label and meaning generated)* |
+| Structure | Reads the files; records types, state, data flows, concurrency, and claims. | Structural, when the pass is done |
+| Concern review | Gives every checklist item a verdict with evidence. Confirmed defects become findings. | Reviewing concerns, as the pass starts |
+| Challenge | Tries to prove each claim and finding wrong. | Challenging claims, as the pass starts |
+| Packaging | Writes the subsystem's purpose and account, updates the site. | Mapped, when the pass is done |
+
+> A subsystem shown as *Reviewing concerns* or *Challenging claims* is in the middle of that
+> pass: its verdicts and findings so far are not the last word.
 
 > **Refresh**, when the code changes. The agent re-reads files that changed since it read them.
 > Until then they are listed on Stale knowledge.
