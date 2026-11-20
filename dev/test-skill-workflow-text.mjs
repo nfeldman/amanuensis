@@ -4,7 +4,8 @@
 // Turns red when:
 //   - open-questions.md still says "option **A**", tells the human to call a tool
 //     (`resolve_open_question`), or "Reviewing the queue" lacks the statement that the person
-//     tells the agent, which then resolves the question, and a reference to the
+//     tells the agent, which then calls `resolve_open_question` (no sentence gives that call to
+//     the person), and a reference to the
 //     "Decisions needed" page; or it still names "a global queue on the findings index";
 //   - subsystem-survey.md contains "(approved)";
 //   - in phase-5-packaging.md the "Advance status" heading comes after "Materialize" or
@@ -82,6 +83,14 @@ function check() {
     if (/resolve_open_question/.test(para) && !/\bagent\b|\bcoordinator\b/i.test(para))
       return "open-questions.md has the human calling resolve_open_question themselves";
   }
+  const calls = review
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .filter((s) => /resolve_open_question/.test(s));
+  if (calls.some((s) => /\b(person|human|you|they)\b\s+(then\s+)?((can|should|must|may)\s+)?calls?\b/i.test(s)))
+    return "open-questions.md has the human calling resolve_open_question themselves";
+  if (!calls.some((s) => /\b(agent|coordinator)\b[^.]*?\bcalls?\b[^.]*?`resolve_open_question/i.test(s)))
+    return 'the "Reviewing the queue" section does not say the agent then calls `resolve_open_question`';
   if (/Answer the question\s*[—-]\s*`resolve_open_question/.test(review))
     return "open-questions.md still lists the tool call as the human's answer";
 
