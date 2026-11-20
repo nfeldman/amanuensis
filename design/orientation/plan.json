@@ -786,8 +786,8 @@
       "attempts": 1,
       "start_sha": "494fa8ee7818b2472ae0990b7f0be90164b31a8e",
       "red_sha": "ea8327b",
-      "green_sha": "a951481",
-      "verified_by_launcher": false,
+      "green_sha": "ee258bc7eb8af91809f061f1ff2e45501bb91937",
+      "verified_by_launcher": true,
       "blocked_reason": "",
       "notes": "The --no-verify-readback notice is read literally as replacing both sentences: just 'Rendered from the command line and not read back.' The receipt now carries render_notice so --readback-only (no render flags, used by promote-docs and tests) checks pages against what the render stated; a receipt without it means recorded. PLAN said every CLI test writes to <storage>/docs, but four did not (test-materializer, test-explanation-pages, test-explanation-orientation, test-search-index); they now pass --allow-external-output, assertions unchanged. README flag list updated; SKILL.md and phase-5 do not describe the CLI output location, so unchanged."
     }
