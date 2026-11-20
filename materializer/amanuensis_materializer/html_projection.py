@@ -2490,6 +2490,16 @@ class MarkdownRenderer:
 
     @staticmethod
     def _record_identifier(value: str) -> str:
+        """The record ID a cell names: its link's label, whatever the ID's shape.
+
+        The renderer links every record ID it prints, so the label is the exact
+        ID (`auth`, `B04-R6`); a cell with no link falls back to the first
+        letters-dash-number token, the shape the renderer once assumed.
+        """
+
+        link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
+        if link:
+            return _plain(link.group(1))
         plain = _plain(value)
         match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
         return match.group(0) if match else plain
