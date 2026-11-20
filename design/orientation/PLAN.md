@@ -779,7 +779,7 @@ Still open:
 | Competing explanations | diagnosticity matrix | A table weighing several causes for one symptom against the evidence. |
 | System boundary | seam | A place where two subsystems share something (a table, a queue, a cache) and depend on each other's assumptions about it. |
 | Recorded edge | xref | A dependency or data flow between two subsystems that the agent wrote down. Edges are never guessed from names. |
-| Stale | | A file that changed after the survey read it. What the survey said about it may no longer hold. |
+| Stale | | A file that changed after the revision the survey recorded for it: the one it was read at, scoped at, or set aside at. What the survey said about it may no longer hold. |
 | Checked at | revision | The commit the survey last compared itself against. Everything on the site is as of that commit. |
 | Standing | | What the record says about one file: no record, left out, in scope but unread, read, read but changed since. |
 | Lens | | One of four groups of pages: Codebase (what the project is), Unresolved (open work), History (what was settled), Method (how far to trust the rest). |

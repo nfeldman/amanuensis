@@ -1562,7 +1562,7 @@ READER_TERMS: tuple[dict[str, object], ...] = (
     {
         "term": "Stale",
         "aliases": (),
-        "definition": "A file that changed after the survey read it. What the survey said about it may no longer hold.",
+        "definition": "A file that changed after the revision the survey recorded for it: the one it was read at, scoped at, or set aside at. What the survey said about it may no longer hold.",
         "pages": ("stale.md", "files.md", "index.md"),
     },
     {
