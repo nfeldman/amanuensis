@@ -11,7 +11,7 @@
 | SO2 | Schema, migrations, SQL bindings and legacy fixtures | done (1 attempt) | SO1 | `mcp-server/test-store-only-schema.mjs` | §8 SO2, §2, §5.1, §7.2 |
 | SO3 | Narrative tools: record, decline, get, reset withdrawal | done (1 attempt) | SO2 | `mcp-server/test-store-only-narratives.mjs` | §8 SO3, §2.1 |
 | SO4 | Project records: purpose (write and read), profile, runtime boundaries, concern territory and probe | done (1 attempt) | SO2 | `mcp-server/test-store-only-project-records.mjs` | §8 SO4, §2.2 |
-| SO5 | Flow marks: record, withdraw, decline, returned by get_claims | ready | SO2 | `mcp-server/test-store-only-claim-marks.mjs` | §8 SO5, §7.2 |
+| SO5 | Flow marks: record, withdraw, decline, returned by get_claims | ready (1 attempt) | SO2 | `mcp-server/test-store-only-claim-marks.mjs` | §8 SO5, §7.2 |
 | SO6 | The server stops depending on hand-written files (prerequisite, locus, artifacts, composition) | ready | SO3 | `mcp-server/test-store-only-no-files.mjs` | §8 SO6, §2.5 |
 | SO7 | Import every artifact's bytes into the store | ready | SO3, SO4 | `mcp-server/test-store-only-import.mjs` | §8 SO7, §5.2, §5.3 |
 
