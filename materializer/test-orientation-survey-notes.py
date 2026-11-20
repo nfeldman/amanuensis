@@ -9,6 +9,7 @@ contradicts the recorded account where there is one:
   B-02  no account, claims, artifact   → the narrative sits inside Structure
   B-03  no account, no claims, artifact → the narrative stands in for claims
   B-04  account, no claims, artifact   → survey-record placement, no claims
+  B-05  account, claims, two artifacts  → survey-record placement, one dated line each
 
 Turns red when, in the Markdown or the HTML of the subsystem pages:
 
@@ -21,6 +22,9 @@ Turns red when, in the Markdown or the HTML of the subsystem pages:
     names the wrong date or revision for either record;
   - a subsystem with an account carries that dated line more than once per
     artifact, or one without an account carries it at all;
+  - B-05's "Survey artifact" lacks, before its prose, a dated line for each of its
+    two artifacts with that artifact's own date and revision, or its provenance
+    lacks either artifact's "written on" date;
   - the narrative's provenance on B-01 to B-04 lacks "written on <artifact date>"
     (the first ten characters of the artifact's stored timestamp);
   - an artifact file's bytes change in the publish;
@@ -109,6 +113,9 @@ HASH = "0123456789abcdef0123456789abcdef"
 NOTES_WRITTEN = "2026-10-02 09:30:00"
 ACCOUNT_RECORDED = "2026-11-10 14:05:00"
 NOTES_DATE = NOTES_WRITTEN[:10]
+LATER_NOTES_SHA = "dddddddd44444444dddddddd44444444dddddddd"
+LATER_NOTES_WRITTEN = "2026-10-20 16:45:00"
+LATER_NOTES_DATE = LATER_NOTES_WRITTEN[:10]
 ACCOUNT_DATE = ACCOUNT_RECORDED[:10]
 
 # (id, name, has_account, has_claims)
@@ -117,7 +124,13 @@ SUBSYSTEMS = (
     ("B-02", "Write path", False, True),
     ("B-03", "Queue", False, False),
     ("B-04", "Cache", True, False),
+    ("B-05", "Index", True, True),
 )
+
+# A second artifact for B-05: (path, prose, revision, written_at).
+LATER_PATH = "B-05-followup-survey.md"
+LATER_PROSE = "NOTES-B-05-LATER the index is rebuilt on every write"
+EXTRA_ARTIFACTS = {"B-05": ((LATER_PATH, f"# B-05 follow-up\n\n{LATER_PROSE}\n", LATER_NOTES_SHA, LATER_NOTES_WRITTEN),)}
 
 ACCOUNT_BODY = (
     "The read path serves each request from the cache and falls back to the store"
@@ -141,9 +154,9 @@ def artifact_text(sid: str) -> str:
     return f"# {sid} survey\n\n{one}\n\n## Details\n\n{two}\n"
 
 
-def dated_line() -> str:
+def dated_line(date: str = NOTES_DATE, sha: str = NOTES_SHA) -> str:
     return (
-        f"Written on {NOTES_DATE} at revision {NOTES_SHA[:8]} as the survey's working"
+        f"Written on {date} at revision {sha[:8]} as the survey's working"
         f" notes, and kept as written. The account above was recorded on {ACCOUNT_DATE}"
         f" at revision {ACCOUNT_SHA[:8]}; where the two disagree, the later one is the"
         " current reading."
@@ -188,6 +201,13 @@ def seed(storage: Path) -> None:
             " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
             (artifact_path(sid), sid, HASH, NOTES_SHA, NOTES_WRITTEN),
         )
+        for path, text, sha, written in EXTRA_ARTIFACTS.get(sid, ()):
+            (storage / path).write_text(text)
+            cur.execute(
+                "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
+                " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'o13', ?)",
+                (path, sid, HASH, sha, written),
+            )
     db.commit()
     db.close()
 
@@ -318,6 +338,31 @@ def main() -> int:
             return None
 
         check("the survey artifact opens with the dated line", dated_under_account)
+
+        def dated_per_artifact() -> str | None:
+            if (why := published()):
+                return why
+            for view, texts in views.items():
+                text = squash(texts["B-05"])
+                first_prose = min(
+                    (at for at in (text.find(prose_lines("B-05")[0]), text.find(LATER_PROSE)) if at >= 0),
+                    default=-1,
+                )
+                if first_prose < 0:
+                    return f"B-05 {view}: the artifacts' prose is gone"
+                for date, sha in ((NOTES_DATE, NOTES_SHA), (LATER_NOTES_DATE, LATER_NOTES_SHA)):
+                    want = dated_line(date, sha)
+                    n = text.count(want)
+                    if n != 1:
+                        return f"B-05 {view}: the dated line for the artifact at {sha[:8]} appears {n} times"
+                    if text.find(want) > first_prose:
+                        return f"B-05 {view}: the dated line for the artifact at {sha[:8]} comes after the prose"
+                for date in (NOTES_DATE, LATER_NOTES_DATE):
+                    if f"written on {date}" not in text.lower():
+                        return f"B-05 {view}: the provenance lacks `written on {date}`"
+            return None
+
+        check("each survey artifact under an account has its own dated line", dated_per_artifact)
 
         # -- 3. no account: no dated line --------------------------------------
         def none_without_account() -> str | None:
