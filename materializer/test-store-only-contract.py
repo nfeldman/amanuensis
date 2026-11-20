@@ -284,6 +284,8 @@ def check_python() -> str | None:
                 bad.append(f"{name}.{src['value']}.requires differs from the contract")
     if bad:
         return "; ".join(bad[:6])
+    if tuple(module.CLAIM_KEY_FAMILIES) != ("key-type", "state-container", "flow"):
+        return f"CLAIM_KEY_FAMILIES is {module.CLAIM_KEY_FAMILIES!r}"
     # The sections are readable through the generated accessors, by value.
     if module.labels("narrative_section").get("structure") != "Structure":
         return "labels('narrative_section') does not map structure to its label"
@@ -323,6 +325,8 @@ def check_typescript() -> str | None:
                 want_req = "[" + ", ".join(f'"{r}"' for r in src["requires"]) + "]"
                 if want_req not in re.sub(r"\s+", " ", seg.group(1)).replace("[ ", "[").replace(", ]", "]"):
                     bad.append(f"{name}.{src['value']}.requires is not {want_req} in vocabulary.ts")
+    if not re.search(r'CLAIM_KEY_FAMILIES = \[\s*"key-type",\s*"state-container",\s*"flow",?\s*\] as const', text):
+        bad.append("CLAIM_KEY_FAMILIES is not the three families of requireStableClaimKey")
     for table in ("VOCABULARY_SQL_BINDINGS", "SQL_CONSTRAINED_VOCABULARIES"):
         m = re.search(rf"export const {table}[^=]*= \{{(.*?)\n\}};", text, re.S)
         if not m:

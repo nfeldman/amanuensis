@@ -4,7 +4,7 @@ Run `node scripts/gen-vocabulary.mjs` after changing the source; CI runs
 
 from __future__ import annotations
 
-VOCABULARY_CONTRACT_VERSION = "1.1.0"
+VOCABULARY_CONTRACT_VERSION = "1.2.0"
 
 # finding_resolution_state — resolution axis.
 FINDING_RESOLUTION_STATES: tuple[str, ...] = (
@@ -270,6 +270,47 @@ ATTENTION_LABELS: tuple[str, ...] = (
     "stale-knowledge",
     "awaiting-verification",
     "undiscriminated",
+)
+
+# narrative_section — narrative axis.
+NARRATIVE_SECTIONS: tuple[str, ...] = (
+    "structure",
+    "concern-reasoning",
+    "challenge",
+    "repository-shape",
+    "runtime",
+    "stateful-entities",
+    "concern-calibration",
+    "start-here",
+    "survey-plan",
+)
+
+# narrative_disposition — narrative axis.
+NARRATIVE_DISPOSITIONS: tuple[str, ...] = (
+    "recorded",
+    "declined",
+    "withdrawn",
+)
+
+# claim_mark_kind — flow-mark axis.
+CLAIM_MARK_KINDS: tuple[str, ...] = (
+    "commit-point",
+    "crash-point",
+    "exit",
+    "crosses-seam",
+    "trigger",
+)
+
+# territory_disposition — territory axis.
+TERRITORY_DISPOSITIONS: tuple[str, ...] = (
+    "applies",
+    "disqualified",
+)
+
+# runtime_boundary_origin — runtime axis.
+RUNTIME_BOUNDARY_ORIGINS: tuple[str, ...] = (
+    "recorded",
+    "imported",
 )
 
 # Every enum with its per-value label, meaning, and authorization limit.
@@ -1388,6 +1429,199 @@ VOCABULARY: dict[str, dict[str, object]] = {
             },
         ),
     },
+    "narrative_section": {
+        "axis": "narrative",
+        "open_vocabulary": False,
+        "reader_facing": False,
+        "values": (
+            {
+                "value": "structure",
+                "label": "Structure",
+                "meaning": "How the subsystem is built: its parts, what it holds, and how work moves through it.",
+                "cannot_justify": "that the structure is correct; it says how the subsystem is built as read at one revision, not that it works",
+                "subject_type": "subsystem",
+                "min_status": "scoping",
+                "evidence": "required",
+            },
+            {
+                "value": "concern-reasoning",
+                "label": "Concern reasoning",
+                "meaning": "Why each concern was judged to apply, to be acceptable, or to be a bug.",
+                "cannot_justify": "that no other concern applies; it gives the reasons for the verdicts the session reached",
+                "subject_type": "subsystem",
+                "min_status": "concerns",
+                "evidence": "required",
+            },
+            {
+                "value": "challenge",
+                "label": "Challenge",
+                "meaning": "What was tried to disprove the subsystem's findings, and what held.",
+                "cannot_justify": "that a finding is true; it says only what the challenge attempted and found",
+                "subject_type": "subsystem",
+                "min_status": "adversarial",
+                "evidence": "required",
+            },
+            {
+                "value": "repository-shape",
+                "label": "Repository shape",
+                "meaning": "How the repository is laid out and where its parts meet.",
+                "cannot_justify": "that every directory is accounted for; it describes the layout the survey read",
+                "subject_type": "project",
+                "evidence": "required",
+            },
+            {
+                "value": "runtime",
+                "label": "Runtime",
+                "meaning": "What runs, in which language or process, and how the parts call each other.",
+                "cannot_justify": "that the system behaves this way in production; it describes the code as read",
+                "subject_type": "project",
+                "evidence": "required",
+            },
+            {
+                "value": "stateful-entities",
+                "label": "Stateful entities",
+                "meaning": "What the system stores or remembers between calls, and what may change it.",
+                "cannot_justify": "that the list is complete; it names the state the survey found",
+                "subject_type": "project",
+                "evidence": "required",
+            },
+            {
+                "value": "concern-calibration",
+                "label": "Concern calibration",
+                "meaning": "Which kinds of concern apply to this project and which do not, and why.",
+                "cannot_justify": "that a concern ruled out here cannot occur; it says the survey did not look for it",
+                "subject_type": "project",
+                "evidence": "required",
+            },
+            {
+                "value": "start-here",
+                "label": "Start here",
+                "meaning": "Where a new reader should begin, and in what order to read on.",
+                "cannot_justify": "that the rest of the survey can be skipped; it is a route into the record, not a summary of it",
+                "subject_type": "project",
+                "evidence": "required",
+            },
+            {
+                "value": "survey-plan",
+                "label": "Survey plan",
+                "meaning": "What the survey means to read next, and in what order.",
+                "cannot_justify": "that any of it has been read; a plan is not a reading",
+                "subject_type": "project",
+                "evidence": "optional",
+            },
+        ),
+    },
+    "narrative_disposition": {
+        "axis": "narrative",
+        "open_vocabulary": False,
+        "reader_facing": False,
+        "values": (
+            {
+                "value": "recorded",
+                "label": "Recorded",
+                "meaning": "A survey session wrote the prose, at a revision and over cited evidence.",
+                "cannot_justify": "that the prose is true; the record establishes who wrote it, at which revision and over which evidence",
+            },
+            {
+                "value": "declined",
+                "label": "Declined",
+                "meaning": "A survey session read the subject and declined to write the section, with the reason.",
+                "cannot_justify": "that nothing true can be said; it says only that the session could not say something specific",
+            },
+            {
+                "value": "withdrawn",
+                "label": "Withdrawn",
+                "meaning": "Earlier prose was withdrawn, with the reason, and the subject owes a new section.",
+                "cannot_justify": "that the earlier prose was wrong; it says only that it no longer stands",
+            },
+        ),
+    },
+    "claim_mark_kind": {
+        "axis": "flow-mark",
+        "open_vocabulary": False,
+        "reader_facing": False,
+        "values": (
+            {
+                "value": "commit-point",
+                "label": "Commit point",
+                "meaning": "The step after which the flow's effect is kept even if a later step fails.",
+                "cannot_justify": "that every failure after it is harmless; it says only where the effect becomes durable",
+                "applies_to": "flow",
+                "requires": (),
+            },
+            {
+                "value": "crash-point",
+                "label": "Crash point",
+                "meaning": "A step where the process can stop partway; the label says what is left half done.",
+                "cannot_justify": "that the flow recovers from the stop; it says only that the stop leaves the state named",
+                "applies_to": "flow",
+                "requires": ("label",),
+            },
+            {
+                "value": "exit",
+                "label": "Exit",
+                "meaning": "A way the flow stops before its last step; the label says why and the target says where it unwinds to, or that it leaves the flow.",
+                "cannot_justify": "that the exit is handled by the caller; it says only where the flow ends up",
+                "applies_to": "flow",
+                "requires": ("label", "target"),
+            },
+            {
+                "value": "crosses-seam",
+                "label": "Crosses a seam",
+                "meaning": "A step where work passes over a named system boundary.",
+                "cannot_justify": "that the other side behaves as the step expects; it says only that the call crosses",
+                "applies_to": "flow",
+                "requires": ("target",),
+            },
+            {
+                "value": "trigger",
+                "label": "Trigger",
+                "meaning": "What starts the flow. It belongs to the flow's first step.",
+                "cannot_justify": "that nothing else can start the flow; it names the start the survey found",
+                "applies_to": "flow",
+                "requires": (),
+                "only_step": "00",
+            },
+        ),
+    },
+    "territory_disposition": {
+        "axis": "territory",
+        "open_vocabulary": False,
+        "reader_facing": False,
+        "values": (
+            {
+                "value": "applies",
+                "label": "Applies",
+                "meaning": "The territory applies to this project and the survey reviews it.",
+                "cannot_justify": "that the territory has been reviewed; it says only that it is in scope",
+            },
+            {
+                "value": "disqualified",
+                "label": "Disqualified",
+                "meaning": "A named condition rules the territory out for this project.",
+                "cannot_justify": "that the condition still holds at a later revision; it was read at one revision",
+            },
+        ),
+    },
+    "runtime_boundary_origin": {
+        "axis": "runtime",
+        "open_vocabulary": False,
+        "reader_facing": False,
+        "values": (
+            {
+                "value": "recorded",
+                "label": "Recorded",
+                "meaning": "A survey session recorded the boundary over cited evidence.",
+                "cannot_justify": "that the boundary is complete; it records one crossing the session read",
+            },
+            {
+                "value": "imported",
+                "label": "Imported",
+                "meaning": "Copied from the survey notes of an earlier version, with no evidence attached.",
+                "cannot_justify": "that anyone has checked the boundary against the code; the copy carries the old notes as they were",
+            },
+        ),
+    },
 }
 
 # Classifications that exempt a scoped file from survey obligation: generated
@@ -1428,6 +1662,13 @@ CLOSED_RESOLUTION_STATES: tuple[str, ...] = (
 # SQL predicate selecting the finding_state_current rows still open.
 OPEN_FINDING_SQL = (
     "resolution_state IN ('open')"
+)
+
+# The families of stable claim key; a claim mark kind applies to one of them.
+CLAIM_KEY_FAMILIES: tuple[str, ...] = (
+    "key-type",
+    "state-container",
+    "flow",
 )
 
 # Terms orientation prose may not use; see the orientation lint.

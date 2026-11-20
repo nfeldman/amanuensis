@@ -481,6 +481,9 @@ jobs:
       - name: Orientation contract — terms, ID kinds, survey passes, reader-facing flag
         working-directory: materializer
         run: python3 test-orientation-contract.py
+      - name: Store-only contract enums — narrative sections, claim mark kinds, territory dispositions
+        working-directory: materializer
+        run: python3 test-store-only-contract.py
 
   node-compatibility:
     name: Node ${{ matrix.node-version }} package floor
