@@ -55,7 +55,8 @@
       "packets": [
         "O10",
         "O12",
-        "O13"
+        "O13",
+        "O15"
       ],
       "review": {
         "status": "pending",
@@ -718,6 +719,77 @@
         "PLAN §4 O13: 'written on <date>' in every placement's provenance; the dated italic line under 'Survey artifact' when an account is recorded, naming both records' dates and revisions; artifact files never modified."
       ],
       "budget_minutes": 75
+    },
+    {
+      "id": "O15",
+      "slice": "S4",
+      "model": "opus",
+      "title": "A command-line render stays in the store docs and says it was not recorded (D6)",
+      "claims": [
+        "§4 O15",
+        "§4 Publishing defects",
+        "§5 D6"
+      ],
+      "depends_on": [
+        "O12"
+      ],
+      "deliverables": [
+        "materializer/materialize.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "mcp-server/src/tools/materialize.ts",
+        "materializer/test-orientation-cli-render.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-cli-render.py",
+        "command": "cd materializer && python3 test-orientation-cli-render.py",
+        "marker": "GATE O15",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs",
+        "cd mcp-server && node test-locus-index-view.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4 O15 Do items 1-4 and its gate red conditions; owner decision D6 option B (§5).",
+        "materialize.ts passes --recorded-publication and --allow-external-output on every run; no server publish carries the notice.",
+        "--readback-only is never refused; the clean-publish check is on the final output."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "ready",
+      "attempts": 0,
+      "start_sha": "",
+      "red_sha": "",
+      "green_sha": "",
+      "verified_by_launcher": false,
+      "blocked_reason": "",
+      "notes": ""
     }
   ],
   "completion": {
@@ -736,6 +808,7 @@
       "node dev/test-skill-workflow-text.mjs",
       "cd materializer && python3 test-orientation-readback-label.py",
       "cd materializer && python3 test-orientation-survey-notes.py",
+      "cd materializer && python3 test-orientation-cli-render.py",
       "cd mcp-server && npm run build && npx biome check src/",
       "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
       "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",

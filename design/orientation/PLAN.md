@@ -393,7 +393,7 @@ Rules for every packet:
   packet's own (`O1`, `O12`), never a decision or finding id (`D4`, `W6`). An earlier lane halted
   because a gate printed an id other than the one its launcher looked for. Each packet has its
   own gate file; a packet that "extends" another packet's gate gets a new file instead.
-- Order: O0 → O1 → O2 → O3 → O4 → O6 → O9 → O14 → O5 → O7 → O8 → O10 → O12 → O13. O11 only on
+- Order: O0 → O1 → O2 → O3 → O4 → O6 → O9 → O14 → O5 → O7 → O8 → O10 → O12 → O13 → O15. O11 only on
   D5, after the rest. `design/orientation/plan.json` is the executable form of this order and of
   every packet's files, gate and regressions; where the two differ, fix the JSON to match this
   file.
@@ -634,8 +634,9 @@ Rules for every packet:
 ### Publishing defects from `BACKLOG.md` (added 2026-11-20)
 
 The four open items under "Publishing and rendering" in `BACKLOG.md` at `4d92312`, read against
-the code. Two can be built now (O12, O13), one in part (O14); two need an owner decision first
-(D6, D7 in §5) and are not in the lane. The fifth item, the AxiomDB maintenance lane's publish
+the code. Two can be built now (O12, O13), one in part (O14); two needed an owner decision first
+(D6, D7 in §5). D6 was decided as option B and became O15; D7 was decided and lies outside the
+repository. The fifth item, the AxiomDB maintenance lane's publish
 step, lives in `~/.claude/automations/axiomdb-maintenance`, outside this repository, and is left
 out of this plan.
 
@@ -709,6 +710,55 @@ out of this plan.
   output lacks `index.html` beside `index.md`. Regressions: `test-orientation-guide.py`,
   `test-lens-pages.py`.
 
+### O15 · A command-line render stays in the store's docs and says it was not recorded (D6)
+
+Added 2026-11-20 after the owner chose D6 option B.
+
+- **[O] Callers.** `materialize.py` is run by the server (`mcp-server/src/tools/materialize.ts`,
+  `execute`, which records the read-back afterwards) and by hand. The server's output is always
+  inside the store (`resolveStorageOutputPath` asserts containment) but not necessarily
+  `<storage>/docs` (`output_dir` is a parameter). `dev/promote-docs.mjs` runs `--readback-only`
+  against the tracked `docs/`, which writes nothing. Every test that runs the CLI writes to the
+  default `<storage>/docs`. A CLI render does run its own read-back unless
+  `--no-verify-readback` is given; what it never does is record it, so the overview keeps the last
+  recorded run (O12's sentence says that run is earlier).
+- **Files:** `materializer/materialize.py`, the materializer's page rendering
+  (`materializer/amanuensis_materializer/core.py` and `html_projection.py`, wherever every page's
+  Markdown and HTML are assembled), `mcp-server/src/tools/materialize.ts` (`execute`'s arguments),
+  new `materializer/test-orientation-cli-render.py`. Depends on O12.
+- **Do:**
+  1. New flag `--allow-external-output`. A render (default mode or `--clean-publish`) whose
+     resolved `--output` is not `<storage>/docs` exits 2 before writing anything, printing the JSON
+     summary `{"ok": false, "error": "refusing to write outside <storage>/docs; pass
+     --allow-external-output to write to <path>"}`. `--readback-only` is never refused (it writes
+     nothing). For `--clean-publish` the check is on the final output, not the staging directory.
+  2. New flag `--recorded-publication`, meaning "the caller records this read-back in the store".
+     `materialize.ts` passes it, and `--allow-external-output`, on every run (the server enforces
+     containment itself). Nothing else passes it.
+  3. Without `--recorded-publication`, every page the render writes carries one notice, as the last
+     paragraph of the Markdown and in the HTML page head, from one constant in the materializer:
+     "Rendered from the command line. Its read-back was not recorded in the survey's record, so the
+     Publication integrity figures on the overview describe an earlier publication." With
+     `--no-verify-readback` the first two sentences become "Rendered from the command line and not
+     read back." The JSON summary gains `"recorded": false` (true with the flag).
+  4. The notice is part of the page, so the in-process read-back must accept it: the read-back
+     reads the same flag, never flags the notice as content drift, and fails if a page that should
+     carry it does not (or carries it under `--recorded-publication`).
+  5. Update `SKILL.md`'s and `phase-5-packaging.md`'s word on the CLI only if they describe its
+     output location; do not add workflow.
+- **Gate:** turns red when: a default-mode or `--clean-publish` render to a directory outside
+  `<storage>/docs` without the flag exits 0 or leaves any file there; the same render with
+  `--allow-external-output` fails; `--readback-only` against an outside directory is refused; a
+  default CLI render leaves any `.md` or `.html` page without the notice, or its summary lacks
+  `"recorded": false`; a render with `--recorded-publication` carries the notice on any page; the
+  `--no-verify-readback` variant has the wrong sentence; `materialize.ts`'s `execute` does not pass
+  both flags; the read-back of a stamped CLI render is not green on all three axes.
+  Regressions: the full materializer suite, `cd mcp-server && npm run build && node
+  test-projection-custody.mjs`, `node test-refresh-recovery.mjs`, `node test-locus-index-view.mjs`,
+  `node test-finding-partition.mjs`, `node test-smoke.mjs`.
+- **Not here:** the published Markdown's future (the owner is still discussing whether it should
+  exist); nothing in this packet removes or adds a view.
+
 ### O11 · Cold-reader check (only on D5)
 
 - **Do:** render a fixture store and the AxiomDB store's copy with the new materializer, give a
@@ -736,23 +786,25 @@ Decided by the owner on 2026-11-20 (relayed by the backlog-triage session):
   `adversarial` before those passes start (O10), and a gate fails on the old order.
   - Follow-up, decided 2026-11-20: the label "Scoping" read as under way although the depth
     means the scope pass is done, so O1 relabels it "Scoped". The stored value stays `scoping`.
+- **D6. A CLI render and the store's publication record: decided 2026-11-20, option B.**
+  `materialize.py` run by hand records no read-back, so the overview keeps the last tool-driven
+  run. The command-line renderer refuses to write outside the store's `docs/` unless explicitly
+  told to, and every page it writes says its read-back was not recorded (or, with
+  `--no-verify-readback`, that it was not read back). Packet O15, added to the running lane.
+  Option A (the CLI records its own read-back) was not chosen.
+- **D7. Downstream copies carry the HTML: decided 2026-11-20, yes, outside this repository.**
+  Copies are made by the AxiomDB maintenance lane's publish step in
+  `~/.claude/automations/axiomdb-maintenance`, so the change belongs there and is not a lane
+  packet. O14 stays as planned: the guide still says what a Markdown-only copy leaves out.
 
 Still open:
 
 - **D5. Republish and test on a real store.** Reaching `docs/` and running O11 on AxiomDB need
   Amanuensis use and a dogfood receipt re-record. Owner, 2026-11-20: only after the lane's
   packets land.
-- **D6. A CLI render and the store's publication record** (`BACKLOG.md`). `materialize.py` run
-  by hand writes pages and records no read-back, so the overview keeps the last tool-driven run
-  (O12 at least labels that run as earlier). The backlog names two fixes, and they differ in kind:
-  (A) the CLI records its own read-back in the store, which makes the Python materializer a
-  writer of `projection_verification_runs` (today only `materialize.ts` writes it); or (B) the CLI
-  refuses to write outside the store's `docs/` unless told to, and a page it writes says it was
-  not read back. Pick one; not in the lane until then.
-- **D7. Should downstream copies carry the HTML?** A conspectus copied into a repository's
-  `docs/` carries Markdown only. Shipping HTML too changes what lands in another repository and
-  is done by the AxiomDB maintenance lane's publish step, outside this repository. O14 only
-  says on the site what the Markdown leaves out. Ship HTML downstream, or not?
+- Under discussion, not a decision: whether the published Markdown should exist at all (the
+  owner's view is that the database holds everything and the HTML is the human projection).
+  Nothing in the lane changes for it.
 
 ## Appendix A · Terms (draft definitions for `reader_terms`)
 
