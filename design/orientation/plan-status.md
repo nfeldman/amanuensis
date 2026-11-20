@@ -10,7 +10,7 @@
 | O1 | Contract: terms, ID kinds, survey passes, reader-facing flag, D4 labels | done (1 attempt) | — | `materializer/test-orientation-contract.py` | §4 O1, §2.1, §2.3, §5 D4, Appendix A, Appendix B, Appendix C |
 | O2 | The page index with 'Use it when' | done (1 attempt) | — | `materializer/test-orientation-index.py` | §4 O2, §2.4, Appendix D |
 
-## S2 · The reader's guide and the overview (review: pending)
+## S2 · The reader's guide and the overview (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
@@ -35,6 +35,7 @@
 | O10 | Skill workflow repairs W1–W6 | ready | O1 | `dev/test-skill-workflow-text.mjs` | §4 O10, §1.5, §5 D4 |
 | O12 | Say which publication the read-back describes | ready | — | `materializer/test-orientation-readback-label.py` | §4 O12, §4 Publishing defects |
 | O13 | Date the survey notes under the account | ready | — | `materializer/test-orientation-survey-notes.py` | §4 O13, §4 Publishing defects |
+| O15 | A command-line render stays in the store docs and says it was not recorded (D6) | ready | O12 | `materializer/test-orientation-cli-render.py` | §4 O15, §4 Publishing defects, §5 D6 |
 
 ## Completion
 
@@ -52,6 +53,7 @@
 - `node dev/test-skill-workflow-text.mjs`
 - `cd materializer && python3 test-orientation-readback-label.py`
 - `cd materializer && python3 test-orientation-survey-notes.py`
+- `cd materializer && python3 test-orientation-cli-render.py`
 - `cd mcp-server && npm run build && npx biome check src/`
 - `cd mcp-server && node scripts/gen-vocabulary.mjs --check`
 - `cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql`

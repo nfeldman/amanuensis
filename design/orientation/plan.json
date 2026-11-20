@@ -28,10 +28,10 @@
         "O14"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "c2bdf5daadf7adffde89eff893c47fa9e7b5132a",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "c7826306dd4984e023f6c12c05e4ed5a2b06626a",
+        "findings": 6
       }
     },
     {
