@@ -2,7 +2,7 @@
 // Run `node scripts/gen-vocabulary.mjs` after changing the source; CI runs
 // `--check` and `--check-sql` and fails when a copy or a SQL CHECK diverges.
 
-export const VOCABULARY_CONTRACT_VERSION = "1.0.0";
+export const VOCABULARY_CONTRACT_VERSION = "1.1.0";
 
 /** finding_resolution_state — resolution axis. */
 export const FINDING_RESOLUTION_STATES = [
@@ -253,6 +253,7 @@ export interface VocabularyValue {
 export interface VocabularyEnum {
   axis: string;
   open_vocabulary: boolean;
+  reader_facing: boolean;
   values: readonly VocabularyValue[];
 }
 
@@ -261,6 +262,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   finding_resolution_state: {
     axis: "resolution",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "open",
@@ -298,6 +300,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   carried_finding_outcome: {
     axis: "carried",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "successor-finding",
@@ -342,6 +345,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   finding_status: {
     axis: "resolution",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "confirmed-bug",
@@ -375,6 +379,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   standing_state: {
     axis: "standing",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "unledgered",
@@ -435,6 +440,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   stale_reason: {
     axis: "standing",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "git-drift",
@@ -467,6 +473,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   file_classification: {
     axis: "standing",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "candidate",
@@ -515,6 +522,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   subsystem_status: {
     axis: "survey",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "unmapped",
@@ -527,8 +535,9 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
       },
       {
         value: "scoping",
-        label: "Scoping",
-        meaning: "Only the subsystem boundary and file scope are established so far.",
+        label: "Scoped",
+        meaning:
+          "The scope pass is done: the subsystem's boundary and files are established, nothing more.",
         cannot_justify: "any behavioral claim; file scope is all that is established",
         authorizes: "which files are in scope for this subsystem",
         explanation_eligible: false,
@@ -537,14 +546,14 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
         value: "structural",
         label: "Structural",
         meaning:
-          "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
+          "The structure pass is done: types, state, flows and concurrency are mapped; correctness claims are not yet authorized.",
         cannot_justify: "any correctness claim",
         authorizes: "claims about types, state containers, flows, and the concurrency model",
         explanation_eligible: true,
       },
       {
         value: "concerns",
-        label: "Concerns",
+        label: "Reviewing concerns",
         meaning: "Structural mapping is complete and concern-by-concern review is in progress.",
         cannot_justify: "that a finding survived adversarial challenge",
         authorizes: "concern review decisions that cite evidence",
@@ -552,7 +561,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
       },
       {
         value: "adversarial",
-        label: "Adversarial",
+        label: "Challenging claims",
         meaning: "Candidate conclusions are being challenged; treat them as provisional.",
         cannot_justify: "that the challenge pass has finished",
         authorizes:
@@ -582,6 +591,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   vocabulary_discharge: {
     axis: "vocabulary",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "terms",
@@ -612,6 +622,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   explanation_subject: {
     axis: "explanation",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "subsystem",
@@ -633,6 +644,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   explanation_slot: {
     axis: "explanation",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "purpose",
@@ -655,6 +667,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   explanation_disposition: {
     axis: "explanation",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "recorded",
@@ -684,6 +697,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   explanation_discharge: {
     axis: "explanation",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "recorded",
@@ -714,6 +728,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   evidence_kind: {
     axis: "evidence",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "code-verified",
@@ -776,6 +791,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   evidence_quality: {
     axis: "evidence",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "code-verified",
@@ -838,6 +854,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   disposition_classification: {
     axis: "disposition",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "confirmed-bug",
@@ -874,6 +891,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   severity: {
     axis: "severity",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "CRITICAL",
@@ -907,6 +925,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   field_note_category: {
     axis: "lead",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "pattern",
@@ -943,6 +962,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   open_question_category: {
     axis: "question",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "domain-knowledge",
@@ -991,6 +1011,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   open_question_resolution: {
     axis: "resolution",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "open",
@@ -1021,6 +1042,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   field_note_follow_up: {
     axis: "lead",
     open_vocabulary: true,
+    reader_facing: false,
     values: [
       {
         value: "open",
@@ -1039,6 +1061,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   xref_relationship: {
     axis: "relation",
     open_vocabulary: true,
+    reader_facing: false,
     values: [
       {
         value: "shared-pattern",
@@ -1081,6 +1104,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   xref_strength: {
     axis: "relation",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "observed",
@@ -1105,6 +1129,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   contradiction_resolution: {
     axis: "resolution",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "a-supersedes-b",
@@ -1135,6 +1160,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   diagnosticity_outcome: {
     axis: "resolution",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "open",
@@ -1159,6 +1185,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   claim_epistemic_kind: {
     axis: "claim",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "observation",
@@ -1207,6 +1234,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   claim_subject_type: {
     axis: "claim",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "symbol",
@@ -1231,6 +1259,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   concern_status: {
     axis: "concern",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "active",
@@ -1261,6 +1290,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   pass_type: {
     axis: "provenance",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "onboarding",
@@ -1291,6 +1321,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   lens: {
     axis: "lens",
     open_vocabulary: false,
+    reader_facing: true,
     values: [
       {
         value: "codebase",
@@ -1325,6 +1356,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   omission_reason: {
     axis: "omission",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "policy",
@@ -1343,6 +1375,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
   attention_label: {
     axis: "attention",
     open_vocabulary: false,
+    reader_facing: false,
     values: [
       {
         value: "open",
