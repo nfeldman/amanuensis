@@ -1805,6 +1805,10 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 
 
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
+# The guide's enum tables. Their Value column is the stored value itself, so it
+# prints as literal code: chipping it would print some enum's label in its
+# place (pass_type's `adversarial` as subsystem_status's "Challenging claims").
+_ENUM_TABLE_PROJECTION = ("value", "label", "what it means", "what it cannot justify")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
 _BOUNDARY_PROJECTION = ("layer", "subsystem", "boundary", "other end")
@@ -2969,6 +2973,7 @@ class MarkdownRenderer:
             return self._summary_list(rows, caption)
 
         lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
+        enum_table = signature == _ENUM_TABLE_PROJECTION
         # `hot-spots.md`'s one measure table carries this page's filterable
         # rows (§8.1.2). The severity facet is named by the band columns
         # themselves: the table keeps critical+high and medium+low apart on
@@ -3005,8 +3010,10 @@ class MarkdownRenderer:
                         f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inline(value)}</span>{location_html}</th>'
                     )
                 else:
+                    literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
+                    rendered = f"<code>{html.escape(literal.group(1))}</code>" if literal else _inline(value)
                     cells.append(
-                        f'<td data-label="{html.escape(label, quote=True)}">{_inline(value)}</td>'
+                        f'<td data-label="{html.escape(label, quote=True)}">{rendered}</td>'
                     )
             row_attrs = ""
             if hot_spots:
