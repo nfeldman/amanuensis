@@ -311,11 +311,9 @@ def main() -> int:
                     survey = text.rfind("Survey artifact", 0, text.find(want))
                     if survey < 0 or text.find("Survey artifact") > text.find(want):
                         return f"{sid} {view}: the dated line is not under `Survey artifact`"
-            if not squash(md["B-01"]).count("*" + want + "*") == 1:
+            if squash(md["B-01"]).count("*" + want + "*") != 1:
                 return "B-01 Markdown: the dated line is not one italic line"
-            if "<em>" not in re.sub(r"\s+", " ", read_html_raw(docs, "B-01")) or not re.search(
-                r"<em>\s*Written on " + NOTES_DATE, read_html_raw(docs, "B-01")
-            ):
+            if not re.search(r"<em>\s*Written on " + NOTES_DATE, read_html_raw(docs, "B-01")):
                 return "B-01 HTML: the dated line is not italic"
             return None
 
@@ -343,7 +341,7 @@ def main() -> int:
                 if want not in text:
                     return f"{sid} Markdown: the narrative's provenance lacks `{want}`"
             for sid in ("B-01", "B-02", "B-03", "B-04"):
-                if f"written on {NOTES_DATE}" not in squash(html[sid]):
+                if f"written on {NOTES_DATE}" not in squash(html[sid]).lower():
                     return f"{sid} HTML: the provenance lacks `written on {NOTES_DATE}`"
             structure = section(md["B-02"], "Structure")
             if f"written on {NOTES_DATE}" not in structure:

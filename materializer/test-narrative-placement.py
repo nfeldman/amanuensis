@@ -111,6 +111,7 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 SENTINEL = "SENTINEL-NARRATIVE-{sid}: the scheduler drains one queue per tick"
 HASH = "0123456789abcdef0123456789abcdef"
+WRITTEN = "2026-10-02 09:30:00"
 
 SUBSYSTEMS = (
     ("B-01", "Read path", True, True),
@@ -133,7 +134,7 @@ def artifact_text(sid: str) -> str:
 
 
 def provenance(sid: str) -> str:
-    return f"`{artifact_path(sid)}` at content hash `{HASH[:12]}`, recorded at `{SHA[:12]}`"
+    return f"`{artifact_path(sid)}` at content hash `{HASH[:12]}`, recorded at `{SHA[:12]}`, written on {WRITTEN[:10]}"
 
 
 def seed(storage: Path) -> None:
@@ -171,8 +172,8 @@ def seed(storage: Path) -> None:
             (storage / artifact_path(sid)).write_text(artifact_text(sid))
             cur.execute(
                 "INSERT INTO artifacts (path, kind, subsystem_id, content_hash, ref_sha,"
-                " session_id) VALUES (?, 'subsystem-survey', ?, ?, ?, 'ex4')",
-                (artifact_path(sid), sid, HASH, SHA),
+                " session_id, written_at) VALUES (?, 'subsystem-survey', ?, ?, ?, 'ex4', ?)",
+                (artifact_path(sid), sid, HASH, SHA, WRITTEN),
             )
     db.commit()
     db.close()

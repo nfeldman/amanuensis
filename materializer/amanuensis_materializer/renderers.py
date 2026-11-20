@@ -650,6 +650,12 @@ def _upstream_of(workspace: Path, branch: str) -> tuple[str, str]:
     return (f"origin/{branch}" if fallback else ""), (fallback or "")
 
 
+def _stored_date(stamp: object) -> str:
+    """The date of a stored timestamp: its first ten characters."""
+
+    return str(stamp or "")[:10] or "not recorded"
+
+
 def _short(sha: str) -> str:
     return f"`{sha[:12]}`" if sha else "not recorded"
 
@@ -777,6 +783,23 @@ def _provenance_line(
         sha=str(record["ref_sha"])[:8],
         n=len(record.get("cited_files") or []),
         ageing=_ageing_sentence(workspace, bound, record, head),
+    )
+
+
+def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) -> str:
+    """The italic line that dates a survey artifact against the recorded account.
+
+    The artifact is working notes kept as written; the account is the later
+    reading. Dates are the first ten characters of the stored timestamps.
+    """
+
+    return (
+        f"*Written on {_stored_date(artifact['written_at'])} at revision"
+        f" {str(artifact['ref_sha'] or '')[:8] or 'not recorded'} as the survey's working"
+        " notes, and kept as written. The account above was recorded on"
+        f" {_stored_date(account.get('recorded_at'))} at revision"
+        f" {str(account['ref_sha'] or '')[:8] or 'not recorded'}; where the two disagree,"
+        " the later one is the current reading.*"
     )
 
 
@@ -1530,7 +1553,7 @@ def render_subsystem(
     # artifact with kind='subsystem-survey' and this subsystem_id.
     survey_rows = rows(
         conn,
-        "SELECT path, content_hash, ref_sha FROM artifacts"
+        "SELECT path, content_hash, ref_sha, written_at FROM artifacts"
         " WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
         (sid,),
     )
@@ -1645,6 +1668,7 @@ def render_subsystem(
     provenance = ", ".join(
         f"`{sv['path']}` at content hash `{str(sv['content_hash'] or '—')[:12]}`"
         f", recorded at {_short(str(sv['ref_sha'] or ''))}"
+        f", written on {_stored_date(sv['written_at'])}"
         for sv in survey_rows
     )
     epistemic_labels = labels("claim_epistemic_kind")
@@ -1910,7 +1934,15 @@ def render_subsystem(
         out += ["No concern has been dispositioned in this subsystem.", ""]
 
     if survey_prose and placement in ("survey-record", "none"):
-        out += ["### Survey artifact", "", _nest_prose(survey_prose, 3)]
+        out += ["### Survey artifact", ""]
+        if placement == "survey-record" and account.row is not None:
+            out += [
+                _survey_notes_line(sv, account.row)
+                for sv in survey_rows
+                if (storage / sv["path"]).is_file()
+            ]
+            out.append("")
+        out += [_nest_prose(survey_prose, 3)]
     elif placement == "structure-narrative":
         out += [
             "### Survey artifact",

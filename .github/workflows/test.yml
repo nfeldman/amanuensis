@@ -427,6 +427,9 @@ jobs:
       - name: Read-back label — the overview says its read-back describes the publication before it
         working-directory: materializer
         run: python3 test-orientation-readback-label.py
+      - name: Survey notes — the artifact is dated under the account and in every provenance
+        working-directory: materializer
+        run: python3 test-orientation-survey-notes.py
       - name: IDs — every known ID links, first mentions are named, the guide explains the letters
         working-directory: materializer
         run: python3 test-orientation-ids.py

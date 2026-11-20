@@ -394,8 +394,8 @@ def explanation_rows(conn: Any) -> list[dict[str, Any]]:
             cited.setdefault(int(link["explanation_id"]), []).append(str(link["file_path"]))
     stored = rows(
         conn,
-        "SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id"
-        " FROM explanations ORDER BY id",
+        "SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id,"
+        " recorded_at FROM explanations ORDER BY id",
     )
     for record in stored:
         record["cited_files"] = cited.get(int(record["id"]), [])
