@@ -1364,7 +1364,20 @@ def render_master_plan(
         layers: dict[str, list[dict[str, Any]]] = {}
         for s in subs:
             layers.setdefault(s["layer"] or "unlayered", []).append(s)
-        body = []
+        # The atlas comes first and always has one row per subsystem, whether or
+        # not any edge is recorded (§2.5): the HTML turns this three-column table
+        # into the region cards the architecture page already uses.
+        body = [
+            "| Region | Subsystem | Survey depth |",
+            "|---|---|---|",
+        ]
+        for layer, items in layers.items():
+            for s in items:
+                body.append(
+                    f"| {_table_cell(layer)} | **[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})**"
+                    f" {_table_cell(s['name'])} | {_table_cell(s['status'])} |"
+                )
+        body.append("")
         for layer, items in layers.items():
             body.append(f"## {layer}")
             body.append("")
@@ -1381,7 +1394,7 @@ def render_master_plan(
                     f"{f['n']} ({f.get('open_bugs', 0)} open) |"
                 )
             body.append("")
-    text = "# Master plan\n\n" + "\n".join(body) + "\n"
+    text = "# Subsystem map\n\n" + "\n".join(body) + "\n"
     return (
         text,
         _db_source("master-plan:subs", subs)

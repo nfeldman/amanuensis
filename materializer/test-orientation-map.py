@@ -113,6 +113,9 @@ SUBSYSTEMS: tuple[tuple[str, str, str, str, str], ...] = (
 )
 # Layer order the per-layer tables follow: ORDER BY layer.
 LAYER_ORDER = ("backend", "frontend", "tooling")
+# What the HTML prints for each recorded status; the Markdown prints the stored
+# value, as the architecture page's atlas does. "scoping" reads "Scoped" (D4).
+DEPTH_LABEL = {"mapped": "mapped", "structural": "structural", "scoping": "scoped", "deferred": "deferred"}
 
 
 def slug_href(sid: str, name: str) -> str:
@@ -214,7 +217,11 @@ def md_tables(text: str) -> list[tuple[str, list[str], list[list[str]]]]:
 def html_atlas(page: str) -> list[tuple[str, int, list[tuple[str, str, str]]]] | None:
     """[(region, stated count, [(subsystem text, href, depth)])] of the one atlas."""
 
-    atlas = re.search(r'<div class="subsystem-atlas"\b.*?</div></div></div>', page, re.S)
+    start = page.find('<div class="subsystem-atlas"')
+    if start < 0:
+        return None
+    end = page.find("<h2", start)
+    atlas = re.search(r".*", page[start : end if end >= 0 else len(page)], re.S)
     if not atlas:
         return None
     regions: list[tuple[str, int, list[tuple[str, str, str]]]] = []
@@ -335,7 +342,7 @@ def main() -> int:
                     return f"atlas row {text!r} does not carry {sid} and {name!r}"
                 if not href.startswith(slug_href(sid, name)):
                     return f"{sid} links to {href!r}, expected the subsystem page {slug_href(sid, name)!r}"
-                if depth.strip().lower().split()[-1] != status:
+                if depth.strip().lower() != DEPTH_LABEL[status]:
                     return f"{sid}'s survey depth reads {depth!r}, the recorded status is {status!r}"
             return None
 
@@ -383,12 +390,12 @@ def main() -> int:
             if regions is None or len(tables) != 1:
                 return "one view carries no atlas to compare"
             html_rows = [
-                (region, re.findall(r"[A-Z]-\d+", text)[0] if re.findall(r"[A-Z]-\d+", text) else text, depth.split()[-1])
+                (region, re.findall(r"[A-Z]-\d+", text)[0] if re.findall(r"[A-Z]-\d+", text) else text, depth.strip().lower())
                 for region, _count, items in regions
                 for text, _href, depth in items
             ]
             md_rows = [
-                (md_visible(cells[0]), (re.findall(r"[A-Z]-\d+", cells[1]) or [cells[1]])[0], md_visible(cells[2]).split()[-1])
+                (md_visible(cells[0]), (re.findall(r"[A-Z]-\d+", cells[1]) or [cells[1]])[0], DEPTH_LABEL.get(md_visible(cells[2]), md_visible(cells[2])))
                 for cells in tables[0][2]
             ]
             if html_rows != md_rows:
@@ -405,9 +412,9 @@ def main() -> int:
             if first_layer < 0 or atlas_at < 0 or atlas_at > first_layer:
                 return "the Markdown atlas does not precede the first per-layer heading"
             html_atlas_at = page.find('class="subsystem-atlas"')
-            first_table = page.find("<table")
-            if html_atlas_at < 0 or first_table < 0 or html_atlas_at > first_table:
-                return "the HTML atlas does not precede the first per-layer table"
+            first_layer_html = page.find(f'<h2 id="{LAYER_ORDER[0]}"')
+            if html_atlas_at < 0 or first_layer_html < 0 or html_atlas_at > first_layer_html:
+                return "the HTML atlas does not precede the first per-layer section"
             return None
 
         check("the atlas sits above the per-layer tables in both views", atlas_above_layers)
@@ -440,7 +447,7 @@ def main() -> int:
                 return f"the empty store's H1 headings are {md_h1s(text)}"
             if "No subsystems registered yet" not in text:
                 return "the empty store lost its 'No subsystems registered yet' sentence"
-            if any(t[1] == ATLAS_HEADER for t in md_tables(text)) or "subsystem-atlas" in page_html:
+            if any(t[1] == ATLAS_HEADER for t in md_tables(text)) or 'class="subsystem-atlas"' in page_html:
                 return "a store with no subsystems renders an atlas"
             return None
 
