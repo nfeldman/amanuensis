@@ -144,6 +144,9 @@ jobs:
         run: node test-package-activation-parity.mjs
       - name: Prove packed cwd and skill-version parity red gates
         run: node dev/test-package-activation-parity-red-gates.mjs
+      # GATE O0 (design/orientation/PLAN.md §4 O0). Reads BACKLOG.md and the plan only.
+      - name: Orientation backlog — the plan is linked and W1–W9 are listed
+        run: node dev/test-orientation-backlog.mjs
       - name: Exact-package rollback preserves five repository stores
         working-directory: mcp-server
         run: node test-release-rollback.mjs

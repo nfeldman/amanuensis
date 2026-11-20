@@ -150,6 +150,21 @@ Workflow:
   is paused; fix its publish step before it restarts. The owner's rule: push the docs commit
   directly, then fast-forward the local checkout and refresh the store's HTML.
 
+### Reader orientation
+
+Plan: [design/orientation/PLAN.md](design/orientation/PLAN.md). The W items are its findings;
+packets O0–O14 fix them. A reader of the site and the skill meets these inconsistencies:
+
+- **W1.** The site never says the person answers a decision by telling the agent, and the skill says a tool call.
+- **W2.** `open-questions.md` points to a page that does not carry the questions.
+- **W3.** The skill keeps leftovers of the removed scope menu and review gates ("option A", "(approved)").
+- **W4.** Packaging publishes before it marks the subsystem `mapped`, so the site is one rung short.
+- **W5.** The seam check runs before either party can be `mapped`, so no packaging step sees it flip.
+- **W6.** A status names the pass under way for `concerns` and `adversarial`: decided (D4), the skill advances earlier.
+- **W7.** "Deferred" is printed on the Subsystem map and nothing there explains it.
+- **W8.** "Phase N" means onboarding Phases 0–7 and survey Phases 1–5, and the pages never say which.
+- **W9.** The site and the skill use two names per record family ("Lead" and "field note", and so on).
+
 ## Server defects
 
 - ~~**Codex rewrites `config.toml` and breaks the installer's managed block.**~~ Fixed
