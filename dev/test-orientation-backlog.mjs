@@ -7,7 +7,8 @@
 //     (a heading line, before the next "## " heading);
 //   - that section has no Markdown link whose target is design/orientation/PLAN.md, or the
 //     target file does not exist;
-//   - the section lacks any of W1–W9 as its own list item, or an item runs past one line,
+//   - the section lacks any of W1–W9 as its own list item, or an item runs past one line
+//     (an indented continuation or an unindented lazy one),
 //     or an item repeats another's id, or an item has no text after its id;
 //   - the W6 item does not say it is decided and cite D4.
 // Reads only BACKLOG.md and PLAN.md; it touches no store.
@@ -77,11 +78,14 @@ function check() {
   for (let n = 1; n <= 9; n += 1) {
     if (!seen.has(`W${n}`)) return `the section lacks an item for W${n}`;
   }
-  // One line each: a list item's continuation line (indented, non-blank, non-item) is a second line.
+  // One line each: a list item's continuation line is a second line. That is an indented
+  // non-item line, or an unindented one Markdown folds into the item as a lazy continuation:
+  // any non-blank line that does not open a new block (list item, heading, quote, fence, rule).
+  const opensBlock = /^\s{0,3}(?:[-*+]\s|\d+[.)]\s|#{1,6}(?:\s|$)|>|```|~~~|(?:[-*_]\s*){3,}$)/;
   for (let i = 0; i < section.length; i += 1) {
     if (!seen.has((section[i].match(/(W[1-9])\b/) ?? [])[1]) || !/^[-*]\s/.test(section[i])) continue;
     const next = section[i + 1];
-    if (next !== undefined && /^\s+\S/.test(next) && !/^\s*[-*]\s/.test(next)) {
+    if (next !== undefined && /\S/.test(next) && (/^\s+\S/.test(next) ? !/^\s*[-*]\s/.test(next) : !opensBlock.test(next))) {
       return `an item is longer than one line: ${section[i].slice(0, 40)}`;
     }
   }
