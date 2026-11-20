@@ -7,7 +7,8 @@ Turns red when:
   - `gen-vocabulary.mjs --check` or `--check-sql` is red on the tree as committed;
   - the generator accepts a broken copy of the contract (it is run on a scratch
     copy of the tree, one sabotage at a time) carrying any of: a `reader_terms`
-    entry without a definition; an alias equal to another term; a
+    entry without a definition; an alias equal to another term (lowercase, as
+    the term is spelled, in mixed case, or padded with whitespace); a
     `survey_passes` status not in `subsystem_status`; a `set_when` other than
     `start`/`end`; `survey_passes` statuses out of ladder order; an enum missing
     `reader_facing`;
@@ -436,6 +437,25 @@ def _alias_is_term(doc: dict[str, Any]) -> None:
     doc["reader_terms"][15]["aliases"] = ["field note", doc["reader_terms"][4]["term"].lower()]
 
 
+# The collision must hold however the alias is spelled: as the term itself, in
+# mixed case, and padded with whitespace. A lowercase alias alone passes a
+# generator that compares the raw alias with its lowercased term keys.
+def _alias_is_term_spelling(doc: dict[str, Any]) -> None:
+    doc["reader_terms"][15]["aliases"] = ["field note", doc["reader_terms"][4]["term"]]
+
+
+def _alias_is_term_mixed_case(doc: dict[str, Any]) -> None:
+    term = doc["reader_terms"][4]["term"]
+    doc["reader_terms"][15]["aliases"] = [
+        "field note",
+        "".join(c.upper() if i % 2 else c.lower() for i, c in enumerate(term)),
+    ]
+
+
+def _alias_is_term_padded(doc: dict[str, Any]) -> None:
+    doc["reader_terms"][15]["aliases"] = ["field note", f"  {doc['reader_terms'][4]['term'].lower()} "]
+
+
 def _status_unknown(doc: dict[str, Any]) -> None:
     doc["survey_passes"][1]["status"] = "reviewed"
 
@@ -457,6 +477,9 @@ SABOTAGE: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
     ("a term without a definition", _drop_definition, "definition"),
     ("a term with an empty definition", _empty_definition, "definition"),
     ("an alias equal to another term", _alias_is_term, "alias"),
+    ("an alias spelled exactly as another term", _alias_is_term_spelling, "alias"),
+    ("an alias equal to another term in mixed case", _alias_is_term_mixed_case, "alias"),
+    ("an alias equal to another term padded with whitespace", _alias_is_term_padded, "alias"),
     ("a survey_passes status not in subsystem_status", _status_unknown, "subsystem_status"),
     ("a set_when other than start or end", _set_when_other, "set_when"),
     ("survey_passes statuses out of ladder order", _out_of_order, "order"),
