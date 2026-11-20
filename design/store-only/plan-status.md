@@ -7,7 +7,7 @@
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
 | SO0 | Record the plan in BACKLOG.md | done (1 attempt) | — | `dev/test-store-only-backlog.mjs` | §8 SO0, §0, §9 |
-| SO1 | Contract enums: narrative sections, claim mark kinds, territory dispositions (no SQL bindings) | ready | SO0 | `materializer/test-store-only-contract.py` | §8 SO1, §2.1, §2.2, §7.2 |
+| SO1 | Contract enums: narrative sections, claim mark kinds, territory dispositions (no SQL bindings) | ready (1 attempt) | SO0 | `materializer/test-store-only-contract.py` | §8 SO1, §2.1, §2.2, §7.2 |
 | SO2 | Schema, migrations, SQL bindings and legacy fixtures | ready | SO1 | `mcp-server/test-store-only-schema.mjs` | §8 SO2, §2, §5.1, §7.2 |
 | SO3 | Narrative tools: record, decline, get, reset withdrawal | ready | SO2 | `mcp-server/test-store-only-narratives.mjs` | §8 SO3, §2.1 |
 | SO4 | Project records: purpose (write and read), profile, runtime boundaries, concern territory and probe | ready | SO2 | `mcp-server/test-store-only-project-records.mjs` | §8 SO4, §2.2 |
