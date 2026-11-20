@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | O0 | Record the plan in BACKLOG.md | done (1 attempt) | — | `dev/test-orientation-backlog.mjs` | §4 O0, §1.5 |
 | O1 | Contract: terms, ID kinds, survey passes, reader-facing flag, D4 labels | done (1 attempt) | — | `materializer/test-orientation-contract.py` | §4 O1, §2.1, §2.3, §5 D4, Appendix A, Appendix B, Appendix C |
-| O2 | The page index with 'Use it when' | ready (1 attempt) | — | `materializer/test-orientation-index.py` | §4 O2, §2.4, Appendix D |
+| O2 | The page index with 'Use it when' | done (1 attempt) | — | `materializer/test-orientation-index.py` | §4 O2, §2.4, Appendix D |
 
 ## S2 · The reader's guide and the overview (review: pending)
 
