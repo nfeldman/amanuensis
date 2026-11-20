@@ -120,7 +120,7 @@ SITE_PARAGRAPH = (
     "This site is the record of an AI agent's survey of {name}. The agent read the code,"
     " recorded what it concluded and the code each conclusion rests on, and listed what it"
     " could not settle. It does not change the code. Every page is as of one commit, shown"
-    " at the top as *Checked*."
+    " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
 )
 # A glob in a term's `pages` stands for the page that lists the family.
 FAMILY_LISTING = {"subsystems/*.md": "master-plan.md", "diagnosticity/*.md": "diagnosticity.md"}
@@ -381,6 +381,31 @@ def main() -> int:
             return None
 
         check("'What this site is' is Appendix C's paragraph, naming the project", site_paragraph)
+
+        def checked_where_promised() -> str | None:
+            # The paragraph names where the commit is shown; each place must show it.
+            # A Markdown page carries no Checked line at its top, so the sentence
+            # may not promise one there.
+            html_pages = sorted(docs.rglob("*.html"))
+            if not html_pages:
+                return "the fixture published no HTML pages"
+            for path in html_pages:
+                text = read(path) or ""
+                if not re.search(r'<span class="snapshot-item"><b>Checked</b>', text):
+                    return f"{path.relative_to(docs)} shows no Checked commit at the top"
+            index_md = read(docs / "index.md") or ""
+            if not re.search(r"^\| Checked at \| \S", index_md, re.M):
+                return "index.md has no 'Checked at' row"
+            bare = [
+                str(path.relative_to(docs))
+                for path in sorted(docs.rglob("*.md"))
+                if not re.search(r"^\*?\*?Checked\b", (read(path) or "").split("\n## ", 1)[0], re.M)
+            ]
+            if bare and "at the top as *Checked*." in md:
+                return f"the guide says every page shows Checked at the top; {bare[0]} and {len(bare) - 1} other Markdown pages do not"
+            return None
+
+        check("the guide's 'Checked' promise holds where it says, in both views", checked_where_promised)
 
         # -- Terms ---------------------------------------------------------
         terms_lines = by_title.get("Terms", [])
