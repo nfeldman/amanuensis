@@ -216,6 +216,17 @@ def html_head(text: str) -> str:
     return match.group(1) if match else ""
 
 
+def hides_from_readers(tag: str) -> bool:
+    """Whether an opening tag takes its element out of the page or the accessibility tree."""
+
+    return bool(
+        re.search(r'\baria-hidden\s*=\s*"?\s*true', tag, re.I)
+        or re.search(r"<\w+\b[^>]*\shidden\b", tag, re.I)
+        or re.search(r"\bstyle\s*=\s*\"[^\"]*(display\s*:\s*none|visibility\s*:\s*hidden)", tag, re.I)
+        or re.search(r'\brole\s*=\s*"?(presentation|none)\b', tag, re.I)
+    )
+
+
 def only_separators(text: str) -> bool:
     return not re.search(r"[A-Za-z0-9]", text)
 
@@ -356,6 +367,14 @@ def main() -> int:
                     return f"{html_page} has no use-when line to sit under"
                 if head[use_when.end() : paragraph.start()].strip():
                     return f"{html_page}: the terms line is not directly under the use-when line"
+                opening = re.match(r"<p\b[^>]*>", paragraph.group(0))
+                if opening and hides_from_readers(opening.group(0)):
+                    return f"{html_page}: the terms line is hidden from readers: {opening.group(0)!r}"
+                for tag in re.findall(r"<a\b[^>]*>", paragraph.group(0)):
+                    if hides_from_readers(tag) or re.search(r"\btabindex\s*=\s*\"?-1", tag):
+                        return f"{html_page}: a terms link is hidden from readers: {tag!r}"
+                    if re.search(r"\baria-label(ledby)?\s*=", tag):
+                        return f"{html_page}: a terms link overrides its accessible name: {tag!r}"
                 links = [
                     (re.sub(r"<[^>]+>", "", t).strip(), h)
                     for h, t in re.findall(r'<a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a>', paragraph.group(0), re.S)
