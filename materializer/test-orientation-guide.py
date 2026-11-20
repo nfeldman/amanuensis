@@ -24,7 +24,9 @@ Turns red when:
     `<summary>`, or a reader-facing enum inside it, or an enum table is
     missing in either view;
   - the HTML Terms or Status values differ from the Markdown's (an HTML guide
-    that drops them is red while the Markdown is whole);
+    that drops them is red while the Markdown is whole), or an enum table's
+    HTML Value cell is anything but the stored value as literal code (a status
+    chip would print another enum's label there);
   - reader-lenses spec §7.8 does not point to design/orientation/PLAN.md;
   - the gate does not run in CI.
 
@@ -618,15 +620,14 @@ def main() -> int:
                     got = [md_visible(c).strip() for c in rows[index].strip().strip("|").split(" | ")]
                     if got != want:
                         return f"{name} row {index + 1} reads {got!r} in Markdown, the contract says {want!r}"
-                    # A stored value that is also a status or evidence label
-                    # prints as a chip; its class still names the stored value.
-                    shown = list(html_rows[index])
-                    chip = re.match(r'\s*<span class="([^"]*)"', raw_rows[index][0])
-                    key = htmllib.escape(want[0].lower())
-                    if chip and ({f"status-{key}", f"evidence-{key}"} & set(chip.group(1).split())):
-                        shown[0] = want[0]
-                    if shown != want:
+                    # The Value column is the stored value, printed literally. A
+                    # chip would print some enum's label in its place (pass_type's
+                    # `adversarial` as subsystem_status's "Challenging claims").
+                    if html_rows[index] != want:
                         return f"{name} row {index + 1} reads {html_rows[index]!r} in HTML, the contract says {want!r}"
+                    literal = f"<code>{htmllib.escape(want[0], quote=False)}</code>"
+                    if raw_rows[index][0].strip() != literal:
+                        return f"{name} row {index + 1}: the HTML Value cell is {raw_rows[index][0].strip()[:80]!r}, not {literal!r}"
             return None
 
         check("each enum row carries its own value's label, meaning and limit, in both views", enum_cells)
