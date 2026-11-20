@@ -32,7 +32,7 @@
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
-| O10 | Skill workflow repairs W1–W6 | ready (1 attempt) | O1 | `dev/test-skill-workflow-text.mjs` | §4 O10, §1.5, §5 D4 |
+| O10 | Skill workflow repairs W1–W6 | done (1 attempt) | O1 | `dev/test-skill-workflow-text.mjs` | §4 O10, §1.5, §5 D4 |
 | O12 | Say which publication the read-back describes | ready | — | `materializer/test-orientation-readback-label.py` | §4 O12, §4 Publishing defects |
 | O13 | Date the survey notes under the account | ready | — | `materializer/test-orientation-survey-notes.py` | §4 O13, §4 Publishing defects |
 | O15 | A command-line render stays in the store docs and says it was not recorded (D6) | ready | O12 | `materializer/test-orientation-cli-render.py` | §4 O15, §4 Publishing defects, §5 D6 |
