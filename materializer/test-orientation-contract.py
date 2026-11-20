@@ -27,6 +27,8 @@ Turns red when:
     value, `authorizes` or `cannot_justify` of `subsystem_status` changed, or
     the `pass_type` enum's own "Adversarial" label changed;
   - the "Survey depth" term's definition omits a depth label it describes;
+  - the "Stale" term's definition describes only files the survey read, while
+    Stale knowledge also lists files scoped but unread and files set aside;
   - `contract_version` is not 1.1.0;
   - CI does not run this gate.
 
@@ -307,6 +309,29 @@ def check_depth_term_names_labels() -> str | None:
     return f"Survey depth definition omits {missing}" if missing else None
 
 
+# Stale knowledge (renderers.render_stale) lists every obligation-bearing ledger
+# row that changed since its recorded revision, partitioned by classification:
+# a file read, a file scoped but unread, a file set aside. The "Stale" term must
+# describe that page, so it names each partition's revision, not a reading alone.
+STALE_PARTITION_WORDS = {"examined": "read", "candidate": "scoped", "deferred-with-reason": "set aside"}
+
+
+def check_stale_term_covers_stale_page() -> str | None:
+    readback = importlib.import_module("amanuensis_materializer.readback")
+    classifications = [c for _heading, group in readback.LEDGER_STALE_SECTIONS for c in group]
+    unknown = [c for c in classifications if c not in STALE_PARTITION_WORDS]
+    if unknown:
+        return f"Stale knowledge lists {unknown}, which this gate does not know how to describe"
+    terms = {t["term"]: t for t in constant("READER_TERMS")}
+    definition = terms.get("Stale", {}).get("definition", "")
+    missing = [
+        f"{c} ({STALE_PARTITION_WORDS[c]!r})" for c in classifications if STALE_PARTITION_WORDS[c] not in definition
+    ]
+    if missing:
+        return f"the Stale definition {definition!r} does not cover the page's partitions {missing}"
+    return None
+
+
 def check_id_kinds() -> str | None:
     kinds = constant("ID_KINDS")
     got = tuple(k.get("kind") for k in kinds)
@@ -518,6 +543,7 @@ def main() -> int:
     check("vocabulary.py carries READER_TERMS, ID_KINDS, SURVEY_PASSES", check_constants_shape)
     check("READER_TERMS matches Appendix A", check_reader_terms)
     check("the Survey depth term names every depth label", check_depth_term_names_labels)
+    check("the Stale term covers every partition Stale knowledge lists", check_stale_term_covers_stale_page)
     check("ID_KINDS matches Appendix B", check_id_kinds)
     check("SURVEY_PASSES matches §4 O1 step 1 (D4 timing)", check_survey_passes)
     check("reader_facing is on every enum and true for exactly the listed fourteen", check_reader_facing)
