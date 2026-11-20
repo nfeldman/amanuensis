@@ -34,7 +34,6 @@ import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
