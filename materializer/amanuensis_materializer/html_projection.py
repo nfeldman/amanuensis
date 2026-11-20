@@ -1623,7 +1623,9 @@ _IDENTIFIER_SHAPE = re.compile(
 class _IdentifierMarkup(HTMLParser):
     """Add semantic definitions to known opaque IDs in an HTML fragment."""
 
-    _PROTECTED = frozenset({"abbr", "script", "style"})
+    # An SVG renders no HTML element, so an <abbr> in its <text> would hide
+    # the ID it defines; the diagrams carry their own names.
+    _PROTECTED = frozenset({"abbr", "script", "style", "svg"})
     _VOID = frozenset({
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
         "meta", "param", "source", "track", "wbr",
