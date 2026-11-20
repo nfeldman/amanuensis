@@ -1519,6 +1519,16 @@ def _code_html(value: str) -> str:
     return f"<code>{html.escape(value)}</code>"
 
 
+_DEPTH_VALUE_BY_LABEL = {label.lower(): value for value, label in labels("subsystem_status").items()}
+
+
+def _atlas_depth(cell: str) -> str:
+    """An atlas depth cell, which carries the contract's label, as its status chip."""
+
+    value = _DEPTH_VALUE_BY_LABEL.get(_plain(cell).lower())
+    return _status_html(value) if value else _inline(cell)
+
+
 def _names_label(text: str) -> bool:
     """Whether a bare cell is a stored value or its own label, not another enum's word.
 
@@ -2203,7 +2213,7 @@ class MarkdownRenderer:
                 "".join(markers)
                 + '<li class="atlas-item">'
                 + f'<div class="atlas-subsystem" data-identifier-defined>{_inline(subsystem)}</div>'
-                + f'<div class="atlas-depth">{_inline(depth)}</div>'
+                + f'<div class="atlas-depth">{_atlas_depth(depth)}</div>'
                 + "</li>"
                 for subsystem, depth, markers in subsystems
             )

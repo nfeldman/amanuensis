@@ -1406,7 +1406,9 @@ def render_master_plan(
             layers.setdefault(s["layer"] or "unlayered", []).append(s)
         # The atlas comes first and always has one row per subsystem, whether or
         # not any edge is recorded (§2.5): the HTML turns this three-column table
-        # into the region cards the architecture page already uses.
+        # into the region cards the architecture page already uses. The depth
+        # is the contract's label in both views, never the stored value.
+        depth_labels = labels("subsystem_status")
         body = [
             "| Region | Subsystem | Survey depth |",
             "|---|---|---|",
@@ -1415,7 +1417,7 @@ def render_master_plan(
             for s in items:
                 body.append(
                     f"| {_table_cell(layer)} | **[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})**"
-                    f" {_table_cell(s['name'])} | {_table_cell(s['status'])} |"
+                    f" {_table_cell(s['name'])} | {_table_cell(depth_labels.get(s['status'], s['status']))} |"
                 )
         body.append("")
         for layer, items in layers.items():

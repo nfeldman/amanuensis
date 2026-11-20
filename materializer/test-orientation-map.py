@@ -449,7 +449,7 @@ def main() -> int:
                 for text, _href, depth in items
             ]
             md_rows = [
-                (md_visible(cells[0]), (re.findall(r"[A-Z]-\d+", cells[1]) or [cells[1]])[0], DEPTH_LABEL.get(md_visible(cells[2]), md_visible(cells[2])))
+                (md_visible(cells[0]), (re.findall(r"[A-Z]-\d+", cells[1]) or [cells[1]])[0], md_visible(cells[2]).strip().lower())
                 for cells in tables[0][2]
             ]
             if html_rows != md_rows:

@@ -18,6 +18,11 @@ from .slugs import subsystem_page
 # each file_classification value in contracts/conspectus-vocabulary.json, so the
 # server and the projection cannot disagree about which scoped files carry work.
 from .vocabulary import OBLIGATION_BEARING_SQL as _OBLIGATION_BEARING
+from .vocabulary import labels
+
+# An atlas prints a depth's contract label, as the HTML chip does, never the
+# stored value.
+_DEPTH_LABELS = labels("subsystem_status")
 
 
 def _safe_label(text: str) -> str:
@@ -81,7 +86,7 @@ def subsystem_dependency_view(conn: sqlite3.Connection) -> tuple[str, str]:
             route = subsystem_page(sid, name)
             region = _safe_label(subsystem.get("layer") or "Other")
             lines.append(
-                f"| {region} | **[{sid}]({route})** {_safe_label(name)} | {subsystem['status']} |"
+                f"| {region} | **[{sid}]({route})** {_safe_label(name)} | {_DEPTH_LABELS.get(subsystem['status'], subsystem['status'])} |"
             )
         return ATLAS_HEADING, "\n".join(lines)
 
