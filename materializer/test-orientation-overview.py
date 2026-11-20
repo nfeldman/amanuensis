@@ -223,19 +223,23 @@ def md_visible(text: str) -> str:
     )
 
 
-def md_routes(section: str) -> dict[str, str]:
-    """lens -> the raw markdown of its bullet (continuation lines folded in)."""
+def md_route_list(section: str) -> list[tuple[str, str]]:
+    """(lens, the raw markdown of its bullet) per bullet, in order, duplicates kept."""
 
-    out: dict[str, str] = {}
-    current: str | None = None
+    out: list[tuple[str, str]] = []
     for line in section.splitlines():
         m = re.match(r"^\s*[-*]\s+\*\*([^*]+)\*\*(.*)$", line)
         if m:
-            current = m.group(1)
-            out[current] = m.group(2)
-        elif current and line.strip():
-            out[current] += " " + line.strip()
+            out.append((m.group(1), m.group(2)))
+        elif out and line.strip():
+            out[-1] = (out[-1][0], out[-1][1] + " " + line.strip())
     return out
+
+
+def md_routes(section: str) -> dict[str, str]:
+    """lens -> the raw markdown of its bullet (continuation lines folded in)."""
+
+    return dict(md_route_list(section))
 
 
 def html_text(fragment: str) -> str:
@@ -255,15 +259,24 @@ def html_h2_titles(text: str) -> list[str]:
     return [html_text(m.group(1)).lstrip("§").strip() for m in re.finditer(r"<h2\b[^>]*>(.*?)</h2>", text, re.S)]
 
 
+def html_route_list(section: str) -> list[tuple[str, str]]:
+    """(lens, inner HTML) per <li>, <p> or <tr> that opens with a lens name, duplicates kept."""
+
+    out: list[tuple[str, str]] = []
+    for m in re.finditer(r"<(li|p|tr)\b[^>]*>(.*?)</\1>", section, re.S):
+        for lens in LENSES:
+            if re.match(rf"\s*(<[^>]+>\s*)*{lens}\b", m.group(2)):
+                out.append((lens, m.group(2)))
+                break
+    return out
+
+
 def html_routes(section: str) -> dict[str, str]:
-    """lens -> the inner HTML of the <li> or <p> that opens with the lens name."""
+    """lens -> the inner HTML of the first <li> or <p> that opens with the lens name."""
 
     out: dict[str, str] = {}
-    for lens in LENSES:
-        for m in re.finditer(r"<(li|p|tr)\b[^>]*>(.*?)</\1>", section, re.S):
-            if re.match(rf"\s*(<[^>]+>\s*)*{lens}\b", m.group(2)):
-                out[lens] = m.group(2)
-                break
+    for lens, raw in html_route_list(section):
+        out.setdefault(lens, raw)
     return out
 
 
@@ -325,6 +338,11 @@ def main() -> int:
                     return f"index.md has no {lens} route"
                 if lens not in html_r:
                     return f"index.html has no {lens} route"
+            # Count before the dictionaries fold duplicates away.
+            for view, routes in (("index.md", md_route_list(md_sec)), ("index.html", html_route_list(html_sec))):
+                names = [lens for lens, _ in routes]
+                if names != list(LENSES):
+                    return f"{view} has the routes {names}, expected one each: {list(LENSES)}"
             return None
 
         check("the overview has one route per lens in both views", one_route_each)
