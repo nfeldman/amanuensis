@@ -461,35 +461,49 @@ def _flat(text: str) -> str:
     return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
 
 
-def _without_first_names(text: str, names: dict[str, str]) -> str:
-    """Text with each `<subsystem id> (<its name>)` read as the bare id.
+def _resolver_pattern(
+    owed: str,
+    names: dict[str, str],
+    concerns: set[str],
+    *,
+    words: bool = False,
+) -> re.Pattern[str]:
+    """`owed` as a pattern that also matches what the xref resolver adds to it.
 
-    The publication prints a subsystem's name beside the first mention of its id
-    on each page (PLAN §2.2 item 3), so an account that names an id reads, on
-    the page, with a name its author did not write. The name is the
-    publication's, like the link and the bold around the id, and is read out on
-    both sides of the comparison. Only that subsystem's exact name in brackets
-    directly after its own id is read out; every other word is still owed.
+    The resolver prints a subsystem's name beside its first mention on a page
+    (PLAN §2.2 item 3) and introduces a concern code as "concern RC-2" (item 5),
+    so an account reads, on the page, with words its author did not write.
+    Whether a mention is the page's first depends on what precedes the account,
+    so each such addition is optional; every word the author wrote stays owed,
+    including a name the author wrote in brackets after an ID. The two shapes
+    recognised are exactly those: ` (<name>)` directly after a subsystem ID and
+    `concern ` directly before a concern code. With `words`, `owed` and the
+    page are `_html_words` text and the additions are matched as words.
     """
 
-    for identifier, name in names.items():
-        text = re.sub(
-            rf"(?<![\w-])({re.escape(identifier)}(?![\w-])(?:\*\*)?) \({re.escape(name.replace('|', '/'))}\)",
-            r"\1",
-            text,
-        )
-    return text
+    def form(text: str) -> str:
+        return _html_words(text).strip() if words else text
 
-
-def _words_without_first_names(page_words: str, names: dict[str, str]) -> str:
-    """`_without_first_names` for an HTML page's words (`_html_words`)."""
-
-    for identifier, name in names.items():
-        bare = _html_words(identifier)
-        page_words = page_words.replace(
-            f"{bare}{_html_words(name.replace('|', '/')).strip()} ", bare
-        )
-    return page_words
+    shown = {identifier: form(name.replace("|", "/")) for identifier, name in names.items()}
+    forms = {form(identifier): identifier for identifier in [*names, *concerns] if form(identifier)}
+    if not forms:
+        return re.compile(re.escape(owed))
+    ids = "|".join(re.escape(f) for f in sorted(forms, key=lambda f: (-len(f), f)))
+    found = re.compile(rf"(?<!\S)({ids})(?!\S)" if words else rf"(?<![\w-])({ids})(?![\w-])")
+    parts: list[str] = []
+    at = 0
+    for match in found.finditer(owed):
+        identifier = forms[match.group(1)]
+        parts.append(re.escape(owed[at : match.start()]))
+        if identifier in concerns:
+            parts.append(f"(?:concern )?{re.escape(match.group(1))}")
+        else:
+            name = shown[identifier]
+            addition = f" {re.escape(name)}" if words else rf" \({re.escape(name)}\)"
+            parts.append(f"{re.escape(match.group(1))}(?:{addition})?" if name else re.escape(match.group(1)))
+        at = match.end()
+    parts.append(re.escape(owed[at:]))
+    return re.compile("".join(parts))
 
 
 def _html_words(text: str) -> str:
@@ -504,7 +518,12 @@ def _html_words(text: str) -> str:
     return " " + " ".join(re.findall(r"[^\W_]+", plain)) + " "
 
 
-def _missing_html_line(owed: str, page_words: str) -> str | None:
+def _missing_html_line(
+    owed: str,
+    page_words: str,
+    names: dict[str, str] | None = None,
+    concerns: set[str] | None = None,
+) -> str | None:
     """The first line of an explanation the HTML page does not carry, or None.
 
     Compared by line and by word, since the projection turns Markdown marks
@@ -513,7 +532,8 @@ def _missing_html_line(owed: str, page_words: str) -> str | None:
     expected are the ones the projection's own inline renderer gives, which can
     differ from the record's: a status in a code span prints as its chip's label
     and a few schema phrases print as the reader's. A fenced line is printed as
-    written.
+    written. Outside a fence, a subsystem's name after its ID and "concern"
+    before a concern code may be the resolver's (`_resolver_pattern`).
     """
 
     from .html_projection import _inline  # noqa: PLC0415 — it imports this module
@@ -525,7 +545,14 @@ def _missing_html_line(owed: str, page_words: str) -> str | None:
             continue
         text = re.sub(r"^\s*(\d+[.)]|[-*+>])\s+", "", line)
         words = _html_words(text if fence else _inline(text)).strip()
-        if words and f" {words} " not in page_words:
+        if not words:
+            continue
+        if fence:
+            if f" {words} " not in page_words:
+                return line
+        elif not _resolver_pattern(f" {words} ", names or {}, concerns or set(), words=True).search(
+            page_words
+        ):
             return line
     return None
 
@@ -1615,6 +1642,13 @@ class ProjectionVerifier:
 
         mismatches: list[dict[str, str]] = []
         names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+        # The kinds the resolver acts on, as the xref index keeps them: a later
+        # family's ID overrides an earlier one's (`_build_xref_index`).
+        later = {str(r["id"]) for r in rows(conn, "SELECT id FROM seams")}
+        later |= {str(r["finding_id"]) for r in rows(conn, "SELECT finding_id FROM findings")}
+        later |= {f"DM-{r['id']}" for r in rows(conn, "SELECT id FROM diagnosticity_sessions")}
+        concerns = {str(r["code"]) for r in rows(conn, "SELECT code FROM concerns")} - later
+        named = {i: n for i, n in names.items() if i not in concerns and i not in later}
         readings = effective_explanations(conn, self.storage)
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
             if reading.state not in {"recorded", "declined"} or reading.row is None:
@@ -1626,8 +1660,8 @@ class ProjectionVerifier:
                 page = "architecture.md"
             body = str(reading.row["body"])
             owed = explanation_refusal(slot) if orientation_violations(body) else body
-            if _without_first_names(_flat(owed), names) not in _without_first_names(
-                _flat(projection.get(page, "")), names
+            if not _resolver_pattern(_flat(owed), named, concerns).search(
+                _flat(projection.get(page, ""))
             ):
                 mismatches.append(
                     {
@@ -1641,10 +1675,7 @@ class ProjectionVerifier:
                 )
             html_page = str(Path(page).with_suffix(".html"))
             absent = _missing_html_line(
-                _without_first_names(owed, names),
-                _words_without_first_names(
-                    _html_words(projection.get(html_page, "")), names
-                ),
+                owed, _html_words(projection.get(html_page, "")), named, concerns
             )
             if absent is not None:
                 mismatches.append(
