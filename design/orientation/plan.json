@@ -59,10 +59,10 @@
         "O15"
       ],
       "review": {
-        "status": "pending",
+        "status": "reviewed",
         "start_sha": "105e99722458d769927ce438dc1653b60aab71bd",
-        "reviewed_sha": "",
-        "findings": 0
+        "reviewed_sha": "fd16fa504ac81519569e272ab2ee315d2bb2542d",
+        "findings": 5
       }
     }
   ],

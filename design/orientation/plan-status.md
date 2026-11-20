@@ -28,7 +28,7 @@
 | O7 | Subsystem map atlas and one name | done (1 attempt) | — | `materializer/test-orientation-map.py` | §4 O7, §2.5, §2.7, §5 D3 |
 | O8 | Recorded-boundary diagram on the architecture page | done (1 attempt) | — | `materializer/test-orientation-diagram.py` | §4 O8, §2.5, §1.3 |
 
-## S4 · Skill workflow and publishing defects (review: pending)
+## S4 · Skill workflow and publishing defects (review: reviewed)
 
 | Packet | Title | Status | Depends on | Gate | Claims |
 |---|---|---|---|---|---|
