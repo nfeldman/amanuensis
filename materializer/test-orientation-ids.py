@@ -30,6 +30,12 @@ Turns red when:
     resolver re-runs over its own output, so naming must be idempotent);
   - either resolver's pattern is a fixed shape rather than built from the xref
     index's keys (an ID outside the old shape stays plain);
+  - the read-back's explanation census misreads what the resolver adds: a
+    faithfully published account whose text holds an interior concern code
+    ("Review RC-2 before …", printed "concern RC-2") or an ID followed by its
+    name in other words ("R-06 — Rule evaluation stores …") is reported
+    missing, or deleting an author-written "(Contract checks)" after C-01 from
+    both views is not reported;
   - the gate does not run in CI.
 
 False green it cannot exclude: the fixture's prose is short, so first-mention
@@ -137,6 +143,13 @@ MIXED = (
 # lowercase ID, a concern code, and a finding ID outside the old shape.
 LEAD = "R-06 calls C-01 twice, and R-06 caches it; auth retries too. RC-2 may apply. See B04-R6."
 ENTRY = "Start at R-06. Then read R-06 again."
+# Recorded accounts the read-back must find on their pages as written: an
+# interior concern code the resolver prefixes, an ID whose name follows in
+# other words, and a name the author wrote in brackets.
+PROJECT_ACCOUNT = "Review RC-2 before updating the cache."
+R06_ACCOUNT = "R-06 — Rule evaluation stores all entries."
+C01_ACCOUNT = "The subsystem is C-01 (Contract checks)."
+AUTHORED_NAME = " (Contract checks)"
 
 
 def seed(storage: Path, subsystems: tuple[tuple[str, str, str, str], ...], prose: bool) -> None:
@@ -182,9 +195,42 @@ def seed(storage: Path, subsystems: tuple[tuple[str, str, str, str], ...], prose
     db.close()
 
 
-def publish(storage: Path) -> dict[str, Any]:
+def seed_accounts(storage: Path) -> None:
+    """The mixed store's subsystems and RC-2, with three recorded accounts."""
+
+    seed(storage, MIXED, False)
+    db = sqlite3.connect(storage / "memory.db")
+    db.execute(
+        "INSERT INTO concerns (code, category, origin, notes)"
+        " VALUES ('RC-2', 'concurrency', 'seeded', 'a race on the rule cache')"
+    )
+    db.executemany(
+        "INSERT INTO explanations (subject_type, subject_id, slot, disposition, body,"
+        " ref_sha, session_id) VALUES (?, ?, 'account', 'recorded', ?, ?, 'o5')",
+        [
+            ("project", "project", PROJECT_ACCOUNT, SHA),
+            ("subsystem", "R-06", R06_ACCOUNT, SHA),
+            ("subsystem", "C-01", C01_ACCOUNT, SHA),
+        ],
+    )
+    db.commit()
+    db.close()
+
+
+def explanation_mismatches(summary: dict[str, Any]) -> list[str]:
+    """A publish nests its read-back under `readback`; `--readback-only` does not."""
+
+    found = summary.get("mismatches") or (summary.get("readback") or {}).get("mismatches") or []
+    return [
+        f"{m.get('object_type')} {m.get('object_id')}"
+        for m in found
+        if str(m.get("object_type", "")).startswith("explanation")
+    ]
+
+
+def publish(storage: Path, *extra: str) -> dict[str, Any]:
     proc = subprocess.run(
-        [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage)],
+        [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage), *extra],
         capture_output=True,
         text=True,
         check=False,
@@ -418,6 +464,47 @@ def prose_checks(docs: Path) -> None:
     check("a concern code in prose reads 'concern RC-2'; the coverage matrix is left alone (§2.2 item 5)", concern_prefix)
 
 
+def account_checks(storage: Path) -> None:
+    docs = storage / "docs"
+    summary = publish(storage)
+
+    def faithful_accounts_read_back() -> str | None:
+        missing = explanation_mismatches(summary)
+        if missing:
+            return f"the read-back reports faithfully published accounts missing: {missing}"
+        if summary.get("_returncode") != 0 or summary.get("ok") is False:
+            return f"the accounts fixture did not publish — {summary.get('_diagnostic', summary.get('mismatches'))}"
+        architecture = read(docs / "architecture.md")
+        if "[concern RC-2](concerns.md#rc-2) before updating the cache" not in architecture:
+            return "the project account's RC-2 is not printed as 'concern RC-2', so the case is not exercised"
+        return None
+
+    check("accounts: the read-back finds accounts the resolver prefixed or left unnamed", faithful_accounts_read_back)
+
+    def authored_name_owed() -> str | None:
+        pages = [p for stem in ("c01-*.md", "c01-*.html") for p in sorted((docs / "subsystems").glob(stem))]
+        if len(pages) != 2:
+            return f"C-01's two views are not published: {[p.name for p in pages]}"
+        originals = {p: read(p) for p in pages}
+        for p, text in originals.items():
+            if AUTHORED_NAME not in text and "(Contract checks)" not in text:
+                return f"{p.name} does not carry the authored name to delete"
+        try:
+            for p, text in originals.items():
+                p.write_text(text.replace(AUTHORED_NAME, "", 1) if p.suffix == ".md" else text.replace(" (Contract checks).", ".", 1))
+            red = publish(storage, "--readback-only", "--output", str(docs))
+        finally:
+            for p, text in originals.items():
+                p.write_text(text)
+        hits = explanation_mismatches(red)
+        for kind in ("explanation C-01:account", "explanation-html C-01:account"):
+            if kind not in hits:
+                return f"deleting the author's '(Contract checks)' from both views is not reported as {kind!r}: {hits}"
+        return None
+
+    check("accounts: an author-written name deleted from both views is reported missing", authored_name_owed)
+
+
 def resolvers_use_index_keys() -> str | None:
     sys.path.insert(0, str(ROOT))
     from amanuensis_materializer import html_projection, xref  # noqa: PLC0415
@@ -485,6 +572,16 @@ def main() -> int:
                     return None
 
                 check("mixed: a second publish over the unchanged store changes no Markdown page", idempotent)
+
+        accounts = Path(tmp) / "accounts"
+        accounts.mkdir()
+        try:
+            seed_accounts(accounts)
+        except Exception as exc:
+            FAILURES.append(f"accounts: could not seed a store — {scrub(repr(exc))}")
+            emit(f"  FAIL accounts: could not seed a store — {scrub(repr(exc))}")
+        else:
+            account_checks(accounts)
 
     check("both resolvers build their pattern from the index's keys", resolvers_use_index_keys)
 
