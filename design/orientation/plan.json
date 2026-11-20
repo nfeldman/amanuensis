@@ -68,14 +68,14 @@
   "packets": [
     {
       "needs_mcp": false,
-      "status": "ready",
+      "status": "done",
       "attempts": 1,
       "start_sha": "e19d43f4bb401783f6b7be01b3dfa30dcc426d93",
-      "red_sha": "",
-      "green_sha": "",
+      "red_sha": "02af4db",
+      "green_sha": "5d94e1d",
       "verified_by_launcher": false,
       "blocked_reason": "",
-      "notes": "",
+      "notes": "Section added as a ### under 'Publishing and rendering' (links the plan, W1-W9 one line each, W6 marked decided D4). Gate also fails on a multi-line item, a duplicate id, or a non-W6 item marked decided. CI step added beside the packed-artifact gates.",
       "id": "O0",
       "slice": "S1",
       "title": "Record the plan in BACKLOG.md",
