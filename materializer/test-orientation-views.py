@@ -316,15 +316,21 @@ def main() -> int:
         check("the overview does not carry the paragraph (§7.2)", overview_unchanged)
 
         def other_pages_do_not() -> str | None:
-            for path in sorted(docs.rglob("*.md")):
-                if path.name == "how-to-read.md":
+            # Both views of every page: an HTML-only copy is still a repeat.
+            pages = sorted([*docs.rglob("*.md"), *docs.rglob("*.html")])
+            if not any(path.name == "architecture.html" for path in pages):
+                return "the fixture published no architecture.html to check"
+            for path in pages:
+                if path.stem == "how-to-read":
                     continue
                 body = read(path) or ""
-                if "Markdown alone" in squash(body):
-                    return f"{path.relative_to(docs)} repeats the paragraph"
+                flat = html_text(visible(body)) if path.suffix == ".html" else squash(visible(body))
+                for probe in ("written twice", "Markdown alone", "leaves those out"):
+                    if probe in flat:
+                        return f"{path.relative_to(docs)} repeats the paragraph ({probe!r})"
             return None
 
-        check("no other Markdown page repeats the paragraph", other_pages_do_not)
+        check("no other page repeats the paragraph, in either view", other_pages_do_not)
 
         # -- CI ------------------------------------------------------------
         def runs_in_ci() -> str | None:
