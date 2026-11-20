@@ -9,7 +9,9 @@
 //     "Decisions needed" page; or it still names "a global queue on the findings index";
 //   - subsystem-survey.md contains "(approved)";
 //   - in phase-5-packaging.md the "Advance status" heading comes after "Materialize" or
-//     "Seam assessability", or the final commit heading is no longer the last step;
+//     "Seam assessability", or the final commit heading is no longer the last step; or in
+//     subsystem-survey.md's Phase 5 summary list the "Advance status" step comes after the
+//     "Materialize" or "Seam assessability" step;
 //   - (W6) subsystem-survey.md contains `status=<phase_name>`, lacks the "When each phase sets
 //     the status" table, or the table's (phase, status, when) rows differ from the contract's
 //     `survey_passes` (mcp-server/contracts/conspectus-vocabulary.json; "before the phase
@@ -170,6 +172,19 @@ function check() {
   const ad = item("adversarial");
   if (!(/Phase 4/.test(ad) && /record_claim_challenge/.test(ad) && /Phase 5/.test(ad)))
     return "the resume list does not finish Phase 4 (record_claim_challenge), then run Phase 5";
+
+  // W4/W5: the coordinator's Phase 5 summary list in subsystem-survey.md
+  const step = (re) => {
+    const m = ss.match(re);
+    return m ? m.index : -1;
+  };
+  const ssAdv = step(/^\d+\.\s+\*\*Advance status/m);
+  const ssMat = step(/^\d+\.\s+\*\*Materialize/m);
+  const ssSeam = step(/^\d+\.\s+\*\*Seam assessability/m);
+  if (ssAdv < 0 || ssMat < 0 || ssSeam < 0)
+    return "subsystem-survey.md's Phase 5 list lost an Advance status, Materialize or Seam assessability step";
+  if (ssAdv > ssMat) return 'subsystem-survey.md\'s Phase 5 list advances status after "Materialize"';
+  if (ssAdv > ssSeam) return 'subsystem-survey.md\'s Phase 5 list advances status after "Seam assessability"';
 
   // W3/W4/W5: phase-5-packaging.md
   const p5 = load(join(skill, "references", "phase-5-packaging.md"), "phase-5-packaging.md");
