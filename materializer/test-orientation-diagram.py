@@ -12,7 +12,10 @@ Turns red when:
     each line's two ends must sit on the edges of the two boxes the record
     names, and a seam's label must be that seam's ID at the line's midpoint;
   - an xref is not drawn as an arrow from its `from_id` to its `to_id`, or a
-    seam carries an arrow;
+    seam carries an arrow; an arrowhead is not one visible triangle (three
+    distinct vertices, nonzero area) whose tip is its line's end and whose base
+    lies behind the tip and across the line, or an xref line has no arrowhead
+    or two;
   - the caption (the section heading, figcaption, SVG title and description)
     says "dependency" while zero `xrefs` are recorded;
   - the "N of M subsystems have no recorded boundary" count is wrong in either
@@ -326,6 +329,38 @@ def layer_label(layer: str | None) -> str:
     return layer or "unlayered"
 
 
+def arrowhead_shape(d: str, xref_lines: list[dict[str, Any]]) -> tuple[str | None, int]:
+    """(problem, index of the xref line it heads): a visible triangle whose tip is
+    the line's end and whose base lies behind the tip, across the line."""
+
+    if not re.fullmatch(r"\s*M[^MZ]*Z\s*", d):
+        return f"an arrowhead path {d!r} is not one closed figure", -1
+    numbers = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", d)]
+    points = [(numbers[i], numbers[i + 1]) for i in range(0, len(numbers) - 1, 2)]
+    if len(numbers) % 2 or len(points) != 3 or len(set(points)) != 3:
+        return f"an arrowhead path {d!r} is not a triangle of three distinct vertices", -1
+    (ax, ay), (bx, by), (cx, cy) = points
+    area = abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2
+    if area < 10:
+        return f"an arrowhead path {d!r} has area {area:g}; it would not show", -1
+    for index, ln in enumerate(xref_lines):
+        tip = next((p for p in points if abs(p[0] - ln["x2"]) <= 0.75 and abs(p[1] - ln["y2"]) <= 0.75), None)
+        if tip is None:
+            continue
+        dx, dy = ln["x2"] - ln["x1"], ln["y2"] - ln["y1"]
+        length = (dx * dx + dy * dy) ** 0.5 or 1.0
+        ux, uy = dx / length, dy / length
+        base = [p for p in points if p is not tip]
+        behind = [(p[0] - tip[0]) * ux + (p[1] - tip[1]) * uy for p in base]
+        across = [(p[0] - tip[0]) * uy - (p[1] - tip[1]) * ux for p in base]
+        if not all(b <= -3 for b in behind):
+            return f"an arrowhead path {d!r} does not point along its line toward the target", -1
+        if not across[0] * across[1] < 0:
+            return f"an arrowhead path {d!r} does not straddle its line", -1
+        return None, index
+    return f"an arrowhead path {d!r} does not sit at the end of an xref line", -1
+
+
 def main() -> int:
     emit("GATE O8 — the recorded-boundary diagram on the architecture page")
     emit("")
@@ -436,15 +471,14 @@ def main() -> int:
                     return f"{name}: arrows drawn {sorted(drawn_xrefs)}, xrefs recorded {sorted(wanted_xrefs)}"
                 if len(diagram.arrows) != len(xrefs):
                     return f"{name}: {len(diagram.arrows)} arrowheads for {len(xrefs)} xrefs; seams are undirected"
+                headed: list[int] = []
                 for path in diagram.arrows:
-                    points = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", attrs(path).get("d", ""))]
-                    tips = [(points[i], points[i + 1]) for i in range(0, len(points) - 1, 2)]
-                    if not any(
-                        abs(px - ln["x2"]) <= 0.75 and abs(py - ln["y2"]) <= 0.75
-                        for ln in xref_lines
-                        for px, py in tips
-                    ):
-                        return f"{name}: an arrowhead does not sit at the end of an xref line"
+                    problem, line_at = arrowhead_shape(attrs(path).get("d", ""), xref_lines)
+                    if problem:
+                        return f"{name}: {problem}"
+                    headed.append(line_at)
+                if sorted(headed) != list(range(len(xref_lines))):
+                    return f"{name}: arrowheads sit on xref lines {sorted(headed)}, expected one on each of {len(xref_lines)}"
             return None
 
         check("every line is a recorded seam or xref, joining the boxes the record names", lines_are_relations)
