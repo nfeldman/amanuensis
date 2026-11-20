@@ -357,6 +357,11 @@ def check_pass_table(
                 f"row {index + 1} ({spec['pass']}) says {depth!r}, but set_when is"
                 f" {spec['set_when']!r}: expected {want_when!r}"
             )
+        if depth != f"{status['label']}, {want_when}":
+            return (
+                f"row {index + 1} ({spec['pass']}) has the depth cell {depth!r},"
+                f" expected exactly {status['label'] + ', ' + want_when!r}"
+            )
         if meaning != status["meaning"]:
             return f"row {index + 1} ({spec['pass']}) gives the meaning {meaning!r}, the contract says {status['meaning']!r}"
         if html_rows[index][:4] != [md_visible(c) for c in cells[:4]]:
@@ -601,9 +606,11 @@ def main() -> int:
                 return f"the 'what the agent does' cell did not follow the contract: {cells[1]!r}"
             if not cells[2].startswith("Xlabel"):
                 return f"the depth label did not follow the contract: {cells[2]!r}"
+            want = expected_when("start" if first["set_when"] == "end" else "end")
+            if cells[2] != f"Xlabel, {want}":
+                return f"the depth cell did not follow the contract label and set_when: {cells[2]!r}"
             if cells[3] != "Xmeaning is done.":
                 return f"the depth meaning did not follow the contract: {cells[3]!r}"
-            want = expected_when("start" if first["set_when"] == "end" else "end")
             if want not in cells[2]:
                 return f"the 'when' cell did not follow set_when: {cells[2]!r}"
             return None
