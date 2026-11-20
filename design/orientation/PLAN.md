@@ -409,17 +409,20 @@ Rules for every packet:
      `status`, `set_when`). `set_when` is `"start"` or `"end"`: the pass sets `status` when it
      starts or when it finishes. Values, per D4: Scope `scoping`/end, Structure `structural`/end,
      Concern review `concerns`/start, Challenge `adversarial`/start, Packaging `mapped`/end.
-  1a. **D4 labels and meanings** in `subsystem_status`: `concerns` label "Concerns" →
-     "Reviewing concerns"; `adversarial` label "Adversarial" → "Challenging claims". Values,
+  1a. **D4 labels and meanings** in `subsystem_status`: `scoping` label "Scoping" → "Scoped"
+     (owner, 2026-11-20: the depth means the scope pass is done, and "Scoping" read as under
+     way); `concerns` label "Concerns" → "Reviewing concerns"; `adversarial` label
+     "Adversarial" → "Challenging claims". Values,
      `authorizes` and `cannot_justify` do not change. Meanings: `scoping` becomes "The scope
      pass is done: the subsystem's boundary and files are established, nothing more.";
      `structural` becomes "The structure pass is done: types, state, flows and concurrency are
      mapped; correctness claims are not yet authorized."; `concerns` and `adversarial` keep
      theirs (they already say "in progress" / "being challenged"). Leave the `pass_type` enum's
-     own "Adversarial" label alone; it is a different enum. Before changing, `rg -n
-     '"Concerns"|"Adversarial"|Reviewing concerns' materializer mcp-server/src dev` and update
-     any test that asserts the old status label (none did at `1f4b72b`; labels are read from
-     `VOCABULARY`).
+     own "Adversarial" label alone; it is a different enum. The value `scoping` stays: the
+     server, the skill's ladder and `check-evidence-vocabulary.mjs` use values, not labels.
+     Before changing, `rg -n '"Scoping"|"Concerns"|"Adversarial"|Reviewing concerns'
+     materializer mcp-server/src dev` and update any test that asserts an old status label
+     (none did at `0ce2b18`; labels are read from `VOCABULARY`).
   2. Add `"reader_facing": true|false` to every enum. True for: `finding_resolution_state`,
      `severity`, `subsystem_status`, `standing_state`, `stale_reason`, `file_classification`,
      `evidence_kind`, `disposition_classification`, `field_note_category`,
@@ -436,8 +439,9 @@ Rules for every packet:
   above is accepted (it writes a broken copy of the JSON to a temp dir and runs the generator on
   it); when `vocabulary.py` lacks the three constants; or when a `subsystem_status` value whose
   `survey_passes` row has `set_when: "start"` has a label that does not begin with an "-ing"
-  word, or one with `set_when: "end"` has a meaning containing neither "done" nor "complete" (checks
-  D4's labels and meanings stay in step with the timing). `node
+  word; or one with `set_when: "end"` has a label that does begin with one (so "Scoping" is
+  red), or a meaning containing neither "done" nor "complete". These checks keep D4's labels
+  and meanings in step with the timing. `node
   mcp-server/scripts/check-evidence-vocabulary.mjs` stays green (it compares status values, not
   labels).
 
@@ -637,9 +641,8 @@ Decided by the owner on 2026-11-20 (relayed by the backlog-triage session):
   done. The server and the contract's values stay as they are. The contract gets labels that
   say "under way" and meanings that say "done" (O1); the skill advances to `concerns` and
   `adversarial` before those passes start (O10), and a gate fails on the old order.
-  - Left as it is, not decided: the label "Scoping" reads as under way although the depth means
-    the scope pass is done. Terms says so plainly (Appendix A). Relabelling it ("Scoped") is a
-    one-line change in O1 if the owner wants it.
+  - Follow-up, decided 2026-11-20: the label "Scoping" read as under way although the depth
+    means the scope pass is done, so O1 relabels it "Scoped". The stored value stays `scoping`.
 
 Still open:
 
@@ -656,7 +659,7 @@ Still open:
 | Session | | One stretch of work by the agent. Sessions and publications lists them. |
 | Subsystem | | A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding. |
 | Layer | region | A group of subsystems with a similar role. Pages group subsystems by layer. |
-| Survey depth | status | How far the survey of a subsystem has got. Unmapped: not started. Scoping and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim. |
+| Survey depth | status | How far the survey of a subsystem has got. Unmapped: not started. Scoped and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim. |
 | Mapped | | The last survey depth: every pass has run. It does not mean every file is read or every bug found. |
 | Scope | file ledger | The files a subsystem owns, each marked as read, not yet read, or left out with a reason. |
 | Evidence | | A pointer to code at a commit (file, symbol, lines) with a note of how strong it is: read in code, seen in a test, stated in a comment, and so on. |
@@ -720,7 +723,7 @@ shown at the top as *Checked*."
 
 | Pass | What the agent does | Survey depth it sets, and when |
 |---|---|---|
-| Scope | Lists the subsystem's files and the terms it uses. | Scoping, when the pass is done *(label and meaning generated)* |
+| Scope | Lists the subsystem's files and the terms it uses. | Scoped, when the pass is done *(label and meaning generated)* |
 | Structure | Reads the files; records types, state, data flows, concurrency, and claims. | Structural, when the pass is done |
 | Concern review | Gives every checklist item a verdict with evidence. Confirmed defects become findings. | Reviewing concerns, as the pass starts |
 | Challenge | Tries to prove each claim and finding wrong. | Challenging claims, as the pass starts |
