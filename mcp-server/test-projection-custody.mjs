@@ -168,6 +168,19 @@ try {
   }
   assert(collisionRejected, "projection proof identity was rebound to another output");
   assert(!existsSync(otherOutput), "proof collision wrote a different output before rejection");
+
+  // A server render always passes --recorded-publication, so its pages carry no
+  // command-line notice. With the read-back switched off there is nothing to
+  // record: the render must be refused, not reported as recorded.
+  const runsBefore = db.prepare("SELECT COUNT(*) AS n FROM projection_verification_runs").get().n;
+  const unverified = call("materialize_docs", { verify_readback: false });
+  const runsAfter = db.prepare("SELECT COUNT(*) AS n FROM projection_verification_runs").get().n;
+  assert(
+    unverified.ok === false && /read-back/i.test(String(unverified.error)),
+    `verify_readback=false was not refused: ${JSON.stringify(unverified).slice(0, 300)}`,
+  );
+  assert(unverified.recorded !== true, "an unverified render reported recorded: true");
+  assert(runsAfter === runsBefore, "an unverified render recorded a projection run");
   console.log(
     "OK — red projection halts, records mismatch custody, repairs, and rejects proof rebinding",
   );

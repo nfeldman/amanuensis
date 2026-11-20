@@ -21,7 +21,7 @@ import subprocess
 from collections import Counter
 from contextvars import ContextVar
 from dataclasses import dataclass
-from html import unescape
+from html import escape, unescape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -394,8 +394,8 @@ def explanation_rows(conn: Any) -> list[dict[str, Any]]:
             cited.setdefault(int(link["explanation_id"]), []).append(str(link["file_path"]))
     stored = rows(
         conn,
-        "SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id"
-        " FROM explanations ORDER BY id",
+        "SELECT id, subject_type, subject_id, slot, disposition, body, ref_sha, session_id,"
+        " recorded_at FROM explanations ORDER BY id",
     )
     for record in stored:
         record["cited_files"] = cited.get(int(record["id"]), [])
@@ -461,6 +461,51 @@ def _flat(text: str) -> str:
     return " ".join(re.sub(r"(?m)^\s*#{1,6}(?=\s)", "", unlinked).split())
 
 
+def _resolver_pattern(
+    owed: str,
+    names: dict[str, str],
+    concerns: set[str],
+    *,
+    words: bool = False,
+) -> re.Pattern[str]:
+    """`owed` as a pattern that also matches what the xref resolver adds to it.
+
+    The resolver prints a subsystem's name beside its first mention on a page
+    (PLAN §2.2 item 3) and introduces a concern code as "concern RC-2" (item 5),
+    so an account reads, on the page, with words its author did not write.
+    Whether a mention is the page's first depends on what precedes the account,
+    so each such addition is optional; every word the author wrote stays owed,
+    including a name the author wrote in brackets after an ID. The two shapes
+    recognised are exactly those: ` (<name>)` directly after a subsystem ID and
+    `concern ` directly before a concern code. With `words`, `owed` and the
+    page are `_html_words` text and the additions are matched as words.
+    """
+
+    def form(text: str) -> str:
+        return _html_words(text).strip() if words else text
+
+    shown = {identifier: form(name.replace("|", "/")) for identifier, name in names.items()}
+    forms = {form(identifier): identifier for identifier in [*names, *concerns] if form(identifier)}
+    if not forms:
+        return re.compile(re.escape(owed))
+    ids = "|".join(re.escape(f) for f in sorted(forms, key=lambda f: (-len(f), f)))
+    found = re.compile(rf"(?<!\S)({ids})(?!\S)" if words else rf"(?<![\w-])({ids})(?![\w-])")
+    parts: list[str] = []
+    at = 0
+    for match in found.finditer(owed):
+        identifier = forms[match.group(1)]
+        parts.append(re.escape(owed[at : match.start()]))
+        if identifier in concerns:
+            parts.append(f"(?:concern )?{re.escape(match.group(1))}")
+        else:
+            name = shown[identifier]
+            addition = f" {re.escape(name)}" if words else rf" \({re.escape(name)}\)"
+            parts.append(f"{re.escape(match.group(1))}(?:{addition})?" if name else re.escape(match.group(1)))
+        at = match.end()
+    parts.append(re.escape(owed[at:]))
+    return re.compile("".join(parts))
+
+
 def _html_words(text: str) -> str:
     """A generated HTML page's visible words, space-delimited, for presence checks.
 
@@ -473,7 +518,12 @@ def _html_words(text: str) -> str:
     return " " + " ".join(re.findall(r"[^\W_]+", plain)) + " "
 
 
-def _missing_html_line(owed: str, page_words: str) -> str | None:
+def _missing_html_line(
+    owed: str,
+    page_words: str,
+    names: dict[str, str] | None = None,
+    concerns: set[str] | None = None,
+) -> str | None:
     """The first line of an explanation the HTML page does not carry, or None.
 
     Compared by line and by word, since the projection turns Markdown marks
@@ -482,7 +532,8 @@ def _missing_html_line(owed: str, page_words: str) -> str | None:
     expected are the ones the projection's own inline renderer gives, which can
     differ from the record's: a status in a code span prints as its chip's label
     and a few schema phrases print as the reader's. A fenced line is printed as
-    written.
+    written. Outside a fence, a subsystem's name after its ID and "concern"
+    before a concern code may be the resolver's (`_resolver_pattern`).
     """
 
     from .html_projection import _inline  # noqa: PLC0415 — it imports this module
@@ -494,7 +545,14 @@ def _missing_html_line(owed: str, page_words: str) -> str | None:
             continue
         text = re.sub(r"^\s*(\d+[.)]|[-*+>])\s+", "", line)
         words = _html_words(text if fence else _inline(text)).strip()
-        if words and f" {words} " not in page_words:
+        if not words:
+            continue
+        if fence:
+            if f" {words} " not in page_words:
+                return line
+        elif not _resolver_pattern(f" {words} ", names or {}, concerns or set(), words=True).search(
+            page_words
+        ):
             return line
     return None
 
@@ -869,7 +927,7 @@ def _local_links(text: str, suffix: str = ".md") -> list[str]:
     ]
 
 
-def write_contract(output: Path, page_paths: list[str]) -> dict[str, Any]:
+def write_contract(output: Path, page_paths: list[str], notice: str = "") -> dict[str, Any]:
     pages: list[dict[str, Any]] = []
     links: list[dict[str, str]] = []
     for rel in sorted(page_paths):
@@ -886,16 +944,29 @@ def write_contract(output: Path, page_paths: list[str]) -> dict[str, Any]:
         "version": CONTRACT_VERSION,
         "pages": pages,
         "local_links": sorted(links, key=lambda x: (x["source"], x["target"])),
+        # The command-line render notice every page carries, or null for a
+        # publication whose caller records its read-back (PLAN O15). A later
+        # `--readback-only` reads it here, since it has no render flags of its own.
+        "render_notice": notice or None,
     }
     (output / CONTRACT_NAME).write_text(json.dumps(contract, indent=2) + "\n")
     return contract
 
 
 class ProjectionVerifier:
-    def __init__(self, storage: Path, output: Path, expected_pages: list[str]) -> None:
+    def __init__(
+        self,
+        storage: Path,
+        output: Path,
+        expected_pages: list[str],
+        notice: str | None = None,
+    ) -> None:
         self.storage = storage
         self.output = output
         self.expected_pages = sorted(expected_pages)
+        # The render notice the pages must carry: the render's own flag when a
+        # render runs this read-back, or None to take it from the receipt.
+        self.notice = notice
 
     def verify(self) -> dict[str, Any]:
         mismatches: list[dict[str, str]] = []
@@ -1089,7 +1160,82 @@ class ProjectionVerifier:
                         "detail": "finished page bytes differ from the publication receipt",
                     }
                 )
+        mismatches.extend(self._render_notice_census(contract, projection))
         return self._summary(mismatches)
+
+    def _render_notice_census(
+        self, contract: dict[str, Any], projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Each page carries the command-line render notice exactly when it should (O15).
+
+        The notice is part of every page a command-line render writes, so the
+        receipt's hashes already cover its bytes; this checks that it is there on
+        every page of such a render, in its place, and on no page of a recorded
+        publication. A render passes its own flag, which must agree with the
+        receipt it just wrote; `--readback-only` takes the receipt's word.
+        """
+
+        from .html_projection import (  # noqa: PLC0415 — it imports this module
+            CLI_RENDER_NOTICES,
+            notice_paragraph,
+        )
+
+        mismatches: list[dict[str, str]] = []
+        stated = str(contract.get("render_notice") or "")
+        expected = stated if self.notice is None else self.notice
+        if stated != expected:
+            mismatches.append(
+                {
+                    "axis": "content",
+                    "object_type": "render-notice",
+                    "object_id": CONTRACT_NAME,
+                    "detail": "the publication receipt states a different render notice from the render's",
+                }
+            )
+        others = [n for n in CLI_RENDER_NOTICES if n != expected]
+        for rel in self.expected_pages:
+            suffix = Path(rel).suffix
+            body = projection.get(rel)
+            if body is None or suffix not in (".md", ".html"):
+                continue  # coverage owns a missing page
+            if suffix == ".md":
+                # The sentence, not its italic paragraph: emphasis is presentation,
+                # and a plain copy says the same thing to a reader.
+                forms = list(others)
+                count = body.count(expected) if expected else 0
+                placed = not expected or (
+                    count == 1 and body.rstrip("\n").endswith("\n" + notice_paragraph(expected))
+                )
+            else:
+                forms = [escape(n) for n in others]
+                count = body.count(escape(expected)) if expected else 0
+                head = re.search(r'<header class="page-head">(.*?)</header>', body, re.S)
+                placed = not expected or (
+                    count == 1 and head is not None and escape(expected) in head.group(1)
+                )
+            if not placed:
+                detail = (
+                    "page lacks the command-line render notice"
+                    if count == 0
+                    else "page carries the command-line render notice out of place or more than once"
+                )
+            elif any(form in body for form in forms):
+                detail = (
+                    "page carries a command-line render notice on a recorded publication"
+                    if not expected
+                    else "page carries the other command-line render notice"
+                )
+            else:
+                continue
+            mismatches.append(
+                {
+                    "axis": "content",
+                    "object_type": "render-notice",
+                    "object_id": rel,
+                    "detail": detail,
+                }
+            )
+        return mismatches
 
     def _finding_partition_census(
         self, conn: Any, projection: dict[str, str]
@@ -1584,6 +1730,13 @@ class ProjectionVerifier:
 
         mismatches: list[dict[str, str]] = []
         names = {str(r["id"]): str(r["name"]) for r in rows(conn, "SELECT id, name FROM subsystems")}
+        # The kinds the resolver acts on, as the xref index keeps them: a later
+        # family's ID overrides an earlier one's (`_build_xref_index`).
+        later = {str(r["id"]) for r in rows(conn, "SELECT id FROM seams")}
+        later |= {str(r["finding_id"]) for r in rows(conn, "SELECT finding_id FROM findings")}
+        later |= {f"DM-{r['id']}" for r in rows(conn, "SELECT id FROM diagnosticity_sessions")}
+        concerns = {str(r["code"]) for r in rows(conn, "SELECT code FROM concerns")} - later
+        named = {i: n for i, n in names.items() if i not in concerns and i not in later}
         readings = effective_explanations(conn, self.storage)
         for (subject_type, subject_id, slot), reading in sorted(readings.items()):
             if reading.state not in {"recorded", "declined"} or reading.row is None:
@@ -1595,7 +1748,9 @@ class ProjectionVerifier:
                 page = "architecture.md"
             body = str(reading.row["body"])
             owed = explanation_refusal(slot) if orientation_violations(body) else body
-            if _flat(owed) not in _flat(projection.get(page, "")):
+            if not _resolver_pattern(_flat(owed), named, concerns).search(
+                _flat(projection.get(page, ""))
+            ):
                 mismatches.append(
                     {
                         "axis": "state",
@@ -1607,7 +1762,9 @@ class ProjectionVerifier:
                     }
                 )
             html_page = str(Path(page).with_suffix(".html"))
-            absent = _missing_html_line(owed, _html_words(projection.get(html_page, "")))
+            absent = _missing_html_line(
+                owed, _html_words(projection.get(html_page, "")), named, concerns
+            )
             if absent is not None:
                 mismatches.append(
                     {

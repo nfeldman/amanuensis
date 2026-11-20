@@ -6,6 +6,9 @@ terminal state — `confirmed-bug` | `confirmed-acceptable` | `ruled-out`
 | `out-of-scope` | `unresolved-competition` — with evidence, an
 evidence-quality tag, a linchpin flag, and a one-sentence rationale.
 
+The coordinator has already advanced this subsystem to `concerns`;
+`set_disposition` and `add_finding` are refused below it.
+
 ## Inputs
 
 - Call `list_concerns(status_filter="active")` — this is your
@@ -185,7 +188,7 @@ Return to the coordinator with a one-line summary:
   `name-inferred` / `pattern-matched` quality — Phase 4 will try
   hardest to upgrade or overturn these.
 
-The coordinator advances to `concerns` status and starts adversarial
+The coordinator advances to `adversarial` and starts adversarial
 review immediately. No pause.
 
 When a concern's classification hinges on a domain rule you can't

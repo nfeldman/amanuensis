@@ -86,10 +86,17 @@ python3 materialize.py --storage /path/to/project/.amanuensis
 
 With optional flags:
 
-- `--output <dir>` — output dir (default: `<storage>/docs`)
+- `--output <dir>` — output dir (default: `<storage>/docs`); a render to any
+  other directory is refused unless `--allow-external-output` is given
 - `--force-full` — ignore the manifest and rebuild every page
 - `--clean-publish` — render and verify in isolation before promotion
 - `--readback-only` — verify the existing projection without changing it
+- `--recorded-publication` — the caller records the read-back in the store
+  (the MCP server passes it)
+
+A render without `--recorded-publication` ends every page with a notice that
+its read-back was not recorded, since the overview's Publication integrity
+figures come from the last recorded run. The summary's `recorded` says which.
 
 On success the last line of stdout is a JSON summary the MCP server's
 `materialize_docs` tool parses.

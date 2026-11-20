@@ -162,11 +162,15 @@ export const artifactTools: ToolDefinition[] = [
       try {
         const abs = resolveArtifactPath(ctx.project.storagePath, path);
         const { hash, bytes } = hashFile(abs);
+        // written_at dates the notes a subsystem page prints under its account
+        // ("Written on …"), so it moves only when the bytes do: a rehash of an
+        // unchanged file must not make old notes look newer than the account.
         ctx.db
           .prepare(
-            `UPDATE artifacts SET content_hash = ?, bytes = ?, ref_sha = COALESCE(?, ref_sha), written_at = datetime('now') WHERE path = ?`,
+            `UPDATE artifacts SET written_at = CASE WHEN content_hash IS ? THEN written_at ELSE datetime('now') END,
+                    content_hash = ?, bytes = ?, ref_sha = COALESCE(?, ref_sha) WHERE path = ?`,
           )
-          .run(hash, bytes, refSha, path);
+          .run(hash, hash, bytes, refSha, path);
         return ok({ content_hash: hash, bytes });
       } catch (e) {
         return { ok: false, error: (e as Error).message };

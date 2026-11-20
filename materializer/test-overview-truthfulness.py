@@ -111,6 +111,11 @@ def check(label: str, fn: Callable[[], str | None]) -> None:
 # expects (§7.2, §11.1, §6.1).
 # ---------------------------------------------------------------------------
 PROJECT_NAME = "LedgerFixture"
+IDENTITY_SENTENCE = (
+    f"An architecture survey of {PROJECT_NAME}. An AI agent running Amanuensis read the"
+    " repository, without changing it, and recorded what it found here. New to this"
+    " site? Start with [How to read this survey](how-to-read.md)."
+)
 THESIS_HEADING = "What is this codebase?"
 THESIS_SENTENCE = (
     "LedgerFixture appends ledger rows durably and serves them through a "
@@ -901,8 +906,11 @@ def main() -> int:
                     f" {title!r}, not the project name {PROJECT_NAME!r}"
                 )
             head_block = index.split(f"## {THESIS_HEADING}", 1)[0]
-            if "Amanuensis" not in head_block:
-                return "the identity block does not name Amanuensis as the producing method"
+            if IDENTITY_SENTENCE not in head_block:
+                return (
+                    "the identity block does not carry the identity sentence naming"
+                    " Amanuensis as the producing method (PLAN Appendix C)"
+                )
             if re.search(r"^#\s+(Conspectus|Amanuensis)\s*$", index, re.M):
                 return "the overview titles itself with the method rather than the project"
             return None

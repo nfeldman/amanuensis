@@ -1,0 +1,846 @@
+{
+  "version": 1,
+  "branch": "orientation",
+  "slices": [
+    {
+      "id": "S1",
+      "title": "Contract and page index",
+      "packets": [
+        "O0",
+        "O1",
+        "O2"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "e19d43f4bb401783f6b7be01b3dfa30dcc426d93",
+        "reviewed_sha": "94f17813a4c48e77c5a9eb3fb4b4ad2b40ce8762",
+        "findings": 6
+      }
+    },
+    {
+      "id": "S2",
+      "title": "The reader's guide and the overview",
+      "packets": [
+        "O3",
+        "O4",
+        "O6",
+        "O9",
+        "O14"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "c2bdf5daadf7adffde89eff893c47fa9e7b5132a",
+        "reviewed_sha": "c7826306dd4984e023f6c12c05e4ed5a2b06626a",
+        "findings": 6
+      }
+    },
+    {
+      "id": "S3",
+      "title": "IDs and structure visuals",
+      "packets": [
+        "O5",
+        "O7",
+        "O8"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "20a3f09bf1b0a0a722ff3ab71d5cbb88d730cf7c",
+        "reviewed_sha": "fe716f3ec10965807ec311ac8b6667e3658d242a",
+        "findings": 8
+      }
+    },
+    {
+      "id": "S4",
+      "title": "Skill workflow and publishing defects",
+      "packets": [
+        "O10",
+        "O12",
+        "O13",
+        "O15"
+      ],
+      "review": {
+        "status": "reviewed",
+        "start_sha": "105e99722458d769927ce438dc1653b60aab71bd",
+        "reviewed_sha": "fd16fa504ac81519569e272ab2ee315d2bb2542d",
+        "findings": 5
+      }
+    }
+  ],
+  "packets": [
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "e19d43f4bb401783f6b7be01b3dfa30dcc426d93",
+      "red_sha": "02af4db",
+      "green_sha": "0962a82c747305d0918812b67cdb28374d592ecf",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Section added as a ### under 'Publishing and rendering' (links the plan, W1-W9 one line each, W6 marked decided D4). Gate also fails on a multi-line item, a duplicate id, or a non-W6 item marked decided. CI step added beside the packed-artifact gates.",
+      "id": "O0",
+      "slice": "S1",
+      "title": "Record the plan in BACKLOG.md",
+      "claims": [
+        "§4 O0",
+        "§1.5"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "BACKLOG.md",
+        "dev/test-orientation-backlog.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-orientation-backlog.mjs",
+        "command": "node dev/test-orientation-backlog.mjs",
+        "marker": "GATE O0",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [],
+      "acceptance": [
+        "PLAN §4 O0: a 'Reader orientation' section under 'Publishing and rendering' links design/orientation/PLAN.md and lists W1–W9, one line each, W6 marked decided (D4)."
+      ],
+      "budget_minutes": 30
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "cb614d28b27e72c25ff911d6edd5da0383dd011d",
+      "red_sha": "5206c68",
+      "green_sha": "d20924d63bd53415ae5a6a7a75f50c00a4d3ffd9",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Gate drives the generator on a scratch tree with seven sabotaged contracts and checks D4 label/meaning timing. Filled gaps: each reader_terms entry's pages chosen by this packet (subsystems/*.md and diagnosticity/*.md stand for families); reader_facing is also emitted into vocabulary.ts, but READER_TERMS/ID_KINDS/SURVEY_PASSES only to Python; the new subsystem_status labels also reach server responses via standing.ts.",
+      "id": "O1",
+      "slice": "S1",
+      "title": "Contract: terms, ID kinds, survey passes, reader-facing flag, D4 labels",
+      "model": "opus",
+      "claims": [
+        "§4 O1",
+        "§2.1",
+        "§2.3",
+        "§5 D4",
+        "Appendix A",
+        "Appendix B",
+        "Appendix C"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "mcp-server/contracts/conspectus-vocabulary.json",
+        "mcp-server/scripts/gen-vocabulary.mjs",
+        "materializer/amanuensis_materializer/vocabulary.py",
+        "mcp-server/src/vocabulary.ts",
+        "materializer/test-orientation-contract.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-contract.py",
+        "command": "cd materializer && python3 test-orientation-contract.py",
+        "marker": "GATE O1",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+        "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node test-vocabulary-source.mjs",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && ruff check ."
+      ],
+      "acceptance": [
+        "PLAN §4 O1 steps 1, 1a, 2, 3, 4 and its gate's red conditions.",
+        "subsystem_status labels: scoping 'Scoped', concerns 'Reviewing concerns', adversarial 'Challenging claims'; stored values unchanged.",
+        "survey_passes rows and set_when exactly as §4 O1 step 1 lists."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "d4141361a620a9f1f1e823abf85131a2fc1a8ff7",
+      "red_sha": "dbb08e5049b50dca599d7a935270f25326d29b0f",
+      "green_sha": "186454e86cc13dba0fb298d73db1bb4c3ada7ce6",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "use_when stores the Appendix D clause (after 'Use it when'), not a full sentence; both views print 'Use it when <clause>'. Subsystem/matrix rows link master-plan.md and diagnosticity.md, which list the members. Heading renamed in test-history-and-disagreements.py (routing check kept, subgroup members checked via their listing page). Index stays in place; moving it second is O3.",
+      "id": "O2",
+      "slice": "S1",
+      "title": "The page index with 'Use it when'",
+      "claims": [
+        "§4 O2",
+        "§2.4",
+        "Appendix D"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/test-orientation-index.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-index.py",
+        "command": "cd materializer && python3 test-orientation-index.py",
+        "marker": "GATE O2",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O2 and §2.4: every static page has a hint and use_when from Appendix D; index renamed 'Pages on this site' with Page / What it shows / Use it when, grouped by lens; one row per subsystem and matrix subgroup; both views print use_when."
+      ],
+      "budget_minutes": 90
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "c2bdf5daadf7adffde89eff893c47fa9e7b5132a",
+      "red_sha": "06c8a04",
+      "green_sha": "84ee2ed1c2b6d1d291777971f75d23ac0404193e",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Terms link only pages planned for the store (a prose page with no source would break read-back links). The Full vocabulary details is a slug check in MarkdownRenderer. Updated test-materializer.py's title assertion and spec's §7.8 plus its page-table title. The overview's Method route still says 'How to read the conspectus' (O9).",
+      "id": "O3",
+      "slice": "S2",
+      "title": "The guide's new shape and Terms",
+      "claims": [
+        "§4 O3",
+        "§2.1",
+        "§2.6",
+        "§3",
+        "Appendix A",
+        "Appendix C"
+      ],
+      "depends_on": [
+        "O1",
+        "O2"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/core.py",
+        "design/reader-lenses/spec.md",
+        "materializer/test-orientation-guide.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-guide.py",
+        "command": "cd materializer && python3 test-orientation-guide.py",
+        "marker": "GATE O3",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-orientation-contract.py",
+        "cd materializer && python3 test-orientation-index.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-materializer.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O3: H2 order What this site is, Pages on this site, How a survey works (absent until O4), Terms, How IDs are formed (absent until O5), Status values, Full vocabulary; title 'How to read this survey' (D2); Terms has Conspectus and Mapped; no backtick in the first 600 bytes; one line added to reader-lenses spec §7.8."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "f360e777289f4c88e3a6a10ec5e980033ecf27dd",
+      "red_sha": "0289ce2",
+      "green_sha": "cd97d90986bdd8e4e1235eff3d1ea5d547e7cd54",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Pass table has four columns (Appendix C's three plus the contract meaning, since the plan says meanings are generated); the generated table is proven by publishing a copy of the materializer with a mutated vocabulary.py. Gate finds the identity paragraph as the last paragraph before the first H2 because O2's italic page-head hint sits under the H1. 'What it expects from you' says 'telling the agent' as Appendix C does.",
+      "id": "O4",
+      "slice": "S2",
+      "title": "How a survey works, and how to answer a decision",
+      "claims": [
+        "§4 O4",
+        "§2.3",
+        "§5 D4",
+        "Appendix C"
+      ],
+      "depends_on": [
+        "O1",
+        "O3"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-overview-truthfulness.py",
+        "materializer/test-orientation-workflow.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-workflow.py",
+        "command": "cd materializer && python3 test-orientation-workflow.py",
+        "marker": "GATE O4",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O4 and Appendix C: pass table generated from SURVEY_PASSES with labels, meanings and when-set from the contract; 'What it expects from you' and 'Phase numbers'; Decisions needed says to tell the agent; overview identity sentence from Appendix C with no digit and no forbidden term; test-overview-truthfulness changes only its identity expectation."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "beff82a6f1f79e8c68a1a999694dbd00328d8506",
+      "red_sha": "2a0326bd8d33ac8154b02c4219438dbbb68d7a47",
+      "green_sha": "3b4e3091281946cf38897d2b071d9b4275809caf",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "page_terms(path) in renderers.py maps a page to READER_TERMS (exact path or family glob, contract order); core.py inserts the Markdown line after the use-when paragraph and passes terms to SitePage; the HTML head prints a page-terms paragraph and strip_page_head removes the Markdown copy. Separator is ' · ' (plan names none); links are relative to the page's directory.",
+      "id": "O6",
+      "slice": "S2",
+      "title": "Terms on each page",
+      "claims": [
+        "§4 O6",
+        "§2.1"
+      ],
+      "depends_on": [
+        "O1",
+        "O3"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-terms.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-terms.py",
+        "command": "cd materializer && python3 test-orientation-terms.py",
+        "marker": "GATE O6",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-materializer.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O6: 'Terms on this page:' under the use_when line in both views, from READER_TERMS pages; omitted when a page has none; every link resolves to a guide anchor."
+      ],
+      "budget_minutes": 90
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "94f64f8382403650273c89f330fcffe352c462b8",
+      "red_sha": 4446892,
+      "green_sha": "2616f3b7fec049101e67f56459f9432cbee701de",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "One string changed in render_index (link text now GUIDE_TITLE, so it cannot drift from the guide's title); both views come from the same Markdown. Gate also pins the other three routes and the overview's H2 list. Checked-in docs/ output still has the old wording; not regenerated (would need a run against a real store). CI step added after test-orientation-terms.",
+      "id": "O9",
+      "slice": "S2",
+      "title": "Overview Method route",
+      "claims": [
+        "§4 O9",
+        "§3"
+      ],
+      "depends_on": [
+        "O3",
+        "O4"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-overview.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-overview.py",
+        "command": "cd materializer && python3 test-orientation-overview.py",
+        "marker": "GATE O9",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-orientation-workflow.py",
+        "cd materializer && python3 test-lens-pages.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O9: the Method route reads 'How to read this survey: what each page is for, the terms it uses, and how a survey works' and links the guide; nothing else on the overview changes."
+      ],
+      "budget_minutes": 45
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "6ddbc158754adb8ada67bf7dee877cbfa1717f48",
+      "red_sha": "346dcb9",
+      "green_sha": "4425d586e37a67dec6726309457c06d1914a9835",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Added SITE_VIEWS as a second paragraph of the guide's 'What this site is' (renderers.py); O3's gate checks only the first paragraph so it stays green. Overview untouched; CI step added beside test-prose-retention.",
+      "id": "O14",
+      "slice": "S2",
+      "title": "Say what the Markdown view leaves out",
+      "claims": [
+        "§4 O14",
+        "§4 Publishing defects"
+      ],
+      "depends_on": [
+        "O3"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-views.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-views.py",
+        "command": "cd materializer && python3 test-orientation-views.py",
+        "marker": "GATE O14",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O14: the paragraph ends 'What this site is' in both views, without backticks; the overview is unchanged."
+      ],
+      "budget_minutes": 45
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "20a3f09bf1b0a0a722ff3ab71d5cbb88d730cf7c",
+      "red_sha": "b810ca8",
+      "green_sha": "2ada6e1cbabc680a8a4c73469a82620fa6d3f416",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Outside the deliverables: readback.py's explanation census and test-explanation-orientation.py (EX12) now read out 'ID (its own name)' the way they already read out link and bold, since a recorded account that names an ID is its page's first mention; reviewer should judge that. Choices: the letter is the ID's leading letter run; a line that already holds the name (table row, heading) counts as the naming mention; headings and table header rows gain no name or prefix; a table row's key cell gains no concern prefix (the HTML builds anchors from it); a lowercase ID links wherever it appears as a whole word.",
+      "id": "O5",
+      "slice": "S3",
+      "title": "IDs: link every known ID, name first mentions, explain the letters",
+      "model": "opus",
+      "claims": [
+        "§4 O5",
+        "§2.2",
+        "§1.4",
+        "§5 D1",
+        "Appendix B"
+      ],
+      "depends_on": [
+        "O1",
+        "O3"
+      ],
+      "deliverables": [
+        "materializer/amanuensis_materializer/xref.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-ids.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-ids.py",
+        "command": "cd materializer && python3 test-orientation-ids.py",
+        "marker": "GATE O5",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-orientation-guide.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-claim-register.py"
+      ],
+      "acceptance": [
+        "PLAN §2.2 items 1–5 and §4 O5's red conditions, on a two-store fixture (letters one-to-one with layers; AxiomDB-like C and P in one layer).",
+        "Both resolvers build their pattern from the xref index's keys; test-xref-moved-target.py stays green."
+      ],
+      "budget_minutes": 150
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "52fab5545fedc39a1b67d43e9310f597499fe20b",
+      "red_sha": "45ac26cda2325d08dabb0272267c11ca8e588d8a",
+      "green_sha": "afd73a9cd11d9428ab87a0002d9507a98bc7032a",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Atlas table is built in render_master_plan only (no html_projection change); Markdown shows the stored status, HTML chips print the label (scoping reads 'Scoped'). The red commit's gate had a wrong atlas-extraction regex and no CI step; both were fixed in the green commit.",
+      "id": "O7",
+      "slice": "S3",
+      "title": "Subsystem map atlas and one name",
+      "claims": [
+        "§4 O7",
+        "§2.5",
+        "§2.7",
+        "§5 D3"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-map.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-map.py",
+        "command": "cd materializer && python3 test-orientation-map.py",
+        "marker": "GATE O7",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-materializer.py"
+      ],
+      "acceptance": [
+        "PLAN §2.5 item 1 and §4 O7: the Region / Subsystem / Survey depth table above the per-layer tables, rendered as the atlas in HTML; H1 'Subsystem map'."
+      ],
+      "budget_minutes": 60
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "eddce3f1ef44a2322f18706386bc6236d6891690",
+      "red_sha": "0cfa0e7f28f71634b5708e4119952aac8093a497",
+      "green_sha": "2afd16e823c3b5ce6bd0c1265518cfb6523ed6ce",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The marker is a new architecture-page section '## Recorded boundaries' whose table (Layer | Subsystem | Boundary | Other end) lists each relation on both endpoints' rows; the HTML draws seams from rows linking seams.md and xrefs only from outgoing (→) rows. Gap filled: a seam or xref naming one subsystem twice or an unrecorded ID is not drawn and is counted in a sentence; a missing layer is the column 'unlayered', as on the Subsystem map.",
+      "id": "O8",
+      "slice": "S3",
+      "title": "Recorded-boundary diagram on the architecture page",
+      "model": "opus",
+      "claims": [
+        "§4 O8",
+        "§2.5",
+        "§1.3"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "materializer/amanuensis_materializer/diagrams.py",
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/test-orientation-diagram.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-diagram.py",
+        "command": "cd materializer && python3 test-orientation-diagram.py",
+        "marker": "GATE O8",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-search-index.py"
+      ],
+      "acceptance": [
+        "PLAN §2.5 item 2, its layout paragraph, and §4 O8's red conditions; no inferred edge; build-time SVG only; a sentence instead of an SVG with no recorded relation."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "105e99722458d769927ce438dc1653b60aab71bd",
+      "red_sha": "b03a89b",
+      "green_sha": "4c283515d450563faa3382ce880c6965fe2d4946",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Advance status is an unnumbered heading before step 5 (Materialize) so test-placeholder-census.py's '### 5.' still finds Materialize and the published store text's 'step 8' still means end_session; the commit step is now 9. subsystem-survey.md's resume line quotes the claim-challenge refusal so check-refusal-parity stays green. Nothing in steps 5-8 needs a status below mapped; the mapped advance needs the explanations settled and a reconciled store, both before it.",
+      "id": "O10",
+      "slice": "S4",
+      "title": "Skill workflow repairs W1–W6",
+      "claims": [
+        "§4 O10",
+        "§1.5",
+        "§5 D4"
+      ],
+      "depends_on": [
+        "O1"
+      ],
+      "deliverables": [
+        ".claude/skills/amanuensis/references/open-questions.md",
+        ".claude/skills/amanuensis/references/subsystem-survey.md",
+        ".claude/skills/amanuensis/references/phase-3-concerns.md",
+        ".claude/skills/amanuensis/references/phase-4-adversarial.md",
+        ".claude/skills/amanuensis/references/phase-5-packaging.md",
+        ".claude/skills/amanuensis/SKILL.md",
+        "dev/test-skill-workflow-text.mjs"
+      ],
+      "gate": {
+        "test_path": "dev/test-skill-workflow-text.mjs",
+        "command": "node dev/test-skill-workflow-text.mjs",
+        "marker": "GATE O10",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+        "cd mcp-server && node scripts/check-reference-calls.mjs",
+        "cd mcp-server && node test-reference-calls.mjs",
+        "cd mcp-server && node scripts/check-refusal-parity.mjs",
+        "cd mcp-server && node test-refusal-parity.mjs",
+        "cd mcp-server && node scripts/check-concern-checklist.mjs",
+        "cd mcp-server && node test-explanation-gate.mjs",
+        "cd mcp-server && node test-consumer-route.mjs",
+        "cd materializer && python3 test-placeholder-census.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O10: W1–W5 edits; W6 per D4 (advance to concerns and adversarial before those phases; the 'When each phase sets the status' table matching the contract's survey_passes; resume list; Phase 3 and 4 openings; SKILL.md arrow row replaced, ladder line kept).",
+        "The gate is red on the unedited skill (its red commit is the gate alone) and reads the contract JSON for survey_passes.",
+        "mcp-server/skills regenerated with node scripts/prepack-bundle-assets.mjs (gitignored)."
+      ],
+      "budget_minutes": 120
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "5fd5cc70fe244b2c03bae7e8686f4f68e063d27c",
+      "red_sha": "2856aa4",
+      "green_sha": "173dcd435e3b35fde73ff891299aa49c5d4625c3",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Added PUBLICATION_INTEGRITY_LAG above the Publication integrity table (both views) and renamed the row to Read back at; materialize.ts and test-overview-truthfulness.py unchanged. Gate step added to test.yml after the O14 views step.",
+      "id": "O12",
+      "slice": "S4",
+      "title": "Say which publication the read-back describes",
+      "claims": [
+        "§4 O12",
+        "§4 Publishing defects"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/test-orientation-readback-label.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-readback-label.py",
+        "command": "cd materializer && python3 test-orientation-readback-label.py",
+        "marker": "GATE O12",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-readback.py",
+        "cd mcp-server && node test-projection-custody.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4 O12: the lag sentence (no digit, no 'red' or 'green') above the Publication integrity table in both views; row 'Read back at'; test-overview-truthfulness.py unchanged and green; materialize.ts unchanged."
+      ],
+      "budget_minutes": 60
+    },
+    {
+      "needs_mcp": false,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "84a46d2935e395cf695c78900eaef662118e9e3b",
+      "red_sha": "c6315ab",
+      "green_sha": "08f057dff463558da7edd46041d3db4d5607a173",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "Provenance now ends ', written on <date>' for every placement; B-01-style pages (account plus claims) print no provenance, so their dated italic line is the dating. test-narrative-placement.py was updated: its seed pins written_at and its expected provenance gains the date, which the plan requires and which no longer matched byte for byte.",
+      "id": "O13",
+      "slice": "S4",
+      "title": "Date the survey notes under the account",
+      "claims": [
+        "§4 O13",
+        "§4 Publishing defects"
+      ],
+      "depends_on": [],
+      "deliverables": [
+        "materializer/amanuensis_materializer/renderers.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "materializer/test-orientation-survey-notes.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-survey-notes.py",
+        "command": "cd materializer && python3 test-orientation-survey-notes.py",
+        "marker": "GATE O13",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-readback.py"
+      ],
+      "acceptance": [
+        "PLAN §4 O13: 'written on <date>' in every placement's provenance; the dated italic line under 'Survey artifact' when an account is recorded, naming both records' dates and revisions; artifact files never modified."
+      ],
+      "budget_minutes": 75
+    },
+    {
+      "id": "O15",
+      "slice": "S4",
+      "model": "opus",
+      "title": "A command-line render stays in the store docs and says it was not recorded (D6)",
+      "claims": [
+        "§4 O15",
+        "§4 Publishing defects",
+        "§5 D6"
+      ],
+      "depends_on": [
+        "O12"
+      ],
+      "deliverables": [
+        "materializer/materialize.py",
+        "materializer/amanuensis_materializer/core.py",
+        "materializer/amanuensis_materializer/html_projection.py",
+        "materializer/amanuensis_materializer/readback.py",
+        "mcp-server/src/tools/materialize.ts",
+        "materializer/test-orientation-cli-render.py"
+      ],
+      "gate": {
+        "test_path": "materializer/test-orientation-cli-render.py",
+        "command": "cd materializer && python3 test-orientation-cli-render.py",
+        "marker": "GATE O15",
+        "red_rejects": [
+          "Traceback (most recent call last)"
+        ]
+      },
+      "regression": [
+        "cd materializer && python3 test-materializer.py",
+        "cd materializer && python3 test-xref-moved-target.py",
+        "cd materializer && python3 test-readback.py",
+        "cd materializer && python3 test-overview-truthfulness.py",
+        "cd materializer && python3 test-ledger-freshness.py",
+        "cd materializer && python3 test-lens-pages.py",
+        "cd materializer && python3 test-prose-retention.py",
+        "cd materializer && python3 test-claim-register.py",
+        "cd materializer && python3 test-narrative-placement.py",
+        "cd materializer && python3 test-explanation-pages.py",
+        "cd materializer && python3 test-explanation-orientation.py",
+        "cd materializer && python3 test-ledger-grouping.py",
+        "cd materializer && python3 test-placeholder-census.py",
+        "cd materializer && python3 test-history-and-disagreements.py",
+        "cd materializer && python3 test-severity-history.py",
+        "cd materializer && python3 test-search-index.py",
+        "cd materializer && python3 test-unmeasured-coverage.py",
+        "cd materializer && python3 test-orientation-readback-label.py",
+        "cd mcp-server && npm run build && npx biome check src/",
+        "cd mcp-server && node test-projection-custody.mjs",
+        "cd mcp-server && node test-refresh-recovery.mjs",
+        "cd mcp-server && node test-locus-index-view.mjs",
+        "cd mcp-server && node test-finding-partition.mjs",
+        "cd mcp-server && node test-smoke.mjs"
+      ],
+      "acceptance": [
+        "PLAN §4 O15 Do items 1-4 and its gate red conditions; owner decision D6 option B (§5).",
+        "materialize.ts passes --recorded-publication and --allow-external-output on every run; no server publish carries the notice.",
+        "--readback-only is never refused; the clean-publish check is on the final output."
+      ],
+      "needs_mcp": false,
+      "budget_minutes": 150,
+      "status": "done",
+      "attempts": 1,
+      "start_sha": "494fa8ee7818b2472ae0990b7f0be90164b31a8e",
+      "red_sha": "ea8327b",
+      "green_sha": "ee258bc7eb8af91809f061f1ff2e45501bb91937",
+      "verified_by_launcher": true,
+      "blocked_reason": "",
+      "notes": "The --no-verify-readback notice is read literally as replacing both sentences: just 'Rendered from the command line and not read back.' The receipt now carries render_notice so --readback-only (no render flags, used by promote-docs and tests) checks pages against what the render stated; a receipt without it means recorded. PLAN said every CLI test writes to <storage>/docs, but four did not (test-materializer, test-explanation-pages, test-explanation-orientation, test-search-index); they now pass --allow-external-output, assertions unchanged. README flag list updated; SKILL.md and phase-5 do not describe the CLI output location, so unchanged."
+    }
+  ],
+  "completion": {
+    "commands": [
+      "node dev/test-orientation-backlog.mjs",
+      "cd materializer && python3 test-orientation-contract.py",
+      "cd materializer && python3 test-orientation-index.py",
+      "cd materializer && python3 test-orientation-guide.py",
+      "cd materializer && python3 test-orientation-workflow.py",
+      "cd materializer && python3 test-orientation-terms.py",
+      "cd materializer && python3 test-orientation-overview.py",
+      "cd materializer && python3 test-orientation-views.py",
+      "cd materializer && python3 test-orientation-ids.py",
+      "cd materializer && python3 test-orientation-map.py",
+      "cd materializer && python3 test-orientation-diagram.py",
+      "node dev/test-skill-workflow-text.mjs",
+      "cd materializer && python3 test-orientation-readback-label.py",
+      "cd materializer && python3 test-orientation-survey-notes.py",
+      "cd materializer && python3 test-orientation-cli-render.py",
+      "cd mcp-server && npm run build && npx biome check src/",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check",
+      "cd mcp-server && node scripts/gen-vocabulary.mjs --check-sql",
+      "cd mcp-server && node scripts/check-evidence-vocabulary.mjs",
+      "cd mcp-server && node test-vocabulary-source.mjs",
+      "cd mcp-server && node scripts/check-reference-calls.mjs",
+      "cd mcp-server && node test-reference-calls.mjs",
+      "cd mcp-server && node test-projection-custody.mjs",
+      "cd mcp-server && node test-explanation-gate.mjs",
+      "cd materializer && ruff check .",
+      "cd materializer && python3 test-materializer.py",
+      "cd materializer && python3 test-xref-moved-target.py",
+      "cd materializer && python3 test-readback.py",
+      "cd materializer && python3 test-overview-truthfulness.py",
+      "cd materializer && python3 test-ledger-freshness.py",
+      "cd materializer && python3 test-lens-pages.py",
+      "cd materializer && python3 test-prose-retention.py",
+      "cd materializer && python3 test-claim-register.py",
+      "cd materializer && python3 test-narrative-placement.py",
+      "cd materializer && python3 test-explanation-pages.py",
+      "cd materializer && python3 test-explanation-orientation.py",
+      "cd materializer && python3 test-ledger-grouping.py",
+      "cd materializer && python3 test-placeholder-census.py",
+      "cd materializer && python3 test-history-and-disagreements.py",
+      "cd materializer && python3 test-severity-history.py",
+      "cd materializer && python3 test-search-index.py",
+      "cd materializer && python3 test-unmeasured-coverage.py"
+    ]
+  },
+  "final_review": {
+    "status": "reviewed",
+    "reviewed_sha": "55396618b473be23e301ee9c866bf36ef74035a2",
+    "findings": 0
+  }
+}

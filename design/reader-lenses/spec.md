@@ -839,7 +839,7 @@ error, not a silently appended group.
 | `resolved-leads.md` | Resolved leads and questions | Resolved leads and questions | Questions that were answered or dismissed, and leads that were closed | History | — | `resolved-leads` | **new**; states that for these two families only the terminal state is recorded (§1.1) |
 | `sessions.md` | Sessions and publications | Sessions and publications | What ran, when, and what it produced | History | — | `sessions` | **new** |
 | `contradictions.md` | Conflicting evidence | Conflicting evidence | Resolved disagreements and the evidence that settled them | History | — | `contradictions` | re-homed; unresolved rows move to `disagreements.md` |
-| `how-to-read.md` | How to read the conspectus | Reader's guide | Every enum, what it authorizes, and what it cannot justify | Method | — | `guide` | generated from the enum source (§10) |
+| `how-to-read.md` | How to read this survey | Reader's guide | Every enum, what it authorizes, and what it cannot justify | Method | — | `guide` | generated from the enum source (§10) |
 | `concerns.md` | Review coverage | Review coverage | Which failure modes were tested where | Method | — | `coverage` | group changed |
 | `concern-checklist.md` | Calibrated review checklist | Review checklist | The concern set and its provenance | Method | — | `artifact` | group changed |
 | `diagnosticity.md` | Competing explanations | Competing explanations | Index of evidence matrices and their outcomes | Method | — | `diagnosticity` | group changed; open and `unresolved-competition` matrices also listed on `disagreements.md` as links |
@@ -1000,6 +1000,7 @@ verification runs with their three axes.
 the value, the human label, the operational meaning, and what it cannot justify. Its "what to
 look at first" table is generated from the page plan, so a new page cannot be missing from it.
 The remaining Method pages are unchanged in content.
+The guide's section order, its Terms, and which enums appear before "Full vocabulary" are amended by `design/orientation/PLAN.md` (§3, packet O3).
 
 ### 7.9 Markdown and HTML stay synchronized
 

@@ -38,8 +38,11 @@ from .html_projection import (
     SEARCH_INDEX_PATH,
     SitePage,
     UnknownNavGroup,
+    append_notice,
     assert_nav_groups,
+    insert_page_head,
     render_html_projection,
+    terms_line,
 )
 from .manifest import (
     MATERIALIZER_VERSION,
@@ -118,6 +121,10 @@ class PagePlan:
     title: str = ""
     label: str = ""
     hint: str = ""
+    # The reader's question the page answers, as the clause that follows "Use it
+    # when" (Appendix D). Subsystem pages and evidence matrices share one per
+    # family, so the index prints it once per subgroup.
+    use_when: str = ""
     group: str = "Codebase"
     kind: str = "reference"
     status: str | None = None
@@ -130,9 +137,10 @@ class PagePlan:
 # The route table on the reader's guide is generated from the page plan (§7.8).
 # One tuple per planned page, in plan order, carrying only what the guide
 # renders — so the guide never reaches into the plan's build closures.
-def _routes(plan: list[PagePlan]) -> list[tuple[str, str, str, str, str]]:
+def _routes(plan: list[PagePlan]) -> list[tuple[str, str, str, str, str, str]]:
     return [
-        (p.path, p.label or p.title, p.hint, p.group, p.subgroup) for p in plan
+        (p.path, p.label or p.title, p.hint, p.group, p.subgroup, p.use_when)
+        for p in plan
     ]
 
 
@@ -213,11 +221,15 @@ class Materializer:
         output: Path,
         force_full: bool = False,
         verify_readback: bool = True,
+        notice: str = "",
     ) -> None:
         self.storage = storage
         self.output = output
         self.force_full = force_full
         self.verify_readback = verify_readback
+        # The command-line render notice every page ends with (PLAN O15); empty
+        # when the caller records this render's read-back in the store.
+        self.notice = notice
         self.manifest_path = output / ".manifest.json"
         self.manifest = Manifest.load(self.manifest_path)
         self.summary = Summary(output_dir=str(output))
@@ -302,6 +314,12 @@ class Materializer:
                     )
                     self.summary.ok = False
                     continue
+                # The hint and "Use it when" sentence sit under the H1 in this
+                # view, and the HTML head prints the same two (PLAN §2.4).
+                text = insert_page_head(
+                    text, p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path))
+                )
+                text = append_notice(text, self.notice)
                 new_hash = sha256_bytes(text.encode("utf-8"))
                 fresh[p.path] = text
                 prev = self.manifest.page(p.path)
@@ -393,6 +411,8 @@ class Materializer:
                     title=p.title,
                     label=p.label or p.title,
                     hint=p.hint,
+                    use_when=p.use_when,
+                    terms=renderers.page_terms(p.path),
                     group=p.group,
                     subgroup=p.subgroup,
                     kind=p.kind,
@@ -407,6 +427,7 @@ class Materializer:
                 html_context,
                 previous_files=self.manifest.projection_files,
                 locus_index=_locus_index(conn),
+                notice=self.notice,
             )
             self.manifest.projection_files = html_result.files
             self.summary.html_pages_total = len(site_pages)
@@ -424,10 +445,10 @@ class Materializer:
             # projection receipt is deliberately separate and hashes the bytes
             # after global xref resolution — the bytes a reader will see.
             expected_paths = sorted(alive | set(html_result.files))
-            write_contract(self.output, expected_paths)
+            write_contract(self.output, expected_paths, notice=self.notice)
             if self.verify_readback:
                 self.summary.readback = ProjectionVerifier(
-                    self.storage, self.output, expected_paths
+                    self.storage, self.output, expected_paths, notice=self.notice
                 ).verify()
                 if not self.summary.readback["ok"]:
                     self.summary.ok = False
@@ -489,7 +510,9 @@ class Materializer:
         storage = self.storage
         plan: list[PagePlan] = []
 
-        def passthrough(rel_src: str, title: str, label: str, hint: str) -> PagePlan | None:
+        def passthrough(
+            rel_src: str, title: str, label: str, hint: str, use_when: str
+        ) -> PagePlan | None:
             """One canonical artifact, passed through when it is on disk.
 
             Planned inline rather than in a trailing loop so the rail's order
@@ -505,6 +528,7 @@ class Materializer:
                 title=title,
                 label=label,
                 hint=hint,
+                use_when=use_when,
                 group="Method",
                 kind="artifact",
             )
@@ -517,34 +541,34 @@ class Materializer:
         plan.extend(
             page
             for page in [
-                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="", group="Overview", kind="overview"),
-                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", group="Codebase", kind="architecture"),
-                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", group="Codebase", kind="registry"),
-                PagePlan("files.md", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", group="Codebase", kind="files"),
-                PagePlan("not-yet-surveyed.md", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", hint="The recorded edge of the map, each gap counted over the unit it occupies.", group="Codebase", kind="gaps"),
-                PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", group="Codebase", kind="seams"),
-                PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="The project's own names, with the meanings Amanuensis observed in context.", group="Codebase", kind="glossary"),
-                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Defects open or awaiting verification at the checked revision.", group="Unresolved", kind="findings"),
-                PagePlan("disagreements.md", lambda: renderers.render_disagreements(conn, storage), title="Records that disagree", label="Disagreements", hint="Where credible records disagree or the evidence does not discriminate between them.", group="Unresolved", kind="undiscriminated"),
-                PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Questions the survey could not settle, with the assumption used to keep moving.", group="Unresolved", kind="questions"),
-                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings.", group="Unresolved", kind="notes"),
-                PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", group="Unresolved", kind="stale"),
-                PagePlan("hot-spots.md", lambda: renderers.render_hot_spots(conn, storage), title="Hot spots", label="Hot spots", hint="Where unresolved work and unread territory concentrate, as separate measures.", group="Unresolved", kind="hotspots"),
-                PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Verified, ruled out, and accepted, each with the basis its resolution rests on.", group="History", kind="findings"),
-                PagePlan("resolution-history.md", lambda: renderers.render_resolution_history(conn, storage), title="Resolution history", label="Resolution history", hint="The append-only account of how records reached their state.", group="History", kind="timeline"),
-                PagePlan("resolved-leads.md", lambda: renderers.render_resolved_leads(conn, storage), title="Resolved leads and questions", label="Resolved leads and questions", hint="Questions that were answered or dismissed, and leads that were closed.", group="History", kind="resolved-leads"),
-                PagePlan("sessions.md", lambda: renderers.render_sessions(conn, storage), title="Sessions and publications", label="Sessions and publications", hint="What ran, when, and what it produced.", group="History", kind="sessions"),
-                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Resolved disagreements and the evidence that settled them.", group="History", kind="contradictions"),
+                PagePlan("index.md", lambda: renderers.render_index(conn, storage, warn=self._warn), title="Project overview", label="Overview", hint="What the codebase is, and where the survey stands.", use_when="you arrive, or want the current counts.", group="Overview", kind="overview"),
+                PagePlan("architecture.md", lambda: renderers.render_architecture(conn, storage, warn=self._warn), title="Architecture at a glance", label="Architecture", hint="Runtime shape, recorded edges, and boundaries, read as one connected system.", use_when="you want the overall shape before reading any one part.", group="Codebase", kind="architecture"),
+                PagePlan("master-plan.md", lambda: renderers.render_master_plan(conn, storage, warn=self._warn), title="Subsystem map", label="Subsystems", hint="Every region, grouped by layer, with the scope recorded for it.", use_when="you are looking for the part of the code that does something.", group="Codebase", kind="registry"),
+                PagePlan("files.md", lambda: renderers.render_files(conn, storage), title="Files", label="Files", hint="One row per ledger file with owners, standing, and open defects.", use_when="you want to know whether a particular file was read.", group="Codebase", kind="files"),
+                PagePlan("not-yet-surveyed.md", lambda: renderers.render_not_yet_surveyed(conn, storage), title="Not yet surveyed", label="Not yet surveyed", hint="The recorded edge of the map, each gap counted over the unit it occupies.", use_when="you want to know what the survey has not covered.", group="Codebase", kind="gaps"),
+                PagePlan("seams.md", lambda: renderers.render_seams(conn, storage), title="System boundaries", label="System boundaries", hint="Shared objects and ordering assumptions where independently understandable subsystems meet.", use_when="you are changing something two subsystems share.", group="Codebase", kind="seams"),
+                PagePlan("vocabulary.md", lambda: renderers.render_vocabulary(conn, storage), title="Codebase glossary", label="Codebase glossary", hint="The project's own names, with the meanings Amanuensis observed in context.", use_when="a project-specific name is unfamiliar.", group="Codebase", kind="glossary"),
+                PagePlan("findings.md", lambda: renderers.render_findings(conn, storage), title="Open findings", label="Open findings", hint="Defects open or awaiting verification at the checked revision.", use_when="you want the defects still open.", group="Unresolved", kind="findings"),
+                PagePlan("disagreements.md", lambda: renderers.render_disagreements(conn, storage), title="Records that disagree", label="Disagreements", hint="Where credible records disagree or the evidence does not discriminate between them.", use_when="you want to know where the record contradicts itself.", group="Unresolved", kind="undiscriminated"),
+                PagePlan("open-questions.md", lambda: renderers.render_open_questions(conn, storage), title="Decisions needed", label="Decisions needed", hint="Questions the survey could not settle, with the assumption used to keep moving.", use_when="you want to know what the agent needs from you.", group="Unresolved", kind="questions"),
+                PagePlan("field-notes.md", lambda: renderers.render_field_notes(conn, storage), title="Leads", label="Leads", hint="Open observations that are not yet findings.", use_when="you want things noticed but not yet confirmed.", group="Unresolved", kind="notes"),
+                PagePlan("stale.md", lambda: renderers.render_stale(conn, storage), title="Stale knowledge", label="Stale knowledge", hint="Examined files the repository has changed under, and scoped files that changed before anyone read them.", use_when="you want to know what may be out of date since the code changed.", group="Unresolved", kind="stale"),
+                PagePlan("hot-spots.md", lambda: renderers.render_hot_spots(conn, storage), title="Hot spots", label="Hot spots", hint="Where unresolved work and unread territory concentrate, as separate measures.", use_when="you want to know where open work concentrates.", group="Unresolved", kind="hotspots"),
+                PagePlan("resolved-findings.md", lambda: renderers.render_resolved_findings(conn, storage), title="Resolved findings", label="Resolved findings", hint="Verified, ruled out, and accepted, each with the basis its resolution rests on.", use_when="you want to know what was fixed or ruled out, and on what basis.", group="History", kind="findings"),
+                PagePlan("resolution-history.md", lambda: renderers.render_resolution_history(conn, storage), title="Resolution history", label="Resolution history", hint="The append-only account of how records reached their state.", use_when="you want to know how a record reached its state.", group="History", kind="timeline"),
+                PagePlan("resolved-leads.md", lambda: renderers.render_resolved_leads(conn, storage), title="Resolved leads and questions", label="Resolved leads and questions", hint="Questions that were answered or dismissed, and leads that were closed.", use_when="you want to know how a question was answered.", group="History", kind="resolved-leads"),
+                PagePlan("sessions.md", lambda: renderers.render_sessions(conn, storage), title="Sessions and publications", label="Sessions and publications", hint="What ran, when, and what it produced.", use_when="you want to know when the survey ran.", group="History", kind="sessions"),
+                PagePlan("contradictions.md", lambda: renderers.render_contradictions(conn, storage), title="Conflicting evidence", label="Conflicting evidence", hint="Resolved disagreements and the evidence that settled them.", use_when="you want to see how a disagreement was settled.", group="History", kind="contradictions"),
                 # The reader's guide is generated from the vocabulary contract
                 # and from this plan (§7.8), so it reads `plan` — complete by the
                 # time any page is built — rather than a hand-written route list
                 # a new page could be left out of.
-                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read the conspectus", label="Reader's guide", hint="", group="Method", kind="guide"),
-                PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", group="Method", kind="coverage"),
-                passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance."),
-                PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", group="Method", kind="diagnosticity"),
-                passthrough("onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus."),
-                passthrough("entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index."),
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read this survey", label="Reader's guide", hint="What each page is for, the terms the site uses, and how a survey works.", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
+                PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", use_when="you want to know which defect kinds were checked where.", group="Method", kind="coverage"),
+                passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance.", "you want the list of defect kinds and where it came from."),
+                PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),
+                passthrough("onboarding-report.md", "Onboarding record", "Onboarding record", "The repository boundary and initial decomposition that established this conspectus.", "you want the first pass's decisions about scope and split."),
+                passthrough("entry-point.md", "Where to begin", "Where to begin", "A dated reading path recorded by an earlier session; it is survey history, not a current index.", "you want the reading path an earlier session wrote."),
             ]
             if page is not None
         )
@@ -563,6 +587,7 @@ class Materializer:
                     title=s["name"],
                     label=s["name"],
                     hint=f"Scope, structure, boundaries, defects, and the survey record for {s['name']}.",
+                    use_when="you have picked a subsystem.",
                     group="Codebase",
                     subgroup="Subsystems",
                     kind="subsystem",
@@ -584,6 +609,7 @@ class Materializer:
                     title=m["symptom"],
                     label=m["symptom"],
                     hint="One matrix: the evidence against each viable explanation, and the outcome it drove.",
+                    use_when="you followed a DM- link.",
                     group="Method",
                     subgroup="Evidence matrices",
                     kind="matrix",
@@ -595,7 +621,21 @@ class Materializer:
 
     # ---------------------------------------------------------------------
     def _build_xref_index(self, conn, plan: list[PagePlan]) -> XrefIndex:
-        del plan  # database records carry the human definitions
+        # Database records carry the human definitions. The plan carries the
+        # generated copy every page head and the guide's index print (hints,
+        # "Use it when" sentences, terms lines): constant prose, so a lowercase
+        # ID that is an ordinary word in it ("the part of the code") is not a
+        # mention of that subsystem.
+        protected = tuple(
+            sorted(
+                {
+                    text
+                    for p in plan
+                    for text in (p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path)))
+                    if text and text.strip()
+                }
+            )
+        )
         entries: dict[str, tuple[str, str, str]] = {}
 
         # Subsystems.
@@ -670,4 +710,24 @@ class Materializer:
                 ),
             )
 
-        return XrefIndex(entries=entries)
+        # The resolver names a subsystem beside its first mention on a page and
+        # introduces a concern code as one (PLAN §2.2 items 3 and 5); it needs
+        # each ID's kind for that, and the subsystem's name.
+        kinds = dict.fromkeys(subsystem_names, "subsystem")
+        kinds.update({c["code"]: "concern" for c in rows(conn, "SELECT code FROM concerns")})
+        kinds.update({s["id"]: "seam" for s in rows(conn, "SELECT id FROM seams")})
+        kinds.update(
+            {f["finding_id"]: "finding" for f in rows(conn, "SELECT finding_id FROM findings")}
+        )
+        kinds.update(
+            {f"DM-{m['id']}": "matrix" for m in rows(conn, "SELECT id FROM diagnosticity_sessions")}
+        )
+        # A later family overwrites an earlier one's entry for a shared ID, so
+        # the kind follows the entry the index kept.
+        kinds = {identifier: kinds[identifier] for identifier in entries if identifier in kinds}
+        names = {
+            identifier: name
+            for identifier, name in subsystem_names.items()
+            if kinds.get(identifier) == "subsystem"
+        }
+        return XrefIndex(entries=entries, names=names, kinds=kinds, protected=protected)

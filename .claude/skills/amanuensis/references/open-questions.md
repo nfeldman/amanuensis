@@ -99,13 +99,15 @@ record_open_question(
 
 ## Reviewing the queue
 
-The materializer renders open questions per phase boundary in the
-relevant subsystem-survey artifact, plus a global queue on the
-findings index. After a checkpoint, the human can:
+The materializer renders open questions on `open-questions.md`, the
+"Decisions needed" page. After a checkpoint the person reads it and
+answers by telling the agent, in the conversation; they do not call tools
+themselves. They can:
 
-- Answer the question — `resolve_open_question(id, resolution=...)`.
-  The resolution flows back into the affected disposition or
-  artifact at the next survey or refresh pass.
+- Answer the question. The agent then calls
+  `resolve_open_question(id, resolution=...)` with their words. The
+  resolution flows back into the affected disposition or artifact at
+  the next survey or refresh pass.
 - Convert it to a finding — if the answer reveals the assumption
   was wrong and the right answer is "yes, this is a bug."
 - Convert it to a field note — if the answer doesn't change the
@@ -125,7 +127,7 @@ other end of any checkpoint. The skill should:
 
 1. Verify `get_autoprogress_mode()` returns `autoprogress=true`
    (the shipped `.mcp.json` sets this; see `setup.md`).
-2. Run as if option **A — autopilot until done** was selected.
+2. Run the inferred scope to completion.
 3. Emit checkpoint summaries to stdout for the CI log; do not
    wait for input.
 4. At the end of the run, emit a final report:

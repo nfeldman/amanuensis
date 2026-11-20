@@ -2,7 +2,7 @@
 
 Phase 5 of a per-subsystem survey runs in the **coordinator** — not as
 a separate phase agent. By the time you're here, Phase 4 has returned
-and you've advanced status to `adversarial`. This step finalizes the
+and the subsystem is already at `adversarial`. This step finalizes the
 subsystem's contribution to the conspectus, renders the navigable
 docs, and emits the subsystem's end-of-survey summary.
 
@@ -58,7 +58,7 @@ the page.
 
 ### Settle the explanations
 
-Before materializing, read what the earlier phases recorded:
+Before advancing to `mapped`, read what the earlier phases recorded:
 
 ```
 get_explanations(subject_type="subsystem", subject_id=<id>)
@@ -87,6 +87,39 @@ Do the same for the project account:
 `get_explanations(subject_type="project")`, then revise it where this pass
 changed what it says, or confirm it stands.
 
+### Advance status
+
+```
+update_subsystem_status(id, status="mapped")
+```
+
+The DB enforces the knowledge-depth contract; if this raises
+`ToolError`, a Phase 1-4 deliverable is missing. Investigate;
+don't force. The advance comes before materializing so that the
+published site, and the seam check below, see the subsystem as `mapped`.
+
+It is also refused while *"the store has not been reconciled against the
+repository at"* the revision being published. Run
+`detect_changes(current_sha=<HEAD>)` first and assign or exempt every
+unledgered path it names.
+
+Every write into `mapped`, from any status including `deferred`, also needs
+the effective purpose and the effective account each to be recorded or
+declined. Otherwise it refuses:
+
+```
+cannot advance <sid> to 'mapped': <what is missing> for this subsystem. Either
+record_explanation with the evidence it was written from, or decline_explanation with the
+reason none is written. There is no length floor, and declining is a real answer that has to be
+said out loud.
+```
+
+`<what is missing>` is `no purpose is recorded or declined`, `no account is
+recorded or declined`, or both joined by `and`. A row whose revision no longer
+resolves is named after the sentence and does not count. Without a bound
+workspace a slot with a row proceeds and the result's `reported` says its
+revision was not resolved; a slot with no row is still refused.
+
 ### 5. Materialize
 
 ```
@@ -94,12 +127,10 @@ materialize_docs()
 ```
 
 `materialize_docs` is refused while *"the store has not been
-reconciled against the repository at"* the revision being published.
-Run `detect_changes(current_sha=<HEAD>)` first and assign or exempt
-every unledgered path it names; coverage published over an
-unreconciled ledger is a fraction of itself. The same reconciliation
-is what `update_subsystem_status(id, status="mapped")` reads at
-step 9.
+reconciled against the repository at"* the revision being published;
+coverage published over an unreconciled ledger is a fraction of itself.
+The advance to `mapped` above has already read that reconciliation, so
+this call finds the store reconciled.
 
 The materializer is diff-aware — only pages whose DB or prose
 sources changed get re-rendered. The cross-reference resolver
@@ -153,34 +184,7 @@ parties `mapped`) is queued for seam assessment. See the
 end_session(outcome="completed")
 ```
 
-### 9. Advance status
-
-```
-update_subsystem_status(id, status="mapped")
-```
-
-The DB enforces the knowledge-depth contract; if this raises
-`ToolError`, a Phase 1-4 deliverable is missing. Investigate;
-don't force.
-
-Every write into `mapped`, from any status including `deferred`, also needs
-the effective purpose and the effective account each to be recorded or
-declined. Otherwise it refuses:
-
-```
-cannot advance <sid> to 'mapped': <what is missing> for this subsystem. Either
-record_explanation with the evidence it was written from, or decline_explanation with the
-reason none is written. There is no length floor, and declining is a real answer that has to be
-said out loud.
-```
-
-`<what is missing>` is `no purpose is recorded or declined`, `no account is
-recorded or declined`, or both joined by `and`. A row whose revision no longer
-resolves is named after the sentence and does not count. Without a bound
-workspace a slot with a row proceeds and the result's `reported` says its
-revision was not resolved; a slot with no row is still refused.
-
-### 10. Commit the final gate
+### 9. Commit the final gate
 
 ```
 commit_phase_gate(label="Phase 5 · <subsystem> · <findings count>

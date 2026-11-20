@@ -384,6 +384,18 @@ run("get_seam_assessability", {}, (r) => Array.isArray(r) && r.length === 1 && r
   writeFileSync(`${TMP}/${path}`, "# Entry Point\n");
   run("rehash_artifact", { path, ref_sha: "deadbeef" }, (r) => r.ok && typeof r.content_hash === "string");
   run("list_artifacts", { kind: "entry-point" }, (r) => r.length === 1 && r[0].bytes > 0);
+  // written_at dates the survey notes on a subsystem page ("Written on …"), so
+  // a rehash of unchanged bytes keeps it; only new content moves it.
+  db.prepare("UPDATE artifacts SET written_at = '2026-01-02 03:04:05' WHERE path = ?").run(path);
+  run("rehash_artifact", { path, ref_sha: "deadbeef" }, (r) => r.ok);
+  const kept = db.prepare("SELECT written_at FROM artifacts WHERE path = ?").get(path).written_at;
+  if (kept !== "2026-01-02 03:04:05")
+    throw new Error(`rehash of an unchanged artifact moved written_at to ${kept}`);
+  writeFileSync(`${TMP}/${path}`, "# Entry Point\n\nRewritten.\n");
+  run("rehash_artifact", { path }, (r) => r.ok);
+  const moved = db.prepare("SELECT written_at FROM artifacts WHERE path = ?").get(path).written_at;
+  if (moved === "2026-01-02 03:04:05")
+    throw new Error("rehash of a rewritten artifact kept the old written_at");
 }
 
 // 19. Evidence

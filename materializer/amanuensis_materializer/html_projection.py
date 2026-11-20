@@ -26,6 +26,7 @@ from .manifest import sha256_bytes
 from .readback import MARKER_KINDS
 from .slugs import slugify
 from .vocabulary import axes, labels, meanings
+from .xref import identifier_pattern
 
 _MARKER_RE = re.compile(
     r"<!--\s*amanuensis:(?:"
@@ -81,16 +82,141 @@ class SitePage:
     hint: str
     group: str
     kind: str = "reference"
+    # The clause after "Use it when" (PLAN Appendix D); empty prints nothing.
+    use_when: str = ""
     record_id: str | None = None
     status: str | None = None
     # A named division inside `group`, rendered under its own `<h3>` after the
     # group's ungrouped items (§7.1). Empty means the page sits directly in the
     # group.
     subgroup: str = ""
+    # `(term, anchor slug)` for the "Terms on this page" line, from the
+    # contract's `reader_terms`; empty prints no line.
+    terms: tuple[tuple[str, str], ...] = ()
 
     @property
     def html_path(self) -> str:
         return str(Path(self.markdown_path).with_suffix(".html")).replace("\\", "/")
+
+
+def page_head_line(hint: str, use_when: str) -> str:
+    """The italic paragraph the Markdown view prints under a page's H1.
+
+    The HTML head prints the same two sentences as separate paragraphs, so the
+    two views say one thing; `strip_page_head` removes this line before the
+    HTML body is built, so it is not printed twice.
+    """
+
+    sentence = f"Use it when {use_when}" if use_when else ""
+    text = " ".join(part for part in (hint.strip(), sentence) if part)
+    return f"*{text}*" if text else ""
+
+
+GUIDE_PAGE = "how-to-read.md"
+TERMS_LABEL = "Terms on this page:"
+
+# A page `materialize.py` writes for a caller that does not record its read-back
+# in the store (PLAN §5 D6, O15). The overview's Publication integrity block reads
+# the store's last recorded run, so it cannot describe this render; each page says
+# so instead. The second form is for a render that skipped its read-back.
+CLI_RENDER_NOTICE = (
+    "Rendered from the command line. Its read-back was not recorded in the survey's"
+    " record, so the Publication integrity figures on the overview describe an earlier"
+    " publication."
+)
+CLI_RENDER_NOTICE_UNVERIFIED = "Rendered from the command line and not read back."
+CLI_RENDER_NOTICES = (CLI_RENDER_NOTICE, CLI_RENDER_NOTICE_UNVERIFIED)
+
+
+def cli_render_notice(*, recorded: bool, verified: bool) -> str:
+    """The notice a render's pages carry; empty when the caller records the read-back."""
+
+    if recorded:
+        return ""
+    return CLI_RENDER_NOTICE if verified else CLI_RENDER_NOTICE_UNVERIFIED
+
+
+def notice_paragraph(notice: str) -> str:
+    return f"*{notice}*"
+
+
+def append_notice(markdown: str, notice: str) -> str:
+    """End the Markdown page with the notice as its last paragraph."""
+
+    if not notice:
+        return markdown
+    return markdown.rstrip("\n") + "\n\n" + notice_paragraph(notice) + "\n"
+
+
+def strip_notice(markdown: str, notice: str) -> str:
+    """The inverse of `append_notice`: the HTML prints the notice in its page head."""
+
+    paragraph = notice_paragraph(notice)
+    body = markdown.rstrip("\n")
+    if not notice or not body.endswith("\n" + paragraph):
+        return markdown
+    return body[: -len(paragraph)].rstrip("\n") + "\n"
+
+
+def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
+    """The Markdown paragraph listing a page's terms, linked to the guide's anchors.
+
+    The HTML head prints the same terms as its own paragraph, and
+    `strip_page_head` removes this one before the HTML body is built.
+    """
+
+    if not terms:
+        return ""
+    base = posixpath.dirname(page_path) or "."
+    guide = posixpath.relpath(GUIDE_PAGE, base)
+    links = " · ".join(f"[{term}]({guide}#term-{slug})" for term, slug in terms)
+    return f"{TERMS_LABEL} {links}"
+
+
+def _first_two_content_lines(lines: list[str]) -> tuple[int, int] | None:
+    first = next((i for i, line in enumerate(lines) if line.strip()), None)
+    if first is None or not lines[first].startswith("# "):
+        return None
+    second = next((i for i in range(first + 1, len(lines)) if lines[i].strip()), len(lines))
+    return first, second
+
+
+def insert_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
+    """Put the page-head paragraph, then the terms line, directly under the page's H1."""
+
+    line = page_head_line(hint, use_when)
+    lines = markdown.split("\n")
+    found = _first_two_content_lines(lines) if line else None
+    if found is None:
+        return markdown
+    first, _second = found
+    head = [line, "", terms] if terms else [line]
+    return "\n".join(lines[: first + 1] + [""] + head + lines[first + 1 :])
+
+
+def _visible_inline(text: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
+
+
+def strip_page_head(markdown: str, hint: str, use_when: str, terms: str = "") -> str:
+    """The inverse of `insert_page_head`, for the HTML projection's body."""
+
+    line = page_head_line(hint, use_when)
+    lines = markdown.split("\n")
+    found = _first_two_content_lines(lines) if line else None
+    if found is None or found[1] >= len(lines):
+        return markdown
+    # The xref pass may have linked or bolded an ID inside the paragraph since
+    # it was written (a subsystem named after its own ID gets `**B-01**`);
+    # compare what the reader sees, not the link or bold markup.
+    if _visible_inline(lines[found[1]]) != _visible_inline(line):
+        return markdown
+    del lines[found[1]]
+    if terms:
+        nxt = next((i for i in range(found[1], len(lines)) if lines[i].strip()), None)
+        if nxt is not None and _visible_inline(lines[nxt]) == _visible_inline(terms):
+            del lines[nxt]
+    return "\n".join(lines)
 
 
 @dataclass
@@ -348,6 +474,10 @@ h1 {
   letter-spacing: -.042em; text-wrap: balance;
   font-variant-ligatures: common-ligatures discretionary-ligatures;
 }
+.page-use-when { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: clamp(.95rem, .3vw + .88rem, 1.1rem)/1.5 var(--body); text-wrap: pretty; }
+.page-terms { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: .85rem/1.6 var(--body); }
+.page-terms a { color: var(--accent); }
+.page-notice { max-width: none; margin: .9rem 0 0; padding: .45rem .75rem; border-left: 2px solid var(--signal); color: var(--text-muted); font: .85rem/1.55 var(--body); }
 .page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
 .snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
@@ -481,6 +611,8 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
 .coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.vocabulary-disclosure { margin-top: 1rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.vocabulary-disclosure > summary { padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
 .coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
 .coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
 .coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
@@ -646,6 +778,21 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
 .runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
 .runtime-boundary-details { display: grid; }
+.boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.boundary-diagram { margin: 0; }
+.boundary-svg-scroll { max-width: 100%; overflow-x: auto; }
+.boundary-svg { display: block; max-width: none; height: auto; background: var(--surface); }
+.boundary-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.boundary-svg-seam { stroke: var(--text-subtle); stroke-width: 1.25; }
+.boundary-svg-xref { stroke: var(--accent); stroke-width: 1.5; }
+.boundary-svg-arrow { fill: var(--accent); }
+.boundary-svg-label-box { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.boundary-svg-label { fill: var(--text-muted); font: 600 10px/1 var(--mono); text-anchor: middle; }
+.boundary-svg-column {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.boundary-svg-id { fill: var(--text); font: 600 12px/1.2 var(--mono); }
+.boundary-svg-name { fill: var(--text-muted); font: 12px/1.2 var(--heading); }
 .runtime-detail {
   display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
   min-width: 0; border-bottom: 1px solid var(--rule);
@@ -900,6 +1047,8 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .document-inner { width: auto; padding: 0; }
   .runtime-svg-scroll { overflow: visible; }
   .runtime-boundary-svg { min-width: 0; }
+  .boundary-svg-scroll { overflow: visible; }
+  .boundary-svg { width: 100%; }
   .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
   a { color: inherit; text-decoration: none; }
 }
@@ -1370,13 +1519,34 @@ def _code_html(value: str) -> str:
     return f"<code>{html.escape(value)}</code>"
 
 
+_DEPTH_VALUE_BY_LABEL = {label.lower(): value for value, label in labels("subsystem_status").items()}
+
+
+def _atlas_depth(cell: str) -> str:
+    """An atlas depth cell, which carries the contract's label, as its status chip."""
+
+    value = _DEPTH_VALUE_BY_LABEL.get(_plain(cell).lower())
+    return _status_html(value) if value else _inline(cell)
+
+
+def _names_label(text: str) -> bool:
+    """Whether a bare cell is a stored value or its own label, not another enum's word.
+
+    A label such as pass_type's "Adversarial" lowercases to a status value whose
+    label differs; chipping it would print that other label in its place.
+    """
+
+    key = text.lower()
+    return text == key or text == DISPLAY_STATUS.get(key, key.replace("-", " ").title())
+
+
 def _inline(text: str) -> str:
     """Render the deliberately small inline subset emitted by Amanuensis."""
 
     stripped = text.strip()
-    if stripped.lower() in STATUS_HINTS:
+    if stripped.lower() in STATUS_HINTS and _names_label(stripped):
         return _status_html(stripped)
-    if stripped.lower() in EVIDENCE_HINTS:
+    if stripped.lower() in EVIDENCE_HINTS and _names_label(stripped):
         return _code_html(stripped)
     if stripped.upper() in SEVERITY_HINTS:
         return _status_html(stripped, severity=True)
@@ -1452,7 +1622,10 @@ def _inline(text: str) -> str:
     return text
 
 
-_IDENTIFIER_PATTERN = re.compile(
+# The shape of a concern code heading a review-coverage column. It only
+# recognises that table; which IDs get a definition is decided by the index's
+# own keys (`identifier_pattern`), whatever their shape (PLAN §2.2 item 4).
+_IDENTIFIER_SHAPE = re.compile(
     r"(?<![\w-])([A-Z]{1,3}\d{0,3}-\d{1,3})(?![\w-])"
 )
 
@@ -1460,7 +1633,9 @@ _IDENTIFIER_PATTERN = re.compile(
 class _IdentifierMarkup(HTMLParser):
     """Add semantic definitions to known opaque IDs in an HTML fragment."""
 
-    _PROTECTED = frozenset({"abbr", "script", "style"})
+    # An SVG renders no HTML element, so an <abbr> in its <text> would hide
+    # the ID it defines; the diagrams carry their own names.
+    _PROTECTED = frozenset({"abbr", "script", "style", "svg"})
     _VOID = frozenset({
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
         "meta", "param", "source", "track", "wbr",
@@ -1469,6 +1644,7 @@ class _IdentifierMarkup(HTMLParser):
     def __init__(self, definitions: dict[str, str]):
         super().__init__(convert_charrefs=False)
         self.definitions = definitions
+        self.pattern = identifier_pattern(definitions)
         self.parts: list[str] = []
         self.protected_depth = 0
 
@@ -1493,7 +1669,7 @@ class _IdentifierMarkup(HTMLParser):
             self.protected_depth -= 1
 
     def handle_data(self, data: str) -> None:
-        if self.protected_depth:
+        if self.protected_depth or self.pattern is None:
             self.parts.append(data)
             return
 
@@ -1509,7 +1685,7 @@ class _IdentifierMarkup(HTMLParser):
                 f'aria-label="{escaped}">{html.escape(identifier)}</abbr>'
             )
 
-        self.parts.append(_IDENTIFIER_PATTERN.sub(replace, data))
+        self.parts.append(self.pattern.sub(replace, data))
 
     def handle_entityref(self, name: str) -> None:
         self.parts.append(f"&{name};")
@@ -1629,8 +1805,13 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 
 
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
+# The guide's enum tables. Their Value column is the stored value itself, so it
+# prints as literal code: chipping it would print some enum's label in its
+# place (pass_type's `adversarial` as subsystem_status's "Challenging claims").
+_ENUM_TABLE_PROJECTION = ("value", "label", "what it means", "what it cannot justify")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+_BOUNDARY_PROJECTION = ("layer", "subsystem", "boundary", "other end")
 _RUNTIME_BOUNDARY_PROJECTION = (
     "runtime / process",
     "language",
@@ -1808,7 +1989,14 @@ class MarkdownRenderer:
             record = dict(zip(keys, values, strict=True))
             key_raw = record[projection.key]
             key_text = _plain(key_raw) or f"Record {row_number}"
-            heading_id = self._heading_slug(f"{projection.kind}-{key_text}")
+            # The xref pass introduces a concern code as "concern RC-2" (PLAN
+            # §2.2 item 5); the anchor other pages link to is the code's.
+            anchor_text = (
+                re.sub(r"^concern\s+", "", key_text)
+                if projection.kind == "concern-disposition"
+                else key_text
+            )
+            heading_id = self._heading_slug(f"{projection.kind}-{anchor_text}")
 
             facts: list[tuple[str, str, str]] = []
             if projection.kind == "file-ledger":
@@ -2029,7 +2217,7 @@ class MarkdownRenderer:
                 "".join(markers)
                 + '<li class="atlas-item">'
                 + f'<div class="atlas-subsystem" data-identifier-defined>{_inline(subsystem)}</div>'
-                + f'<div class="atlas-depth">{_inline(depth)}</div>'
+                + f'<div class="atlas-depth">{_atlas_depth(depth)}</div>'
                 + "</li>"
                 for subsystem, depth, markers in subsystems
             )
@@ -2212,8 +2400,165 @@ class MarkdownRenderer:
             + '</div></div>'
         )
 
+    def _boundary_diagram(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
+
+        Columns are layers in table order, eight to a band; boxes are in table
+        order within a column. A line is drawn only for a row that names a seam
+        or an outgoing xref, so nothing the table does not record is drawn.
+        """
+        box_w, box_h, gap_x, gap_y, margin, per_band = 200, 44, 64, 16, 24, 8
+        layers: dict[str, list[str]] = {}
+        names: dict[str, str] = {}
+        touched: set[str] = set()
+        seams: dict[str, tuple[str, str]] = {}
+        xrefs: list[tuple[str, str, str]] = []
+        for values, _markers in rows:
+            layer, subsystem, boundary, other = values[:4]
+            sid = self._record_identifier(subsystem)
+            if sid not in names:
+                names[sid] = _plain(subsystem).removeprefix(sid).strip()
+                layers.setdefault(_plain(layer) or "unlayered", []).append(sid)
+            other_id = self._record_identifier(other) if _plain(other) not in ("", "—") else ""
+            if not other_id:
+                continue
+            touched.add(sid)
+            relation = _plain(boundary)
+            if "](seams.md#" in boundary:
+                seams.setdefault(self._record_identifier(boundary), (sid, other_id))
+            elif relation.endswith("→"):
+                xrefs.append((sid, other_id, relation.removesuffix("→").strip()))
+
+        columns = list(layers)
+        bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
+        boxes: dict[str, tuple[int, int]] = {}
+        parts_columns: list[str] = []
+        band_top = 0
+        for band in bands:
+            for position, layer in enumerate(band):
+                x = margin + position * (box_w + gap_x)
+                parts_columns.append(
+                    f'<text class="boundary-svg-column" x="{x}" y="{band_top + 30}">{html.escape(layer)}</text>'
+                )
+                for row, sid in enumerate(layers[layer]):
+                    boxes[sid] = (x, band_top + 44 + row * (box_h + gap_y))
+            tallest = max(len(layers[layer]) for layer in band)
+            band_top += 44 + tallest * (box_h + gap_y) + 24
+        width = 2 * margin + min(len(columns), per_band) * (box_w + gap_x) - gap_x
+        height = band_top
+
+        def ends(a: str, b: str) -> tuple[float, float, float, float]:
+            (ax, ay), (bx, by) = boxes[a], boxes[b]
+            if ax == bx:
+                if ay < by:
+                    return ax + box_w / 2, ay + box_h, bx + box_w / 2, by
+                return ax + box_w / 2, ay, bx + box_w / 2, by + box_h
+            if ax < bx:
+                return ax + box_w, ay + box_h / 2, bx, by + box_h / 2
+            return ax, ay + box_h / 2, bx + box_w, by + box_h / 2
+
+        def num(value: float) -> str:
+            return f"{round(value, 1):g}"
+
+        lines: list[str] = []
+        labels: list[str] = []
+        for seam_id, (a, b) in seams.items():
+            x1, y1, x2, y2 = ends(a, b)
+            lines.append(
+                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+            )
+            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+            label_w = 12 + 6.4 * len(seam_id)
+            labels.append(
+                f'<rect class="boundary-svg-label-box" x="{num(mx - label_w / 2)}" y="{num(my - 8)}" '
+                f'width="{num(label_w)}" height="16" rx="2"/>'
+                f'<text class="boundary-svg-label" x="{num(mx)}" y="{num(my + 3.5)}">{html.escape(seam_id)}</text>'
+            )
+        for a, b, _relation in xrefs:
+            x1, y1, x2, y2 = ends(a, b)
+            length = max(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5, 1.0)
+            ux, uy = (x2 - x1) / length, (y2 - y1) / length
+            lines.append(
+                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+                f'<path class="boundary-svg-arrow" d="M {num(x2)} {num(y2)} '
+                f'L {num(x2 - 10 * ux - 5 * uy)} {num(y2 - 10 * uy + 5 * ux)} '
+                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"/>'
+            )
+
+        nodes: list[str] = []
+        for sid, (x, y) in boxes.items():
+            name = names[sid]
+            shown = name if len(name) <= 28 else name[:27].rstrip() + "…"
+            nodes.append(
+                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}">'
+                f"<title>{html.escape(f'{sid} {name}')}</title>"
+                f'<rect x="{x}" y="{y}" width="{box_w}" height="{box_h}" rx="3"/>'
+                f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
+                f'<text class="boundary-svg-name" x="{x + 10}" y="{y + 35}">{html.escape(shown)}</text>'
+                "</g>"
+            )
+
+        total = len(names)
+        unconnected = total - len(touched)
+        census = (
+            f"{unconnected} of {total} subsystem{'s' if total != 1 else ''} "
+            f"{'has' if unconnected == 1 else 'have'} no recorded boundary"
+        )
+        seam_count = f"{len(seams)} seam{'s' if len(seams) != 1 else ''} as labelled lines"
+        xref_count = (
+            f"{len(xrefs)} recorded dependenc{'ies' if len(xrefs) != 1 else 'y'} as arrows"
+            if xrefs
+            else ""
+        )
+        drawn = "; ".join(part for part in (seam_count, xref_count) if part)
+        account = (
+            "Each arrow is listed in the dependency graph above, and each seam line in the seam topology below"
+            if xrefs
+            else "Each line is listed in the seam topology below"
+        )
+        svg = (
+            f'<svg class="boundary-svg" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" '
+            'aria-labelledby="boundary-svg-title boundary-svg-description">'
+            '<title id="boundary-svg-title">Recorded boundaries</title>'
+            f'<desc id="boundary-svg-description">{total} subsystems in {len(columns)} layer '
+            f'column{"s" if len(columns) != 1 else ""}; {html.escape(drawn)}. {html.escape(census)}. '
+            'No line is inferred from a name or a layer.</desc>'
+            + "".join(parts_columns)
+            + f'<g class="boundary-svg-lines">{"".join(lines)}</g>'
+            + f'<g class="boundary-svg-nodes">{"".join(nodes)}</g>'
+            + f'<g class="boundary-svg-labels">{"".join(labels)}</g>'
+            + "</svg>"
+        )
+        label = html.escape(caption or "recorded boundaries", quote=True)
+        return (
+            '<div class="boundary-projection">'
+            f'<figure class="boundary-diagram" aria-label="{label}">'
+            '<figcaption class="runtime-diagram-caption">'
+            "<strong>Recorded boundaries</strong>"
+            f"<span>{html.escape(drawn)}</span>"
+            f"<span>{html.escape(census)}</span>"
+            f"<span>{account}</span>"
+            "</figcaption>"
+            f'<div class="boundary-svg-scroll">{svg}</div></figure></div>'
+        )
+
     @staticmethod
     def _record_identifier(value: str) -> str:
+        """The record ID a cell names: its link's label, whatever the ID's shape.
+
+        The renderer links every record ID it prints, so the label is the exact
+        ID (`auth`, `B04-R6`); a cell with no link falls back to the first
+        letters-dash-number token, the shape the renderer once assumed.
+        """
+
+        link = re.search(r"\[([^\]]+)\]\([^)]*\)", value)
+        if link:
+            return _plain(link.group(1))
         plain = _plain(value)
         match = re.search(r"\b[A-Za-z][A-Za-z0-9]*-\d+\b", plain)
         return match.group(0) if match else plain
@@ -2611,12 +2956,14 @@ class MarkdownRenderer:
             return self._connection_topology(rows, caption, kind="seam")
         if signature == _RUNTIME_BOUNDARY_PROJECTION:
             return self._runtime_boundary_diagram(rows, caption)
+        if signature == _BOUNDARY_PROJECTION:
+            return self._boundary_diagram(rows, caption)
         if signature == _CONCERN_CHECKLIST_PROJECTION:
             return self._concern_checklist(headers, rows, caption)
         if (
             len(signature) > 1
             and signature[0] == "subsystem"
-            and all(_IDENTIFIER_PATTERN.fullmatch(header.upper()) for header in signature[1:])
+            and all(_IDENTIFIER_SHAPE.fullmatch(header.upper()) for header in signature[1:])
         ):
             return self._coverage_index(headers, rows)
         projection = _RECORD_PROJECTIONS.get(signature)
@@ -2626,6 +2973,7 @@ class MarkdownRenderer:
             return self._summary_list(rows, caption)
 
         lifecycle = signature in _LIFECYCLE_TABLE_PROJECTIONS
+        enum_table = signature == _ENUM_TABLE_PROJECTION
         # `hot-spots.md`'s one measure table carries this page's filterable
         # rows (§8.1.2). The severity facet is named by the band columns
         # themselves: the table keeps critical+high and medium+low apart on
@@ -2662,8 +3010,10 @@ class MarkdownRenderer:
                         f'<th scope="row" data-label="{html.escape(label, quote=True)}"><span class="table-key">{_inline(value)}</span>{location_html}</th>'
                     )
                 else:
+                    literal = re.fullmatch(r"`([^`]+)`", value.strip()) if enum_table and index == 0 else None
+                    rendered = f"<code>{html.escape(literal.group(1))}</code>" if literal else _inline(value)
                     cells.append(
-                        f'<td data-label="{html.escape(label, quote=True)}">{_inline(value)}</td>'
+                        f'<td data-label="{html.escape(label, quote=True)}">{rendered}</td>'
                     )
             row_attrs = ""
             if hot_spots:
@@ -2691,6 +3041,8 @@ class MarkdownRenderer:
         body: list[str] = []
         i = 0
         in_section = False
+        in_disclosure = False
+        disclose = False
         current_section = ""
 
         while i < len(lines):
@@ -2751,11 +3103,17 @@ class MarkdownRenderer:
                     display_raw = "Active concerns"
                 self._note_heading(level, display_raw)
                 if level == 2:
+                    if in_disclosure:
+                        body.append("</details>")
+                        in_disclosure = False
                     if in_section:
                         body.append("</section>")
                     current_section = slugify(_plain(display_raw))
                     body.append(f'<section class="section-{html.escape(current_section, quote=True)}">')
                     in_section = True
+                    # The guide's last section holds the tables a reader never
+                    # meets as a label; it stays closed until asked for.
+                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
                 anchor_id = self._heading_slug(display_raw)
                 label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
                 # The Unresolved lens nests the subsystem under resolution
@@ -2771,6 +3129,10 @@ class MarkdownRenderer:
                     f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
                     f'{_inline(display_raw)}</h{level}>'
                 )
+                if level == 2 and disclose:
+                    body.append('<details class="vocabulary-disclosure"><summary>Show the full vocabulary</summary>')
+                    in_disclosure = True
+                    disclose = False
                 i += 1
                 continue
 
@@ -2823,6 +3185,8 @@ class MarkdownRenderer:
                 i += 1
             body.append(f"<p>{_inline(' '.join(paragraph))}</p>")
 
+        if in_disclosure:
+            body.append("</details>")
         if in_section:
             body.append("</section>")
         return title, "\n".join(_compose_prose_runs(body))
@@ -2987,6 +3351,7 @@ def _shell(
     body: str,
     context: dict[str, Any],
     filters: tuple[str, dict[str, list[str]]] | None = None,
+    notice: str = "",
 ) -> str:
     canonical = str(context.get("canonical_branch") or "not recorded")
     project_name = str(context.get("project_name") or "Project")
@@ -3014,6 +3379,25 @@ def _shell(
         freshness_class = "freshness stale" if stale_entries else "freshness"
     display_title = page.title or source_title
     hint_para = f'<p class="page-hint">{html.escape(page.hint)}</p>' if page.hint else ""
+    use_when_para = (
+        f'<p class="page-use-when">{html.escape("Use it when " + page.use_when)}</p>'
+        if page.use_when
+        else ""
+    )
+    guide_href = _rel_link(page.html_path, GUIDE_PAGE.replace(".md", ".html"))
+    terms_para = (
+        f'<p class="page-terms">{html.escape(TERMS_LABEL)} '
+        + " · ".join(
+            f'<a href="{html.escape(guide_href + "#term-" + slug, quote=True)}">{html.escape(term)}</a>'
+            for term, slug in page.terms
+        )
+        + "</p>"
+        if page.terms
+        else ""
+    )
+    notice_para = (
+        f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
+    )
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
     record_status = _status_html(page.status) if page.status else ""
@@ -3079,6 +3463,9 @@ def _shell(
         <p class="eyebrow">{eyebrow}</p>
         <h1>{html.escape(display_title)}</h1>
         {hint_para}
+        {use_when_para}
+        {terms_para}
+        {notice_para}
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
@@ -3128,8 +3515,13 @@ def render_html_projection(
     context: dict[str, Any],
     previous_files: dict[str, str] | None = None,
     locus_index: dict[str, Any] | None = None,
+    notice: str = "",
 ) -> HtmlProjectionResult:
-    """Render HTML companions from finished Markdown and retire old HTML."""
+    """Render HTML companions from finished Markdown and retire old HTML.
+
+    `notice` is the command-line render notice the Markdown ends with; the HTML
+    moves it from the end of the body into the page head.
+    """
 
     previous_files = previous_files or {}
     route_map = {
@@ -3165,7 +3557,14 @@ def render_html_projection(
             page.html_path,
             repository_url=str(context.get("repository_url") or "") or None,
         )
-        source_title, body = parser.render(source.read_text())
+        source_title, body = parser.render(
+            strip_page_head(
+                strip_notice(source.read_text(), notice),
+                page.hint,
+                page.use_when,
+                terms_line(page.markdown_path, page.terms),
+            )
+        )
         document = _shell(
             page,
             pages,
@@ -3173,6 +3572,7 @@ def render_html_projection(
             body,
             context,
             (parser.filter_scope, parser.facets),
+            notice,
         )
         target = output / page.html_path
         digest = sha256_bytes(document.encode("utf-8"))

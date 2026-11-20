@@ -4,7 +4,7 @@ Run `node scripts/gen-vocabulary.mjs` after changing the source; CI runs
 
 from __future__ import annotations
 
-VOCABULARY_CONTRACT_VERSION = "1.0.0"
+VOCABULARY_CONTRACT_VERSION = "1.1.0"
 
 # finding_resolution_state — resolution axis.
 FINDING_RESOLUTION_STATES: tuple[str, ...] = (
@@ -277,6 +277,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "finding_resolution_state": {
         "axis": "resolution",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Finding state",
         "values": (
             {
                 "value": "open",
@@ -313,6 +315,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "carried_finding_outcome": {
         "axis": "carried",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "successor-finding",
@@ -347,6 +350,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "finding_status": {
         "axis": "resolution",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "confirmed-bug",
@@ -377,6 +381,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "standing_state": {
         "axis": "standing",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "File standing",
         "values": (
             {
                 "value": "unledgered",
@@ -432,6 +438,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "stale_reason": {
         "axis": "standing",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Why a file is stale",
         "values": (
             {
                 "value": "git-drift",
@@ -462,6 +470,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "file_classification": {
         "axis": "standing",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "File scope",
         "values": (
             {
                 "value": "candidate",
@@ -510,6 +520,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "subsystem_status": {
         "axis": "survey",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Survey depth",
         "values": (
             {
                 "value": "unmapped",
@@ -521,8 +533,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
             },
             {
                 "value": "scoping",
-                "label": "Scoping",
-                "meaning": "Only the subsystem boundary and file scope are established so far.",
+                "label": "Scoped",
+                "meaning": "The scope pass is done: the subsystem's boundary and files are established, nothing more.",
                 "cannot_justify": "any behavioral claim; file scope is all that is established",
                 "authorizes": "which files are in scope for this subsystem",
                 "explanation_eligible": False,
@@ -530,14 +542,14 @@ VOCABULARY: dict[str, dict[str, object]] = {
             {
                 "value": "structural",
                 "label": "Structural",
-                "meaning": "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
+                "meaning": "The structure pass is done: types, state, flows and concurrency are mapped; correctness claims are not yet authorized.",
                 "cannot_justify": "any correctness claim",
                 "authorizes": "claims about types, state containers, flows, and the concurrency model",
                 "explanation_eligible": True,
             },
             {
                 "value": "concerns",
-                "label": "Concerns",
+                "label": "Reviewing concerns",
                 "meaning": "Structural mapping is complete and concern-by-concern review is in progress.",
                 "cannot_justify": "that a finding survived adversarial challenge",
                 "authorizes": "concern review decisions that cite evidence",
@@ -545,7 +557,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
             },
             {
                 "value": "adversarial",
-                "label": "Adversarial",
+                "label": "Challenging claims",
                 "meaning": "Candidate conclusions are being challenged; treat them as provisional.",
                 "cannot_justify": "that the challenge pass has finished",
                 "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
@@ -572,6 +584,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "vocabulary_discharge": {
         "axis": "vocabulary",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "terms",
@@ -596,6 +609,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "explanation_subject": {
         "axis": "explanation",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "subsystem",
@@ -614,6 +628,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "explanation_slot": {
         "axis": "explanation",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "purpose",
@@ -632,6 +647,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "explanation_disposition": {
         "axis": "explanation",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "recorded",
@@ -656,6 +672,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "explanation_discharge": {
         "axis": "explanation",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "recorded",
@@ -680,6 +697,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "evidence_kind": {
         "axis": "evidence",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Evidence kind",
         "values": (
             {
                 "value": "code-verified",
@@ -740,6 +759,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "evidence_quality": {
         "axis": "evidence",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "code-verified",
@@ -800,6 +820,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "disposition_classification": {
         "axis": "disposition",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Concern review verdict",
         "values": (
             {
                 "value": "confirmed-bug",
@@ -836,6 +858,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "severity": {
         "axis": "severity",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Severity",
         "values": (
             {
                 "value": "CRITICAL",
@@ -866,6 +890,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "field_note_category": {
         "axis": "lead",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Lead category",
         "values": (
             {
                 "value": "pattern",
@@ -902,6 +928,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "open_question_category": {
         "axis": "question",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Decision category",
         "values": (
             {
                 "value": "domain-knowledge",
@@ -950,6 +978,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "open_question_resolution": {
         "axis": "resolution",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Decision outcome",
         "values": (
             {
                 "value": "open",
@@ -980,6 +1010,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "field_note_follow_up": {
         "axis": "lead",
         "open_vocabulary": True,
+        "reader_facing": False,
         "values": (
             {
                 "value": "open",
@@ -998,6 +1029,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "xref_relationship": {
         "axis": "relation",
         "open_vocabulary": True,
+        "reader_facing": False,
         "values": (
             {
                 "value": "shared-pattern",
@@ -1040,6 +1072,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "xref_strength": {
         "axis": "relation",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "observed",
@@ -1064,6 +1097,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "contradiction_resolution": {
         "axis": "resolution",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "How a disagreement was settled",
         "values": (
             {
                 "value": "a-supersedes-b",
@@ -1094,6 +1129,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "diagnosticity_outcome": {
         "axis": "resolution",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Competing explanations outcome",
         "values": (
             {
                 "value": "open",
@@ -1118,6 +1155,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "claim_epistemic_kind": {
         "axis": "claim",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "observation",
@@ -1166,6 +1204,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "claim_subject_type": {
         "axis": "claim",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "symbol",
@@ -1190,6 +1229,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "concern_status": {
         "axis": "concern",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "active",
@@ -1220,6 +1260,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "pass_type": {
         "axis": "provenance",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "onboarding",
@@ -1250,6 +1291,8 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "lens": {
         "axis": "lens",
         "open_vocabulary": False,
+        "reader_facing": True,
+        "title": "Lens",
         "values": (
             {
                 "value": "codebase",
@@ -1280,6 +1323,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "omission_reason": {
         "axis": "omission",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "policy",
@@ -1298,6 +1342,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
     "attention_label": {
         "axis": "attention",
         "open_vocabulary": False,
+        "reader_facing": False,
         "values": (
             {
                 "value": "open",
@@ -1396,6 +1441,273 @@ ORIENTATION_FORBIDDEN_TERMS: tuple[str, ...] = (
     "out of date",
     "current as of",
     "fully surveyed",
+)
+
+# Amanuensis's own terms for the reader's guide: term, aliases (the other names
+# a reader meets, including the stored one), definition, and the pages that
+# print the term. subsystems/*.md and diagnosticity/*.md stand for a family.
+READER_TERMS: tuple[dict[str, object], ...] = (
+    {
+        "term": "Amanuensis",
+        "aliases": (),
+        "definition": "The tool that produced this site. An AI agent runs it to survey a repository.",
+        "pages": ("index.md", "sessions.md"),
+    },
+    {
+        "term": "Conspectus",
+        "aliases": ("survey record",),
+        "definition": "Amanuensis's name for what a survey keeps: a database of what was read and concluded, plus this site, which is built from it.",
+        "pages": ("index.md", "onboarding-report.md"),
+    },
+    {
+        "term": "Survey",
+        "aliases": (),
+        "definition": "The agent's reading of the repository, done in passes, with each conclusion tied to the code it read.",
+        "pages": ("index.md", "not-yet-surveyed.md", "sessions.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Session",
+        "aliases": (),
+        "definition": "One stretch of work by the agent. Sessions and publications lists them.",
+        "pages": ("sessions.md", "resolution-history.md", "entry-point.md", "index.md"),
+    },
+    {
+        "term": "Subsystem",
+        "aliases": (),
+        "definition": "A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding.",
+        "pages": ("master-plan.md", "architecture.md", "onboarding-report.md", "subsystems/*.md", "index.md", "not-yet-surveyed.md", "hot-spots.md", "disagreements.md", "diagnosticity.md", "diagnosticity/*.md"),
+    },
+    {
+        "term": "Layer",
+        "aliases": ("region",),
+        "definition": "A group of subsystems with a similar role. Pages group subsystems by layer.",
+        "pages": ("master-plan.md", "architecture.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Survey depth",
+        "aliases": ("status",),
+        "definition": "How far the survey of a subsystem has got. Unmapped: not started. Scoped and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim.",
+        "pages": ("master-plan.md", "architecture.md", "not-yet-surveyed.md", "subsystems/*.md", "index.md"),
+    },
+    {
+        "term": "Mapped",
+        "aliases": (),
+        "definition": "The last survey depth: every pass has run. It does not mean every file is read or every bug found.",
+        "pages": ("master-plan.md", "not-yet-surveyed.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Scope",
+        "aliases": ("file ledger",),
+        "definition": "The files a subsystem owns, each marked as read, not yet read, or left out with a reason.",
+        "pages": ("files.md", "not-yet-surveyed.md", "subsystems/*.md", "index.md", "master-plan.md"),
+    },
+    {
+        "term": "Evidence",
+        "aliases": (),
+        "definition": "A pointer to code at a commit (file, symbol, lines) with a note of how strong it is: read in code, seen in a test, stated in a comment, and so on.",
+        "pages": ("findings.md", "resolved-findings.md", "concerns.md", "subsystems/*.md", "contradictions.md", "disagreements.md", "hot-spots.md"),
+    },
+    {
+        "term": "Claim",
+        "aliases": (),
+        "definition": "A statement about how the code is built (\"this cache is per request\"), with evidence.",
+        "pages": ("disagreements.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Challenge",
+        "aliases": ("adversarial pass",),
+        "definition": "A pass in which the agent tries to prove its own claims and findings wrong. Each claim records whether it survived.",
+        "pages": ("findings.md", "resolved-findings.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Concern",
+        "aliases": (),
+        "definition": "One kind of defect worth looking for in this codebase, such as a race on a shared cache. The review checklist is the full list.",
+        "pages": ("concerns.md", "concern-checklist.md", "seams.md", "not-yet-surveyed.md", "diagnosticity.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Concern review",
+        "aliases": ("disposition",),
+        "definition": "The verdict for one concern in one subsystem: bug found, acceptable, ruled out, out of scope, or undecided.",
+        "pages": ("concerns.md", "subsystems/*.md", "disagreements.md"),
+    },
+    {
+        "term": "Finding",
+        "aliases": (),
+        "definition": "A defect the survey confirmed, with evidence, a severity, and a state (open, repaired, verified, ruled out, accepted).",
+        "pages": ("findings.md", "resolved-findings.md", "hot-spots.md", "files.md", "subsystems/*.md", "index.md", "master-plan.md", "disagreements.md"),
+    },
+    {
+        "term": "Lead",
+        "aliases": ("field note",),
+        "definition": "Something the agent noticed that is not a finding: a pattern, an oddity, a tension, a possible concern.",
+        "pages": ("field-notes.md", "resolved-leads.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Decision needed",
+        "aliases": ("open question",),
+        "definition": "Something the agent could not settle alone. It records the assumption it used and keeps going; you answer it.",
+        "pages": ("open-questions.md", "resolved-leads.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Disagreement",
+        "aliases": ("contradiction",),
+        "definition": "Two records that cannot both be true. The survey keeps both until one is settled.",
+        "pages": ("disagreements.md", "contradictions.md"),
+    },
+    {
+        "term": "Competing explanations",
+        "aliases": ("diagnosticity matrix",),
+        "definition": "A table weighing several causes for one symptom against the evidence.",
+        "pages": ("diagnosticity.md", "diagnosticity/*.md", "disagreements.md"),
+    },
+    {
+        "term": "System boundary",
+        "aliases": ("seam",),
+        "definition": "A place where two subsystems share something (a table, a queue, a cache) and depend on each other's assumptions about it.",
+        "pages": ("seams.md", "architecture.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Recorded edge",
+        "aliases": ("xref",),
+        "definition": "A dependency or data flow between two subsystems that the agent wrote down. Edges are never guessed from names.",
+        "pages": ("architecture.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Stale",
+        "aliases": (),
+        "definition": "A file that changed after the revision the survey recorded for it: the one it was read at, scoped at, or set aside at. What the survey said about it may no longer hold.",
+        "pages": ("stale.md", "files.md", "index.md", "hot-spots.md"),
+    },
+    {
+        "term": "Checked at",
+        "aliases": ("revision",),
+        "definition": "The commit the survey last compared itself against. Everything on the site is as of that commit.",
+        "pages": ("index.md", "stale.md"),
+    },
+    {
+        "term": "Standing",
+        "aliases": (),
+        "definition": "What the record says about one file: no record, left out, in scope but unread, read, read but changed since.",
+        "pages": ("files.md", "stale.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Lens",
+        "aliases": (),
+        "definition": "One of four groups of pages: Codebase (what the project is), Unresolved (open work), History (what was settled), Method (how far to trust the rest).",
+        "pages": ("index.md",),
+    },
+    {
+        "term": "Thesis",
+        "aliases": (),
+        "definition": "The paragraph on the overview that says what the codebase does.",
+        "pages": ("index.md",),
+    },
+    {
+        "term": "Purpose, account",
+        "aliases": ("explanation",),
+        "definition": "A subsystem's one-sentence purpose and its longer explanation of how it works, each written from evidence.",
+        "pages": ("architecture.md", "subsystems/*.md"),
+    },
+    {
+        "term": "Publication check",
+        "aliases": ("read-back",),
+        "definition": "After building the site, Amanuensis reads it back to confirm it matches the record. The overview shows the result.",
+        "pages": ("index.md", "sessions.md"),
+    },
+)
+
+# One row per kind of ID the site prints. The letters are labels, not a code.
+ID_KINDS: tuple[dict[str, object], ...] = (
+    {
+        "kind": "Subsystem",
+        "shape": "letters, dash, number: `R-06`",
+        "names": "a subsystem",
+        "chosen_by": "the agent, at onboarding",
+        "links_to": "the subsystem's page",
+    },
+    {
+        "kind": "Finding",
+        "shape": "subsystem code, dash, sequence: `R06-2`",
+        "names": "a defect in that subsystem",
+        "chosen_by": "the agent, when it records the finding",
+        "links_to": "Open or Resolved findings",
+    },
+    {
+        "kind": "Seam",
+        "shape": "`SM-` and a number: `SM-03`",
+        "names": "a system boundary",
+        "chosen_by": "the agent",
+        "links_to": "System boundaries",
+    },
+    {
+        "kind": "Concern",
+        "shape": "short letters, dash, number: `RC-2`",
+        "names": "a checklist item",
+        "chosen_by": "the agent, at onboarding",
+        "links_to": "Review coverage",
+    },
+    {
+        "kind": "Seam concern",
+        "shape": "`SC-` and a number",
+        "names": "a checklist item about one boundary",
+        "chosen_by": "the agent",
+        "links_to": "Review coverage",
+    },
+    {
+        "kind": "Competing explanations",
+        "shape": "`DM-` and a number",
+        "names": "one evidence table",
+        "chosen_by": "numbered by Amanuensis",
+        "links_to": "its own page",
+    },
+    {
+        "kind": "Decision",
+        "shape": "`#` and a number",
+        "names": "a decision needed",
+        "chosen_by": "numbered by Amanuensis",
+        "links_to": "Decisions needed",
+    },
+)
+
+# The passes of a subsystem survey, in ladder order: the subsystem_status value
+# each sets, and whether it sets it as the pass starts or when it is done.
+SURVEY_PASSES: tuple[dict[str, object], ...] = (
+    {
+        "pass": "Scope",
+        "phase": 1,
+        "does": "Lists the subsystem's files and the terms it uses.",
+        "status": "scoping",
+        "set_when": "end",
+    },
+    {
+        "pass": "Structure",
+        "phase": 2,
+        "does": "Reads the files; records types, state, data flows, concurrency, and claims.",
+        "status": "structural",
+        "set_when": "end",
+    },
+    {
+        "pass": "Concern review",
+        "phase": 3,
+        "does": "Gives every checklist item a verdict with evidence. Confirmed defects become findings.",
+        "status": "concerns",
+        "set_when": "start",
+    },
+    {
+        "pass": "Challenge",
+        "phase": 4,
+        "does": "Tries to prove each claim and finding wrong.",
+        "status": "adversarial",
+        "set_when": "start",
+    },
+    {
+        "pass": "Packaging",
+        "phase": 5,
+        "does": "Writes the subsystem's purpose and account, updates the site.",
+        "status": "mapped",
+        "set_when": "end",
+    },
 )
 
 

@@ -220,7 +220,8 @@ def main() -> None:
         relocated = storage / "relocated-docs"
         bound_run = subprocess.run(
             [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage),
-             "--workspace", str(ROOT.parent), "--output", str(relocated)],
+             "--workspace", str(ROOT.parent), "--allow-external-output",
+             "--output", str(relocated)],
             capture_output=True, text=True, check=True,
         )
         bound_summary = json.loads(bound_run.stdout.strip().splitlines()[-1])
@@ -450,8 +451,8 @@ def main() -> None:
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
         htr = (docs / "how-to-read.md").read_text()
-        assert "How to read this conspectus" in htr
-        assert "### Subsystem status" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
+        assert "How to read this survey" in htr
+        assert "### Survey depth" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
         assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"
         assert "\x00" not in (docs / "how-to-read.html").read_text(), "xref placeholders leaked into HTML"

@@ -22,8 +22,10 @@ from typing import Any
 
 from .db import row, rows, table_exists
 from .diagrams import (
+    BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
+    boundary_view,
     concern_coverage_heatmap,
     runtime_boundary_map,
     runtime_boundary_state,
@@ -69,8 +71,11 @@ from .readback import (
 )
 from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
+    ID_KINDS,
     OBLIGATION_BEARING_SQL,
     OPEN_FINDING_SQL,
+    READER_TERMS,
+    SURVEY_PASSES,
     VOCABULARY,
     VOCABULARY_CONTRACT_VERSION,
     cannot_justify,
@@ -645,6 +650,12 @@ def _upstream_of(workspace: Path, branch: str) -> tuple[str, str]:
     return (f"origin/{branch}" if fallback else ""), (fallback or "")
 
 
+def _stored_date(stamp: object) -> str:
+    """The date of a stored timestamp: its first ten characters."""
+
+    return str(stamp or "")[:10] or "not recorded"
+
+
 def _short(sha: str) -> str:
     return f"`{sha[:12]}`" if sha else "not recorded"
 
@@ -772,6 +783,23 @@ def _provenance_line(
         sha=str(record["ref_sha"])[:8],
         n=len(record.get("cited_files") or []),
         ageing=_ageing_sentence(workspace, bound, record, head),
+    )
+
+
+def _survey_notes_line(artifact: Mapping[str, Any], account: Mapping[str, Any]) -> str:
+    """The italic line that dates a survey artifact against the recorded account.
+
+    The artifact is working notes kept as written; the account is the later
+    reading. Dates are the first ten characters of the stored timestamps.
+    """
+
+    return (
+        f"*Written on {_stored_date(artifact['written_at'])} at revision"
+        f" {str(artifact['ref_sha'] or '')[:8] or 'not recorded'} as the survey's working"
+        " notes, and kept as written. The account above was recorded on"
+        f" {_stored_date(account.get('recorded_at'))} at revision"
+        f" {str(account['ref_sha'] or '')[:8] or 'not recorded'}; where the two disagree,"
+        " the later one is the current reading.*"
     )
 
 
@@ -940,6 +968,24 @@ def _empty_lens(
 # ---------------------------------------------------------------------------
 
 
+# Appendix C, "Overview identity". The project is the subject and Amanuensis the
+# method; the sentence carries no digit and none of the orientation lint's terms,
+# and ends by sending a new reader to the guide.
+OVERVIEW_IDENTITY = (
+    "An architecture survey of {name}. An AI agent running Amanuensis read the"
+    " repository, without changing it, and recorded what it found here. New to this"
+    " site? Start with [{guide}](how-to-read.md)."
+)
+
+# The read-back is recorded after the pages are written, so the overview can only
+# show the publication before it. No digit and neither "red" nor "green": the
+# overview's truthfulness gate counts those words in this block.
+PUBLICATION_INTEGRITY_LAG = (
+    "A publication's read-back is recorded after its pages are written, so these"
+    " results describe the publication before this one."
+)
+
+
 def render_index(
     conn: sqlite3.Connection,
     storage: Path,
@@ -1038,7 +1084,7 @@ def render_index(
     out = [
         f"# {name}",
         "",
-        f"An architecture survey of {name}, recorded by Amanuensis.",
+        OVERVIEW_IDENTITY.format(name=name, guide=GUIDE_TITLE),
         "",
         # 2. Thesis — by heading, from entry-point.md, or the named instruction.
         "## What is this codebase?",
@@ -1140,6 +1186,7 @@ def render_index(
     out += _metric_table(work)
     out += ["### Publication integrity", ""]
     if verification:
+        out += [PUBLICATION_INTEGRITY_LAG, ""]
         out += _metric_table(
             [
                 *(
@@ -1149,7 +1196,7 @@ def render_index(
                     )
                     for axis in ("state", "coverage", "content")
                 ),
-                ("Verified at", _fmt_time(str(verification["verified_at"]))),
+                ("Read back at", _fmt_time(str(verification["verified_at"]))),
             ]
         )
     else:
@@ -1182,8 +1229,8 @@ def render_index(
         " verification at the checked revision.",
         "- **History** — [Resolved findings](resolved-findings.md): the records that"
         " reached a terminal state, with the basis each one rests on.",
-        "- **Method** — [How to read the conspectus](how-to-read.md): every recorded"
-        " state, what it authorizes, and what it cannot justify.",
+        f"- **Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
+        " the terms it uses, and how a survey works.",
         "",
     ]
 
@@ -1285,6 +1332,12 @@ def render_architecture(
         "",
         dependency_body,
         "",
+        # §2.5 item 2: the HTML draws this section's table as the boundary SVG,
+        # recognised by its header signature as the runtime table is.
+        f"## {BOUNDARY_HEADING}",
+        "",
+        boundary_view(conn),
+        "",
         "## Seam topology",
         "",
         seam_graph(conn),
@@ -1351,7 +1404,22 @@ def render_master_plan(
         layers: dict[str, list[dict[str, Any]]] = {}
         for s in subs:
             layers.setdefault(s["layer"] or "unlayered", []).append(s)
-        body = []
+        # The atlas comes first and always has one row per subsystem, whether or
+        # not any edge is recorded (§2.5): the HTML turns this three-column table
+        # into the region cards the architecture page already uses. The depth
+        # is the contract's label in both views, never the stored value.
+        depth_labels = labels("subsystem_status")
+        body = [
+            "| Region | Subsystem | Survey depth |",
+            "|---|---|---|",
+        ]
+        for layer, items in layers.items():
+            for s in items:
+                body.append(
+                    f"| {_table_cell(layer)} | **[{s['id']}]({subsystem_page(str(s['id']), str(s['name']))})**"
+                    f" {_table_cell(s['name'])} | {_table_cell(depth_labels.get(s['status'], s['status']))} |"
+                )
+        body.append("")
         for layer, items in layers.items():
             body.append(f"## {layer}")
             body.append("")
@@ -1368,7 +1436,7 @@ def render_master_plan(
                     f"{f['n']} ({f.get('open_bugs', 0)} open) |"
                 )
             body.append("")
-    text = "# Master plan\n\n" + "\n".join(body) + "\n"
+    text = "# Subsystem map\n\n" + "\n".join(body) + "\n"
     return (
         text,
         _db_source("master-plan:subs", subs)
@@ -1487,7 +1555,7 @@ def render_subsystem(
     # artifact with kind='subsystem-survey' and this subsystem_id.
     survey_rows = rows(
         conn,
-        "SELECT path, content_hash, ref_sha FROM artifacts"
+        "SELECT path, content_hash, ref_sha, written_at FROM artifacts"
         " WHERE kind = 'subsystem-survey' AND subsystem_id = ?",
         (sid,),
     )
@@ -1602,6 +1670,7 @@ def render_subsystem(
     provenance = ", ".join(
         f"`{sv['path']}` at content hash `{str(sv['content_hash'] or '—')[:12]}`"
         f", recorded at {_short(str(sv['ref_sha'] or ''))}"
+        f", written on {_stored_date(sv['written_at'])}"
         for sv in survey_rows
     )
     epistemic_labels = labels("claim_epistemic_kind")
@@ -1867,7 +1936,15 @@ def render_subsystem(
         out += ["No concern has been dispositioned in this subsystem.", ""]
 
     if survey_prose and placement in ("survey-record", "none"):
-        out += ["### Survey artifact", "", _nest_prose(survey_prose, 3)]
+        out += ["### Survey artifact", ""]
+        if placement == "survey-record" and account.row is not None:
+            out += [
+                _survey_notes_line(sv, account.row)
+                for sv in survey_rows
+                if (storage / sv["path"]).is_file()
+            ]
+            out.append("")
+        out += [_nest_prose(survey_prose, 3)]
     elif placement == "structure-narrative":
         out += [
             "### Survey artifact",
@@ -3248,43 +3325,329 @@ def _ledger_stale_table(
     return out
 
 
-# The reader's guide is generated, not written (§7.8, §10.2). Every table below
-# comes from `mcp-server/contracts/conspectus-vocabulary.json` by way of the
-# generated `vocabulary.py`, and the route table comes from the page plan, so a
-# value the server enforces or a page the projection publishes cannot be
-# missing from the guide without the generator changing.
-HOW_TO_READ_INTRO = """\
-# How to read this conspectus
-"""
+# The reader's guide is generated, not written (§7.8, §10.2). Its terms and
+# tables come from `mcp-server/contracts/conspectus-vocabulary.json` by way of
+# the generated `vocabulary.py`, and the route table comes from the page plan,
+# so a value the server enforces or a page the projection publishes cannot be
+# missing from the guide without the generator changing. The sections run in
+# the order PLAN §4 O3 gives: what the site is, pages, how a survey works,
+# terms, how IDs are formed, status values, then the vocabulary a reader never
+# sees as a label.
+GUIDE_TITLE = "How to read this survey"
+SURVEY_SECTION = "How a survey works"
+HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
 
 HOW_TO_READ_CLOSING = ""
 
+# Appendix C, "What this site is". The project name is the only variable. The
+# second paragraph (PLAN §4 O14) says what the Markdown view leaves out; it has
+# no code span, since the guide's first 600 bytes carry none.
+SITE_IS = (
+    "This site is the record of an AI agent's survey of {name}. The agent read the code,"
+    " recorded what it concluded and the code each conclusion rests on, and listed what it"
+    " could not settle. It does not change the code. Every page is as of one commit, shown"
+    " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
+)
+SITE_VIEWS = (
+    "Each page is written twice from the same record: as HTML, which adds the diagrams, the"
+    " search and the definitions shown on hover, and as Markdown. Both are written to the same"
+    " directory; the HTML starts at index.html. A copy of the Markdown alone leaves those out."
+)
+
+# A term's `pages` may name a family; the family's listing page stands for it.
+_FAMILY_LISTINGS: dict[str, tuple[str, str]] = {
+    "subsystems/*.md": ("Subsystem pages", "master-plan.md"),
+    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.md"),
+}
+
+
+def term_slug(term: str) -> str:
+    """The anchor suffix for a term: `#term-<slug>` on the guide."""
+
+    return re.sub(r"[^a-z0-9]+", "-", term.lower()).strip("-")
+
+
+def page_terms(page: str) -> tuple[tuple[str, str], ...]:
+    """The `READER_TERMS` entries a page names, as `(term, anchor slug)` in contract order.
+
+    A term's `pages` holds exact page paths, or a family glob (`subsystems/*.md`)
+    for every page directly under that directory.
+    """
+
+    found: list[tuple[str, str]] = []
+    for entry in READER_TERMS:
+        for pattern in entry.get("pages") or ():  # type: ignore[union-attr]
+            pattern = str(pattern)
+            if pattern == page or (
+                pattern.endswith("/*.md")
+                and page.startswith(pattern[: -len("*.md")])
+                and "/" not in page[len(pattern) - len("*.md") :]
+            ):
+                term = str(entry["term"])
+                found.append((term, term_slug(term)))
+                break
+    return tuple(found)
+
 
 def _enum_heading(name: str) -> str:
-    """A reader-facing name for one enum, with the stored name beside it."""
+    """A reader-facing name for one enum; the stored name goes beside it.
 
-    return name.replace("_", " ").capitalize()
+    The plain name is the contract's `title` (every reader-facing enum carries
+    one); an internal enum without one falls back to its stored name's words.
+    """
+
+    title = VOCABULARY.get(name, {}).get("title")
+    return str(title) if title else name.replace("_", " ").capitalize()
 
 
-def _vocabulary_tables() -> list[str]:
-    """One table per enum the contract carries, in its declared order (§7.8)."""
+def _site_is(name: str) -> list[str]:
+    return ["## What this site is", "", SITE_IS.format(name=name), "", SITE_VIEWS, ""]
 
-    out: list[str] = [
-        "## The vocabulary this record uses",
+
+# Appendix C, "How a survey works". The surrounding sentences are constants; the
+# pass table's labels, meanings and timing come from the contract (`SURVEY_PASSES`
+# and `subsystem_status`), so the guide cannot drift from what the server enforces.
+SURVEY_LEAD = (
+    "The agent works in two stages and does not wait for approval between steps."
+)
+SURVEY_ONBOARDING = (
+    "**Onboarding**, once. The agent reads the repository's shape, splits it into"
+    " subsystems grouped by layer, writes a review checklist of defects worth looking"
+    " for in this codebase, ranks the subsystems, and publishes the first version of"
+    " this site."
+)
+SURVEY_EACH = (
+    "**A survey of each subsystem**, highest priority first, in {passes} passes:"
+)
+SURVEY_IN_PROGRESS = (
+    "A subsystem shown as {labels} is in the middle of that pass: its verdicts and"
+    " findings so far are not the last word."
+)
+SURVEY_REFRESH = (
+    "**Refresh**, when the code changes. The agent re-reads files that changed since it"
+    " read them. Until then they are listed on Stale knowledge."
+)
+EXPECTS_HEADING = "What it expects from you"
+SURVEY_EXPECTS = (
+    "- Nothing, for it to keep going. When it cannot decide something, it records a"
+    " *decision needed* with the assumption it used, and carries on.",
+    "- At each checkpoint (after onboarding, after each subsystem, and at the start of"
+    " each session) it posts a summary in your chat. Read **Decisions needed** then, and"
+    " answer what you can by telling the agent in your session. This site is read-only;"
+    " answers reach the record only through the agent.",
+    '- You can redirect it at any time: name a subsystem to survey next, say "stop", or'
+    ' ask "what do we know about `<file>`".',
+)
+PHASES_HEADING = "Phase numbers"
+PHASES_LEAD = (
+    'Notes written by the agent may say "Phase 2". The numbers belong to one of two'
+    " sequences:"
+)
+ONBOARDING_PHASES = "0–7"
+ONBOARDING_PHASES_MEANING = "The one-time stage above, before any subsystem is surveyed."
+_NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven"}
+
+# How the table says when a pass sets its depth (D4): the depths that name a
+# finished pass are set when it ends, the two that name one under way as it starts.
+_WHEN = {"end": "when the pass is done", "start": "as the pass starts"}
+
+
+def _survey_passes_section() -> list[str]:
+    """Appendix C's "How a survey works", the pass table generated from the contract."""
+
+    spec = [dict(p) for p in SURVEY_PASSES]
+    count = len(spec)
+    out = [
+        f"## {SURVEY_SECTION}",
         "",
-        "Every value below is generated from the vocabulary contract, version"
-        f" `{VOCABULARY_CONTRACT_VERSION}` — the same source the server validates"
-        " writes against and the same source this site's labels come from. A value"
-        " the server accepts and this page did not carry would be a drift, so the"
-        " generator produces both from one definition.",
+        SURVEY_LEAD,
+        "",
+        SURVEY_ONBOARDING,
+        "",
+        SURVEY_EACH.format(passes=_NUMBER_WORDS.get(count, str(count))),
+        "",
+        "| Pass | What the agent does | Survey depth it sets, and when | What that depth means |",
+        "|---|---|---|---|",
+    ]
+    for p in spec:
+        status = str(p["status"])
+        label = SUBSYSTEM_STATUS_LABELS.get(status, status)
+        out.append(
+            f"| {_table_cell(p['pass'])} | {_table_cell(p['does'])} |"
+            f" **{_table_cell(label)}**, {_WHEN.get(str(p['set_when']), str(p['set_when']))} |"
+            f" {_table_cell(SUBSYSTEM_STATUS_MEANINGS.get(status, ''))} |"
+        )
+    under_way = [
+        f"*{SUBSYSTEM_STATUS_LABELS.get(str(p['status']), p['status'])}*"
+        for p in spec
+        if p["set_when"] == "start"
+    ]
+    out += ["", SURVEY_IN_PROGRESS.format(labels=" or ".join(under_way)), ""]
+    out += [SURVEY_REFRESH, "", f"### {EXPECTS_HEADING}", "", *SURVEY_EXPECTS, ""]
+    phases = [int(str(p["phase"])) for p in spec]
+    survey_phases = f"{min(phases)}–{max(phases)}"
+    named = ", ".join(f"{p['pass']} ({p['phase']})" for p in spec)
+    out += [
+        f"### {PHASES_HEADING}",
+        "",
+        PHASES_LEAD,
+        "",
+        "| Numbering | Phases | What they are |",
+        "|---|---|---|",
+        f"| Onboarding | {ONBOARDING_PHASES} | {ONBOARDING_PHASES_MEANING} |",
+        f"| Subsystem survey | {survey_phases} | {_table_cell(named)}, in order. |",
         "",
     ]
+    return out
+
+
+def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+    """One entry per `READER_TERMS` row, anchored for the pages that link to it."""
+
+    # Only planned pages are linked: a term's `pages` may name a prose page this
+    # store has no source for, and a link to it would not resolve (read-back).
+    labels = {route[0]: route[1] for route in routes}
+    out: list[str] = [
+        "## Terms",
+        "",
+        "Words this site uses in a particular sense. Each entry says where you will meet it.",
+        "",
+    ]
+    for entry in READER_TERMS:
+        term = str(entry["term"])
+        out += [f'<a id="term-{term_slug(term)}"></a>', "", f"### {term}", ""]
+        aliases = [str(alias) for alias in entry.get("aliases") or ()]  # type: ignore[union-attr]
+        if aliases:
+            out += [f"*Also called: {', '.join(aliases)}.*", ""]
+        out += [str(entry["definition"]), ""]
+        links: list[str] = []
+        for page in entry.get("pages") or ():  # type: ignore[union-attr]
+            page = str(page)
+            if page in _FAMILY_LISTINGS:
+                label, target = _FAMILY_LISTINGS[page]
+            elif page in labels:
+                label, target = labels[page], page
+            else:
+                continue  # not planned for this store (a prose page with no source)
+            link = f"[{label}]({target})"
+            if link not in links:
+                links.append(link)
+        if links:
+            out += [f"Seen on: {', '.join(links)}", ""]
+    return out
+
+
+# Appendix B, "How IDs are formed" (PLAN §2.2 items 1 and 2, D1). The kinds come
+# from the contract (`ID_KINDS`); the example in each row and the sentence about
+# this store's subsystem letters come from the store, so both stay true per store
+# without any rule at onboarding.
+IDS_SECTION = "How IDs are formed"
+IDS_LEAD = (
+    "IDs are short labels so records can point at each other. Except where this page"
+    " says otherwise, the letters are not a code: read the name beside the ID."
+)
+LETTERS_ARE_LAYERS = "Here the letter is the layer: {pairs}."
+LETTERS_ENCODE_NOTHING = (
+    "The letters were chosen when the survey began and do not encode anything."
+    " Read the name beside the ID."
+)
+NO_EXAMPLE = "none yet"
+
+
+def _id_letters(identifier: str) -> str:
+    """A subsystem ID's leading letters: `R` for `R-06`, `auth` for `auth`."""
+
+    match = re.match(r"[A-Za-z]+", identifier)
+    return match.group(0) if match else identifier[:1]
+
+
+def subsystem_letter_key(subsystems: Sequence[tuple[str, str | None]]) -> str | None:
+    """What this store's subsystem letters say, from `(id, layer)` pairs.
+
+    The letter is the layer only when every letter's subsystems sit in one
+    layer and no layer is spelled by two letters; a letter that is right most of
+    the time is worse for a reader than one that is plainly arbitrary (§2.2).
+    """
+
+    if not subsystems:
+        return None
+    layers: dict[str, set[str | None]] = {}
+    for identifier, layer in subsystems:
+        layers.setdefault(_id_letters(identifier), set()).add(layer or None)
+    owners: dict[str, set[str]] = {}
+    for letter, found in layers.items():
+        for layer in found:
+            owners.setdefault(str(layer), set()).add(letter)
+    one_to_one = all(
+        len(found) == 1 and None not in found for found in layers.values()
+    ) and all(len(letters) == 1 for letters in owners.values())
+    if not one_to_one:
+        return LETTERS_ENCODE_NOTHING
+    pairs = ", ".join(
+        f"{letter} is {next(iter(layers[letter]))}" for letter in sorted(layers)
+    )
+    return LETTERS_ARE_LAYERS.format(pairs=pairs)
+
+
+def _id_examples(conn: sqlite3.Connection) -> dict[str, str]:
+    """One ID per kind from this store, keyed by `ID_KINDS[*].kind`."""
+
+    def first(sql: str) -> str | None:
+        found = row(conn, sql)
+        return None if found is None or found["v"] is None else str(found["v"])
+
+    concerns = [str(r["code"]) for r in rows(conn, "SELECT code FROM concerns ORDER BY code")]
+    matrix = first("SELECT MIN(id) AS v FROM diagnosticity_sessions")
+    decision = first("SELECT MIN(id) AS v FROM open_questions")
+    found = {
+        "Subsystem": first("SELECT MIN(id) AS v FROM subsystems"),
+        "Finding": first("SELECT MIN(finding_id) AS v FROM findings"),
+        "Seam": first("SELECT MIN(id) AS v FROM seams"),
+        "Concern": next((c for c in concerns if not c.startswith("SC-")), None),
+        "Seam concern": next((c for c in concerns if c.startswith("SC-")), None),
+        "Competing explanations": f"DM-{matrix}" if matrix else None,
+        "Decision": f"#{decision}" if decision else None,
+    }
+    return {kind: example for kind, example in found.items() if example}
+
+
+def _ids_section(conn: sqlite3.Connection) -> list[str]:
+    """Appendix B's table of ID kinds, with this store's examples and letter key."""
+
+    out = [f"## {IDS_SECTION}", "", IDS_LEAD, ""]
+    key = subsystem_letter_key(
+        [(str(r["id"]), r["layer"]) for r in rows(conn, "SELECT id, layer FROM subsystems ORDER BY id")]
+    )
+    if key:
+        out += [key, ""]
+    examples = _id_examples(conn)
+    out += [
+        "| Kind | Shape | Names | Chosen by | Example here | Links to |",
+        "|---|---|---|---|---|---|",
+    ]
+    for kind in ID_KINDS:
+        name = str(kind["kind"])
+        out.append(
+            f"| {_table_cell(name)} | {_table_cell(kind['shape'])} | {_table_cell(kind['names'])}"
+            f" | {_table_cell(kind['chosen_by'])} | {_table_cell(examples.get(name, NO_EXAMPLE))}"
+            f" | {_table_cell(kind['links_to'])} |"
+        )
+    out.append("")
+    return out
+
+
+def _enum_tables(heading: str, lede: str, reader_facing: bool) -> list[str]:
+    """The enum tables whose `reader_facing` flag matches, in declared order."""
+
+    out: list[str] = [f"## {heading}", "", lede, ""]
     for name, definition in VOCABULARY.items():
+        if bool(definition.get("reader_facing")) != reader_facing:
+            continue
         axis = str(definition.get("axis") or "")
         out += [
             f"### {_enum_heading(name)}",
             "",
-            f"`{name}`" + (f" · {axis} axis" if axis else ""),
+            f"Stored as `{name}`" + (f" · {axis} axis" if axis else ""),
             "",
             "| Value | Label | What it means | What it cannot justify |",
             "|---|---|---|---|",
@@ -3299,35 +3662,81 @@ def _vocabulary_tables() -> list[str]:
     return out
 
 
-def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]:
-    """The "what to look at first" table, generated from the page plan (§7.8).
+def _vocabulary_tables() -> list[str]:
+    """Status values, then the full vocabulary, from the enum source (§7.8)."""
+
+    return _enum_tables(
+        "Status values",
+        "The values this site prints as labels, from the vocabulary contract, version"
+        f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
+        " against. Each table gives the label, what it means, and what it cannot justify.",
+        True,
+    ) + _enum_tables(
+        "Full vocabulary",
+        "The remaining values the record stores, which the pages rarely print as labels."
+        " They come from the same contract.",
+        False,
+    )
+
+
+# A subgroup is a family with one page per record, so the index gives it one
+# row. The row routes to the page that lists the family's members: the
+# subsystem map and the competing-explanations index.
+_SUBGROUP_ROWS: dict[str, tuple[str, str, str]] = {
+    "Subsystems": ("Subsystem pages", "master-plan.md", "one page per subsystem"),
+    "Evidence matrices": ("Evidence tables", "diagnosticity.md", "one page per evidence matrix"),
+}
+
+
+def _route_tables(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+    """The index of pages, generated from the page plan (§7.8, PLAN §2.4).
 
     Written from the plan rather than by hand so a page cannot be published and
     left unroutable: the guide is the one page a stranger is told to read, and a
-    site index that silently omits a lens is worse than none.
+    site index that silently omits a lens is worse than none. Families with one
+    page per record take one row each, so the table stays the length of the
+    site's structure, not of the surveyed codebase.
     """
 
+    lens_meanings = meanings("lens")
     out: list[str] = [
-        "## What to look at first",
+        "## Pages on this site",
         "",
-        "Every page this conspectus publishes, in the order the record presents"
-        " them. The lens a page sits under says what kind of claim it carries.",
+        "Every kind of page this survey publishes, grouped by lens. The lens says"
+        " what kind of claim a page carries. Subsystem pages and evidence tables"
+        " take one row each; the pages they stand for are listed on the pages"
+        " the rows link to.",
         "",
     ]
-    groups: dict[str, list[tuple[str, str, str, str, str]]] = {}
+    groups: dict[str, list[tuple[str, str, str, str, str, str]]] = {}
     for route in routes:
         groups.setdefault(route[3], []).append(route)
     for group, members in groups.items():
+        out += [f"### {group}", ""]
+        meaning = lens_meanings.get(group.lower())
+        if meaning:
+            out += [meaning, ""]
         out += [
-            f"### {group}",
-            "",
-            "| Page | What it carries |",
-            "|---|---|",
+            "| Page | What it shows | Use it when |",
+            "|---|---|---|",
         ]
-        for path, label, hint, _group, subgroup in members:
-            prefix = f"{subgroup} · " if subgroup else ""
+        done: set[str] = set()
+        for path, label, hint, _group, subgroup, use_when in members:
+            if subgroup:
+                if subgroup in done:
+                    continue
+                done.add(subgroup)
+                family = [m for m in members if m[4] == subgroup]
+                name, target, scope = _SUBGROUP_ROWS.get(
+                    subgroup, (subgroup, path, "one page per record")
+                )
+                out.append(
+                    f"| [{name}]({target}) | {_table_cell(f'{len(family)} pages, {scope}.')}"
+                    f" | {_table_cell(use_when)} |"
+                )
+                continue
             out.append(
-                f"| {prefix}[{label}]({path}) | {_table_cell(hint)} |"
+                f"| [{label}]({path}) | {_table_cell(hint)} | {_table_cell(use_when)} |"
             )
         out.append("")
     return out
@@ -3336,7 +3745,7 @@ def _route_tables(routes: Sequence[tuple[str, str, str, str, str]]) -> list[str]
 def render_how_to_read(
     conn: sqlite3.Connection,
     storage: Path,
-    routes: Sequence[tuple[str, str, str, str, str]] | None = None,
+    routes: Sequence[tuple[str, str, str, str, str, str]] | None = None,
 ) -> RenderResult:
     """The reader's guide, generated from the enum source and the page plan.
 
@@ -3346,10 +3755,12 @@ def render_how_to_read(
     `verified-fixed`. Nothing kept them in step, so nothing did.
     """
 
-    del conn, storage  # the contract and the page plan are the whole source
-
     body = [HOW_TO_READ_INTRO, ""]
+    body += _site_is(project_name(storage))
     body += _route_tables(routes or ())
+    body += _survey_passes_section()
+    body += _terms_section(routes or ())
+    body += _ids_section(conn)
     body += _vocabulary_tables()
     body += [HOW_TO_READ_CLOSING]
     text = "\n".join(body)
@@ -3375,6 +3786,14 @@ OPEN_QUESTION_ORDER: tuple[str, ...] = (
     "tooling-limit",
     "priority-ranking",
     "other",
+)
+
+
+# §2.3 (W1): a reader cannot call the tool that records an answer, and this site
+# is read-only, so the page says where an answer goes.
+HOW_TO_ANSWER = (
+    "To answer, tell the agent in your session, for example: “Decision #12: tenancy is"
+    " per account.” This site is read-only."
 )
 
 
@@ -3407,6 +3826,8 @@ def render_open_questions(conn: sqlite3.Connection, storage: Path) -> RenderResu
         "which readings would change if the assumption turns out wrong. Questions "
         "already settled are on "
         "[Resolved leads and questions](resolved-leads.md)._",
+        "",
+        HOW_TO_ANSWER,
         "",
     ]
     if not questions:
@@ -3467,8 +3888,10 @@ def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResul
     if not p.is_file():
         return None
     body = p.read_text()
-    # Prepend a banner only if the source doesn't already start with #.
-    if not body.lstrip().startswith("#"):
+    # Prepend a banner only if the source doesn't already open with an H1: the
+    # page head (hint and use_when) is inserted under the page's H1, so a source
+    # opening with "## " still needs one.
+    if not re.match(r"#[ \t]", body.lstrip()):
         body = f"# {title}\n\n{body}"
     return body, _prose_source(storage, rel_source)
 

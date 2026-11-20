@@ -1,10 +1,12 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "description": "The single source for every CHECK-constrained vocabulary the server enforces and the projection renders. mcp-server/src/vocabulary.ts and materializer/amanuensis_materializer/vocabulary.py are generated from this file by mcp-server/scripts/gen-vocabulary.mjs; the SQL CHECK literals in src/schema.sql are not generated but are asserted against it by --check-sql.",
   "enums": {
     "finding_resolution_state": {
       "axis": "resolution",
       "const_name": "FINDING_RESOLUTION_STATES",
+      "reader_facing": true,
+      "title": "Finding state",
       "sql": [
         {
           "table": "finding_resolution_events",
@@ -56,6 +58,7 @@
     "carried_finding_outcome": {
       "axis": "carried",
       "const_name": "CARRIED_FINDING_OUTCOMES",
+      "reader_facing": false,
       "note": "The terminal outcomes a carried finding can reach. Three are authority-bearing and are written by record_carried_outcome: each asserts something about *this* store, with a rule that says who may assert it and on what evidence. The fourth is written by the carry alone, for a finding the archive had already closed, which asserts nothing about this store because nobody here checked a commit or read a repaired path.",
       "sql": [
         {
@@ -97,6 +100,7 @@
     "finding_status": {
       "axis": "resolution",
       "const_name": "FINDING_STATUSES",
+      "reader_facing": false,
       "sql": [
         {
           "table": "findings",
@@ -134,6 +138,8 @@
     "standing_state": {
       "axis": "standing",
       "const_name": "STANDING_STATES",
+      "reader_facing": true,
+      "title": "File standing",
       "sql": [],
       "note": "Computed by the file_standing view and the unledgered probe; no column stores it.",
       "values": [
@@ -191,6 +197,8 @@
     "stale_reason": {
       "axis": "standing",
       "const_name": "STALE_REASONS",
+      "reader_facing": true,
+      "title": "Why a file is stale",
       "sql": [],
       "note": "file_ledger.stale_reason carries no CHECK constraint; the writers are detect_changes and the standing reachability probe.",
       "values": [
@@ -223,6 +231,8 @@
     "file_classification": {
       "axis": "standing",
       "const_name": "FILE_CLASSIFICATIONS",
+      "reader_facing": true,
+      "title": "File scope",
       "sql": [
         {
           "table": "file_ledger",
@@ -277,6 +287,8 @@
     "subsystem_status": {
       "axis": "survey",
       "const_name": "SUBSYSTEM_STATUSES",
+      "reader_facing": true,
+      "title": "Survey depth",
       "sql": [
         {
           "table": "subsystems",
@@ -302,8 +314,8 @@
         },
         {
           "value": "scoping",
-          "label": "Scoping",
-          "meaning": "Only the subsystem boundary and file scope are established so far.",
+          "label": "Scoped",
+          "meaning": "The scope pass is done: the subsystem's boundary and files are established, nothing more.",
           "authorizes": "which files are in scope for this subsystem",
           "cannot_justify": "any behavioral claim; file scope is all that is established",
           "explanation_eligible": false
@@ -311,14 +323,14 @@
         {
           "value": "structural",
           "label": "Structural",
-          "meaning": "Types, state, flows, and concurrency are mapped; correctness claims are not yet authorized.",
+          "meaning": "The structure pass is done: types, state, flows and concurrency are mapped; correctness claims are not yet authorized.",
           "authorizes": "claims about types, state containers, flows, and the concurrency model",
           "cannot_justify": "any correctness claim",
           "explanation_eligible": true
         },
         {
           "value": "concerns",
-          "label": "Concerns",
+          "label": "Reviewing concerns",
           "meaning": "Structural mapping is complete and concern-by-concern review is in progress.",
           "authorizes": "concern review decisions that cite evidence",
           "cannot_justify": "that a finding survived adversarial challenge",
@@ -326,7 +338,7 @@
         },
         {
           "value": "adversarial",
-          "label": "Adversarial",
+          "label": "Challenging claims",
           "meaning": "Candidate conclusions are being challenged; treat them as provisional.",
           "authorizes": "provisional conclusions while the challenge pass runs; a finding counts as survived only where its recorded adversarial evidence or terminal review aggregation says so",
           "cannot_justify": "that the challenge pass has finished",
@@ -354,6 +366,7 @@
     "vocabulary_discharge": {
       "axis": "vocabulary",
       "const_name": "VOCABULARY_DISCHARGES",
+      "reader_facing": false,
       "note": "The three states a subsystem's domain vocabulary can be in at the advance to 'structural'. Discharge or decline, never a floor: one anchored term is enough, 'none' is a real and common answer that has to be said out loud, and a subsystem nobody asked is a third state that is never collapsed into the second.",
       "values": [
         {
@@ -379,6 +392,7 @@
     "explanation_subject": {
       "axis": "explanation",
       "const_name": "EXPLANATION_SUBJECTS",
+      "reader_facing": false,
       "sql": [
         {
           "table": "explanations",
@@ -404,6 +418,7 @@
     "explanation_slot": {
       "axis": "explanation",
       "const_name": "EXPLANATION_SLOTS",
+      "reader_facing": false,
       "sql": [
         {
           "table": "explanations",
@@ -429,6 +444,7 @@
     "explanation_disposition": {
       "axis": "explanation",
       "const_name": "EXPLANATION_DISPOSITIONS",
+      "reader_facing": false,
       "sql": [
         {
           "table": "explanations",
@@ -460,6 +476,7 @@
     "explanation_discharge": {
       "axis": "explanation",
       "const_name": "EXPLANATION_DISCHARGES",
+      "reader_facing": false,
       "note": "The state a reader sees for one explanation slot, computed from the effective row and never stored. Discharge or decline, never a floor: not-recorded is the absence of an effective row, a third state that is never collapsed into declined.",
       "values": [
         {
@@ -485,6 +502,8 @@
     "evidence_kind": {
       "axis": "evidence",
       "const_name": "EVIDENCE_KINDS",
+      "reader_facing": true,
+      "title": "Evidence kind",
       "sql": [
         {
           "table": "evidence",
@@ -552,6 +571,7 @@
     "evidence_quality": {
       "axis": "evidence",
       "const_name": "EVIDENCE_QUALITIES",
+      "reader_facing": false,
       "sql": [
         {
           "table": "dispositions",
@@ -620,6 +640,8 @@
     "disposition_classification": {
       "axis": "disposition",
       "const_name": "DISPOSITION_CLASSIFICATIONS",
+      "reader_facing": true,
+      "title": "Concern review verdict",
       "sql": [
         {
           "table": "dispositions",
@@ -662,6 +684,8 @@
     "severity": {
       "axis": "severity",
       "const_name": "SEVERITIES",
+      "reader_facing": true,
+      "title": "Severity",
       "sql": [
         {
           "table": "findings",
@@ -698,6 +722,8 @@
     "field_note_category": {
       "axis": "lead",
       "const_name": "FIELD_NOTE_CATEGORIES",
+      "reader_facing": true,
+      "title": "Lead category",
       "sql": [
         {
           "table": "field_notes",
@@ -740,6 +766,8 @@
     "open_question_category": {
       "axis": "question",
       "const_name": "OPEN_QUESTION_CATEGORIES",
+      "reader_facing": true,
+      "title": "Decision category",
       "sql": [
         {
           "table": "open_questions",
@@ -794,6 +822,8 @@
     "open_question_resolution": {
       "axis": "resolution",
       "const_name": "OPEN_QUESTION_RESOLUTIONS",
+      "reader_facing": true,
+      "title": "Decision outcome",
       "sql": [
         {
           "table": "open_questions",
@@ -830,6 +860,7 @@
     "field_note_follow_up": {
       "axis": "lead",
       "const_name": "FIELD_NOTE_FOLLOW_UPS",
+      "reader_facing": false,
       "sql": [],
       "open_vocabulary": true,
       "note": "field_notes.follow_up carries no CHECK: a finding id may also be recorded here, which is how a lead is promoted.",
@@ -851,6 +882,7 @@
     "xref_relationship": {
       "axis": "relation",
       "const_name": "XREF_RELATIONSHIPS",
+      "reader_facing": false,
       "sql": [],
       "open_vocabulary": true,
       "note": "xrefs.relationship carries no CHECK; these are the canonical values add_xref publishes.",
@@ -896,6 +928,7 @@
     "xref_strength": {
       "axis": "relation",
       "const_name": "XREF_STRENGTHS",
+      "reader_facing": false,
       "sql": [
         {
           "table": "xrefs",
@@ -926,6 +959,8 @@
     "contradiction_resolution": {
       "axis": "resolution",
       "const_name": "CONTRADICTION_RESOLUTIONS",
+      "reader_facing": true,
+      "title": "How a disagreement was settled",
       "sql": [
         {
           "table": "contradictions",
@@ -966,6 +1001,8 @@
     "diagnosticity_outcome": {
       "axis": "resolution",
       "const_name": "DIAGNOSTICITY_OUTCOMES",
+      "reader_facing": true,
+      "title": "Competing explanations outcome",
       "sql": [
         {
           "table": "diagnosticity_sessions",
@@ -996,6 +1033,7 @@
     "claim_epistemic_kind": {
       "axis": "claim",
       "const_name": "CLAIM_EPISTEMIC_KINDS",
+      "reader_facing": false,
       "sql": [
         {
           "table": "claims",
@@ -1050,6 +1088,7 @@
     "claim_subject_type": {
       "axis": "claim",
       "const_name": "CLAIM_SUBJECT_TYPES",
+      "reader_facing": false,
       "sql": [],
       "note": "claims.subject_type carries a length CHECK only; the closed vocabulary is enforced by the tool.",
       "values": [
@@ -1076,6 +1115,7 @@
     "concern_status": {
       "axis": "concern",
       "const_name": "CONCERN_STATUSES",
+      "reader_facing": false,
       "sql": [
         {
           "table": "concerns",
@@ -1112,6 +1152,7 @@
     "pass_type": {
       "axis": "provenance",
       "const_name": "PASS_TYPES",
+      "reader_facing": false,
       "sql": [
         {
           "table": "dispositions",
@@ -1152,6 +1193,8 @@
     "lens": {
       "axis": "lens",
       "const_name": "LENSES",
+      "reader_facing": true,
+      "title": "Lens",
       "sql": [],
       "values": [
         {
@@ -1183,6 +1226,7 @@
     "omission_reason": {
       "axis": "omission",
       "const_name": "OMISSION_REASONS",
+      "reader_facing": false,
       "sql": [],
       "values": [
         {
@@ -1202,6 +1246,7 @@
     "attention_label": {
       "axis": "attention",
       "const_name": "ATTENTION_LABELS",
+      "reader_facing": false,
       "sql": [],
       "note": "ADR-0010's operational definitions, reused verbatim where they apply; awaiting-verification and undiscriminated are added by get_attention.",
       "values": [
@@ -1260,5 +1305,422 @@
     "out of date",
     "current as of",
     "fully surveyed"
+  ],
+  "reader_terms_note": "Amanuensis's own nouns, for the reader's guide's Terms section (design/orientation/PLAN.md §2.1, Appendix A). aliases carries the other names a reader meets for the same thing, including the stored name; pages lists where the term is printed, as page-plan paths, with subsystems/*.md and diagnosticity/*.md standing for every page of that family.",
+  "reader_terms": [
+    {
+      "term": "Amanuensis",
+      "aliases": [],
+      "definition": "The tool that produced this site. An AI agent runs it to survey a repository.",
+      "pages": [
+        "index.md",
+        "sessions.md"
+      ]
+    },
+    {
+      "term": "Conspectus",
+      "aliases": [
+        "survey record"
+      ],
+      "definition": "Amanuensis's name for what a survey keeps: a database of what was read and concluded, plus this site, which is built from it.",
+      "pages": [
+        "index.md",
+        "onboarding-report.md"
+      ]
+    },
+    {
+      "term": "Survey",
+      "aliases": [],
+      "definition": "The agent's reading of the repository, done in passes, with each conclusion tied to the code it read.",
+      "pages": [
+        "index.md",
+        "not-yet-surveyed.md",
+        "sessions.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Session",
+      "aliases": [],
+      "definition": "One stretch of work by the agent. Sessions and publications lists them.",
+      "pages": [
+        "sessions.md",
+        "resolution-history.md",
+        "entry-point.md",
+        "index.md"
+      ]
+    },
+    {
+      "term": "Subsystem",
+      "aliases": [],
+      "definition": "A part of the codebase the survey treats as one unit, with its own files and its own page. The agent chose the split during onboarding.",
+      "pages": [
+        "master-plan.md",
+        "architecture.md",
+        "onboarding-report.md",
+        "subsystems/*.md",
+        "index.md",
+        "not-yet-surveyed.md",
+        "hot-spots.md",
+        "disagreements.md",
+        "diagnosticity.md",
+        "diagnosticity/*.md"
+      ]
+    },
+    {
+      "term": "Layer",
+      "aliases": [
+        "region"
+      ],
+      "definition": "A group of subsystems with a similar role. Pages group subsystems by layer.",
+      "pages": [
+        "master-plan.md",
+        "architecture.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Survey depth",
+      "aliases": [
+        "status"
+      ],
+      "definition": "How far the survey of a subsystem has got. Unmapped: not started. Scoped and Structural: that pass is done. Reviewing concerns and Challenging claims: that pass is under way. Mapped: every pass is done. Deferred: left out of the survey on purpose. Each depth limits what the record may claim.",
+      "pages": [
+        "master-plan.md",
+        "architecture.md",
+        "not-yet-surveyed.md",
+        "subsystems/*.md",
+        "index.md"
+      ]
+    },
+    {
+      "term": "Mapped",
+      "aliases": [],
+      "definition": "The last survey depth: every pass has run. It does not mean every file is read or every bug found.",
+      "pages": [
+        "master-plan.md",
+        "not-yet-surveyed.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Scope",
+      "aliases": [
+        "file ledger"
+      ],
+      "definition": "The files a subsystem owns, each marked as read, not yet read, or left out with a reason.",
+      "pages": [
+        "files.md",
+        "not-yet-surveyed.md",
+        "subsystems/*.md",
+        "index.md",
+        "master-plan.md"
+      ]
+    },
+    {
+      "term": "Evidence",
+      "aliases": [],
+      "definition": "A pointer to code at a commit (file, symbol, lines) with a note of how strong it is: read in code, seen in a test, stated in a comment, and so on.",
+      "pages": [
+        "findings.md",
+        "resolved-findings.md",
+        "concerns.md",
+        "subsystems/*.md",
+        "contradictions.md",
+        "disagreements.md",
+        "hot-spots.md"
+      ]
+    },
+    {
+      "term": "Claim",
+      "aliases": [],
+      "definition": "A statement about how the code is built (\"this cache is per request\"), with evidence.",
+      "pages": [
+        "disagreements.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Challenge",
+      "aliases": [
+        "adversarial pass"
+      ],
+      "definition": "A pass in which the agent tries to prove its own claims and findings wrong. Each claim records whether it survived.",
+      "pages": [
+        "findings.md",
+        "resolved-findings.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Concern",
+      "aliases": [],
+      "definition": "One kind of defect worth looking for in this codebase, such as a race on a shared cache. The review checklist is the full list.",
+      "pages": [
+        "concerns.md",
+        "concern-checklist.md",
+        "seams.md",
+        "not-yet-surveyed.md",
+        "diagnosticity.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Concern review",
+      "aliases": [
+        "disposition"
+      ],
+      "definition": "The verdict for one concern in one subsystem: bug found, acceptable, ruled out, out of scope, or undecided.",
+      "pages": [
+        "concerns.md",
+        "subsystems/*.md",
+        "disagreements.md"
+      ]
+    },
+    {
+      "term": "Finding",
+      "aliases": [],
+      "definition": "A defect the survey confirmed, with evidence, a severity, and a state (open, repaired, verified, ruled out, accepted).",
+      "pages": [
+        "findings.md",
+        "resolved-findings.md",
+        "hot-spots.md",
+        "files.md",
+        "subsystems/*.md",
+        "index.md",
+        "master-plan.md",
+        "disagreements.md"
+      ]
+    },
+    {
+      "term": "Lead",
+      "aliases": [
+        "field note"
+      ],
+      "definition": "Something the agent noticed that is not a finding: a pattern, an oddity, a tension, a possible concern.",
+      "pages": [
+        "field-notes.md",
+        "resolved-leads.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Decision needed",
+      "aliases": [
+        "open question"
+      ],
+      "definition": "Something the agent could not settle alone. It records the assumption it used and keeps going; you answer it.",
+      "pages": [
+        "open-questions.md",
+        "resolved-leads.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Disagreement",
+      "aliases": [
+        "contradiction"
+      ],
+      "definition": "Two records that cannot both be true. The survey keeps both until one is settled.",
+      "pages": [
+        "disagreements.md",
+        "contradictions.md"
+      ]
+    },
+    {
+      "term": "Competing explanations",
+      "aliases": [
+        "diagnosticity matrix"
+      ],
+      "definition": "A table weighing several causes for one symptom against the evidence.",
+      "pages": [
+        "diagnosticity.md",
+        "diagnosticity/*.md",
+        "disagreements.md"
+      ]
+    },
+    {
+      "term": "System boundary",
+      "aliases": [
+        "seam"
+      ],
+      "definition": "A place where two subsystems share something (a table, a queue, a cache) and depend on each other's assumptions about it.",
+      "pages": [
+        "seams.md",
+        "architecture.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Recorded edge",
+      "aliases": [
+        "xref"
+      ],
+      "definition": "A dependency or data flow between two subsystems that the agent wrote down. Edges are never guessed from names.",
+      "pages": [
+        "architecture.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Stale",
+      "aliases": [],
+      "definition": "A file that changed after the revision the survey recorded for it: the one it was read at, scoped at, or set aside at. What the survey said about it may no longer hold.",
+      "pages": [
+        "stale.md",
+        "files.md",
+        "index.md",
+        "hot-spots.md"
+      ]
+    },
+    {
+      "term": "Checked at",
+      "aliases": [
+        "revision"
+      ],
+      "definition": "The commit the survey last compared itself against. Everything on the site is as of that commit.",
+      "pages": [
+        "index.md",
+        "stale.md"
+      ]
+    },
+    {
+      "term": "Standing",
+      "aliases": [],
+      "definition": "What the record says about one file: no record, left out, in scope but unread, read, read but changed since.",
+      "pages": [
+        "files.md",
+        "stale.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Lens",
+      "aliases": [],
+      "definition": "One of four groups of pages: Codebase (what the project is), Unresolved (open work), History (what was settled), Method (how far to trust the rest).",
+      "pages": [
+        "index.md"
+      ]
+    },
+    {
+      "term": "Thesis",
+      "aliases": [],
+      "definition": "The paragraph on the overview that says what the codebase does.",
+      "pages": [
+        "index.md"
+      ]
+    },
+    {
+      "term": "Purpose, account",
+      "aliases": [
+        "explanation"
+      ],
+      "definition": "A subsystem's one-sentence purpose and its longer explanation of how it works, each written from evidence.",
+      "pages": [
+        "architecture.md",
+        "subsystems/*.md"
+      ]
+    },
+    {
+      "term": "Publication check",
+      "aliases": [
+        "read-back"
+      ],
+      "definition": "After building the site, Amanuensis reads it back to confirm it matches the record. The overview shows the result.",
+      "pages": [
+        "index.md",
+        "sessions.md"
+      ]
+    }
+  ],
+  "id_kinds_note": "One row per kind of ID the site prints (PLAN.md §2.2, Appendix B). The letters are labels chosen when a record was made; they carry no meaning (D1).",
+  "id_kinds": [
+    {
+      "kind": "Subsystem",
+      "shape": "letters, dash, number: `R-06`",
+      "names": "a subsystem",
+      "chosen_by": "the agent, at onboarding",
+      "links_to": "the subsystem's page"
+    },
+    {
+      "kind": "Finding",
+      "shape": "subsystem code, dash, sequence: `R06-2`",
+      "names": "a defect in that subsystem",
+      "chosen_by": "the agent, when it records the finding",
+      "links_to": "Open or Resolved findings"
+    },
+    {
+      "kind": "Seam",
+      "shape": "`SM-` and a number: `SM-03`",
+      "names": "a system boundary",
+      "chosen_by": "the agent",
+      "links_to": "System boundaries"
+    },
+    {
+      "kind": "Concern",
+      "shape": "short letters, dash, number: `RC-2`",
+      "names": "a checklist item",
+      "chosen_by": "the agent, at onboarding",
+      "links_to": "Review coverage"
+    },
+    {
+      "kind": "Seam concern",
+      "shape": "`SC-` and a number",
+      "names": "a checklist item about one boundary",
+      "chosen_by": "the agent",
+      "links_to": "Review coverage"
+    },
+    {
+      "kind": "Competing explanations",
+      "shape": "`DM-` and a number",
+      "names": "one evidence table",
+      "chosen_by": "numbered by Amanuensis",
+      "links_to": "its own page"
+    },
+    {
+      "kind": "Decision",
+      "shape": "`#` and a number",
+      "names": "a decision needed",
+      "chosen_by": "numbered by Amanuensis",
+      "links_to": "Decisions needed"
+    }
+  ],
+  "survey_passes_note": "The five passes of a subsystem survey, in order (PLAN.md §2.3, Appendix C). status is the subsystem_status value the pass sets; set_when says whether it sets it as the pass starts or when it is done (D4). Statuses follow the subsystem_status ladder. The skill's gate reads the same rows.",
+  "survey_passes": [
+    {
+      "pass": "Scope",
+      "phase": 1,
+      "does": "Lists the subsystem's files and the terms it uses.",
+      "status": "scoping",
+      "set_when": "end"
+    },
+    {
+      "pass": "Structure",
+      "phase": 2,
+      "does": "Reads the files; records types, state, data flows, concurrency, and claims.",
+      "status": "structural",
+      "set_when": "end"
+    },
+    {
+      "pass": "Concern review",
+      "phase": 3,
+      "does": "Gives every checklist item a verdict with evidence. Confirmed defects become findings.",
+      "status": "concerns",
+      "set_when": "start"
+    },
+    {
+      "pass": "Challenge",
+      "phase": 4,
+      "does": "Tries to prove each claim and finding wrong.",
+      "status": "adversarial",
+      "set_when": "start"
+    },
+    {
+      "pass": "Packaging",
+      "phase": 5,
+      "does": "Writes the subsystem's purpose and account, updates the site.",
+      "status": "mapped",
+      "set_when": "end"
+    }
   ]
 }

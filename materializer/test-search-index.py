@@ -1678,7 +1678,9 @@ def main() -> int:
         )
 
         def clean_publish_is_green() -> str | None:
-            published = publish(storage, "--clean-publish", "--output", str(clean))
+            published = publish(
+                storage, "--clean-publish", "--allow-external-output", "--output", str(clean)
+            )
             if not published.get("ok") or not published.get("published"):
                 warnings = published.get("warnings") or []
                 return (

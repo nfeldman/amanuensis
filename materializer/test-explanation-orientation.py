@@ -386,7 +386,20 @@ def read(path: Path) -> str:
 def unlink(text: str) -> str:
     """Markdown links resolved to their labels: the publication links every subsystem id."""
 
-    return re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    return unnamed(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text))
+
+
+def unnamed(text: str) -> str:
+    """The publication's name beside a page's first mention of a subsystem id, read out.
+
+    It prints `B-01 (Read path)` where an account wrote `B-01` (orientation PLAN
+    §2.2 item 3). Only a fixture subsystem's own name in brackets directly after
+    its own id is read out; every word the account wrote is still owed.
+    """
+
+    for sid, name, *_ in SUBSYSTEMS:
+        text = re.sub(rf"(?<![\w-])({re.escape(sid)}(?:\*\*)?) \({re.escape(name)}\)", r"\1", text)
+    return text
 
 
 def section(text: str, heading: str, level: int = 2) -> str:
@@ -413,7 +426,7 @@ def html_sections(text: str) -> dict[str, str]:
     visible = re.sub(r'(?is)<a class="heading-anchor"[^>]*>.*?</a>', " ", visible)
     parts = re.split(r'(?is)<h2\b(?![^>]*nav-group-title)[^>]*>(.*?)</h2>', visible)
     plain = lambda fragment: " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())  # noqa: E731
-    return {plain(parts[i]): plain(parts[i + 1]) for i in range(1, len(parts) - 1, 2)}
+    return {plain(parts[i]): unnamed(plain(parts[i + 1])) for i in range(1, len(parts) - 1, 2)}
 
 
 def h2s(text: str) -> list[str]:
@@ -688,7 +701,11 @@ def main() -> int:
                 if tree_digest(docs) != before:
                     return "the previously published output was touched"
                 inplace = run_materializer(
-                    storage, "--output", str(storage / "docs-inplace"), workspace=repo
+                    storage,
+                    "--allow-external-output",
+                    "--output",
+                    str(storage / "docs-inplace"),
+                    workspace=repo,
                 )
                 if inplace.get("ok"):
                     return f"an in-place render with a violating {variant} stayed green"
