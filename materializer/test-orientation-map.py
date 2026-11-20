@@ -8,8 +8,8 @@ Turns red when:
     old "Master plan" heading, or a heading that differs from the page title);
   - `master-plan.html` has no `class="subsystem-atlas"`, has more than one, or
     carries a number of `atlas-item` entries other than one per subsystem — the
-    fixture has three layers and a `deferred` subsystem, so a filter on status
-    or layer drops a row;
+    fixture has three layers and one subsystem at every survey depth the schema
+    admits, so a filter on any status or layer drops a row;
   - the atlas does not sit above the per-layer tables, in either view;
   - an atlas row's region, subsystem ID, name, link or survey depth differs from
     the subsystem's recorded layer, ID, name and status, or a deferred
@@ -24,7 +24,7 @@ Turns red when:
     of the existing sentence, or loses the "Subsystem map" H1;
   - the gate does not run in CI.
 
-False green it cannot exclude: the fixture is five subsystems in three layers,
+False green it cannot exclude: the fixture is eight subsystems in three layers,
 so a layout that fails only at 35 rows is exercised by count. The HTML checks
 read bytes; they do not drive a browser.
 
@@ -102,20 +102,41 @@ PAGE_TITLE = "Subsystem map"
 ATLAS_HEADER = ["Region", "Subsystem", "Survey depth"]
 SHA = "aaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaa"
 
-# id, name, status, layer, scope — three layers, one `deferred` subsystem, and a
-# layer whose only subsystem is deferred (so dropping deferred drops a region).
+# id, name, status, layer, scope — three layers, every legal survey depth (so a
+# filter on any one status drops a row), and a layer whose only subsystem is
+# deferred (so dropping deferred drops a region).
 SUBSYSTEMS: tuple[tuple[str, str, str, str, str], ...] = (
     ("B-01", "Read path", "mapped", "backend", "src/reader.ts"),
     ("B-02", "Write path", "structural", "backend", "src/writer.ts"),
+    ("B-03", "Cache", "concerns", "backend", "src/cache.ts"),
+    ("B-04", "Index", "adversarial", "backend", "src/index.ts"),
     ("F-01", "Console", "scoping", "frontend", "ui/console.ts"),
     ("F-02", "Charts", "deferred", "frontend", "ui/charts.ts"),
+    ("F-03", "Settings", "unmapped", "frontend", "ui/settings.ts"),
     ("T-01", "Release tooling", "deferred", "tooling", "scripts/release.sh"),
 )
 # Layer order the per-layer tables follow: ORDER BY layer.
 LAYER_ORDER = ("backend", "frontend", "tooling")
 # What the HTML prints for each recorded status; the Markdown prints the stored
-# value, as the architecture page's atlas does. "scoping" reads "Scoped" (D4).
-DEPTH_LABEL = {"mapped": "mapped", "structural": "structural", "scoping": "scoped", "deferred": "deferred"}
+# value, as the architecture page's atlas does. "scoping" reads "Scoped" (D4);
+# "concerns" and "adversarial" print the contract's in-progress labels.
+DEPTH_LABEL = {
+    "unmapped": "unmapped",
+    "scoping": "scoped",
+    "structural": "structural",
+    "concerns": "reviewing concerns",
+    "adversarial": "challenging claims",
+    "mapped": "mapped",
+    "deferred": "deferred",
+}
+
+
+def legal_depths() -> set[str]:
+    """The statuses `subsystems.status` admits, read from the schema's CHECK."""
+
+    table = re.search(r"CREATE TABLE IF NOT EXISTS subsystems\s*\((.*?)\n\);", SCHEMA.read_text(), re.S)
+    check_clause = re.search(r"\bstatus\b[^\n]*\n?[^(]*CHECK \(status IN \((.*?)\)\)", table.group(1) if table else "", re.S)
+    return set(re.findall(r"'([a-z_]+)'", check_clause.group(1))) if check_clause else set()
 
 
 def slug_href(sid: str, name: str) -> str:
@@ -317,6 +338,17 @@ def main() -> int:
             return None
 
         check("master-plan.html has one subsystem-atlas with one atlas-item per subsystem", atlas_item_per_subsystem)
+
+        def fixture_covers_every_depth() -> str | None:
+            legal = legal_depths()
+            if not legal:
+                return "could not read the legal subsystem statuses from schema.sql"
+            seeded_depths = {status for _sid, _name, status, _layer, _scope in SUBSYSTEMS}
+            if seeded_depths != legal or set(DEPTH_LABEL) != legal:
+                return f"the fixture seeds {sorted(seeded_depths)}, the schema admits {sorted(legal)}"
+            return None
+
+        check("the fixture seeds every survey depth the schema admits", fixture_covers_every_depth)
 
         def atlas_rows_match_record() -> str | None:
             if page is None:
