@@ -20,7 +20,10 @@ Turns red when:
     lies behind the tip and across the line, or an xref line has no arrowhead
     or two;
   - the caption (the section heading, figcaption, SVG title and description)
-    says "dependency" while zero `xrefs` are recorded;
+    says "dependency" while zero `xrefs` are recorded; or, with `xrefs`
+    recorded, says every line is listed in the seam topology (it lists seams
+    only) instead of sending arrows to the dependency graph and seams to the
+    seam topology;
   - the "N of M subsystems have no recorded boundary" count is wrong in either
     view;
   - the SVG lacks `role="img"`, a `<title>` or a `<desc>` as parsed direct
@@ -523,6 +526,15 @@ def main() -> int:
             section = html_section(page["xrefs"] or "", SECTION)
             if section is None or not re.search(r"dependenc", html_text(section), re.I):
                 return "xrefs: with xrefs recorded the caption does not name the dependency arrows"
+            figcaption = re.search(r"<figcaption\b[^>]*>(.*?)</figcaption>", section, re.S)
+            caption = html_text(figcaption.group(1)) if figcaption else ""
+            # The seam topology lists seams only, so an arrow is not "listed" there.
+            if re.search(r"each line is listed in[^.]*seam topology", caption, re.I):
+                return "xrefs: the caption says every line, arrows included, is listed in the seam topology"
+            if not re.search(r"arrow[^.]*dependency graph", caption, re.I) or not re.search(
+                r"seam[^.]*seam topology", caption, re.I
+            ):
+                return "xrefs: the caption does not send arrows to the dependency graph and seams to the seam topology"
             return None
 
         check("the caption says 'Recorded boundaries' and 'dependency' only when xrefs exist", caption_words)
