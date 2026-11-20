@@ -25,7 +25,9 @@
 //     immediately; the same for phase-4-adversarial.md with `adversarial` (first
 //     `set_disposition` or pass_type="adversarial") and "runs Phase 5 packaging immediately";
 //   - (W6) SKILL.md's ladder block still has an arrow row putting phases under statuses, or the
-//     sentences under it do not give each rung its phase and timing as the contract says.
+//     sentences under it do not give each rung its phase and timing as the contract says, or
+//     (W4) the `mapped` sentence does not place it after the explanations are settled and
+//     before the phase publishes.
 // Reads the skill files and the contract only; it touches no store.
 
 import { existsSync, readFileSync } from "node:fs";
@@ -244,6 +246,12 @@ function check() {
     const other = p.set_when === "start" ? `when Phase ${p.phase} ends` : `before Phase ${p.phase} starts`;
     if (sentence.includes(other)) return `SKILL.md's sentence for \`${p.status}\` also says ${other}`;
   }
+  // W4: `mapped` is set partway through Phase 5, so its sentence must say where: after the
+  // explanations are settled and before the phase publishes. "When Phase 5 ends, before the
+  // phase materializes" contradicts itself.
+  const mappedSentence = prose.split(/(?<=\.)\s+/).find((s) => s.includes("`mapped`")) ?? "";
+  if (!(/after[^.]*explanations/i.test(mappedSentence) && /before[^.]*publish/i.test(mappedSentence)))
+    return "SKILL.md's sentence for `mapped` does not place it after the explanations are settled and before the phase publishes";
   return null;
 }
 
