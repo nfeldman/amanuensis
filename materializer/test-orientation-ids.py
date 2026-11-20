@@ -30,6 +30,12 @@ Turns red when:
     resolver re-runs over its own output, so naming must be idempotent);
   - either resolver's pattern is a fixed shape rather than built from the xref
     index's keys (an ID outside the old shape stays plain);
+  - the resolver takes a subsystem's name inside a link destination
+    (`[auth](subsystems/auth-login.md)`) for a name the reader sees, so the
+    first mention of `auth` (name `login`) gains no name (§2.2 item 3);
+  - a concern code the resolver did not write as "concern RC-2" stays bare
+    because it is already a link's label or a table row's key cell (§2.2
+    item 5 exempts only the review-coverage matrix);
   - the read-back's explanation census misreads what the resolver adds: a
     faithfully published account whose text holds an interior concern code
     ("Review RC-2 before …", printed "concern RC-2") or an ID followed by its
@@ -505,6 +511,36 @@ def account_checks(storage: Path) -> None:
     check("accounts: an author-written name deleted from both views is reported missing", authored_name_owed)
 
 
+def resolver_reads_visible_text() -> str | None:
+    sys.path.insert(0, str(ROOT))
+    from amanuensis_materializer import xref  # noqa: PLC0415
+
+    index = xref.XrefIndex(
+        entries={
+            "auth": ("auth", "subsystems/auth-login.md", "login"),
+            "RC-2": ("RC-2", "concerns.md#rc-2", "Concurrency"),
+        },
+        names={"auth": "login"},
+        kinds={"auth": "subsystem", "RC-2": "concern"},
+    )
+    text = xref.resolve_text("See [auth](subsystems/auth-login.md). Then auth.\n", "index.md", index)
+    if "[auth](subsystems/auth-login.md) (login). Then [auth]" not in text:
+        return f"a name inside a link destination counted as shown; the first auth gained no name: {text!r}"
+    linked = xref.resolve_text("See [RC-2](concerns.md#rc-2).\n", "index.md", index)
+    if "[concern RC-2](concerns.md#rc-2)" not in linked:
+        return f"an existing link to RC-2 kept a bare label: {linked!r}"
+    keyed = xref.resolve_text("| Concern | Classification |\n|---|---|\n| RC-2 | ruled-out |\n", "subsystems/x.md", index)
+    if "| [concern RC-2](../concerns.md#rc-2) | ruled-out |" not in keyed:
+        return f"a concern code in a row's key cell kept a bare label: {keyed!r}"
+    if "concern" in keyed.splitlines()[0].lower().replace("| concern |", ""):
+        return f"a table header gained a prefix: {keyed.splitlines()[0]!r}"
+    for once in (text, linked, keyed):
+        again = xref.resolve_text(once, "subsystems/x.md" if once is keyed else "index.md", index)
+        if again != once:
+            return f"a second pass changed {once!r} to {again!r}"
+    return None
+
+
 def resolvers_use_index_keys() -> str | None:
     sys.path.insert(0, str(ROOT))
     from amanuensis_materializer import html_projection, xref  # noqa: PLC0415
@@ -584,6 +620,7 @@ def main() -> int:
             account_checks(accounts)
 
     check("both resolvers build their pattern from the index's keys", resolvers_use_index_keys)
+    check("the resolver names and prefixes by what the reader sees (§2.2 items 3 and 5)", resolver_reads_visible_text)
 
     def runs_in_ci() -> str | None:
         ci = read(CI_FILE)
