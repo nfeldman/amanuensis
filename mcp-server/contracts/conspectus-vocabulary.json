@@ -1321,7 +1321,8 @@
       "pages": [
         "index.md",
         "not-yet-surveyed.md",
-        "sessions.md"
+        "sessions.md",
+        "subsystems/*.md"
       ]
     },
     {
@@ -1331,7 +1332,8 @@
       "pages": [
         "sessions.md",
         "resolution-history.md",
-        "entry-point.md"
+        "entry-point.md",
+        "index.md"
       ]
     },
     {
@@ -1342,7 +1344,13 @@
         "master-plan.md",
         "architecture.md",
         "onboarding-report.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "index.md",
+        "not-yet-surveyed.md",
+        "hot-spots.md",
+        "disagreements.md",
+        "diagnosticity.md",
+        "diagnosticity/*.md"
       ]
     },
     {
@@ -1353,7 +1361,8 @@
       "definition": "A group of subsystems with a similar role. Pages group subsystems by layer.",
       "pages": [
         "master-plan.md",
-        "architecture.md"
+        "architecture.md",
+        "subsystems/*.md"
       ]
     },
     {
@@ -1366,7 +1375,8 @@
         "master-plan.md",
         "architecture.md",
         "not-yet-surveyed.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "index.md"
       ]
     },
     {
@@ -1388,7 +1398,9 @@
       "pages": [
         "files.md",
         "not-yet-surveyed.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "index.md",
+        "master-plan.md"
       ]
     },
     {
@@ -1399,7 +1411,10 @@
         "findings.md",
         "resolved-findings.md",
         "concerns.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "contradictions.md",
+        "disagreements.md",
+        "hot-spots.md"
       ]
     },
     {
@@ -1430,7 +1445,10 @@
       "pages": [
         "concerns.md",
         "concern-checklist.md",
-        "seams.md"
+        "seams.md",
+        "not-yet-surveyed.md",
+        "diagnosticity.md",
+        "subsystems/*.md"
       ]
     },
     {
@@ -1441,7 +1459,8 @@
       "definition": "The verdict for one concern in one subsystem: bug found, acceptable, ruled out, out of scope, or undecided.",
       "pages": [
         "concerns.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "disagreements.md"
       ]
     },
     {
@@ -1453,7 +1472,10 @@
         "resolved-findings.md",
         "hot-spots.md",
         "files.md",
-        "subsystems/*.md"
+        "subsystems/*.md",
+        "index.md",
+        "master-plan.md",
+        "disagreements.md"
       ]
     },
     {
@@ -1533,7 +1555,8 @@
       "pages": [
         "stale.md",
         "files.md",
-        "index.md"
+        "index.md",
+        "hot-spots.md"
       ]
     },
     {
@@ -1553,7 +1576,8 @@
       "definition": "What the record says about one file: no record, left out, in scope but unread, read, read but changed since.",
       "pages": [
         "files.md",
-        "stale.md"
+        "stale.md",
+        "subsystems/*.md"
       ]
     },
     {
