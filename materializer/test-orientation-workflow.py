@@ -20,7 +20,9 @@ Turns red when:
     points the reader to "Decisions needed" and to telling the agent, says the
     site is read-only, and tells them they can redirect or stop it, or the second does not decode onboarding Phases 0–7 and survey
     Phases 1–5 against every pass name;
-  - the HTML guide's table, subheadings and prose differ from the Markdown's;
+  - the HTML guide's table, subheadings and prose differ from the Markdown's, or
+    the section's Markdown prints a raw HTML tag outside a code span (such as
+    `<file>`, which a CommonMark reader drops);
   - the "Decisions needed" page lacks the line saying to tell the agent in the
     session and that the site is read-only, in Markdown or HTML, with a
     question open or with none;
@@ -476,6 +478,17 @@ def main() -> int:
             return None
 
         check("'What it expects from you' says what to do, and to tell the agent", expects)
+
+        def no_raw_tags() -> str | None:
+            # A CommonMark reader treats `<file>` as inline HTML and drops it, so
+            # the Markdown would print a shorter sentence than the HTML. Outside
+            # a code span, only the guide's own `<a id>` anchors are HTML.
+            section = "\n".join(line for _title, lines in md_sections(md) if _title == SECTION for line in lines)
+            outside = re.sub(r"`[^`]*`", "", section)
+            tags = [t for t in re.findall(r"</?[A-Za-z][^>]*>", outside) if not re.fullmatch(r'<a id="[^"]+"></a>|</?a\b[^>]*>', t)]
+            return f"the Markdown section prints raw HTML a reader drops: {tags[:4]}" if tags else None
+
+        check("the section's Markdown carries no raw HTML tag outside a code span", no_raw_tags)
 
         def phases() -> str | None:
             text = body(SUBHEADINGS[1])
