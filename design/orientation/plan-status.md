@@ -26,7 +26,7 @@
 |---|---|---|---|---|---|
 | O5 | IDs: link every known ID, name first mentions, explain the letters | done (1 attempt) | O1, O3 | `materializer/test-orientation-ids.py` | §4 O5, §2.2, §1.4, §5 D1, Appendix B |
 | O7 | Subsystem map atlas and one name | done (1 attempt) | — | `materializer/test-orientation-map.py` | §4 O7, §2.5, §2.7, §5 D3 |
-| O8 | Recorded-boundary diagram on the architecture page | ready | — | `materializer/test-orientation-diagram.py` | §4 O8, §2.5, §1.3 |
+| O8 | Recorded-boundary diagram on the architecture page | ready (1 attempt) | — | `materializer/test-orientation-diagram.py` | §4 O8, §2.5, §1.3 |
 
 ## S4 · Skill workflow and publishing defects (review: pending)
 
