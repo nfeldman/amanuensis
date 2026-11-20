@@ -1930,7 +1930,14 @@ class MarkdownRenderer:
             record = dict(zip(keys, values, strict=True))
             key_raw = record[projection.key]
             key_text = _plain(key_raw) or f"Record {row_number}"
-            heading_id = self._heading_slug(f"{projection.kind}-{key_text}")
+            # The xref pass introduces a concern code as "concern RC-2" (PLAN
+            # §2.2 item 5); the anchor other pages link to is the code's.
+            anchor_text = (
+                re.sub(r"^concern\s+", "", key_text)
+                if projection.kind == "concern-disposition"
+                else key_text
+            )
+            heading_id = self._heading_slug(f"{projection.kind}-{anchor_text}")
 
             facts: list[tuple[str, str, str]] = []
             if projection.kind == "file-ledger":

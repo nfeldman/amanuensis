@@ -191,20 +191,32 @@ def _resolve_line(
         named.add(id_)
         return f" ({shown})"
 
-    # A table row's first cell is its record's key, and the HTML builds the
-    # record's anchor from that text, so a concern code there gains no prefix.
-    key_cell_end = -1
-    if line.lstrip().startswith("|"):
-        first = line.index("|")
-        key_cell_end = line.find("|", first + 1)
+    def _concern_label(id_: str, at: int) -> bool:
+        """Whether a concern code printed here owes the "concern" prefix.
+
+        A heading or a table's header row (the review-coverage matrix names
+        its columns by concern code) is left alone, as is a code the words
+        before it already introduce. A link's destination and anchor are not
+        touched; only the text the reader sees gains the word.
+        """
+
+        return (
+            not plain
+            and index.kinds.get(id_) == "concern"
+            and not CONCERN_WORD_PAT.search(line[:at])
+        )
 
     def _replace(m: re.Match) -> str:
         if m.group("link"):
-            # A link the renderer (or an earlier run) wrote. Its label is left
-            # alone; a subsystem ID as the whole label is still a mention.
+            # A link the renderer (or an earlier run) wrote. Its target is left
+            # alone; a subsystem ID as the whole label is still a mention, and a
+            # concern code as the whole label is introduced as one.
+            link = m.group("link")
             label = m.group("label").strip("*")
+            if _concern_label(label, m.start()):
+                link = "[concern " + link[1:]
             suffix = _name_after(label) if label in index.names else ""
-            return m.group("link") + (m.group("lpost") or "") + suffix
+            return link + (m.group("lpost") or "") + suffix
         id_ = m.group("id")
         pre, post = m.group("pre") or "", m.group("post") or ""
         linked = index.link(id_, rel_path)
@@ -216,13 +228,7 @@ def _resolve_line(
             # supplied that emphasis, keep the token itself so repeated passes
             # do not accumulate another pair of ``**`` delimiters.
             linked = id_
-        elif (
-            not self_ref
-            and not plain
-            and m.start() > key_cell_end
-            and index.kinds.get(id_) == "concern"
-            and not CONCERN_WORD_PAT.search(line[: m.start()])
-        ):
+        elif not self_ref and _concern_label(id_, m.start()):
             linked = linked.replace(f"[{id_}]", f"[concern {id_}]", 1)
         return pre + linked + post + _name_after(id_)
 
