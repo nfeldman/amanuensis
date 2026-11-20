@@ -60,6 +60,8 @@ INLINE_CODE_PAT = re.compile(r"`[^`]*`")
 # A raw HTML tag (`<a id="b04-r6"></a>`): its attributes are not prose.
 HTML_TAG_PAT = re.compile(r"</?[A-Za-z][^>\n]*>")
 TABLE_RULE_PAT = re.compile(r"^\s*\|?\s*:?-{3,}")
+# A Markdown link's destination, which the reader does not see.
+LINK_TARGET_PAT = re.compile(r"\]\([^)]*\)")
 # "concern RC-2" already says what RC-2 is.
 CONCERN_WORD_PAT = re.compile(r"(?i)\bconcerns?[\s*_]*$")
 
@@ -171,16 +173,17 @@ def _resolve_line(
     def _name_after(id_: str) -> str:
         """` (Name)` for a page's first mention of a subsystem, else nothing.
 
-        A line that already holds the name (a table with a Name column, a
+        A line that already shows the name (a table with a Name column, a
         heading, a mention named on an earlier run) counts as the naming
-        mention and gains nothing.
+        mention and gains nothing. A link's destination is not shown, so a
+        name in a page path does not count.
         """
 
         name = index.names.get(id_)
         if name is None or id_ in named:
             return ""
         shown = name.replace("|", "/")
-        if shown in line:
+        if shown in LINK_TARGET_PAT.sub("]", line):
             named.add(id_)
             return ""
         if plain:
