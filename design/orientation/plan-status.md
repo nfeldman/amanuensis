@@ -16,7 +16,7 @@
 |---|---|---|---|---|---|
 | O3 | The guide's new shape and Terms | done (1 attempt) | O1, O2 | `materializer/test-orientation-guide.py` | §4 O3, §2.1, §2.6, §3, Appendix A, Appendix C |
 | O4 | How a survey works, and how to answer a decision | done (1 attempt) | O1, O3 | `materializer/test-orientation-workflow.py` | §4 O4, §2.3, §5 D4, Appendix C |
-| O6 | Terms on each page | ready (1 attempt) | O1, O3 | `materializer/test-orientation-terms.py` | §4 O6, §2.1 |
+| O6 | Terms on each page | done (1 attempt) | O1, O3 | `materializer/test-orientation-terms.py` | §4 O6, §2.1 |
 | O9 | Overview Method route | ready | O3, O4 | `materializer/test-orientation-overview.py` | §4 O9, §3 |
 | O14 | Say what the Markdown view leaves out | ready | O3 | `materializer/test-orientation-views.py` | §4 O14, §4 Publishing defects |
 
