@@ -543,6 +543,61 @@ def main() -> int:
 
         check("each enum table has a plain heading, its stored name in a code span, and a row per value", enum_headings)
 
+        def enum_cells() -> str | None:
+            # Each row must carry its own value's label, meaning and limit, in
+            # contract order, in both views: a row count cannot see a label
+            # moved onto the wrong value.
+            def expected(entry: dict[str, Any]) -> list[str]:
+                return [
+                    " ".join(str(entry[key]).split()).replace("|", "/")
+                    for key in ("value", "label", "meaning", "cannot_justify")
+                ]
+
+            html_blocks = dict(html_h3_blocks(page))
+            for name, definition in enums.items():
+                title = enum_title(name)
+                lines = next(
+                    (
+                        body
+                        for section in ("Status values", "Full vocabulary")
+                        for heading, body in md_blocks(by_title.get(section, []))
+                        if heading == title
+                    ),
+                    None,
+                )
+                if lines is None:
+                    return f"the Markdown guide has no table for {name}"
+                rows = [ln for ln in lines if ln.startswith("|")][2:]
+                block = html_blocks.get(title)
+                if block is None:
+                    return f"the HTML guide has no table for {name}"
+                body = block.split("</tbody>")[0].split("<tbody>")[-1]
+                raw_rows = [
+                    re.findall(r"<td\b[^>]*>(.*?)</td>", tr, re.S)
+                    for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", body, re.S)
+                ]
+                html_rows = [[html_text(c) for c in cells] for cells in raw_rows]
+                values = list(definition.get("values") or [])
+                if len(rows) != len(values) or len(html_rows) != len(values):
+                    return f"{name} has {len(rows)} Markdown and {len(html_rows)} HTML rows for {len(values)} values"
+                for index, entry in enumerate(values):
+                    want = expected(entry)
+                    got = [md_visible(c).strip() for c in rows[index].strip().strip("|").split(" | ")]
+                    if got != want:
+                        return f"{name} row {index + 1} reads {got!r} in Markdown, the contract says {want!r}"
+                    # A stored value that is also a status or evidence label
+                    # prints as a chip; its class still names the stored value.
+                    shown = list(html_rows[index])
+                    chip = re.match(r'\s*<span class="([^"]*)"', raw_rows[index][0])
+                    key = htmllib.escape(want[0].lower())
+                    if chip and ({f"status-{key}", f"evidence-{key}"} & set(chip.group(1).split())):
+                        shown[0] = want[0]
+                    if shown != want:
+                        return f"{name} row {index + 1} reads {html_rows[index]!r} in HTML, the contract says {want!r}"
+            return None
+
+        check("each enum row carries its own value's label, meaning and limit, in both views", enum_cells)
+
         def html_disclosure() -> str | None:
             spans = {title: (start, end) for title, start, end in html_h2_spans(page)}
             if "Full vocabulary" not in spans or "Status values" not in spans:
