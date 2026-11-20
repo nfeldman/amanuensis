@@ -6,6 +6,7 @@
       "axis": "resolution",
       "const_name": "FINDING_RESOLUTION_STATES",
       "reader_facing": true,
+      "title": "Finding state",
       "sql": [
         {
           "table": "finding_resolution_events",
@@ -138,6 +139,7 @@
       "axis": "standing",
       "const_name": "STANDING_STATES",
       "reader_facing": true,
+      "title": "File standing",
       "sql": [],
       "note": "Computed by the file_standing view and the unledgered probe; no column stores it.",
       "values": [
@@ -196,6 +198,7 @@
       "axis": "standing",
       "const_name": "STALE_REASONS",
       "reader_facing": true,
+      "title": "Why a file is stale",
       "sql": [],
       "note": "file_ledger.stale_reason carries no CHECK constraint; the writers are detect_changes and the standing reachability probe.",
       "values": [
@@ -229,6 +232,7 @@
       "axis": "standing",
       "const_name": "FILE_CLASSIFICATIONS",
       "reader_facing": true,
+      "title": "File scope",
       "sql": [
         {
           "table": "file_ledger",
@@ -284,6 +288,7 @@
       "axis": "survey",
       "const_name": "SUBSYSTEM_STATUSES",
       "reader_facing": true,
+      "title": "Survey depth",
       "sql": [
         {
           "table": "subsystems",
@@ -498,6 +503,7 @@
       "axis": "evidence",
       "const_name": "EVIDENCE_KINDS",
       "reader_facing": true,
+      "title": "Evidence kind",
       "sql": [
         {
           "table": "evidence",
@@ -635,6 +641,7 @@
       "axis": "disposition",
       "const_name": "DISPOSITION_CLASSIFICATIONS",
       "reader_facing": true,
+      "title": "Concern review verdict",
       "sql": [
         {
           "table": "dispositions",
@@ -678,6 +685,7 @@
       "axis": "severity",
       "const_name": "SEVERITIES",
       "reader_facing": true,
+      "title": "Severity",
       "sql": [
         {
           "table": "findings",
@@ -715,6 +723,7 @@
       "axis": "lead",
       "const_name": "FIELD_NOTE_CATEGORIES",
       "reader_facing": true,
+      "title": "Lead category",
       "sql": [
         {
           "table": "field_notes",
@@ -758,6 +767,7 @@
       "axis": "question",
       "const_name": "OPEN_QUESTION_CATEGORIES",
       "reader_facing": true,
+      "title": "Decision category",
       "sql": [
         {
           "table": "open_questions",
@@ -813,6 +823,7 @@
       "axis": "resolution",
       "const_name": "OPEN_QUESTION_RESOLUTIONS",
       "reader_facing": true,
+      "title": "Decision outcome",
       "sql": [
         {
           "table": "open_questions",
@@ -949,6 +960,7 @@
       "axis": "resolution",
       "const_name": "CONTRADICTION_RESOLUTIONS",
       "reader_facing": true,
+      "title": "How a disagreement was settled",
       "sql": [
         {
           "table": "contradictions",
@@ -990,6 +1002,7 @@
       "axis": "resolution",
       "const_name": "DIAGNOSTICITY_OUTCOMES",
       "reader_facing": true,
+      "title": "Competing explanations outcome",
       "sql": [
         {
           "table": "diagnosticity_sessions",
@@ -1181,6 +1194,7 @@
       "axis": "lens",
       "const_name": "LENSES",
       "reader_facing": true,
+      "title": "Lens",
       "sql": [],
       "values": [
         {

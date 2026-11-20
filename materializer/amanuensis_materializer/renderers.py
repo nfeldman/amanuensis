@@ -3390,9 +3390,14 @@ def page_terms(page: str) -> tuple[tuple[str, str], ...]:
 
 
 def _enum_heading(name: str) -> str:
-    """A reader-facing name for one enum; the stored name goes beside it."""
+    """A reader-facing name for one enum; the stored name goes beside it.
 
-    return name.replace("_", " ").capitalize()
+    The plain name is the contract's `title` (every reader-facing enum carries
+    one); an internal enum without one falls back to its stored name's words.
+    """
+
+    title = VOCABULARY.get(name, {}).get("title")
+    return str(title) if title else name.replace("_", " ").capitalize()
 
 
 def _site_is(name: str) -> list[str]:

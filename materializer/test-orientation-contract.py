@@ -11,7 +11,7 @@ Turns red when:
     the term is spelled, in mixed case, or padded with whitespace); a
     `survey_passes` status not in `subsystem_status`; a `set_when` other than
     `start`/`end`; `survey_passes` statuses out of ladder order; an enum missing
-    `reader_facing`;
+    `reader_facing`; a reader-facing enum without a `title` (its guide heading);
   - the generator rejects the unbroken copy, or writes on a rejected one;
   - `vocabulary.py` lacks `READER_TERMS`, `ID_KINDS` or `SURVEY_PASSES`, or they
     differ from Appendices A, B and C (terms, aliases and each definition word
@@ -534,6 +534,10 @@ def _missing_reader_facing(doc: dict[str, Any]) -> None:
     del doc["enums"]["severity"]["reader_facing"]
 
 
+def _missing_title(doc: dict[str, Any]) -> None:
+    del doc["enums"]["subsystem_status"]["title"]
+
+
 SABOTAGE: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
     ("a term without a definition", _drop_definition, "definition"),
     ("a term with an empty definition", _empty_definition, "definition"),
@@ -545,6 +549,7 @@ SABOTAGE: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
     ("a set_when other than start or end", _set_when_other, "set_when"),
     ("survey_passes statuses out of ladder order", _out_of_order, "order"),
     ("an enum missing reader_facing", _missing_reader_facing, "reader_facing"),
+    ("a reader-facing enum without a title", _missing_title, "title"),
 )
 
 

@@ -21,7 +21,8 @@ Turns red when:
     vocabulary" heading, or a reader-facing enum is not under "Status values"
     with a plain heading and its stored name in a code span; the plain heading
     is the enum's contract `title`, which every reader-facing enum must carry
-    and which must not be its stored name's words ("Field note category");
+    and which must use no `reader_terms` alias (so not "Field note category"
+    or "Subsystem status");
   - the HTML puts a non-reader-facing enum outside a closed `<details>` with a
     `<summary>`, or a reader-facing enum inside it, or an enum table is
     missing in either view;
@@ -273,10 +274,6 @@ def load_contract() -> dict[str, Any]:
     return json.loads(CONTRACT.read_text())
 
 
-def stored_name_words(name: str) -> str:
-    return name.replace("_", " ").capitalize()
-
-
 def enum_title(name: str) -> str:
     """The heading an enum's table must carry: its contract `title` (PLAN §2.1's
     plain name), read from the contract rather than recomputed from the stored
@@ -287,7 +284,7 @@ def enum_title(name: str) -> str:
         title = load_contract()["enums"][name].get("title")
     except (OSError, KeyError, ValueError):
         title = None
-    return title if isinstance(title, str) and title.strip() else stored_name_words(name)
+    return title if isinstance(title, str) and title.strip() else name.replace("_", " ").capitalize()
 
 
 def expected_targets(pages: list[str], docs: Path) -> set[str]:
@@ -557,17 +554,26 @@ def main() -> int:
             # PLAN §2.1, §1.1: a reader-facing table is headed by a plain name,
             # not its stored name's words ("Field note category", "Subsystem
             # status"); the stored name follows in small type.
-            bad = [
-                name
-                for name, definition in enums.items()
-                if definition.get("reader_facing")
-                and (
-                    not isinstance(definition.get("title"), str)
-                    or not definition["title"].strip()
-                    or definition["title"].strip().lower() == stored_name_words(name).lower()
-                )
+            # Plain means in the site's own words: no alias a Terms entry
+            # translates away (W9: "field note", "open question", "status",
+            # "disposition", "contradiction" ...).
+            aliases = [
+                alias.lower()
+                for term in load_contract().get("reader_terms") or []
+                for alias in term.get("aliases") or []
             ]
-            return f"reader-facing enums headed by their stored name, with no plain contract title: {bad}" if bad else None
+            bad = []
+            for name, definition in enums.items():
+                if not definition.get("reader_facing"):
+                    continue
+                title = definition.get("title")
+                if not isinstance(title, str) or not title.strip():
+                    bad.append(f"{name}: no title")
+                    continue
+                used = [a for a in aliases if re.search(rf"(?<![\w-]){re.escape(a)}(?![\w-])", title, re.I)]
+                if used:
+                    bad.append(f"{name}: {title!r} uses the stored name {used[0]!r}")
+            return f"reader-facing enums without a plain contract title: {bad}" if bad else None
 
         check("each reader-facing enum has a plain title in the contract, not its stored name", plain_titles)
 

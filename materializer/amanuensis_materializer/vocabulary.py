@@ -278,6 +278,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "resolution",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Finding state",
         "values": (
             {
                 "value": "open",
@@ -381,6 +382,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "standing",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "File standing",
         "values": (
             {
                 "value": "unledgered",
@@ -437,6 +439,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "standing",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Why a file is stale",
         "values": (
             {
                 "value": "git-drift",
@@ -468,6 +471,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "standing",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "File scope",
         "values": (
             {
                 "value": "candidate",
@@ -517,6 +521,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "survey",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Survey depth",
         "values": (
             {
                 "value": "unmapped",
@@ -693,6 +698,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "evidence",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Evidence kind",
         "values": (
             {
                 "value": "code-verified",
@@ -815,6 +821,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "disposition",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Concern review verdict",
         "values": (
             {
                 "value": "confirmed-bug",
@@ -852,6 +859,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "severity",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Severity",
         "values": (
             {
                 "value": "CRITICAL",
@@ -883,6 +891,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "lead",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Lead category",
         "values": (
             {
                 "value": "pattern",
@@ -920,6 +929,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "question",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Decision category",
         "values": (
             {
                 "value": "domain-knowledge",
@@ -969,6 +979,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "resolution",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Decision outcome",
         "values": (
             {
                 "value": "open",
@@ -1087,6 +1098,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "resolution",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "How a disagreement was settled",
         "values": (
             {
                 "value": "a-supersedes-b",
@@ -1118,6 +1130,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "resolution",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Competing explanations outcome",
         "values": (
             {
                 "value": "open",
@@ -1279,6 +1292,7 @@ VOCABULARY: dict[str, dict[str, object]] = {
         "axis": "lens",
         "open_vocabulary": False,
         "reader_facing": True,
+        "title": "Lens",
         "values": (
             {
                 "value": "codebase",

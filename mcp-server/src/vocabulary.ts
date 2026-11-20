@@ -254,6 +254,7 @@ export interface VocabularyEnum {
   axis: string;
   open_vocabulary: boolean;
   reader_facing: boolean;
+  title?: string;
   values: readonly VocabularyValue[];
 }
 
@@ -263,6 +264,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "resolution",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Finding state",
     values: [
       {
         value: "open",
@@ -380,6 +382,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "standing",
     open_vocabulary: false,
     reader_facing: true,
+    title: "File standing",
     values: [
       {
         value: "unledgered",
@@ -441,6 +444,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "standing",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Why a file is stale",
     values: [
       {
         value: "git-drift",
@@ -474,6 +478,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "standing",
     open_vocabulary: false,
     reader_facing: true,
+    title: "File scope",
     values: [
       {
         value: "candidate",
@@ -523,6 +528,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "survey",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Survey depth",
     values: [
       {
         value: "unmapped",
@@ -729,6 +735,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "evidence",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Evidence kind",
     values: [
       {
         value: "code-verified",
@@ -855,6 +862,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "disposition",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Concern review verdict",
     values: [
       {
         value: "confirmed-bug",
@@ -892,6 +900,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "severity",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Severity",
     values: [
       {
         value: "CRITICAL",
@@ -926,6 +935,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "lead",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Lead category",
     values: [
       {
         value: "pattern",
@@ -963,6 +973,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "question",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Decision category",
     values: [
       {
         value: "domain-knowledge",
@@ -1012,6 +1023,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "resolution",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Decision outcome",
     values: [
       {
         value: "open",
@@ -1130,6 +1142,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "resolution",
     open_vocabulary: false,
     reader_facing: true,
+    title: "How a disagreement was settled",
     values: [
       {
         value: "a-supersedes-b",
@@ -1161,6 +1174,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "resolution",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Competing explanations outcome",
     values: [
       {
         value: "open",
@@ -1322,6 +1336,7 @@ export const VOCABULARY: Readonly<Record<string, VocabularyEnum>> = {
     axis: "lens",
     open_vocabulary: false,
     reader_facing: true,
+    title: "Lens",
     values: [
       {
         value: "codebase",
