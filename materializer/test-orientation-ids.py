@@ -12,7 +12,9 @@ Turns red when:
 
   - the guide has no "How IDs are formed" section between Terms and Status
     values, in either view, or it lacks Appendix B's sentence or a row per
-    `id_kinds` entry with an example taken from this store;
+    `id_kinds` entry with an example taken from this store, or any row's kind,
+    shape, names, chosen-by or links-to cell differs from the contract in
+    either view;
   - the guide's letter sentence is wrong for either store: the one-to-one store
     must read "Here the letter is the layer: Q is Query, S is Storage.", the
     AxiomDB-like store must say the letters do not encode anything (§2.2 item 2);
@@ -256,6 +258,14 @@ def published(summary: dict[str, Any], docs: Path) -> str | None:
 # ---------------------------------------------------------------------------
 # Checks
 # ---------------------------------------------------------------------------
+# Appendix B's columns in order; None is "Example here", which comes from the store.
+KIND_COLUMNS: tuple[str | None, ...] = ("kind", "shape", "names", "chosen_by", None, "links_to")
+
+
+def one_cell(value: object) -> str:
+    return " ".join(str(value).split()).replace("|", "/")
+
+
 def guide_checks(name: str, docs: Path, letters: str, wrong: str, kinds: list[dict[str, Any]], examples: dict[str, str]) -> None:
     md = read(docs / "how-to-read.md")
     page = article(read(docs / "how-to-read.html"))
@@ -302,16 +312,27 @@ def guide_checks(name: str, docs: Path, letters: str, wrong: str, kinds: list[di
             cells = [c.strip() for c in row.strip().strip("|").split("|")]
             if cells[0] != kind["kind"]:
                 return f"a row starts {cells[0]!r}, expected {kind['kind']!r} in contract order"
-            for key in ("names", "chosen_by", "links_to"):
-                if str(kind[key]) not in row:
-                    return f"the {kind['kind']} row lacks its {key} ({kind[key]!r})"
+            if len(cells) != len(KIND_COLUMNS):
+                return f"the {kind['kind']} row has {len(cells)} cells, not {len(KIND_COLUMNS)}"
+            for column, (key, cell) in enumerate(zip(KIND_COLUMNS, cells, strict=True)):
+                if key and cell != one_cell(kind[key]):
+                    return f"the {kind['kind']} row's column {column + 1} is {cell!r}, not its {key} {kind[key]!r}"
             want = examples.get(str(kind["kind"]))
-            if want and want not in row:
+            if want and want not in cells[KIND_COLUMNS.index(None)]:
                 return f"the {kind['kind']} row does not give this store's example {want!r}"
-        body = html_text(html_section(page, IDS_HEADING) or "")
-        for kind in kinds:
-            if str(kind["names"]) not in body:
-                return f"the HTML section lacks the {kind['kind']} row"
+        section_html = html_section(page, IDS_HEADING) or ""
+        html_rows = [
+            [html_text(cell) for cell in re.findall(r"<t[dh]\b[^>]*>(.*?)</t[dh]>", tr, re.S)]
+            for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", section_html, re.S)
+        ][1:]
+        if len(html_rows) != len(kinds):
+            return f"the HTML table has {len(html_rows)} rows for {len(kinds)} id_kinds entries"
+        for cells, kind in zip(html_rows, kinds, strict=True):
+            if len(cells) != len(KIND_COLUMNS):
+                return f"the HTML {kind['kind']} row has {len(cells)} cells, not {len(KIND_COLUMNS)}"
+            for column, (key, cell) in enumerate(zip(KIND_COLUMNS, cells, strict=True)):
+                if key and cell != html_text(one_cell(kind[key]).replace("`", "")):
+                    return f"the HTML {kind['kind']} row's column {column + 1} is {cell!r}, not its {key} {kind[key]!r}"
         return None
 
     check(f"{name}: one row per ID kind, each with an example from this store", kinds_table)
