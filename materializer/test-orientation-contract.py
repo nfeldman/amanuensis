@@ -14,8 +14,9 @@ Turns red when:
     `reader_facing`;
   - the generator rejects the unbroken copy, or writes on a rejected one;
   - `vocabulary.py` lacks `READER_TERMS`, `ID_KINDS` or `SURVEY_PASSES`, or they
-    differ from Appendices A, B and C (terms and aliases, ID kinds, and the five
-    passes with their phase, status and `set_when` per D4);
+    differ from Appendices A, B and C (terms, aliases and each definition word
+    for word as Appendix A in PLAN.md gives it; every column of every Appendix B
+    row; and the five passes with their phase, status and `set_when` per D4);
   - `VOCABULARY` does not carry `reader_facing` on every enum, or the enums
     marked true are not exactly the fourteen §4 O1 step 2 lists;
   - a `subsystem_status` value whose `survey_passes` row has `set_when: "start"`
@@ -157,6 +158,22 @@ EXPECTED_PASSES = (
     ("Packaging", 5, "mapped", "end"),
 )
 
+PLAN = REPO / "design" / "orientation" / "PLAN.md"
+
+
+def plan_table(start: str, end: str) -> list[list[str]]:
+    """The body rows of the first table between two headings of the plan."""
+
+    text = PLAN.read_text(encoding="utf-8")
+    section = text[text.index(start) : text.index(end)]
+    rows = []
+    for line in section.splitlines():
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        rows.append([cell.strip() for cell in line.strip().strip("|").split("|")])
+    return rows[1:]
+
+
 READER_FACING = {
     "finding_resolution_state",
     "severity",
@@ -288,6 +305,14 @@ def check_reader_terms() -> str | None:
             return f"terms are {got_names}, Appendix A lists {want_names}"
         diff = [f"{a[0]}: {a[1]} != {b[1]}" for a, b in zip(got, EXPECTED_TERMS, strict=True) if a != b]
         return f"aliases differ from Appendix A: {diff}"
+    # The normative text, not only its length: Appendix A's definition, word for word.
+    try:
+        appendix = {row[0]: row[2] for row in plan_table("## Appendix A", "## Appendix B")}
+    except (OSError, ValueError, IndexError) as exc:
+        return f"cannot read Appendix A from {PLAN.name}: {exc}"
+    changed = [t.get("term") for t in terms if t.get("definition") != appendix.get(t.get("term"))]
+    if changed:
+        return f"definitions differ from Appendix A: {changed}"
     bad = []
     for t in terms:
         definition = t.get("definition")
@@ -343,7 +368,18 @@ def check_id_kinds() -> str | None:
         for f in ID_KIND_FIELDS
         if not isinstance(k.get(f), str) or not k[f].strip()
     ]
-    return f"empty fields: {bad}" if bad else None
+    if bad:
+        return f"empty fields: {bad}"
+    # Every column of every row, as Appendix B writes it.
+    try:
+        appendix = [tuple(row) for row in plan_table("## Appendix B", "## Appendix C")]
+    except (OSError, ValueError, IndexError) as exc:
+        return f"cannot read Appendix B from {PLAN.name}: {exc}"
+    got_rows = [tuple(k.get(f) for f in ID_KIND_FIELDS) for k in kinds]
+    changed = [g[0] for g, w in zip(got_rows, appendix, strict=False) if g != w]
+    if len(got_rows) != len(appendix) or changed:
+        return f"ID kind rows differ from Appendix B: {changed or 'row count'}"
+    return None
 
 
 def check_survey_passes() -> str | None:
