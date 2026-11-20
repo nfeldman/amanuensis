@@ -701,7 +701,11 @@ def main() -> int:
                 if tree_digest(docs) != before:
                     return "the previously published output was touched"
                 inplace = run_materializer(
-                    storage, "--output", str(storage / "docs-inplace"), workspace=repo
+                    storage,
+                    "--allow-external-output",
+                    "--output",
+                    str(storage / "docs-inplace"),
+                    workspace=repo,
                 )
                 if inplace.get("ok"):
                     return f"an in-place render with a violating {variant} stayed green"

@@ -38,6 +38,7 @@ from .html_projection import (
     SEARCH_INDEX_PATH,
     SitePage,
     UnknownNavGroup,
+    append_notice,
     assert_nav_groups,
     insert_page_head,
     render_html_projection,
@@ -220,11 +221,15 @@ class Materializer:
         output: Path,
         force_full: bool = False,
         verify_readback: bool = True,
+        notice: str = "",
     ) -> None:
         self.storage = storage
         self.output = output
         self.force_full = force_full
         self.verify_readback = verify_readback
+        # The command-line render notice every page ends with (PLAN O15); empty
+        # when the caller records this render's read-back in the store.
+        self.notice = notice
         self.manifest_path = output / ".manifest.json"
         self.manifest = Manifest.load(self.manifest_path)
         self.summary = Summary(output_dir=str(output))
@@ -314,6 +319,7 @@ class Materializer:
                 text = insert_page_head(
                     text, p.hint, p.use_when, terms_line(p.path, renderers.page_terms(p.path))
                 )
+                text = append_notice(text, self.notice)
                 new_hash = sha256_bytes(text.encode("utf-8"))
                 fresh[p.path] = text
                 prev = self.manifest.page(p.path)
@@ -421,6 +427,7 @@ class Materializer:
                 html_context,
                 previous_files=self.manifest.projection_files,
                 locus_index=_locus_index(conn),
+                notice=self.notice,
             )
             self.manifest.projection_files = html_result.files
             self.summary.html_pages_total = len(site_pages)
@@ -438,10 +445,10 @@ class Materializer:
             # projection receipt is deliberately separate and hashes the bytes
             # after global xref resolution — the bytes a reader will see.
             expected_paths = sorted(alive | set(html_result.files))
-            write_contract(self.output, expected_paths)
+            write_contract(self.output, expected_paths, notice=self.notice)
             if self.verify_readback:
                 self.summary.readback = ProjectionVerifier(
-                    self.storage, self.output, expected_paths
+                    self.storage, self.output, expected_paths, notice=self.notice
                 ).verify()
                 if not self.summary.readback["ok"]:
                     self.summary.ok = False

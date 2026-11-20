@@ -238,6 +238,11 @@ function execute(
       ctx.project.workspacePath,
       "--output",
       outputDir,
+      // The server records every read-back below, so its pages carry no
+      // command-line notice; and `resolveStorageOutputPath` already holds the
+      // output inside the store, so the CLI's own docs/-only check is waived.
+      "--recorded-publication",
+      "--allow-external-output",
       ...extraArgs,
     ],
     // A render of a large store runs longer than a git call, so it gets its own

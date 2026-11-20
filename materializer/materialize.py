@@ -25,6 +25,7 @@ import uuid
 from pathlib import Path
 
 from amanuensis_materializer import Materializer
+from amanuensis_materializer.html_projection import cli_render_notice
 from amanuensis_materializer.readback import BOUND_WORKSPACE
 
 
@@ -107,6 +108,19 @@ def main() -> int:
         help="Skip post-render read-back (diagnostic compatibility escape hatch; not suitable for publication).",
     )
     parser.add_argument(
+        "--allow-external-output",
+        action="store_true",
+        help="Allow a render to write somewhere other than <storage>/docs.",
+    )
+    parser.add_argument(
+        "--recorded-publication",
+        action="store_true",
+        help=(
+            "The caller records this read-back in the store (the MCP server does). "
+            "Without it every page says its read-back was not recorded."
+        ),
+    )
+    parser.add_argument(
         "--json-summary",
         action="store_true",
         default=True,
@@ -137,6 +151,26 @@ def main() -> int:
             )
         )
         return 2
+    # A hand-run render stays in the store's own docs unless told otherwise
+    # (PLAN §5 D6). The server passes the flag and enforces containment itself.
+    # A read-back writes nothing, so it is never refused; a clean publish is
+    # checked on its final output, not its staging directory.
+    docs = (storage / "docs").resolve()
+    if not args.readback_only and not args.allow_external_output and output != docs:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": (
+                        f"refusing to write outside {docs}; pass --allow-external-output"
+                        f" to write to {output}"
+                    ),
+                }
+            )
+        )
+        return 2
+    recorded = args.recorded_publication
+    notice = cli_render_notice(recorded=recorded, verified=not args.no_verify_readback)
     if args.readback_only:
         summary = Materializer(storage=storage, output=output).verify_projection()
         summary.update(
@@ -145,6 +179,7 @@ def main() -> int:
                 "html_entrypoint": str(output / "index.html"),
                 "mode": "readback",
                 "published": False,
+                "recorded": recorded,
             }
         )
         print(json.dumps(summary))
@@ -176,6 +211,7 @@ def main() -> int:
                 output=stage,
                 force_full=True,
                 verify_readback=not args.no_verify_readback,
+                notice=notice,
             ).materialize()
             summary.update({"output_dir": str(output), "mode": "clean-publish", "published": False})
             if summary.get("ok", False):
@@ -210,9 +246,11 @@ def main() -> int:
             output=output,
             force_full=args.force_full,
             verify_readback=not args.no_verify_readback,
+            notice=notice,
         ).materialize()
         summary.update({"mode": "readback", "published": summary.get("ok", False)})
     summary["html_entrypoint"] = str(output / "index.html")
+    summary["recorded"] = recorded
     print(json.dumps(summary))
     return 0 if summary.get("ok", False) else 1
 

@@ -220,7 +220,8 @@ def main() -> None:
         relocated = storage / "relocated-docs"
         bound_run = subprocess.run(
             [sys.executable, str(ROOT / "materialize.py"), "--storage", str(storage),
-             "--workspace", str(ROOT.parent), "--output", str(relocated)],
+             "--workspace", str(ROOT.parent), "--allow-external-output",
+             "--output", str(relocated)],
             capture_output=True, text=True, check=True,
         )
         bound_summary = json.loads(bound_run.stdout.strip().splitlines()[-1])

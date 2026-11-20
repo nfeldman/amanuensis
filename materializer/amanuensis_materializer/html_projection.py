@@ -115,6 +115,48 @@ def page_head_line(hint: str, use_when: str) -> str:
 GUIDE_PAGE = "how-to-read.md"
 TERMS_LABEL = "Terms on this page:"
 
+# A page `materialize.py` writes for a caller that does not record its read-back
+# in the store (PLAN §5 D6, O15). The overview's Publication integrity block reads
+# the store's last recorded run, so it cannot describe this render; each page says
+# so instead. The second form is for a render that skipped its read-back.
+CLI_RENDER_NOTICE = (
+    "Rendered from the command line. Its read-back was not recorded in the survey's"
+    " record, so the Publication integrity figures on the overview describe an earlier"
+    " publication."
+)
+CLI_RENDER_NOTICE_UNVERIFIED = "Rendered from the command line and not read back."
+CLI_RENDER_NOTICES = (CLI_RENDER_NOTICE, CLI_RENDER_NOTICE_UNVERIFIED)
+
+
+def cli_render_notice(*, recorded: bool, verified: bool) -> str:
+    """The notice a render's pages carry; empty when the caller records the read-back."""
+
+    if recorded:
+        return ""
+    return CLI_RENDER_NOTICE if verified else CLI_RENDER_NOTICE_UNVERIFIED
+
+
+def notice_paragraph(notice: str) -> str:
+    return f"*{notice}*"
+
+
+def append_notice(markdown: str, notice: str) -> str:
+    """End the Markdown page with the notice as its last paragraph."""
+
+    if not notice:
+        return markdown
+    return markdown.rstrip("\n") + "\n\n" + notice_paragraph(notice) + "\n"
+
+
+def strip_notice(markdown: str, notice: str) -> str:
+    """The inverse of `append_notice`: the HTML prints the notice in its page head."""
+
+    paragraph = notice_paragraph(notice)
+    body = markdown.rstrip("\n")
+    if not notice or not body.endswith("\n" + paragraph):
+        return markdown
+    return body[: -len(paragraph)].rstrip("\n") + "\n"
+
 
 def terms_line(page_path: str, terms: Sequence[tuple[str, str]]) -> str:
     """The Markdown paragraph listing a page's terms, linked to the guide's anchors.
@@ -435,6 +477,7 @@ h1 {
 .page-use-when { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: clamp(.95rem, .3vw + .88rem, 1.1rem)/1.5 var(--body); text-wrap: pretty; }
 .page-terms { max-width: none; margin: .4rem 0 0; color: var(--text-muted); font: .85rem/1.6 var(--body); }
 .page-terms a { color: var(--accent); }
+.page-notice { max-width: none; margin: .9rem 0 0; padding: .45rem .75rem; border-left: 2px solid var(--signal); color: var(--text-muted); font: .85rem/1.55 var(--body); }
 .page-hint { max-width: none; margin: 1.1rem 0 0; color: var(--text-muted); font: italic clamp(1.05rem, .45vw + .94rem, 1.3rem)/1.48 var(--heading); text-wrap: pretty; }
 .snapshot-strip { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-top: 1.3rem; padding: .7rem .85rem; background: var(--canvas); border: 1px solid var(--rule); border-radius: 0; }
 .snapshot-item { color: var(--text-muted); font: .7rem/1.45 var(--mono); }
@@ -3289,6 +3332,7 @@ def _shell(
     body: str,
     context: dict[str, Any],
     filters: tuple[str, dict[str, list[str]]] | None = None,
+    notice: str = "",
 ) -> str:
     canonical = str(context.get("canonical_branch") or "not recorded")
     project_name = str(context.get("project_name") or "Project")
@@ -3331,6 +3375,9 @@ def _shell(
         + "</p>"
         if page.terms
         else ""
+    )
+    notice_para = (
+        f'<p class="page-notice" role="note">{html.escape(notice)}</p>' if notice else ""
     )
     md_link = _rel_link(page.html_path, page.markdown_path)
     home_link = _rel_link(page.html_path, "index.html")
@@ -3399,6 +3446,7 @@ def _shell(
         {hint_para}
         {use_when_para}
         {terms_para}
+        {notice_para}
         <div class="snapshot-strip">
           <span class="snapshot-item"><b>Branch</b>&nbsp; {html.escape(canonical)}</span>
           <span class="snapshot-item"><b>Checked</b>&nbsp; {html.escape(checked[:12] or 'not recorded')}</span>
@@ -3448,8 +3496,13 @@ def render_html_projection(
     context: dict[str, Any],
     previous_files: dict[str, str] | None = None,
     locus_index: dict[str, Any] | None = None,
+    notice: str = "",
 ) -> HtmlProjectionResult:
-    """Render HTML companions from finished Markdown and retire old HTML."""
+    """Render HTML companions from finished Markdown and retire old HTML.
+
+    `notice` is the command-line render notice the Markdown ends with; the HTML
+    moves it from the end of the body into the page head.
+    """
 
     previous_files = previous_files or {}
     route_map = {
@@ -3487,7 +3540,7 @@ def render_html_projection(
         )
         source_title, body = parser.render(
             strip_page_head(
-                source.read_text(),
+                strip_notice(source.read_text(), notice),
                 page.hint,
                 page.use_when,
                 terms_line(page.markdown_path, page.terms),
@@ -3500,6 +3553,7 @@ def render_html_projection(
             body,
             context,
             (parser.filter_scope, parser.facets),
+            notice,
         )
         target = output / page.html_path
         digest = sha256_bytes(document.encode("utf-8"))

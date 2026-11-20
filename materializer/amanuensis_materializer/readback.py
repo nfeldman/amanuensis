@@ -21,7 +21,7 @@ import subprocess
 from collections import Counter
 from contextvars import ContextVar
 from dataclasses import dataclass
-from html import unescape
+from html import escape, unescape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -927,7 +927,7 @@ def _local_links(text: str, suffix: str = ".md") -> list[str]:
     ]
 
 
-def write_contract(output: Path, page_paths: list[str]) -> dict[str, Any]:
+def write_contract(output: Path, page_paths: list[str], notice: str = "") -> dict[str, Any]:
     pages: list[dict[str, Any]] = []
     links: list[dict[str, str]] = []
     for rel in sorted(page_paths):
@@ -944,16 +944,29 @@ def write_contract(output: Path, page_paths: list[str]) -> dict[str, Any]:
         "version": CONTRACT_VERSION,
         "pages": pages,
         "local_links": sorted(links, key=lambda x: (x["source"], x["target"])),
+        # The command-line render notice every page carries, or null for a
+        # publication whose caller records its read-back (PLAN O15). A later
+        # `--readback-only` reads it here, since it has no render flags of its own.
+        "render_notice": notice or None,
     }
     (output / CONTRACT_NAME).write_text(json.dumps(contract, indent=2) + "\n")
     return contract
 
 
 class ProjectionVerifier:
-    def __init__(self, storage: Path, output: Path, expected_pages: list[str]) -> None:
+    def __init__(
+        self,
+        storage: Path,
+        output: Path,
+        expected_pages: list[str],
+        notice: str | None = None,
+    ) -> None:
         self.storage = storage
         self.output = output
         self.expected_pages = sorted(expected_pages)
+        # The render notice the pages must carry: the render's own flag when a
+        # render runs this read-back, or None to take it from the receipt.
+        self.notice = notice
 
     def verify(self) -> dict[str, Any]:
         mismatches: list[dict[str, str]] = []
@@ -1147,7 +1160,80 @@ class ProjectionVerifier:
                         "detail": "finished page bytes differ from the publication receipt",
                     }
                 )
+        mismatches.extend(self._render_notice_census(contract, projection))
         return self._summary(mismatches)
+
+    def _render_notice_census(
+        self, contract: dict[str, Any], projection: dict[str, str]
+    ) -> list[dict[str, str]]:
+        """Each page carries the command-line render notice exactly when it should (O15).
+
+        The notice is part of every page a command-line render writes, so the
+        receipt's hashes already cover its bytes; this checks that it is there on
+        every page of such a render, in its place, and on no page of a recorded
+        publication. A render passes its own flag, which must agree with the
+        receipt it just wrote; `--readback-only` takes the receipt's word.
+        """
+
+        from .html_projection import (  # noqa: PLC0415 — it imports this module
+            CLI_RENDER_NOTICES,
+            notice_paragraph,
+        )
+
+        mismatches: list[dict[str, str]] = []
+        stated = str(contract.get("render_notice") or "")
+        expected = stated if self.notice is None else self.notice
+        if stated != expected:
+            mismatches.append(
+                {
+                    "axis": "content",
+                    "object_type": "render-notice",
+                    "object_id": CONTRACT_NAME,
+                    "detail": "the publication receipt states a different render notice from the render's",
+                }
+            )
+        others = [n for n in CLI_RENDER_NOTICES if n != expected]
+        for rel in self.expected_pages:
+            suffix = Path(rel).suffix
+            body = projection.get(rel)
+            if body is None or suffix not in (".md", ".html"):
+                continue  # coverage owns a missing page
+            if suffix == ".md":
+                forms = [notice_paragraph(n) for n in others]
+                count = body.count(notice_paragraph(expected)) if expected else 0
+                placed = not expected or (
+                    count == 1 and body.rstrip("\n").endswith("\n" + notice_paragraph(expected))
+                )
+            else:
+                forms = [escape(n) for n in others]
+                count = body.count(escape(expected)) if expected else 0
+                head = re.search(r'<header class="page-head">(.*?)</header>', body, re.S)
+                placed = not expected or (
+                    count == 1 and head is not None and escape(expected) in head.group(1)
+                )
+            if not placed:
+                detail = (
+                    "page lacks the command-line render notice"
+                    if count == 0
+                    else "page carries the command-line render notice out of place or more than once"
+                )
+            elif any(form in body for form in forms):
+                detail = (
+                    "page carries a command-line render notice on a recorded publication"
+                    if not expected
+                    else "page carries the other command-line render notice"
+                )
+            else:
+                continue
+            mismatches.append(
+                {
+                    "axis": "content",
+                    "object_type": "render-notice",
+                    "object_id": rel,
+                    "detail": detail,
+                }
+            )
+        return mismatches
 
     def _finding_partition_census(
         self, conn: Any, projection: dict[str, str]
