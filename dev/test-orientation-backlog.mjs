@@ -8,7 +8,8 @@
 //   - that section has no Markdown link whose target is design/orientation/PLAN.md, or the
 //     target file does not exist;
 //   - the section lacks any of W1–W9 as its own list item, or an item runs past one line
-//     (an indented continuation or an unindented lazy one),
+//     (an indented continuation, an unindented lazy one, or an indented paragraph after a
+//     blank line),
 //     or an item repeats another's id, or an item has no text after its id;
 //   - the W6 item does not say it is decided and cite D4.
 // Reads only BACKLOG.md and PLAN.md; it touches no store.
@@ -87,6 +88,13 @@ function check() {
     const next = section[i + 1];
     if (next !== undefined && /\S/.test(next) && (/^\s+\S/.test(next) ? !/^\s*[-*]\s/.test(next) : !opensBlock.test(next))) {
       return `an item is longer than one line: ${section[i].slice(0, 40)}`;
+    }
+    // Past blank lines, an indented line still belongs to the item: a continuation paragraph
+    // or a nested block. Only an unindented line ends it.
+    let j = i + 1;
+    while (j < section.length && !/\S/.test(section[j])) j += 1;
+    if (j > i + 1 && j < section.length && /^\s+\S/.test(section[j])) {
+      return `an item continues past a blank line: ${section[i].slice(0, 40)}`;
     }
   }
 
