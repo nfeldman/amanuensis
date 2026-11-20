@@ -3280,7 +3280,7 @@ SITE_IS = (
     "This site is the record of an AI agent's survey of {name}. The agent read the code,"
     " recorded what it concluded and the code each conclusion rests on, and listed what it"
     " could not settle. It does not change the code. Every page is as of one commit, shown"
-    " at the top as *Checked*."
+    " at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
 )
 SITE_VIEWS = (
     "Each page is written twice from the same record: as HTML, which adds the diagrams, the"

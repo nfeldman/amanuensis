@@ -866,7 +866,8 @@ site? Start with [How to read this survey](how-to-read.md)."
 **Guide, "What this site is":** "This site is the record of an AI agent's survey of {name}. The
 agent read the code, recorded what it concluded and the code each conclusion rests on, and
 listed what it could not settle. It does not change the code. Every page is as of one commit,
-shown at the top as *Checked*."
+shown at the top of each HTML page as *Checked* and in the overview's *Checked at* row."
+(Revised by the slice-S2 fix, F6: the Markdown pages carry no *Checked* line at the top.)
 
 **Guide, "How a survey works":**
 
