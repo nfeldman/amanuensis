@@ -735,6 +735,21 @@ a .identifier-definition { text-decoration-color: currentColor; }
 .runtime-svg-language { fill: var(--text-muted); font: 11px/1.3 var(--mono); }
 .runtime-svg-mechanism { fill: var(--accent-strong); font: 600 11px/1.3 var(--mono); text-anchor: middle; }
 .runtime-boundary-details { display: grid; }
+.boundary-projection { margin: 1.2rem 0 1.8rem; border-bottom: 1px solid var(--rule-strong); }
+.boundary-diagram { margin: 0; }
+.boundary-svg-scroll { max-width: 100%; overflow-x: auto; }
+.boundary-svg { display: block; max-width: none; height: auto; background: var(--surface); }
+.boundary-svg-node { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.boundary-svg-seam { stroke: var(--text-subtle); stroke-width: 1.25; }
+.boundary-svg-xref { stroke: var(--accent); stroke-width: 1.5; }
+.boundary-svg-arrow { fill: var(--accent); }
+.boundary-svg-label-box { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.boundary-svg-label { fill: var(--text-muted); font: 600 10px/1 var(--mono); text-anchor: middle; }
+.boundary-svg-column {
+  fill: var(--text-subtle); font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.boundary-svg-id { fill: var(--text); font: 600 12px/1.2 var(--mono); }
+.boundary-svg-name { fill: var(--text-muted); font: 12px/1.2 var(--heading); }
 .runtime-detail {
   display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(0, 1.2fr);
   min-width: 0; border-bottom: 1px solid var(--rule);
@@ -989,6 +1004,8 @@ a .identifier-definition { text-decoration-color: currentColor; }
   .document-inner { width: auto; padding: 0; }
   .runtime-svg-scroll { overflow: visible; }
   .runtime-boundary-svg { min-width: 0; }
+  .boundary-svg-scroll { overflow: visible; }
+  .boundary-svg { width: 100%; }
   .content section, .figure, .runtime-boundary-projection, .table-wrap, .record { break-inside: avoid-page; }
   a { color: inherit; text-decoration: none; }
 }
@@ -1735,6 +1752,7 @@ _LIFECYCLE_TABLE_PROJECTIONS = {
 _SUBSYSTEM_ATLAS_PROJECTION = ("region", "subsystem", "survey depth")
 _DEPENDENCY_TOPOLOGY_PROJECTION = ("from", "relationship", "to", "strength", "context")
 _SEAM_TOPOLOGY_PROJECTION = ("seam", "party a", "shared object", "party b")
+_BOUNDARY_PROJECTION = ("layer", "subsystem", "boundary", "other end")
 _RUNTIME_BOUNDARY_PROJECTION = (
     "runtime / process",
     "language",
@@ -2316,6 +2334,153 @@ class MarkdownRenderer:
             + '</div></div>'
         )
 
+    def _boundary_diagram(
+        self,
+        rows: list[tuple[list[str], list[str]]],
+        caption: str,
+    ) -> str:
+        """Draw the recorded-boundary table as inline SVG (§2.5 item 2).
+
+        Columns are layers in table order, eight to a band; boxes are in table
+        order within a column. A line is drawn only for a row that names a seam
+        or an outgoing xref, so nothing the table does not record is drawn.
+        """
+        box_w, box_h, gap_x, gap_y, margin, per_band = 200, 44, 64, 16, 24, 8
+        layers: dict[str, list[str]] = {}
+        names: dict[str, str] = {}
+        touched: set[str] = set()
+        seams: dict[str, tuple[str, str]] = {}
+        xrefs: list[tuple[str, str, str]] = []
+        for values, _markers in rows:
+            layer, subsystem, boundary, other = values[:4]
+            sid = self._record_identifier(subsystem)
+            if sid not in names:
+                names[sid] = _plain(subsystem).removeprefix(sid).strip()
+                layers.setdefault(_plain(layer) or "unlayered", []).append(sid)
+            other_id = self._record_identifier(other) if _plain(other) not in ("", "—") else ""
+            if not other_id:
+                continue
+            touched.add(sid)
+            relation = _plain(boundary)
+            if "](seams.md#" in boundary:
+                seams.setdefault(self._record_identifier(boundary), (sid, other_id))
+            elif relation.endswith("→"):
+                xrefs.append((sid, other_id, relation.removesuffix("→").strip()))
+
+        columns = list(layers)
+        bands = [columns[i : i + per_band] for i in range(0, len(columns), per_band)]
+        boxes: dict[str, tuple[int, int]] = {}
+        parts_columns: list[str] = []
+        band_top = 0
+        for band in bands:
+            for position, layer in enumerate(band):
+                x = margin + position * (box_w + gap_x)
+                parts_columns.append(
+                    f'<text class="boundary-svg-column" x="{x}" y="{band_top + 30}">{html.escape(layer)}</text>'
+                )
+                for row, sid in enumerate(layers[layer]):
+                    boxes[sid] = (x, band_top + 44 + row * (box_h + gap_y))
+            tallest = max(len(layers[layer]) for layer in band)
+            band_top += 44 + tallest * (box_h + gap_y) + 24
+        width = 2 * margin + min(len(columns), per_band) * (box_w + gap_x) - gap_x
+        height = band_top
+
+        def ends(a: str, b: str) -> tuple[float, float, float, float]:
+            (ax, ay), (bx, by) = boxes[a], boxes[b]
+            if ax == bx:
+                if ay < by:
+                    return ax + box_w / 2, ay + box_h, bx + box_w / 2, by
+                return ax + box_w / 2, ay, bx + box_w / 2, by + box_h
+            if ax < bx:
+                return ax + box_w, ay + box_h / 2, bx, by + box_h / 2
+            return ax, ay + box_h / 2, bx + box_w, by + box_h / 2
+
+        def num(value: float) -> str:
+            return f"{round(value, 1):g}"
+
+        lines: list[str] = []
+        labels: list[str] = []
+        for seam_id, (a, b) in seams.items():
+            x1, y1, x2, y2 = ends(a, b)
+            lines.append(
+                f'<line class="boundary-svg-seam" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+            )
+            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+            label_w = 12 + 6.4 * len(seam_id)
+            labels.append(
+                f'<rect class="boundary-svg-label-box" x="{num(mx - label_w / 2)}" y="{num(my - 8)}" '
+                f'width="{num(label_w)}" height="16" rx="2"/>'
+                f'<text class="boundary-svg-label" x="{num(mx)}" y="{num(my + 3.5)}">{html.escape(seam_id)}</text>'
+            )
+        for a, b, _relation in xrefs:
+            x1, y1, x2, y2 = ends(a, b)
+            length = max(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5, 1.0)
+            ux, uy = (x2 - x1) / length, (y2 - y1) / length
+            lines.append(
+                f'<line class="boundary-svg-xref" x1="{num(x1)}" y1="{num(y1)}" x2="{num(x2)}" y2="{num(y2)}"/>'
+                f'<path class="boundary-svg-arrow" d="M {num(x2)} {num(y2)} '
+                f'L {num(x2 - 10 * ux - 5 * uy)} {num(y2 - 10 * uy + 5 * ux)} '
+                f'L {num(x2 - 10 * ux + 5 * uy)} {num(y2 - 10 * uy - 5 * ux)} Z"/>'
+            )
+
+        nodes: list[str] = []
+        for sid, (x, y) in boxes.items():
+            name = names[sid]
+            shown = name if len(name) <= 28 else name[:27].rstrip() + "…"
+            nodes.append(
+                f'<g class="boundary-svg-node" data-subsystem="{html.escape(sid, quote=True)}">'
+                f"<title>{html.escape(f'{sid} {name}')}</title>"
+                f'<rect x="{x}" y="{y}" width="{box_w}" height="{box_h}" rx="3"/>'
+                f'<text class="boundary-svg-id" x="{x + 10}" y="{y + 18}">{html.escape(sid)}</text>'
+                f'<text class="boundary-svg-name" x="{x + 10}" y="{y + 35}">{html.escape(shown)}</text>'
+                "</g>"
+            )
+
+        total = len(names)
+        unconnected = total - len(touched)
+        census = (
+            f"{unconnected} of {total} subsystem{'s' if total != 1 else ''} "
+            f"{'has' if unconnected == 1 else 'have'} no recorded boundary"
+        )
+        seam_count = f"{len(seams)} seam{'s' if len(seams) != 1 else ''} as labelled lines"
+        xref_count = (
+            f"{len(xrefs)} recorded dependenc{'ies' if len(xrefs) != 1 else 'y'} as arrows"
+            if xrefs
+            else ""
+        )
+        drawn = "; ".join(part for part in (seam_count, xref_count) if part)
+        account = (
+            "Each line is listed in the dependency graph above and the seam topology below"
+            if xrefs
+            else "Each line is listed in the seam topology below"
+        )
+        svg = (
+            f'<svg class="boundary-svg" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" '
+            'aria-labelledby="boundary-svg-title boundary-svg-description">'
+            '<title id="boundary-svg-title">Recorded boundaries</title>'
+            f'<desc id="boundary-svg-description">{total} subsystems in {len(columns)} layer '
+            f'column{"s" if len(columns) != 1 else ""}; {html.escape(drawn)}. {html.escape(census)}. '
+            'No line is inferred from a name or a layer.</desc>'
+            + "".join(parts_columns)
+            + f'<g class="boundary-svg-lines">{"".join(lines)}</g>'
+            + f'<g class="boundary-svg-nodes">{"".join(nodes)}</g>'
+            + f'<g class="boundary-svg-labels">{"".join(labels)}</g>'
+            + "</svg>"
+        )
+        label = html.escape(caption or "recorded boundaries", quote=True)
+        return (
+            '<div class="boundary-projection">'
+            f'<figure class="boundary-diagram" aria-label="{label}">'
+            '<figcaption class="runtime-diagram-caption">'
+            "<strong>Recorded boundaries</strong>"
+            f"<span>{html.escape(drawn)}</span>"
+            f"<span>{html.escape(census)}</span>"
+            f"<span>{account}</span>"
+            "</figcaption>"
+            f'<div class="boundary-svg-scroll">{svg}</div></figure></div>'
+        )
+
     @staticmethod
     def _record_identifier(value: str) -> str:
         plain = _plain(value)
@@ -2715,6 +2880,8 @@ class MarkdownRenderer:
             return self._connection_topology(rows, caption, kind="seam")
         if signature == _RUNTIME_BOUNDARY_PROJECTION:
             return self._runtime_boundary_diagram(rows, caption)
+        if signature == _BOUNDARY_PROJECTION:
+            return self._boundary_diagram(rows, caption)
         if signature == _CONCERN_CHECKLIST_PROJECTION:
             return self._concern_checklist(headers, rows, caption)
         if (

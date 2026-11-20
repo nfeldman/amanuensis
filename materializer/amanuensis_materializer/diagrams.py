@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from .db import rows
 from .slugs import subsystem_page
@@ -113,6 +114,112 @@ def subsystem_dependency_view(conn: sqlite3.Connection) -> tuple[str, str]:
             f"| {edge['strength']} | {context} |"
         )
     return DEPENDENCY_HEADING, "\n".join(lines)
+
+
+#: The architecture page's boundary section. The HTML recognises the table by
+#: these four headers and draws it as an SVG, as it does the runtime table.
+BOUNDARY_HEADING = "Recorded boundaries"
+BOUNDARY_COLUMNS = ("Layer", "Subsystem", "Boundary", "Other end")
+#: What the section says when no seam or xref joins two recorded subsystems.
+BOUNDARY_NONE = "No boundary between subsystems is recorded, so no diagram is drawn."
+
+
+def boundary_relations(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Nodes, edges and layer order for the recorded-boundary diagram (§2.5).
+
+    Layers are in the order the Subsystem map lists them (`ORDER BY layer`, a
+    missing layer headed "unlayered"); nodes are in ID order within a layer.
+    Edges are the recorded seams and `xrefs` and nothing else. A relation that
+    names one subsystem twice, or an ID no `subsystems` row carries, has no
+    pair of boxes to join, so it is counted in `not_drawn` instead.
+    """
+    layers: dict[str, list[dict[str, str]]] = {}
+    for s in rows(conn, "SELECT id, name, layer FROM subsystems ORDER BY layer, id"):
+        layer = s["layer"] or "unlayered"
+        layers.setdefault(layer, []).append(
+            {"id": str(s["id"]), "name": str(s["name"]), "layer": layer}
+        )
+    nodes = [node for layer in layers.values() for node in sorted(layer, key=lambda n: n["id"])]
+    known = {node["id"] for node in nodes}
+    candidates = [
+        {"kind": "seam", "label": str(s["id"]), "from": str(s["party_a"]), "to": str(s["party_b"])}
+        for s in rows(conn, "SELECT id, party_a, party_b FROM seams ORDER BY id")
+    ] + [
+        {"kind": "xref", "label": str(x["relationship"]), "from": str(x["from_id"]), "to": str(x["to_id"])}
+        for x in rows(
+            conn, "SELECT from_id, to_id, relationship FROM xrefs ORDER BY from_id, to_id, relationship"
+        )
+    ]
+    edges = [
+        edge
+        for edge in candidates
+        if edge["from"] in known and edge["to"] in known and edge["from"] != edge["to"]
+    ]
+    return {
+        "layers": list(layers),
+        "nodes": nodes,
+        "edges": edges,
+        "not_drawn": len(candidates) - len(edges),
+    }
+
+
+def _no_boundary_sentence(unconnected: int, total: int) -> str:
+    verb = "has" if unconnected == 1 else "have"
+    noun = "subsystem" if total == 1 else "subsystems"
+    return f"{unconnected} of {total} {noun} {verb} no recorded boundary."
+
+
+def boundary_view(conn: sqlite3.Connection) -> str:
+    """The boundary section: a sentence, or the census and the table the HTML draws."""
+    graph = boundary_relations(conn)
+    nodes, edges = graph["nodes"], graph["edges"]
+    if not nodes:
+        return "_No subsystems recorded yet._"
+    touching: dict[str, list[tuple[str, str]]] = {node["id"]: [] for node in nodes}
+    for edge in edges:
+        if edge["kind"] == "seam":
+            link = f"**[{edge['label']}](seams.md#{edge['label'].lower()})** seam"
+            touching[edge["from"]].append((link, edge["to"]))
+            touching[edge["to"]].append((link, edge["from"]))
+        else:
+            relationship = _safe_label(edge["label"])
+            touching[edge["from"]].append((f"{relationship} →", edge["to"]))
+            touching[edge["to"]].append((f"← {relationship}", edge["from"]))
+    census = _no_boundary_sentence(sum(1 for found in touching.values() if not found), len(nodes))
+    not_drawn = graph["not_drawn"]
+    skipped = (
+        f" {not_drawn} recorded relation{' names' if not_drawn == 1 else 's name'} one subsystem"
+        " twice or a subsystem with no record, and is not drawn."
+        if not_drawn
+        else ""
+    )
+    if not edges:
+        return f"_{BOUNDARY_NONE} {census}{skipped}_"
+
+    kinds = []
+    if any(edge["kind"] == "seam" for edge in edges):
+        kinds.append("seam")
+    if any(edge["kind"] == "xref" for edge in edges):
+        kinds.append("recorded dependency")
+    names = {node["id"]: node["name"] for node in nodes}
+
+    def subsystem_cell(sid: str) -> str:
+        return f"**[{sid}]({subsystem_page(sid, names[sid])})** {_safe_label(names[sid])}"
+
+    lines = [
+        f"_{census} Each {' and each '.join(kinds)} below joins two recorded subsystems;"
+        f" no line is inferred from a name or a layer.{skipped}_",
+        "",
+        "| " + " | ".join(BOUNDARY_COLUMNS) + " |",
+        "|---|---|---|---|",
+    ]
+    for node in nodes:
+        sid = node["id"]
+        layer = _safe_label(node["layer"])
+        for boundary, other in touching[sid] or [("none recorded", "")]:
+            other_cell = subsystem_cell(other) if other else "—"
+            lines.append(f"| {layer} | {subsystem_cell(sid)} | {boundary} | {other_cell} |")
+    return "\n".join(lines)
 
 
 def subsystem_dependency_graph(conn: sqlite3.Connection) -> str:

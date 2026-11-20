@@ -22,8 +22,10 @@ from typing import Any
 
 from .db import row, rows, table_exists
 from .diagrams import (
+    BOUNDARY_HEADING,
     RUNTIME_BOUNDARY_ABSENT,
     RUNTIME_BOUNDARY_COLUMNS,
+    boundary_view,
     concern_coverage_heatmap,
     runtime_boundary_map,
     runtime_boundary_state,
@@ -1297,6 +1299,12 @@ def render_architecture(
         f"## {dependency_heading}",
         "",
         dependency_body,
+        "",
+        # §2.5 item 2: the HTML draws this section's table as the boundary SVG,
+        # recognised by its header signature as the runtime table is.
+        f"## {BOUNDARY_HEADING}",
+        "",
+        boundary_view(conn),
         "",
         "## Seam topology",
         "",
