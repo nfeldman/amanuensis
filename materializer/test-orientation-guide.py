@@ -19,7 +19,9 @@ Turns red when:
     glob stands for its listing page); or lacks Conspectus or Mapped (D2, D3);
   - an enum whose `reader_facing` is false is named before the "Full
     vocabulary" heading, or a reader-facing enum is not under "Status values"
-    with a plain heading and its stored name in a code span;
+    with a plain heading and its stored name in a code span; the plain heading
+    is the enum's contract `title`, which every reader-facing enum must carry
+    and which must not be its stored name's words ("Field note category");
   - the HTML puts a non-reader-facing enum outside a closed `<details>` with a
     `<summary>`, or a reader-facing enum inside it, or an enum table is
     missing in either view;
@@ -271,8 +273,21 @@ def load_contract() -> dict[str, Any]:
     return json.loads(CONTRACT.read_text())
 
 
-def enum_title(name: str) -> str:
+def stored_name_words(name: str) -> str:
     return name.replace("_", " ").capitalize()
+
+
+def enum_title(name: str) -> str:
+    """The heading an enum's table must carry: its contract `title` (PLAN §2.1's
+    plain name), read from the contract rather than recomputed from the stored
+    name. An enum with no title (only the non-reader-facing ones may lack one)
+    falls back to its stored name's words."""
+
+    try:
+        title = load_contract()["enums"][name].get("title")
+    except (OSError, KeyError, ValueError):
+        title = None
+    return title if isinstance(title, str) and title.strip() else stored_name_words(name)
 
 
 def expected_targets(pages: list[str], docs: Path) -> set[str]:
@@ -537,6 +552,24 @@ def main() -> int:
             return where, None
 
         where, _ = locate_enums()
+
+        def plain_titles() -> str | None:
+            # PLAN §2.1, §1.1: a reader-facing table is headed by a plain name,
+            # not its stored name's words ("Field note category", "Subsystem
+            # status"); the stored name follows in small type.
+            bad = [
+                name
+                for name, definition in enums.items()
+                if definition.get("reader_facing")
+                and (
+                    not isinstance(definition.get("title"), str)
+                    or not definition["title"].strip()
+                    or definition["title"].strip().lower() == stored_name_words(name).lower()
+                )
+            ]
+            return f"reader-facing enums headed by their stored name, with no plain contract title: {bad}" if bad else None
+
+        check("each reader-facing enum has a plain title in the contract, not its stored name", plain_titles)
 
         def enum_placement() -> str | None:
             if not enums:
