@@ -7,7 +7,8 @@ Turns red when:
   - `PagePlan` or `SitePage` carries no `use_when` field;
   - a static page's Markdown does not open, directly under its H1, with an
     italic paragraph holding its hint and then "Use it when <Appendix D text>";
-    in particular when the overview's or the reader's guide's hint is still
+    in particular when a prose source opens with an H2 rather than an H1, or
+    when the overview's or the reader's guide's hint is still
     empty or is not the Appendix D sentence, or a kept hint was replaced;
   - a page's HTML head prints a different hint or `use_when` than its Markdown
     prints, prints no `use_when` at all, or prints the Markdown's italic
@@ -186,7 +187,9 @@ def seed(storage: Path) -> None:
     db.commit()
     db.close()
     (storage / "entry-point.md").write_text("# Where to begin\n\nStart at the reader.\n")
-    (storage / "onboarding-report.md").write_text("# Onboarding\n\nOne repository.\n")
+    # A prose source that opens with an H2, not an H1: the published page must
+    # still open with an H1 carrying the page head.
+    (storage / "onboarding-report.md").write_text("## Onboarding\n\nOne repository.\n")
     (storage / "concern-checklist.md").write_text("# Checklist\n\n## Active concerns\n\n- none\n")
 
 
