@@ -34,8 +34,13 @@ Turns red when:
     (`[auth](subsystems/auth-login.md)`) for a name the reader sees, so the
     first mention of `auth` (name `login`) gains no name (§2.2 item 3);
   - a concern code the resolver did not write as "concern RC-2" stays bare
-    because it is already a link's label or a table row's key cell (§2.2
-    item 5 exempts only the review-coverage matrix);
+    because it is already a link's label or a table row's key cell, or sits in
+    a heading or on its own page (§2.2 item 5 exempts only the review-coverage
+    matrix);
+  - an ID inside a link's visible label (`[the auth subsystem](…)`) is not
+    named on its first mention, or a subsystem's name anywhere else in the
+    sentence ("auth is slow; the login team knows") suppresses the name that
+    belongs beside the ID (§2.2 item 3);
   - the read-back's explanation census misreads what the resolver adds: a
     faithfully published account whose text holds an interior concern code
     ("Review RC-2 before …", printed "concern RC-2") or an ID followed by its
@@ -544,6 +549,29 @@ def resolver_reads_visible_text() -> str | None:
         return f"a table header gained a prefix: {keyed.splitlines()[0]!r}"
     for once in (text, linked, keyed):
         again = xref.resolve_text(once, "subsystems/x.md" if once is keyed else "index.md", index)
+        if again != once:
+            return f"a second pass changed {once!r} to {again!r}"
+    # §2.2 item 3: an ID inside a link's visible label is a mention too.
+    labelled = xref.resolve_text("See [the auth subsystem](subsystems/auth-login.md) for tokens.\n", "index.md", index)
+    if "[the auth subsystem](subsystems/auth-login.md) (login)" not in labelled:
+        return f"an ID inside a link label was not named on its first mention: {labelled!r}"
+    # The name counts as shown only beside the ID, not anywhere on the line.
+    elsewhere = xref.resolve_text("auth is slow; the login team knows.\n", "index.md", index)
+    if "[auth](subsystems/auth-login.md) (login)" not in elsewhere:
+        return f"a name elsewhere in the sentence suppressed the first mention's name: {elsewhere!r}"
+    beside = xref.resolve_text("auth — login handles tokens.\n", "index.md", index)
+    if "(login)" in beside:
+        return f"a name already beside the ID was printed again: {beside!r}"
+    # §2.2 item 5: the matrix is the one exception; a heading and the code's own
+    # page still say "concern".
+    heading = xref.resolve_text("## RC-2 Race on the cache\n", "findings.md", index)
+    if "[concern RC-2](concerns.md#rc-2)" not in heading:
+        return f"a concern code in a heading lacks the prefix: {heading!r}"
+    own = xref.resolve_text("- **RC-2** race on a cache\n", "concerns.md", index)
+    if "**concern RC-2**" not in own:
+        return f"a concern code on its own page lacks the prefix: {own!r}"
+    for once, page in ((labelled, "index.md"), (elsewhere, "index.md"), (heading, "findings.md"), (own, "concerns.md")):
+        again = xref.resolve_text(once, page, index)
         if again != once:
             return f"a second pass changed {once!r} to {again!r}"
     return None
