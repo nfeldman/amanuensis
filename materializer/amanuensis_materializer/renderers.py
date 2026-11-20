@@ -3496,8 +3496,10 @@ def passthrough_prose(storage: Path, rel_source: str, title: str) -> RenderResul
     if not p.is_file():
         return None
     body = p.read_text()
-    # Prepend a banner only if the source doesn't already start with #.
-    if not body.lstrip().startswith("#"):
+    # Prepend a banner only if the source doesn't already open with an H1: the
+    # page head (hint and use_when) is inserted under the page's H1, so a source
+    # opening with "## " still needs one.
+    if not re.match(r"#[ \t]", body.lstrip()):
         body = f"# {title}\n\n{body}"
     return body, _prose_source(storage, rel_source)
 
