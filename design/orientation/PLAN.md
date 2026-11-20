@@ -388,15 +388,23 @@ Rules for every packet:
 - **Done** means: the packet's gate is green, every earlier orientation gate is green, and the
   existing materializer gates in `test.yml` are no redder than before (diff the FAIL lines, not
   only exit codes). Commit each green packet.
-- Order: O0 → O1 → (O2, O5, O7, O8 in any order) → O3 → O4 → O6 → O9 → O10. O11 only on D5.
-  O10's gate reads O1's `survey_passes`, so O10 cannot start before O1.
+- **Gate markers.** Every gate prints exactly one status line, last: `GATE <packet id> RED:
+  <reason>` with a non-zero exit, or `GATE <packet id> GREEN` with exit 0. The id is the
+  packet's own (`O1`, `O12`), never a decision or finding id (`D4`, `W6`). An earlier lane halted
+  because a gate printed an id other than the one its launcher looked for. Each packet has its
+  own gate file; a packet that "extends" another packet's gate gets a new file instead.
+- Order: O0 → O1 → O2 → O3 → O4 → O6 → O9 → O14 → O5 → O7 → O8 → O10 → O12 → O13. O11 only on
+  D5, after the rest. `design/orientation/plan.json` is the executable form of this order and of
+  every packet's files, gate and regressions; where the two differ, fix the JSON to match this
+  file.
 
 ### O0 · Record the plan
 
 - **Files:** `BACKLOG.md`.
 - **Do:** add a "Reader orientation" section under "Publishing and rendering" that links this plan
   and lists W1–W9 as items, each one line.
-- **Gate:** `rg -n 'design/orientation/PLAN.md' BACKLOG.md` finds the link.
+- **Gate:** new `dev/test-orientation-backlog.mjs`. Turns red when `BACKLOG.md` has no link to
+  `design/orientation/PLAN.md`, or the "Reader orientation" section lacks any of W1–W9.
 
 ### O1 · Contract: terms, ID kinds, survey passes, reader-facing flag
 
@@ -515,17 +523,19 @@ Rules for every packet:
   page path to its terms via `READER_TERMS[*].pages`).
 - **Do:** print "Terms on this page:" with links to the guide's anchors, under the `use_when`
   line, in both views. Omit the line when a page has no terms.
-- **Gate:** extend `test-orientation-guide.py`: turns red when a page listed in some term's
-  `pages` lacks the line, or a link's anchor does not exist in the guide's HTML.
+- **Gate:** new `materializer/test-orientation-terms.py`: turns red when a page listed in some
+  term's `pages` lacks the line in either view, a page with no terms has the line, or a link's
+  anchor does not exist in the guide's HTML.
 
 ### O7 · Subsystem map atlas and one name
 
 - **Files:** `renderers.py` (`render_master_plan`).
 - **Do:** §2.5 item 1. Change `# Master plan` to the page title, "Subsystem map" (D3: the title
   in `core.py` stays as it is).
-- **Gate:** extend `materializer/test-lens-pages.py` or a new `test-orientation-map.py`: turns
-  red when `master-plan.html` lacks `class="subsystem-atlas"` with one `atlas-item` per
-  subsystem, or the Markdown H1 differs from the plan's title.
+- **Gate:** new `materializer/test-orientation-map.py`: turns red when `master-plan.html` lacks
+  `class="subsystem-atlas"` with one `atlas-item` per subsystem (seed at least two layers and a
+  `deferred` subsystem), or the Markdown H1 is not "Subsystem map". `test-lens-pages.py` stays
+  green.
 
 ### O8 · Boundary diagram
 
@@ -546,8 +556,9 @@ Rules for every packet:
 - **Files:** `renderers.py` (`render_index`, lens routes).
 - **Do:** the Method route reads "How to read this survey: what each page is for, the terms it
   uses, and how a survey works". Nothing else on the overview changes.
-- **Gate:** `test-overview-truthfulness.py` green; `test-orientation-workflow.py` asserts the
-  Method route text.
+- **Gate:** new `materializer/test-orientation-overview.py`: turns red when the overview's
+  Method route (both views) does not carry that text and link to the guide.
+  `test-overview-truthfulness.py` stays green.
 
 ### O10 · Skill workflow repairs (W1–W6)
 
@@ -613,8 +624,90 @@ Rules for every packet:
   Also run `node mcp-server/scripts/check-evidence-vocabulary.mjs` (it parses `SKILL.md`'s
   ladder line and its "Authorized claims" table) and keep it green, and add the new script as a
   step in `.github/workflows/test.yml` beside the vocabulary check.
+- **Last:** edit only the tracked source `.claude/skills/amanuensis`. Then regenerate the
+  packaged copy with `cd mcp-server && node scripts/prepack-bundle-assets.mjs` (the copy under
+  `mcp-server/skills` is gitignored, so there is nothing to commit from it) and run
+  `node mcp-server/scripts/check-reference-calls.mjs` and `node mcp-server/test-reference-calls.mjs`.
 - **Not here:** W7 is handled by Terms; W8 by O4's phase key; W9 by Terms' aliases. The server
   and the contract's values need no change for W6 (D4).
+
+### Publishing defects from `BACKLOG.md` (added 2026-11-20)
+
+The four open items under "Publishing and rendering" in `BACKLOG.md` at `4d92312`, read against
+the code. Two can be built now (O12, O13), one in part (O14); two need an owner decision first
+(D6, D7 in §5) and are not in the lane. The fifth item, the AxiomDB maintenance lane's publish
+step, lives in `~/.claude/automations/axiomdb-maintenance`, outside this repository, and is left
+out of this plan.
+
+- **[O] Why the state axis reports the previous run.** The overview's Publication integrity
+  block reads the newest `projection_verification_runs` row (`renderers.py`, `render_index`,
+  the `verification` query near `:1025`; printed near `:1141`). `materialize_docs` writes that
+  row in `recordReadback` (`mcp-server/src/tools/materialize.ts`) only after `materialize.py`
+  has written and read back the pages. So a page can never show its own read-back: it always
+  shows the publication before it, and a failed attempt's red lands on the next, green
+  publication's overview. The same cause makes a CLI render show the last tool-driven run.
+- **[O] Survey notes.** `narrative_placement` already puts the survey narrative under the account
+  when an account is recorded (`renderers.py`, "survey-record" placement: the "Survey artifact"
+  subsection at the end of the page). What is missing is the date: in that placement the
+  narrative prints with no provenance at all, and nothing says it is older working notes.
+  `artifacts.written_at` and `ref_sha` hold the date and revision; the account's `recorded_at` is
+  in `explanations` but not selected by `explanation_rows` (`readback.py`).
+- **[O] Markdown only.** Every page is written as HTML and Markdown into the same output
+  directory (`SKILL.md`: "HTML is the primary human reading surface; Markdown is its portable,
+  inspectable companion"). Nothing on the site says the Markdown lacks the diagrams, search and
+  hover definitions, or where the HTML is.
+
+### O12 · Say which publication the read-back describes
+
+- **Files:** `materializer/amanuensis_materializer/renderers.py` (`render_index`, the
+  "Publication integrity" block); new `materializer/test-orientation-readback-label.py`.
+- **Do:** under "### Publication integrity", when a run exists, print before the table the
+  constant sentence `PUBLICATION_INTEGRITY_LAG` = "A publication's read-back is recorded after its
+  pages are written, so these results describe the publication before this one." Rename the row
+  "Verified at" to "Read back at". Leave the no-run sentence as it is. The new sentence must
+  contain no digit and neither word "red" nor "green": `test-overview-truthfulness.py`'s
+  `publication_integrity_values` counts those words and dates in the block, and must stay green
+  unchanged. Do not change `materialize.ts` or the read-back.
+- **Gate:** turns red when, on a seeded store with two runs (older: state axis failed; newer: all
+  passed), the overview's Publication integrity block in either view lacks the sentence, still
+  says "Verified at", lacks "Read back at" with the newer run's date, or reports the older run.
+  Regressions: `test-overview-truthfulness.py`, `test-readback.py`, `cd mcp-server && node
+  test-projection-custody.mjs`.
+
+### O13 · Date the survey notes under the account
+
+- **Files:** `materializer/amanuensis_materializer/renderers.py` (`render_subsystem`: the
+  `survey_rows` query, the `provenance` string, the "Survey artifact" subsection),
+  `materializer/amanuensis_materializer/readback.py` (`explanation_rows`: add `recorded_at` to
+  its SELECT); new `materializer/test-orientation-survey-notes.py`.
+- **Do:** select `written_at` with each survey artifact row. Add "written on <YYYY-MM-DD>" to
+  each artifact's entry in `provenance`, so every placement carries the date. In the
+  "survey-record" placement (an account is recorded), print under "### Survey artifact", before
+  the prose, one italic line per artifact: "Written on <date> at revision <sha8> as the survey's
+  working notes, and kept as written. The account above was recorded on <date> at revision
+  <sha8>; where the two disagree, the later one is the current reading." Never modify an
+  artifact file (the server appends status lines to it). Dates are the first ten characters of
+  the stored timestamps.
+- **Gate:** turns red when, on a seeded subsystem with a recorded account and a survey artifact
+  whose prose contradicts it: any line of the artifact's prose appears above the account's
+  heading; the dated line is missing or names the wrong date or revision for either record; the
+  artifact file's bytes changed; or a subsystem without an account (claims present) lacks
+  "written on" in its narrative's provenance. Regressions: `test-narrative-placement.py`,
+  `test-explanation-pages.py`, `test-prose-retention.py`, `test-readback.py`.
+
+### O14 · Say what the Markdown view leaves out
+
+- **Files:** `materializer/amanuensis_materializer/renderers.py` (the guide's "What this site is"
+  section, from O3); new `materializer/test-orientation-views.py`. Depends on O3.
+- **Do:** end "What this site is" with: "Each page is written twice from the same record: as
+  HTML, which adds the diagrams, the search and the definitions shown on hover, and as Markdown.
+  Both are written to the same directory; the HTML starts at index.html. A copy of the Markdown
+  alone leaves those out." No backticks (O3's gate forbids them in the guide's first 600 bytes).
+  The overview is not changed (§7.2). This is the in-repository half of the backlog item; whether
+  downstream copies should carry the HTML is D7.
+- **Gate:** turns red when the guide's Markdown or HTML lacks the paragraph, or the publish
+  output lacks `index.html` beside `index.md`. Regressions: `test-orientation-guide.py`,
+  `test-lens-pages.py`.
 
 ### O11 · Cold-reader check (only on D5)
 
@@ -647,7 +740,19 @@ Decided by the owner on 2026-11-20 (relayed by the backlog-triage session):
 Still open:
 
 - **D5. Republish and test on a real store.** Reaching `docs/` and running O11 on AxiomDB need
-  Amanuensis use and a dogfood receipt re-record. Go or wait.
+  Amanuensis use and a dogfood receipt re-record. Owner, 2026-11-20: only after the lane's
+  packets land.
+- **D6. A CLI render and the store's publication record** (`BACKLOG.md`). `materialize.py` run
+  by hand writes pages and records no read-back, so the overview keeps the last tool-driven run
+  (O12 at least labels that run as earlier). The backlog names two fixes, and they differ in kind:
+  (A) the CLI records its own read-back in the store, which makes the Python materializer a
+  writer of `projection_verification_runs` (today only `materialize.ts` writes it); or (B) the CLI
+  refuses to write outside the store's `docs/` unless told to, and a page it writes says it was
+  not read back. Pick one; not in the lane until then.
+- **D7. Should downstream copies carry the HTML?** A conspectus copied into a repository's
+  `docs/` carries Markdown only. Shipping HTML too changes what lands in another repository and
+  is done by the AxiomDB maintenance lane's publish step, outside this repository. O14 only
+  says on the site what the Markdown leaves out. Ship HTML downstream, or not?
 
 ## Appendix A · Terms (draft definitions for `reader_terms`)
 
