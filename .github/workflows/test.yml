@@ -415,6 +415,9 @@ jobs:
       - name: Terms on each page — the line under "Use it when", linked to the guide's anchors
         working-directory: materializer
         run: python3 test-orientation-terms.py
+      - name: Overview Method route — links the guide and says what the guide holds
+        working-directory: materializer
+        run: python3 test-orientation-overview.py
       - name: Prose retention — every model-authored field reaches a page
         working-directory: materializer
         run: python3 test-prose-retention.py

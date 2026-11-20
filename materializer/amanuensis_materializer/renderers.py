@@ -1194,8 +1194,8 @@ def render_index(
         " verification at the checked revision.",
         "- **History** — [Resolved findings](resolved-findings.md): the records that"
         " reached a terminal state, with the basis each one rests on.",
-        "- **Method** — [How to read the conspectus](how-to-read.md): every recorded"
-        " state, what it authorizes, and what it cannot justify.",
+        f"- **Method** — [{GUIDE_TITLE}](how-to-read.md): what each page is for,"
+        " the terms it uses, and how a survey works.",
         "",
     ]
 
