@@ -82,4 +82,4 @@
 - `cd materializer && python3 test-search-index.py`
 - `cd materializer && python3 test-unmeasured-coverage.py`
 
-Final review: pending
+Final review: reviewed
