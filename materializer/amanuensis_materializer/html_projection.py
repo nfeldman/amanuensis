@@ -537,6 +537,8 @@ td:first-child, th:first-child { padding-left: .7rem; }
 .coverage-legend-item { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
 .coverage-matrix-disclosure { margin-top: 1.15rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .coverage-matrix-disclosure > summary { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
+.vocabulary-disclosure { margin-top: 1rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.vocabulary-disclosure > summary { padding: .8rem .1rem; cursor: pointer; font-weight: 650; }
 .coverage-matrix-disclosure > summary span:last-child { color: var(--text-subtle); font: .62rem/1.4 var(--mono); font-weight: 400; }
 .coverage-matrix-note { max-width: var(--measure); margin: 0 0 .8rem; color: var(--text-muted); font-size: .8rem; }
 .coverage-matrix-wrap { max-height: min(72vh, 56rem); margin: 0 0 1rem; }
@@ -2747,6 +2749,8 @@ class MarkdownRenderer:
         body: list[str] = []
         i = 0
         in_section = False
+        in_disclosure = False
+        disclose = False
         current_section = ""
 
         while i < len(lines):
@@ -2807,11 +2811,17 @@ class MarkdownRenderer:
                     display_raw = "Active concerns"
                 self._note_heading(level, display_raw)
                 if level == 2:
+                    if in_disclosure:
+                        body.append("</details>")
+                        in_disclosure = False
                     if in_section:
                         body.append("</section>")
                     current_section = slugify(_plain(display_raw))
                     body.append(f'<section class="section-{html.escape(current_section, quote=True)}">')
                     in_section = True
+                    # The guide's last section holds the tables a reader never
+                    # meets as a label; it stays closed until asked for.
+                    disclose = self.current_html_path == "how-to-read.html" and current_section == "full-vocabulary"
                 anchor_id = self._heading_slug(display_raw)
                 label = html.escape(f"Link to {_plain(display_raw)}", quote=True)
                 # The Unresolved lens nests the subsystem under resolution
@@ -2827,6 +2837,10 @@ class MarkdownRenderer:
                     f'<a class="heading-anchor" href="#{anchor_id}" aria-label="{label}">§</a>'
                     f'{_inline(display_raw)}</h{level}>'
                 )
+                if level == 2 and disclose:
+                    body.append('<details class="vocabulary-disclosure"><summary>Show the full vocabulary</summary>')
+                    in_disclosure = True
+                    disclose = False
                 i += 1
                 continue
 
@@ -2879,6 +2893,8 @@ class MarkdownRenderer:
                 i += 1
             body.append(f"<p>{_inline(' '.join(paragraph))}</p>")
 
+        if in_disclosure:
+            body.append("</details>")
         if in_section:
             body.append("</section>")
         return title, "\n".join(_compose_prose_runs(body))

@@ -552,7 +552,7 @@ class Materializer:
                 # and from this plan (§7.8), so it reads `plan` — complete by the
                 # time any page is built — rather than a hand-written route list
                 # a new page could be left out of.
-                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read the conspectus", label="Reader's guide", hint="What each page is for, the terms the site uses, and how a survey works.", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
+                PagePlan("how-to-read.md", lambda: renderers.render_how_to_read(conn, storage, _routes(plan)), title="How to read this survey", label="Reader's guide", hint="What each page is for, the terms the site uses, and how a survey works.", use_when="a word, an ID or a page is unfamiliar.", group="Method", kind="guide"),
                 PagePlan("concerns.md", lambda: renderers.render_concerns(conn, storage), title="Review coverage", label="Review coverage", hint="Which failure modes were tested where, and the disposition each one reached.", use_when="you want to know which defect kinds were checked where.", group="Method", kind="coverage"),
                 passthrough("concern-checklist.md", "Calibrated review checklist", "Review checklist", "The concern set and its provenance.", "you want the list of defect kinds and where it came from."),
                 PagePlan("diagnosticity.md", lambda: renderers.render_diagnosticity(conn, storage), title="Competing explanations", label="Competing explanations", hint="Index of evidence matrices and their outcomes.", use_when="you want to see how a symptom's cause was weighed.", group="Method", kind="diagnosticity"),

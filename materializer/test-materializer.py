@@ -450,7 +450,7 @@ def main() -> None:
         # The reader's guide is static — every conspectus ships with it.
         # Sanity-check that the content actually landed.
         htr = (docs / "how-to-read.md").read_text()
-        assert "How to read this conspectus" in htr
+        assert "How to read this survey" in htr
         assert "### Subsystem status" in htr and "cannot justify" in htr.lower()  # the survey-depth ladder is generated from the enum source
         assert "evidence quality" in htr.lower()
         assert "\x00" not in htr, "nested xref placeholders leaked into Markdown"

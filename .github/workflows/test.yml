@@ -406,6 +406,9 @@ jobs:
       - name: Page index — hint and "Use it when" on every page
         working-directory: materializer
         run: python3 test-orientation-index.py
+      - name: Reader's guide — new shape, Terms, and the closed full vocabulary
+        working-directory: materializer
+        run: python3 test-orientation-guide.py
       - name: Prose retention — every model-authored field reaches a page
         working-directory: materializer
         run: python3 test-prose-retention.py

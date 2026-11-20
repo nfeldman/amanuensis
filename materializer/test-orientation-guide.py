@@ -265,8 +265,10 @@ def enum_title(name: str) -> str:
     return name.replace("_", " ").capitalize()
 
 
-def expected_targets(pages: list[str]) -> set[str]:
-    return {FAMILY_LISTING.get(page, page) for page in pages}
+def expected_targets(pages: list[str], docs: Path) -> set[str]:
+    """The pages a term names that this store published; the rest cannot be linked."""
+
+    return {t for t in (FAMILY_LISTING.get(page, page) for page in pages) if (docs / t).is_file()}
 
 
 def main() -> int:
@@ -311,7 +313,7 @@ def main() -> int:
         check("the fixture publishes", published)
 
         sections = md_sections(md)
-        by_title = {title: lines for title, lines in sections}
+        by_title = dict(sections)
 
         # -- title (D2) --------------------------------------------------
         def title_says_survey() -> str | None:
@@ -440,18 +442,18 @@ def main() -> int:
                     return f"{term['term']!r} has no aliases but prints an 'Also called:' line"
                 seen = [ln for ln in body.splitlines() if ln.strip().startswith("Seen on:")]
                 pages = [str(p) for p in term.get("pages") or []]
-                if pages:
+                if expected_targets(pages, docs):
                     if len(seen) != 1:
                         return f"{term['term']!r} has {len(seen)} 'Seen on:' lines, wanted one"
                     targets = {m.group(2) for m in LINK.finditer(seen[0])}
-                    want = expected_targets(pages)
+                    want = expected_targets(pages, docs)
                     if targets != want:
                         return f"{term['term']!r} 'Seen on:' links {sorted(targets)}, wanted {sorted(want)}"
                     for target in targets:
                         if not (docs / target).is_file():
                             return f"{term['term']!r} links {target}, which is not published"
                 elif seen:
-                    return f"{term['term']!r} names no pages but prints 'Seen on:'"
+                    return f"{term['term']!r} names no published page but prints 'Seen on:'"
             return None
 
         check("each term carries its definition, aliases on one line, and Seen on: links to its pages", term_bodies)
@@ -478,7 +480,7 @@ def main() -> int:
                         return f"the HTML entry for {term['term']!r} lacks the alias {alias!r}"
             hrefs = set(re.findall(r'href="([^"#]+)\.html"', fragment))
             for term in terms:
-                for target in expected_targets([str(p) for p in term.get("pages") or []]):
+                for target in expected_targets([str(p) for p in term.get("pages") or []], docs):
                     if target[:-3] not in hrefs:
                         return f"the HTML Terms carries no link to {target[:-3]}.html"
             if "Seen on" not in text:
@@ -572,10 +574,18 @@ def main() -> int:
                     return f"the HTML Status values lacks the table for {name}"
                 if title in inside_h3:
                     return f"reader-facing {name} is inside the closed <details>"
+            # A value that is also a status prints as a chip, so count rows
+            # rather than looking for each label's text.
             for name, definition in enums.items():
-                for entry in definition.get("values") or []:
-                    if htmllib.escape(str(entry["label"]), quote=False) not in page and str(entry["label"]) not in html_text(page):
-                        return f"{name}.{entry['value']} label is missing from the HTML"
+                block = next(
+                    (body for part in (status, full) for t, body in html_h3_blocks(part) if t == enum_title(name)),
+                    None,
+                )
+                if block is None:
+                    return f"the HTML has no table for {name}"
+                rows = len(re.findall(r"<tr>", block.split("</tbody>")[0].split("<tbody>")[-1]))
+                if rows != len(definition.get("values") or []):
+                    return f"the HTML table for {name} has {rows} rows for {len(definition.get('values') or [])} values"
             return None
 
         check("the HTML shows reader-facing tables openly and the rest in a closed <details>", html_disclosure)

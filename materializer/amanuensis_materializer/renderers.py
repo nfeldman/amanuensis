@@ -71,6 +71,7 @@ from .slugs import matrix_page, matrix_slug, subsystem_page
 from .vocabulary import (
     OBLIGATION_BEARING_SQL,
     OPEN_FINDING_SQL,
+    READER_TERMS,
     VOCABULARY,
     VOCABULARY_CONTRACT_VERSION,
     cannot_justify,
@@ -3248,43 +3249,97 @@ def _ledger_stale_table(
     return out
 
 
-# The reader's guide is generated, not written (§7.8, §10.2). Every table below
-# comes from `mcp-server/contracts/conspectus-vocabulary.json` by way of the
-# generated `vocabulary.py`, and the route table comes from the page plan, so a
-# value the server enforces or a page the projection publishes cannot be
-# missing from the guide without the generator changing.
-HOW_TO_READ_INTRO = """\
-# How to read this conspectus
-"""
+# The reader's guide is generated, not written (§7.8, §10.2). Its terms and
+# tables come from `mcp-server/contracts/conspectus-vocabulary.json` by way of
+# the generated `vocabulary.py`, and the route table comes from the page plan,
+# so a value the server enforces or a page the projection publishes cannot be
+# missing from the guide without the generator changing. The sections run in
+# the order PLAN §4 O3 gives: what the site is, pages, terms, status values,
+# then the vocabulary a reader never sees as a label.
+GUIDE_TITLE = "How to read this survey"
+HOW_TO_READ_INTRO = f"# {GUIDE_TITLE}\n"
 
 HOW_TO_READ_CLOSING = ""
 
+# Appendix C, "What this site is". The project name is the only variable.
+SITE_IS = (
+    "This site is the record of an AI agent's survey of {name}. The agent read the code,"
+    " recorded what it concluded and the code each conclusion rests on, and listed what it"
+    " could not settle. It does not change the code. Every page is as of one commit, shown"
+    " at the top as *Checked*."
+)
+
+# A term's `pages` may name a family; the family's listing page stands for it.
+_FAMILY_LISTINGS: dict[str, tuple[str, str]] = {
+    "subsystems/*.md": ("Subsystem pages", "master-plan.md"),
+    "diagnosticity/*.md": ("Evidence tables", "diagnosticity.md"),
+}
+
+
+def term_slug(term: str) -> str:
+    """The anchor suffix for a term: `#term-<slug>` on the guide."""
+
+    return re.sub(r"[^a-z0-9]+", "-", term.lower()).strip("-")
+
 
 def _enum_heading(name: str) -> str:
-    """A reader-facing name for one enum, with the stored name beside it."""
+    """A reader-facing name for one enum; the stored name goes beside it."""
 
     return name.replace("_", " ").capitalize()
 
 
-def _vocabulary_tables() -> list[str]:
-    """One table per enum the contract carries, in its declared order (§7.8)."""
+def _site_is(name: str) -> list[str]:
+    return ["## What this site is", "", SITE_IS.format(name=name), ""]
 
+
+def _terms_section(routes: Sequence[tuple[str, str, str, str, str, str]]) -> list[str]:
+    """One entry per `READER_TERMS` row, anchored for the pages that link to it."""
+
+    # Only planned pages are linked: a term's `pages` may name a prose page this
+    # store has no source for, and a link to it would not resolve (read-back).
+    labels = {route[0]: route[1] for route in routes}
     out: list[str] = [
-        "## The vocabulary this record uses",
+        "## Terms",
         "",
-        "Every value below is generated from the vocabulary contract, version"
-        f" `{VOCABULARY_CONTRACT_VERSION}` — the same source the server validates"
-        " writes against and the same source this site's labels come from. A value"
-        " the server accepts and this page did not carry would be a drift, so the"
-        " generator produces both from one definition.",
+        "Words this site uses in a particular sense. Each entry says where you will meet it.",
         "",
     ]
+    for entry in READER_TERMS:
+        term = str(entry["term"])
+        out += [f'<a id="term-{term_slug(term)}"></a>', "", f"### {term}", ""]
+        aliases = [str(alias) for alias in entry.get("aliases") or ()]  # type: ignore[union-attr]
+        if aliases:
+            out += [f"*Also called: {', '.join(aliases)}.*", ""]
+        out += [str(entry["definition"]), ""]
+        links: list[str] = []
+        for page in entry.get("pages") or ():  # type: ignore[union-attr]
+            page = str(page)
+            if page in _FAMILY_LISTINGS:
+                label, target = _FAMILY_LISTINGS[page]
+            elif page in labels:
+                label, target = labels[page], page
+            else:
+                continue  # not planned for this store (a prose page with no source)
+            link = f"[{label}]({target})"
+            if link not in links:
+                links.append(link)
+        if links:
+            out += [f"Seen on: {', '.join(links)}", ""]
+    return out
+
+
+def _enum_tables(heading: str, lede: str, reader_facing: bool) -> list[str]:
+    """The enum tables whose `reader_facing` flag matches, in declared order."""
+
+    out: list[str] = [f"## {heading}", "", lede, ""]
     for name, definition in VOCABULARY.items():
+        if bool(definition.get("reader_facing")) != reader_facing:
+            continue
         axis = str(definition.get("axis") or "")
         out += [
             f"### {_enum_heading(name)}",
             "",
-            f"`{name}`" + (f" · {axis} axis" if axis else ""),
+            f"Stored as `{name}`" + (f" · {axis} axis" if axis else ""),
             "",
             "| Value | Label | What it means | What it cannot justify |",
             "|---|---|---|---|",
@@ -3297,6 +3352,23 @@ def _vocabulary_tables() -> list[str]:
             )
         out.append("")
     return out
+
+
+def _vocabulary_tables() -> list[str]:
+    """Status values, then the full vocabulary, from the enum source (§7.8)."""
+
+    return _enum_tables(
+        "Status values",
+        "The values this site prints as labels, from the vocabulary contract, version"
+        f" `{VOCABULARY_CONTRACT_VERSION}`: the same source the server checks writes"
+        " against. Each table gives the label, what it means, and what it cannot justify.",
+        True,
+    ) + _enum_tables(
+        "Full vocabulary",
+        "The remaining values the record stores, which the pages rarely print as labels."
+        " They come from the same contract.",
+        False,
+    )
 
 
 # A subgroup is a family with one page per record, so the index gives it one
@@ -3375,10 +3447,12 @@ def render_how_to_read(
     `verified-fixed`. Nothing kept them in step, so nothing did.
     """
 
-    del conn, storage  # the contract and the page plan are the whole source
+    del conn  # the contract and the page plan are the source; the store names the project
 
     body = [HOW_TO_READ_INTRO, ""]
+    body += _site_is(project_name(storage))
     body += _route_tables(routes or ())
+    body += _terms_section(routes or ())
     body += _vocabulary_tables()
     body += [HOW_TO_READ_CLOSING]
     text = "\n".join(body)
