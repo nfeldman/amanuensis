@@ -25,7 +25,7 @@
 // red run reaches an assertion and never a stack trace.
 //
 // Must-stay-green controls:
-//   C1  a project subject accepts 'project' or no id and has the account slot only
+//   C1  a project subject accepts 'project' or no id and has the purpose and account slots
 //   C2  a reset of one subsystem leaves another subsystem's slots effective
 //   C3  a reset appends a row only for a slot that has one
 //
@@ -590,12 +590,16 @@ async function main(mods) {
 
   {
     const ctx = world("project");
-    await check("C1 the project subject reads its account only, with or without an id", async () => {
+    // The project holds a purpose since store-only SO4 (design/store-only/PLAN.md §2.2);
+    // its recording and reading are test-store-only-project-records.mjs.
+    await check("C1 the project subject reads its purpose and account, with or without an id", async () => {
       // Nothing is read to 'structural' yet, so nothing can be recorded; it still reads.
       const empty = await read(ctx, { subject_type: "project" });
       if (empty.failed) return `project with no subsystem read: ${empty.failed}`;
       const slots = (empty.payload.slots ?? []).map((s) => s.slot).join();
-      if (slots !== "account") return `the project's slots are [${slots}], expected [account]`;
+      if (slots !== "purpose,account") return `the project's slots are [${slots}], expected [purpose,account]`;
+      const emptyPurpose = slotDiff(slotOf(empty.payload, "purpose"), { state: "not-recorded", earlier_rows: 0, row: null }, "empty project purpose");
+      if (emptyPurpose) return emptyPurpose;
       const emptyDiff = slotDiff(slotOf(empty.payload, "account"), { state: "not-recorded", earlier_rows: 0, row: null }, "empty project");
       if (emptyDiff) return emptyDiff;
 
@@ -612,7 +616,7 @@ async function main(mods) {
           `project ${JSON.stringify(args)}`,
         );
         if (diff) return diff;
-        if (result.payload.slots.length !== 1) return "the project subject returned more than one slot";
+        if (result.payload.slots.length !== 2) return "the project subject did not return exactly its two slots";
       }
       return null;
     });
